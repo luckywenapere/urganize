@@ -64,7 +64,17 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
  *  - It publishes its height as --home-dock-height and data-home-dock on
  *    <html>, so Home's padding and the toasts clear it (globals.css).
  */
-export function HomeAskBar() {
+export function HomeAskBar({
+  variant = 'home',
+  onSend,
+}: {
+  /** 'swipe' (URG-380): the swipe navigation's one box under Home and Artists,
+   *  on phones and desktops, centred to the page column. */
+  variant?: 'home' | 'swipe';
+  /** Replaces opening the chat page: the swipe navigation hands the message to
+   *  Main and glides the pager to UrgAns instead. */
+  onSend?: () => void;
+} = {}) {
   const router = useRouter();
   const releases = useReleaseStore((state) => state.releases);
   const scopedReleaseId = useChappiStore((state) => state.scopedReleaseId);
@@ -165,8 +175,14 @@ export function HomeAskBar() {
     if (!canSend) return;
     setInput(input.trim());
     setPendingAttachments(attach.attachments);
-    setSendInputOnOpen(true);
+    if (!onSend) setSendInputOnOpen(true);
     attach.clear();
+    if (onSend) {
+      // The swipe navigation: the conversation is already mounted beside Home.
+      inputRef.current?.blur();
+      onSend();
+      return;
+    }
     // Always the full chat page: it mounts the conversation that picks the
     // message up and sends it. No keyboard hand-off: the chat's box is busy
     // while the reply comes, so a kept keyboard would only lose what is typed.
@@ -176,7 +192,14 @@ export function HomeAskBar() {
   if (!CHAPPI_ENABLED || !inBrowser) return null;
 
   return createPortal(
-    <div ref={dockRef} className="home-dock fixed inset-x-3 z-40 lg:hidden">
+    <div
+      ref={dockRef}
+      className={
+        variant === 'swipe'
+          ? 'home-dock swipe-dock fixed inset-x-4 z-40 mx-auto max-w-[40rem]'
+          : 'home-dock fixed inset-x-3 z-40 lg:hidden'
+      }
+    >
       {voiceDriver}
       <form
         onSubmit={handleSubmit}

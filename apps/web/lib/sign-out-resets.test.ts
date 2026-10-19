@@ -29,6 +29,7 @@ const REGISTRANTS: Record<SignOutResetId, string> = {
   tasks: 'stores/useTaskStore.ts',
   activity: 'stores/useActivityStore.ts',
   home: 'stores/useHomeStore.ts',
+  'swipe-nav': 'stores/useSwipeNavStore.ts',
 };
 
 describe('sign-out reset registry', () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'react';
+import { Fragment, useEffect, useRef, useState, type FormEvent, type ReactNode, type RefObject } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Chappi, CHAPPI_MIN_SIZE } from '@urganize/ui';
@@ -116,6 +116,20 @@ type ChappiConversationProps = {
    * search bar's "Ask UrgAns"). 0 or absent asks for nothing.
    */
   focusRequest?: number;
+  /**
+   * The swipe navigation's UrgAns tab (URG-380). Optional; every other surface
+   * leaves these out and is unchanged.
+   *  - `trailing` + `trailingAt`: one extra turn drawn in the transcript after
+   *    the first `trailingAt` messages (the Home card carried into Main, the
+   *    "Needs you" notices). Its presence counts as a conversation.
+   *  - `emptyHero`: the empty state as a serif question, a line, and wrapped
+   *    prompts that send themselves.
+   *  - `placeholder`: the composer's placeholder.
+   */
+  trailing?: ReactNode;
+  trailingAt?: number;
+  emptyHero?: { title: string; subtitle: string; prompts: string[] };
+  placeholder?: string;
 };
 
 // Icons live here, not in the client-safe intent-router lib (icons are React
@@ -250,6 +264,10 @@ export function ChappiConversation({
   variant = 'page',
   headingLevel = 'h1',
   focusRequest = 0,
+  trailing = null,
+  trailingAt,
+  emptyHero,
+  placeholder,
 }: ChappiConversationProps) {
   const isPanel = variant === 'panel';
   const router = useRouter();
@@ -459,7 +477,7 @@ export function ChappiConversation({
     }
   }
 
-  const hasMessages = messages.length > 0;
+  const hasMessages = messages.length > 0 || Boolean(trailing);
 
   // With history on, a chat that was just opened (or restored, or this
   // surface just mounted over one) JUMPS to its end — smooth-scrolling
@@ -1333,6 +1351,7 @@ export function ChappiConversation({
     <form
       onSubmit={handleSubmit}
       className="w-full"
+      data-chappi-composer
     >
       {voiceDriver}
       <ChappiAttachmentTray
@@ -1379,7 +1398,7 @@ export function ChappiConversation({
               event.preventDefault();
               void attach.addFiles(pictures);
             }}
-            placeholder={isTranscribing ? 'Turning your voice into text…' : 'Ask UrgAns…'}
+            placeholder={isTranscribing ? 'Turning your voice into text…' : placeholder ?? 'Ask UrgAns…'}
             aria-label="Message UrgAns"
             disabled={isThinking || isTranscribing}
             // 16px below sm is deliberate: anything smaller makes iOS zoom the
@@ -1480,6 +1499,38 @@ export function ChappiConversation({
   // The compact dock/rail panel (`panel` variant) keeps bottom-anchoring the
   // pair instead — it has its own footer to sit just above, and a full-height
   // split would strand the question at the top of a ~380px box.
+  if (!hasMessages && emptyHero && !isPanel) {
+    // The swipe navigation's empty Main (URG-380): the question sits low, just
+    // above wrapped prompts and the composer. Chips wrap, never scroll sideways
+    // (the pager owns horizontal swipes).
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="min-h-0 flex-1" />
+        <div className="shrink-0 pb-4">
+          {headingLevel === 'h2' ? (
+            <h2 className="font-display text-[28px] leading-tight text-content-primary">{emptyHero.title}</h2>
+          ) : (
+            <h1 className="font-display text-[28px] leading-tight text-content-primary">{emptyHero.title}</h1>
+          )}
+          <p className="mb-[18px] mt-2 text-[14.5px] text-content-primary/55">{emptyHero.subtitle}</p>
+          <div className="flex flex-wrap gap-x-1.5 gap-y-[7px]">
+            {emptyHero.prompts.map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                onClick={() => sendUserTurn(prompt)}
+                className="motion-focus motion-press inline-flex h-9 items-center rounded-full border border-content-primary/[0.14] px-3 text-[13.5px] text-content-primary/[0.88] transition-colors hover:border-brand/60 hover:bg-brand/[0.08]"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="shrink-0">{inputForm}</div>
+      </div>
+    );
+  }
+
   if (!hasMessages) {
     // The chips row is shared by both branches below (`hidden lg:flex`): the
     // side rail also mounts variant="panel" at lg+ (ChappiSidePanel), so
@@ -1585,6 +1636,9 @@ export function ChappiConversation({
             auto-scroll below still follows the newest reply either way. */}
         <div className={`mx-auto flex w-full flex-col ${isPanel ? '' : 'max-w-[46rem] px-1'}`}>
           <Transcript
+            trailing={trailing}
+            trailingAt={trailingAt}
+            markMessages={Boolean(emptyHero)}
             messages={messages}
             isThinking={isThinking}
             previewText={previewText}
@@ -1636,6 +1690,12 @@ export function ChappiConversation({
 }
 
 type TranscriptProps = {
+  /** See ChappiConversationProps.trailing. */
+  trailing?: ReactNode;
+  trailingAt?: number;
+  /** Swipe navigation only (URG-380): draw data-message-id on each turn so a
+   *  ?m=<id> link can find it. Off everywhere else, so the DOM is unchanged. */
+  markMessages?: boolean;
   messages: ChappiMessage[];
   isThinking: boolean;
   /** The reply as it is being written; '' when nothing has streamed. */
@@ -1672,6 +1732,9 @@ type TranscriptProps = {
  * thumbs — the streamed-answer pattern, 2026-08-12). Streamlined and quiet.
  */
 function Transcript({
+  trailing = null,
+  trailingAt,
+  markMessages = false,
   messages,
   isThinking,
   previewText,
@@ -1693,9 +1756,11 @@ function Transcript({
 }: TranscriptProps) {
   return (
     <div className="space-y-5 pb-2">
-      {messages.map((message) =>
-        message.role === 'user' ? (
-          <div key={message.id} className="flex justify-end">
+      {trailing && trailingAt !== undefined && trailingAt <= 0 ? trailing : null}
+      {messages.map((message, index) => (
+        <Fragment key={message.id}>
+        {message.role === 'user' ? (
+          <div data-message-id={markMessages ? message.id : undefined} className="flex justify-end">
             <div className="flex max-w-[85%] flex-col items-end">
               {message.attachments?.length ? (
                 <ChappiMessageAttachments attachments={message.attachments} />
@@ -1711,14 +1776,17 @@ function Transcript({
           </div>
         ) : (
           <AssistantMessage
-            key={message.id}
+            messageId={markMessages ? message.id : undefined}
             content={message.content}
             reveal={message.id === revealMessageId}
             onRetry={message.id === retryMessageId ? onRetry : undefined}
             briefSections={message.briefSections}
           />
-        )
-      )}
+        )}
+        {trailing && trailingAt !== undefined && trailingAt === index + 1 ? trailing : null}
+        </Fragment>
+      ))}
+      {trailing && (trailingAt === undefined || trailingAt > messages.length) ? trailing : null}
 
       {/* Chappi IS the loading state here — he replaces the spinner rather
           than sitting beside one (mascot brief, 2026-08-30). He carries the
@@ -1831,11 +1899,15 @@ function Transcript({
  * lift per-message UI state anywhere shared.
  */
 function AssistantMessage({
+  messageId,
   content,
   reveal,
   onRetry,
   briefSections,
 }: {
+  /** Drawn as data-message-id on the turn's own box (no wrapper), so a
+   *  ?m=<id> link can find it (URG-380). */
+  messageId?: string;
   content: string;
   reveal: boolean;
   onRetry?: () => void;
@@ -1907,7 +1979,7 @@ function AssistantMessage({
     'motion-focus grid h-7 w-7 place-items-center rounded-md text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary';
 
   return (
-    <div className="max-w-[90%]">
+    <div className="max-w-[90%]" data-message-id={messageId}>
       <div className="whitespace-pre-wrap break-words rounded-2xl rounded-bl-md border border-stroke-default bg-bg-surface px-4 py-3 text-sm leading-7 text-content-primary">
         <ReplyText content={content} reveal={reveal} />
       </div>

@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.160.1",
+    title: "Swipe between Home, UrgAns and Artists (preview)",
+    tag: "App",
+    date: "October 19, 2026",
+    highlights: [
+      "On your phone, swipe left and right to move between Home, UrgAns and Artists. Your avatar opens your account and connections.",
+      "Early preview for a few accounts while we test it. Everyone else keeps the current navigation.",
+    ],
+  },
+  {
     version: "1.160.0",
     title: "Send to TRM from Distribute",
     tag: "Rollouts",

@@ -8,6 +8,8 @@ import { useOpenSettings } from '@/components/settings/useOpenSettings';
 import { NEXT_MOVE_COPY, type NextMove } from '@/lib/next-moves';
 import { HOME_FOUR_COPY, describeTaskLabel, describeTaskWhere, type OneThingItem } from '@/lib/home/home-four';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
+import { useSwipeNav } from '@/stores/useSwipeNavStore';
+import { carryCardToUrgAns } from '@/components/shell/swipe/handoff';
 
 const CARD = 'relative rounded-[20px] border border-stroke-default bg-bg-surface';
 /**
@@ -56,6 +58,7 @@ function Slide({
 }) {
   const { openTask } = useTaskUI();
   const goToMove = useGoToMove();
+  const swipe = useSwipeNav();
   const track = () =>
     captureAnalyticsEvent({ name: 'home_one_thing_clicked', properties: { kind: item.kind, position } });
 
@@ -99,6 +102,55 @@ function Slide({
   }
 
   const { move } = item;
+  if (swipe) {
+    // The swipe navigation (URG-380): the card's button acts, "Not now" puts it
+    // away, and a tap anywhere else on the card carries it into UrgAns' Main
+    // thread as the newest turn (handoff.ts). No dismiss cross: "Not now" is a
+    // button, never a swipe.
+    const carry = (event: React.MouseEvent<HTMLDivElement>) => {
+      if ((event.target as HTMLElement).closest('button, a')) return;
+      track();
+      carryCardToUrgAns(event.currentTarget, {
+        cardId: item.key,
+        title: move.title,
+        body: move.detail,
+        actionLabel: move.action,
+        onAction: () => goToMove(move),
+        onDismiss: () => onDismissMove(move),
+      });
+    };
+    return (
+      <div
+        className={`${CARD} ${GOLDEN} motion-press flex h-full cursor-pointer flex-col px-6 pb-5 pt-6 hover:bg-bg-elevated`}
+        data-next-move={move.rule}
+        data-home-card={item.key}
+        onClick={carry}
+      >
+        <h2 className="break-words font-display text-[1.45rem] leading-[1.25] text-content-primary">{move.title}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-content-secondary">{move.detail}</p>
+        <span className="flex-1" aria-hidden="true" />
+        <div className="mt-5 flex items-center gap-1.5">
+          <button
+            type="button"
+            className="motion-focus motion-press inline-flex h-10 items-center rounded-full bg-brand px-[18px] text-[15px] font-semibold text-content-inverse hover:bg-brand-hover"
+            onClick={() => {
+              track();
+              goToMove(move);
+            }}
+          >
+            {move.action}
+          </button>
+          <button
+            type="button"
+            onClick={() => onDismissMove(move)}
+            className="motion-focus inline-flex h-10 items-center rounded-full px-1.5 text-[15px] font-medium text-content-primary/55 hover:text-content-primary"
+          >
+            Not now
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={`${CARD} ${GOLDEN} flex h-full flex-col px-6 pb-5 pt-6`} data-next-move={move.rule}>
       <button
@@ -146,6 +198,9 @@ export function OneThing({
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
+  // The swipe navigation owns horizontal swipes (URG-380): the stack only moves
+  // by its dots there.
+  const swipe = useSwipeNav();
 
   if (items.length === 0) {
     return (
@@ -171,7 +226,9 @@ export function OneThing({
           const next = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
           if (next !== index) setIndex(next);
         }}
-        className="flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={`flex snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+          swipe ? 'touch-pan-y overflow-x-hidden' : 'overflow-x-auto overscroll-x-contain'
+        }`}
       >
         {items.map((item, i) => (
           <div

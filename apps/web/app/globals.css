@@ -3425,3 +3425,82 @@ html[data-release-focus='on'] nav a[href^='/dashboard']:not([href^='/dashboard/h
     animation: none !important;
   }
 }
+
+/* ── Swipe navigation (URG-380), only while :root[data-swipe-nav] is set ──────
+   SwipeFrame sets data-swipe-nav="tab" on Home/UrgAns/Artists and "page" on
+   pushed screens. With the swipe navigation off none of this matches. */
+
+/* One app-height column pinned to the visible viewport, so each page scrolls on
+   its own and the keyboard never scrolls the document. */
+.swipe-frame {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--app-visual-top, 0px);
+  height: var(--app-viewport-height, 100dvh);
+}
+
+/* The one box on Home and Artists sits where the old bottom bar was. */
+:root[data-swipe-nav] .swipe-dock {
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+@media (max-width: 1023px) {
+  :root[data-swipe-nav][data-keyboard-open='true'] .swipe-dock {
+    bottom: calc(0.5rem + var(--app-keyboard-inset, 0px));
+  }
+}
+@media (min-width: 1024px) {
+  :root[data-swipe-nav] .swipe-dock {
+    bottom: 1.5rem;
+  }
+}
+
+/* Each page clears the box under it. */
+.swipe-page {
+  padding-bottom: calc(var(--home-dock-height, 3.5rem) + 2.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Toasts and prompts clear the box (no bottom bar to sit above). */
+:root[data-swipe-nav='tab'][data-home-dock] .mobile-nav-raise,
+:root[data-swipe-nav='tab'][data-home-dock] .mobile-nav-raise-card {
+  bottom: calc(1.75rem + var(--home-dock-height, 3.5rem) + env(safe-area-inset-bottom, 0px));
+}
+:root[data-swipe-nav='page'] .mobile-nav-raise,
+:root[data-swipe-nav='page'] .mobile-nav-raise-card {
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* The Home card landing in Main: hidden while its copy flies (~330ms), then a
+   120ms crossfade in and a green ring (35%) fading over 600ms. */
+.swipe-turn-in {
+  animation:
+    swipe-turn-fade 120ms ease-out 330ms both,
+    swipe-turn-ring 600ms ease-out 330ms both;
+}
+@keyframes swipe-turn-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes swipe-turn-ring {
+  from { box-shadow: 0 0 0 3px rgb(127 217 154 / 0.35); }
+  to { box-shadow: 0 0 0 3px rgb(127 217 154 / 0); }
+}
+
+/* /dashboard/urgans?m=<id>: the turn rings for 1.2s. */
+.swipe-message-ring {
+  border-radius: 1rem;
+  animation: swipe-turn-ring 1200ms ease-out both;
+}
+
+/* After a card arrives the composer gets a soft focus ring; no keyboard. */
+.swipe-urgans[data-composer-ready] [data-chappi-composer] > div.rounded-full {
+  border-color: rgb(127 217 154 / 0.55);
+  box-shadow: 0 0 0 4px rgb(127 217 154 / 0.08);
+  transition: border-color 300ms, box-shadow 300ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swipe-turn-in {
+    animation: swipe-turn-ring 600ms ease-out both;
+  }
+}

@@ -127,6 +127,10 @@ type SidebarProps = {
    *  (WorkspaceFrame's workspaceUserName and showHelpMenu). */
   userName?: string;
   showHelp?: boolean;
+  /** False under the swipe navigation (URG-380): its top bar already holds
+   *  the avatar, so the foot keeps only the fold button and a page with no
+   *  menu draws no rail at all. */
+  account?: boolean;
 };
 
 /**
@@ -150,7 +154,7 @@ type SidebarProps = {
  * this file: a phone keeps Settings and the help rows in the bottom bar's
  * More sheet, unchanged.
  */
-export function Sidebar({ userName, showHelp = false }: SidebarProps = {}) {
+export function Sidebar({ userName, showHelp = false, account = true }: SidebarProps = {}) {
   const pathname = usePathname() ?? '/dashboard';
   const areas = useShellAreas();
   const menu = shellSideMenu(areas, pathname);
@@ -182,6 +186,10 @@ export function Sidebar({ userName, showHelp = false }: SidebarProps = {}) {
     mode === 'expanded'
       ? 'app-sidebar w-60 pl-4 pr-2'
       : 'w-16 items-center';
+
+  // The swipe navigation's pages with no menu: the avatar is in its top bar,
+  // so there is nothing left for the rail to hold.
+  if (!account && !menu) return null;
 
   return (
     <aside
@@ -270,6 +278,7 @@ export function Sidebar({ userName, showHelp = false }: SidebarProps = {}) {
           mode === 'expanded' ? 'items-center gap-1' : 'flex-col items-center gap-2'
         }`}
       >
+        {account ? (
         <WorkspaceMenu
           userName={userName}
           showHelp={showHelp}
@@ -277,6 +286,9 @@ export function Sidebar({ userName, showHelp = false }: SidebarProps = {}) {
           glideKey={toggles}
           className={mode === 'expanded' ? 'min-w-0 flex-1' : undefined}
         />
+        ) : mode === 'expanded' ? (
+          <span className="flex-1" aria-hidden="true" />
+        ) : null}
         {menu ? (
           <div ref={toggleRef} className="shrink-0">
             <SidebarToggle />

@@ -1,6 +1,7 @@
 'use client';
 
-import { Suspense, type ReactNode } from 'react';
+import { Suspense, useEffect, type ReactNode } from 'react';
+import { startSwipeNav, useSwipeNav } from '@/stores/useSwipeNavStore';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
@@ -59,6 +60,11 @@ import '@/stores/useSceneDataStore';
 const CommandBar = dynamic(() =>
   import('@/components/shell/CommandBar').then((m) => m.CommandBar)
 );
+// The swipe navigation (URG-380): its own chrome, fetched only for a person
+// it is switched on for, so everyone else downloads none of it.
+const SwipeFrame = dynamic(() =>
+  import('@/components/shell/swipe/SwipeFrame').then((m) => m.SwipeFrame)
+);
 const FloatingUrgAns = dynamic(() =>
   import('@/components/shell/FloatingUrgAns').then((m) => m.FloatingUrgAns)
 );
@@ -72,6 +78,10 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
   const isAuthLoading = useAuthStore((state) => state.isLoading);
   const user = useAuthStore((state) => state.user);
   const pathname = usePathname();
+  const swipeNav = useSwipeNav();
+  useEffect(() => {
+    startSwipeNav();
+  }, []);
 
   // The same rules AppShell used, narrowed to the routes this frame is mounted
   // on (/dashboard/* and /settings): a curator-only account has no workspace to
@@ -95,6 +105,17 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
     : pathname === HOME_PATH
       ? 'home-main-padding'
       : 'mobile-nav-clearance';
+
+  if (swipeNav && showWorkspaceChrome) {
+    return (
+      <>
+        {CHAT_HISTORY_ENABLED ? <ChappiHistoryBridge /> : null}
+        <SwipeFrame userName={workspaceUserName} showHelp={showHelpMenu}>
+          {children}
+        </SwipeFrame>
+      </>
+    );
+  }
 
   return (
     <>

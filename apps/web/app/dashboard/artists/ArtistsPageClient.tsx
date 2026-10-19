@@ -3,7 +3,11 @@
 import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Users } from '@/components/icons';
+import { ArrowRight, ChevronRight, Plus, Users } from '@/components/icons';
+import { bucketReleases } from '@/lib/artist-overview';
+import { parseReleaseDate } from '@/lib/recap-copy';
+import { ADD_ARTIST_HREF, CATALOGUE_HREF } from '@/lib/shell-nav';
+import { initialsFor } from '@/lib/swipe-nav';
 import { useAuthStore } from '@/lib/auth-store';
 import { artistSummary } from '@/lib/artist-overview';
 import { artistHref, describeArtistCounts, isArtistPageEnabled } from '@/lib/artist-page';
@@ -14,7 +18,7 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
 
-export default function ArtistsPageClient() {
+export default function ArtistsPageClient({ swipe = false }: { swipe?: boolean } = {}) {
   const router = useRouter();
   const authLoading = useAuthStore((state) => state.isLoading);
 
@@ -48,6 +52,8 @@ export default function ArtistsPageClient() {
   if (!ARTIST_PAGE_ENABLED) return null;
 
   const loading = (authLoading || !rosterLoaded) && artists.length === 0;
+
+  if (swipe) return <SwipeArtists loading={loading} artists={artists} releases={releases} />;
 
   return (
     <div>
@@ -128,6 +134,115 @@ export default function ArtistsPageClient() {
             ))}
           </ul>
         </div>
+      )}
+    </div>
+  );
+}
+
+/** "Drops Fri 6 Nov" within a fortnight, "Drops 4 Dec" further out. */
+function describeDrop(value: string | null, now: Date = new Date()): string | null {
+  const date = parseReleaseDate(value);
+  if (!date) return null;
+  const soon = date.getTime() - now.getTime() < 14 * 86_400_000;
+  const text = date.toLocaleDateString('en-GB', soon ? { weekday: 'short', day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short' });
+  return `Drops ${text.replace(',', '')}`;
+}
+
+type RosterArtist = { id: string; name: string; photoUrl?: string | null };
+type RosterRelease = { id: string; artistId: string; releaseDate: string | null; status: string; title: string };
+
+/**
+ * The Artists tab in the swipe navigation (URG-380, frame 5): a serif title with
+ * one quiet +, a count line whose "in motion" half opens the rollouts list, and
+ * one row per artist with their next release and when it drops. Rows, not a
+ * card, the same as Home's rows.
+ */
+function SwipeArtists({
+  loading,
+  artists,
+  releases,
+}: {
+  loading: boolean;
+  artists: RosterArtist[];
+  releases: RosterRelease[];
+}) {
+  const rows = artists.map((artist) => {
+    const mine = releases.filter((release) => release.artistId === artist.id);
+    const buckets = bucketReleases(mine);
+    const next = buckets.planned[0] ?? buckets.live[0] ?? null;
+    return { artist, next, drop: next ? describeDrop(next.releaseDate) : null, motion: buckets.planned.length + buckets.live.length };
+  });
+  const inMotion = rows.reduce((sum, row) => sum + row.motion, 0);
+
+  return (
+    <div className="pb-6">
+      <div className="mt-3 flex items-end justify-between">
+        <h1 className="font-display text-[40px] leading-[1.1] tracking-[-0.3px] text-content-primary">Artists</h1>
+        <Link
+          href={ADD_ARTIST_HREF}
+          aria-label="Add artist"
+          className="motion-focus motion-press mb-1 grid h-9 w-9 place-items-center rounded-full border border-content-primary/[0.14] text-content-primary/70 hover:text-content-primary"
+        >
+          <Plus className="h-[18px] w-[18px]" aria-hidden="true" />
+        </Link>
+      </div>
+      {loading ? (
+        <ul className="mt-[18px]" aria-busy="true">
+          {[0, 1, 2].map((key) => (
+            <li key={key} className="flex h-[76px] items-center gap-3.5 border-b border-content-primary/[0.07] px-1.5">
+              <span className="h-[42px] w-[42px] shrink-0 animate-pulse rounded-full bg-bg-hover" />
+              <span className="h-4 w-32 animate-pulse rounded bg-bg-hover" />
+            </li>
+          ))}
+        </ul>
+      ) : rows.length === 0 ? (
+        <div className="mt-6 rounded-[22px] border border-content-primary/[0.07] bg-bg-surface p-6">
+          <p className="font-display text-2xl text-content-primary">No artists yet.</p>
+          <p className="mt-2 text-[15px] text-content-primary/55">Add the first and their rollouts show here.</p>
+        </div>
+      ) : (
+        <>
+          <p className="mt-1.5 text-[15px] text-content-primary/55">
+            {rows.length} {rows.length === 1 ? 'artist' : 'artists'}
+            {inMotion > 0 ? (
+              <>
+                {' · '}
+                <Link href={CATALOGUE_HREF} className="motion-focus rounded hover:text-content-primary">
+                  {inMotion} {inMotion === 1 ? 'rollout' : 'rollouts'} in motion
+                </Link>
+              </>
+            ) : null}
+          </p>
+          <ul className="section-list-enter mt-[18px]">
+            {rows.map(({ artist, next, drop }) => (
+              <li key={artist.id} className="border-b border-content-primary/[0.07] last:border-b-0">
+                <Link
+                  href={artistHref(artist.id)}
+                  className="motion-focus flex min-h-[76px] items-center gap-3.5 px-1.5 py-2"
+                >
+                  {artist.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={artist.photoUrl} alt="" className="h-[42px] w-[42px] shrink-0 rounded-full object-cover" />
+                  ) : (
+                    <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-full bg-bg-elevated text-[13.5px] font-semibold text-content-primary/80" aria-hidden="true">
+                      {initialsFor(artist.name)}
+                    </span>
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[16.5px] text-content-primary">{artist.name}</span>
+                    <span className={`mt-0.5 block truncate text-sm ${next ? 'text-content-primary/75' : 'text-content-primary/40'}`}>
+                      {next ? next.title : 'No rollout planned'}
+                    </span>
+                  </span>
+                  {next ? (
+                    <span className="shrink-0 font-mono text-xs text-content-primary/50">{drop ?? 'Planning'}</span>
+                  ) : null}
+                  <ChevronRight className="h-[18px] w-[18px] shrink-0 text-content-primary/35" aria-hidden="true" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );

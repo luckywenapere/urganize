@@ -2,6 +2,7 @@
 
 import { Bell } from '@/components/icons';
 import { bellBadge } from '@/lib/notification-groups';
+import { useSwipeNav } from '@/stores/useSwipeNavStore';
 import { useNotificationsDoorStore } from '@/stores/useNotificationsDoorStore';
 
 /**
@@ -16,7 +17,9 @@ export function HomeBell() {
   const available = useNotificationsDoorStore((state) => state.available);
   const unread = useNotificationsDoorStore((state) => state.unread);
   const requestOpen = useNotificationsDoorStore((state) => state.requestOpen);
-  if (!available) return null;
+  // The swipe navigation has no bell (URG-380): notices are a turn in UrgAns.
+  const swipe = useSwipeNav();
+  if (!available || swipe) return null;
   const badge = bellBadge(unread);
 
   return (

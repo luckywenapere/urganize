@@ -36,7 +36,7 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
  * Making a rollout goes through RolloutCreateFlow, the same flow the chat page
  * uses, so the conversation's "New rollout" behaves the same in both places.
  */
-export default function HomePageClient() {
+export default function HomePageClient({ swipe = false }: { swipe?: boolean } = {}) {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
   const { data: home, isLoading: homeLoading, error: homeError, load: loadHome } = useHomeStore();
@@ -107,7 +107,11 @@ export default function HomePageClient() {
 
   return (
     <>
-      {isDesktop && CHAPPI_ENABLED ? (
+      {swipe ? (
+        // The swipe navigation (URG-380): Home is one column on every width;
+        // the conversation lives on the UrgAns tab and the frame owns the box.
+        <div className="home-scene-container swipe-home pb-6 pt-1">{view}</div>
+      ) : isDesktop && CHAPPI_ENABLED ? (
         <HomeDesktopSplit onNewRelease={openCreate}>{view}</HomeDesktopSplit>
       ) : (
         <>

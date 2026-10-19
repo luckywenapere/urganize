@@ -112,6 +112,14 @@ const nextConfig = {
   // the feature was only hidden.
   async redirects() {
     return [
+      // Short links for the three tabs (URG-380). Harmless with the swipe
+      // navigation off: they land on the same pages.
+      { source: '/home', destination: '/dashboard/home', permanent: false },
+      { source: '/urgans', destination: '/dashboard/urgans', permanent: false },
+      { source: '/urgans/s/:id', destination: '/dashboard/urgans?s=:id', permanent: false },
+      { source: '/urgans/m/:id', destination: '/dashboard/urgans?m=:id', permanent: false },
+      { source: '/artists', destination: '/dashboard/artists', permanent: false },
+      { source: '/artists/:id', destination: '/dashboard/artists/:id', permanent: false },
       { source: '/dashboard/shows', destination: '/dashboard', permanent: false },
       { source: '/dashboard/shows/:path*', destination: '/dashboard', permanent: false },
       // The standalone press kit is hidden (Oct 17, 2026, founder approved
