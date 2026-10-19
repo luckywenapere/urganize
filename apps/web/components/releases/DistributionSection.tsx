@@ -12,6 +12,11 @@ import { FanPaymentsCard } from './FanPaymentsCard';
 import { HandoffSection } from './HandoffSection';
 import { PartnerLogo } from './PartnerLogo';
 import { distributionAuthHeaders, useDistributionStatus } from './useDistributionStatus';
+import { TrmDistribute } from './trm/TrmDistribute';
+
+/** Send to TRM (URG-392) ships ON. NEXT_PUBLIC_FEATURE_TRM_SEND=false is the
+ *  kill switch: the step falls back to the handoff + partner cards below. */
+const TRM_SEND_ON = process.env.NEXT_PUBLIC_FEATURE_TRM_SEND !== 'false';
 
 type DistributionSectionProps = {
   release: Pick<Release, 'id' | 'title' | 'artistName' | 'releaseDate'>;
@@ -57,7 +62,17 @@ const formatDay = (iso: string): string => {
  * partner cards. It loads and fails on its own (HandoffSection), so a slow
  * handoff never holds the partner cards back, and the other way round.
  */
-export function DistributionSection({ release, onOpenDetails, onChangeArtist }: DistributionSectionProps) {
+export function DistributionSection(props: DistributionSectionProps) {
+  if (TRM_SEND_ON) {
+    return (
+      <TrmDistribute releaseId={props.release.id} onOpenDetails={props.onOpenDetails} onChangeArtist={props.onChangeArtist} />
+    );
+  }
+  return <HandoffDistributionSection {...props} />;
+}
+
+/** The step as it was before Send to TRM: the handoff rows and partner cards. */
+function HandoffDistributionSection({ release, onOpenDetails, onChangeArtist }: DistributionSectionProps) {
   const { data, setData, loadError, reload } = useDistributionStatus(release.id);
 
   const order = useCallback(

@@ -175,7 +175,7 @@ const toTaskState = (row: TaskRow | undefined): HandoffTaskState | null =>
       }
     : null;
 
-type LoadedHandoff = {
+export type LoadedHandoff = {
   release: ReleaseRow;
   workspaceId: string | null;
   payload: HandoffPayload;

@@ -41,6 +41,19 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.160.0",
+    title: "Send to TRM from Distribute",
+    tag: "Rollouts",
+    date: "October 19, 2026",
+    highlights: [
+      "Distribute now says in one line whether a single is ready for stores, and lists exactly what TRM still needs, each with its owner and a Fix button.",
+      "Send to TRM delivers the release from Urganize: confirm the date and the artist's TRM email, add the master and it goes straight to TRM. Urganize never keeps the audio.",
+      "After sending, a live status follows it from Sent to Checking, Accepted, Delivering and In stores. If TRM sends it back, each reason becomes a fix task on the plan.",
+      "Rights and policies come pre-filled with sensible defaults you can change in one place.",
+      "The send uses the artist's own TRM plan, so the artist needs a TRM account. If they don't have one yet, Distribute gives you their sign-up link and checks again when they're in.",
+    ],
+  },
+  {
     version: "1.159.1",
     tag: "Rollouts",
     date: "October 19, 2026",

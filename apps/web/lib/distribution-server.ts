@@ -196,7 +196,7 @@ export async function loadDistributionPayload(
   return { ...check, rejections, lastHandoffAt };
 }
 
-async function workspaceIdOf(admin: SupabaseClient, ownerUserId: string): Promise<string | null> {
+export async function workspaceIdOf(admin: SupabaseClient, ownerUserId: string): Promise<string | null> {
   try {
     const { data } = await admin.from('workspaces').select('id').eq('owner_id', ownerUserId).maybeSingle();
     return (data as { id?: string } | null)?.id ?? null;

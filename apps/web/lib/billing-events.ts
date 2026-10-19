@@ -153,6 +153,15 @@ export const BILLING_EVENT_TYPES = [
    *  Distribute step. `metadata` carries the release id. The founder compares
    *  the count with the partner's monthly statement. */
   'distribution_handoff',
+  /** Send to TRM (URG-392). `metadata` carries the release id. Interest: a
+   *  team pressed Send while sending is still gated to the test account.
+   *  Started: the draft was created at TRM. Submitted / rejected / published:
+   *  the real deliveries the founder reports on. */
+  'trm_send_interest',
+  'trm_send_started',
+  'trm_submitted',
+  'trm_rejected',
+  'trm_published',
   /** A team was tagged to a referral partner, by their signup link or by hand.
    *  `metadata` carries the partner id, the code as entered and which of the two
    *  it was. The tag itself is team_referrals; this is the audit trail. */
