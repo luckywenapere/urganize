@@ -3,4 +3,12 @@
 // login after an update. This re-export keeps every homepage import site
 // stable; the package remains the single source of truth for the product
 // version (see CLAUDE.md → Versioning).
-export { changelog, CURRENT_VERSION, type Release } from '@urganize/changelog';
+export {
+  changelog,
+  CURRENT_VERSION,
+  publicChangelog,
+  RELEASE_TAGS,
+  releaseTag,
+  type Release,
+  type ReleaseTag,
+} from '@urganize/changelog';

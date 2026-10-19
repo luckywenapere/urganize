@@ -963,3 +963,156 @@ html[data-marketing-theme="dark"] .page-sky {
     --page-sky-glow-w: 46%;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Changelog (2026-10-19, URG-388): month-grouped timeline, PostHog-style.
+   Markup in app/changelog/page.tsx. The rail is one hairline down the left
+   of each month's entries; a feature entry gets an accent dot, the folded
+   "smaller improvements" group a hollow one. Meta (tag · date · version) is
+   quiet Space Mono so the title and its one line of benefit lead.
+   ------------------------------------------------------------------------ */
+.changelog-rail {
+  position: relative;
+}
+
+.changelog-rail::before {
+  content: "";
+  position: absolute;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  left: 3px;
+  width: 1px;
+  background: var(--marketing-border-strong);
+}
+
+.changelog-dot {
+  position: absolute;
+  top: 0.32rem;
+  left: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: var(--marketing-accent);
+}
+
+.changelog-dot-small {
+  top: 0.45rem;
+  background: var(--marketing-bg);
+  box-shadow: inset 0 0 0 1px var(--marketing-text-subtle);
+}
+
+.changelog-meta {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--marketing-text-subtle);
+}
+
+.changelog-more {
+  position: relative;
+  padding-left: 0.9rem;
+}
+
+.changelog-more::before {
+  content: "";
+  position: absolute;
+  top: 0.68em;
+  left: 0;
+  width: 0.35rem;
+  height: 1px;
+  background: var(--marketing-text-subtle);
+}
+
+.changelog-summary {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.15rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.9375rem;
+  color: var(--marketing-text-muted);
+}
+
+.changelog-summary::-webkit-details-marker {
+  display: none;
+}
+
+.changelog-summary::after {
+  content: "+";
+  margin-left: 0.5rem;
+  font-family: var(--font-mono);
+  color: var(--marketing-text-subtle);
+}
+
+.changelog-smaller[open] > .changelog-summary::after {
+  content: "\2212";
+}
+
+.changelog-summary:hover {
+  color: var(--marketing-text);
+}
+
+.changelog-smaller .changelog-dot-small {
+  top: 1.15rem;
+}
+
+.changelog-count::before {
+  content: attr(data-n-all);
+}
+
+.changelog-chips {
+  scrollbar-width: none;
+}
+
+.changelog-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.changelog-extra-summary {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--marketing-text-subtle);
+}
+
+.changelog-extra-summary::-webkit-details-marker {
+  display: none;
+}
+
+.changelog-extra-summary::after {
+  content: "+";
+  margin-left: 0.4rem;
+}
+
+.changelog-extra[open] > .changelog-extra-summary::after {
+  content: "\2212";
+}
+
+.changelog-extra-summary:hover,
+.changelog-summary:hover {
+  color: var(--marketing-text);
+}
+
+.changelog-older > .changelog-summary {
+  margin-top: 0.1rem;
+}
+
+.changelog-older[open] > .changelog-summary::after {
+  content: "\2212";
+}
+
+/* On a phone the chip row scrolls sideways; the fade says there is more. */
+@media (max-width: 639px) {
+  .changelog-chips {
+    -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 2rem), transparent 100%);
+    mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 2rem), transparent 100%);
+  }
+}
