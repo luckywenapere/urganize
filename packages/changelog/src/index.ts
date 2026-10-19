@@ -4333,7 +4333,7 @@ export const changelog: Release[] = [
     date: "July 23, 2026",
     highlights: [
       "Creating a release now starts with a choice: begin from the proven rollout plan (recommended) or from a blank release you build up yourself — two clear cards, pick one, then name and date it.",
-      "Settings gains a Back button that returns you to exactly where you came from — the release you were on, your scoped workspace, or Chappi.",
+      "Settings gains a Back button that returns you to exactly where you came from — the release you were on, your scoped workspace, or UrgAns.",
     ],
   },
   {
@@ -4457,7 +4457,7 @@ export const changelog: Release[] = [
       "The app now remembers what it showed you — your catalog, activities, and settings paint instantly on every visit, like a proper mobile app, refreshing quietly in the background.",
       "The mobile catalog is redesigned: release cards are centered at a comfortable size instead of edge to edge, and a single release fits your screen with no scrolling.",
       "The motion tracker now shows on mobile too when you open a release.",
-      "Chappi on mobile behaves like a real chat app — the page stays put, the conversation scrolls on its own, the message box stays pinned, and tapping it no longer zooms the screen.",
+      "UrgAns on mobile behaves like a real chat app — the page stays put, the conversation scrolls on its own, the message box stays pinned, and tapping it no longer zooms the screen.",
       "The account button in the top bar is now a clean profile icon instead of your initials, drawn in the house style.",
     ],
   },
@@ -4786,7 +4786,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "July 13, 2026",
     highlights: [
-      "A conversational AI assistant (first called Chappi, now UrgAns) is built into the dashboard as the front door: ask about your releases and take actions in plain language. (Rolling out behind a flag; falls back to a command bar until fully switched on.)",
+      "UrgAns, a conversational AI assistant, is built into the dashboard as the front door: ask about your releases and take actions in plain language. (Rolling out behind a flag; falls back to a command bar until fully switched on.)",
       "Added light mode across the app, with automatic system-preference detection and a manual toggle.",
       "Faster load times — cut the app's initial load size by over 20%.",
       "Task completion is now instant and reliable, with no more silent failures when checking off a task.",
