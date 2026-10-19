@@ -36,9 +36,12 @@ export function TrialButton({
   location,
   size = "md",
   className = "",
+  label = "Try Urganize",
 }: {
   location: TrialButtonLocation;
   size?: "md" | "lg";
+  /** Founder call 2026-10-19: /features hero reads "Join waitlist". */
+  label?: string;
   className?: string;
 }) {
   const sizing =
@@ -52,7 +55,7 @@ export function TrialButton({
       data-location={location}
       className={`inline-flex cursor-pointer touch-manipulation items-center justify-center rounded-full bg-[var(--marketing-primary)] font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] transition-colors hover:bg-[var(--marketing-primary-hover)] ${sizing} ${className}`.trim()}
     >
-      Try Urganize
+      {label}
     </a>
   );
 }

@@ -111,9 +111,9 @@ export default function FeaturesPage() {
               Features
             </p>
             <h1 className="mt-8 text-balance text-[2.25rem] leading-[1.06] text-[var(--marketing-text)] sm:text-[3.6rem]">
-              Everything a rollout needs.{" "}
+              Everything your release needs.{" "}
               <span className="text-[var(--marketing-accent)]">
-                Nothing it doesn&apos;t.
+                None of the chasing.
               </span>
             </h1>
             {/* The 2026-08-19 brief banned container metaphors ("live in one
@@ -122,8 +122,8 @@ export default function FeaturesPage() {
                 banned in anything a person reads, and "from one place" is the
                 product's own promise, so it is the sanctioned phrasing now. */}
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
-              Urganize runs the plan, the work and the status for every
-              rollout from one place.
+              The plan, who&rsquo;s on what and what&rsquo;s late, for every
+              artist on your roster.
             </p>
             {/* CTA moved into the hero (2026-08-05, URG-218): the page
                 previously had no ask until the very bottom, ~7 screens
@@ -134,7 +134,7 @@ export default function FeaturesPage() {
                 TrialButton the homepage mounts; the waitlist survives as a
                 disclosure under the final CTA. */}
             <div className="mt-8 flex w-full flex-col items-center gap-4">
-              <TrialButton location="features_hero" size="lg" className="w-full sm:w-auto" />
+              <TrialButton location="features_hero" size="lg" label="Join waitlist" className="w-full sm:w-auto" />
               <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
                 We are letting teams in from the waitlist.
               </p>
