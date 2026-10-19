@@ -51,9 +51,9 @@ export function HeroSection() {
           Every release, <span className="text-[var(--marketing-accent)]">on plan.</span>
         </h1>
         <p className="hero-fade-in hero-delay-2 mx-auto mt-6 max-w-[40rem] text-[1.05rem] leading-8 text-[var(--marketing-text-muted)] sm:text-[1.25rem] sm:leading-9">
-          Add a release. Get the plan.
+          Add a release and everyone knows their job till drop day.
           <br />
-          Your team knows what to do and when.
+          You stop being the team’s reminder app.
         </p>
 
         {/* z-[60] keeps the form above the hero-fade-in transform stack and
