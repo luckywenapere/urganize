@@ -270,7 +270,7 @@ export function WaitlistForm({
 
       <div className="flex flex-col items-center gap-3">
         <button type="submit" disabled={isSubmitting} className={actionClassName}>
-          {isSubmitting ? "Joining…" : "Join the waitlist"}
+          {isSubmitting ? "Joining…" : "Join waitlist"}
         </button>
         <p className="font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
           {email.toUpperCase()}

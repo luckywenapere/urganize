@@ -61,8 +61,8 @@ export function HeroSection() {
         <div className="hero-fade-in hero-delay-3 relative z-[60] mt-9 flex w-full flex-col items-center gap-5">
           <WaitlistForm
             source="homepage_hero"
-            buttonLabel="Join the waitlist"
-            hint="IN PUBLIC BETA"
+            buttonLabel="Join waitlist"
+            hint="PRIVATE BETA · INVITES GO OUT WEEKLY"
             accent
           />
           <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">

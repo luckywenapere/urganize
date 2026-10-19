@@ -35,7 +35,7 @@ export function WaitlistDisclosure({
           onClick={() => setOpen(true)}
           className="cursor-pointer text-sm text-[var(--marketing-text-muted)] underline decoration-[color:var(--marketing-text-subtle)] underline-offset-4 transition-colors hover:text-[var(--marketing-text)] hover:decoration-[color:var(--marketing-text)]"
         >
-          Not ready yet? Join the waitlist
+          Not ready yet? Join waitlist
         </button>
       )}
     </div>

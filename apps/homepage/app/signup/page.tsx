@@ -39,7 +39,7 @@ export default function SignupPage() {
               Join the waitlist
             </h1>
             <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
-              Add your first rollout and get a plan built from a real playbook,
+              Add your first release and get a plan built from a real playbook,
               not a blank board you have to fill in yourself.
             </p>
 
@@ -48,7 +48,7 @@ export default function SignupPage() {
                 href={WAITLIST_URL}
                 className="relative z-[60] inline-flex touch-manipulation items-center justify-center rounded-full bg-[var(--marketing-primary)] px-7 py-3.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] pointer-events-auto hover:bg-[var(--marketing-primary-hover)] sm:text-base"
               >
-                Join the waitlist
+                Join waitlist
               </a>
               <p className="mt-4 text-sm text-[var(--marketing-text-subtle)]">
                 We are letting teams in from the waitlist.

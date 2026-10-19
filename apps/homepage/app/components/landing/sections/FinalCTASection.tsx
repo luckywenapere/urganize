@@ -50,7 +50,7 @@ export function FinalCTASection() {
             <div className="w-full">
               <WaitlistForm
                 source="homepage_final_cta"
-                buttonLabel="Join the waitlist"
+                buttonLabel="Join waitlist"
                 hint={null}
                 accent
               />
