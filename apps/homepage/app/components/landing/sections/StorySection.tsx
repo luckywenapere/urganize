@@ -69,8 +69,8 @@ const STEPS: readonly {
   alt: string;
 }[] = [
   {
-    title: "Add a release. Get the plan.",
-    line: "Every week mapped till drop day. No last-minute rush.",
+    title: "Stop planning releases in your head.",
+    line: "Add a release and every week till drop day is mapped. Nothing forgotten, no last-minute rush.",
     shot: PRODUCT_SHOTS.scopedRelease,
     phoneCrop: PHONE_CROPS.scopedRelease,
     alt: "A rollout open in Urganize: the activity list grouped by when it is due, with a progress bar counting finished activities against the plan.",
