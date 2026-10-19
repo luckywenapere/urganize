@@ -60,7 +60,7 @@ const SPRING = '#7FD99A';
 // line.
 const MAIN_LINE = 'Every release, on plan.';
 const ACCENT = 'on plan.';
-const SUB_LINE = 'Add a release. Get the plan. Your team knows what to do and when.';
+const SUB_LINE = 'Everyone knows their job till drop day. You stop being the reminder app.';
 
 const font = (file) => readFileSync(join(WEB, 'assets', 'fonts', file));
 const logo = readFileSync(join(HOMEPAGE, 'public', 'images', 'urganize-logo.png'));
@@ -124,9 +124,13 @@ const card = h(
           lineHeight: 1.4,
           // Cream, stepped back so the main line stays the first thing read.
           color: 'rgba(245, 240, 230, 0.72)',
+          display: 'flex',
+          flexDirection: 'column',
         },
       },
-      SUB_LINE,
+      // One sentence per line (2026-10-19): left to wrap, the promise line
+      // stranded its last word alone on a second line.
+      ...SUB_LINE.split(/(?<=\.)\s+/).map((sentence) => h('span', null, sentence)),
     ),
   ),
 );

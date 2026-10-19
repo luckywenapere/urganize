@@ -34,7 +34,7 @@ export const CORE_LINE = `Urganize is ${CORE_CLAUSE}.`;
 
 export const SHORT_LINE = 'Every release, on plan.';
 
-export const PROMISE_LINE = 'Add a release. Get the plan. Your team knows what to do and when.';
+export const PROMISE_LINE = 'Everyone knows their job till drop day. You stop being the reminder app.';
 
 export const AUDIENCE = ['artists', 'managers', 'labels'] as const;
 

@@ -58,7 +58,7 @@ export const LANDING_DESCRIPTION = CANONICAL_DESCRIPTION;
 // Bump this string every time public/opengraph-image.png changes so the
 // URL is new to every platform and the very next fetch pulls fresh bytes,
 // instead of depending on a manual re-scrape request or an unknown TTL.
-const SHARE_IMAGE_VERSION = "2026-10-17-on-plan";
+const SHARE_IMAGE_VERSION = "2026-10-19-reminder-app";
 
 const SHARE_IMAGE = {
   url: `${SITE_URL}/opengraph-image.png?v=${SHARE_IMAGE_VERSION}`,
@@ -74,7 +74,8 @@ const SHARE_IMAGE = {
   // and has to be bumped by hand whenever the card is regenerated.
   //
   // The generator is `apps/homepage/scripts/generate-og-image.mjs`.
-  // Regenerated 2026-10-17 for "Every release, on plan." (URG-334); on
+  // Regenerated 2026-10-19 for the new promise line (URG-400, founder approved);
+  // 2026-10-17 for "Every release, on plan." (URG-334); on
   // 2026-09-24 for "Everything after the music"; twice on
   // 2026-09-11 for the widened category and the audience narrowing; on
   // 2026-09-09 for the release-to-rollout rename and before that for the

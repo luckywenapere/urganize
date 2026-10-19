@@ -78,7 +78,7 @@ export const SHORT_LINE = 'Every release, on plan.';
  * as A, B and C. The share card's second line and the homepage subhead.
  * Founder-approved with the homepage v2 hero on 2026-10-17 (URG-334).
  */
-export const PROMISE_LINE = 'Add a release. Get the plan. Your team knows what to do and when.';
+export const PROMISE_LINE = 'Everyone knows their job till drop day. You stop being the reminder app.';
 
 /**
  * Who it is for, in the fixed order artists, managers, labels.

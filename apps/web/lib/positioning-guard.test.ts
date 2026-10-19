@@ -247,7 +247,7 @@ describe('positioning', () => {
     // on time" replaced "do everything after the music is made".
     expect(CORE_LINE).toBe('Urganize is where music teams plan every release and deliver it on time.');
     expect(SHORT_LINE).toBe('Every release, on plan.');
-    expect(PROMISE_LINE).toBe('Add a release. Get the plan. Your team knows what to do and when.');
+    expect(PROMISE_LINE).toBe('Everyone knows their job till drop day. You stop being the reminder app.');
     // 2026-10-18 (founder approved): the long description leads with artist
     // managers, the buyer, and names them as its own last sentence.
     expect(CANONICAL_DESCRIPTION).toBe(
