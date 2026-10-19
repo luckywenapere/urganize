@@ -277,8 +277,8 @@ export const changelog: Release[] = [
     tag: "Account",
     date: "October 17, 2026",
     highlights: [
-      "New prices. Solo is ₦7,500 a month and now has room for 2 people, the artist and their manager. Manager is ₦25,000 a month for up to 3 artists and 5 people, and it is the plan we recommend. Label is ₦60,000 a month.",
-      "Yearly is still 10 months for 12: ₦75,000, ₦250,000 and ₦600,000. If you already pay, your price does not change.",
+      "Plans got a new price. Solo now has room for 2 people, the artist and their manager. Manager covers up to 3 artists and 5 people, and it is the plan we recommend.",
+      "Yearly is still 10 months for 12. If you already pay, your price does not change.",
     ],
   },
   {
@@ -358,7 +358,7 @@ export const changelog: Release[] = [
     tag: "Account",
     date: "October 17, 2026",
     highlights: [
-      "The Manager plan is now ₦35,000 a month, or ₦350,000 a year. Solo and Label stay the same.",
+      "The Manager plan has a new monthly and yearly price. Solo and Label stay the same.",
     ],
   },
   {
@@ -699,7 +699,7 @@ export const changelog: Release[] = [
     tag: "App",
     date: "October 15, 2026",
     highlights: [
-      "Under the hood: the app's servers now run in Europe, next to its database, so every page and action waits less on the network.",
+      "Under the hood: the app's servers now run right next to its database, so every page and action waits less on the network.",
     ],
   },
   {
@@ -762,7 +762,7 @@ export const changelog: Release[] = [
     date: "October 15, 2026",
     highlights: [
       "A new look for your public page: your photo, name and tick, what you do and where, one line about you, the artists you manage, your releases and their cover art, with Reach and Save for anyone who wants to work with you.",
-      "Share to Story: your page as a tall card with your face, name, artists and link, ready for Instagram or a WhatsApp status.",
+      "Share to Story: your page as a tall card with your face, name, artists and link, ready to post as a story or status.",
       "Claiming your page takes four quick screens: prove it's you with a code sent to your work email, add a photo, a line about you and your artists, then share it.",
     ],
   },
@@ -1332,7 +1332,7 @@ export const changelog: Release[] = [
     tag: "Pitching",
     date: "October 11, 2026",
     highlights: [
-      "Find promo inside any rollout: radio stations in Lagos, Abuja and the UK, music blogs, X communities and SoundCloud networks. Each one shows how to submit, who to contact, the lead time and whether it is free. Add one to your plan and it becomes an activity dated ahead of release day.",
+      "Find promo inside any rollout: radio stations, music blogs and online music communities. Each one shows how to submit, who to contact, the lead time and whether it is free. Add one to your plan and it becomes an activity dated ahead of release day.",
       "Know a station, blog or community we are missing? Suggest it from the same screen. We check every suggestion before it is listed.",
       "When UrgAns builds your plan, it names a few promo channels that fit your song, one tap from the full list.",
     ],
@@ -1450,7 +1450,7 @@ export const changelog: Release[] = [
       "On a phone, notifications, your account and the artist you are looking at are now under More.",
       "The rollout menu on a phone opens as a full sheet, so you can reach every option.",
       "Rollout chat works like a messenger: the message box stays at the bottom, above the keyboard, and new messages are always in view.",
-      "The Pitch screen is tidier, and the link box now asks for your untitled, SoundCloud or other private link.",
+      "The Pitch screen is tidier, and the link box now asks for your private listening link.",
     ],
   },
   {
@@ -1486,8 +1486,8 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "October 11, 2026",
     highlights: [
-      "Rollout plans and bigger UrgAns questions now run on GPT-6.1 Sol, a stronger model that also costs fewer credits per plan.",
-      "Speaking to UrgAns now uses OpenAI's newest speech-to-text model, so what you say lands in the message box more accurately.",
+      "Rollout plans and bigger UrgAns questions now run on a stronger AI model that also costs fewer credits per plan.",
+      "Speaking to UrgAns now uses newer speech-to-text, so what you say lands in the message box more accurately.",
       "Talk to UrgAns: start a voice call from the Talk button and UrgAns answers out loud, and can make plans, add tasks and move dates after you confirm. Calls cost 2 credits a minute.",
     ],
   },
@@ -1729,7 +1729,7 @@ export const changelog: Release[] = [
     tag: "App",
     date: "October 9, 2026",
     highlights: [
-      "Home counts the days to a release right in the Americas too. It used to say a day too early for anyone west of Africa.",
+      "Home counts the days to a release right wherever you are. It used to say a day too early in some time zones.",
       "The week of your rollout plan on Home now matches the day you picked.",
     ],
   },
@@ -1880,7 +1880,7 @@ export const changelog: Release[] = [
     date: "October 9, 2026",
     highlights: [
       "You can now log what you pay for on each rollout. Open Spend, add the cost, and see the total.",
-      "Download the list as a spreadsheet that opens in Excel or Google Sheets.",
+      "Download the list as a spreadsheet.",
       "Thirty days after release day, Urganize asks what the rollout paid back, and shows your answer on the rollout.",
       "Managers also see where the money went, by type, on Home.",
     ],
@@ -2481,7 +2481,7 @@ export const changelog: Release[] = [
     tag: "Account",
     date: "September 9, 2026",
     highlights: [
-      "New prices, and every plan is now paid once a year. Solo is ₦5,000, Manager is ₦22,000 and Label is ₦50,000.",
+      "New prices, and every plan is now paid once a year.",
       "There is no monthly option any more, so there is one price to read on every plan.",
       "Already paying? Your price stays exactly where it is. Ask us if you want to move to a new one.",
       "UrgAns suggests a few things to ask it when you open it, so there is somewhere to start.",
@@ -3055,7 +3055,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "August 25, 2026",
     highlights: [
-      "Connect Claude, ChatGPT or another AI app to Urganize and ask it about your releases. It can see your releases, activities and notes, and add or change them — it cannot delete anything.",
+      "Connect the AI app you already use to Urganize and ask it about your releases. It can see your releases, activities and notes, and add or change them — it cannot delete anything.",
       "You decide which apps get in, and you can cut any of them off at any time from Settings.",
     ],
   },
@@ -3190,7 +3190,7 @@ export const changelog: Release[] = [
     tag: "Team",
     date: "August 21, 2026",
     highlights: [
-      "Teammate invites now arrive by email. Invite someone with their address from Settings or UrgAns and the join link lands in their inbox — the copyable link is still there as a backup for sharing over WhatsApp or chat.",
+      "Teammate invites now arrive by email. Invite someone with their address from Settings or UrgAns and the join link lands in their inbox — the copyable link is still there as a backup for sharing in a chat.",
     ],
   },
   {
@@ -3227,7 +3227,7 @@ export const changelog: Release[] = [
     tag: "Team",
     date: "August 16, 2026",
     highlights: [
-      "Creating a release now hands you a login to send to your team. You don't have to go looking for it — the moment the release is set up, the link is there to copy straight into WhatsApp or an email.",
+      "Creating a release now hands you a login to send to your team. You don't have to go looking for it — the moment the release is set up, the link is there to copy straight into a message or an email.",
       "A new Team logins section in Settings lets you create as many logins as you need, one per person, and label each one so you know who you sent it to.",
       "Nobody has to be sent a password. Whoever opens your link chooses their own on the way in, so there's never a password sitting in a chat you'd have to go back and delete.",
       "You can revoke any login you've handed out. It stops working immediately, and anyone who already joined keeps their access.",
@@ -3375,7 +3375,7 @@ export const changelog: Release[] = [
     date: "August 13, 2026",
     highlights: [
       "UrgAns replies now stream in word by word instead of appearing all at once, so you can start reading the moment the first words land.",
-      "Every reply carries a quiet row of actions underneath: copy it in one tap (handy for pasting into WhatsApp), regenerate the last answer, or rate it with a thumbs up or down so we know what's working.",
+      "Every reply carries a quiet row of actions underneath: copy it in one tap (handy for pasting into a chat), regenerate the last answer, or rate it with a thumbs up or down so we know what's working.",
       "Suggested follow-up questions now sit in their own titled list under the answer, each one a full-width row you can tap to ask — clearer than the small floating buttons they used to be.",
     ],
   },
@@ -4424,7 +4424,7 @@ export const changelog: Release[] = [
       "Event milestones — listening parties, video shoots, and release day appear as dated points on the release timeline.",
       "Consolidated everything onto one workspace screen: releases and their tasks together, instead of separate pages.",
       "Real-time notifications with a notification bell.",
-      "Recurring monthly and annual subscriptions plus a Label plan, with Naira and USD billing.",
+      "Recurring monthly and annual subscriptions plus a Label plan, with billing in local and international currency.",
       "28-day free trial (no card required) for every new account.",
       "Google sign-in alongside email and password, and end-to-end team invites.",
       "Workspace logo that automatically fills in as placeholder cover art for releases without their own artwork.",
