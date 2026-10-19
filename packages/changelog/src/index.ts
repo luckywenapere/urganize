@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.160.8",
+    tag: "App",
+    date: "October 19, 2026",
+    listed: false,
+    highlights: [
+      "Urganize's link previews now describe it the new way: everyone knows their job till drop day, so you stop being the team's reminder app.",
+    ],
+  },
+  {
     version: "1.160.7",
     tag: "App",
     date: "October 19, 2026",

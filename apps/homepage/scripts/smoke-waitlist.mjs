@@ -384,7 +384,7 @@ async function assertFormReachesStepTwo(client, label) {
   await client.send("Input.insertText", { text: smokeEmail });
   await client.clickExpression(
     clickTargetExpression(
-      `[...document.querySelectorAll('#waitlist button')].find((item) => ["Join now", "Join the waitlist"].includes(item.innerText.trim()))`,
+      `[...document.querySelectorAll('#waitlist button')].find((item) => ["Join waitlist", "Join now", "Join the waitlist"].includes(item.innerText.trim()))`,
     ),
     `${label}: "Join now"`,
   );

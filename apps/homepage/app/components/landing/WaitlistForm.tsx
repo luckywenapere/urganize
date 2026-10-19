@@ -77,8 +77,10 @@ function collectMetadata(source: string) {
 // page passes only `source` and renders exactly as before.
 export function WaitlistForm({
   source,
-  buttonLabel = "Join now",
-  hint = "JOIN THE WAITLIST",
+  // Defaults since 2026-10-19 (founder call): "Join waitlist" and no hint
+  // line (the old "JOIN THE WAITLIST" label under "Join now" read as a stray).
+  buttonLabel = "Join waitlist",
+  hint = null,
   accent = false,
 }: {
   source: string;

@@ -6,7 +6,6 @@ import { WaitlistForm } from "../components/landing/WaitlistForm";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { PricingTierCards } from "../components/pricing/PricingTierCards";
-import { AUDIENCE_LINE, CORE_LINE } from "@/lib/positioning";
 import { PageDawn } from "../components/marketing/PageDawn";
 
 // THE PRICE TABLE IS UNCONDITIONAL. Do not put it back behind a flag.
@@ -80,9 +79,9 @@ export function PricingPageClient() {
             </p>
 
             <h1 className="hero-fade-in hero-delay-1 mb-8 mt-8 text-[2.25rem] leading-[1.06] sm:text-[3.6rem] md:text-[4.2rem]">
-              One price.
+              Pay for the roster,
               <br />
-              <span className="text-[var(--marketing-accent)]">Your whole team.</span>
+              <span className="text-[var(--marketing-accent)]">not the headcount.</span>
             </h1>
 
             {/* Plain-language pass 2026-08-30. The headline used to be "Priced
@@ -93,8 +92,8 @@ export function PricingPageClient() {
                 what the headline now says. Composed from lib/positioning, so it
                 cannot drift from the homepage and the footer. */}
             <p className="hero-fade-in hero-delay-2 mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl">
-              {CORE_LINE} Join the waitlist, and let us set your roster up
-              with you.
+              Your whole team is covered by one price. Join the waitlist and
+              we&rsquo;ll set your roster up with you.
             </p>
 
             <div className="hero-fade-in hero-delay-3 mt-10">
@@ -102,9 +101,6 @@ export function PricingPageClient() {
                   its own, and one more button up here reads as a button
                   repeated rather than as a choice. The header's "Try Urganize"
                   is on screen throughout anyway. */}
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--marketing-text-subtle)]">
-                Built for {AUDIENCE_LINE}.
-              </p>
               {/* The Founding Member line ("Only 10 founding spots. Your price
                   never goes up.") was removed 2026-10-17: founder call, "no
                   founding members". Everyone pays the list price, and the
@@ -136,11 +132,11 @@ export function PricingPageClient() {
           <div className="mx-auto max-w-3xl text-center">
             <ScrollReveal>
               <h2 className="text-3xl md:text-4xl">
-                Not ready to talk yet?
+                Not ready yet?
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[var(--marketing-text-muted)]">
-                Leave your email. We&apos;ll reach out when the time is right
-                for your team.
+                Leave your email and we&rsquo;ll let you in when your spot
+                opens.
               </p>
             </ScrollReveal>
             <div className="mt-8">

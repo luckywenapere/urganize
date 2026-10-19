@@ -6,6 +6,7 @@ import { GUIDES } from "@/content/guides";
 import { SHORT_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { PageDawn } from "../components/marketing/PageDawn";
+import { TrialButton } from "../components/landing/TrialButton";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Guides to planning a music release",
@@ -27,8 +28,8 @@ export default function GuidesPage() {
               Plan a music release, step by step
             </h1>
             <p className="mt-4 max-w-[38rem] text-[var(--marketing-text-muted)]">
-              Plain answers for artists and managers. Each one comes from the plan Urganize
-              uses for a single.
+              Plain answers for managers who&rsquo;d rather not learn the hard way. Each one
+              comes from the plan Urganize builds for a single.
             </p>
           </PageDawn>
 
@@ -49,6 +50,14 @@ export default function GuidesPage() {
               </li>
             ))}
           </ul>
+
+          {/* Closing ask (2026-10-19, founder call). */}
+          <div className="mt-12 flex flex-col items-start gap-4">
+            <p className="text-[var(--marketing-text-muted)]">
+              Want this plan built for your next release?
+            </p>
+            <TrialButton location="guide_cta" />
+          </div>
         </div>
       </main>
 

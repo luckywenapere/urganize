@@ -47,7 +47,7 @@ export const ONE_LINER = SHORT_LINE;
 export const SHORT_DESCRIPTION = CORE_LINE;
 
 export const CANONICAL_DESCRIPTION =
-  'Every release, on plan. Add a release and get the plan, week by week to release day, ' +
-  'so your team knows what to do and when. Built for artist managers.';
+  'Every release, on plan. Add a release and everyone knows their job till drop day, ' +
+  'so you stop being the team\u2019s reminder app. Built for artist managers.';
 
 export const URGANS_LINE = 'personal AI for music professionals';

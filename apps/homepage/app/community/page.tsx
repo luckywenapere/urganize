@@ -20,7 +20,7 @@ import { PageDawn } from "../components/marketing/PageDawn";
 export const metadata: Metadata = buildPageMetadata({
   title: "Community",
   description:
-    `${CORE_LINE} Join our community, a group chat for people running rollouts.`,
+    `${CORE_LINE} Join our community, a group chat for managers running releases.`,
   path: "/community",
   // Kept out of search so the homepage's sitelinks stay commercial
   // (Features / Pricing / For executives / For managers). The page stays public
@@ -40,12 +40,12 @@ export default function CommunityPage() {
               Community
             </p>
             <h1 className="mt-6 text-[2.25rem] leading-[1.08] sm:text-[3rem]">
-              The Urganize community
+              Managers comparing notes on real releases.
             </h1>
             <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
-              A group chat for artists and managers running rollouts. Trade
-              notes, ask questions, and see how other teams handle the same mess
-              Urganize fixes.
+              A group chat for managers and artists running releases. Ask how
+              others handled the late artwork, the silent distributor or the
+              curator who never replied.
             </p>
 
             <div className="mt-10">
@@ -65,9 +65,8 @@ export default function CommunityPage() {
               Who it&apos;s for
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">
-              Managers and small teams running more than one
-              artist&apos;s rollouts. No pitch and no spam. Just managers
-              comparing notes on real rollouts.
+              Managers and small teams running more than one artist. No
+              pitches, no spam.
             </p>
           </section>
         </div>

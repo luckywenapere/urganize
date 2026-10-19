@@ -13,7 +13,7 @@ import { PageDawn } from "../components/marketing/PageDawn";
 export const metadata: Metadata = buildPageMetadata({
   title: "Music release plan, tasks and press kit",
   description:
-    "Every release, on plan. Add a release and get the plan, week by week to release day, with an owner on every activity. Plus UrgAns.",
+    "Every release, on plan. Add a release and get the plan, week by week to release day, with an owner on every task. Plus UrgAns.",
   path: "/features",
 });
 
@@ -34,18 +34,18 @@ export const metadata: Metadata = buildPageMetadata({
 const features = [
   {
     kicker: "The plan",
-    title: "A rollout plan, not a blank page.",
+    title: "Stop starting every release from zero.",
     // Numbers are the live playbooks (CLAUDE.md, shipped v0.55.0): single
     // 64 activities / 11 weeks, EP 90 / 16, album 113 / 21. The screenshot
     // below shows the EP one, so the copy names all three rather than
     // describing a single next to a 90-activity image.
-    body: "Create a rollout and Urganize lays out the whole plan, written by real managers and sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Edit or delete any activity.",
+    body: "Add a release and real managers have already written the plan: 64 tasks for a single, 90 for an EP, 113 for an album. Change anything.",
     points: [
       "Singles, EPs and albums each get their own playbook",
-      "Every activity dated around your release day",
+      "Every task dated back from drop day",
       // Never "reorder" — reordering has no UI (CLAUDE.md: the endpoint
       // was deleted 2026-07-10) and the honesty rule bans advertising it.
-      "Edit or delete anything. It's your plan",
+      "It\u2019s your plan. Edit or delete anything",
     ],
     // Real screenshot of the current release view (light and dark retaken
     // together 2026-08-25, founder-supplied, same release and scroll
@@ -66,29 +66,29 @@ const features = [
 // block copy — same claims, same honesty rule, less scroll.
 const compactFeatures = [
   {
-    kicker: "Activities",
-    title: "Owned, dated and in order.",
-    body: "Every activity has an owner, a due date and a priority. A blocked activity unlocks the moment the step it's waiting on is done.",
+    kicker: "Tasks",
+    title: "Nobody gets to say \u201cI didn\u2019t know.\u201d",
+    body: "Every task has an owner, a due date and a priority. Finish one step and the next one unlocks.",
   },
   {
     kicker: "Press kit",
-    title: "One link, ready to send.",
-    body: "Urganize builds your artist a press kit from the work you already put in, tells you when a new rollout is missing from it, and you can take it down anytime.",
+    title: "Stop rebuilding the EPK every drop.",
+    body: "One link, built from work you\u2019ve already done. It tells you when your new release is missing, and you can take it down anytime.",
   },
   {
     kicker: "Assistant",
-    title: "UrgAns handles the small stuff.",
-    body: "Tell UrgAns, the personal AI for music professionals inside Urganize, what you need. Create a rollout, add an activity, mark something done. Type it and it happens.",
+    title: "Type it. It\u2019s done.",
+    body: "Tell UrgAns, the AI inside Urganize, to add a release, add a task or mark something done.",
   },
   {
     kicker: "Milestones",
-    title: "The moments that matter, on the timeline.",
-    body: "Listening party, video shoot, release day. Milestones sit inside the rollout plan as dated events the whole team sees coming.",
+    title: "Nobody forgets the video shoot.",
+    body: "Listening party, shoot, drop day, all dated on the timeline the whole team sees.",
   },
   {
     kicker: "Visibility",
-    title: "Know where every rollout stands.",
-    body: "One list shows every rollout you have going: progress, what's overdue and what's due this week. No meeting needed.",
+    title: "Know what\u2019s late without calling anyone.",
+    body: "One list shows every release, with progress, what\u2019s overdue and what\u2019s due this week.",
   },
 ] as const;
 
@@ -214,7 +214,7 @@ export default function FeaturesPage() {
                 Everything else
               </p>
               <h2 className={`mt-5 max-w-[40rem] ${headlineClass}`}>
-                The rest of what a rollout gets.
+                Everything else that usually lands on you.
               </h2>
 
               <div className="mt-10 divide-y divide-[color:var(--marketing-border)]">
@@ -241,7 +241,7 @@ export default function FeaturesPage() {
           <SectionShell containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10">
             <div className="text-center">
               <h2 className={headlineClass}>
-                Run your next rollout with a system.
+                Run your next release without the chasing.
               </h2>
               <div className="mt-10 flex w-full flex-col items-center gap-4">
                 <TrialButton location="features_cta" size="lg" className="w-full sm:w-auto" />

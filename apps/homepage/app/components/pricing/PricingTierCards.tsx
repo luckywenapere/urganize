@@ -230,8 +230,7 @@ export function PricingTierCards() {
             of anything a customer reads. */}
         <p className="mt-8 text-center text-xs leading-6 text-[var(--marketing-text-subtle)]">
           Prices are in Naira. One price covers your whole team, not each person.{" "}
-          {billingLine(SELLABLE_INTERVALS)} We are letting teams in from the
-          waitlist.
+          {billingLine(SELLABLE_INTERVALS)}
         </p>
       </div>
     </section>

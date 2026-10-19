@@ -17,7 +17,7 @@ export const metadata: Metadata = buildPageMetadata({
   noIndex: true,
 });
 
-// Bios are founder-approved facts. Never edit a bio without re-approval —
+// Bios are founder-approved facts (reworked 2026-10-19, team signed off). Never edit a bio without re-approval —
 // same rule as the landing-page testimonials.
 //
 // Portraits are the illustrated brand set (cream ground, spring-green ink),
@@ -28,28 +28,28 @@ const members = [
     name: "Oyin Wenapere",
     role: "Co-Founder and CEO",
     photo: "/images/team/lucky-wenapere.webp",
-    bio: "Ten years in the music industry as a videographer, director, and editor; now manages two artists. Studied Computer Engineering at Afe Babalola University; currently works with Afreximbank's Tech & Innovation team.",
+    bio: "Manages two artists and has spent ten years on music sets as a videographer, director and editor, so he\u2019s seen releases fall apart from every side. Studied Computer Engineering at Afe Babalola University and works with Afreximbank\u2019s Tech & Innovation team.",
     linkedin: "https://www.linkedin.com/in/oyinwenapere",
   },
   {
     name: "Tedum King",
     role: "Co-Founder and CTO",
     photo: "/images/team/tedum-king.webp",
-    bio: "An artist himself, in both music and visuals, Tedum builds Urganize's AI layer from inside the creative process it serves. Studied Computer Engineering at Afe Babalola University.",
+    bio: "A music and visual artist who builds Urganize\u2019s AI from inside the creative process it serves. He knows what a release feels like from the artist\u2019s chair. Studied Computer Engineering at Afe Babalola University.",
     linkedin: "https://www.linkedin.com/in/tedum-king-kpunee-035556393/",
   },
   {
     name: "Adamu Kabiru",
     role: "Community Lead",
     photo: "/images/team/adamu-kabiru.webp",
-    bio: "Known in Nigeria's underground music scene as Don Baba K, Adamu is an artist manager, A&R, event organiser, and music PR who manages three artists and helps foster the growth of upcoming talent.",
+    bio: "Known in Nigeria\u2019s underground scene as Don Baba K. He manages three artists and works as an A&R, event organiser and music PR, so he lives the chasing every day. He also helps upcoming talent grow.",
     linkedin: null,
   },
   {
     name: "Chidera Nnamani",
     role: "Product Ops Lead",
     photo: "/images/team/chidera-nnamani.webp",
-    bio: "Manages artists and has worked across startups, bringing both the operator's and the manager's view to Urganize's product operations. Holds an MBA in Music Management from the Creative Business Academy for Africa, on a foundation of engineering and mathematics.",
+    bio: "Manages artists and has run operations at startups, so he sees both the manager\u2019s mess and the system that fixes it. Holds an MBA in Music Management from the Creative Business Academy for Africa, built on engineering and mathematics.",
     linkedin: "https://www.linkedin.com/in/chidera-nnamani/",
   },
 ] as const;
@@ -80,18 +80,16 @@ export default function TeamPage() {
             </p>
             <div className="mt-6 max-w-[42rem] space-y-5 leading-8 text-[var(--marketing-text-muted)]">
               <p>
-                Urganize started in December 2025, in the middle of the mess.
-                Oyin was sorting out activities for a third artist&apos;s rollout
-                across chats, notes, and memory. That is when it became clear
-                the problem was not effort. His artists&apos; music was not
-                getting the rollouts it deserved, because nothing held the
-                rollout together.
+                December 2025. Oyin was juggling a third artist&rsquo;s release
+                across chats, notes and his own memory, and things kept
+                slipping. The problem wasn&rsquo;t effort. Nothing held the
+                release together.
               </p>
               <p>
-                After ten years in the industry as a videographer, director,
-                and editor, he had seen that mess from every side of a
-                rollout. So he built the system he needed. Now he runs his
-                own artists&apos; rollouts on it.
+                After ten years as a videographer, director and editor,
+                he&rsquo;d seen that mess from every side. So he built the
+                system he needed, and he runs his own artists&rsquo; releases
+                on it today.
               </p>
             </div>
           </section>

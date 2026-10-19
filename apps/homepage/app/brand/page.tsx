@@ -26,25 +26,25 @@ export const metadata: Metadata = buildPageMetadata({
 const VOICE_PILLARS = [
   {
     title: "Plain-spoken, no jargon",
-    body: "We say “the plan, the activities and the files for your rollout,” not “a synergistic platform.” If a sentence needs a decoder, rewrite it.",
-    say: "Every activity has an owner and a date.",
+    body: "We say “the plan, the tasks and the files for your release,” not “a synergistic platform.” If a sentence needs a decoder, rewrite it.",
+    say: "Every task has an owner and a date.",
     avoid: "Holistic asset-lifecycle management.",
   },
   {
     title: "Concrete, never overclaiming",
     body: "We don’t advertise what isn’t built. Unshipped work is marked “coming soon,” and screenshots show the real app.",
-    say: "64 activities, generated from a template.",
-    avoid: "AI runs your whole rollout for you.",
+    say: "64 tasks, generated from a template.",
+    avoid: "AI runs your whole release for you.",
   },
   {
     title: "Name the problem",
-    body: "We say the quiet part out loud: rollouts run on group chats and “Final v3 ACTUAL final” in Drive. The enemy is chaos — we name it.",
-    say: "Stop running rollouts out of WhatsApp threads.",
+    body: "We say the quiet part out loud: releases run on group chats and “Final v3 ACTUAL final” in Drive. The enemy is chaos — we name it.",
+    say: "No more “I thought you were handling it.”",
     avoid: "Streamline your creative workflow.",
   },
   {
     title: "Operator to operator",
-    body: "We write like a manager talking to a manager — benefit-first, active, specific. We’ve run rollouts; the copy shows it.",
+    body: "We write like a manager talking to a manager — benefit-first, active, specific. We’ve run releases; the copy shows it.",
     say: "No more “who’s doing the art again?”",
     avoid: "Empower your creative journey.",
   },
@@ -150,8 +150,8 @@ export default function BrandPage() {
                 <h3 className="text-sm text-[var(--marketing-text)]">Mission</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
                   The music industry runs on chaos: knowledge stuck in people’s heads, scattered
-                  group chats, spreadsheets and one overworked person holding every rollout
-                  together. Urganize ends that. Every rollout runs to plan, with the work and
+                  group chats, spreadsheets and one overworked manager chasing everyone till
+                  drop day. Urganize ends that. Every release runs to plan, with the work and
                   the status in one place.
                 </p>
               </div>
@@ -171,8 +171,8 @@ export default function BrandPage() {
               <div>
                 <h3 className="text-sm text-[var(--marketing-text)]">Who it’s for</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  Artist managers first, then labels. One rollout is a lot of moving parts; a roster is
-                  many calendars, many rollouts at once and a pile of chats holding it
+                  Artist managers first, then labels. One release is a lot of moving parts; a roster is
+                  many calendars, many releases at once and a pile of chats holding it
                   together. Urganize is what runs that. Teams with a bigger roster get the
                   Label plan, with the founders working alongside them.
                 </p>
@@ -183,11 +183,11 @@ export default function BrandPage() {
                   What we believe
                 </h3>
                 <ul className={`mt-1.5 list-disc space-y-1 pl-5 ${bodyText}`}>
-                  <li>The rollout is the spine. Every feature serves a rollout.</li>
+                  <li>The release is the spine. Every feature serves a release.</li>
                   <li>We are opinionated on purpose: if it doesn’t cut the chaos, it’s out.</li>
                   <li>
-                    That’s why we don’t do revenue tracking, legal contracts, analytics dashboards,
-                    or distribution. We stay focused on the rollout.
+                    That’s why we don’t do revenue tracking, legal contracts or analytics
+                    dashboards. We stay focused on the release.
                   </li>
                 </ul>
               </div>

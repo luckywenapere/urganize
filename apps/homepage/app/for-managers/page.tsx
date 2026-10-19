@@ -37,10 +37,10 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "You don't start from a blank page for artist number three.",
-    body: "Create a rollout and Urganize lays out the whole plan, sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Every artist gets the same starting plan and you can edit or delete any activity.",
+    body: "Add a release and Urganize lays out the whole plan, sized to the format: 64 tasks for a single, 90 for an EP, 113 for an album. Every artist gets the same starting plan and you can edit or delete any task.",
     points: [
-      "One template, shaped for each rollout",
-      "Every activity dated around that release day",
+      "One template, shaped for each release",
+      "Every task dated back from that drop day",
       // Never "reorder" — reordering has no UI (CLAUDE.md: the endpoint
       // was deleted 2026-07-10) and the honesty rule bans advertising it.
       "Edit or delete anything. It's your plan",
@@ -54,18 +54,18 @@ const valueBlocks = [
 const compactBlocks = [
   {
     kicker: "Ownership",
-    title: "Hand work off without babysitting it.",
-    body: "Every activity has an owner, a due date and a priority. Nothing starts before the step it needs is done.",
+    title: "Every job has a name on it.",
+    body: "Every task has an owner, a due date and a priority. Nothing starts before the step it needs is done.",
   },
   {
     kicker: "Press kit",
     title: "One link, ready whenever press asks.",
-    body: "Urganize builds each artist a press kit from the work you already put in, and tells you when a new rollout is missing from it. It works the same for any artist you run.",
+    body: "Urganize builds each artist a press kit from the work you already put in, and tells you when a new release is missing from it. It works the same for any artist you run.",
   },
   {
     kicker: "Status",
-    title: "Answer \"where's that rollout?\" without scrolling WhatsApp.",
-    body: "One list shows every rollout you run: progress, what's overdue, what's due this week and which artist it belongs to.",
+    title: "Answer \u201cwhere are we on that release?\u201d without scrolling WhatsApp.",
+    body: "One list shows every release you run: progress, what\u2019s overdue, what\u2019s due this week and which artist it belongs to.",
   },
 ] as const;
 
@@ -85,16 +85,15 @@ export default function ForManagersPage() {
               For artist managers
             </p>
             <h1 className="mt-8 text-balance text-[2.25rem] leading-[1.06] text-[var(--marketing-text)] sm:text-[3.6rem]">
-              Every artist&apos;s rollout.{" "}
+              Every artist&rsquo;s release.{" "}
               <span className="text-[var(--marketing-accent)]">
                 One screen, not five chats.
               </span>
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
-              One artist and one rollout? A group chat and a Drive folder hold
-              up fine. Add a second rollout, a third artist and a team, and
-              keeping it all moving becomes the real job. Urganize is built
-              for that part.
+              One artist, one release? A group chat and a Drive folder hold
+              up. Add a second artist and a team, and chasing everyone becomes
+              the real job. Urganize takes that job off you.
             </p>
             {/* CTA moved into the hero (2026-08-05, URG-218): the page
                 previously had no ask until the very bottom, ~6 screens
@@ -136,7 +135,7 @@ export default function ForManagersPage() {
                 Everything else
               </p>
               <h2 className={`mt-5 max-w-[40rem] ${PERSONA_HEADLINE_CLASS}`}>
-                Hand-offs, the press kit and status come with it.
+                Hand it off and stop babysitting it.
               </h2>
 
               <div className="mt-10 divide-y divide-[color:var(--marketing-border)]">
@@ -187,7 +186,7 @@ export default function ForManagersPage() {
         <ScrollReveal>
           <SectionShell containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10">
             <div className="text-center">
-              <h2 className={PERSONA_HEADLINE_CLASS}>Run every rollout with a system.</h2>
+              <h2 className={PERSONA_HEADLINE_CLASS}>Stop being the reminder app for your whole roster.</h2>
               <p className="mx-auto mt-6 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
                 Join the waitlist, and we set up every team
                 personally. See{" "}
@@ -215,7 +214,7 @@ export default function ForManagersPage() {
           containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10"
         >
           <p className="text-center text-sm text-[var(--marketing-text-subtle)]">
-            Answering for rollouts other people run?{" "}
+            Answering for releases other people run?{" "}
             <Link
               href="/for-executives"
               className="text-[var(--marketing-text)] underline underline-offset-4 hover:text-[var(--marketing-accent)]"
