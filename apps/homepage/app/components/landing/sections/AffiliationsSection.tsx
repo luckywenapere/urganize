@@ -4,9 +4,9 @@ import { wideContainerClass } from "./shared";
 // 2026-10-17, URG-333).
 //
 // TWO TRUE LINES, SIDE BY SIDE. "Backed by" is Greylight alone: Urganize is in
-// Greylight's Tangent Cohort 002, a venture-building programme. "Built with
-// people from" is backed by real people, not by the company: people from CBA
-// use Urganize. The company has not endorsed Urganize, so do not reword this
+// Greylight's Tangent Cohort 002, a venture-building programme. "Shaped with
+// managers from" is backed by real people, not by the company: managers from
+// CBA (Chidera, Khaybee) shaped Urganize (founder, 2026-10-19, URG-404). The company has not endorsed Urganize, so do not reword this
 // into a claim it has. The founder confirmed the people involved agree to the
 // name and logo.
 //
@@ -105,7 +105,7 @@ export function AffiliationsSection() {
             aria-hidden="true"
             className="mx-14 hidden h-16 w-px self-center bg-[var(--marketing-border-strong)] sm:block"
           />
-          <LogoGroup label="Built with people from" logos={AFFILIATIONS} />
+          <LogoGroup label="Shaped with managers from" logos={AFFILIATIONS} />
         </div>
       </div>
     </section>
