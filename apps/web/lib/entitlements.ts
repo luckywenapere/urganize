@@ -399,7 +399,7 @@ function limitMessage(key: CountableLimitKey, limit: number, tierLabel: string):
     case 'seats':
       return `${tierLabel} plans include ${limit} ${limit === 1 ? 'person' : 'people'}. Upgrade to Label for unlimited team members.`;
     case 'active_releases':
-      return `${tierLabel} plans cover ${limit} ${limit === 1 ? 'rollout' : 'rollouts'} at a time. Archive one you have finished, or upgrade to Label for unlimited rollouts.`;
+      return `${tierLabel} plans cover ${limit} ${limit === 1 ? 'release' : 'releases'} at a time. Archive one you have finished, or upgrade to Label for unlimited releases.`;
     case 'urgans_monthly_actions':
       return `You have used all ${limit} UrgAns actions on your plan this period. Everything else keeps working normally, and these reset when your billing period does. Upgrade to Label for unlimited.`;
   }

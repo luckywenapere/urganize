@@ -15,6 +15,7 @@ import { KeyboardShortcuts } from '@/components/shell/KeyboardShortcuts';
 import { TeamReadOnlyStrip } from '@/components/app/TeamReadOnlyStrip';
 import { TeamTrialStrip } from '@/components/app/TeamTrialStrip';
 import { UrgansUsageStrip } from '@/components/app/UrgansUsageStrip';
+import { PolicyUpdateStrip } from '@/components/app/PolicyUpdateStrip';
 import { OfflineBanner } from '@/components/app/OfflineBanner';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
@@ -170,6 +171,7 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
                 UrgAns actions, which today is nobody: no code path can write
                 the capped tier yet. */}
             <UrgansUsageStrip />
+            <PolicyUpdateStrip />
             {/* The shell (design overhaul, 2026-10-04): a top bar of the six
                 areas, the page, and on a phone a bottom bar.
                 URG-254 (founder call, 2026-10-14): on a computer the second

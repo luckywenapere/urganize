@@ -909,7 +909,7 @@ describe('limit copy reads correctly at a limit of one', () => {
   it('says one rollout, not one rollouts', () => {
     const verdict = checkLimit({ tier: 'solo', key: 'active_releases', current: 1 });
     if (verdict.allowed) throw new Error('expected blocked');
-    expect(verdict.message).toContain('1 rollout at a time');
+    expect(verdict.message).toContain('1 release at a time');
   });
 
   it('keeps the plural above one', () => {
@@ -917,7 +917,7 @@ describe('limit copy reads correctly at a limit of one', () => {
     const releases = checkLimit({ tier: 'manager', key: 'active_releases', current: 3 });
     if (seats.allowed || releases.allowed) throw new Error('expected blocked');
     expect(seats.message).toContain('5 people');
-    expect(releases.message).toContain('3 rollouts at a time');
+    expect(releases.message).toContain('3 releases at a time');
   });
 });
 

@@ -12,6 +12,7 @@ import { KeyboardShortcuts } from '@/components/shell/KeyboardShortcuts';
 import { TeamReadOnlyStrip } from '@/components/app/TeamReadOnlyStrip';
 import { TeamTrialStrip } from '@/components/app/TeamTrialStrip';
 import { UrgansUsageStrip } from '@/components/app/UrgansUsageStrip';
+import { PolicyUpdateStrip } from '@/components/app/PolicyUpdateStrip';
 import { OfflineBanner } from '@/components/app/OfflineBanner';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { WorkspacePageErrorBoundary } from '@/components/app/WorkspacePageErrorBoundary';
@@ -82,6 +83,7 @@ export function SwipeFrame({
       <TeamTrialStrip />
       <TeamReadOnlyStrip />
       <UrgansUsageStrip />
+            <PolicyUpdateStrip />
     </>
   );
 
