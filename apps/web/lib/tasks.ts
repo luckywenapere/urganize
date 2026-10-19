@@ -371,22 +371,10 @@ export function getTaskSectionKey(
     }
   }
 
-  if (!task.dueDate) {
+  const differenceInDays = daysUntilDue(task.dueDate, now);
+  if (differenceInDays === null) {
     return 'no_due_date';
   }
-
-  const dueDate = new Date(task.dueDate);
-  if (Number.isNaN(dueDate.getTime())) {
-    return 'no_due_date';
-  }
-
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
-
-  const dueDay = new Date(dueDate);
-  dueDay.setHours(0, 0, 0, 0);
-
-  const differenceInDays = Math.round((dueDay.getTime() - today.getTime()) / 86400000);
 
   if (differenceInDays < 0) {
     // Compressed-runway tasks: the template instantiated them with a past
@@ -477,29 +465,70 @@ export function getTaskSectionDescription(section: TaskSectionKey): string {
   }
 }
 
+/**
+ * Done and cancelled are CLOSED: the work is no longer owed, so nothing about
+ * it is due, late or behind (URG-389, Oct 19, 2026). Status is the truth here,
+ * never `completedAt`: that column is stamped only since v1.158.0 (every done
+ * task before it has null), and cancelling never stamps it at all.
+ */
+export function isClosedStatus(status: TaskStatus | string | null | undefined): boolean {
+  return status === 'done' || status === 'cancelled';
+}
+
+const UTC_MIDNIGHT_PATTERN = /^(\d{4})-(\d{2})-(\d{2})(?:$|T00:00(?::00(?:\.0+)?)?(?:Z|[+-]00(?::?00)?)$)/;
+
+/**
+ * The local-midnight Date of the CALENDAR day a due date names.
+ *
+ * Due dates are stored as timestamps, but almost all of them mean a day: the
+ * playbooks write UTC midnight of the day, and the date field in the activity
+ * pop-up sends `new Date('YYYY-MM-DD')`, which is UTC midnight too. Read as an
+ * instant, "2026-10-20T00:00:00Z" is the evening of Oct 19 anywhere west of
+ * UTC, so the activity said "Due today" a day early there while the timeline
+ * (UTC days) put it on the 20th. A date-only or UTC-midnight value is
+ * therefore read as that calendar day in every timezone; anything else (a
+ * naive local wall-clock edit) keeps its instant, as before.
+ */
+export function dueCalendarDay(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const match = UTC_MIDNIGHT_PATTERN.exec(value);
+  if (match) {
+    const day = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    return Number.isNaN(day.getTime()) ? null : day;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  parsed.setHours(0, 0, 0, 0);
+  return parsed;
+}
+
+/** Whole days from the user's today to the due day (negative is past), or null
+ *  when there is no usable due date. */
+export function daysUntilDue(value: string | null | undefined, now: Date = new Date()): number | null {
+  const dueDay = dueCalendarDay(value);
+  if (!dueDay) return null;
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  return Math.round((dueDay.getTime() - today.getTime()) / 86400000);
+}
+
 export function getRelativeDueLabel(
-  task: Pick<Task, 'dueDate' | 'completedAt' | 'compressedRunway'>,
+  task: Pick<Task, 'dueDate' | 'completedAt' | 'compressedRunway'> & { status?: TaskStatus | string | null },
   now = new Date()
 ): {
   label: string;
   isOverdue: boolean;
 } {
-  if (!task.dueDate) {
-    return { label: 'No due date', isOverdue: false };
+  // Closed work carries no due copy at all: no "Behind by", no "overdue", no
+  // "Due in". The status says what happened; the date row says when it was set.
+  if (isClosedStatus(task.status)) {
+    return { label: '', isOverdue: false };
   }
 
-  const dueDate = new Date(task.dueDate);
-  if (Number.isNaN(dueDate.getTime())) {
+  const differenceInDays = daysUntilDue(task.dueDate, now);
+  if (differenceInDays === null) {
     return { label: 'No due date', isOverdue: false };
   }
-
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
-
-  const dueDay = new Date(dueDate);
-  dueDay.setHours(0, 0, 0, 0);
-
-  const differenceInDays = Math.round((dueDay.getTime() - today.getTime()) / 86400000);
 
   if (differenceInDays === 0) {
     return { label: 'Due today', isOverdue: false };

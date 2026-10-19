@@ -3,7 +3,8 @@
 import { Check, Link2 } from '@/components/icons';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { getTaskStatusLabel, getTaskStatusTone, type TaskStatus } from '@/lib/tasks';
-import { TASK_DONE_STATUS } from '@/lib/execution-types';
+import { TASK_DONE_STATUS, isDependencySatisfied } from '@/lib/execution-types';
+import { dependencyHint } from '@/lib/release-execution';
 
 export type DependencyTaskSummary = {
   id: string;
@@ -44,6 +45,9 @@ export function TaskDependenciesSection({
 
   // Preserve the order the dependencies were declared in.
   const byId = new Map(prerequisites.map((task) => [task.id, task]));
+  // One line that says where this stands (URG-389): what still has to be
+  // finished, or that a cancelled prerequisite no longer holds it up.
+  const hint = dependencyHint(dependencyIds.map((id) => byId.get(id)?.status ?? null));
 
   return (
     // De-boxed 2026-09-05: the activity pop-up went boxless, and a bordered
@@ -54,9 +58,7 @@ export function TaskDependenciesSection({
         <Link2 className="h-4 w-4 shrink-0 text-content-tertiary" aria-hidden="true" />
         <h3 className="text-sm text-content-primary">Depends on</h3>
       </div>
-      <p className="ml-7 mt-0.5 text-xs text-content-secondary">
-        Finish each prerequisite before this task can be marked done.
-      </p>
+      {hint ? <p className="ml-7 mt-0.5 text-xs text-content-secondary">{hint}</p> : null}
 
       <ul className="ml-7 mt-2 space-y-2">
         {dependencyIds.map((id) => {
@@ -73,7 +75,10 @@ export function TaskDependenciesSection({
             );
           }
 
-          const isDone = task.status === TASK_DONE_STATUS;
+          // Done or cancelled: it holds nothing up any more (URG-389), so
+          // both read quiet. The badge still says which one it was.
+          const isDone = isDependencySatisfied(task.status);
+          const isTicked = task.status === TASK_DONE_STATUS;
           const dueLabel = formatDueLabel(task.dueDate);
 
           return (
@@ -95,7 +100,7 @@ export function TaskDependenciesSection({
                   }`}
                   aria-hidden
                 >
-                  {isDone ? <Check className="h-3 w-3" /> : null}
+                  {isTicked ? <Check className="h-3 w-3" /> : null}
                 </span>
                 <span
                   className={`min-w-0 flex-1 truncate text-sm font-medium ${

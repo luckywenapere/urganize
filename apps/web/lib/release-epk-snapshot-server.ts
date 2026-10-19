@@ -70,6 +70,8 @@ export async function runKitSnapshotSweep(admin: SupabaseClient): Promise<KitSna
       if (taskResult.error) return { skipped: true, reason: 'read_failed' };
       for (const row of taskResult.data || []) {
         const id = String(row.release_id || '');
+        // Cancelled work is out of the count (URG-389): dropped is neither done nor owed.
+        if (row.status === 'cancelled') continue;
         const entry = totals.get(id) ?? { total: 0, done: 0 };
         entry.total += 1;
         if (row.status === 'done') entry.done += 1;

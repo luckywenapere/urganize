@@ -221,6 +221,8 @@ export async function loadScoreboardInput(
   for (const row of tasks.rows) {
     const releaseId = str(row.release_id);
     if (!releaseId) continue;
+    // Cancelled work is out of the count (URG-389): dropped is neither done nor owed.
+    if (row.status === 'cancelled') continue;
     const totals = taskTotals.get(releaseId) ?? { count: 0, done: 0, lastDoneAt: null };
     totals.count += 1;
     if (row.status === 'done') {

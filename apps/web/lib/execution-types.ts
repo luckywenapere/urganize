@@ -43,3 +43,13 @@ export type CommandCenterData = {
 export const TASK_DONE_STATUS: TaskStatus = 'done';
 export const TASK_PENDING_STATUS: TaskStatus = 'todo';
 export const TASK_LOCKED_STATUS = 'locked' as TaskStatus;
+
+/**
+ * Whether a prerequisite no longer holds anything up (URG-389, Oct 19, 2026):
+ * done, or cancelled. A cancelled prerequisite was dropped on purpose, so the
+ * work after it must not stay locked or blocked forever waiting on something
+ * nobody is going to do. Every "are the dependencies met" check reads this.
+ */
+export function isDependencySatisfied(status: TaskStatus | string | null | undefined): boolean {
+  return status === TASK_DONE_STATUS || status === 'cancelled';
+}

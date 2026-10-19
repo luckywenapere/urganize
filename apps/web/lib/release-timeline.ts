@@ -250,6 +250,9 @@ export type TimelinePhaseGroup = {
   startDay: number;
   endDay: number;
   doneCount: number;
+  /** Items that are not cancelled: the denominator beside doneCount, so the
+   * grid's "10/12" says the same as the phase chip (URG-389). */
+  liveCount: number;
   /** Overdue plus blocked — what the collapsed row needs to shout about. */
   attentionCount: number;
 };
@@ -390,10 +393,12 @@ export function buildReleaseTimeline(params: {
     let phaseStart = phaseItems[0].startDay;
     let phaseEnd = phaseItems[0].endDay;
     let doneCount = 0;
+    let liveCount = 0;
     let attentionCount = 0;
     for (const item of phaseItems) {
       if (item.startDay < phaseStart) phaseStart = item.startDay;
       if (item.endDay > phaseEnd) phaseEnd = item.endDay;
+      if (item.tone !== 'cancelled') liveCount += 1;
       if (item.tone === 'done') doneCount += 1;
       if (item.tone === 'overdue' || item.tone === 'blocked') attentionCount += 1;
     }
@@ -405,6 +410,7 @@ export function buildReleaseTimeline(params: {
       startDay: phaseStart,
       endDay: phaseEnd,
       doneCount,
+      liveCount,
       attentionCount,
     });
   }
@@ -433,6 +439,7 @@ export function narrowTimeline(timeline: ReleaseTimeline, keep: ReadonlySet<stri
       startDay: Math.min(...items.map((item) => item.startDay)),
       endDay: Math.max(...items.map((item) => item.endDay)),
       doneCount: items.filter((item) => item.tone === 'done').length,
+      liveCount: items.filter((item) => item.tone !== 'cancelled').length,
       attentionCount: items.filter((item) => item.tone === 'overdue' || item.tone === 'blocked').length,
     });
   }
@@ -602,6 +609,31 @@ export function foldPastWeeks(timeline: ReleaseTimeline): FoldedWeekList {
 
   const weeks = groups.filter((group) => group.week.startDay >= currentWeekStart);
   return { catchUp, weeks, doneEarlier };
+}
+
+/**
+ * The rollout's "All clear" state (URG-389): there is work, and none of it is
+ * still owed. Done and cancelled both count as closed; a rollout of nothing
+ * is not all clear, it is empty.
+ */
+export function rolloutClosedSummary(
+  tasks: ReadonlyArray<Pick<Task, 'status'>>
+): { allClear: boolean; done: number; cancelled: number } {
+  let done = 0;
+  let cancelled = 0;
+  for (const task of tasks) {
+    if (task.status === 'done') done += 1;
+    else if (task.status === 'cancelled') cancelled += 1;
+  }
+  return { allClear: tasks.length > 0 && done + cancelled === tasks.length, done, cancelled };
+}
+
+/** "14 done · 3 cancelled", leaving out a zero. */
+export function closedSummaryLine(summary: { done: number; cancelled: number }): string {
+  const parts: string[] = [];
+  if (summary.done > 0) parts.push(`${summary.done} done`);
+  if (summary.cancelled > 0) parts.push(`${summary.cancelled} cancelled`);
+  return parts.join(' · ');
 }
 
 /** Moves the Start here activity to the front of its list, so it sits on the

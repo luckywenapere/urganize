@@ -526,6 +526,45 @@ export function TaskUIEngine({ bridge }: { bridge: TaskUIEngineBridge }) {
       return;
     }
 
+    // A status change (cancel, un-cancel, start, block...) is shown at once
+    // (URG-389): the pop-up's status, the list row and the timeline all move
+    // in the same frame instead of after a round trip, and both snap back if
+    // the server refuses. Done is not here: it goes through the store above,
+    // which has its own optimistic beat and rollback.
+    const optimisticStatus = typeof patch.status === 'string' ? (patch.status as TaskDetail['status']) : null;
+    const previousRowStatus = optimisticStatus
+      ? useTaskStore.getState().tasks.find((row) => row.id === activeTaskId)?.status ?? null
+      : null;
+    const previousDetailStatus = optimisticStatus && task?.id === activeTaskId ? task.status : null;
+    if (optimisticStatus) {
+      setTask((current) => (current && current.id === activeTaskId ? { ...current, status: optimisticStatus } : current));
+      const store = useTaskStore.getState();
+      if (previousRowStatus !== null) {
+        store.setTasks(
+          store.tasks.map((row) => (row.id === activeTaskId ? { ...row, status: optimisticStatus } : row))
+        );
+      }
+    }
+    const rollbackStatus = () => {
+      if (!optimisticStatus) return;
+      if (previousDetailStatus !== null) {
+        // Only if nothing newer has moved it since.
+        setTask((current) =>
+          current && current.id === activeTaskId && current.status === optimisticStatus
+            ? { ...current, status: previousDetailStatus }
+            : current
+        );
+      }
+      if (previousRowStatus !== null) {
+        const store = useTaskStore.getState();
+        store.setTasks(
+          store.tasks.map((row) =>
+            row.id === activeTaskId && row.status === optimisticStatus ? { ...row, status: previousRowStatus } : row
+          )
+        );
+      }
+    };
+
     try {
       const payload = await requestJson<TaskDetailPayload>(`/api/tasks/${activeTaskId}`, {
         method: 'PATCH',
@@ -580,6 +619,9 @@ export function TaskUIEngine({ bridge }: { bridge: TaskUIEngineBridge }) {
       // didn't persist. Re-fetch the task to revert any visual drift.
       const message = error instanceof Error ? error.message : 'Could not save changes.';
       console.error('Task patch failed:', error);
+      // Undo this patch's optimistic status first, even if a newer patch was
+      // issued: the guards above leave anything newer alone.
+      rollbackStatus();
       if (!isLatestPatch()) {
         return;
       }

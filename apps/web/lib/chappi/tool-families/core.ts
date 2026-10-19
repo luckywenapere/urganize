@@ -5,6 +5,7 @@
 // reimplemented — except completion/reopen, which need the dependency cascade
 // the PATCH route lacks and so go through TaskService directly.
 
+import { countProgress } from '@/lib/task-progress';
 import { describeStatusFacts, type StatusFacts } from '@/lib/release-status';
 import { TaskService } from '@/lib/services/task-service';
 import { settingsDeepLink } from '@/lib/settings-nav';
@@ -60,16 +61,17 @@ export const CORE_TOOLS: ChappiTool[] = [
         ctx.workspaceIds,
         { releaseId }
       );
-      const done = tasks.filter((t) => t.status === 'done').length;
+      // Cancelled work is out of both numbers (URG-389).
+      const { done, total } = countProgress(tasks);
       return {
         ok: true,
-        summary: `${release.title}: ${done}/${tasks.length} tasks done.`,
+        summary: `${release.title}: ${done}/${total} tasks done.`,
         data: {
           release: {
             id: release.id,
             title: release.title,
             artist: release.artistName,
-            status: assistantReleaseStatus(release, { done, total: tasks.length }),
+            status: assistantReleaseStatus(release, { done, total }),
             releaseDate: release.releaseDate,
           },
           tasks: tasks.map(compactTask),

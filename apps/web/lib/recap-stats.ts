@@ -176,7 +176,9 @@ export async function gatherRecapStats(
     throw new Error(error.message || 'Could not load tasks for the recap.');
   }
 
-  const tasks = (data ?? []) as TaskRow[];
+  // Cancelled work is out of every number here (URG-389): it was dropped, so
+  // it is neither done nor still owed, and it must not hold the recap back.
+  const tasks = ((data ?? []) as TaskRow[]).filter((task) => String(task.status ?? '') !== 'cancelled');
 
   // "Done" is status-based on purpose: tasks.completed_at is only written by
   // the service path, so the checkbox most managers use leaves it null.

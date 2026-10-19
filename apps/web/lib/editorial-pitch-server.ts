@@ -119,7 +119,10 @@ export function pitchBlockedBy(
   const orderOpen = dependencies.some(
     (dependency) =>
       isDistributionOrderTask(readTemplateOrigin(dependency.metadata).taskId) &&
-      dependency.status !== 'done'
+      // A cancelled order no longer gates the pitch (URG-389): it was dropped,
+      // usually because distribution was handled outside the plan.
+      dependency.status !== 'done' &&
+      dependency.status !== 'cancelled'
   );
   return orderOpen ? PITCH_BLOCKED_COPY : null;
 }

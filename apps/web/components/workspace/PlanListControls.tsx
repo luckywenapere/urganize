@@ -8,8 +8,13 @@ import { Search, SlidersHorizontal, X } from '@/components/icons';
 import { FilterPopover, FilterSheet } from '@/components/shell/ListToolbar';
 import { useAuthStore } from '@/lib/auth-store';
 import { activeFilterCount as countActiveFilters, type ToolbarControl } from '@/lib/list-toolbar';
+import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import {
   EMPTY_PLAN_FILTERS,
+  SHOW_CANCELLED_STORAGE_KEY,
+  SHOW_CANCELLED_STORAGE_VERSION,
+  isShowCancelledMap,
+  withShowCancelled,
   PLAN_STATUS_FILTERS,
   PLAN_STATUS_LABELS,
   PLAN_WHEN_FILTERS,
@@ -36,6 +41,9 @@ import type { Task } from '@/types/tasks';
 export function usePlanList(tasks: Task[], rolloutId: string | null) {
   const [filters, setFilters] = useState<PlanFilters>(EMPTY_PLAN_FILTERS);
   const [showAll, setShowAll] = useState(false);
+  // Cancelled work is hidden until asked for (URG-389), remembered per rollout
+  // on this device — see SHOW_CANCELLED_STORAGE_KEY for why there.
+  const [showCancelled, setShowCancelledState] = useState(false);
   const [forRollout, setForRollout] = useState(rolloutId);
   const currentUserId = useAuthStore((state) => state.user?.id ?? null);
 
@@ -45,11 +53,35 @@ export function usePlanList(tasks: Task[], rolloutId: string | null) {
     setForRollout(rolloutId);
     setFilters(EMPTY_PLAN_FILTERS);
     setShowAll(false);
+    setShowCancelledState(false);
   }
 
+  // Read after mount (server HTML is always the hidden default), then again
+  // whenever the rollout changes.
+  useEffect(() => {
+    if (!rolloutId) return;
+    const saved = readPersistedState(SHOW_CANCELLED_STORAGE_KEY, SHOW_CANCELLED_STORAGE_VERSION, isShowCancelledMap);
+    setShowCancelledState(Boolean(saved?.[rolloutId]));
+  }, [rolloutId]);
+
+  const setShowCancelled = useCallback(
+    (on: boolean) => {
+      setShowCancelledState(on);
+      if (!rolloutId) return;
+      const saved =
+        readPersistedState(SHOW_CANCELLED_STORAGE_KEY, SHOW_CANCELLED_STORAGE_VERSION, isShowCancelledMap) ?? {};
+      try {
+        writePersistedState(SHOW_CANCELLED_STORAGE_KEY, SHOW_CANCELLED_STORAGE_VERSION, withShowCancelled(saved, rolloutId, on));
+      } catch {
+        // Storage full or blocked: the choice still holds for this visit.
+      }
+    },
+    [rolloutId]
+  );
+
   const result = useMemo(
-    () => selectPlanTasks(tasks, { filters, showAll, currentUserId }),
-    [tasks, filters, showAll, currentUserId]
+    () => selectPlanTasks(tasks, { filters, showAll, showCancelled, currentUserId }),
+    [tasks, filters, showAll, showCancelled, currentUserId]
   );
 
   const assignees = useMemo(() => {
@@ -78,8 +110,11 @@ export function usePlanList(tasks: Task[], rolloutId: string | null) {
     setFilters,
     showAll,
     setShowAll,
+    showCancelled,
+    setShowCancelled,
     assignees,
-    totalCount: tasks.length,
+    /** The live plan's size: cancelled work is not part of "all N". */
+    totalCount: result.liveCount,
   };
 }
 
@@ -361,25 +396,61 @@ function PlanListRow({
   );
 }
 
-/** The one quiet control under the list: reveal the rest, or go back. */
-export function PlanShowAllToggle({ plan }: { plan: PlanListState }) {
+/**
+ * The quiet line under the list: reveal the rest of the plan, and (URG-389)
+ * bring cancelled work back. One line, two equal tertiary links joined by a
+ * dot, so neither competes with the page's one primary action. The cancelled
+ * link only appears when there is cancelled work; a search or filter already
+ * looks at everything, so neither link shows then.
+ */
+export function PlanShowAllToggle({
+  plan,
+  cancelledOnly = false,
+}: {
+  plan: PlanListState;
+  /** Just the cancelled link: the undated pre-production list shows every
+   *  activity already, so "Show all" would promise nothing. */
+  cancelledOnly?: boolean;
+}) {
   if (plan.filtering) {
     if (plan.visible.length > 0) return null;
     return (
       <p className="py-6 text-center text-sm text-content-secondary">No activities match.</p>
     );
   }
-  if (plan.hiddenCount === 0) return null;
+  const showAllLink = plan.hiddenCount > 0 && !cancelledOnly;
+  const cancelledLink = plan.cancelledCount > 0;
+  if (!showAllLink && !cancelledLink) return null;
+  const linkClass =
+    'motion-focus rounded-md px-2 py-1 text-xs font-medium text-content-secondary underline-offset-4 transition-colors hover:text-content-primary hover:underline';
   return (
-    <div className="flex justify-center pt-1">
-      <button
-        type="button"
-        onClick={() => plan.setShowAll(!plan.showAll)}
-        aria-expanded={plan.showAll}
-        className="motion-focus rounded-md px-2 py-1 text-xs font-medium text-content-secondary underline-offset-4 transition-colors hover:text-content-primary hover:underline"
-      >
-        {plan.showAll ? 'Show key activities' : `Show all ${plan.totalCount} activities`}
-      </button>
+    <div className="flex flex-wrap items-center justify-center gap-x-1 pt-1" data-plan-quiet-line>
+      {showAllLink ? (
+        <button
+          type="button"
+          onClick={() => plan.setShowAll(!plan.showAll)}
+          aria-expanded={plan.showAll}
+          className={linkClass}
+        >
+          {plan.showAll ? 'Show key activities' : `Show all ${plan.totalCount} activities`}
+        </button>
+      ) : null}
+      {showAllLink && cancelledLink ? (
+        <span className="text-xs text-content-tertiary" aria-hidden="true">
+          ·
+        </span>
+      ) : null}
+      {cancelledLink ? (
+        <button
+          type="button"
+          onClick={() => plan.setShowCancelled(!plan.showCancelled)}
+          aria-pressed={plan.showCancelled}
+          data-show-cancelled
+          className={linkClass}
+        >
+          {plan.showCancelled ? 'Hide cancelled' : `Show cancelled · ${plan.cancelledCount}`}
+        </button>
+      ) : null}
     </div>
   );
 }

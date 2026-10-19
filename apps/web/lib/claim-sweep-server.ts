@@ -102,6 +102,8 @@ export async function deliveredReleaseIds(
   const totals = new Map<string, { total: number; done: number }>();
   for (const task of tasks.rows.map(asRow)) {
     const id = text(task.release_id);
+    // Cancelled work is out of the count (URG-389): dropped is neither done nor owed.
+    if (text(task.status) === 'cancelled') continue;
     const entry = totals.get(id) ?? { total: 0, done: 0 };
     entry.total += 1;
     if (text(task.status) === 'done') entry.done += 1;

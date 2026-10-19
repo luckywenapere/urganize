@@ -14,6 +14,7 @@
 // tool through a live database — see CLAUDE.md's "How new logic gets tested
 // here" for why that split is the house pattern.
 
+import { countProgress } from '@/lib/task-progress';
 import { TaskService } from '@/lib/services/task-service';
 import { listVisibleReleases } from '../release-scope';
 import { assistantReleaseStatus } from '../release-status';
@@ -162,14 +163,15 @@ export const INSIGHTS_TOOLS: ChappiTool[] = [
           const tasks = await taskService.getTasksForUser(ctx.user.id, ctx.workspaceIds, {
             releaseId: release.id,
           });
-          const tasksDone = tasks.filter((t) => t.status === 'done').length;
+          // Cancelled work is out of both numbers (URG-389).
+          const { done: tasksDone, total: tasksTotal } = countProgress(tasks);
           return {
             id: release.id,
             title: release.title,
-            status: assistantReleaseStatus(release, { done: tasksDone, total: tasks.length }),
+            status: assistantReleaseStatus(release, { done: tasksDone, total: tasksTotal }),
             releaseDate: release.releaseDate,
             tasksDone,
-            tasksTotal: tasks.length,
+            tasksTotal,
           };
         })
       );

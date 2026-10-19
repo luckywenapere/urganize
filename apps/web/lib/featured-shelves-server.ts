@@ -445,6 +445,8 @@ async function loadRiseInput(
   for (const row of taskRows) {
     const releaseId = String(row.release_id);
     releaseOfTask.set(String(row.id), releaseId);
+    // Cancelled work is out of the count (URG-389): dropped is neither done nor owed.
+    if (row.status === 'cancelled') continue;
     const stats = taskStats.get(releaseId) ?? { total: 0, done: 0, lastDoneAt: null };
     stats.total += 1;
     if (row.status === 'done') {

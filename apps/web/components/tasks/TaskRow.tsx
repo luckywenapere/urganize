@@ -97,7 +97,7 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable', sta
   const isCompact = density === 'compact';
   const titleClass = `truncate text-sm font-semibold ${
     isLocked ? 'text-content-secondary' : 'text-content-primary'
-  } ${task.status === 'done' ? 'line-through' : ''}`;
+  } ${task.status === 'done' ? 'line-through' : ''} ${task.status === 'cancelled' ? 'line-through opacity-55' : ''}`;
 
   const interactionHandlers = {
     onClick: () => onClick?.(task),
@@ -163,11 +163,17 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable', sta
               {formatMilestoneDate(task.dueDate)}
             </span>
           ) : (
-            <span
-              className={`whitespace-nowrap font-mono ${due.isOverdue ? 'font-semibold text-status-error' : ''}`}
-            >
-              {due.label}
-            </span>
+            due.label ? (
+              <span
+                className={`whitespace-nowrap font-mono ${due.isOverdue ? 'font-semibold text-status-error' : ''}`}
+              >
+                {due.label}
+              </span>
+            ) : task.status === 'cancelled' ? (
+              // Closed work carries no due copy (URG-389); a cancelled row says
+              // what happened instead, quietly, so search results read clearly.
+              <span className="whitespace-nowrap font-mono uppercase tracking-wide text-content-tertiary">Cancelled</span>
+            ) : null
           )}
           {isLocked ? (
             <Lock
@@ -234,12 +240,17 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable', sta
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-content-secondary">
           {task.assignee ? <AssigneeAvatar member={task.assignee} size="sm" /> : null}
           <span>{getAssigneeLabel(task)}</span>
-          <span className="text-content-tertiary">•</span>
           {isMilestone ? (
-            <span className="font-mono text-status-info">{formatMilestoneDate(task.dueDate)}</span>
-          ) : (
-            <span className={`font-mono ${due.isOverdue ? 'font-semibold text-status-error' : ''}`}>{due.label}</span>
-          )}
+            <>
+              <span className="text-content-tertiary">•</span>
+              <span className="font-mono text-status-info">{formatMilestoneDate(task.dueDate)}</span>
+            </>
+          ) : due.label ? (
+            <>
+              <span className="text-content-tertiary">•</span>
+              <span className={`font-mono ${due.isOverdue ? 'font-semibold text-status-error' : ''}`}>{due.label}</span>
+            </>
+          ) : null}
         </div>
       </div>
 

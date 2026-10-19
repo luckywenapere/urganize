@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase/client';
 import {
   TASK_DONE_STATUS,
   TASK_LOCKED_STATUS,
+  isDependencySatisfied,
   TASK_PENDING_STATUS,
   type ExecutionTask,
   type TaskRequirement,
@@ -192,7 +193,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
     const hasIncompleteDependencies = (input.dependencies || []).some((id) => {
       const dependency = get().tasks.find((task) => task.id === id);
-      return dependency && dependency.status !== TASK_DONE_STATUS;
+      return dependency && !isDependencySatisfied(dependency.status);
     });
 
     const response = await fetch('/api/tasks', {
@@ -423,7 +424,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         candidate.status === TASK_LOCKED_STATUS &&
         candidate.dependencies.includes(taskId) &&
         candidate.dependencies.every(
-          (id) => tasksAfterComplete.find((dep) => dep.id === id)?.status === TASK_DONE_STATUS
+          (id) => isDependencySatisfied(tasksAfterComplete.find((dep) => dep.id === id)?.status)
         )
     );
 

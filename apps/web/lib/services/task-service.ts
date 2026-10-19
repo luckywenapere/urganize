@@ -14,6 +14,7 @@ import { readAllPages, ROWS_MAX_PAGES, ROWS_PAGE_SIZE } from '@/lib/paged-rows';
 import {
   TASK_DONE_STATUS,
   TASK_LOCKED_STATUS,
+  isDependencySatisfied,
   TASK_PENDING_STATUS,
   type ExecutionTask,
 } from '@/lib/execution-types';
@@ -268,7 +269,7 @@ export class TaskService {
           candidate.status === TASK_LOCKED_STATUS &&
           candidate.dependencies.includes(taskId) &&
           candidate.dependencies.every(
-            (id) => afterComplete.find((dep) => dep.id === id)?.status === TASK_DONE_STATUS
+            (id) => isDependencySatisfied(afterComplete.find((dep) => dep.id === id)?.status)
           )
       )
       .map((candidate) => candidate.id);

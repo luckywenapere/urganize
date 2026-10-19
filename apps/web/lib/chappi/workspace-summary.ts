@@ -11,6 +11,7 @@
 // without a database — which matters, because prompt text is the kind of thing
 // that silently drifts.
 
+import { countProgress } from '@/lib/task-progress';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/types/tasks';
@@ -197,8 +198,9 @@ export function formatWorkspaceSummary(input: {
     `${heading}\n${shown
       .map((r) => {
         const forRelease = tasks.filter((t) => t.releaseId === r.id);
-        const done = forRelease.filter((t) => t.status === 'done').length;
-        return `- ${r.title} (id: ${r.id}, status: ${assistantReleaseStatus(r, { done, total: forRelease.length }, dayToDate(today))}, ${done}/${forRelease.length} tasks done, date: ${r.releaseDate ?? 'unset'})`;
+        // Cancelled work is out of both numbers (URG-389).
+        const { done, total } = countProgress(forRelease);
+        return `- ${r.title} (id: ${r.id}, status: ${assistantReleaseStatus(r, { done, total }, dayToDate(today))}, ${done}/${total} tasks done, date: ${r.releaseDate ?? 'unset'})`;
       })
       .join('\n')}`
   );

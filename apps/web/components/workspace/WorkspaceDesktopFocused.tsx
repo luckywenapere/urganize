@@ -1,5 +1,6 @@
 'use client';
 
+import { countProgress } from '@/lib/task-progress';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { SIDEBAR_SLOT_ROLLOUT, useSidebarSlot } from '@/components/shell/Sidebar';
@@ -94,8 +95,8 @@ export function WorkspaceDesktopFocused({
   panelActivitiesFooter,
   panelBannerReplacesEmptyState,
 }: WorkspaceDesktopFocusedProps) {
-  const tasksTotal = scopedTasks.length;
-  const tasksDone = scopedTasks.filter((t) => t.status === 'done').length;
+  // Cancelled work is out of both numbers (URG-389).
+  const { done: tasksDone, total: tasksTotal } = countProgress(scopedTasks);
   const rolloutMenuSlot = useSidebarSlot(SIDEBAR_SLOT_ROLLOUT);
   const crumbSlot = usePageBarCrumbSlot(true);
   const endSlot = usePageBarEndSlot(true);

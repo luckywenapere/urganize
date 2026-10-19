@@ -1,5 +1,5 @@
 import type { Task } from '@/types/tasks';
-import { getTaskSectionKey } from '@/lib/tasks';
+import { daysUntilDue, getTaskSectionKey } from '@/lib/tasks';
 import { matchesSearchTerms, parseSearchTerms } from '@/lib/task-search';
 
 /**
@@ -131,7 +131,7 @@ export function selectKeyTaskIds(tasks: PlanFocusTask[]): Set<string> {
 // Search and filters
 // ---------------------------------------------------------------------------
 
-export const PLAN_STATUS_FILTERS = ['all', 'todo', 'in_progress', 'done'] as const;
+export const PLAN_STATUS_FILTERS = ['all', 'todo', 'in_progress', 'done', 'cancelled'] as const;
 export type PlanStatusFilter = (typeof PLAN_STATUS_FILTERS)[number];
 
 export const PLAN_WHEN_FILTERS = ['any', 'overdue', 'week', 'month', 'later'] as const;
@@ -159,6 +159,7 @@ export const PLAN_STATUS_LABELS: Record<PlanStatusFilter, string> = {
   todo: 'To do',
   in_progress: 'In progress',
   done: 'Done',
+  cancelled: 'Cancelled',
 };
 
 export const PLAN_WHEN_LABELS: Record<PlanWhenFilter, string> = {
@@ -187,17 +188,13 @@ function matchesStatus(task: PlanFilterTask, status: PlanStatusFilter): boolean 
       return true;
     case 'done':
       return task.status === 'done';
+    case 'cancelled':
+      return task.status === 'cancelled';
     case 'in_progress':
       return ACTIVE.has(task.status);
     case 'todo':
       return isOpenTask(task) && !ACTIVE.has(task.status);
   }
-}
-
-function startOfDay(date: Date): number {
-  const copy = new Date(date);
-  copy.setHours(0, 0, 0, 0);
-  return copy.getTime();
 }
 
 function matchesWhen(task: PlanFilterTask, when: PlanWhenFilter, now: Date): boolean {
@@ -208,10 +205,8 @@ function matchesWhen(task: PlanFilterTask, when: PlanWhenFilter, now: Date): boo
     const section = getTaskSectionKey(task as Task, now);
     return section === 'overdue' || section === 'catch_up';
   }
-  if (!task.dueDate) return false;
-  const due = new Date(task.dueDate);
-  if (Number.isNaN(due.getTime())) return false;
-  const days = Math.round((startOfDay(due) - startOfDay(now)) / 86_400_000);
+  const days = daysUntilDue(task.dueDate, now);
+  if (days === null) return false;
   if (when === 'week') return days >= 0 && days <= 7;
   if (when === 'month') return days >= 0 && days <= 30;
   return days > 30;
@@ -230,21 +225,39 @@ function matchesAssignee(
 
 /**
  * What the list shows. With a search or a filter on, it looks across EVERY
- * task, key or not — a search that missed tucked-away work would make "kept,
- * not lost" untrue. With neither, it shows the key tasks unless `showAll`.
+ * task, key or not, cancelled or not — a search that missed tucked-away work
+ * would make "kept, not lost" untrue. With neither, it shows the key tasks
+ * unless `showAll`.
+ *
+ * Cancelled work (URG-389, Oct 19, 2026) is left out of the plain list unless
+ * `showCancelled`: it was dropped on purpose, so it should not sit among the
+ * work still owed. It is never deleted, it is counted (`cancelledCount`) so
+ * the quiet "Show cancelled · n" control can bring it back, and it is not
+ * counted in `liveCount` or `hiddenCount`, which describe the live plan.
  */
 export function selectPlanTasks<T extends PlanFilterTask>(
   tasks: T[],
   options: {
     filters: PlanFilters;
     showAll: boolean;
+    showCancelled?: boolean;
     currentUserId?: string | null;
     now?: Date;
   }
-): { visible: T[]; hiddenCount: number; filtering: boolean } {
-  const { filters, showAll } = options;
+): {
+  visible: T[];
+  hiddenCount: number;
+  filtering: boolean;
+  /** Activities that are not cancelled: the plan's real size. */
+  liveCount: number;
+  cancelledCount: number;
+} {
+  const { filters, showAll, showCancelled = false } = options;
   const now = options.now ?? new Date();
   const filtering = hasActivePlanFilters(filters);
+  const live = tasks.filter((task) => task.status !== 'cancelled');
+  const liveCount = live.length;
+  const cancelledCount = tasks.length - liveCount;
 
   if (filtering) {
     const terms = parseSearchTerms(filters.query);
@@ -255,13 +268,14 @@ export function selectPlanTasks<T extends PlanFilterTask>(
         matchesWhen(task, filters.when, now) &&
         matchesAssignee(task, filters.assignee, options.currentUserId ?? null)
     );
-    return { visible, hiddenCount: 0, filtering };
+    return { visible, hiddenCount: 0, filtering, liveCount, cancelledCount };
   }
 
-  const keyIds = selectKeyTaskIds(tasks);
-  const hiddenCount = tasks.length - keyIds.size;
-  if (showAll) return { visible: tasks, hiddenCount, filtering };
-  return { visible: tasks.filter((task) => keyIds.has(task.id)), hiddenCount, filtering };
+  const keyIds = selectKeyTaskIds(live);
+  const hiddenCount = liveCount - keyIds.size;
+  const keep = (task: T) =>
+    task.status === 'cancelled' ? showCancelled : showAll || keyIds.has(task.id);
+  return { visible: tasks.filter(keep), hiddenCount, filtering, liveCount, cancelledCount };
 }
 
 /** Read the key flag the planner writes at `metadata.planner.key`. */
@@ -294,4 +308,47 @@ export function withPlanKey(metadata: unknown, key: boolean): Record<string, unk
       ? (base.planner as Record<string, unknown>)
       : {};
   return { ...base, planner: { ...planner, key } };
+}
+
+// ---------------------------------------------------------------------------
+// "Show cancelled", remembered per rollout (URG-389)
+// ---------------------------------------------------------------------------
+
+/**
+ * Where the "Show cancelled" choice lives: this device's localStorage, keyed
+ * by rollout. It is a way of looking, not data, so it needs no column, no
+ * migration and no round trip, and it is instant on open. Per rollout because
+ * wanting to see what was dropped on one plan says nothing about the next; a
+ * rollout nobody asked about opens on the calm default (hidden).
+ */
+export const SHOW_CANCELLED_STORAGE_KEY = 'urganize.plan.show-cancelled';
+export const SHOW_CANCELLED_STORAGE_VERSION = 1;
+/** Kept small: only rollouts someone turned it on for are stored at all. */
+export const SHOW_CANCELLED_MAX_ROLLOUTS = 50;
+
+export type ShowCancelledMap = Record<string, true>;
+
+export function isShowCancelledMap(value: unknown): value is ShowCancelledMap {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.values(value).every((entry) => entry === true)
+  );
+}
+
+/** The map with one rollout turned on or off. Off removes the entry; on adds
+ *  it at the end and drops the oldest past the cap. */
+export function withShowCancelled(map: ShowCancelledMap, rolloutId: string, on: boolean): ShowCancelledMap {
+  const next: ShowCancelledMap = {};
+  for (const [id, value] of Object.entries(map)) {
+    if (id !== rolloutId) next[id] = value;
+  }
+  if (!on) return next;
+  next[rolloutId] = true;
+  const ids = Object.keys(next);
+  if (ids.length <= SHOW_CANCELLED_MAX_ROLLOUTS) return next;
+  const trimmed: ShowCancelledMap = {};
+  for (const id of ids.slice(ids.length - SHOW_CANCELLED_MAX_ROLLOUTS)) trimmed[id] = true;
+  return trimmed;
 }

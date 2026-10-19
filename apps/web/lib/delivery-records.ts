@@ -62,10 +62,12 @@ const isDone = (task: DeliverySourceTask): boolean => task.status === 'done';
 
 /** Has this release actually come out? Delegated, never re-implemented. */
 export function isReleaseDelivered(release: DeliverySourceRelease, now: Date): boolean {
-  const total = release.tasks.length;
+  // Cancelled work is out of the count (URG-389): dropped is neither done nor owed.
+  const live = release.tasks.filter((task) => task.status !== 'cancelled');
+  const total = live.length;
   return isRecapEligible(
     { releaseDate: release.releaseDate, status: release.status },
-    { totalTasks: total, allTasksDone: total > 0 && release.tasks.every(isDone) },
+    { totalTasks: total, allTasksDone: total > 0 && live.every(isDone) },
     now
   );
 }

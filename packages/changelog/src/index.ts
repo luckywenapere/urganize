@@ -41,6 +41,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.159.0",
+    title: "Cancelled tasks step aside",
+    tag: "Rollouts",
+    date: "October 19, 2026",
+    highlights: [
+      "Cancelled tasks are hidden from your timeline and task list. Tap \"Show cancelled\" to see them again, and search still finds them.",
+      "Finished and cancelled tasks never show as late, and they no longer count against your progress.",
+      "A task waiting on a cancelled task is no longer stuck. When everything is done or cancelled, the timeline says you're all clear.",
+    ],
+  },
+  {
     version: "1.158.12",
     tag: "App",
     listed: false,

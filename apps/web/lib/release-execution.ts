@@ -5,8 +5,8 @@ import {
   isEditorialPitchTask,
 } from '@/lib/editorial-pitch';
 import {
-  TASK_DONE_STATUS,
   TASK_LOCKED_STATUS,
+  isDependencySatisfied,
   type ExecutionTask,
   type TaskRequirement,
 } from '@/lib/execution-types';
@@ -41,14 +41,22 @@ export function isRequirementSatisfied(requirement: TaskRequirement | null | und
 }
 
 export function getTaskCompletionBlocker(task: ExecutionTask, tasks: ExecutionTask[]): string | null {
-  if (task.status === TASK_LOCKED_STATUS) {
+  const knownDependencies = task.dependencies
+    .map((id) => tasks.find((candidate) => candidate.id === id))
+    .filter((candidate): candidate is ExecutionTask => Boolean(candidate));
+  // Done or cancelled prerequisites hold nothing up (URG-389): a dropped
+  // prerequisite must not keep this task waiting forever.
+  const openDependencies = knownDependencies.filter((candidate) => !isDependencySatisfied(candidate.status));
+
+  // A locked task stays locked while anything it waits on is open, or when we
+  // cannot see its prerequisites at all. Once every one is done or cancelled
+  // it may be finished even if the stored status has not caught up yet.
+  if (
+    task.status === TASK_LOCKED_STATUS &&
+    (openDependencies.length > 0 || knownDependencies.length === 0)
+  ) {
     return 'Complete the dependency chain first.';
   }
-
-  const openDependencies = task.dependencies
-    .map((id) => tasks.find((candidate) => candidate.id === id))
-    .filter((candidate): candidate is ExecutionTask => Boolean(candidate))
-    .filter((candidate) => candidate.status !== TASK_DONE_STATUS);
 
   if (openDependencies.length > 0) {
     // Spotify takes a pitch only after the distributor has delivered, so the
@@ -67,4 +75,20 @@ export function getTaskCompletionBlocker(task: ExecutionTask, tasks: ExecutionTa
   }
 
   return null;
+}
+
+/**
+ * The one line under "Depends on" in the activity pop-up (URG-389): what still
+ * has to be finished, or that a cancelled prerequisite no longer holds this up,
+ * or nothing when every prerequisite is done. A prerequisite we cannot see
+ * (null) counts as open, as getTaskCompletionBlocker's caller would.
+ */
+export function dependencyHint(statuses: ReadonlyArray<string | null>): string {
+  if (statuses.some((status) => status === null || !isDependencySatisfied(status))) {
+    return 'Finish each prerequisite before this task can be marked done.';
+  }
+  if (statuses.some((status) => status === 'cancelled')) {
+    return 'A cancelled prerequisite no longer holds this up.';
+  }
+  return '';
 }

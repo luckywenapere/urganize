@@ -1,5 +1,6 @@
 'use client';
 
+import { countProgress } from '@/lib/task-progress';
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -568,7 +569,9 @@ export function WorkspaceView() {
 
     return sortedReleases.map((release) => {
       const releaseTasks = taskList.filter((task) => task.releaseId === release.id);
-      const tasksDone = releaseTasks.filter((task) => task.status === 'done').length;
+      // Cancelled work is out of both numbers (URG-389).
+      const releaseProgress = countProgress(releaseTasks);
+      const tasksDone = releaseProgress.done;
       return {
         release: {
           id: release.id,
@@ -578,7 +581,7 @@ export function WorkspaceView() {
           releaseDate: release.releaseDate,
         },
         tasksDone,
-        tasksTotal: releaseTasks.length,
+        tasksTotal: releaseProgress.total,
         coverArtUrl: release.coverArtUrl ?? null,
         coverThumbUrl: release.coverThumbUrl ?? null,
         // Derived client-side from the metadata the command-center already
@@ -680,6 +683,8 @@ export function WorkspaceView() {
     if (!scopedReleaseId) return taskList;
     return taskList.filter((task) => task.releaseId === scopedReleaseId);
   }, [scopedReleaseId, taskList]);
+  // Done of the live plan, cancelled work out of both numbers (URG-389).
+  const scopedProgress = useMemo(() => countProgress(scopedTasks), [scopedTasks]);
 
   // The Spotify editorial pitch for the scoped rollout (2026-10-09), if it has one.
   const editorialPitchTask = useMemo(
@@ -889,11 +894,11 @@ export function WorkspaceView() {
         status: scopedReleaseSlim.status ?? '',
       },
       {
-        totalTasks: scopedTasks.length,
-        allTasksDone: scopedTasks.every((task) => task.status === 'done'),
+        totalTasks: scopedProgress.total,
+        allTasksDone: scopedProgress.total > 0 && scopedProgress.done === scopedProgress.total,
       }
     );
-  }, [scopedReleaseSlim, scopedTasks]);
+  }, [scopedReleaseSlim, scopedProgress]);
 
   // Archive is offered once a release reads as finished — the same eligibility
   // the recap uses, because "worth celebrating" and "safe to shelve" are the
@@ -1242,8 +1247,8 @@ export function WorkspaceView() {
     ? distributionStripMode({
         status: scopedReleaseSlim.status ?? '',
         releaseDate: scopedReleaseSlim.releaseDate ?? null,
-        tasksDone: scopedTasks.filter((task) => task.status === 'done').length,
-        tasksTotal: scopedTasks.length,
+        tasksDone: scopedProgress.done,
+        tasksTotal: scopedProgress.total,
       })
     : 'none';
   const distributionStatusStrip =
@@ -1619,8 +1624,8 @@ export function WorkspaceView() {
                   artistName={scopedReleaseSlim.artistName}
                   title={scopedReleaseSlim.title}
                   releaseDate={scopedReleaseSlim.releaseDate}
-                  done={scopedTasks.filter((t) => t.status === 'done').length}
-                  total={scopedTasks.length}
+                  done={scopedProgress.done}
+                  total={scopedProgress.total}
                   backLabel={backLabel}
                   onBack={handleMobileBack}
                   showMeta={bodyIsMainView}

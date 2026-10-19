@@ -6,6 +6,7 @@ import type { Release } from '@/types/releases';
 import type { Task } from '@/types/tasks';
 import {
   buildReleaseTimeline,
+  closedSummaryLine,
   dayPosition,
   daysForDragDelta,
   foldPastWeeks,
@@ -15,6 +16,7 @@ import {
   isClosedTone,
   phoneWeekHeading,
   isoForDayOffset,
+  rolloutClosedSummary,
   itemPosition,
   narrowTimeline,
   type ReleaseTimeline,
@@ -178,10 +180,29 @@ export function TimelineScene({
   const [dragging, setDragging] = useState<{ taskId: string; days: number } | null>(null);
   const axisRef = useRef<HTMLDivElement | null>(null);
 
-  const timeline = useMemo(
-    () => buildReleaseTimeline({ tasks, releaseDate: release.releaseDate ?? null }),
-    [tasks, release.releaseDate]
+  // The plan opens on its key activities (URG-258); search, filters and
+  // "Show all" decide the rest, and cancelled work stays out until asked for
+  // (URG-389).
+  const plan = usePlanList(tasks, release.id);
+
+  // The axis is built from every activity that CAN show, so a bar sits in the
+  // same week whichever list is showing. Hidden cancelled work is left out of
+  // it (URG-389): a dropped activity months out must not stretch the grid into
+  // empty columns nobody can see anything in. When cancelled work is showing
+  // (the toggle, or a search or filter, which look at everything) it is on the
+  // axis like the rest.
+  const cancelledVisible = plan.showCancelled || plan.filtering;
+  const axisTasks = useMemo(
+    () => (cancelledVisible ? tasks : tasks.filter((task) => task.status !== 'cancelled')),
+    [tasks, cancelledVisible]
   );
+  const timeline = useMemo(
+    () => buildReleaseTimeline({ tasks: axisTasks, releaseDate: release.releaseDate ?? null }),
+    [axisTasks, release.releaseDate]
+  );
+  // Nothing left to do (URG-389): one calm line instead of a grid or an
+  // empty state that says "generate a plan" to someone who finished one.
+  const closed = useMemo(() => rolloutClosedSummary(tasks), [tasks]);
 
   // Pre-release, Release and Post-release with dates and progress (URG-292),
   // from every activity rather than the short list: the strip answers "where
@@ -195,10 +216,6 @@ export function TimelineScene({
     [phaseSummaries]
   );
 
-  // The plan opens on its key activities (URG-258); search, filters and
-  // "Show all" decide the rest. The axis is built from every activity so a
-  // bar sits in the same week whichever list is showing.
-  const plan = usePlanList(tasks, release.id);
   // A smaller plan (URG-318): Start here on its first open task. The rest of
   // the plan's work as one-tap suggestions left the timeline on Oct 17, 2026
   // ("52 suggested" under a 12-activity plan read as "your plan is missing 52
@@ -258,7 +275,15 @@ export function TimelineScene({
     // empty timeline; the week grid takes over once a date is set.
     const undated = tasks.filter((task) => task.phase === 'pre_production');
     if (undated.length > 0) {
-      return <UndatedPreProduction tasks={undated} onOpenTask={onOpenTask} />;
+      const visibleIds = new Set(plan.visible.map((task) => task.id));
+      return (
+        <UndatedPreProduction
+          tasks={undated.filter((task) => task.status !== 'cancelled' || visibleIds.has(task.id))}
+          allTasks={undated}
+          onOpenTask={onOpenTask}
+          footer={<PlanShowAllToggle plan={plan} cancelledOnly />}
+        />
+      );
     }
     if (suppressEmptyState) return null;
     return (
@@ -270,6 +295,18 @@ export function TimelineScene({
   }
 
   if (!timeline || (timeline.placedCount === 0 && timeline.unscheduled.length === 0)) {
+    // Every activity is cancelled and hidden: the rollout is not empty, it is
+    // finished with. Say so, and keep the dropped work one tap away.
+    if (closed.allClear && tasks.length > 0) {
+      return (
+        <div className="tl-scene-container pb-16 mt-6">
+          <TimelineAllClear line={closedSummaryLine(closed)} />
+          <div className="mt-4">
+            <PlanShowAllToggle plan={plan} />
+          </div>
+        </div>
+      );
+    }
     if (suppressEmptyState) return null;
     return (
       <TimelineEmptyState
@@ -345,6 +382,12 @@ export function TimelineScene({
           </div>
         </>
       )}
+
+      {closed.allClear && !plan.filtering ? (
+        <div className={phone ? 'mb-2' : 'mb-4'}>
+          <TimelineAllClear line={closedSummaryLine(closed)} />
+        </div>
+      ) : null}
 
       {/* ---- Wide: the week grid ---------------------------------------- */}
       <div className="tl-grid-view">
@@ -556,7 +599,7 @@ function PhaseLabels({
           {phase.label}
         </span>
         <span className="shrink-0 text-[10px] tabular-nums text-content-tertiary">
-          {phase.doneCount}/{phase.items.length}
+          {phase.doneCount}/{phase.liveCount}
         </span>
         {phase.attentionCount > 0 ? (
           <span
@@ -581,10 +624,18 @@ function PhaseLabels({
               {item.isMilestone ? (
                 <Flag className="h-3 w-3 shrink-0 text-brand" aria-hidden="true" />
               ) : null}
-              <span className="min-w-0 flex-1 truncate text-[11px] text-content-secondary">
+              <span
+                className={`min-w-0 flex-1 truncate text-[11px] text-content-secondary ${
+                  item.tone === 'cancelled' ? 'line-through opacity-55' : ''
+                }`}
+              >
                 {item.title}
               </span>
-              {item.taskId === startHereId ? (
+              {item.tone === 'cancelled' ? (
+                <span className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-content-tertiary">
+                  Cancelled
+                </span>
+              ) : item.taskId === startHereId ? (
                 <span className="shrink-0 font-mono text-[10px] text-brand">Start here</span>
               ) : TONE_TAG_CLASS[item.tone] ? (
                 <span className={`shrink-0 text-[11px] font-semibold ${TONE_TAG_CLASS[item.tone]}`}>
@@ -747,14 +798,14 @@ function TimelineRow({
         {item.isBar ? (
           <span
             className={`block h-2.5 w-full rounded-full ${TONE_BAR_CLASS[item.tone]} ${
-              isDragging ? 'opacity-80 ring-2 ring-brand' : ''
+              isDragging ? 'opacity-80 ring-2 ring-brand' : item.tone === 'cancelled' ? 'opacity-55' : ''
             }`}
           />
         ) : (
           <span
             className={`block h-2.5 w-2.5 border ${
               item.isMilestone ? 'rotate-45' : 'rounded-full'
-            } ${dotClass(item)} ${isDragging ? 'ring-2 ring-brand' : ''}`}
+            } ${dotClass(item)} ${item.tone === 'cancelled' ? 'opacity-55' : ''} ${isDragging ? 'ring-2 ring-brand' : ''}`}
           />
         )}
       </button>
@@ -932,7 +983,11 @@ function WeekRow({
           ) : startHere ? (
             <span className="h-2.5 w-2.5 rounded-full bg-brand" />
           ) : (
-            <span className={`h-2.5 w-2.5 border ${item.isMilestone ? 'rotate-45' : 'rounded-full'} ${dotClass(item)}`} />
+            <span
+              className={`h-2.5 w-2.5 border ${item.isMilestone ? 'rotate-45' : 'rounded-full'} ${dotClass(item)} ${
+                item.tone === 'cancelled' ? 'opacity-55' : ''
+              }`}
+            />
           )}
         </span>
         <span
@@ -946,8 +1001,10 @@ function WeekRow({
         >
           {item.title}
         </span>
-        {closed ? <span className="sr-only">{TONE_LABEL[item.tone]}</span> : null}
-        {startHere ? (
+        {item.tone === 'done' ? <span className="sr-only">{TONE_LABEL[item.tone]}</span> : null}
+        {item.tone === 'cancelled' ? (
+          <span className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-content-tertiary">Cancelled</span>
+        ) : startHere ? (
           <span className="shrink-0 text-xs text-brand">Start here</span>
         ) : tag ? (
           <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-status-error">{tag}</span>
@@ -985,6 +1042,9 @@ function TimelineColourKey({ timeline }: { timeline: ReleaseTimeline }) {
   entries.push({ key: 'todo', label: 'To do', mark: <span className="h-2.5 w-2.5 rounded-full border border-stroke-control bg-bg-surface" /> });
   if (has((item) => item.tone === 'done')) {
     entries.push({ key: 'done', label: 'Done', mark: <Check className="h-3.5 w-3.5 text-content-tertiary" /> });
+  }
+  if (has((item) => item.tone === 'cancelled')) {
+    entries.push({ key: 'cancelled', label: 'Cancelled', mark: <span className="h-2.5 w-2.5 rounded-full border border-stroke-strong bg-bg-surface opacity-55" /> });
   }
   if (has((item) => item.isMilestone)) {
     entries.push({ key: 'milestone', label: 'Milestone', mark: <span className="h-2.5 w-2.5 rotate-45 border border-brand bg-brand" /> });
@@ -1090,21 +1150,39 @@ function TimelineEmptyState({ title, body }: { title: string; body: string }) {
   );
 }
 
-function UndatedPreProduction({ tasks, onOpenTask }: { tasks: Task[]; onOpenTask: (taskId: string) => void }) {
-  const done = tasks.filter((task) => task.status === 'done').length;
+function UndatedPreProduction({
+  tasks,
+  allTasks,
+  onOpenTask,
+  footer,
+}: {
+  /** What to list: cancelled work only when it is showing (URG-389). */
+  tasks: Task[];
+  /** Every pre-production activity, for the count. */
+  allTasks: Task[];
+  onOpenTask: (taskId: string) => void;
+  footer?: ReactNode;
+}) {
+  // Cancelled work is out of both numbers (URG-389).
+  const live = allTasks.filter((task) => task.status !== 'cancelled');
+  const done = live.filter((task) => task.status === 'done').length;
   return (
     <section aria-label="Pre-production" className="mt-6 pb-16">
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="font-display text-base font-semibold text-content-primary">Pre-production</h3>
         <span className="text-xs tabular-nums text-content-tertiary">
-          {done}/{tasks.length} done
+          {done}/{live.length} done
         </span>
       </div>
       <p className="mt-1 text-xs text-content-secondary">
         No release date yet. Set one and the whole rollout lays out here week by week.
       </p>
+      {tasks.length > 0 ? (
       <ol className="mt-3 divide-y divide-stroke-subtle overflow-hidden rounded-xl border border-stroke-subtle bg-bg-surface">
-        {tasks.map((task) => (
+        {tasks.map((task) => {
+          const isDone = task.status === 'done';
+          const isCancelled = task.status === 'cancelled';
+          return (
           <li key={task.id}>
             <button
               type="button"
@@ -1113,20 +1191,39 @@ function UndatedPreProduction({ tasks, onOpenTask }: { tasks: Task[]; onOpenTask
             >
               <span
                 aria-hidden="true"
-                className={`h-2 w-2 shrink-0 rounded-full ${task.status === 'done' ? 'bg-brand' : 'border border-stroke-strong'}`}
+                className={`h-2 w-2 shrink-0 rounded-full ${isDone ? 'bg-brand' : 'border border-stroke-strong'} ${isCancelled ? 'opacity-55' : ''}`}
               />
               <span
                 className={`min-w-0 flex-1 truncate text-sm ${
-                  task.status === 'done' ? 'text-content-tertiary line-through' : 'text-content-primary'
+                  isDone ? 'text-content-tertiary line-through' : isCancelled ? 'text-content-primary line-through opacity-55' : 'text-content-primary'
                 }`}
               >
                 {task.title}
               </span>
-              {task.status === 'done' ? <span className="sr-only">Done</span> : null}
+              {isDone ? <span className="sr-only">Done</span> : null}
+              {isCancelled ? (
+                <span className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-content-tertiary">Cancelled</span>
+              ) : null}
             </button>
           </li>
-        ))}
+          );
+        })}
       </ol>
+      ) : null}
+      {footer ? <div className="mt-4">{footer}</div> : null}
     </section>
+  );
+}
+
+/**
+ * Every activity on the rollout is done or cancelled (URG-389). One line, no
+ * illustration and no button: there is nothing to do, so nothing to press.
+ */
+function TimelineAllClear({ line }: { line: string }) {
+  return (
+    <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1" data-timeline-all-clear>
+      <span className="font-display text-lg text-content-primary">All clear</span>
+      {line ? <span className="font-mono text-xs tabular-nums text-content-tertiary">{line}</span> : null}
+    </p>
   );
 }
