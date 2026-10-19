@@ -15,7 +15,9 @@ export type FaqItem = { question: string; answer: string };
 
 const managerArtists = PRICING_TIERS.manager.limits.artists;
 
-// HOMEPAGE V2 (2026-10-17, URG-334): five questions, the real objections a
+// HOMEPAGE V2 (2026-10-17, URG-334; reworked 2026-10-19, URG-405: WhatsApp
+// adoption and no-release questions replace "Do I pay per person?" and "Does it
+// work on my phone?", phone folded into the WhatsApp answer): five questions, the real objections a
 // manager has before joining a waitlist. Cut from the homepage: "What happens
 // when my spot opens?" (folded into the first answer), "Can I change the plan
 // it gives me?" (step A says "Change anything"), "Will UrgAns do things
@@ -28,20 +30,22 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
       "We are letting teams in from the waitlist. Join and we will message you when your spot opens.",
   },
   {
-    question: "Is it for one artist or a roster?",
-    answer: `Both. Solo covers one artist, Manager up to ${managerArtists ?? "three"} and Label has no limit.`,
+    question: "My team lives on WhatsApp. Will they actually use it?",
+    answer:
+      "Yes, there’s almost nothing to learn. Send them an invite link and each person sees what’s theirs and when it’s due. It works in the phone browser too.",
   },
   {
-    question: "Do I pay per person?",
-    answer: "No. One price covers your team.",
+    question: "What if I don’t have a release right now?",
+    answer:
+      "Start the next one early. Plan it now and find opportunities that fit your artists.",
+  },
+  {
+    question: "Is it for one artist or a roster?",
+    answer: `Both. Solo covers one artist, Manager up to ${managerArtists ?? "three"} and Label has no limit.`,
   },
   {
     question: "Does it post or distribute for me?",
     answer:
       "No. Urganize plans and tracks the release. You still post and distribute.",
-  },
-  {
-    question: "Does it work on my phone?",
-    answer: "Yes, in your browser. Add it to your home screen.",
   },
 ];

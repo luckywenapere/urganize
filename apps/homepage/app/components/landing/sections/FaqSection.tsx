@@ -35,7 +35,7 @@ export function FaqSection() {
         containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10"
       >
         <div className="text-center">
-          <h2 className={centeredHeadlineClass}>Questions</h2>
+          <h2 className={centeredHeadlineClass}>Before you join</h2>
         </div>
 
         <div className="mt-10 border-t border-[color:var(--marketing-border)]">

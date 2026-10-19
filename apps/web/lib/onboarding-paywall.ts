@@ -5,7 +5,7 @@
  * What is decided here, pure so vitest holds it:
  *  - the headline, exactly "Run your next release like a pro." (no number:
  *    the founder dropped the task count on 2026-10-14),
- *  - the logo strip's line, "Built with people from", the landing page's
+ *  - the logo strip's line, "Shaped with managers from", the landing page's
  *    wording (AffiliationsSection). Never "Trusted by": those companies have
  *    not endorsed Urganize,
  *  - which plan is PRE-SELECTED from the "Who are you?" persona (URG-262),
@@ -26,7 +26,7 @@ import { isBillingInterval, isPricingTierId, type BillingInterval, type PricingT
 import type { OnboardingPersona, OnboardingWhereStuck } from './onboarding';
 
 export const PAYWALL_HEADLINE = 'Run your next release like a pro.';
-export const PAYWALL_LOGOS_LINE = 'Built with people from';
+export const PAYWALL_LOGOS_LINE = 'Shaped with managers from';
 export const PAYWALL_CTA = 'Start my free trial';
 export const PAYWALL_CHAT_LINE = 'Questions? Chat with us';
 
@@ -50,8 +50,8 @@ export function paywallTrialLine(trialDays: number): string {
 }
 
 /**
- * The same three people-based logos as the landing page's "Built with people
- * from" row, as black-on-transparent masks coloured by the theme. Sizes match
+ * The same three people-based logos as the landing page's "Shaped with
+ * managers from" row, as black-on-transparent masks coloured by the theme. Sizes match
  * apps/homepage/app/components/landing/sections/AffiliationsSection.tsx.
  * Greylight is "Backed by" on the landing page, a different claim, and is not
  * in this row.

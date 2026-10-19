@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.160.6",
+    tag: "App",
+    date: "October 19, 2026",
+    listed: false,
+    highlights: [
+      "The logo line on the plan screen after sign-up now reads \"Shaped with managers from\", matching the homepage.",
+    ],
+  },
+  {
     version: "1.160.5",
     tag: "App",
     date: "October 19, 2026",
