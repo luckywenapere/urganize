@@ -52,7 +52,16 @@ export function PricingStripSection() {
         containerClassName={wideContainerClass}
       >
         <div className="mx-auto max-w-[52rem] text-center">
-          <h2 className={centeredHeadlineClass}>One price for your team.</h2>
+          {/* 2026-10-19 (founder approved, loss framing): the price sits
+              against the cost of one missed deadline. The "from" figure is
+              the first priced tier, rendered from @urganize/pricing like the
+              cards, never typed. */}
+          <h2 className={centeredHeadlineClass}>Cheaper than one missed deadline.</h2>
+          {tiers[0]?.price ? (
+            <p className="mx-auto mt-5 max-w-[36rem] text-[1.05rem] leading-8 text-[var(--marketing-text-muted)] sm:text-[1.15rem]">
+              From {tiers[0].price}. Pick the plan that fits your roster.
+            </p>
+          ) : null}
         </div>
 
         {/* FOUR since 2026-10-02 (Group came back as the "Let's talk" card).
