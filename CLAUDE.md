@@ -19783,3 +19783,11 @@ The rollout's Distribute step can now deliver a **single** to TRM Distro through
 - **Env (Vercel Production, urganize):** `TRM_CLIENT_ID`, `TRM_CLIENT_SECRET` (credential "Urganize server (Hark build)"), `TRM_WEBHOOK_SECRET` (rotated Oct 19 in the TRM portal), optional `TRM_SEND_ALLOWED_EMAILS` (kill switch, unset = open), `TRM_API_BASE_URL`.
 - **Defaults** (one "Rights & policies" row, editable): label Independent (or the metadata label), copyright = artist + release year, stores `["all"]`, country of recording Nigeria, owns recording + collects publishing Worldwide, YouTube/Facebook Monetize, SoundExchange Claim from Inception, royalty splits = master splits when filled, else 100% to the artist. Open with TRM: canonical store ids, rejection payload shape, whether these defaults are acceptable.
 - **Not built in v1:** EP/album (shows "Singles first"), takedown UI, the rollout-line "Sent to TRM" strip, automatic artist TRM account creation (no endpoint).
+
+## Curator UrgAns front desk (URG-381, v1.161.0, 2026-10-19)
+
+Curators teach UrgAns their terms once (`/curator/front-desk`); artists and managers ask about a pitch from the dashboard (`/dashboard/front-desk/[pitchId]`) or the public pitch status page, UrgAns answers from those terms, and anything it can't answer escalates to the curator's inbox (`/curator/front-desk/inbox`). A daily digest email (`front_desk_digest`, run from `app/api/cron/notifications`) lists waiting questions, deduped so a question rides once and again only when it grows. Founder approved the build Oct 18, 2026 and said "Ship for everyone everything" Oct 19, 04:10 WAT.
+
+- **Code:** `lib/front-desk/` (flag, server, answer, terms, text, digest-server, client, types), `components/front-desk/`, `app/api/front-desk/` (every handler gated on the flag plus an owner check; `privacy-guard.test.ts` scans for it).
+- **Tables (migration `20261018210000_curator_front_desk.sql`, additive, applied Oct 19):** `curator_desk_terms`, `pitch_desk_questions`, `pitch_desk_answers`; RLS on with no policies (server-only access).
+- **Flag:** on for every curator. `FRONT_DESK_ALL=false` (Vercel) is the off switch and falls back to the Flow Test account plus `FRONT_DESK_EMAILS`. Decided on the server from the signed-in email; the digest and public reads check the CURATOR's account the same way.

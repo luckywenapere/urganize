@@ -141,6 +141,13 @@ const LOADERS: LoaderMap = {
       subject: (p) => m.pitchNoticeSubject(p.subject),
     };
   },
+  front_desk_digest: async () => {
+    const m = await import('./FrontDeskDigestEmail');
+    return {
+      element: (p) => createElement(m.FrontDeskDigestEmail, p),
+      subject: (p) => m.frontDeskDigestSubject(p),
+    };
+  },
   founder_ops_alert: async () => {
     const m = await import('./FounderOpsAlertEmail');
     return {

@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.161.0",
+    title: "UrgAns front desk for curators",
+    tag: "Pitching",
+    date: "October 19, 2026",
+    highlights: [
+      "Curators can teach UrgAns their terms once, and UrgAns answers artists' and managers' questions about a pitch from them, right on the pitch.",
+      "Anything UrgAns can't answer goes to the curator's front desk inbox, and curators get one daily email with the questions waiting for them.",
+    ],
+  },
+  {
     version: "1.160.8",
     tag: "App",
     date: "October 19, 2026",

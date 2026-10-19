@@ -13,6 +13,7 @@ import type { FounderBillingAlertEmailProps } from './FounderBillingAlertEmail';
 import type { NotifyAdminEmailProps } from './NotifyAdminEmail';
 import type { PayLinkEmailProps } from './PayLinkEmail';
 import type { PitchNoticeEmailProps } from './PitchNoticeEmail';
+import type { FrontDeskDigestEmailProps } from './FrontDeskDigestEmail';
 import type { FounderOpsAlertEmailProps } from './FounderOpsAlertEmail';
 import type { OnboardingStepEmailProps } from './OnboardingStepEmail';
 import type { AnnouncementEmailProps } from './AnnouncementEmail';
@@ -35,6 +36,7 @@ export type EmailTemplateProps = {
   notify_admin: NotifyAdminEmailProps;
   pay_link: PayLinkEmailProps;
   pitch_notice: PitchNoticeEmailProps;
+  front_desk_digest: FrontDeskDigestEmailProps;
   founder_ops_alert: FounderOpsAlertEmailProps;
   onboarding_step: OnboardingStepEmailProps;
   announcement: AnnouncementEmailProps;
