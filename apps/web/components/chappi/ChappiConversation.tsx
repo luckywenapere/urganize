@@ -131,6 +131,13 @@ type ChappiConversationProps = {
   trailingAt?: number;
   emptyHero?: { title: string; subtitle: string; prompts: string[] };
   placeholder?: string;
+  /**
+   * The swipe navigation draws one shared "Message UrgAns…" box at shell level
+   * for all three tabs (URG-380), so the UrgAns tab's conversation draws none
+   * of its own: the box hands its text over with `sendInputOnOpen`, and this
+   * conversation publishes `replyInFlight` for the box's busy state.
+   */
+  externalComposer?: boolean;
 };
 
 // Icons live here, not in the client-safe intent-router lib (icons are React
@@ -269,6 +276,7 @@ export function ChappiConversation({
   trailingAt,
   emptyHero,
   placeholder,
+  externalComposer = false,
 }: ChappiConversationProps) {
   const isPanel = variant === 'panel';
   const router = useRouter();
@@ -314,6 +322,15 @@ export function ChappiConversation({
   // disabled for up to a minute while an answer for another chat finishes.
   const [thinkingEpoch, setThinkingEpoch] = useState<number | null>(null);
   const isThinking = thinkingEpoch === epoch;
+  // The shared box outside (swipe navigation) shows the same busy state.
+  useEffect(() => {
+    if (!externalComposer) return;
+    useChappiStore.getState().setReplyInFlight(isThinking);
+  }, [externalComposer, isThinking]);
+  useEffect(() => {
+    if (!externalComposer) return;
+    return () => useChappiStore.getState().setReplyInFlight(false);
+  }, [externalComposer]);
   // The reply as it is being written, while the model is still writing it. A
   // preview only: when the turn ends, the reply the server sends replaces it.
   // Keyed by epoch like `thinkingEpoch`, so a preview for a transcript that has
@@ -1348,7 +1365,7 @@ export function ChappiConversation({
   // settled on: context control, field, send. The dropdown still opens
   // upward from it, and it still renders nothing while the user has no
   // releases (in which case this is simply field + send).
-  const inputForm = (
+  const inputForm = externalComposer ? null : (
     <form
       onSubmit={handleSubmit}
       className="w-full"
@@ -1527,7 +1544,7 @@ export function ChappiConversation({
             ))}
           </div>
         </div>
-        <div className="shrink-0">{inputForm}</div>
+        {inputForm ? <div className="shrink-0">{inputForm}</div> : null}
       </div>
     );
   }

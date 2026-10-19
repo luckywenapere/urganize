@@ -36,8 +36,10 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
  *
  *  - On Home, UrgAns and Artists: the top tabs over the pager, one app-height
  *    column pinned to the visible viewport, each page scrolling on its own, and
- *    the "Message UrgAns…" box pinned at the bottom of Home and Artists (UrgAns
- *    has its own, in the same place). The pager draws the three pages itself,
+ *    ONE "Message UrgAns…" box pinned at the bottom across all three tabs: the
+ *    same instance, shape, size and place whichever tab is up, so a swipe
+ *    never makes it jump (the UrgAns tab's conversation draws no box of its
+ *    own; its rollout scope sits in its top row). The pager draws the three pages itself,
  *    so `children` (the route's page) is not drawn on these routes.
  *  - Anywhere else (a rollout, settings, relationships…): the same top bar over
  *    the page as it was, with the desktop side menu where the page has one.
@@ -114,7 +116,7 @@ export function SwipeFrame({
               />
             </WorkspacePageErrorBoundary>
           </main>
-          {CHAPPI_ENABLED && tab !== 'urgans' ? <SwipeComposer /> : null}
+          {CHAPPI_ENABLED ? <SwipeComposer onUrgAns={tab === 'urgans'} /> : null}
         </div>
       ) : (
         <div className="app-layout">
@@ -155,15 +157,25 @@ export function SwipeFrame({
 }
 
 /**
- * The one "Message UrgAns…" box on Home and Artists. It always posts to Main:
- * Main is put on screen first, then the message is handed over and the pager
- * glides to UrgAns, where the conversation sends it.
+ * The one "Message UrgAns…" box, shared by Home, UrgAns and Artists (URG-380).
+ * On UrgAns it hands the text to the conversation on screen. On Home and
+ * Artists it always posts to Main: Main is put on screen first, then the
+ * message is handed over and the pager glides to UrgAns, where the
+ * conversation sends it.
  */
-function SwipeComposer() {
+function SwipeComposer({ onUrgAns }: { onUrgAns: boolean }) {
+  const replyInFlight = useChappiStore((state) => state.replyInFlight);
   return (
     <HomeAskBar
       variant="swipe"
+      replying={onUrgAns && replyInFlight}
       onSend={() => {
+        if (onUrgAns) {
+          // The conversation is already on screen: it sends the box's text
+          // (and any files, held in pendingAttachments) as soon as it is free.
+          useChappiStore.getState().setSendInputOnOpen(true);
+          return;
+        }
         // Opening Main can replace the transcript (and the box's text with it),
         // so the message is held here and handed back once Main is on screen.
         const held = useChappiStore.getState();

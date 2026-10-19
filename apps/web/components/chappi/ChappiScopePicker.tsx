@@ -11,6 +11,13 @@ type ChappiScopePickerProps = {
   releases: ExecutionRelease[];
   scopedReleaseId: string | null;
   onSelect: (releaseId: string | null) => void;
+  /**
+   * 'composer' (default): a leading chip inside a composer pinned at the
+   * bottom, opening upward. 'header': a quiet pill in a page's top row (the
+   * swipe navigation's UrgAns tab, URG-380, beside "Main thread"), opening
+   * downward, so the shared composer below never changes shape.
+   */
+  placement?: 'composer' | 'header';
 };
 
 /** 20px cover thumbnail — real art or the theme-aware U-mark default. */
@@ -47,7 +54,13 @@ function ScopeThumb({ release }: { release: ExecutionRelease }) {
  * UPWARD (the composer is pinned at the bottom of the surface). "All
  * releases" clears the scope.
  */
-export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: ChappiScopePickerProps) {
+export function ChappiScopePicker({
+  releases,
+  scopedReleaseId,
+  onSelect,
+  placement = 'composer',
+}: ChappiScopePickerProps) {
+  const header = placement === 'header';
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -105,7 +118,11 @@ export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: Chapp
         // Both names contain the words on the button, which is what lets a
         // voice-control user who says what they see reach it.
         aria-label={scoped ? `Conversation scoped to ${scoped.title}` : 'All rollouts. Choose one for this conversation.'}
-        className="motion-focus inline-flex max-w-full items-center gap-1.5 rounded-full bg-bg-elevated px-2 py-1.5 text-xs text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary"
+        className={
+          header
+            ? 'motion-focus motion-press inline-flex h-[30px] max-w-full items-center gap-1.5 rounded-full bg-content-primary/[0.05] px-3 text-[13.5px] text-content-primary/70 transition-colors hover:text-content-primary'
+            : 'motion-focus inline-flex max-w-full items-center gap-1.5 rounded-full bg-bg-elevated px-2 py-1.5 text-xs text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary'
+        }
       >
         {scoped ? (
           <ScopeThumb release={scoped} />
@@ -120,14 +137,16 @@ export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: Chapp
             it carries the recognition a truncated title loses; the full
             title stays in the aria-label and the dropdown. */}
         <span
-          className={`max-w-[4.5rem] truncate sm:max-w-[10rem] ${
+          className={`${header ? 'max-w-[9rem]' : 'max-w-[4.5rem]'} truncate sm:max-w-[10rem] ${
             scoped ? 'font-medium text-content-secondary' : ''
           }`}
         >
           {scoped ? scoped.title : 'All rollouts'}
         </span>
         <ChevronDown
-          className={`h-3 w-3 shrink-0 transition-transform ${open ? '' : 'rotate-180'}`}
+          className={`${header ? 'h-3.5 w-3.5 text-content-primary/60' : 'h-3 w-3'} shrink-0 transition-transform ${
+            open === header ? 'rotate-180' : ''
+          }`}
           aria-hidden="true"
         />
       </button>
@@ -140,7 +159,7 @@ export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: Chapp
           role="group"
           aria-label="Scope this conversation to a rollout"
           ref={panelRef}
-          className="absolute bottom-full left-0 z-50 mb-2 max-h-72 w-64 max-w-[calc(100vw-3rem)] overflow-y-auto overscroll-contain rounded-xl border border-stroke-default bg-bg-surface py-1 shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
+          className={`absolute left-0 z-50 ${header ? 'top-full mt-2' : 'bottom-full mb-2'} max-h-72 w-64 max-w-[calc(100vw-3rem)] overflow-y-auto overscroll-contain rounded-xl border border-stroke-default bg-bg-surface py-1 shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]`}
         >
           <button
             type="button"

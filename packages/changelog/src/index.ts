@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.161.1",
+    tag: "App",
+    date: "October 19, 2026",
+    highlights: [
+      "Swipe navigation: the Message UrgAns box is now one box that stays the same shape, size and place on Home, UrgAns and Artists, so it no longer jumps when you swipe. The rollout picker moved to the top of UrgAns, beside Main thread.",
+    ],
+  },
+  {
     version: "1.161.0",
     title: "UrgAns front desk for curators",
     tag: "Pitching",

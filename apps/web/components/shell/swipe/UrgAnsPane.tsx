@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, ChevronDown, Home as HomeIcon, Plus } from '@/components/icons';
 import { ChappiConversation } from '@/components/chappi/ChappiConversation';
+import { ChappiScopePicker } from '@/components/chappi/ChappiScopePicker';
 import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { RolloutCreateFlow } from '@/components/releases/RolloutCreateFlow';
@@ -39,8 +40,9 @@ function useOnMain(): boolean {
 
 /**
  * UrgAns as a tab (URG-380): one persistent Main thread, a quiet "Main thread ⌄"
- * pill that opens Sessions, the conversation with its own composer pinned at the
- * bottom, and two kinds of turn the swipe navigation adds at the end of Main:
+ * pill that opens Sessions with the rollout scope beside it, the conversation
+ * (its box is the shell's one shared composer, SwipeFrame, so it never changes
+ * shape between tabs), and two kinds of turn the swipe navigation adds at the end of Main:
  * the Home card carried in, and "Needs you" (what the bell used to hold).
  */
 export function UrgAnsPane({ active }: { active: boolean }) {
@@ -57,6 +59,8 @@ export function UrgAnsPane({ active }: { active: boolean }) {
   const unread = useNeedsYouStore((state) => state.items).filter((item) => !item.read);
   const loadNeedsYou = useNeedsYouStore((state) => state.load);
   const [fresh, setFresh] = useState(false);
+  const scopedReleaseId = useChappiStore((state) => state.scopedReleaseId);
+  const setScopedReleaseId = useChappiStore((state) => state.setScopedReleaseId);
 
   const sessionTitle = useMemo(() => {
     if (onMain) return 'Main thread';
@@ -96,6 +100,17 @@ export function UrgAnsPane({ active }: { active: boolean }) {
     return () => window.clearTimeout(timer);
   }, [handoff]);
 
+  // The shared composer lives outside this pane (portalled to <body>), so the
+  // ring is keyed off <html>.
+  useEffect(() => {
+    if (!fresh) return;
+    const root = document.documentElement;
+    root.dataset.composerReady = '';
+    return () => {
+      delete root.dataset.composerReady;
+    };
+  }, [fresh]);
+
   const prompts = useMemo(() => {
     const next = [...releases]
       .filter((release) => release.releaseDate && new Date(release.releaseDate).getTime() >= Date.now() - 86_400_000)
@@ -120,22 +135,28 @@ export function UrgAnsPane({ active }: { active: boolean }) {
     ) : null;
 
   return (
-    <div className="swipe-urgans flex h-full min-h-0 flex-col px-5 lg:mx-auto lg:max-w-[46rem]" data-composer-ready={fresh || undefined}>
-      <div className="flex shrink-0 items-center pt-2">
+    <div className="swipe-urgans flex h-full min-h-0 flex-col px-5 lg:mx-auto lg:max-w-[46rem]">
+      <div className="flex shrink-0 items-center gap-2 pt-2">
         <button
           type="button"
           onClick={() => setSessionsOpen(true)}
           aria-haspopup="dialog"
-          className="motion-focus motion-press inline-flex h-[30px] max-w-full items-center gap-1.5 rounded-full bg-content-primary/[0.05] px-3 text-[13.5px] text-content-primary/70"
+          className="motion-focus motion-press inline-flex h-[30px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-content-primary/[0.05] px-3 text-[13.5px] text-content-primary/70"
         >
           <span className="truncate">{sessionTitle}</span>
           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-content-primary/60" aria-hidden="true" />
         </button>
+        <ChappiScopePicker
+          placement="header"
+          releases={releases}
+          scopedReleaseId={scopedReleaseId}
+          onSelect={setScopedReleaseId}
+        />
       </div>
       <div className="shrink-0">
         <InviteTeamBanner />
       </div>
-      <div className="min-h-0 flex-1 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3">
+      <div className="swipe-urgans-body min-h-0 flex-1 pt-3">
         <ErrorBoundary name="swipe-urgans-conversation" onError={reportBoundaryError}>
           <ChappiConversation
             onNewRelease={() => setCreateOpen(true)}
@@ -147,7 +168,7 @@ export function UrgAnsPane({ active }: { active: boolean }) {
               subtitle: 'One thread for every rollout. Ask anything.',
               prompts,
             }}
-            placeholder={showHandoff ? 'Reply to UrgAns…' : 'Message UrgAns…'}
+            externalComposer
           />
         </ErrorBoundary>
       </div>

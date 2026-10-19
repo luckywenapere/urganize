@@ -67,6 +67,7 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 export function HomeAskBar({
   variant = 'home',
   onSend,
+  replying = false,
 }: {
   /** 'swipe' (URG-380): the swipe navigation's one box under Home and Artists,
    *  on phones and desktops, centred to the page column. */
@@ -74,6 +75,10 @@ export function HomeAskBar({
   /** Replaces opening the chat page: the swipe navigation hands the message to
    *  Main and glides the pager to UrgAns instead. */
   onSend?: () => void;
+  /** The conversation it feeds is writing a reply (the swipe navigation's
+   *  UrgAns tab): the box holds still, field and send disabled, a spinner in
+   *  send. Same shape and size either way. */
+  replying?: boolean;
 } = {}) {
   const router = useRouter();
   const releases = useReleaseStore((state) => state.releases);
@@ -149,7 +154,8 @@ export function HomeAskBar({
   const isRecording = voice.state === 'recording';
   const isTranscribing = voice.state === 'transcribing';
   const busy = isRecording || isTranscribing;
-  const canSend = (input.trim().length > 0 || attach.attachments.length > 0) && attach.pending === 0 && !busy;
+  const canSend =
+    (input.trim().length > 0 || attach.attachments.length > 0) && attach.pending === 0 && !busy && !replying;
 
   // Slide the box down to where the chat's message box sits and fade the rest
   // of Home, while the chat page loads underneath. Nothing waits on the slide.
@@ -211,7 +217,7 @@ export function HomeAskBar({
       >
         <ChappiAttachmentTray attachments={attach.attachments} pending={attach.pending} onRemove={attach.remove} />
         <div className="flex items-center gap-1 rounded-full border border-stroke-control bg-bg-surface/95 p-1.5 shadow-lg backdrop-blur-2xl transition-colors focus-within:border-brand/70">
-          <ChappiAttachMenu disabled={busy} onFiles={(files) => void attach.addFiles(files)} />
+          <ChappiAttachMenu disabled={busy || replying} onFiles={(files) => void attach.addFiles(files)} />
           {isRecording ? (
             <div role="status" className="flex min-w-0 flex-1 items-center gap-2 px-2 text-[16px] text-content-secondary">
               <span className="h-2 w-2 shrink-0 rounded-full bg-status-error motion-safe:animate-pulse" aria-hidden="true" />
@@ -233,7 +239,7 @@ export function HomeAskBar({
               placeholder={isTranscribing ? 'Turning your voice into text...' : 'Message UrgAns...'}
               aria-label="Message UrgAns"
               enterKeyHint="send"
-              disabled={isTranscribing}
+              disabled={isTranscribing || replying}
               // 16px: anything smaller makes iOS zoom the page on focus.
               className="min-w-0 flex-1 bg-transparent px-2 text-[16px] text-content-primary placeholder:text-content-tertiary focus:outline-none disabled:opacity-60"
             />
@@ -272,7 +278,11 @@ export function HomeAskBar({
             disabled={!canSend}
             className={SEND_BUTTON_DOCK_CLASS}
           >
-            <ArrowUp className={SEND_ARROW_CLASS} aria-hidden="true" />
+            {replying ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <ArrowUp className={SEND_ARROW_CLASS} aria-hidden="true" />
+            )}
           </button>
         </div>
         {voice.error ? (

@@ -97,6 +97,11 @@ type ChappiStore = {
    * as a conversation is on screen. The conversation clears it when it sends. */
   sendInputOnOpen: boolean;
   setSendInputOnOpen: (value: boolean) => void;
+  /** True while the conversation on screen is waiting on a reply. Published by
+   * ChappiConversation so a composer outside it (the swipe navigation's one
+   * shared box, URG-380) can show the same busy state. */
+  replyInFlight: boolean;
+  setReplyInFlight: (value: boolean) => void;
   /** Files attached in Home's box, sent along with its message. */
   pendingAttachments: ChappiAttachment[];
   setPendingAttachments: (value: ChappiAttachment[]) => void;
@@ -154,6 +159,8 @@ export const useChappiStore = create<ChappiStore>((set) => ({
   epoch: 0,
   sendInputOnOpen: false,
   setSendInputOnOpen: (value) => set({ sendInputOnOpen: value }),
+  replyInFlight: false,
+  setReplyInFlight: (value) => set({ replyInFlight: value }),
   pendingAttachments: [],
   setPendingAttachments: (value) => set({ pendingAttachments: value }),
   setInput: (value) => set({ input: value }),
