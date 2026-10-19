@@ -34,7 +34,7 @@ export function FinalCTASection() {
             This block is `#join`. The note below is the history.
 
             THE ANCHOR SITS ON THE HEADLINE'S BLOCK, NOT THE FORM'S (2026-10-09).
-            Every "Try Urganize" button on the site lands here via /#waitlist.
+            Every "Join waitlist" button on the site lands here via /#waitlist.
             The id used to be on the div under the h2, so a tap jumped to a bare
             email field with its headline scrolled off the top. scroll-mt-28 is
             112px against a 77px fixed header on a phone (81px on desktop). The

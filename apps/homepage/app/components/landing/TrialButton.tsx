@@ -36,11 +36,11 @@ export function TrialButton({
   location,
   size = "md",
   className = "",
-  label = "Try Urganize",
+  label = "Join waitlist",
 }: {
   location: TrialButtonLocation;
   size?: "md" | "lg";
-  /** Founder call 2026-10-19: /features hero reads "Join waitlist". */
+  /** Founder call 2026-10-19 (URG-407): every mount reads "Join waitlist" (was "Try Urganize"). */
   label?: string;
   className?: string;
 }) {

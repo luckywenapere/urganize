@@ -17,7 +17,7 @@ export const APP_LOGIN_URL = `${APP_ORIGIN}/auth`;
 export const APP_SIGNUP_URL = `${APP_ORIGIN}/onboarding`;
 
 /**
- * Where every "Try Urganize" button goes (2026-10-07, founder call: the site is
+ * Where every "Join waitlist" button goes (2026-10-07, founder call: the site is
  * a waitlist again). The inline form on the homepage, id="waitlist" in
  * FinalCTASection. A root-relative href so it works from any marketing page and
  * scrolls when already on the homepage. Sign-in stays on APP_LOGIN_URL.

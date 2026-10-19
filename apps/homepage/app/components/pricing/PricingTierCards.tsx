@@ -200,7 +200,7 @@ export function PricingTierCards() {
                       priced tier that was not self-serve; since 2026-09-08 the
                       two conditions are exact complements, so that branch was
                       unreachable and is gone rather than left to rot. */}
-                  {selfServe ? "Try Urganize" : "Let's talk"}
+                  {selfServe ? "Join waitlist" : "Let's talk"}
                 </a>
 
                 <ul className="mt-6 flex flex-1 flex-col gap-2.5">

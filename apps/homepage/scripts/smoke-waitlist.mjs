@@ -17,7 +17,7 @@ const baseUrl = process.env.WAITLIST_SMOKE_URL ?? "http://localhost:3000";
 // line, and since 2026-10-07 the waitlist form is open on the page (the
 // disclosure component is no longer mounted anywhere). So the script now does
 // what a visitor does, at a desktop and at a phone size:
-//   1. tap the header's "Try Urganize" and land on the form's headline, not
+//   1. tap the header's "Join waitlist" and land on the form's headline, not
 //      behind the fixed header (the 2026-10-09 anchor fix);
 //   2. type an email, press "Join now", and reach step 2 (name and phone).
 // It stops before submitting, because POST /api/signup needs the waitlist

@@ -33,7 +33,7 @@ To smoke-test the waitlist CTAs against a running local server:
 npm run smoke:waitlist
 ```
 
-At a desktop and a phone size it taps the header's "Try Urganize" and checks
+At a desktop and a phone size it taps the header's "Join waitlist" and checks
 you land on the waitlist headline (not hidden behind the fixed header), then
 types an email, presses "Join now" and checks the form reaches step 2. It
 stops before submitting, so it adds nothing to the waitlist database.

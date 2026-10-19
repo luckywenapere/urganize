@@ -134,7 +134,7 @@ export default function FeaturesPage() {
                 TrialButton the homepage mounts; the waitlist survives as a
                 disclosure under the final CTA. */}
             <div className="mt-8 flex w-full flex-col items-center gap-4">
-              <TrialButton location="features_hero" size="lg" label="Join waitlist" className="w-full sm:w-auto" />
+              <TrialButton location="features_hero" size="lg" className="w-full sm:w-auto" />
               <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
                 We are letting teams in from the waitlist.
               </p>
