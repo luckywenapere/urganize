@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.160.3",
+    tag: "Account",
+    date: "October 19, 2026",
+    highlights: [
+      "New accounts confirm their email with one tap. Your first rollout is saved while you check your inbox and opens as soon as you confirm, even if you open the link on another device.",
+      "Redesigned account emails: password reset and every other sign-in email is now one clear line, one button named for what it does, and a plain link if the button won't open, in light and dark.",
+      "Sign-in links can no longer be bent to send you to another website after you sign in.",
+    ],
+  },
+  {
     version: "1.160.2",
     tag: "Rollouts",
     date: "October 19, 2026",

@@ -14,6 +14,9 @@
 // finishes the join. Same pattern as /invite/accept.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { clearPendingConfirmation, firstNameOf, writePendingConfirmation } from '@/lib/email-confirmation';
+import { CheckInbox } from '@/components/auth/EmailConfirmation';
+import { useConfirmationPickup } from '@/components/auth/useConfirmationPickup';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button, Card, Input, Logo } from '@urganize/ui';
@@ -104,6 +107,8 @@ export function CuratorJoinPageClient({
   const [isGoogleRedirecting, setIsGoogleRedirecting] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  // Email confirmation (URG-386): Check your inbox until the account is confirmed.
+  const [confirmation, setConfirmation] = useState<{ email: string; sentAt: number; firstName: string } | null>(null);
 
   const resumeStartedRef = useRef(false);
 
@@ -256,7 +261,22 @@ export function CuratorJoinPageClient({
       const trimmedName = name.trim();
       // 'curator' goes into auth metadata so the OAuth callback's fallback
       // profile upsert cannot write a team role over it.
-      await signup(email.trim().toLowerCase(), password, trimmedName, 'curator');
+      // The code rides in user_metadata (URG-386): with email confirmation
+      // on there is no session yet, and /auth/callback redeems it once the
+      // email is confirmed, on whichever device opens the link. It used to
+      // fail here with "Could not use this link."
+      const signupResult = await signup(email.trim().toLowerCase(), password, trimmedName, 'curator', undefined, {
+        metadata: { curator_join_code: code },
+      });
+      if (signupResult.status === 'confirmation_sent') {
+        const sentAt = Date.now();
+        const firstName = firstNameOf(trimmedName);
+        writePendingConfirmation({ email: signupResult.email, sentAt, kind: 'curator', firstName });
+        setPassword('');
+        setConfirmation({ email: signupResult.email, sentAt, firstName });
+        setIsSubmitting(false);
+        return;
+      }
       const result = await acceptInvite(trimmedName);
       if (!result.ok) throw new Error(result.message || 'Could not use this link.');
       await finish();
@@ -265,6 +285,20 @@ export function CuratorJoinPageClient({
       setIsSubmitting(false);
     }
   };
+
+  // Confirmed in another tab of this browser: redeem and go in from here.
+  useConfirmationPickup(Boolean(confirmation), () => {
+    void (async () => {
+      const result = await acceptInvite(confirmation?.firstName ? name.trim() : undefined);
+      clearPendingConfirmation();
+      if (result.ok) {
+        await finish();
+      } else {
+        setConfirmation(null);
+        setError(result.message || 'Could not use this link.');
+      }
+    })();
+  });
 
   const handleGoogleSignup = async () => {
     setError('');
@@ -311,6 +345,20 @@ export function CuratorJoinPageClient({
 
   const isUsable = loadState.kind === 'ready' && loadState.state === 'active';
   const busy = isSubmitting || isGoogleRedirecting;
+
+  if (confirmation) {
+    return (
+      <CheckInbox
+        email={confirmation.email}
+        firstName={confirmation.firstName}
+        sentAt={confirmation.sentAt}
+        onChangeEmail={() => {
+          setEmail(confirmation.email);
+          setConfirmation(null);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="relative min-h-screen overflow-hidden p-4">

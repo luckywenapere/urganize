@@ -69,9 +69,35 @@ export type RedeemAnswer = { approved: boolean; answered: boolean; outcome?: str
  * failure it answers approved=true so the caller carries on and the server's
  * own gate decides on the next request.
  */
+/**
+ * The codes an email sign-up carried in its user_metadata (URG-386), read
+ * from the access token's claims. A confirmation link opened in another
+ * browser (the Gmail app's, another device) has no localStorage copy, and
+ * without this the account would be held as "not let in".
+ */
+export function accessIntentFromToken(accessToken: string): { code: string | null; welcomeToken: string | null } {
+  try {
+    const part = accessToken.split('.')[1] || '';
+    const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const json = typeof atob === 'function' ? atob(padded) : Buffer.from(padded, 'base64').toString('binary');
+    const claims = JSON.parse(json) as { user_metadata?: Record<string, unknown> };
+    const metadata = claims.user_metadata || {};
+    const code = metadata.pending_access_code;
+    const welcomeToken = metadata.pending_welcome_token;
+    return {
+      code: looksLikeAccessCode(code) ? code : null,
+      welcomeToken: typeof welcomeToken === 'string' && welcomeToken.trim() ? welcomeToken.trim().slice(0, 200) : null,
+    };
+  } catch {
+    return { code: null, welcomeToken: null };
+  }
+}
+
 export async function redeemPendingAccess(accessToken: string): Promise<RedeemAnswer> {
-  const code = readAccessIntent();
-  const welcomeToken = readWelcomeIntent();
+  const fromToken = accessIntentFromToken(accessToken);
+  const code = readAccessIntent() ?? fromToken.code;
+  const welcomeToken = readWelcomeIntent() ?? fromToken.welcomeToken;
   try {
     const response = await fetch('/api/access/redeem', {
       method: 'POST',

@@ -19,6 +19,9 @@ import { errorMessage } from "@/lib/errors";
 import { supabase } from '@/lib/supabase/client';
 import { InviteOnlyNotice } from '@/components/access/InviteOnlyNotice';
 import { checkEmailAccess, hasPendingAccessIntent, redeemPendingAccess } from '@/lib/access-intent';
+import { normalizeEmail, readPendingConfirmation } from '@/lib/email-confirmation';
+import { CheckInbox } from '@/components/auth/EmailConfirmation';
+import { useConfirmationPickup } from '@/components/auth/useConfirmationPickup';
 
 // /auth is the single front door for BOTH sides of the account line, in the
 // stacked-pill layout: logo, heading, "Continue with Google", "Continue with
@@ -174,6 +177,14 @@ export default function AuthPage() {
   // Closed sign-up (2026-10-15): an email with no account and no invite reads
   // "Urganize is invite-only for now" here instead of starting the wizard.
   const [inviteOnly, setInviteOnly] = useState(false);
+  // URG-386: a password log-in before the email is confirmed reads Check your
+  // inbox (with Resend), not a red error.
+  const [unconfirmed, setUnconfirmed] = useState<{
+    email: string;
+    sentAt: number;
+    firstName: string;
+    releaseTitle: string;
+  } | null>(null);
 
   const emailInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
@@ -376,7 +387,23 @@ export default function AuthPage() {
       }
       router.push(nextPath);
     } catch (loginError) {
-      setError(errorMessage(loginError, 'Login failed. Please try again.'));
+      const message = errorMessage(loginError, 'Login failed. Please try again.');
+      if (/verify your email|email not confirmed/i.test(message)) {
+        const address = normalizeEmail(email);
+        const pending = readPendingConfirmation();
+        const same = pending && pending.email === address ? pending : null;
+        setPassword('');
+        setUnconfirmed({
+          email: address,
+          // Our own last send, when there was one, keeps its cooldown; otherwise
+          // Resend is available straight away.
+          sentAt: same?.sentAt ?? 0,
+          firstName: same?.firstName || '',
+          releaseTitle: same?.releaseTitle || '',
+        });
+        return;
+      }
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -422,6 +449,27 @@ export default function AuthPage() {
   // empty. Interactive submits stay excluded (local isLoading /
   // isGoogleLoading) so the form keeps its inline "Signing in…" + error UX
   // during a login attempt.
+  // Confirmed in another tab of this browser: go in from here.
+  useConfirmationPickup(Boolean(unconfirmed), () => {
+    router.push(nextPath);
+  });
+
+  if (unconfirmed) {
+    return (
+      <CheckInbox
+        email={unconfirmed.email}
+        firstName={unconfirmed.firstName}
+        releaseTitle={unconfirmed.releaseTitle}
+        sentAt={unconfirmed.sentAt}
+        onChangeEmail={() => {
+          setUnconfirmed(null);
+          setError('');
+          setEmailStage('collect');
+        }}
+      />
+    );
+  }
+
   if (hasMounted && isAuthenticated && !isLoading && !isGoogleLoading) {
     return (
       <LoadingScreen variant="shell" title="Opening Urganize" />

@@ -37,6 +37,9 @@ import { HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
 import { MIN_PASSWORD_LENGTH, PASSWORD_LENGTH_HINT } from '@/lib/password-rules';
+import { clearPendingConfirmation, firstNameOf, writePendingConfirmation } from '@/lib/email-confirmation';
+import { CheckInbox } from '@/components/auth/EmailConfirmation';
+import { useConfirmationPickup } from '@/components/auth/useConfirmationPickup';
 
 // Profile role for invited teammates. 'artist-team' positions them as a
 // member of someone else's team — matches the standalone signup vocabulary
@@ -109,6 +112,9 @@ export default function InviteAcceptPage() {
   const [isGoogleRedirecting, setIsGoogleRedirecting] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  // Email confirmation (URG-386): the sign-up went out and the account must
+  // be confirmed first. Check your inbox replaces the form until then.
+  const [confirmation, setConfirmation] = useState<{ email: string; sentAt: number; firstName: string } | null>(null);
 
   // Resume-after-OAuth guard. The accept POST is idempotent (returns
   // already_accepted) but the ref keeps us from firing the call multiple
@@ -236,20 +242,21 @@ export default function InviteAcceptPage() {
       // authenticated request even if everything after this line fails — a
       // dropped connection here used to leave an account that belonged to no
       // workspace, with nothing that would ever retry.
-      await signup(email.trim().toLowerCase(), password, name.trim(), INVITEE_PROFILE_ROLE, undefined, {
+      const signupResult = await signup(email.trim().toLowerCase(), password, name.trim(), INVITEE_PROFILE_ROLE, undefined, {
         pendingInviteToken: token,
       });
 
       // Email confirmation (when the Supabase project requires it) means
       // signUp returns NO session — the accept POST below cannot run yet.
-      // That is fine now: the metadata claim joins them the moment they
-      // confirm and sign in, so say so instead of surfacing a misleading
-      // "sign in to accept" error.
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        setSuccessMessage(
-          `Account created. Check your email to confirm it, then sign in. You'll join ${displayWorkspace} automatically.`
-        );
+      // That is fine: the token is in user_metadata, so /auth/callback joins
+      // them the moment they confirm (on any device), and the deferred claim
+      // is the backstop. Check your inbox until then (URG-386).
+      if (signupResult.status === 'confirmation_sent') {
+        const sentAt = Date.now();
+        const firstName = firstNameOf(name);
+        writePendingConfirmation({ email: signupResult.email, sentAt, kind: 'invite', firstName });
+        setPassword('');
+        setConfirmation({ email: signupResult.email, sentAt, firstName });
         setIsSubmitting(false);
         return;
       }
@@ -270,6 +277,16 @@ export default function InviteAcceptPage() {
       setIsSubmitting(false);
     }
   };
+
+  // Confirmed in another tab of this browser: join and go in from here.
+  useConfirmationPickup(Boolean(confirmation), () => {
+    void (async () => {
+      const result = await acceptInvite();
+      clearPendingConfirmation();
+      router.replace(result.ok ? HOME_PATH : `/invite/accept?token=${encodeURIComponent(token)}`);
+      if (!result.ok) setConfirmation(null);
+    })();
+  });
 
   const handleGoogleSignup = async () => {
     if (loadState.kind !== 'ready') return;
@@ -332,6 +349,20 @@ export default function InviteAcceptPage() {
     if (!isAuthenticated || !user?.email || !metadata?.invitedEmail) return false;
     return user.email.trim().toLowerCase() !== metadata.invitedEmail.trim().toLowerCase();
   }, [isAuthenticated, metadata, user?.email]);
+
+  if (confirmation) {
+    return (
+      <CheckInbox
+        email={confirmation.email}
+        firstName={confirmation.firstName}
+        sentAt={confirmation.sentAt}
+        onChangeEmail={() => {
+          setEmail(confirmation.email);
+          setConfirmation(null);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="relative min-h-screen overflow-hidden p-4">

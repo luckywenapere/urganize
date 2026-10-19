@@ -7,6 +7,9 @@ const MESSAGES: Record<string, string> = {
   callback_timeout: 'Google sign-in took too long to finish. Try again, or use your email.',
   callback_no_session: 'Google sign-in did not finish. Try again, or use your email.',
   callback_failed: 'Google sign-in did not work this time. Try again, or use your email.',
+  // URG-386: /auth/callback shows "This link has expired." itself; this is
+  // only for a link that reaches /auth with the code.
+  otp_expired: 'That confirmation link has expired. Log in with your email to get a new one.',
 };
 
 export function describeCallbackError(code: string | null | undefined): string | null {

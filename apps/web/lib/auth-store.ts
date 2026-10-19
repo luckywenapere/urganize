@@ -426,6 +426,14 @@ const resolveNeedsOnboarding = (profile: Profile | null | undefined): boolean =>
   return profile.onboarding_completed !== true;
 };
 
+/**
+ * What signup() did. `confirmation_sent` means the project requires email
+ * confirmation: there is an account but no session yet, and the caller shows
+ * Check your inbox instead of carrying on (URG-386). An address that already
+ * has an account answers the same way, so the screen never reveals it.
+ */
+export type SignupResult = { status: 'signed_in' } | { status: 'confirmation_sent'; email: string };
+
 interface AuthState {
   user: Profile | null;
   isAuthenticated: boolean;
@@ -451,8 +459,12 @@ interface AuthState {
        * the workspace join even when the accept POST after signup never
        * completes — the account-created-but-never-joined dead end. */
       pendingInviteToken?: string;
+      /** Extra user_metadata for the resume after the confirmation email
+       * (URG-386): onboarding_draft, curator_join_code,
+       * pending_access_code, pending_welcome_token. */
+      metadata?: Record<string, unknown>;
     }
-  ) => Promise<void>;
+  ) => Promise<SignupResult>;
   updateArtistName: (artistName: string) => Promise<void>;
   updateProfileName: (name: string) => Promise<void>;
   updateAskAfterTasks: (enabled: boolean) => Promise<void>;
@@ -781,8 +793,8 @@ export const useAuthStore = create<AuthState>()(
         name: string,
         role: string,
         artistName?: string,
-        options?: { pendingInviteToken?: string }
-      ) => {
+        options?: { pendingInviteToken?: string; metadata?: Record<string, unknown> }
+      ): Promise<SignupResult> => {
         try {
           set({ isLoading: true, error: null });
           const normalizedArtistName = String(artistName || '').trim();
@@ -790,11 +802,18 @@ export const useAuthStore = create<AuthState>()(
             throw new Error('Artist name is required for Artist accounts');
           }
 
+          const normalizedEmail = email.trim().toLowerCase();
           const { data, error: signUpError } = await supabase.auth.signUp({
-            email: email.trim().toLowerCase(),
+            email: normalizedEmail,
             password,
             options: {
+              // Where the confirmation link lands when the project requires
+              // one (URG-386). Ignored while autoconfirm is on.
+              ...(typeof window !== 'undefined'
+                ? { emailRedirectTo: `${window.location.origin}/auth/callback` }
+                : {}),
               data: {
+                ...(options?.metadata || {}),
                 name: name.trim(),
                 role,
                 artist_name: normalizedArtistName || undefined,
@@ -846,7 +865,7 @@ export const useAuthStore = create<AuthState>()(
                     needsOnboarding: true,
                     error: null,
                   });
-                  return;
+                  return { status: 'signed_in' };
                 }
               }
 
@@ -877,7 +896,7 @@ export const useAuthStore = create<AuthState>()(
                     needsOnboarding: true,
                     error: null,
                   });
-                  return;
+                  return { status: 'signed_in' };
                 }
               }
               persistLastAuthEmail(profile.email || data.user.email);
@@ -890,11 +909,17 @@ export const useAuthStore = create<AuthState>()(
               });
             }
           } else {
-            set({ 
-              isLoading: false,
-              error: 'Please check your email to verify your account' 
-            });
+            // Email confirmation is on: an account exists, no session yet.
+            // Not an error (it used to be a red "Please check your email to
+            // verify your account" that callers carried on past). The caller
+            // shows Check your inbox. Supabase answers an address that already
+            // has an account the same way (identities: []), so that case
+            // reads identically and never leaks that the account exists.
+            persistLastAuthEmail(normalizedEmail);
+            set({ isLoading: false, error: null });
+            return { status: 'confirmation_sent', email: normalizedEmail };
           }
+          return { status: 'signed_in' };
         } catch (error) {
           const errorMessage = handleSupabaseError(error);
           set({ isLoading: false, error: errorMessage });

@@ -137,7 +137,19 @@ import { resolvePostSignupDestination, takePitchIntent } from '@/lib/pitch-inten
 import { takeClaimIntent } from '@/lib/claim-intent';
 import { readWelcomeIntent } from '@/lib/welcome-intent';
 import { InviteOnlyNotice } from '@/components/access/InviteOnlyNotice';
-import { checkEmailAccess, redeemPendingAccess } from '@/lib/access-intent';
+import { checkEmailAccess, readAccessIntent, redeemPendingAccess } from '@/lib/access-intent';
+import {
+  EMAIL_CONFIRMED_FLAG_KEY,
+  EMAIL_CONFIRMED_PARAM,
+  clearPendingConfirmation,
+  firstNameOf,
+  readPendingConfirmation,
+  toMetadataDraft,
+  writePendingConfirmation,
+} from '@/lib/email-confirmation';
+import { claimEmailResume, dropMetadataDraft, emailResumeClaimedHere } from '@/lib/email-confirmation-client';
+import { CheckInbox, YoureIn, type YoureInRow } from '@/components/auth/EmailConfirmation';
+import { buildOnboardingPlanPreview, shortDateLabel } from '@/lib/onboarding-plan-preview';
 import { captureReferralFromSearch, reportReferralCode } from '@/lib/referral-intent';
 import { captureSignupSourceFromSearch, reportSignupSource } from '@/lib/signup-source-intent';
 import {
@@ -470,6 +482,25 @@ export default function OnboardingPage() {
   // redirect to /dashboard so the user can finish the invite step on this
   // page instead of being shunted away the moment auth flips.
   const [accountCreated, setAccountCreated] = useState(false);
+  // Email confirmation (URG-386). `confirmation`: the sign-up went out and the
+  // project wants the email confirmed first, so Check your inbox shows instead
+  // of the wizard. `emailResume`: the account is confirmed and this tab is
+  // building the rollout behind "You're in" (or another tab is).
+  const [confirmation, setConfirmation] = useState<{
+    email: string;
+    sentAt: number;
+    firstName: string;
+    releaseTitle: string;
+  } | null>(null);
+  const [emailResume, setEmailResume] = useState<{
+    phase: 'claiming' | 'ready' | 'building' | 'lost' | 'error';
+    firstName: string;
+    error?: string;
+  } | null>(null);
+  // Which part of the hand-off is running, so "You're in" moves with the real work.
+  const [handoffPhase, setHandoffPhase] = useState<'account' | 'rollout' | 'plan' | 'finishing' | 'next'>('account');
+  const emailResumeStartedRef = useRef(false);
+  const youreInShownAtRef = useRef(0);
   const [error, setError] = useState('');
   const [progressMessage, setProgressMessage] = useState('');
   // URG-251 Part 1: optional referral code on the account step, prefilled from
@@ -517,7 +548,41 @@ export default function OnboardingPage() {
   // belongs on step 1. Everything it touches is storage-guarded, so this
   // cannot throw.
   useIsomorphicLayoutEffect(() => {
-    const loaded = loadOnboardingDraft();
+    let loaded = loadOnboardingDraft();
+    // Email confirmation (URG-386): the draft lives in sessionStorage, which a
+    // new tab or the Gmail app's browser does not share. The pending
+    // confirmation keeps a copy in localStorage for exactly that.
+    const pendingConfirmation = readPendingConfirmation();
+    if (!loaded.title && !loaded.releaseType && pendingConfirmation?.onboarding) {
+      loaded = pendingConfirmation.onboarding.draft;
+    }
+    const pageParams = new URLSearchParams(window.location.search);
+    let confirmedFlag = false;
+    try {
+      confirmedFlag = window.sessionStorage.getItem(EMAIL_CONFIRMED_FLAG_KEY) === '1';
+      window.sessionStorage.removeItem(EMAIL_CONFIRMED_FLAG_KEY);
+    } catch {
+      // The query flag below carries the same signal.
+    }
+    if (confirmedFlag || pageParams.get(EMAIL_CONFIRMED_PARAM) === '1') {
+      // Back from a confirmation link: "You're in" from the first paint.
+      youreInShownAtRef.current = Date.now();
+      setEmailResume({ phase: 'claiming', firstName: pendingConfirmation?.firstName || '' });
+    } else if (pendingConfirmation?.kind === 'onboarding' && pageParams.get('change') === '1') {
+      // The account chip on Check your inbox / This link has expired: back to
+      // the account step with the address filled in.
+      setPersonaOpen(false);
+      setStep(ONBOARDING_STEP.account);
+      if (pendingConfirmation.firstName) setName((current) => current || pendingConfirmation.firstName || '');
+    } else if (pendingConfirmation?.kind === 'onboarding' && !pageParams.get('email')) {
+      // A reload or a new tab while waiting: still Check your inbox.
+      setConfirmation({
+        email: pendingConfirmation.email,
+        sentAt: pendingConfirmation.sentAt,
+        firstName: pendingConfirmation.firstName || '',
+        releaseTitle: pendingConfirmation.releaseTitle || '',
+      });
+    }
     if (loaded.releaseType !== null && !AVAILABLE_RELEASE_TYPE_SET.has(loaded.releaseType)) {
       setDraft({ ...loaded, releaseType: null });
     } else {
@@ -662,7 +727,9 @@ export default function OnboardingPage() {
       !isSubmitting &&
       !accountCreated &&
       !resumeData &&
-      !isAuthedSetup
+      !isAuthedSetup &&
+      !emailResume &&
+      !confirmation
     ) {
       router.replace(HOME_PATH);
     }
@@ -673,6 +740,8 @@ export default function OnboardingPage() {
     accountCreated,
     resumeData,
     isAuthedSetup,
+    emailResume,
+    confirmation,
     hasHydrated,
     router,
   ]);
@@ -932,6 +1001,7 @@ export default function OnboardingPage() {
     // themself — the same `plan` contract CreateReleaseModal uses (URG-201:
     // before this, the preference was recorded on the profile but the
     // release was always created with the full template).
+    setHandoffPhase('rollout');
     setProgressMessage(onboardingProgressMessage('rollout', draft.title));
     // A slow server still gets a later line, so the screen never sits on one
     // sentence long enough to look frozen.
@@ -975,6 +1045,7 @@ export default function OnboardingPage() {
     if (!releaseResponse.ok) {
       throw new Error(releasePayload.error || 'Could not create your rollout.');
     }
+    setHandoffPhase('plan');
 
     // Remembered for finishToDashboard, which lands on this rollout and opens
     // its planner. Share to socials (2026-09-23) used to leave a pending
@@ -1007,11 +1078,13 @@ export default function OnboardingPage() {
     // complete happens in finishToDashboard, called from the last of them.
     const after = firstStepAfterAccount(sequence);
     if (after === null) {
+      setHandoffPhase('finishing');
       setProgressMessage(onboardingProgressMessage('almost', draft.title));
       await finishToDashboard(accessToken);
       return;
     }
 
+    setHandoffPhase('next');
     setProgressMessage('');
     setIsSubmitting(false);
     handoffRunningRef.current = false;
@@ -1110,14 +1183,51 @@ export default function OnboardingPage() {
       // goes into the account's metadata only, which the release route reads
       // as its default artist.
       const trimmedArtistName = artistName.trim() || undefined;
-      await signup(
+      const accessCode = readAccessIntent();
+      const welcomeToken = readWelcomeIntent();
+      const result = await signup(
         email.trim().toLowerCase(),
         password,
         name.trim(),
         role,
-        trimmedArtistName
+        trimmedArtistName,
+        {
+          // URG-386: everything needed to build the rollout once the email
+          // is confirmed, on whichever device opens the link. No release
+          // title here: user text never goes into the confirmation email.
+          metadata: {
+            onboarding_draft: toMetadataDraft(draft, role),
+            ...(accessCode ? { pending_access_code: accessCode } : {}),
+            ...(welcomeToken ? { pending_welcome_token: welcomeToken } : {}),
+          },
+        }
       );
+      if (result.status === 'confirmation_sent') {
+        // No session until the email is confirmed: Check your inbox, not the
+        // old "Could not finish creating your team." The answers are kept in
+        // localStorage (same browser) and the account's metadata (anywhere).
+        const sentAt = Date.now();
+        const firstName = firstNameOf(name);
+        const releaseTitle = draft.title.trim();
+        writePendingConfirmation({
+          email: result.email,
+          sentAt,
+          kind: 'onboarding',
+          firstName,
+          releaseTitle,
+          onboarding: { role, draft },
+        });
+        setPassword('');
+        setProgressMessage('');
+        setIsSubmitting(false);
+        handoffRunningRef.current = false;
+        setConfirmation({ email: result.email, sentAt, firstName, releaseTitle });
+        return;
+      }
       setAccountCreated(true);
+      // Signed in straight away (confirmation off): the metadata copy of the
+      // answers is never needed, so it goes.
+      void dropMetadataDraft();
       const accessToken = await getAccessToken();
       await runPostSignupHandoff(accessToken);
     } catch (handoffError) {
@@ -1277,6 +1387,174 @@ export default function OnboardingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resumeData, isAuthenticated, isAuthLoading]);
 
+  // ---- email confirmation (URG-386) --------------------------------------
+  // The account is confirmed (this tab came back through /auth/callback, or
+  // the waiting tab saw the session arrive from another tab): take the resume
+  // once per account (claimEmailResume), then run the SAME hand-off the other
+  // paths run, behind "You're in".
+  const startEmailResume = async () => {
+    if (emailResumeStartedRef.current) return;
+    emailResumeStartedRef.current = true;
+    if (!youreInShownAtRef.current) youreInShownAtRef.current = Date.now();
+    const pendingConfirmation = readPendingConfirmation();
+    const fallbackName = pendingConfirmation?.firstName || confirmation?.firstName || firstNameOf(name);
+    setConfirmation(null);
+    setEmailResume((current) => ({ phase: 'claiming', firstName: current?.firstName || fallbackName }));
+    try {
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
+      if (!session) {
+        // Not signed in after all (the link was confirmed elsewhere, or not
+        // yet): back to waiting.
+        emailResumeStartedRef.current = false;
+        setEmailResume(null);
+        if (pendingConfirmation?.kind === 'onboarding') {
+          setConfirmation({
+            email: pendingConfirmation.email,
+            sentAt: pendingConfirmation.sentAt,
+            firstName: pendingConfirmation.firstName || '',
+            releaseTitle: pendingConfirmation.releaseTitle || '',
+          });
+        }
+        return;
+      }
+      try {
+        await checkAuth({ force: true });
+      } catch {
+        // The profile read below falls back to what the store has.
+      }
+      if (useAuthStore.getState().user?.onboarding_completed === true) {
+        clearPendingConfirmation();
+        router.replace(HOME_PATH);
+        return;
+      }
+      const sessionEmail = String(session.user.email || '').trim().toLowerCase();
+      const claimed = await claimEmailResume(session.user.id);
+      if (!claimed) {
+        if (emailResumeClaimedHere(session.user.id)) {
+          // Another tab of this browser is building this rollout.
+          setEmailResume((current) => ({ phase: 'lost', firstName: current?.firstName || fallbackName }));
+          return;
+        }
+        // Nothing to build for this account (another device built it, or a
+        // different account is signed in here): the pending record only
+        // goes when it is this account's, then the app takes over.
+        if (pendingConfirmation && pendingConfirmation.email === sessionEmail) clearPendingConfirmation();
+        router.replace(HOME_PATH);
+        return;
+      }
+      clearPendingConfirmation();
+      setPersonaOpen(false);
+      setAccountCreated(true);
+      setStep(ONBOARDING_STEP.account);
+      setDraft(claimed.draft);
+      // The hand-off runs from the effect below, after this draft is rendered,
+      // so it reads the confirmed answers rather than this render's.
+      setEmailResume((current) => ({ phase: 'ready', firstName: claimed.firstName || current?.firstName || fallbackName }));
+    } catch (resumeError) {
+      setEmailResume((current) => ({
+        phase: 'error',
+        firstName: current?.firstName || fallbackName,
+        error: errorMessage(resumeError, 'Could not finish setting up your team.'),
+      }));
+    }
+  };
+
+  // Came back through the confirmation link: start once auth has settled.
+  useEffect(() => {
+    if (emailResume?.phase !== 'claiming') return;
+    if (isAuthLoading) return;
+    if (!isAuthenticated) {
+      // Give the session a moment to land (the callback just stored it).
+      const timer = window.setTimeout(() => void startEmailResume(), 1500);
+      return () => window.clearTimeout(timer);
+    }
+    void startEmailResume();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [emailResume?.phase, isAuthenticated, isAuthLoading]);
+
+  // The waiting tab: same-browser confirmation shows up as a session from
+  // another tab (supabase-js syncs it over BroadcastChannel). Focus and
+  // visibility re-check too, for browsers that dropped the broadcast.
+  // Cross-device pick-up (retrying the password in memory) is a follow-up.
+  useEffect(() => {
+    if (!confirmation) return;
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED')) {
+        void startEmailResume();
+      }
+    });
+    const recheck = () => {
+      if (document.visibilityState !== 'visible') return;
+      void supabase.auth.getSession().then(({ data: sessionData }) => {
+        if (sessionData.session) void startEmailResume();
+      });
+    };
+    window.addEventListener('focus', recheck);
+    document.addEventListener('visibilitychange', recheck);
+    return () => {
+      data.subscription.unsubscribe();
+      window.removeEventListener('focus', recheck);
+      document.removeEventListener('visibilitychange', recheck);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirmation]);
+
+  // Run the hand-off with the claimed draft in this render's closure.
+  useEffect(() => {
+    if (emailResume?.phase !== 'ready') return;
+    if (handoffRunningRef.current) return;
+    handoffRunningRef.current = true;
+    setEmailResume((current) => (current ? { ...current, phase: 'building', error: undefined } : current));
+    setHandoffPhase('account');
+    setIsSubmitting(true);
+    void (async () => {
+      try {
+        const accessToken = await getAccessToken();
+        await runPostSignupHandoff(accessToken);
+      } catch (handoffError) {
+        handoffRunningRef.current = false;
+        setIsSubmitting(false);
+        setProgressMessage('');
+        setEmailResume((current) => ({
+          phase: 'error',
+          firstName: current?.firstName || '',
+          error: errorMessage(handoffError, 'Could not finish setting up your team.'),
+        }));
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [emailResume?.phase, draft]);
+
+  // The hand-off moved on to the paywall / welcome / invite step: let
+  // "You're in" read for at least ~1.2 s, then show it.
+  useEffect(() => {
+    if (emailResume?.phase !== 'building' || handoffPhase !== 'next') return;
+    const left = Math.max(0, 1200 - (Date.now() - youreInShownAtRef.current));
+    const timer = window.setTimeout(() => setEmailResume(null), left);
+    return () => window.clearTimeout(timer);
+  }, [emailResume?.phase, handoffPhase]);
+
+  // The plan's first rows for "You're in": the same playbook the preview
+  // step reads, revealed as the real hand-off moves (never on a timer).
+  const youreInRows = useMemo<YoureInRow[]>(() => {
+    if (draft.planningPreference === 'start_from_scratch') return [];
+    const preview = buildOnboardingPlanPreview({
+      releaseType: draft.releaseType,
+      releaseDate: draft.releaseDate,
+      now: Date.now(),
+    });
+    if (!preview) return [];
+    const rows: YoureInRow[] = [];
+    preview.weeks.forEach((week, index) => {
+      const when = week.isCatchUp ? 'Now' : index === 0 ? 'This week' : week.isReleaseWeek ? 'Launch wk' : `Wk ${index + 1}`;
+      for (const title of week.tasks) {
+        if (rows.length < 3) rows.push({ title, when });
+      }
+    });
+    return rows;
+  }, [draft.planningPreference, draft.releaseType, draft.releaseDate]);
+
   // ---- invite step -------------------------------------------------------
   const updateInviteRow = (rowId: string, patch: Partial<InviteRow>) => {
     setInviteRows((current) =>
@@ -1419,6 +1697,82 @@ export default function OnboardingPage() {
   const ownsItsScreen = !personaOpen && (step === ONBOARDING_STEP.paywall || step === ONBOARDING_STEP.welcome);
   const authedSetupFinishStep = lastQuestionStep(sequence);
   const inviteLabels = inviteStepButtonLabels(finishing);
+
+  // Email confirmation (URG-386): "You're in" while the rollout builds, and
+  // Check your inbox while the link is out. Both replace the wizard.
+  if (emailResume) {
+    const typeLabel = ONBOARDING_RELEASE_TYPES.find((option) => option.value === draft.releaseType)?.label;
+    const releaseDateMs = isReleaseDateValid(draft.releaseDate) ? Date.parse(`${draft.releaseDate}T00:00:00Z`) : NaN;
+    const release = draft.title.trim()
+      ? {
+          title: draft.title.trim(),
+          meta: [typeLabel, Number.isFinite(releaseDateMs) ? `Out ${shortDateLabel(releaseDateMs)}` : '']
+            .filter(Boolean)
+            .join(' · '),
+        }
+      : null;
+    const phaseRank = { account: 1, rollout: 1, plan: 2, finishing: 3, next: 3 }[handoffPhase];
+    const building = emailResume.phase === 'building';
+    const progress = !building ? 0.15 : { account: 0.3, rollout: 0.5, plan: 0.78, finishing: 1, next: 1 }[handoffPhase];
+    if (emailResume.phase === 'lost') {
+      return (
+        <YoureIn
+          firstName={emailResume.firstName}
+          subline="Finish in your other tab."
+          footer={
+            <button
+              type="button"
+              onClick={() => router.replace(HOME_PATH)}
+              className="text-[15px] font-medium text-content-primary/70 underline-offset-4 hover:underline"
+            >
+              Continue here
+            </button>
+          }
+        />
+      );
+    }
+    return (
+      <YoureIn
+        firstName={emailResume.firstName}
+        release={release}
+        rows={youreInRows}
+        revealed={building ? phaseRank : 0}
+        progress={progress}
+        error={emailResume.phase === 'error' ? emailResume.error || 'Could not finish setting up your team.' : null}
+        onRetry={
+          emailResume.phase === 'error'
+            ? () => {
+                if (accountCreated) {
+                  setEmailResume((current) => (current ? { ...current, phase: 'ready', error: undefined } : current));
+                } else {
+                  emailResumeStartedRef.current = false;
+                  void startEmailResume();
+                }
+              }
+            : undefined
+        }
+      />
+    );
+  }
+
+  if (confirmation) {
+    return (
+      <CheckInbox
+        email={confirmation.email}
+        firstName={confirmation.firstName}
+        releaseTitle={confirmation.releaseTitle}
+        sentAt={confirmation.sentAt}
+        onChangeEmail={() => {
+          setEmail(confirmation.email);
+          setPassword('');
+          setError('');
+          setPersonaOpen(false);
+          setStep(ONBOARDING_STEP.account);
+          setConfirmation(null);
+        }}
+      />
+    );
+  }
 
   // Closed sign-up (2026-10-15): an email that is not let in reads this
   // instead of the wizard.

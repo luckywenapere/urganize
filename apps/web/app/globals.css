@@ -3504,3 +3504,134 @@ html[data-release-focus='on'] nav a[href^='/dashboard']:not([href^='/dashboard/h
     animation: swipe-turn-ring 600ms ease-out both;
   }
 }
+
+/* ── Email confirmation screens (URG-386, approved v2 mocks, Oct 18, 2026) ──
+   One soft green bloom, a lifted surface, the 112px mark (sweeping ring while
+   waiting, filled check when in). Token-driven so the light theme follows.
+   `.ec-surface` sits in the components layer so `md:ec-surface` works. */
+@layer components {
+  .ec-surface {
+    position: relative;
+    border-radius: 30px;
+    border: 1px solid rgb(var(--color-stroke) / 0.08);
+    background: linear-gradient(180deg, rgb(var(--color-bg-elevated)) 0%, rgb(var(--color-bg-surface)) 100%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.05),
+      0 40px 90px -20px rgb(0 0 0 / 0.55),
+      0 2px 6px rgb(0 0 0 / 0.25);
+  }
+}
+.ec-glow {
+  position: absolute;
+  left: 50%;
+  top: 90px;
+  width: 640px;
+  height: 560px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(var(--color-brand) / 0.3), rgb(var(--color-brand) / 0.11) 50%, transparent 100%);
+  filter: blur(14px);
+}
+@media (min-width: 768px) {
+  .ec-glow {
+    top: 40px;
+    width: 1100px;
+    height: 720px;
+    background: radial-gradient(closest-side, rgb(var(--color-brand) / 0.2), rgb(var(--color-brand) / 0.06) 55%, transparent 100%);
+  }
+}
+.ec-glow-dim { opacity: 0.35; }
+html[data-theme='light'] .ec-glow { opacity: 0.22; }
+html[data-theme='light'] .ec-surface {
+  border-color: rgb(var(--color-stroke) / 0.1);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 24px 60px -24px rgb(60 50 30 / 0.22), 0 1px 3px rgb(60 50 30 / 0.08);
+}
+.ec-mark { position: relative; width: 112px; height: 112px; margin: 0 auto; display: block; }
+.ec-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
+}
+.ec-ring-track { background: rgb(var(--color-text-primary) / 0.07); }
+.ec-ring-full { background: rgb(var(--color-brand) / 0.55); }
+.ec-sweep { position: absolute; inset: 0; animation: ec-spin 2.4s linear infinite; }
+.ec-ring-sweep {
+  background: conic-gradient(from 200deg, transparent 0deg, rgb(var(--color-brand) / 0) 40deg, rgb(var(--color-brand) / 0.95) 150deg, transparent 151deg);
+}
+/* The sweep's bright end sits at 350deg (from 200deg + 150deg). */
+.ec-head {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  left: 43.3px;
+  top: -1.5px;
+  border-radius: 50%;
+  background: rgb(var(--color-brand));
+  box-shadow: 0 0 12px 2px rgb(var(--color-brand) / 0.7);
+}
+.ec-disc {
+  position: absolute;
+  inset: 14px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgb(var(--color-stroke) / 0.13);
+  background: radial-gradient(120% 100% at 50% 0%, rgb(var(--color-bg-hover)) 0%, rgb(var(--color-bg-elevated)) 60%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 10px 24px rgb(0 0 0 / 0.35);
+}
+.ec-disc-success {
+  color: rgb(12 12 13);
+  border-color: rgb(255 255 255 / 0.25);
+  background: radial-gradient(120% 100% at 50% 0%, #a4ecb8 0%, #7fd99a 55%, #5fbf7e 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.45), 0 14px 40px -6px rgb(127 217 154 / 0.55);
+}
+.ec-pulse { position: absolute; border-radius: 50%; border: 1px solid rgb(var(--color-brand) / 0.45); }
+.ec-pulse-far { border-color: rgb(var(--color-brand) / 0.16); }
+.ec-pulse-live { border-color: rgb(var(--color-brand) / 0.35); opacity: 0.55; animation: ec-breathe 2.8s ease-in-out infinite; }
+.ec-pulse-live.ec-pulse-far { opacity: 0.22; animation-delay: 0.4s; }
+.ec-mark-success { animation: ec-pop 420ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.ec-live-dot {
+  position: relative;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgb(var(--color-brand));
+  box-shadow: 0 0 0 5px rgb(var(--color-brand) / 0.16), 0 0 0 11px rgb(var(--color-brand) / 0.06), 0 0 14px rgb(var(--color-brand) / 0.7);
+  animation: ec-breathe 2.8s ease-in-out infinite;
+}
+.ec-cover {
+  position: relative;
+  overflow: hidden;
+  display: block;
+  background: radial-gradient(120% 90% at 20% 15%, #f0c27a 0%, #c8664c 38%, #4a2340 78%, #1f1530 100%);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.3), inset 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+.ec-cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 60% at 70% 75%, rgb(12 12 13 / 0.55), transparent 70%);
+}
+.ec-cover-muted { filter: saturate(0.7); }
+.ec-plan::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 40px;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgb(var(--color-bg-surface) / 0.9));
+}
+.ec-row-in { animation: ec-row-in 360ms ease-out both; }
+@keyframes ec-spin { to { transform: rotate(360deg); } }
+@keyframes ec-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+@keyframes ec-pop { from { transform: scale(0.86); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes ec-row-in { from { transform: translateY(6px); opacity: 0; } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .ec-sweep, .ec-pulse-live, .ec-live-dot, .ec-mark-success, .ec-row-in { animation: none !important; }
+}
