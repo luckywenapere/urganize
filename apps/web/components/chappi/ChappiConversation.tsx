@@ -38,6 +38,7 @@ import {
 import { describeTranscriptAnnouncement } from '@/lib/chappi/transcript-announcement';
 import { createTextBatcher, isStreamContentType, URGANS_STREAM_HEADER } from '@/lib/chappi/stream-protocol';
 import { CONNECTION_DROPPED_NOTE, readStreamedTurn } from '@/lib/chappi/stream-client';
+import { TURN_DROPPED_NOTE, failedTurnOutcome, isDeviceOnline } from '@/lib/chappi/turn-failure';
 import { ChappiConfirmationCard } from '@/components/chappi/ChappiConfirmationCard';
 import { ChappiCoverArtUploadCard } from '@/components/chappi/ChappiCoverArtUploadCard';
 import { ChappiRecapCard } from '@/components/chappi/ChappiRecapCard';
@@ -1075,6 +1076,22 @@ export function ChappiConversation({
       }
       runDeterministic(prompt);
     };
+    // Set once fetch resolves: from then on the server has the request and its
+    // tools may have run, so a failure must never be answered by the keyword
+    // router (a rename that went through came back as "Let's plan it").
+    let sent = false;
+    let reachedServer = false;
+    const handleFailedTurn = () => {
+      if (failedTurnOutcome({ sent, reachedServer, online: isDeviceOnline() }) === 'router') {
+        fallBackToRouter();
+        return;
+      }
+      // Show the real state rather than a guess: whatever ran is on screen
+      // after the refresh, wherever the person is now.
+      void loadCommandCenter({ force: true });
+      window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
+      if (isTurnCurrent(turn)) deliverReply(turn, TURN_DROPPED_NOTE);
+    };
     try {
       // A status change is answered here, by rule, before any model call.
       if (!sentAttachments) {
@@ -1086,6 +1103,7 @@ export function ChappiConversation({
         fallBackToRouter();
         return;
       }
+      sent = true;
       const response = await fetch('/api/urgans', {
         method: 'POST',
         headers: {
@@ -1109,6 +1127,7 @@ export function ChappiConversation({
         }),
         cache: 'no-store',
       });
+      reachedServer = true;
       let data: ChappiResponse | null;
       let streamedText = '';
       if (response.body && isStreamContentType(response.headers.get('content-type'))) {
@@ -1135,15 +1154,17 @@ export function ChappiConversation({
         batcher.discard();
         streamedText = outcome.text;
         if (!outcome.final) {
-          // The connection dropped before the answer was complete. Keep what
-          // was written and say so; with nothing written, the typed-command
-          // router answers as it does for any other failure.
+          // The connection dropped before the answer was complete. The server
+          // had the request, so its tools may have run: keep what was written
+          // and say so, refresh, and never hand the prompt to the router.
           if (outcome.text) {
+            void loadCommandCenter({ force: true });
+            window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
             deliverReply(turn, `${outcome.text}\n\n${CONNECTION_DROPPED_NOTE}`, undefined, undefined, {
               streamed: true,
             });
           } else {
-            fallBackToRouter();
+            handleFailedTurn();
           }
           return;
         }
@@ -1184,11 +1205,17 @@ export function ChappiConversation({
       if (data?.mode === 'deterministic' && data.notice) {
         deliverReply(turn, data.notice);
       }
-      // Deterministic mode (model not configured) or any unexpected shape:
-      // fall back to the local intent router.
-      fallBackToRouter();
+      // Deterministic mode (model not configured, or a ceiling): the server
+      // said so before running anything, so the local router answers.
+      if (data?.mode === 'deterministic') {
+        fallBackToRouter();
+        return;
+      }
+      // Any other shape (a 502/504 page, an unreadable body) after the request
+      // reached the server: it may have run, so no router guess.
+      handleFailedTurn();
     } catch {
-      fallBackToRouter();
+      handleFailedTurn();
     } finally {
       // Only clears the indicator this turn set. If the transcript was
       // replaced and a new turn started meanwhile, that one owns it now.

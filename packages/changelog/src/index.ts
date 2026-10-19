@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.161.3",
+    tag: "AI",
+    date: "October 19, 2026",
+    listed: false,
+    highlights: [
+      "UrgAns: if the connection drops after you ask for a change, it now says so and refreshes your rollout so you can see whether it went through, instead of guessing and opening the rollout planner. Asking to rename or edit a rollout no longer opens the planner.",
+    ],
+  },
+  {
     version: "1.161.2",
     tag: "Account",
     date: "October 19, 2026",

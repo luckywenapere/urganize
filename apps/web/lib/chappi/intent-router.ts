@@ -70,6 +70,21 @@ const SHARE_WITH_TEAM = /\bwith\s+(the|my|our)\s+team\b/i;
  */
 const NOTE_PREFIX = /^\s*(?:take\s+a\s+note|make\s+a\s+note|note)\s*[:,\-–—]?\s+(\S[\s\S]*)$/i;
 
+/**
+ * Edits to something that already exists: "rename the single", "change the
+ * title of the song to Honest", "edit the release date". The keyword branches
+ * below read "song", "single" or "rollout" as a request to START one, so an
+ * edit opened the planner (reported Oct 2026: a rename that had already gone
+ * through on the server came back as "Let's plan it"). The router can't make
+ * edits, so these get the help card, which is honest, never a creation flow.
+ * "update" alone is NOT here: "write a status update" is its own branch.
+ */
+const EDIT_PHRASES: readonly RegExp[] = [
+  /\b(?:rename|renamed|renaming|retitle|edit|editing|modify)\b/i,
+  /\b(?:change|changing|update|updating|set|fix|correct)\b[\s\S]{0,40}\b(?:title|name|called|date|cover|artwork|genre)\b/i,
+  /\bcall\s+(?:it|the\s+\w+)\s+["'‘“]/i,
+];
+
 /** Bare "note" / "take a note" with nothing after it. */
 const BARE_NOTE = /^\s*(?:take\s+a\s+note|make\s+a\s+note|new\s+note|note)\s*[.!]?\s*$/i;
 
@@ -153,6 +168,11 @@ export function resolveIntent(raw: string): ChappiIntent {
     if (BARE_NOTE.test(raw)) {
       return { kind: 'take_note' };
     }
+  }
+
+  // Before every creation branch: an edit is never a new task, rollout or plan.
+  if (EDIT_PHRASES.some((pattern) => pattern.test(raw))) {
+    return { kind: 'help' };
   }
 
   // 'activity' is the product's own word for these — tasks were renamed in the

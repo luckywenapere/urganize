@@ -426,3 +426,34 @@ describe('resolveIntent — "rollout" is the word users type now (2026-09-09)', 
     expect(resolveIntent('new release').kind).toBe('new_release');
   });
 });
+
+describe('resolveIntent — edits never open a creation flow', () => {
+  const edits = [
+    'Change the title of the song to ‘Honest’',
+    "change the title of the song to 'Honest'",
+    'Rename the single to Honest',
+    'rename this rollout',
+    'Edit the release date of the track',
+    'update the name of the album',
+    'change the song title',
+    'set the release date for the single to Nov 6',
+    'call it "Honest"',
+  ];
+
+  it.each([true, false])('routes edits to the help card (planner %s)', async (planner) => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner, share: true, recap: true });
+    for (const text of edits) {
+      expect(resolveIntent(text), text).toEqual({ kind: 'help' });
+    }
+  });
+
+  it('still starts and plans rollouts, and still writes status updates', async () => {
+    const { resolveIntent, CHAPPI_CHIPS } = await loadRouter({ notes: true, planner: true });
+    expect(resolveIntent('Plan a rollout').kind).toBe('plan_release');
+    expect(resolveIntent('new song').kind).toBe('plan_release');
+    expect(resolveIntent('Generate a status update').kind).toBe('generate_status');
+    const statusChip = CHAPPI_CHIPS.find((chip) => chip.id === 'status-update');
+    expect(resolveIntent(statusChip?.ask ?? '').kind).toBe('generate_status');
+    expect(resolveIntent('Add an activity').kind).toBe('add_task');
+  });
+});
