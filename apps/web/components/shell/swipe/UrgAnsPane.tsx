@@ -20,6 +20,7 @@ import { showMain } from './main-thread';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useNeedsYouStore } from '@/stores/useNeedsYouStore';
 import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
+import { scrollIntoColumn } from '@/lib/scroll-in-column';
 import { SwipeSheet, SHEET_ROW } from './SwipeSheet';
 
 const HISTORY_ENABLED = isChappiHistoryEnabled();
@@ -183,7 +184,7 @@ function highlightMessage(id: string) {
   window.setTimeout(() => {
     const el = document.querySelector<HTMLElement>(`[data-swipe-pane="urgans"] [data-message-id="${CSS.escape(id)}"]`);
     if (!el) return;
-    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    scrollIntoColumn(el, { block: 'center', behavior: 'smooth' });
     el.classList.add('swipe-message-ring');
     window.setTimeout(() => el.classList.remove('swipe-message-ring'), 1200);
   }, 250);
@@ -278,7 +279,7 @@ function FromHomeTurn() {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    ref.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    scrollIntoColumn(ref.current, { block: 'end', behavior: 'smooth' });
   }, []);
 
   if (!handoff) return null;

@@ -158,6 +158,40 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
     };
   }, [mountAll, paint]);
 
+  // Pinned to the committed page (URG-380 hotfix). The track moves only by
+  // transform, so the viewport and each pane must never scroll sideways. A
+  // browser can still scroll an overflow:hidden box (scrollIntoView, focus, a
+  // find-in-page); any sideways scroll is undone at once, and a resize or
+  // rotation snaps instantly back onto the active page.
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const onScroll = (event: Event) => {
+      const target = event.target;
+      if (target === viewport || (target instanceof HTMLElement && target.dataset.swipePane)) {
+        const box = target as HTMLElement;
+        if (box.scrollLeft !== 0) box.scrollLeft = 0;
+      }
+    };
+    const resettle = () => {
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+      frame.current = null;
+      if (viewport.scrollLeft !== 0) viewport.scrollLeft = 0;
+      paint(committed.current);
+    };
+    viewport.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    window.addEventListener('resize', resettle);
+    window.addEventListener('orientationchange', resettle);
+    window.addEventListener('pageshow', resettle);
+    resettle();
+    return () => {
+      viewport.removeEventListener('scroll', onScroll, { capture: true });
+      window.removeEventListener('resize', resettle);
+      window.removeEventListener('orientationchange', resettle);
+      window.removeEventListener('pageshow', resettle);
+    };
+  }, [paint]);
+
   // Touch: direction lock, drag, settle. Non-passive move so a horizontal drag
   // can stop the page from scrolling under it.
   useEffect(() => {
@@ -240,10 +274,15 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
   }, [animateTo, mountAll, paint]);
 
   return (
-    <div ref={viewportRef} className="relative min-h-0 flex-1 overflow-hidden" data-swipe-pager>
+    <div
+      ref={viewportRef}
+      className="relative min-h-0 w-full min-w-0 flex-1 overflow-hidden"
+      style={{ overflow: 'clip' }}
+      data-swipe-pager
+    >
       <div
         ref={trackRef}
-        className="flex h-full will-change-transform"
+        className="flex h-full flex-nowrap will-change-transform"
         style={{ width: `${COUNT * 100}%`, transform: initialTransform }}
       >
         {SWIPE_TABS.map((tab, i) => (
@@ -253,8 +292,9 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
             aria-hidden={i !== active || undefined}
             inert={i !== active || undefined}
             data-swipe-pane={tab.key}
-            className="swipe-pane h-full min-w-0 overflow-y-auto overscroll-contain"
-            style={{ width: `${100 / COUNT}%` }}
+            className="swipe-pane h-full min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain"
+            // Exactly one viewport wide: never grows for a wide child (the composer).
+            style={{ flex: `0 0 ${100 / COUNT}%`, width: `${100 / COUNT}%`, maxWidth: `${100 / COUNT}%` }}
           >
             {mounted.has(i) ? panes[tab.key] : null}
           </section>

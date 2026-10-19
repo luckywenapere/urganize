@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.160.7",
+    tag: "App",
+    date: "October 19, 2026",
+    highlights: [
+      "Fixed swipe navigation on phones opening stuck halfway between Home and UrgAns. Each page now always fills the screen and settles on the tab you're on.",
+    ],
+  },
+  {
     version: "1.160.6",
     tag: "App",
     date: "October 19, 2026",

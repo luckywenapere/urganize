@@ -82,6 +82,7 @@ import {
 import { mergeTranscript } from '@/lib/urgans-voice';
 import { describeStatusFacts, type StatusFacts } from '@/lib/release-status';
 import { supabase } from '@/lib/supabase/client';
+import { scrollIntoColumn } from '@/lib/scroll-in-column';
 import { CHAPPI_CHIPS, buildHelpReply, resolveIntent } from '@/lib/chappi/intent-router';
 import type {
   ChappiAttachment,
@@ -491,7 +492,7 @@ export function ChappiConversation({
     // An explicit `behavior: 'smooth'` overrides the CSS scroll-behavior the
     // reduced-motion rule sets, so the preference has to be honoured here.
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    bottomRef.current?.scrollIntoView({
+    scrollIntoColumn(bottomRef.current, {
       behavior: opened || reduceMotion ? 'instant' : 'smooth',
       block: 'end',
     });
@@ -513,7 +514,7 @@ export function ChappiConversation({
     }
     const target = scroller ?? document.documentElement;
     const fromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
-    if (fromBottom < 160) sentinel.scrollIntoView({ behavior: 'instant', block: 'end' });
+    if (fromBottom < 160) scrollIntoColumn(sentinel, { behavior: 'instant', block: 'end' });
   }, [previewText]);
 
   // Appends only the ASSISTANT side of a turn. Callers own appending the
