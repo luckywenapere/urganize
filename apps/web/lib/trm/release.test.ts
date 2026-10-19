@@ -2,8 +2,16 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_TRM_SETTINGS,
   buildTrmReleaseInput,
+  TRM_ARTIST_NOT_FOUND_TEXT,
   canSendToTrmEmail,
+  chipFor,
   earliestTrmDate,
+  heroForInFlight,
+  isArtistNotFoundReason,
+  parseConnectorMessage,
+  receivedByTrm,
+  rejectionTitle,
+  resolveTrmStores,
   progressFor,
   readTrmSettings,
   royaltySplits,
@@ -73,7 +81,7 @@ describe('trmChecklist', () => {
 
 describe('buildTrmReleaseInput', () => {
   it('fills every field TRM requires with safe defaults', () => {
-    const input = buildTrmReleaseInput(ready, DEFAULT_TRM_SETTINGS, ' Hadiza.Moon@Gmail.com ');
+    const input = buildTrmReleaseInput(ready, DEFAULT_TRM_SETTINGS, ' Hadiza.Moon@Gmail.com ', ['Spotify', 'Apple Music']);
     expect(input).toMatchObject({
       external_release_id: 'r1',
       artist_email: 'hadiza.moon@gmail.com',
@@ -81,7 +89,7 @@ describe('buildTrmReleaseInput', () => {
       label: 'Independent',
       copyright_name: 'Hadiza Moon',
       copyright_year: 2026,
-      stores: ['all'],
+      stores: ['Spotify', 'Apple Music'],
       explicit: false,
     });
     const track = input.tracks[0];
@@ -105,7 +113,9 @@ describe('buildTrmReleaseInput', () => {
 describe('helpers', () => {
   it('earliest date is today + 14 (UTC days)', () => expect(earliestTrmDate(TODAY)).toBe('2026-11-02'));
   it('settings read defensively', () => {
-    expect(readTrmSettings({ youtubePolicy: 'Block', stores: [] })).toMatchObject({ youtubePolicy: 'Block', stores: ['all'], countryOfRecording: 'Nigeria' });
+    expect(readTrmSettings({ youtubePolicy: 'Block', stores: [] })).toMatchObject({ youtubePolicy: 'Block', stores: [], countryOfRecording: 'Nigeria' });
+    // v1.160.0 saved ["all"], which TRM refuses: read as "every store".
+    expect(readTrmSettings({ stores: ['all'] }).stores).toEqual([]);
     expect(readTrmSettings({ youtubePolicy: 'nope' }).youtubePolicy).toBe('Monetize');
   });
   it('sending is open to every signed-in account unless the env narrows it', () => {
@@ -119,14 +129,66 @@ describe('helpers', () => {
     expect(shouldApply('2026-10-19T10:00:00Z', '2026-10-19T10:00:01Z')).toBe(true);
     expect(shouldApply(null, null)).toBe(true);
   });
-  it('progress marks reached steps', () => {
-    const p = progressFor('validating', [{ status: 'submitted', at: 'a' }, { status: 'validating', at: 'b' }], '2026-11-07');
-    expect(p.map((s) => [s.label, s.done, s.current, s.at])).toEqual([
-      ['Sent', true, false, 'a'],
-      ['Checking', true, true, 'b'],
-      ['Accepted', false, false, null],
+  it('progress: Submitted, then Received by TRM only once TRM says so', () => {
+    const sent = progressFor('validating', [{ status: 'submitted', at: 'a' }, { status: 'validating', at: 'b' }], '2027-01-15');
+    expect(sent.map((s) => [s.label, s.done, s.current, s.at])).toEqual([
+      ['Submitted', true, true, 'a'],
+      ['Received by TRM', false, false, null],
       ['Delivering', false, false, null],
-      ['In stores', false, false, '2026-11-07'],
+      ['In stores', false, false, '2027-01-15'],
     ]);
+    const got = progressFor('validating', [{ status: 'submitted', at: 'a' }, { status: 'received', at: 'c' }], null);
+    expect(got.map((s) => [s.label, s.done, s.current, s.at])).toEqual([
+      ['Submitted', true, false, 'a'],
+      ['Received by TRM', true, true, 'c'],
+      ['Delivering', false, false, null],
+      ['In stores', false, false, null],
+    ]);
+  });
+});
+
+describe('Submitted vs Received by TRM', () => {
+  it('received needs a receipt after the latest submit, or a status past review', () => {
+    expect(receivedByTrm('submitted', [{ status: 'submitted', at: 'a' }])).toBe(false);
+    expect(receivedByTrm('submitted', [{ status: 'submitted', at: 'a' }, { status: 'received', at: 'b' }])).toBe(true);
+    // A resubmit starts over.
+    expect(receivedByTrm('submitted', [{ status: 'received', at: 'a' }, { status: 'submitted', at: 'b' }])).toBe(false);
+    expect(receivedByTrm('accepted', [])).toBe(true);
+    expect(receivedByTrm('rejected', [{ status: 'received', at: 'a' }])).toBe(false);
+  });
+  it('one chip, named for where it is', () => {
+    expect(chipFor('submitted')).toEqual({ label: 'Submitted', tone: 'live' });
+    expect(chipFor('validating', true)).toEqual({ label: 'Received by TRM', tone: 'live' });
+    expect(chipFor('accepted')).toEqual({ label: 'Received by TRM', tone: 'live' });
+    expect(chipFor('processing')?.label).toBe('Delivering');
+    expect(chipFor('published')?.label).toBe('Delivered');
+    expect(chipFor('needs_account')).toEqual({ label: 'Not received', tone: 'error' });
+    expect(heroForInFlight('submitted')).toBe('Submitted to TRM.');
+    expect(heroForInFlight('validating', true)).toBe('Received by TRM.');
+  });
+});
+
+describe('TRM stores and failure messages', () => {
+  it('stores: a narrowed choice keeps only names TRM offers; none means all', () => {
+    const all = ['Spotify', 'Apple Music', 'Boomplay'];
+    expect(resolveTrmStores([], all)).toEqual(all);
+    expect(resolveTrmStores(['Boomplay', 'Myspace'], all)).toEqual(['Boomplay']);
+    expect(resolveTrmStores(['all'], all)).toEqual(all);
+  });
+  it('reads the connector JSON string, a double-encoded one, and plain text', () => {
+    const msg = '{"error":{"code":"artist_not_found","message":"The target TRM artist was not found."}}';
+    expect(parseConnectorMessage(msg)).toEqual({ code: 'artist_not_found', text: 'The target TRM artist was not found.' });
+    expect(parseConnectorMessage(JSON.stringify(msg))).toEqual({ code: 'artist_not_found', text: 'The target TRM artist was not found.' });
+    expect(parseConnectorMessage('Store feed timed out')).toEqual({ code: null, text: 'Store feed timed out' });
+    expect(parseConnectorMessage('{not json')).toEqual({ code: null, text: '{not json' });
+    expect(parseConnectorMessage('')).toBeNull();
+    expect(parseConnectorMessage(null)).toBeNull();
+  });
+  it('knows artist_not_found by code or TRM’s sentence', () => {
+    expect(isArtistNotFoundReason({ code: 'artist_not_found', text: 'x' })).toBe(true);
+    expect(isArtistNotFoundReason({ code: null, text: 'The target TRM artist was not found.' })).toBe(true);
+    expect(isArtistNotFoundReason({ code: null, text: 'Artwork contains a URL.' })).toBe(false);
+    expect(rejectionTitle('artist_not_found', 'x')).toBe('TRM account');
+    expect(TRM_ARTIST_NOT_FOUND_TEXT).toBe('Create your TRM account, or correct the email to match your existing TRM account, then resubmit.');
   });
 });

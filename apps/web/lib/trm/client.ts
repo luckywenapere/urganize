@@ -184,6 +184,10 @@ export type TrmAsset = {
 export type TrmRelease = {
   id: string;
   status: string;
+  /** Problems TRM found (shape not documented; read defensively). */
+  validation_errors?: unknown;
+  /** Review details on a rejection (shape not documented; read defensively). */
+  review?: unknown;
   external_release_id?: string;
   trm_release_id?: string | null;
   upc?: string | null;
@@ -245,6 +249,80 @@ export async function submitTrmRelease(releaseId: string, key: string): Promise<
 
 export async function getTrmCapabilities(): Promise<Record<string, unknown>> {
   return call<Record<string, unknown>>('GET', '/capabilities');
+}
+
+// ---------------------------------------------------------------------------
+// Stores. TRM (Oct 19, 2026): `stores: ["all"]` is INVALID (422
+// validation_failed on stores.0). Send the explicit list from GET
+// /capabilities (data.stores), cached server-side for an hour; if that call
+// fails, TRM's own list below (case-sensitive, exactly as TRM gave it).
+// ---------------------------------------------------------------------------
+
+export const TRM_FALLBACK_STORES: readonly string[] = [
+  'Spotify',
+  'Apple Music',
+  'YouTube Music',
+  'TikTok Music',
+  'Audiomack',
+  'Deezer',
+  'Amazon Music',
+  'Tidal',
+  'Boomplay',
+  'iHeartRadio',
+  'Pandora',
+  'SoundCloud Go',
+  'Napster',
+  'Anghami',
+  'JioSaavn',
+  'Trebel',
+  'Shazam',
+  'Facebook / Instagram',
+  'Snap / TikTok',
+  'NetEase',
+  'Tencent',
+];
+
+const STORES_TTL_MS = 60 * 60 * 1000;
+let cachedStores: { value: string[]; expiresAt: number } | null = null;
+
+/** For tests. */
+export function resetTrmStoresCache() {
+  cachedStores = null;
+}
+
+/** data.stores from a capabilities body: strings, or objects with a name. */
+export function storesFromCapabilities(body: unknown): string[] {
+  const root = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
+  const data = root.data && typeof root.data === 'object' ? (root.data as Record<string, unknown>) : root;
+  const list = Array.isArray(data.stores) ? data.stores : [];
+  const out: string[] = [];
+  for (const item of list) {
+    const name =
+      typeof item === 'string'
+        ? item
+        : item && typeof item === 'object'
+          ? ((item as Record<string, unknown>).name ?? (item as Record<string, unknown>).id)
+          : null;
+    if (typeof name === 'string' && name.trim() && name.trim().toLowerCase() !== 'all' && !out.includes(name.trim())) {
+      out.push(name.trim());
+    }
+  }
+  return out;
+}
+
+/** Every store TRM delivers to for this partner. Never throws. */
+export async function getTrmStores(now = Date.now()): Promise<string[]> {
+  if (cachedStores && cachedStores.expiresAt > now) return cachedStores.value;
+  try {
+    const stores = storesFromCapabilities(await getTrmCapabilities());
+    if (stores.length > 0) {
+      cachedStores = { value: stores, expiresAt: now + STORES_TTL_MS };
+      return stores;
+    }
+  } catch (error) {
+    console.error('[trm] capabilities failed; using the fallback store list', error instanceof Error ? error.message : error);
+  }
+  return [...TRM_FALLBACK_STORES];
 }
 
 /** PUT bytes to a presigned URL (server-side cover art only). */

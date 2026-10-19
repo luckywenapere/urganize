@@ -20,6 +20,7 @@
 //     delivery_id / id / event_id.
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { parseConnectorMessage } from './release';
 
 export const TRM_SIGNATURE_HEADER = 'x-trm-webhook-signature';
 export const TRM_WEBHOOK_TOLERANCE_SECONDS = 5 * 60;
@@ -42,6 +43,22 @@ export const isTrmStatus = (value: unknown): value is TrmStatus =>
 
 /** Lower-cased header map, so lookups do not depend on how TRM capitalises. */
 export type HeaderBag = Record<string, string>;
+
+/**
+ * The headers worth keeping: TRM's own (x-trm-*) and content-type. Nothing
+ * else: Vercel adds internal ones (x-vercel-oidc-token, x-vercel-sc-headers,
+ * forwarded, x-forwarded-*, ...) that must never land in a table. The
+ * signature itself is reduced to its length.
+ */
+export function loggableHeaders(headers: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [raw, value] of Object.entries(headers)) {
+    const name = raw.toLowerCase();
+    if (name !== 'content-type' && !name.startsWith('x-trm-')) continue;
+    out[name] = name.includes('signature') ? `[${value.length} chars]` : value.slice(0, 300);
+  }
+  return out;
+}
 
 export function headerBag(headers: Iterable<[string, string]>): HeaderBag {
   const bag: HeaderBag = {};
@@ -150,7 +167,16 @@ export function verifyTrmWebhook(
 }
 
 // ---------------------------------------------------------------------------
-// Reading the body. The shape is undocumented, so every field is looked for in
+// Reading the body. TRM (Oct 19, 2026) gave the shape:
+//   { id, event, created_at, data: { id (TRM API release uuid),
+//     external_release_id, previous_status, status, trm_release_id,
+//     reason (free text, may be null) } }
+// Rejection is event "release.status_changed" with data.status "rejected"
+// (there is no release.rejected). "release.delivery_failed" carries
+// data.status "rejected" and data.message = the connector's JSON AS A STRING.
+// The older guesses below stay as a fallback; the documented fields win
+// because `data` is read before the top level.
+// The shape was undocumented before that, so every field is looked for in
 // the places a lifecycle event usually keeps it: top level, `data`,
 // `data.release`, `release`, `payload`.
 // ---------------------------------------------------------------------------
@@ -198,6 +224,10 @@ export type TrmWebhookEvent = {
   reasons: TrmRejectionReason[];
   upc: string | null;
   isrc: string | null;
+  /** TRM's own release id: set once the release is delivered into TRM. */
+  trmReleaseId: string | null;
+  /** release.delivery_failed only: the connector's error, parsed. */
+  failure: TrmRejectionReason | null;
 };
 
 function readReasons(body: Json): TrmRejectionReason[] {
@@ -225,10 +255,14 @@ function readReasons(body: Json): TrmRejectionReason[] {
     }
     for (const key of ['rejection_reason', 'reason', 'message']) {
       const value = layer[key];
-      if (typeof value === 'string') push(asText(layer.reason_code) ?? asText(layer.code), value);
-      else if (value && typeof value === 'object') {
+      if (typeof value === 'string') {
+        // data.message on delivery_failed is JSON in a string.
+        const parsed = parseConnectorMessage(value);
+        if (parsed) push(parsed.code ?? asText(layer.reason_code) ?? asText(layer.code), parsed.text);
+      } else if (value && typeof value === 'object') {
         const r = asRecord(value);
-        push(asText(r.code), asText(r.message) ?? asText(r.text));
+        const parsed = parseConnectorMessage(r);
+        push(parsed?.code ?? asText(r.code), parsed?.text ?? asText(r.text));
       }
     }
     if (out.length > 0) break;
@@ -276,7 +310,11 @@ export function readTrmEvent(body: unknown, headers: HeaderBag): TrmWebhookEvent
       ? asRecord(root.release)
       : null;
   const releaseId =
-    asText(releaseLayer?.id) ?? pick(root, ['release_id', 'releaseId', 'trm_release_uuid']) ?? (data.external_release_id ? asText(data.id) : null);
+    asText(releaseLayer?.id) ??
+    pick(root, ['release_id', 'releaseId', 'trm_release_uuid']) ??
+    // TRM's documented shape: data.id is the API release uuid on every
+    // release.* event (delivery_failed carries no external_release_id).
+    (data.external_release_id || (event && /^release\./i.test(event)) ? asText(data.id) : null);
 
   return {
     deliveryId: deliveryId ? deliveryId.slice(0, 191) : null,
@@ -288,5 +326,7 @@ export function readTrmEvent(body: unknown, headers: HeaderBag): TrmWebhookEvent
     reasons: readReasons(root),
     upc: pick(root, ['upc']),
     isrc: pick(root, ['isrc']),
+    trmReleaseId: pick(root, ['trm_release_id', 'trmReleaseId']),
+    failure: event && /delivery_failed$/i.test(event) ? parseConnectorMessage(data.message ?? data.error ?? null) : null,
   };
 }

@@ -1,6 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { headerBag, parseTimestamp, readTrmEvent, verifyTrmWebhook } from './webhook';
+import { headerBag, loggableHeaders, parseTimestamp, readTrmEvent, verifyTrmWebhook } from './webhook';
 
 const SECRET = 'trm_whsec_test_123';
 const NOW = 1_792_400_000;
@@ -67,8 +67,62 @@ describe('readTrmEvent', () => {
       { code: null, text: 'Producer credit must match.' },
     ]);
   });
+  it('reads TRM’s documented status_changed payload (rejection = status rejected, free-text reason)', () => {
+    const e = readTrmEvent(
+      {
+        id: 'evt_1',
+        event: 'release.status_changed',
+        created_at: '2026-10-19T09:00:00Z',
+        data: { id: 'api-uuid', external_release_id: 'ext-1', previous_status: 'validating', status: 'rejected', trm_release_id: null, reason: 'Cover art has text.' },
+      },
+      {}
+    );
+    expect(e).toMatchObject({ deliveryId: 'evt_1', releaseId: 'api-uuid', externalReleaseId: 'ext-1', status: 'rejected', occurredAt: '2026-10-19T09:00:00Z', trmReleaseId: null, failure: null });
+    expect(e.reasons).toEqual([{ code: null, text: 'Cover art has text.' }]);
+    const none = readTrmEvent({ id: 'evt_2', event: 'release.status_changed', data: { id: 'api-uuid', status: 'rejected', reason: null } }, {});
+    expect(none.reasons).toEqual([]);
+    const got = readTrmEvent({ id: 'evt_3', event: 'release.status_changed', data: { id: 'api-uuid', status: 'accepted', trm_release_id: 'TRM-77' } }, {});
+    expect(got.trmReleaseId).toBe('TRM-77');
+  });
+  it('reads release.delivery_failed: data.message is connector JSON in a string', () => {
+    const e = readTrmEvent(
+      {
+        id: 'evt_4',
+        event: 'release.delivery_failed',
+        data: { id: 'api-uuid', status: 'rejected', message: '{"error":{"code":"artist_not_found","message":"The target TRM artist was not found."}}' },
+      },
+      {}
+    );
+    expect(e).toMatchObject({ releaseId: 'api-uuid', status: 'rejected', failure: { code: 'artist_not_found', text: 'The target TRM artist was not found.' } });
+    expect(e.reasons).toEqual([{ code: 'artist_not_found', text: 'The target TRM artist was not found.' }]);
+    const plain = readTrmEvent({ id: 'evt_5', event: 'release.delivery_failed', data: { id: 'api-uuid', status: 'rejected', message: 'Core unavailable' } }, {});
+    expect(plain.failure).toEqual({ code: null, text: 'Core unavailable' });
+  });
   it('never throws on junk', () => {
     expect(readTrmEvent(null, {})).toMatchObject({ deliveryId: null, status: null });
     expect(readTrmEvent({ status: 'test' }, {}).status).toBeNull();
+  });
+});
+
+describe('loggableHeaders', () => {
+  it('keeps only x-trm-* and content-type, never Vercel internals', () => {
+    const kept = loggableHeaders({
+      'content-type': 'application/json',
+      'x-trm-webhook-signature': 'abc123',
+      'x-trm-webhook-timestamp': '1760000000',
+      'x-vercel-oidc-token': 'eyJ.secret',
+      'x-vercel-sc-headers': '{"Authorization":"Bearer x"}',
+      forwarded: 'for=1.2.3.4',
+      'x-forwarded-for': '1.2.3.4',
+      'x-real-ip': '1.2.3.4',
+      cookie: 'a=b',
+      authorization: 'Bearer y',
+      'user-agent': 'TRM/1.0',
+    });
+    expect(kept).toEqual({
+      'content-type': 'application/json',
+      'x-trm-webhook-signature': '[6 chars]',
+      'x-trm-webhook-timestamp': '1760000000',
+    });
   });
 });

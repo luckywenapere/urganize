@@ -1,5 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { TrmApiError, createTrmRelease, getTrmToken, idempotencyKey, resetTrmTokenCache, submitTrmRelease } from './client';
+import {
+  TRM_FALLBACK_STORES,
+  TrmApiError,
+  createTrmRelease,
+  getTrmStores,
+  getTrmToken,
+  idempotencyKey,
+  resetTrmStoresCache,
+  resetTrmTokenCache,
+  storesFromCapabilities,
+  submitTrmRelease,
+} from './client';
 
 type Call = { url: string; init: RequestInit };
 let calls: Call[] = [];
@@ -10,6 +21,7 @@ beforeEach(() => {
   calls = [];
   answers = [];
   resetTrmTokenCache();
+  resetTrmStoresCache();
   process.env.TRM_CLIENT_ID = 'cid';
   process.env.TRM_CLIENT_SECRET = 'csecret';
   vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit) => {
@@ -60,5 +72,29 @@ describe('TRM client (mocked HTTP)', () => {
     expect(idempotencyKey('r1', 'create', { a: 1 })).toBe(idempotencyKey('r1', 'create', { a: 1 }));
     expect(idempotencyKey('r1', 'create', { a: 1 })).not.toBe(idempotencyKey('r1', 'create', { a: 2 }));
     expect(idempotencyKey('r1', 'create', { a: 1 }).length).toBeLessThanOrEqual(191);
+  });
+
+  it('reads data.stores from capabilities and caches it for an hour', async () => {
+    answers.push(json(200, { access_token: 'tok', expires_in: 3600 }), json(200, { data: { stores: ['Spotify', 'Boomplay'] } }));
+    const t0 = 1_000_000;
+    expect(await getTrmStores(t0)).toEqual(['Spotify', 'Boomplay']);
+    expect(await getTrmStores(t0 + 59 * 60 * 1000)).toEqual(['Spotify', 'Boomplay']);
+    expect(calls.filter((c) => c.url.endsWith('/capabilities'))).toHaveLength(1);
+    expect((calls[1].init.headers as Record<string, string>).Authorization).toBe('Bearer tok');
+  });
+
+  it('falls back to TRM’s exact list when capabilities fails or lists nothing', async () => {
+    answers.push(json(200, { access_token: 'tok', expires_in: 3600 }), json(503, { error: { message: 'down' } }));
+    expect(await getTrmStores()).toEqual([...TRM_FALLBACK_STORES]);
+    answers.push(json(200, { data: { stores: [] } }));
+    expect(await getTrmStores()).toEqual([...TRM_FALLBACK_STORES]);
+    expect(TRM_FALLBACK_STORES).toHaveLength(21);
+    expect(TRM_FALLBACK_STORES).toContain('Snap / TikTok');
+  });
+
+  it('store names: strings or {name}, never "all", no duplicates', () => {
+    expect(storesFromCapabilities({ data: { stores: ['Spotify', { name: 'Tidal' }, 'all', 'Spotify', 3] } })).toEqual(['Spotify', 'Tidal']);
+    expect(storesFromCapabilities({ stores: ['Deezer'] })).toEqual(['Deezer']);
+    expect(storesFromCapabilities(null)).toEqual([]);
   });
 });

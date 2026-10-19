@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/app/api/_shared/auth';
 import { applyTrmWebhook, recordRefusedDelivery } from '@/lib/trm/server';
-import { headerBag, readTrmEvent, verifyTrmWebhook } from '@/lib/trm/webhook';
+import { headerBag, loggableHeaders, readTrmEvent, verifyTrmWebhook } from '@/lib/trm/webhook';
 
 // TRM lifecycle webhooks (URG-392). Public, because TRM is the caller; the
 // HMAC signature (lib/trm/webhook.ts) is the only access control. An unset
@@ -9,22 +9,12 @@ import { headerBag, readTrmEvent, verifyTrmWebhook } from '@/lib/trm/webhook';
 // has not configured it accepts nothing.
 //
 //   401: bad or missing signature, or a timestamp more than 5 minutes off.
-//        Nothing changes; the header names and a capped body are kept so the
-//        undocumented payload can be read.
+//        Nothing changes; the x-trm-* headers, content-type and a capped
+//        body are kept so a misconfigured secret can be diagnosed.
 //   200: verified. A replayed delivery id is a no-op 200 ("duplicate").
 //   500: a verified delivery we could not store, so TRM retries it.
 
 export const dynamic = 'force-dynamic';
-
-/** Header names and values, minus the signature itself. */
-function loggableHeaders(headers: Record<string, string>): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [name, value] of Object.entries(headers)) {
-    if (name === 'cookie' || name === 'authorization') continue;
-    out[name] = name.includes('signature') ? `[${value.length} chars]` : value.slice(0, 300);
-  }
-  return out;
-}
 
 export async function POST(request: NextRequest) {
   const secret = process.env.TRM_WEBHOOK_SECRET?.trim();

@@ -33,6 +33,8 @@ export type TrmSettings = {
   youtubePolicy: TrmPolicy;
   facebookPolicy: TrmPolicy;
   soundexchangePolicy: string;
+  /** Stores the team narrowed to. Empty = every store TRM offers (resolved at
+   *  send time from GET /capabilities; TRM refuses ["all"]). */
   stores: string[];
 };
 
@@ -42,7 +44,7 @@ export const DEFAULT_TRM_SETTINGS: TrmSettings = {
   youtubePolicy: 'Monetize',
   facebookPolicy: 'Monetize',
   soundexchangePolicy: 'Claim from Inception',
-  stores: ['all'],
+  stores: [],
 };
 
 const isPolicy = (v: unknown): v is TrmPolicy => typeof v === 'string' && (TRM_POLICIES as readonly string[]).includes(v);
@@ -51,15 +53,28 @@ const text = (v: unknown): string | null => (typeof v === 'string' && v.trim() ?
 /** Stored settings, read defensively over the defaults. */
 export function readTrmSettings(stored: unknown): TrmSettings {
   const s = stored && typeof stored === 'object' ? (stored as Record<string, unknown>) : {};
-  const stores = Array.isArray(s.stores) ? s.stores.filter((x): x is string => typeof x === 'string' && x.trim() !== '') : [];
+  // "all" was v1.160.0's default and is not a store name TRM accepts.
+  const stores = Array.isArray(s.stores)
+    ? s.stores.filter((x): x is string => typeof x === 'string' && x.trim() !== '' && x.trim().toLowerCase() !== 'all')
+    : [];
   return {
     label: text(s.label),
     countryOfRecording: text(s.countryOfRecording) ?? DEFAULT_TRM_SETTINGS.countryOfRecording,
     youtubePolicy: isPolicy(s.youtubePolicy) ? s.youtubePolicy : DEFAULT_TRM_SETTINGS.youtubePolicy,
     facebookPolicy: isPolicy(s.facebookPolicy) ? s.facebookPolicy : DEFAULT_TRM_SETTINGS.facebookPolicy,
     soundexchangePolicy: text(s.soundexchangePolicy) ?? DEFAULT_TRM_SETTINGS.soundexchangePolicy,
-    stores: stores.length ? stores : DEFAULT_TRM_SETTINGS.stores,
+    stores,
   };
+}
+
+/**
+ * The explicit store list TRM gets. `available` is TRM's own list (capabilities
+ * or the fallback). A team's narrowed choice keeps only names TRM still offers;
+ * nothing left (or no choice) means every store.
+ */
+export function resolveTrmStores(chosen: readonly string[], available: readonly string[]): string[] {
+  const narrowed = chosen.filter((name) => available.includes(name));
+  return narrowed.length > 0 ? narrowed : [...available];
 }
 
 export type TrmCredit = {
@@ -298,8 +313,7 @@ export function isDefaultSettings(s: TrmSettings): boolean {
     s.youtubePolicy === DEFAULT_TRM_SETTINGS.youtubePolicy &&
     s.facebookPolicy === DEFAULT_TRM_SETTINGS.facebookPolicy &&
     s.soundexchangePolicy === DEFAULT_TRM_SETTINGS.soundexchangePolicy &&
-    s.stores.length === 1 &&
-    s.stores[0] === 'all'
+    s.stores.length === 0
   );
 }
 
@@ -319,8 +333,14 @@ const splitNames = (value: string | null): string[] =>
     .map((s) => s.trim())
     .filter(Boolean);
 
-/** The ReleaseInput TRM gets. Call only on a release with no blocking rows. */
-export function buildTrmReleaseInput(facts: TrmFacts, settings: TrmSettings, artistEmail: string): TrmReleaseInput {
+/** The ReleaseInput TRM gets. Call only on a release with no blocking rows.
+ *  `availableStores` is TRM's explicit list (see getTrmStores). */
+export function buildTrmReleaseInput(
+  facts: TrmFacts,
+  settings: TrmSettings,
+  artistEmail: string,
+  availableStores: readonly string[]
+): TrmReleaseInput {
   const year = Number((facts.releaseDate ?? '').slice(0, 4)) || new Date().getUTCFullYear();
   const featured = splitNames(facts.featuredArtists);
   const writers = writersOf(facts.credits).map((c) => ({
@@ -353,7 +373,7 @@ export function buildTrmReleaseInput(facts: TrmFacts, settings: TrmSettings, art
     copyright_year: year,
     language: (facts.language ?? '').trim(),
     explicit: facts.explicit === true,
-    stores: settings.stores,
+    stores: resolveTrmStores(settings.stores, availableStores),
     metadata: { source: 'urganize' },
     tracks: [
       {
@@ -390,32 +410,67 @@ export function buildTrmReleaseInput(facts: TrmFacts, settings: TrmSettings, art
 /** Where a submission stands on our side. TRM's statuses plus our own. */
 export type SubmissionStatus = TrmStatus | 'preparing' | 'needs_account' | 'waitlisted';
 
-export type TrmHistoryEntry = { status: string; at: string; event?: string | null };
+/** A history entry. `status: 'received'` is our marker for the moment TRM
+ *  reported the release delivered into TRM (it carries trmReleaseId). */
+export type TrmHistoryEntry = { status: string; at: string; event?: string | null; trmReleaseId?: string | null };
 
-export const PROGRESS_STEPS: ReadonlyArray<{ status: TrmStatus; label: string }> = [
-  { status: 'submitted', label: 'Sent' },
-  { status: 'validating', label: 'Checking' },
-  { status: 'accepted', label: 'Accepted' },
-  { status: 'processing', label: 'Delivering' },
-  { status: 'published', label: 'In stores' },
-];
+export const RECEIVED_MARKER = 'received';
 
 export const IN_FLIGHT: readonly SubmissionStatus[] = ['submitted', 'validating', 'accepted', 'processing'];
 
-export function chipFor(status: SubmissionStatus | null): { label: string; tone: 'live' | 'error' | 'done' | 'quiet' } | null {
+/**
+ * SUBMITTED vs RECEIVED BY TRM (TRM, Oct 19, 2026). A 200 from POST /submit
+ * means the Partner API ACCEPTED the package; TRM then delivers it into TRM
+ * itself and checks the artist account during that delivery, which can still
+ * fail (release.delivery_failed). So the chip says "Submitted" until TRM tells
+ * us the release reached TRM: a webhook or poll carrying a trm_release_id (TRM's
+ * own release id, which exists only once delivered), or a status past review
+ * (accepted / processing / published).
+ */
+export function receivedByTrm(status: SubmissionStatus | null, history: readonly TrmHistoryEntry[]): boolean {
+  if (status === 'accepted' || status === 'processing' || status === 'published') return true;
+  if (status !== 'submitted' && status !== 'validating') return false;
+  // Only a receipt after the latest submit counts (a resubmit starts over).
+  for (let i = history.length - 1; i >= 0; i -= 1) {
+    if (history[i].status === RECEIVED_MARKER) return true;
+    if (history[i].status === 'submitted') return false;
+  }
+  return false;
+}
+
+type Step = { key: 'submitted' | 'received' | 'processing' | 'published'; label: string };
+export const PROGRESS_STEPS: readonly Step[] = [
+  { key: 'submitted', label: 'Submitted' },
+  { key: 'received', label: 'Received by TRM' },
+  { key: 'processing', label: 'Delivering' },
+  { key: 'published', label: 'In stores' },
+];
+
+function stepIndex(status: SubmissionStatus | null, received: boolean): number {
+  if (status === 'published') return 3;
+  if (status === 'processing') return 2;
+  if (received) return 1;
+  if (status === 'submitted' || status === 'validating') return 0;
+  return -1;
+}
+
+export function chipFor(
+  status: SubmissionStatus | null,
+  received = false
+): { label: string; tone: 'live' | 'error' | 'done' | 'quiet' } | null {
   switch (status) {
     case 'submitted':
-      return { label: 'Sent', tone: 'live' };
     case 'validating':
-      return { label: 'Checking', tone: 'live' };
     case 'accepted':
-      return { label: 'Accepted', tone: 'live' };
+      return received || status === 'accepted' ? { label: 'Received by TRM', tone: 'live' } : { label: 'Submitted', tone: 'live' };
     case 'processing':
       return { label: 'Delivering', tone: 'live' };
     case 'published':
       return { label: 'Delivered', tone: 'done' };
     case 'rejected':
       return { label: 'Sent back', tone: 'error' };
+    case 'needs_account':
+      return { label: 'Not received', tone: 'error' };
     case 'takedown_requested':
       return { label: 'Takedown requested', tone: 'quiet' };
     case 'taken_down':
@@ -425,19 +480,11 @@ export function chipFor(status: SubmissionStatus | null): { label: string; tone:
   }
 }
 
-export function heroForInFlight(status: SubmissionStatus): string {
-  switch (status) {
-    case 'submitted':
-      return 'Sent to TRM.';
-    case 'validating':
-      return 'Sent. TRM is checking it.';
-    case 'accepted':
-      return 'Accepted by TRM.';
-    case 'processing':
-      return 'Delivering to stores.';
-    default:
-      return 'Sent to TRM.';
-  }
+export function heroForInFlight(status: SubmissionStatus, received = false): string {
+  if (status === 'processing') return 'Delivering to stores.';
+  if (status === 'accepted') return 'Accepted by TRM.';
+  if (received) return 'Received by TRM.';
+  return 'Submitted to TRM.';
 }
 
 /** Progress steps with the time each was reached (from history), for the line. */
@@ -446,15 +493,22 @@ export function progressFor(
   history: readonly TrmHistoryEntry[],
   releaseDate: string | null
 ): Array<{ label: string; done: boolean; current: boolean; at: string | null }> {
-  const reachedIndex = PROGRESS_STEPS.findIndex((s) => s.status === status);
+  const received = receivedByTrm(status, history);
+  const reachedIndex = stepIndex(status, received);
+  const lastAt = (match: (h: TrmHistoryEntry) => boolean) => [...history].reverse().find(match)?.at ?? null;
+  const times: Record<Step['key'], string | null> = {
+    submitted: lastAt((h) => h.status === 'submitted'),
+    received: lastAt((h) => h.status === RECEIVED_MARKER || h.status === 'accepted'),
+    processing: lastAt((h) => h.status === 'processing'),
+    published: lastAt((h) => h.status === 'published'),
+  };
   return PROGRESS_STEPS.map((step, index) => {
-    const hit = [...history].reverse().find((h) => h.status === step.status);
     const done = reachedIndex >= 0 && index <= reachedIndex;
     return {
       label: step.label,
       done,
       current: index === reachedIndex,
-      at: hit?.at ?? (step.status === 'published' && !done ? releaseDate : null),
+      at: times[step.key] ?? (step.key === 'published' && !done ? releaseDate : null),
     };
   });
 }
@@ -485,6 +539,7 @@ export function canSendToTrmEmail(email: string | null | undefined, allowlistEnv
 /** A plain title for one TRM rejection reason (the fix row's bold line). */
 export function rejectionTitle(code: string | null, text: string): string {
   const t = `${code ?? ''} ${text}`.toLowerCase();
+  if (/artist_not_found|target trm artist/.test(t)) return 'TRM account';
   if (/artwork|cover/.test(t)) return 'Cover art';
   if (/producer/.test(t)) return 'Producer credit';
   if (/writer|composer|lyricist/.test(t)) return 'Writer credit';
@@ -510,4 +565,59 @@ export function rejectionFix(code: string | null, text: string): DistributionFie
   if (/explicit/.test(t)) return 'metadata.explicit';
   if (/title/.test(t)) return 'title';
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// TRM's failure messages (TRM, Oct 19, 2026)
+// ---------------------------------------------------------------------------
+
+/** What the team reads when TRM sent no reason. */
+export const TRM_NO_REASON = 'Contact TRM for details';
+
+/** What the team reads when TRM found no artist for the email. */
+export const TRM_ARTIST_NOT_FOUND_TEXT =
+  'Create your TRM account, or correct the email to match your existing TRM account, then resubmit.';
+
+/**
+ * release.delivery_failed carries the connector's answer as a JSON STRING in
+ * data.message, e.g. "{\"error\":{\"code\":\"artist_not_found\",\"message\":\"...\"}}".
+ * Read error.code / error.message when it parses; otherwise the plain text.
+ */
+export function parseConnectorMessage(value: unknown): { code: string | null; text: string } | null {
+  if (value && typeof value === 'object') return readConnectorObject(value as Record<string, unknown>);
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const raw = value.trim();
+  if (raw.startsWith('{') || raw.startsWith('[') || raw.startsWith('"')) {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      // Double-encoded strings happen: a JSON string holding JSON.
+      if (typeof parsed === 'string') return parseConnectorMessage(parsed);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        const read = readConnectorObject(parsed as Record<string, unknown>);
+        if (read) return read;
+      }
+    } catch {
+      // not JSON: plain text below
+    }
+  }
+  return { code: null, text: raw.slice(0, 2000) };
+}
+
+function readConnectorObject(obj: Record<string, unknown>): { code: string | null; text: string } | null {
+  const err = obj.error && typeof obj.error === 'object' ? (obj.error as Record<string, unknown>) : obj;
+  const code = typeof err.code === 'string' && err.code.trim() ? err.code.trim() : null;
+  const message =
+    typeof err.message === 'string' && err.message.trim()
+      ? err.message.trim()
+      : typeof obj.error === 'string' && obj.error.trim()
+        ? obj.error.trim()
+        : null;
+  if (!code && !message) return null;
+  return { code, text: (message ?? code ?? '').slice(0, 2000) };
+}
+
+/** Whether a TRM reason means "no TRM artist for that email". */
+export function isArtistNotFoundReason(reason: { code: string | null; text: string }): boolean {
+  if (reason.code?.toLowerCase() === 'artist_not_found') return true;
+  return /artist_not_found|target trm artist was not found/i.test(reason.text);
 }

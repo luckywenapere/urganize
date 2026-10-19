@@ -22,6 +22,7 @@ import {
   completeTrmAsset,
   createTrmRelease,
   getTrmRelease,
+  getTrmStores,
   idempotencyKey,
   presignTrmAsset,
   putToPresignedUrl,
@@ -32,12 +33,17 @@ import {
 } from './client';
 import {
   IN_FLIGHT,
+  RECEIVED_MARKER,
+  TRM_ARTIST_NOT_FOUND_TEXT,
   TRM_ARTWORK_MAX_BYTES,
+  TRM_NO_REASON,
   TRM_AUDIO_MAX_BYTES,
   TRM_PARTNER,
   buildTrmReleaseInput,
   canSendToTrmEmail,
+  isArtistNotFoundReason,
   readTrmSettings,
+  receivedByTrm,
   rejectionFix,
   rejectionTitle,
   shouldApply,
@@ -316,7 +322,7 @@ async function loadFixes(admin: SupabaseClient, releaseId: string, submission: S
   return ((rejections.data as Json[] | null) ?? []).map((r) => {
     const id = String(r.id);
     const code = asText(r.reason_code);
-    const reason = asText(r.reason_text) ?? 'TRM did not say why.';
+    const reason = asText(r.reason_text) ?? TRM_NO_REASON;
     const task = byRejection.get(id);
     const done = task && String(task.status) === 'done';
     return {
@@ -433,10 +439,24 @@ export async function recordTrmInterest(admin: SupabaseClient, releaseId: string
   return { ok: true, data: { waitlisted: true } };
 }
 
+/**
+ * TRM checks the artist account ASYNCHRONOUSLY, during delivery (TRM, Oct 19,
+ * 2026): a draft and a submit can succeed and the send then fail with
+ * release.delivery_failed / artist_not_found (handled in the webhook). So a
+ * draft-time error only counts as "no account" when TRM names the exact code;
+ * v1.160.0's guess (any 422 mentioning "artist") is gone.
+ */
 function isArtistNotFound(error: TrmApiError): boolean {
-  const blob = `${error.code ?? ''} ${error.message} ${JSON.stringify(error.details)}`.toLowerCase();
-  return error.status === 422 && /artist/.test(blob) && /(not.?found|no such|unknown|does not exist|exist|account)/.test(blob);
+  return error.code === 'artist_not_found';
 }
+
+/** Rounds of sending: 0 before the first submit, N after N submits. Every
+ *  write key carries it, so a resubmit after a rejection never reuses an
+ *  Idempotency-Key from the round TRM rejected (TRM, Oct 19, 2026). */
+const roundOf = (row: SubmissionRow | null | undefined): string => `r${row?.submit_count ?? 0}`;
+
+/** Statuses TRM rejected, where the team fixes and resubmits. */
+const SENT_BACK: readonly SubmissionStatus[] = ['rejected', 'needs_account'];
 
 function trmMessage(error: unknown): string {
   if (error instanceof TrmApiError) {
@@ -481,7 +501,10 @@ export async function prepareTrmDraft(
   const testCheck = await admin.from('releases').select('metadata').eq('id', releaseId).maybeSingle();
   if (readTestRelease(asRecord(testCheck.data).metadata as Parameters<typeof readTestRelease>[0])) return fail(409, 'test_release', 'Sample rollouts can’t be sent.');
 
-  const body = buildTrmReleaseInput(loaded.facts, settings, email);
+  // TRM refuses ["all"]: send its explicit store list (cached for an hour).
+  const body = buildTrmReleaseInput(loaded.facts, settings, email, await getTrmStores());
+  const round = roundOf(current);
+  const sentBack = Boolean(current && SENT_BACK.includes(current.status));
   const base = {
     artist_email: email,
     artist_id: loaded.artistId,
@@ -492,7 +515,7 @@ export async function prepareTrmDraft(
   let partnerReleaseId = current?.partner_release_id ?? null;
   try {
     if (partnerReleaseId) {
-      await replaceTrmRelease(partnerReleaseId, body, idempotencyKey(releaseId, `patch:${partnerReleaseId}`, body));
+      await replaceTrmRelease(partnerReleaseId, body, idempotencyKey(releaseId, `patch:${partnerReleaseId}:${round}`, body));
     } else {
       const created = await createTrmRelease(body, idempotencyKey(releaseId, 'create', body));
       partnerReleaseId = created.id;
@@ -507,7 +530,7 @@ export async function prepareTrmDraft(
       });
       return fail(422, 'artist_not_found', 'No TRM account for that email.');
     }
-    await saveSubmission(admin, releaseId, { ...base, status: current?.status === 'rejected' ? 'rejected' : 'preparing', error: trmMessage(error) });
+    await saveSubmission(admin, releaseId, { ...base, status: sentBack && current ? current.status : 'preparing', error: trmMessage(error) });
     return fail(502, 'trm_error', trmMessage(error));
   }
 
@@ -515,9 +538,10 @@ export async function prepareTrmDraft(
   let row = await saveSubmission(admin, releaseId, {
     ...base,
     partner_release_id: partnerReleaseId,
-    status: current?.status === 'rejected' ? 'rejected' : 'draft',
-    error: null,
-    ...(current?.status === 'rejected'
+    status: sentBack && current ? current.status : 'draft',
+    // A sent-back release keeps its reason on screen until it is resubmitted.
+    ...(sentBack ? {} : { error: null }),
+    ...(sentBack
       ? {}
       : { history: withHistory(current?.history ?? [], { status: 'draft', at: new Date().toISOString() }) }),
   });
@@ -541,9 +565,13 @@ export async function prepareTrmDraft(
         size_bytes: bytes.byteLength,
         sha256: sha,
       };
-      const presign = await presignTrmAsset(partnerReleaseId as string, presignBody, idempotencyKey(releaseId, `artwork:${partnerReleaseId}`, presignBody));
+      const presign = await presignTrmAsset(
+        partnerReleaseId as string,
+        presignBody,
+        idempotencyKey(releaseId, `artwork:${partnerReleaseId}:${round}`, presignBody)
+      );
       await putToPresignedUrl(presign.upload, bytes, art.mimeType);
-      await completeTrmAsset(partnerReleaseId as string, presign.asset.id, idempotencyKey(releaseId, `artwork-complete:${presign.asset.id}`));
+      await completeTrmAsset(partnerReleaseId as string, presign.asset.id, idempotencyKey(releaseId, `artwork-complete:${presign.asset.id}:${round}`));
       row = (await saveSubmission(admin, releaseId, { artwork_asset_id: presign.asset.id, artwork_source_id: art.id })) ?? row;
     } catch (error) {
       await saveSubmission(admin, releaseId, { error: trmMessage(error) });
@@ -578,7 +606,11 @@ export async function presignMaster(
   if (!/^[a-f0-9]{64}$/.test(sha)) return fail(400, 'bad_hash', 'Could not read the file. Try again.');
   const body = { type: 'audio' as const, file_name: fileName, mime_type: mimeType, size_bytes: size, sha256: sha, track_sequence: 1 };
   try {
-    const presign = await presignTrmAsset(current.partner_release_id, body, idempotencyKey(releaseId, `audio:${current.partner_release_id}`, body));
+    const presign = await presignTrmAsset(
+      current.partner_release_id,
+      body,
+      idempotencyKey(releaseId, `audio:${current.partner_release_id}:${roundOf(current)}`, body)
+    );
     return {
       ok: true,
       data: {
@@ -603,7 +635,7 @@ export async function completeMaster(
   const assetId = asText(input.assetId);
   if (current === 'error' || !current?.partner_release_id || !assetId) return fail(409, 'no_draft', 'Start the send again.');
   try {
-    await completeTrmAsset(current.partner_release_id, assetId, idempotencyKey(releaseId, `audio-complete:${assetId}`));
+    await completeTrmAsset(current.partner_release_id, assetId, idempotencyKey(releaseId, `audio-complete:${assetId}:${roundOf(current)}`));
   } catch (error) {
     return fail(502, 'trm_error', trmMessage(error));
   }
@@ -646,6 +678,15 @@ export async function submitToTrm(admin: SupabaseClient, releaseId: string, acto
 
   const attempt = current.submit_count + 1;
   try {
+    // A resubmit after a rejection: TRM wants the full metadata PATCHed (done
+    // in prepare), the assets RE-VERIFIED, then submit, all on new keys. The
+    // complete keys match the ones prepare/complete_master used this round, so
+    // an asset already re-checked this round is a byte-identical replay.
+    if (current.submit_count > 0) {
+      const round = roundOf(current);
+      await completeTrmAsset(current.partner_release_id, current.artwork_asset_id, idempotencyKey(releaseId, `artwork-complete:${current.artwork_asset_id}:${round}`));
+      await completeTrmAsset(current.partner_release_id, current.audio_asset_id, idempotencyKey(releaseId, `audio-complete:${current.audio_asset_id}:${round}`));
+    }
     await submitTrmRelease(current.partner_release_id, idempotencyKey(releaseId, `submit:${current.partner_release_id}:${attempt}`));
   } catch (error) {
     await saveSubmission(admin, releaseId, { error: trmMessage(error) });
@@ -666,25 +707,42 @@ export async function submitToTrm(admin: SupabaseClient, releaseId: string, acto
 }
 
 /** Fallback poll for when a webhook is late. */
-export async function refreshFromTrm(admin: SupabaseClient, releaseId: string): Promise<TrmResult<{ status: SubmissionStatus }>> {
+export async function refreshFromTrm(
+  admin: SupabaseClient,
+  releaseId: string
+): Promise<TrmResult<{ status: SubmissionStatus; received: boolean }>> {
   const current = await loadSubmission(admin, releaseId);
   if (current === 'error' || !current?.partner_release_id) return fail(409, 'no_draft', 'Nothing at TRM yet.');
-  if (!trmConfigured()) return { ok: true, data: { status: current.status } };
+  if (!trmConfigured()) return { ok: true, data: { status: current.status, received: receivedByTrm(current.status, current.history) } };
   try {
     const release = await getTrmRelease(current.partner_release_id);
-    if (isTrmStatus(release.status) && release.status !== current.status && release.status !== 'draft') {
+    const nowIso = new Date().toISOString();
+    const trmReleaseId = asText(release.trm_release_id);
+    // TRM's rejected covers both a review rejection and a delivery that found
+    // no artist; we show the second as needs_account, so do not flip it back.
+    const unchanged = release.status === current.status || (release.status === 'rejected' && current.status === 'needs_account');
+    if (isTrmStatus(release.status) && !unchanged && release.status !== 'draft') {
+      const reasons = release.status === 'rejected' ? reasonsFromTrmRelease(release) : [];
+      const status: SubmissionStatus = release.status === 'rejected' && reasons.some(isArtistNotFoundReason) ? 'needs_account' : release.status;
       await applyStatus(admin, current, {
-        status: release.status,
-        at: new Date().toISOString(),
+        status,
+        ...(status === 'needs_account' ? { error: TRM_ARTIST_NOT_FOUND_TEXT } : {}),
+        at: nowIso,
         event: 'poll',
-        reasons: [],
+        reasons,
         upc: asText(release.upc),
         isrc: asText(release.tracks?.[0]?.isrc),
+        trmReleaseId,
+        enriched: true,
         raw: { polled: true },
       });
-      return { ok: true, data: { status: release.status } };
+      const received = receivedByTrm(status, trmReleaseId ? [{ status: RECEIVED_MARKER, at: nowIso }] : []);
+      return { ok: true, data: { status, received } };
     }
-    return { ok: true, data: { status: current.status } };
+    const receipt = receiptEntry(current, trmReleaseId, nowIso, 'poll');
+    const history = receipt ? withHistory(current.history, receipt) : current.history;
+    if (receipt) await saveSubmission(admin, releaseId, { history });
+    return { ok: true, data: { status: current.status, received: receivedByTrm(current.status, history) } };
   } catch (error) {
     return fail(502, 'trm_error', trmMessage(error));
   }
@@ -701,17 +759,96 @@ type StatusChange = {
   reasons: TrmWebhookEvent['reasons'];
   upc: string | null;
   isrc: string | null;
+  trmReleaseId?: string | null;
+  /** The reasons already include GET /releases/{id} (skip the extra call). */
+  enriched?: boolean;
+  /** The text the team reads for this state (needs_account). */
+  error?: string | null;
   raw: unknown;
 };
+
+const IN_FLIGHT_OR_DONE: readonly string[] = ['submitted', 'validating', 'accepted', 'processing', 'published'];
+
+/** A "Received by TRM" marker when TRM first reports its own release id for
+ *  this round (see receivedByTrm in release.ts). Null when nothing is new. */
+function receiptEntry(current: SubmissionRow, trmReleaseId: string | null, at: string, event: string | null): TrmHistoryEntry | null {
+  if (!trmReleaseId || !IN_FLIGHT_OR_DONE.includes(current.status)) return null;
+  for (let i = current.history.length - 1; i >= 0; i -= 1) {
+    if (current.history[i].status === RECEIVED_MARKER) return null;
+    if (current.history[i].status === 'submitted') break;
+  }
+  return { status: RECEIVED_MARKER, at, event, trmReleaseId };
+}
+
+type Reason = TrmWebhookEvent['reasons'][number];
+type RejectionEntry = TrmHistoryEntry & { rejectionIds?: string[]; reasons?: string[] };
+
+/** The rejected entry of the current round (after the latest submit), if any. */
+function lastRejectionThisRound(history: readonly TrmHistoryEntry[]): RejectionEntry | null {
+  for (let i = history.length - 1; i >= 0; i -= 1) {
+    if (history[i].status === 'rejected') return history[i] as RejectionEntry;
+    if (history[i].status === 'submitted') return null;
+  }
+  return null;
+}
+
+/** Reasons from GET /releases/{id}: data.validation_errors and data.review.
+ *  Neither shape is documented, so strings, {code|field, message} objects and
+ *  field -> message maps are all read, two levels deep. */
+export function reasonsFromTrmRelease(release: { validation_errors?: unknown; review?: unknown }): Reason[] {
+  const out: Reason[] = [];
+  const seen = new Set<string>();
+  const push = (code: string | null, text: string | null) => {
+    const clean = text?.trim();
+    if (!clean) return;
+    const key = `${code ?? ''}|${clean}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ code, text: clean.slice(0, 2000) });
+  };
+  const read = (value: unknown, field: string | null, depth: number) => {
+    if (depth > 2 || value === null || value === undefined) return;
+    if (typeof value === 'string') return push(field, value);
+    if (Array.isArray(value)) return value.forEach((v) => read(v, field, depth + 1));
+    if (typeof value !== 'object') return;
+    const r = value as Json;
+    const message = asText(r.message) ?? asText(r.reason) ?? asText(r.detail) ?? asText(r.text) ?? asText(r.notes) ?? asText(r.comment);
+    if (message) return push(asText(r.code) ?? asText(r.field) ?? field, message);
+    for (const [k, v] of Object.entries(r)) {
+      if (['status', 'reviewed_at', 'reviewer', 'reviewed_by', 'created_at', 'updated_at', 'id'].includes(k)) continue;
+      read(v, k, depth + 1);
+    }
+  };
+  read(release.validation_errors, null, 0);
+  read(release.review, null, 0);
+  return out;
+}
 
 async function applyStatus(admin: SupabaseClient, current: SubmissionRow, change: StatusChange): Promise<void> {
   const releaseId = current.release_id;
   const facts = await loadTrmFacts(admin, releaseId);
   const ownerUserId = facts?.ownerUserId ?? '';
-  const entry: TrmHistoryEntry & { rejectionIds?: string[] } = { status: change.status, at: change.at, event: change.event };
+  const entry: RejectionEntry = { status: change.status, at: change.at, event: change.event };
+  const receipt = change.status === 'rejected' || change.status === 'needs_account' ? null : receiptEntry({ ...current, status: change.status }, change.trmReleaseId ?? null, change.at, change.event);
+
+  if (change.status === 'needs_account' && ownerUserId) {
+    await logEvent(admin, ownerUserId, null, 'trm_rejected', { releaseId, reason: 'artist_not_found' });
+  }
 
   if (change.status === 'rejected') {
-    const reasons = change.reasons.length ? change.reasons : [{ code: null, text: 'TRM sent it back without a reason. Check the artist’s TRM account.' }];
+    // TRM: fetch the release on a rejection; validation_errors and review add
+    // what the webhook's free-text reason leaves out.
+    let found = change.reasons;
+    if (!change.enriched && current.partner_release_id && trmConfigured()) {
+      try {
+        const extra = reasonsFromTrmRelease(await getTrmRelease(current.partner_release_id));
+        const known = new Set(found.map((r) => r.text));
+        found = [...found, ...extra.filter((r) => !known.has(r.text))];
+      } catch (error) {
+        console.error('[trm] could not read the rejected release', error instanceof Error ? error.message : error);
+      }
+    }
+    const reasons = found.length ? found : [{ code: null, text: TRM_NO_REASON }];
     const loaded = await loadHandoff(admin, releaseId, ownerUserId, { sync: false }).catch(() => null);
     const ids: string[] = [];
     const due = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
@@ -749,18 +886,24 @@ async function applyStatus(admin: SupabaseClient, current: SubmissionRow, change
         if (result.error) console.error('[trm] could not add a fix task', result.error.message);
       }
     }
-    entry.rejectionIds = ids;
+    // Same round, rejected again: keep the earlier fixes on screen too.
+    const previous = current.status === 'rejected' ? lastRejectionThisRound(current.history) : null;
+    entry.rejectionIds = [...(previous?.rejectionIds ?? []), ...ids];
+    entry.reasons = [...(previous?.reasons ?? []), ...reasons.map((r) => r.text)].slice(-20);
     if (ownerUserId) await logEvent(admin, ownerUserId, null, 'trm_rejected', { releaseId, reasons: reasons.length });
   }
   if (change.status === 'published' && ownerUserId) {
     await logEvent(admin, ownerUserId, null, 'trm_published', { releaseId });
   }
 
+  const withEntry = withHistory(current.history, entry);
+  const history = receipt ? withHistory(withEntry, receipt) : withEntry;
   await saveSubmission(admin, releaseId, {
     status: change.status,
     last_event: change.event,
     last_event_at: change.at,
-    history: withHistory(current.history, entry),
+    history,
+    ...(change.error !== undefined ? { error: change.error } : {}),
     ...(change.upc ? { upc: change.upc } : {}),
     ...(change.isrc ? { isrc: change.isrc } : {}),
   });
@@ -818,18 +961,48 @@ export async function applyTrmWebhook(
 
   const at = event.occurredAt && Number.isFinite(Date.parse(event.occurredAt)) ? new Date(event.occurredAt).toISOString() : new Date(input.signedAt * 1000).toISOString();
   if (!shouldApply(current.last_event_at, at)) return finish('stale', current.release_id);
-  if (event.status === current.status && event.status !== 'rejected') {
-    await saveSubmission(admin, current.release_id, { last_event: event.event, last_event_at: at });
-    return finish('applied', current.release_id);
+
+  // What this delivery means for us. TRM (Oct 19, 2026): a rejection is
+  // release.status_changed -> rejected (reason may be null); a failed delivery
+  // into TRM is release.delivery_failed (status rejected, connector JSON in
+  // data.message). artist_not_found becomes our needs_account.
+  const reasons = event.failure ? [event.failure] : event.reasons;
+  let status: SubmissionStatus = event.status;
+  if (status === 'rejected' && reasons.some(isArtistNotFoundReason)) status = 'needs_account';
+  const stampOnly = async () => {
+    const receipt = receiptEntry(current as SubmissionRow, event.trmReleaseId, at, event.event);
+    await saveSubmission(admin, (current as SubmissionRow).release_id, {
+      last_event: event.event,
+      last_event_at: at,
+      ...(receipt ? { history: withHistory((current as SubmissionRow).history, receipt) } : {}),
+    });
+    return finish('applied', (current as SubmissionRow).release_id);
+  };
+  if (status === current.status && status !== 'rejected') return stampOnly();
+  // The paired rejected event for a failure we already show as needs_account.
+  if (status === 'rejected' && current.status === 'needs_account' && reasons.length === 0) return stampOnly();
+
+  // A second rejection for the same round (status_changed and delivery_failed
+  // can both arrive): add only reasons not already on the plan.
+  let newReasons = reasons;
+  if (status === 'rejected' && current.status === 'rejected') {
+    const previous = lastRejectionThisRound(current.history);
+    if (previous) {
+      const known = new Set(previous.reasons ?? []);
+      newReasons = reasons.filter((r) => !known.has(r.text));
+      if (newReasons.length === 0) return stampOnly();
+    }
   }
   try {
     await applyStatus(admin, current, {
-      status: event.status,
+      status,
       at,
       event: event.event,
-      reasons: event.reasons,
+      reasons: newReasons,
       upc: event.upc,
       isrc: event.isrc,
+      trmReleaseId: event.trmReleaseId,
+      ...(status === 'needs_account' ? { error: TRM_ARTIST_NOT_FOUND_TEXT } : {}),
       raw: input.payload,
     });
   } catch (error) {

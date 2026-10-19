@@ -41,6 +41,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.161.4",
+    tag: "Rollouts",
+    date: "October 19, 2026",
+    highlights: [
+      "Send to TRM now goes through: Urganize sends TRM's exact list of stores, so a single is no longer refused before it leaves.",
+      "The status now says Submitted when TRM's system takes the release and Received by TRM once it has reached TRM, so you know which one happened.",
+      "If TRM sends a release back, you see TRM's reason (or Contact TRM for details when it gives none), and Resend fixes and resubmits it properly.",
+      "If TRM can't find the artist's account after you send, Distribute says to create the TRM account or correct the email, then resubmit.",
+    ],
+  },
+  {
     version: "1.161.3",
     tag: "AI",
     date: "October 19, 2026",

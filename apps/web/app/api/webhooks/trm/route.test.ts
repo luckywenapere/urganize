@@ -3,10 +3,12 @@ import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const applied: unknown[] = [];
+const storedHeaders: Array<Record<string, string>> = [];
 const refused: string[] = [];
 vi.mock('@/app/api/_shared/auth', () => ({ createAdminClient: () => ({}) }));
 vi.mock('@/lib/trm/server', () => ({
-  applyTrmWebhook: vi.fn(async (_admin: unknown, event: { deliveryId: string }) => {
+  applyTrmWebhook: vi.fn(async (_admin: unknown, event: { deliveryId: string }, input: { headers: Record<string, string> }) => {
+    storedHeaders.push(input.headers);
     if (applied.some((e) => (e as { deliveryId: string }).deliveryId === event.deliveryId)) return 'duplicate';
     applied.push(event);
     return 'applied';
@@ -30,6 +32,7 @@ describe('POST /api/webhooks/trm', () => {
   beforeEach(() => {
     applied.length = 0;
     refused.length = 0;
+    storedHeaders.length = 0;
     process.env.TRM_WEBHOOK_SECRET = SECRET;
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://x.supabase.co';
   });
@@ -60,5 +63,12 @@ describe('POST /api/webhooks/trm', () => {
     expect(await again.json()).toEqual({ ok: true, outcome: 'duplicate' });
     expect(applied).toHaveLength(1);
     expect(applied[0]).toMatchObject({ deliveryId: 'dlv_9', releaseId: 'trm-1', status: 'validating' });
+  });
+
+  it('stores only x-trm-* headers and content-type, not Vercel internals', async () => {
+    const { POST } = await import('./route');
+    const headers = { ...signed(), 'x-vercel-oidc-token': 'eyJ.secret', 'x-vercel-sc-headers': '{}', forwarded: 'for=1.2.3.4', 'x-forwarded-for': '1.2.3.4' };
+    expect((await POST(req(headers))).status).toBe(200);
+    expect(Object.keys(storedHeaders[0]).sort()).toEqual(['content-type', 'x-trm-webhook-signature', 'x-trm-webhook-timestamp']);
   });
 });

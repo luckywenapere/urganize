@@ -16,6 +16,8 @@ import {
   formatShortDay,
   heroForInFlight,
   progressFor,
+  receivedByTrm,
+  TRM_ARTIST_NOT_FOUND_TEXT,
   type TrmSettings,
 } from '@/lib/trm/release';
 import type { TrmPayload, TrmRowView } from '@/lib/trm/server';
@@ -87,6 +89,8 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
 
   const status = data?.submission?.status ?? null;
   const inFlight = status !== null && IN_FLIGHT.includes(status);
+  // "Submitted" (the API took it) vs "Received by TRM" (delivered into TRM).
+  const received = receivedByTrm(status, data?.submission?.history ?? []);
 
   // Fallback poll while TRM has it, in case a webhook is late.
   useEffect(() => {
@@ -95,7 +99,7 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
     const tick = async () => {
       if (stopped || document.visibilityState !== 'visible') return;
       const result = await post('refresh');
-      if (!stopped && result.ok && result.data.status !== status) void reload();
+      if (!stopped && result.ok && (result.data.status !== status || Boolean(result.data.received) !== received)) void reload();
     };
     const first = window.setTimeout(() => void tick(), 4_000);
     const timer = window.setInterval(() => void tick(), POLL_MS);
@@ -104,7 +108,7 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
       window.clearTimeout(first);
       window.clearInterval(timer);
     };
-  }, [inFlight, post, reload, status]);
+  }, [inFlight, post, reload, status, received]);
 
   const availability: FixAvailability = {
     ...SCENE_FLAGS,
@@ -147,7 +151,7 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
   }
 
   const meta = ['Single', data.releaseDate ? `Out ${formatShortDay(data.releaseDate)}` : null, 'All stores'].filter(Boolean).join(' · ');
-  const chip = chipFor(status);
+  const chip = chipFor(status, received);
   const chipNode = chip ? <Chip label={chip.label} tone={chip.tone} /> : null;
 
   const pressSend = async () => {
@@ -290,7 +294,11 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
     const steps = progressFor(status, data.submission?.history ?? [], data.releaseDate);
     return wrap(
       <>
-        <Hero title={heroForInFlight(status)} meta="We’ll tell you the moment it moves · Nothing to do" chip={chipNode} />
+        <Hero
+          title={heroForInFlight(status, received)}
+          meta={received ? 'We’ll tell you the moment it moves · Nothing to do' : 'Waiting for TRM to receive it · Nothing to do'}
+          chip={chipNode}
+        />
         <section>
           <SectionLabel>Progress</SectionLabel>
           <ol className="flex flex-col gap-0 sm:flex-row sm:gap-1.5">
@@ -399,31 +407,24 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
 
   // ---- Needs a TRM account -------------------------------------------------------
   if (status === 'needs_account') {
-    const checkAgain = async () => {
-      setBusy(true);
-      setNote('');
-      const result = await post('prepare', { artistEmail: data.artistEmail, termsAccepted: true });
-      setBusy(false);
-      if (result.ok) {
-        await reload();
-        setSheet('send');
-      } else if (result.data.code === 'artist_not_found') {
-        setNote('TRM still has no account for that email.');
-      } else {
-        setNote(String(result.data.error || 'Try again.'));
-      }
-    };
+    // TRM checks the artist account while delivering, after the submit went
+    // through (TRM, Oct 19, 2026). Fix the account or the email, then resubmit.
+    const blocked = data.checklist.blocking.length > 0;
     return wrap(
       <>
         <div>
-          <Hero title={`${data.primaryArtist || 'The artist'} needs a TRM account.`} meta="TRM only takes releases from artists with an account" />
+          <Hero
+            title={`${data.primaryArtist || 'The artist'} needs a TRM account.`}
+            meta={TRM_ARTIST_NOT_FOUND_TEXT}
+            chip={chipNode}
+          />
           <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:gap-3">
             <button type="button" onClick={() => void copy(TRM_SIGNUP_URL, 'Sign-up link')} className={PRIMARY}>
               <Copy className="h-4 w-4" aria-hidden="true" />
               Copy sign-up link
             </button>
-            <button type="button" disabled={busy} onClick={() => void checkAgain()} className={OUTLINE}>
-              {busy ? 'Checking…' : 'They’ve signed up · Check again'}
+            <button type="button" disabled={blocked} onClick={() => setSheet('resend')} className={OUTLINE}>
+              Resubmit to TRM
             </button>
           </div>
           {noteLine}
