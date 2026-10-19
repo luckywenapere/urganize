@@ -18,7 +18,7 @@ export const CONNECTION_DROPPED_NOTE = 'I lost the connection before I could fin
 
 export async function readStreamedTurn(
   response: Response,
-  handlers: { onText: (delta: string) => void; onReset: () => void }
+  handlers: { onText: (delta: string) => void; onReset: () => void; onFirstChunk?: () => void }
 ): Promise<StreamedTurn> {
   const body = response.body;
   if (!body) return { final: null, text: '' };
@@ -43,10 +43,19 @@ export async function readStreamedTurn(
   };
 
   const stream = body.getReader();
+  let first = true;
   try {
     for (;;) {
       const { value, done } = await stream.read();
       if (done) break;
+      if (first && value && value.byteLength > 0) {
+        first = false;
+        try {
+          handlers.onFirstChunk?.();
+        } catch {
+          // Telemetry must never stop the reply.
+        }
+      }
       apply(reader.feed(decoder.decode(value, { stream: true })));
     }
     apply(reader.flush());

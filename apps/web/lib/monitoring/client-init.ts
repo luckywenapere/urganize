@@ -13,12 +13,14 @@ import {
   resolveSentryEnvironment,
   resolveSentryRelease,
   sentryBeforeSend,
+  SENTRY_CLIENT_TRACES_SAMPLE_RATE,
 } from './sentry-options';
+import type { MonitoringBreadcrumb } from './report';
 
-// Integrations that measure performance or record sessions. This is an
-// errors-only setup, so they are dropped even if a future SDK default adds them.
+// Integrations that record sessions or profile. PostHog records sessions, so
+// these stay off even if a future SDK default adds them. Tracing is on, at a
+// small sample (sentry-options.ts), through browserTracingIntegration below.
 const UNWANTED_INTEGRATIONS = new Set([
-  'BrowserTracing',
   'Replay',
   'ReplayCanvas',
   'BrowserProfiling',
@@ -37,9 +39,17 @@ export function initBrowserSentry(): boolean {
     dsn,
     environment: resolveSentryEnvironment(),
     release: resolveSentryRelease(),
-    // Errors only: no tracing (tracesSampleRate left unset means no spans and
-    // no trace headers on our fetches), no replay, no profiling.
-    integrations: (defaults) => defaults.filter((integration) => !UNWANTED_INTEGRATIONS.has(integration.name)),
+    // Errors, plus performance traces for a tenth of page loads so a dropped
+    // UrgAns reply can be followed from the browser into /api/urgans (trace
+    // headers go to our own origin only, the SDK default). No replay, no
+    // profiling.
+    integrations: (defaults) => [
+      ...defaults.filter(
+        (integration) => !UNWANTED_INTEGRATIONS.has(integration.name) && integration.name !== 'BrowserTracing'
+      ),
+      Sentry.browserTracingIntegration(),
+    ],
+    tracesSampleRate: SENTRY_CLIENT_TRACES_SAMPLE_RATE,
     dataCollection: SENTRY_DATA_COLLECTION,
     // Never rewrite the app's own error messages (the default appends the
     // hostname to "Failed to fetch", which could show up in the UI).
@@ -56,4 +66,8 @@ export function initBrowserSentry(): boolean {
 
 export function captureBrowserError(error: unknown, context?: Record<string, string>) {
   Sentry.captureException(error, context ? { tags: context } : undefined);
+}
+
+export function addBrowserBreadcrumb(crumb: MonitoringBreadcrumb) {
+  Sentry.addBreadcrumb({ type: 'default', level: crumb.level ?? 'info', ...crumb });
 }

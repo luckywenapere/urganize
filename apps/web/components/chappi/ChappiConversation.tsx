@@ -38,6 +38,7 @@ import {
 import { describeTranscriptAnnouncement } from '@/lib/chappi/transcript-announcement';
 import { createTextBatcher, isStreamContentType, URGANS_STREAM_HEADER } from '@/lib/chappi/stream-protocol';
 import { CONNECTION_DROPPED_NOTE, readStreamedTurn } from '@/lib/chappi/stream-client';
+import { startUrgansTelemetry } from '@/lib/chappi/urgans-telemetry';
 import { TURN_DROPPED_NOTE, failedTurnOutcome, isDeviceOnline } from '@/lib/chappi/turn-failure';
 import { ChappiConfirmationCard } from '@/components/chappi/ChappiConfirmationCard';
 import { ChappiCoverArtUploadCard } from '@/components/chappi/ChappiCoverArtUploadCard';
@@ -1081,6 +1082,8 @@ export function ChappiConversation({
     // router (a rename that went through came back as "Let's plan it").
     let sent = false;
     let reachedServer = false;
+    // Content-free breadcrumbs (sent, first byte, done, error) for Sentry.
+    const telemetry = startUrgansTelemetry();
     const handleFailedTurn = () => {
       if (failedTurnOutcome({ sent, reachedServer, online: isDeviceOnline() }) === 'router') {
         fallBackToRouter();
@@ -1104,6 +1107,7 @@ export function ChappiConversation({
         return;
       }
       sent = true;
+      telemetry.sent({ streamed: true, scoped: Boolean(scopedRelease), attachments: sentAttachments });
       const response = await fetch('/api/urgans', {
         method: 'POST',
         headers: {
@@ -1130,7 +1134,9 @@ export function ChappiConversation({
       reachedServer = true;
       let data: ChappiResponse | null;
       let streamedText = '';
-      if (response.body && isStreamContentType(response.headers.get('content-type'))) {
+      const isStream = Boolean(response.body) && isStreamContentType(response.headers.get('content-type'));
+      telemetry.response(response.status, isStream);
+      if (response.body && isStream) {
         // Pieces of the reply are shown as they arrive, a few times a second at
         // most, so a fast model does not re-render the whole transcript on every
         // word.
@@ -1150,10 +1156,12 @@ export function ChappiConversation({
             batcher.discard();
             setPreview(null);
           },
+          onFirstChunk: () => telemetry.firstByte(),
         });
         batcher.discard();
         streamedText = outcome.text;
         if (!outcome.final) {
+          telemetry.failed('stream_dropped', { status: response.status, reachedServer: true });
           // The connection dropped before the answer was complete. The server
           // had the request, so its tools may have run: keep what was written
           // and say so, refresh, and never hand the prompt to the router.
@@ -1174,6 +1182,7 @@ export function ChappiConversation({
       }
 
       if (response.ok && data?.mode === 'agent') {
+        telemetry.done('agent');
         if (
           !deliverReply(turn, data.reply, undefined, data.briefSections, {
             streamed: streamedText.length > 0,
@@ -1195,9 +1204,11 @@ export function ChappiConversation({
         return;
       }
       if (data?.mode === 'error') {
+        telemetry.done('error');
         deliverReply(turn, data.error);
         return;
       }
+      if (data?.mode === 'deterministic') telemetry.done('deterministic');
       // A ceiling reply carries a reason. Shown before the router runs so the
       // user understands why the answer reads differently, rather than
       // silently getting a terser assistant. The typed command still works —
@@ -1213,8 +1224,10 @@ export function ChappiConversation({
       }
       // Any other shape (a 502/504 page, an unreadable body) after the request
       // reached the server: it may have run, so no router guess.
+      telemetry.failed('bad_response', { status: response.status, reachedServer: true });
       handleFailedTurn();
-    } catch {
+    } catch (error) {
+      telemetry.failed(!sent ? 'before_send' : reachedServer ? 'unexpected' : 'network', { error, reachedServer });
       handleFailedTurn();
     } finally {
       // Only clears the indicator this turn set. If the transcript was

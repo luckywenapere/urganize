@@ -19,7 +19,7 @@ import { errorMessage } from "@/lib/errors";
 import { supabase } from '@/lib/supabase/client';
 import { InviteOnlyNotice } from '@/components/access/InviteOnlyNotice';
 import { checkEmailAccess, hasPendingAccessIntent, redeemPendingAccess } from '@/lib/access-intent';
-import { normalizeEmail, readPendingConfirmation } from '@/lib/email-confirmation';
+import { isSafeNextPath, normalizeEmail, readPendingConfirmation } from '@/lib/email-confirmation';
 import { CheckInbox } from '@/components/auth/EmailConfirmation';
 import { useConfirmationPickup } from '@/components/auth/useConfirmationPickup';
 
@@ -117,7 +117,11 @@ export default function AuthPage() {
     captureReferralFromSearch(window.location.search);
   }, []);
 
-  const nextPath = searchParams?.get('next') || HOME_PATH;
+  // Only a path on this site: `?next=//evil.example` or `https://…` would make
+  // router.push leave the app after sign-in (URG-386's safe next, applied here
+  // too, not only on /auth/callback).
+  const requestedNext = searchParams?.get('next');
+  const nextPath = isSafeNextPath(requestedNext) ? requestedNext : HOME_PATH;
   const inviteEmail = normalizeAuthEmail(searchParams?.get('email') || '');
   // Old bookmarks / sent emails may still carry ?mode=signup. Send those
   // to /onboarding (the organic signup home) so the user has a path

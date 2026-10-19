@@ -81,3 +81,17 @@ describe('sentry options', () => {
     expect(asText).toContain('ChunkLoadError');
   });
 });
+
+describe('Sentry tracing scope', () => {
+  it('traces every /api/urgans request and no other server route', async () => {
+    const { serverTracesSampler, SENTRY_CLIENT_TRACES_SAMPLE_RATE } = await import('./sentry-options');
+    expect(serverTracesSampler({ name: 'POST /api/urgans' })).toBe(1);
+    expect(serverTracesSampler({ name: 'POST /api/urgans/transcribe' })).toBe(1);
+    expect(serverTracesSampler({ normalizedRequest: { url: 'https://app.urganize.app/api/urgans?x=1' } })).toBe(1);
+    expect(serverTracesSampler({ name: 'GET /api/releases' })).toBe(0);
+    expect(serverTracesSampler({ name: 'GET /api/urgansomething' })).toBe(0);
+    expect(serverTracesSampler({})).toBe(0);
+    expect(SENTRY_CLIENT_TRACES_SAMPLE_RATE).toBeGreaterThan(0);
+    expect(SENTRY_CLIENT_TRACES_SAMPLE_RATE).toBeLessThanOrEqual(0.2);
+  });
+});

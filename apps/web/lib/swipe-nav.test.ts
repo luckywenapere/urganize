@@ -154,3 +154,42 @@ describe('flag isolation (guard)', () => {
     }
   });
 });
+
+describe('swipe nav is for phone-width screens only', () => {
+  it('needs the account switch on AND a phone-width viewport', async () => {
+    const { shouldShowSwipeNav } = await import('./swipe-nav');
+    expect(shouldShowSwipeNav({ enabled: true, phoneWidth: true })).toBe(true);
+    // Desktop (lg and up) keeps the classic sidebar shell even with the flag on.
+    expect(shouldShowSwipeNav({ enabled: true, phoneWidth: false })).toBe(false);
+    // Unknown viewport (server render, hydration): classic, so no desktop flash.
+    expect(shouldShowSwipeNav({ enabled: true, phoneWidth: null })).toBe(false);
+    // ?nav=classic opt-out or the kill switch on a phone.
+    expect(shouldShowSwipeNav({ enabled: false, phoneWidth: true })).toBe(false);
+    expect(shouldShowSwipeNav({ enabled: null, phoneWidth: true })).toBe(false);
+  });
+
+  it('breaks at Tailwind lg: 1023px is a phone, 1024px is desktop', async () => {
+    const { SWIPE_NAV_MEDIA_QUERY, SWIPE_NAV_MAX_WIDTH_PX } = await import('./swipe-nav');
+    expect(SWIPE_NAV_MAX_WIDTH_PX).toBe(1023);
+    expect(SWIPE_NAV_MEDIA_QUERY).toBe('(max-width: 1023px)');
+  });
+
+  it('the kill switch and the opt-out still win on a phone', async () => {
+    const { resolveSwipeNav, shouldShowSwipeNav } = await import('./swipe-nav');
+    expect(shouldShowSwipeNav({ enabled: resolveSwipeNav({ allOff: true, metadata: {} }), phoneWidth: true })).toBe(false);
+    expect(shouldShowSwipeNav({ enabled: resolveSwipeNav({ metadata: { swipe_nav: false } }), phoneWidth: true })).toBe(false);
+    expect(shouldShowSwipeNav({ enabled: resolveSwipeNav({ metadata: {} }), phoneWidth: true })).toBe(true);
+    expect(shouldShowSwipeNav({ enabled: resolveSwipeNav({ metadata: {} }), phoneWidth: false })).toBe(false);
+  });
+
+  it('useSwipeNav gates on the media query, follows resizes, and renders classic on the server', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const source = readFileSync(join(__dirname, '..', 'stores', 'useSwipeNavStore.ts'), 'utf8');
+    const hook = source.slice(source.indexOf('export function useSwipeNav()'));
+    expect(hook).toContain('shouldShowSwipeNav({ enabled, phoneWidth })');
+    expect(source).toContain('window.matchMedia(SWIPE_NAV_MEDIA_QUERY)');
+    expect(source).toMatch(/addEventListener\('change', listener\)/);
+    expect(source).toMatch(/useSyncExternalStore\(subscribeViewport, isPhoneWidth, \(\) => false\)/);
+  });
+});

@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.161.5",
+    tag: "App",
+    date: "October 19, 2026",
+    highlights: [
+      "Desktop keeps its sidebar layout; swipe tabs are for phones only.",
+      "Sign-in links can't send you to another website after you sign in, from the sign-in page as well as email links.",
+      "Tapping Create account twice in a row now shows Check your inbox instead of an error.",
+    ],
+  },
+  {
     version: "1.161.4",
     tag: "Rollouts",
     date: "October 19, 2026",

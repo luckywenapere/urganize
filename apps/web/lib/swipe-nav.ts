@@ -40,6 +40,24 @@ export function resolveSwipeNav(input: { allOff?: boolean; metadata: Record<stri
   return !(value === false || value === 'false');
 }
 
+/**
+ * Phone-width screens only: below Tailwind's lg breakpoint (1024px). Desktop
+ * and anything lg and up keeps the classic sidebar shell whatever the account
+ * says (v1.160.5 turned swipe on for everyone without this, and desktops lost
+ * their sidebar).
+ */
+export const SWIPE_NAV_MAX_WIDTH_PX = 1023;
+export const SWIPE_NAV_MEDIA_QUERY = `(max-width: ${SWIPE_NAV_MAX_WIDTH_PX}px)`;
+
+/**
+ * Whether this screen draws the swipe shell. Needs the account's answer to be
+ * on AND a phone-width viewport. An unknown viewport (server render, hydration,
+ * no matchMedia) is classic, so a desktop never flashes the swipe shell.
+ */
+export function shouldShowSwipeNav(input: { enabled: boolean | null; phoneWidth: boolean | null }): boolean {
+  return input.enabled === true && input.phoneWidth === true;
+}
+
 /** What a ?nav= value asks for: true (on), false (off), or null (nothing). */
 export function readSwipeNavQuery(value: string | null | undefined): boolean | null {
   if (value === 'swipe') return true;

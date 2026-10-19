@@ -266,7 +266,7 @@ function DirectoryBody() {
             onChange={(event) => patch({ query: event.target.value })}
             placeholder="Search"
             aria-label="Search"
-            className="motion-focus h-[46px] w-full rounded-[14px] border border-stroke-default bg-bg-surface px-4 text-[15px] text-content-primary placeholder:text-content-tertiary"
+            className="motion-focus h-[46px] w-full rounded-[14px] border border-stroke-control bg-bg-surface px-4 text-[15px] text-content-primary placeholder:text-content-tertiary"
           />
 
           <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Role">

@@ -5,8 +5,10 @@ import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
 import { registerSignOutReset } from '@/lib/sign-out-resets';
 import {
+  SWIPE_NAV_MEDIA_QUERY,
   SWIPE_NAV_METADATA_KEY,
   SWIPE_NAV_QUERY_KEY,
+  shouldShowSwipeNav,
   readSwipeNavQuery,
   resolveSwipeNav,
   type SwipeTabKey,
@@ -150,15 +152,48 @@ export function startSwipeNav(): void {
 
 const subscribe = (listener: () => void) => useSwipeNavStore.subscribe(listener);
 
+// The viewport half of the gate: phone width (below lg, 1024px) or not. Read
+// straight from matchMedia, so the first client render already knows and a
+// desktop never draws the swipe shell; a window resized across the breakpoint
+// re-renders through the media query's change event.
+function phoneWidthQuery(): MediaQueryList | null {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return null;
+  return window.matchMedia(SWIPE_NAV_MEDIA_QUERY);
+}
+
+function subscribeViewport(listener: () => void) {
+  const query = phoneWidthQuery();
+  if (!query) return () => {};
+  if (typeof query.addEventListener === 'function') {
+    query.addEventListener('change', listener);
+    return () => query.removeEventListener('change', listener);
+  }
+  // Safari before 14.
+  query.addListener(listener);
+  return () => query.removeListener(listener);
+}
+
+function isPhoneWidth(): boolean {
+  return phoneWidthQuery()?.matches === true;
+}
+
+/** True on a phone-width screen (below lg). False on the server and in the hydration render. */
+export function usePhoneWidth(): boolean {
+  return useSyncExternalStore(subscribeViewport, isPhoneWidth, () => false);
+}
+
 /**
- * True when the swipe navigation is on for this person. False on the server and
- * in the hydration render (so the server's HTML always matches), then the real
+ * True when the swipe navigation is drawn: on for this person AND a phone-width
+ * screen. False on the server and in the hydration render (so the server's
+ * HTML always matches, and desktop starts and stays classic), then the real
  * answer.
  */
 export function useSwipeNav(): boolean {
-  return useSyncExternalStore(
+  const enabled = useSyncExternalStore(
     subscribe,
     () => useSwipeNavStore.getState().enabled === true,
     () => false
   );
+  const phoneWidth = usePhoneWidth();
+  return shouldShowSwipeNav({ enabled, phoneWidth });
 }

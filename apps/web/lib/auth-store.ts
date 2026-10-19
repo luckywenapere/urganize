@@ -29,6 +29,7 @@ import {
 } from '@/lib/auth-failure';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { clearAppCaches } from '@/lib/offline/register';
+import { isRecentSignupCooldown } from '@/lib/signup-cooldown';
 
 // Custom URL scheme registered by the Expo shell (apps/mobile/app.config.ts,
 // `scheme`) — see docs/mobile/auth-setup.md. Google
@@ -825,7 +826,18 @@ export const useAuthStore = create<AuthState>()(
             },
           });
 
-          if (signUpError) throw signUpError;
+          if (signUpError) {
+            // A second tap within Supabase's per-address cooldown ("For security
+            // purposes, you can only request this after 4 seconds.") means a
+            // confirmation link for this address went out seconds ago: the
+            // person's next step is their inbox, not a raw error.
+            if (isRecentSignupCooldown(signUpError)) {
+              persistLastAuthEmail(normalizedEmail);
+              set({ isLoading: false, error: null });
+              return { status: 'confirmation_sent', email: normalizedEmail };
+            }
+            throw signUpError;
+          }
 
           if (!data.user) {
             throw new Error('Signup failed - no user returned');

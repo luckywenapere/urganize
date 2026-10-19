@@ -94,4 +94,19 @@ describe('readStreamedTurn', () => {
   it('has a note for a dropped connection that says what to do', () => {
     expect(CONNECTION_DROPPED_NOTE).toMatch(/carry on/i);
   });
+
+  it('says once when the first piece of the body arrives, and survives a throwing hook', async () => {
+    const { handlers } = record();
+    let firsts = 0;
+    const body = [{ type: 'text', delta: 'Hel' }, { type: 'text', delta: 'lo' }, final] as UrgansStreamEvent[];
+    const result = await readStreamedTurn(responseOf(body.map(encodeStreamEvent)), {
+      ...handlers,
+      onFirstChunk: () => {
+        firsts += 1;
+        throw new Error('telemetry broke');
+      },
+    });
+    expect(firsts).toBe(1);
+    expect(result.final).toEqual(final.data);
+  });
 });

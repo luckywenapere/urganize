@@ -18,11 +18,23 @@
 
 type QueuedError = { error: unknown; context?: Record<string, string> };
 
+/** A breadcrumb: a short, content-free note of what the app did just before an
+ *  error ("urgans request sent"). Never put message text, names, emails or
+ *  tokens in one: it is sent with any error that follows. */
+export type MonitoringBreadcrumb = {
+  category: string;
+  message: string;
+  level?: 'info' | 'warning' | 'error';
+  data?: Record<string, string | number | boolean | null>;
+};
+
 type ClientModule = typeof import('./client-init');
 
 const MAX_QUEUED = 20;
+const MAX_QUEUED_CRUMBS = 30;
 
 let queue: QueuedError[] = [];
+let crumbs: MonitoringBreadcrumb[] = [];
 let client: ClientModule | null = null;
 let starting = false;
 let disabled = false;
@@ -82,9 +94,13 @@ export function startErrorMonitoring() {
           if (!mod.initBrowserSentry()) {
             disabled = true;
             queue = [];
+            crumbs = [];
             return;
           }
           client = mod;
+          const pendingCrumbs = crumbs;
+          crumbs = [];
+          for (const crumb of pendingCrumbs) mod.addBrowserBreadcrumb(crumb);
           const pending = queue;
           queue = [];
           for (const item of pending) mod.captureBrowserError(item.error, item.context);
@@ -95,6 +111,7 @@ export function startErrorMonitoring() {
           stopListening();
           disabled = true;
           queue = [];
+          crumbs = [];
         });
     });
   } catch {
@@ -109,6 +126,22 @@ export function reportErrorToMonitoring(error: unknown, context?: Record<string,
     if (typeof window === 'undefined' || disabled) return;
     if (client) client.captureBrowserError(error, context);
     else enqueue({ error, context });
+  } catch {
+    // Ignore.
+  }
+}
+
+/** Leave a breadcrumb for the next error report. Safe before the SDK has
+ *  loaded (the newest few are held), and a no-op on a local dev server. */
+export function addMonitoringBreadcrumb(crumb: MonitoringBreadcrumb) {
+  try {
+    if (typeof window === 'undefined' || disabled) return;
+    if (client) {
+      client.addBrowserBreadcrumb(crumb);
+      return;
+    }
+    crumbs.push(crumb);
+    if (crumbs.length > MAX_QUEUED_CRUMBS) crumbs.shift();
   } catch {
     // Ignore.
   }

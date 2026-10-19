@@ -1,6 +1,6 @@
 // Sentry for the Node.js server runtime (URG-372). Loaded by instrumentation.ts.
-// Errors only: no tracing (tracesSampleRate is left unset, and next.config.js
-// tree-shakes tracing out with excludeTracing), no profiling.
+// Errors, plus tracing for /api/urgans only (serverTracesSampler: every UrgAns
+// request, no other route), no profiling.
 import * as Sentry from '@sentry/nextjs';
 import {
   SENTRY_DATA_COLLECTION,
@@ -9,6 +9,7 @@ import {
   resolveSentryEnvironment,
   resolveSentryRelease,
   sentryBeforeSend,
+  serverTracesSampler,
 } from './lib/monitoring/sentry-options';
 
 Sentry.init({
@@ -24,4 +25,5 @@ Sentry.init({
   enhanceFetchErrorMessages: 'report-only',
   ignoreErrors: SENTRY_IGNORE_ERRORS,
   beforeSend: sentryBeforeSend,
+  tracesSampler: serverTracesSampler,
 });

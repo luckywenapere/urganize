@@ -196,11 +196,10 @@ const nextConfig = {
   },
 };
 
-// Sentry's build wrapper (URG-372). Source maps are NOT uploaded yet: there is
-// no SENTRY_AUTH_TOKEN, and without one the plugin would only warn. Uploading
-// stays off explicitly so the build never depends on the token or on Sentry
-// being reachable. To get readable stack traces later, add SENTRY_AUTH_TOKEN
-// in Vercel and set sourcemaps.disable to false.
+// Sentry's build wrapper (URG-372). Source maps upload only when
+// SENTRY_AUTH_TOKEN is set (it is, in Vercel Production); without it uploading
+// stays off so the build never depends on the token or on Sentry being
+// reachable.
 const { withSentryConfig } = require('@sentry/nextjs/config');
 
 module.exports = withSentryConfig(nextConfig, {
@@ -212,14 +211,17 @@ module.exports = withSentryConfig(nextConfig, {
   telemetry: false,
   sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
   release: { create: Boolean(process.env.SENTRY_AUTH_TOKEN), name: `urganize-web@${APP_VERSION}` },
-  // The route manifest names transactions for tracing, which is off. Leaving
-  // it on inlines every route pattern into the shared client bundle.
+  // The route manifest names browser transactions by route pattern. Leaving it
+  // on inlines every route pattern into the shared client bundle; browser
+  // traces are a 10% sample, so raw paths as names are fine.
   routeManifestInjection: false,
-  // Errors only: strip the SDK's debug logging and the tracing / replay code
-  // paths from the client bundle where the bundler supports it.
+  // Strip the SDK's debug logging and the replay code paths from the client
+  // bundle. Tracing stays in: /api/urgans and a sample of page loads are traced
+  // (lib/monitoring/sentry-options.ts). The browser SDK is a lazy chunk, so
+  // this does not touch the shared first-load bundle.
   bundleSizeOptimizations: {
     excludeDebugStatements: true,
-    excludeTracing: true,
+    excludeTracing: false,
     excludeReplayIframe: true,
     excludeReplayShadowDom: true,
     excludeReplayWorker: true,

@@ -1,10 +1,13 @@
 /**
  * Shared Sentry settings for the client, server and edge runtimes (URG-372).
  *
- * ERRORS ONLY, on purpose. PostHog already records sessions, so there is no
- * Session Replay here, no profiling, and tracing is off everywhere. Every
- * extra Sentry feature is bytes on a slow Nigerian connection or quota on a
- * free plan, and neither is worth spending until somebody needs it.
+ * Errors, plus a little tracing. PostHog already records sessions, so there is
+ * no Session Replay here and no profiling. Tracing was off until UrgAns replies
+ * started going missing with nothing to read afterwards (Oct 19, 2026): now
+ * every /api/urgans request is traced on the server and a tenth of browser page
+ * loads are, everything else on the server stays untraced. Every extra Sentry
+ * feature is bytes on a slow Nigerian connection or quota on a free plan, so
+ * keep these rates small.
  *
  * This file must stay free of runtime Sentry imports (types only), so it can
  * be read by the lazy client chunk and the server configs alike, and so a test
@@ -93,6 +96,29 @@ export const SENTRY_DENY_URLS: RegExp[] = [
   /extensions\//i,
   /^resource:\/\//i,
 ];
+
+/** Browser: the share of page loads and navigations traced. */
+export const SENTRY_CLIENT_TRACES_SAMPLE_RATE = 0.1;
+
+/** Server and edge: every /api/urgans request is traced (low volume, and the
+ *  one route we need to read end to end); no other route is. */
+export function serverTracesSampler(context: {
+  name?: string;
+  normalizedRequest?: { url?: string };
+  attributes?: Record<string, unknown>;
+  inheritOrSampleWith?: (fallback: number) => number;
+}): number {
+  const target = String(
+    context.normalizedRequest?.url ||
+      context.attributes?.['http.target'] ||
+      context.attributes?.['url.path'] ||
+      context.attributes?.['http.route'] ||
+      context.name ||
+      ''
+  );
+  if (/\/api\/urgans(?:[/?#\s]|$)/.test(target)) return 1.0;
+  return 0;
+}
 
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|::1)$|\.local$/i;
 
