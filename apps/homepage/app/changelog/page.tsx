@@ -86,9 +86,13 @@ function countBy(releases: Release[]): Record<string, number> {
   return counts;
 }
 
-function recentCount(releases: Release[]): number {
+// The hero counts features (titled entries) shipped in the last 30 days, so
+// the number matches what the page shows once housekeeping and patch notes
+// are unlisted (2026-10-19 curation).
+function recentFeatures(releases: Release[]): number {
   const cutoff = Date.now() - 30 * DAY_MS;
   return releases.filter((release) => {
+    if (!release.title) return false;
     const shipped = new Date(release.date).getTime();
     return Number.isFinite(shipped) && shipped >= cutoff;
   }).length;
@@ -206,7 +210,7 @@ export default function ChangelogPage() {
     return shown >= OPEN_FEATURES;
   });
   const openCount = openMonths === -1 ? months.length : openMonths + 1;
-  const recent = recentCount(publicChangelog);
+  const recent = recentFeatures(publicChangelog);
 
   return (
     <div className="min-h-screen bg-[var(--marketing-bg)] text-[var(--marketing-text)]">
@@ -224,7 +228,7 @@ export default function ChangelogPage() {
             </h1>
             <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
               {recent >= 4
-                ? `${recent} updates in the last 30 days, newest first.`
+                ? `${recent} new features in the last 30 days, newest first.`
                 : "Every update, newest first."}
             </p>
           </PageDawn>

@@ -11,7 +11,11 @@ export type Release = {
   // without one folds into its month's "smaller improvements"), `tag` is its
   // one area for the filter (an untagged entry counts as App), and
   // `listed: false` keeps housekeeping (site copy, metadata, internal
-  // monitoring) off the public page. Optional, so older consumers (the in-app
+  // monitoring) off the public page. Since the 2026-10-19 investor curation
+  // (URG-393) only release-planning milestones stay listed: polish, nav
+  // reshuffles, pricing churn, features later cut and personal-name examples
+  // are listed: false (kept here, never deleted). New entries: list only what
+  // a strategic investor should see. Optional, so older consumers (the in-app
   // What's new, CURRENT_VERSION) are unchanged. New minor releases: add a
   // title and a tag.
   title?: string;
@@ -47,6 +51,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.158.11",
+    listed: false,
     tag: "App",
     date: "October 19, 2026",
     highlights: [
@@ -73,6 +78,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.158.8",
+    listed: false,
     tag: "App",
     date: "October 18, 2026",
     highlights: [
@@ -99,6 +105,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.158.5",
+    listed: false,
     tag: "App",
     date: "October 18, 2026",
     highlights: [
@@ -107,6 +114,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.158.4",
+    listed: false,
     tag: "App",
     date: "October 18, 2026",
     highlights: [
@@ -133,6 +141,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.157.18",
+    listed: false,
     tag: "Rollouts",
     date: "October 18, 2026",
     highlights: [
@@ -141,6 +150,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.157.17",
+    listed: false,
     tag: "Rollouts",
     date: "October 18, 2026",
     highlights: [
@@ -149,6 +159,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.157.16",
+    listed: false,
     tag: "Team",
     date: "October 18, 2026",
     highlights: [
@@ -157,6 +168,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.157.15",
+    listed: false,
     tag: "App",
     date: "October 18, 2026",
     highlights: [
@@ -166,6 +178,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.157.14",
+    listed: false,
     tag: "App",
     date: "October 18, 2026",
     highlights: [
@@ -182,6 +195,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.157.12",
+    listed: false,
     tag: "App",
     date: "October 18, 2026",
     highlights: [
@@ -190,6 +204,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.157.11",
+    listed: false,
     tag: "App",
     date: "October 18, 2026",
     highlights: [
@@ -199,6 +214,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.157.10",
+    listed: false,
     tag: "App",
     date: "October 18, 2026",
     highlights: [
@@ -207,6 +223,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.157.9",
+    listed: false,
     tag: "App",
     date: "October 18, 2026",
     highlights: [
@@ -218,6 +235,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.157.8",
+    listed: false,
     tag: "App",
     date: "October 18, 2026",
     highlights: [
@@ -226,6 +244,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.157.7",
+    listed: false,
     tag: "App",
     date: "October 18, 2026",
     highlights: [
@@ -234,6 +253,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.157.6",
+    listed: false,
     tag: "App",
     date: "October 18, 2026",
     highlights: [
@@ -243,6 +263,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.157.5",
+    listed: false,
     tag: "Rollouts",
     date: "October 17, 2026",
     highlights: [
@@ -263,6 +284,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.157.3",
+    listed: false,
     tag: "App",
     date: "October 17, 2026",
     highlights: [
@@ -274,6 +296,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.157.2",
+    listed: false,
     tag: "Account",
     date: "October 17, 2026",
     highlights: [
@@ -283,6 +306,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.157.1",
+    listed: false,
     tag: "App",
     date: "October 17, 2026",
     highlights: [
@@ -292,7 +316,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.157.0",
-    title: "Pitch with credits, many curators at once",
+    title: "Pitch many curators at once",
     tag: "Pitching",
     date: "October 17, 2026",
     highlights: [
@@ -304,6 +328,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.156.7",
+    listed: false,
     tag: "Rollouts",
     date: "October 17, 2026",
     highlights: [
@@ -313,6 +338,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.156.6",
+    listed: false,
     tag: "App",
     date: "October 17, 2026",
     highlights: [
@@ -321,6 +347,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.156.5",
+    listed: false,
     tag: "Rollouts",
     date: "October 17, 2026",
     highlights: [
@@ -329,6 +356,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.156.4",
+    listed: false,
     tag: "Team",
     date: "October 17, 2026",
     highlights: [
@@ -337,6 +365,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.156.3",
+    listed: false,
     tag: "Pitching",
     date: "October 17, 2026",
     highlights: [
@@ -347,6 +376,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.156.2",
+    listed: false,
     tag: "Team",
     date: "October 17, 2026",
     highlights: [
@@ -355,6 +385,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.156.1",
+    listed: false,
     tag: "Account",
     date: "October 17, 2026",
     highlights: [
@@ -374,6 +405,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.155.0",
+    listed: false,
     title: "A tighter Urganize, focused on the release",
     tag: "App",
     date: "October 17, 2026",
@@ -385,6 +417,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.154.18",
+    listed: false,
     tag: "App",
     date: "October 17, 2026",
     highlights: [
@@ -394,6 +427,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.154.17",
+    listed: false,
     tag: "Team",
     date: "October 17, 2026",
     highlights: [
@@ -403,6 +437,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.154.16",
+    listed: false,
     tag: "App",
     date: "October 17, 2026",
     highlights: [
@@ -411,6 +446,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.154.15",
+    listed: false,
     tag: "Rollouts",
     date: "October 17, 2026",
     highlights: [
@@ -421,6 +457,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.154.14",
+    listed: false,
     tag: "App",
     date: "October 17, 2026",
     highlights: [
@@ -429,6 +466,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.154.13",
+    listed: false,
     tag: "App",
     date: "October 17, 2026",
     highlights: [
@@ -437,6 +475,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.154.12",
+    listed: false,
     tag: "Team",
     date: "October 17, 2026",
     highlights: [
@@ -445,6 +484,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.154.11",
+    listed: false,
     tag: "Rollouts",
     date: "October 17, 2026",
     highlights: [
@@ -453,6 +493,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.154.10",
+    listed: false,
     tag: "App",
     date: "October 16, 2026",
     highlights: [
@@ -461,6 +502,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.154.9",
+    listed: false,
     tag: "Account",
     date: "October 16, 2026",
     highlights: [
@@ -469,6 +511,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.154.8",
+    listed: false,
     tag: "Account",
     date: "October 16, 2026",
     highlights: [
@@ -477,6 +520,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.154.7",
+    listed: false,
     tag: "Rollouts",
     date: "October 16, 2026",
     highlights: [
@@ -485,6 +529,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.154.6",
+    listed: false,
     tag: "Account",
     date: "October 16, 2026",
     highlights: [
@@ -493,6 +538,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.154.5",
+    listed: false,
     tag: "AI",
     date: "October 16, 2026",
     highlights: [
@@ -519,6 +565,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.154.2",
+    listed: false,
     tag: "Pitching",
     date: "October 16, 2026",
     highlights: [
@@ -527,6 +574,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.154.1",
+    listed: false,
     tag: "App",
     date: "October 16, 2026",
     highlights: [
@@ -545,6 +593,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.153.2",
+    listed: false,
     tag: "Rollouts",
     date: "October 16, 2026",
     highlights: [
@@ -554,6 +603,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.153.1",
+    listed: false,
     tag: "Account",
     date: "October 16, 2026",
     highlights: [
@@ -572,6 +622,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.152.1",
+    listed: false,
     tag: "Rollouts",
     date: "October 16, 2026",
     highlights: [
@@ -614,6 +665,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.149.1",
+    listed: false,
     tag: "App",
     date: "October 16, 2026",
     highlights: [
@@ -646,6 +698,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.147.11",
+    listed: false,
     tag: "App",
     date: "October 16, 2026",
     highlights: [
@@ -654,6 +707,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.147.10",
+    listed: false,
     tag: "App",
     date: "October 16, 2026",
     highlights: [
@@ -664,6 +718,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.147.9",
+    listed: false,
     tag: "Rollouts",
     date: "October 15, 2026",
     highlights: [
@@ -688,6 +743,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.147.6",
+    listed: false,
     tag: "App",
     date: "October 15, 2026",
     highlights: [
@@ -713,6 +769,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.147.3",
+    listed: false,
     tag: "Rollouts",
     date: "October 15, 2026",
     highlights: [
@@ -721,6 +778,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.147.2",
+    listed: false,
     tag: "App",
     date: "October 15, 2026",
     highlights: [
@@ -729,6 +787,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.147.1",
+    listed: false,
     tag: "App",
     date: "October 15, 2026",
     highlights: [
@@ -749,6 +808,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.146.1",
+    listed: false,
     tag: "Rollouts",
     date: "October 15, 2026",
     highlights: [
@@ -778,6 +838,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.144.0",
+    listed: false,
     title: "My People, sorted by last contact",
     tag: "Team",
     date: "October 15, 2026",
@@ -788,6 +849,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.143.0",
+    listed: false,
     title: "Relationships opens on Directory",
     tag: "Team",
     date: "October 15, 2026",
@@ -798,6 +860,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.142.4",
+    listed: false,
     tag: "Rollouts",
     date: "October 15, 2026",
     highlights: [
@@ -807,6 +870,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.142.3",
+    listed: false,
     tag: "Account",
     date: "October 15, 2026",
     highlights: [
@@ -815,6 +879,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.142.2",
+    listed: false,
     tag: "Rollouts",
     date: "October 15, 2026",
     highlights: [
@@ -824,6 +889,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.142.1",
+    listed: false,
     tag: "Team",
     date: "October 15, 2026",
     highlights: [
@@ -832,6 +898,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.142.0",
+    listed: false,
     title: "Start a rollout from an artist's page",
     tag: "Rollouts",
     date: "October 15, 2026",
@@ -842,6 +909,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.141.1",
+    listed: false,
     tag: "Rollouts",
     date: "October 15, 2026",
     highlights: [
@@ -850,6 +918,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.141.0",
+    listed: false,
     title: "Add a show from an artist's page",
     tag: "Rollouts",
     date: "October 15, 2026",
@@ -859,6 +928,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.140.0",
+    listed: false,
     title: "Keyboard shortcuts on a computer",
     tag: "App",
     date: "October 15, 2026",
@@ -869,6 +939,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.139.2",
+    listed: false,
     tag: "Team",
     date: "October 15, 2026",
     highlights: [
@@ -877,6 +948,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.139.1",
+    listed: false,
     tag: "Rollouts",
     date: "October 15, 2026",
     highlights: [
@@ -894,6 +966,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.138.1",
+    listed: false,
     tag: "App",
     date: "October 15, 2026",
     highlights: [
@@ -902,6 +975,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.138.0",
+    listed: false,
     title: "A cleaner Distribute step",
     tag: "Rollouts",
     date: "October 15, 2026",
@@ -913,6 +987,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.137.1",
+    listed: false,
     tag: "Rollouts",
     date: "October 15, 2026",
     highlights: [
@@ -922,6 +997,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.137.0",
+    listed: false,
     title: "UrgAns gets its own tab on a computer",
     tag: "AI",
     date: "October 15, 2026",
@@ -954,6 +1030,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.134.1",
+    listed: false,
     tag: "App",
     date: "October 15, 2026",
     highlights: [
@@ -963,6 +1040,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.134.0",
+    listed: false,
     title: "Pitching moves inside each rollout",
     tag: "Pitching",
     date: "October 15, 2026",
@@ -974,6 +1052,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.133.3",
+    listed: false,
     tag: "App",
     date: "October 15, 2026",
     highlights: [
@@ -983,6 +1062,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.133.2",
+    listed: false,
     tag: "App",
     date: "October 14, 2026",
     highlights: [
@@ -991,6 +1071,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.133.1",
+    listed: false,
     tag: "App",
     date: "October 14, 2026",
     highlights: [
@@ -1009,6 +1090,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.132.4",
+    listed: false,
     tag: "Rollouts",
     date: "October 14, 2026",
     highlights: [
@@ -1017,6 +1099,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.132.3",
+    listed: false,
     tag: "Team",
     date: "October 14, 2026",
     highlights: [
@@ -1025,6 +1108,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.132.2",
+    listed: false,
     tag: "Rollouts",
     date: "October 14, 2026",
     highlights: [
@@ -1034,6 +1118,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.132.1",
+    listed: false,
     tag: "Rollouts",
     date: "October 14, 2026",
     highlights: [
@@ -1042,6 +1127,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.132.0",
+    listed: false,
     title: "Filters and menus that fit your phone",
     tag: "App",
     date: "October 14, 2026",
@@ -1053,6 +1139,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.131.0",
+    listed: false,
     title: "Distribute gets its own tab",
     tag: "Rollouts",
     date: "October 14, 2026",
@@ -1063,6 +1150,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.130.4",
+    listed: false,
     tag: "App",
     date: "October 14, 2026",
     highlights: [
@@ -1071,6 +1159,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.130.3",
+    listed: false,
     tag: "App",
     date: "October 14, 2026",
     highlights: [
@@ -1079,6 +1168,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.130.2",
+    listed: false,
     tag: "App",
     date: "October 14, 2026",
     highlights: [
@@ -1087,6 +1177,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.130.1",
+    listed: false,
     tag: "Account",
     date: "October 14, 2026",
     highlights: [
@@ -1095,6 +1186,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.130.0",
+    listed: false,
     title: "Cancel or pause your plan yourself",
     tag: "Account",
     date: "October 14, 2026",
@@ -1120,6 +1212,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.128.2",
+    listed: false,
     tag: "App",
     date: "October 14, 2026",
     highlights: [
@@ -1128,6 +1221,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.128.1",
+    listed: false,
     tag: "Team",
     date: "October 14, 2026",
     highlights: [
@@ -1137,6 +1231,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.128.0",
+    listed: false,
     title: "A cleaner rollout page on a computer",
     tag: "Rollouts",
     date: "October 14, 2026",
@@ -1149,6 +1244,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.127.0",
+    listed: false,
     title: "A menu that leads with what you need",
     tag: "App",
     date: "October 14, 2026",
@@ -1159,6 +1255,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.126.0",
+    listed: false,
     title: "A side menu for the part you are in",
     tag: "App",
     date: "October 14, 2026",
@@ -1169,6 +1266,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.125.3",
+    listed: false,
     tag: "App",
     date: "October 14, 2026",
     highlights: [
@@ -1177,6 +1275,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.125.2",
+    listed: false,
     tag: "Rollouts",
     date: "October 14, 2026",
     highlights: [
@@ -1185,6 +1284,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.125.1",
+    listed: false,
     tag: "App",
     date: "October 14, 2026",
     highlights: [
@@ -1204,6 +1304,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.124.1",
+    listed: false,
     tag: "Rollouts",
     date: "October 14, 2026",
     highlights: [
@@ -1221,6 +1322,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.123.0",
+    listed: false,
     title: "Opportunities on Home",
     tag: "Team",
     date: "October 14, 2026",
@@ -1230,6 +1332,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.122.1",
+    listed: false,
     tag: "Rollouts",
     date: "October 14, 2026",
     highlights: [
@@ -1247,6 +1350,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.121.0",
+    listed: false,
     title: "Sign-up starts with who you are",
     tag: "Account",
     date: "October 14, 2026",
@@ -1265,6 +1369,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.120.3",
+    listed: false,
     tag: "Team",
     date: "October 13, 2026",
     highlights: [
@@ -1273,6 +1378,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.120.2",
+    listed: false,
     tag: "Rollouts",
     date: "October 13, 2026",
     highlights: [
@@ -1281,6 +1387,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.120.1",
+    listed: false,
     tag: "App",
     date: "October 11, 2026",
     highlights: [
@@ -1289,6 +1396,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.120.0",
+    listed: false,
     title: "Search and filters take less room",
     tag: "App",
     date: "October 11, 2026",
@@ -1299,6 +1407,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.119.1",
+    listed: false,
     tag: "Rollouts",
     date: "October 11, 2026",
     highlights: [
@@ -1339,6 +1448,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.116.0",
+    listed: false,
     title: "Easier to find the pitch kit",
     tag: "Pitching",
     date: "October 11, 2026",
@@ -1354,6 +1464,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.115.6",
+    listed: false,
     tag: "App",
     date: "October 11, 2026",
     highlights: [
@@ -1363,6 +1474,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.115.5",
+    listed: false,
     tag: "App",
     date: "October 11, 2026",
     highlights: [
@@ -1371,6 +1483,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.115.4",
+    listed: false,
     tag: "Team",
     date: "October 11, 2026",
     highlights: [
@@ -1379,6 +1492,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.115.3",
+    listed: false,
     tag: "App",
     date: "October 11, 2026",
     highlights: [
@@ -1387,6 +1501,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.115.2",
+    listed: false,
     tag: "App",
     date: "October 11, 2026",
     highlights: [
@@ -1395,6 +1510,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.115.1",
+    listed: false,
     tag: "App",
     date: "October 11, 2026",
     highlights: [
@@ -1412,6 +1528,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.114.0",
+    listed: false,
     title: "Share your page once you claim it",
     tag: "Team",
     date: "October 11, 2026",
@@ -1423,6 +1540,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.113.0",
+    listed: false,
     title: "Frame your profile photo",
     tag: "Team",
     date: "October 11, 2026",
@@ -1433,6 +1551,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.112.1",
+    listed: false,
     tag: "App",
     date: "October 11, 2026",
     highlights: [
@@ -1441,6 +1560,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.112.0",
+    listed: false,
     title: "See where the money went",
     tag: "Rollouts",
     date: "October 11, 2026",
@@ -1455,6 +1575,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.111.0",
+    listed: false,
     title: "Artists get profile photos",
     tag: "Team",
     date: "October 11, 2026",
@@ -1465,6 +1586,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.110.2",
+    listed: false,
     tag: "App",
     date: "October 11, 2026",
     highlights: [
@@ -1473,6 +1595,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.110.1",
+    listed: false,
     tag: "Pitching",
     date: "October 11, 2026",
     highlights: [
@@ -1493,6 +1616,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.109.0",
+    listed: false,
     title: "Start your first rollout straight away",
     tag: "Account",
     date: "October 11, 2026",
@@ -1550,6 +1674,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.105.1",
+    listed: false,
     tag: "Pitching",
     date: "October 11, 2026",
     highlights: [
@@ -1572,6 +1697,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.104.0",
+    listed: false,
     title: "Simpler pitching",
     tag: "Pitching",
     date: "October 11, 2026",
@@ -1590,6 +1716,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.102.0",
+    listed: false,
     title: "Get paid by fans directly",
     tag: "Rollouts",
     date: "October 11, 2026",
@@ -1610,6 +1737,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.100.0",
+    listed: false,
     title: "Tell us how we're doing",
     tag: "App",
     date: "October 11, 2026",
@@ -1620,6 +1748,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.99.0",
+    listed: false,
     title: "Featured and On the rise in the Directory",
     tag: "Team",
     date: "October 11, 2026",
@@ -1664,6 +1793,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.95.0",
+    listed: false,
     title: "Directory profiles say what you are",
     tag: "Team",
     date: "October 11, 2026",
@@ -1675,6 +1805,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.94.0",
+    listed: false,
     title: "Give the Home chat full width",
     tag: "AI",
     date: "October 10, 2026",
@@ -1684,6 +1815,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.93.2",
+    listed: false,
     tag: "Pitching",
     date: "October 10, 2026",
     highlights: [
@@ -1700,6 +1832,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.93.0",
+    listed: false,
     title: "Home's chat is its own chat",
     tag: "AI",
     date: "October 10, 2026",
@@ -1718,6 +1851,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.92.14",
+    listed: false,
     tag: "Team",
     date: "October 10, 2026",
     highlights: [
@@ -1726,6 +1860,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.92.13",
+    listed: false,
     tag: "App",
     date: "October 9, 2026",
     highlights: [
@@ -1735,6 +1870,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.92.12",
+    listed: false,
     tag: "Rollouts",
     date: "October 9, 2026",
     highlights: [
@@ -1744,6 +1880,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.92.11",
+    listed: false,
     tag: "Account",
     date: "October 9, 2026",
     highlights: [
@@ -1753,6 +1890,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.92.10",
+    listed: false,
     tag: "Rollouts",
     date: "October 9, 2026",
     highlights: [
@@ -1763,6 +1901,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.92.9",
+    listed: false,
     tag: "Team",
     date: "October 9, 2026",
     highlights: [
@@ -1772,6 +1911,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.92.8",
+    listed: false,
     tag: "App",
     date: "October 9, 2026",
     highlights: [
@@ -1780,6 +1920,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.92.7",
+    listed: false,
     tag: "Rollouts",
     date: "October 9, 2026",
     highlights: [
@@ -1788,6 +1929,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.92.6",
+    listed: false,
     tag: "App",
     date: "October 9, 2026",
     highlights: [
@@ -1796,6 +1938,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.92.5",
+    listed: false,
     tag: "Rollouts",
     date: "October 9, 2026",
     highlights: [
@@ -1804,6 +1947,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.92.4",
+    listed: false,
     tag: "Rollouts",
     date: "October 9, 2026",
     highlights: [
@@ -1812,6 +1956,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.92.3",
+    listed: false,
     tag: "Team",
     date: "October 9, 2026",
     highlights: [
@@ -1820,6 +1965,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.92.2",
+    listed: false,
     tag: "Rollouts",
     date: "October 9, 2026",
     highlights: [
@@ -1829,6 +1975,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.92.1",
+    listed: false,
     tag: "Rollouts",
     date: "October 9, 2026",
     highlights: [
@@ -1837,6 +1984,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.92.0",
+    listed: false,
     title: "See the plan before you answer",
     tag: "AI",
     date: "October 9, 2026",
@@ -1846,6 +1994,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.91.3",
+    listed: false,
     tag: "Rollouts",
     date: "October 9, 2026",
     highlights: [
@@ -1855,6 +2004,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.91.2",
+    listed: false,
     tag: "Rollouts",
     date: "October 9, 2026",
     highlights: [
@@ -1864,6 +2014,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.91.1",
+    listed: false,
     tag: "App",
     date: "October 9, 2026",
     highlights: [
@@ -1875,6 +2026,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.91.0",
+    listed: false,
     title: "Log what each rollout costs",
     tag: "Rollouts",
     date: "October 9, 2026",
@@ -1910,6 +2062,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.88.5",
+    listed: false,
     tag: "Rollouts",
     date: "October 9, 2026",
     highlights: [
@@ -1920,6 +2073,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.88.4",
+    listed: false,
     tag: "App",
     date: "October 7, 2026",
     highlights: [
@@ -1928,6 +2082,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.88.3",
+    listed: false,
     tag: "App",
     date: "October 7, 2026",
     highlights: [
@@ -1936,6 +2091,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.88.2",
+    listed: false,
     tag: "App",
     date: "October 7, 2026",
     highlights: [
@@ -1944,6 +2100,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.88.1",
+    listed: false,
     tag: "Team",
     date: "October 7, 2026",
     highlights: [
@@ -1966,6 +2123,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.87.0",
+    listed: false,
     title: "Tag teammates with @",
     tag: "Team",
     date: "October 7, 2026",
@@ -1975,6 +2133,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.86.0",
+    listed: false,
     title: "Timeline gets its own tab",
     tag: "Rollouts",
     date: "October 7, 2026",
@@ -1985,6 +2144,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.85.1",
+    listed: false,
     tag: "App",
     date: "October 7, 2026",
     highlights: [
@@ -1993,6 +2153,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.85.0",
+    listed: false,
     title: "Smoother sending from Home",
     tag: "AI",
     date: "October 7, 2026",
@@ -2002,6 +2163,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.84.1",
+    listed: false,
     tag: "AI",
     date: "October 7, 2026",
     highlights: [
@@ -2010,6 +2172,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.84.0",
+    listed: false,
     title: "Close the Today panel, find saved chats",
     tag: "AI",
     date: "October 7, 2026",
@@ -2020,6 +2183,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.83.0",
+    listed: false,
     title: "Home chat opens the full chat",
     tag: "AI",
     date: "October 7, 2026",
@@ -2031,6 +2195,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.82.0",
+    listed: false,
     title: "A cleaner Home",
     tag: "App",
     date: "October 7, 2026",
@@ -2040,6 +2205,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.81.0",
+    listed: false,
     title: "A simpler priority task",
     tag: "App",
     date: "October 7, 2026",
@@ -2049,6 +2215,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.80.0",
+    listed: false,
     title: "Attach, pick a rollout or talk from Home",
     tag: "AI",
     date: "October 7, 2026",
@@ -2058,6 +2225,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.79.0",
+    listed: false,
     title: "A normal chat box on Home",
     tag: "AI",
     date: "October 7, 2026",
@@ -2076,6 +2244,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.77.0",
+    listed: false,
     title: "The ask bar is now a chat box",
     tag: "AI",
     date: "October 7, 2026",
@@ -2094,6 +2263,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.75.0",
+    listed: false,
     title: "UrgAns reads its replies out loud",
     tag: "AI",
     date: "October 6, 2026",
@@ -2103,6 +2273,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.74.0",
+    listed: false,
     title: "An easier ask bar on Home",
     tag: "AI",
     date: "October 6, 2026",
@@ -2113,6 +2284,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.73.0",
+    listed: false,
     title: "Cleaner screens and a new body font",
     tag: "App",
     date: "October 5, 2026",
@@ -2124,6 +2296,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.72.0",
+    listed: false,
     title: "A calmer Home",
     tag: "App",
     date: "October 5, 2026",
@@ -2133,6 +2306,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.71.0",
+    listed: false,
     title: "A cleaner trial-ended page",
     tag: "Account",
     date: "October 5, 2026",
@@ -2144,6 +2318,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.69.0",
+    listed: false,
     title: "A calmer first visit",
     tag: "App",
     date: "October 4, 2026",
@@ -2153,6 +2328,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.68.0",
+    listed: false,
     title: "New headline font",
     tag: "App",
     date: "October 4, 2026",
@@ -2172,6 +2348,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.66.0",
+    listed: false,
     title: "A steadier phone bar and better search",
     tag: "App",
     date: "October 4, 2026",
@@ -2183,6 +2360,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.65.1",
+    listed: false,
     tag: "App",
     date: "October 4, 2026",
     highlights: [
@@ -2203,6 +2381,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.64.0",
+    listed: false,
     title: "The content calendar is back",
     tag: "Pitching",
     date: "October 4, 2026",
@@ -2231,6 +2410,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.61.0",
+    listed: false,
     title: "Use Urganize with just credits",
     tag: "Account",
     date: "October 2, 2026",
@@ -2240,6 +2420,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.60.0",
+    listed: false,
     title: "See your credits under the chat box",
     tag: "AI",
     date: "October 2, 2026",
@@ -2249,6 +2430,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.59.0",
+    listed: false,
     title: "Directory search on every plan",
     tag: "Account",
     date: "October 2, 2026",
@@ -2302,6 +2484,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.54.0",
+    listed: false,
     title: "Home fits your phone",
     tag: "App",
     date: "September 30, 2026",
@@ -2311,6 +2494,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.53.0",
+    listed: false,
     title: "Clearer fields and text",
     tag: "App",
     date: "September 30, 2026",
@@ -2324,6 +2508,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.52.0",
+    listed: false,
     title: "Your chats in the side menu",
     tag: "AI",
     date: "September 30, 2026",
@@ -2334,6 +2519,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.51.0",
+    listed: false,
     title: "One menu for your rollout on a computer",
     tag: "Rollouts",
     date: "September 30, 2026",
@@ -2345,6 +2531,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.50.0",
+    listed: false,
     title: "Settings opens over your page",
     tag: "App",
     date: "September 29, 2026",
@@ -2357,6 +2544,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.49.0",
+    listed: false,
     title: "A chat for every rollout",
     tag: "Team",
     date: "September 29, 2026",
@@ -2366,6 +2554,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.48.1",
+    listed: false,
     tag: "Rollouts",
     date: "September 25, 2026",
     highlights: [
@@ -2374,6 +2563,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.48.0",
+    listed: false,
     title: "Talk to UrgAns",
     tag: "AI",
     date: "September 25, 2026",
@@ -2384,6 +2574,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.47.0",
+    listed: false,
     title: "Plans build as soon as you answer",
     tag: "AI",
     date: "September 25, 2026",
@@ -2394,6 +2585,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.46.0",
+    listed: false,
     title: "Shows is out of beta",
     tag: "Rollouts",
     date: "September 25, 2026",
@@ -2405,6 +2597,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.45.0",
+    listed: false,
     title: "Artist colours for share images",
     tag: "Pitching",
     date: "September 24, 2026",
@@ -2423,6 +2616,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.43.1",
+    listed: false,
     tag: "AI",
     date: "September 24, 2026",
     highlights: [
@@ -2431,6 +2625,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.43.0",
+    listed: false,
     title: "Share to X and Snapchat",
     tag: "Pitching",
     date: "September 24, 2026",
@@ -2440,6 +2635,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.42.1",
+    listed: false,
     tag: "AI",
     date: "September 24, 2026",
     highlights: [
@@ -2458,6 +2654,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.41.0",
+    listed: false,
     title: "A 3-day free trial",
     tag: "Account",
     date: "September 10, 2026",
@@ -2467,6 +2664,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.40.0",
+    listed: false,
     title: "Three plans: Solo, Manager and Label",
     tag: "Account",
     date: "September 9, 2026",
@@ -2477,6 +2675,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.39.0",
+    listed: false,
     title: "New yearly prices",
     tag: "Account",
     date: "September 9, 2026",
@@ -2490,6 +2689,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.38.0",
+    listed: false,
     title: "Fold the side menu to icons",
     tag: "App",
     date: "September 9, 2026",
@@ -2501,6 +2701,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.37.0",
+    listed: false,
     title: "Releases are now rollouts",
     tag: "Rollouts",
     date: "September 9, 2026",
@@ -2510,6 +2711,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.36.0",
+    listed: false,
     title: "Pitching gets its own page",
     tag: "Pitching",
     date: "September 9, 2026",
@@ -2521,6 +2723,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.35.0",
+    listed: false,
     title: "Plain hints in the side menu",
     tag: "App",
     date: "September 9, 2026",
@@ -2533,6 +2736,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.34.0",
+    listed: false,
     title: "Resize the side menu",
     tag: "App",
     date: "September 9, 2026",
@@ -2544,6 +2748,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.33.0",
+    listed: false,
     title: "Sign in straight to UrgAns",
     tag: "AI",
     date: "September 9, 2026",
@@ -2558,6 +2763,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.32.1",
+    listed: false,
     tag: "Rollouts",
     date: "September 8, 2026",
     highlights: [
@@ -2577,6 +2783,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.31.0",
+    listed: false,
     title: "Notes are back",
     tag: "Rollouts",
     date: "September 8, 2026",
@@ -2588,6 +2795,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.30.0",
+    listed: false,
     title: "Metadata collection is back",
     tag: "Rollouts",
     date: "September 7, 2026",
@@ -2599,6 +2807,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.29.0",
+    listed: false,
     title: "Ask UrgAns for your release recap",
     tag: "AI",
     date: "September 7, 2026",
@@ -2609,6 +2818,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.28.0",
+    listed: false,
     title: "Ask UrgAns for a status update",
     tag: "AI",
     date: "September 7, 2026",
@@ -2619,6 +2829,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.27.0",
+    listed: false,
     title: "A look of its own",
     tag: "App",
     date: "September 7, 2026",
@@ -2629,6 +2840,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.26.1",
+    listed: false,
     tag: "Team",
     date: "September 7, 2026",
     highlights: [
@@ -2648,6 +2860,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.25.0",
+    listed: false,
     title: "UrgAns knows your shows and press kits",
     tag: "AI",
     date: "September 7, 2026",
@@ -2660,6 +2873,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.24.2",
+    listed: false,
     tag: "Pitching",
     date: "September 5, 2026",
     highlights: [
@@ -2669,6 +2883,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.24.1",
+    listed: false,
     tag: "App",
     date: "September 5, 2026",
     highlights: [
@@ -2690,6 +2905,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.23.1",
+    listed: false,
     tag: "Rollouts",
     date: "September 5, 2026",
     highlights: [
@@ -2700,6 +2916,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.23.0",
+    listed: false,
     title: "Tell us from inside the app",
     tag: "App",
     date: "September 3, 2026",
@@ -2721,6 +2938,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.21.0",
+    listed: false,
     title: "Three release tools paused",
     tag: "Rollouts",
     date: "September 3, 2026",
@@ -2731,6 +2949,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.20.1",
+    listed: false,
     tag: "App",
     date: "September 2, 2026",
     highlights: [
@@ -2739,6 +2958,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.20.0",
+    listed: false,
     title: "Shows are here",
     tag: "Rollouts",
     date: "September 2, 2026",
@@ -2751,6 +2971,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.19.0",
+    listed: false,
     title: "Notifications on Android",
     tag: "App",
     date: "September 2, 2026",
@@ -2772,6 +2993,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.17.0",
+    listed: false,
     title: "Turn on notifications",
     tag: "App",
     date: "September 2, 2026",
@@ -2791,6 +3013,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.15.0",
+    listed: false,
     title: "The Solo plan",
     tag: "Account",
     date: "September 1, 2026",
@@ -2801,6 +3024,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.14.1",
+    listed: false,
     tag: "App",
     date: "September 1, 2026",
     highlights: [
@@ -2809,6 +3033,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.14.0",
+    listed: false,
     title: "One menu button on your phone",
     tag: "App",
     date: "August 31, 2026",
@@ -2819,6 +3044,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.13.0",
+    listed: false,
     title: "Search your catalog",
     tag: "App",
     date: "August 31, 2026",
@@ -2829,6 +3055,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.12.0",
+    listed: false,
     title: "Phone search finds activities",
     tag: "App",
     date: "August 31, 2026",
@@ -2839,6 +3066,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.11.3",
+    listed: false,
     tag: "Rollouts",
     date: "August 31, 2026",
     highlights: [
@@ -2848,6 +3076,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.11.2",
+    listed: false,
     tag: "AI",
     date: "August 31, 2026",
     highlights: [
@@ -2856,6 +3085,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.11.1",
+    listed: false,
     tag: "App",
     date: "August 31, 2026",
     highlights: [
@@ -2865,6 +3095,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.11.0",
+    listed: false,
     title: "Back to your catalog in one tap",
     tag: "App",
     date: "August 31, 2026",
@@ -2875,6 +3106,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.10.2",
+    listed: false,
     tag: "Rollouts",
     date: "August 31, 2026",
     highlights: [
@@ -2883,6 +3115,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.10.1",
+    listed: false,
     tag: "App",
     date: "August 31, 2026",
     highlights: [
@@ -2891,7 +3124,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.10.0",
-    title: "A whole release on one screen",
+    title: "A whole release on one timeline",
     tag: "Rollouts",
     date: "August 31, 2026",
     highlights: [
@@ -2901,6 +3134,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.9.1",
+    listed: false,
     tag: "Rollouts",
     date: "August 30, 2026",
     highlights: [
@@ -2909,6 +3143,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.9.0",
+    listed: false,
     title: "Meet Chappi",
     tag: "AI",
     date: "August 30, 2026",
@@ -2918,6 +3153,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.8.0",
+    listed: false,
     title: "Remove an artist you added by mistake",
     tag: "Team",
     date: "August 30, 2026",
@@ -2927,6 +3163,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.7.0",
+    listed: false,
     title: "Move a release to another artist",
     tag: "Rollouts",
     date: "August 30, 2026",
@@ -2946,6 +3183,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.5.4",
+    listed: false,
     tag: "Rollouts",
     date: "August 29, 2026",
     highlights: [
@@ -2954,6 +3192,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.5.3",
+    listed: false,
     tag: "Rollouts",
     date: "August 29, 2026",
     highlights: [
@@ -2962,6 +3201,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.5.2",
+    listed: false,
     tag: "Rollouts",
     date: "August 29, 2026",
     highlights: [
@@ -2972,6 +3212,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.5.1",
+    listed: false,
     tag: "Team",
     date: "August 29, 2026",
     highlights: [
@@ -2991,6 +3232,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.4.3",
+    listed: false,
     tag: "Team",
     date: "August 29, 2026",
     highlights: [
@@ -3000,6 +3242,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.4.2",
+    listed: false,
     tag: "App",
     date: "August 28, 2026",
     highlights: [
@@ -3009,6 +3252,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.4.1",
+    listed: false,
     tag: "Account",
     date: "August 27, 2026",
     highlights: [
@@ -3018,6 +3262,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.4.0",
+    listed: false,
     title: "Hear when credits come in",
     tag: "Rollouts",
     date: "August 27, 2026",
@@ -3042,6 +3287,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.2.1",
+    listed: false,
     tag: "App",
     date: "August 27, 2026",
     highlights: [
@@ -3061,6 +3307,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.1.4",
+    listed: false,
     tag: "Account",
     date: "August 25, 2026",
     highlights: [
@@ -3071,6 +3318,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.1.3",
+    listed: false,
     tag: "App",
     date: "August 25, 2026",
     highlights: [
@@ -3080,6 +3328,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.1.2",
+    listed: false,
     tag: "Rollouts",
     date: "August 25, 2026",
     highlights: [
@@ -3089,6 +3338,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.1.1",
+    listed: false,
     tag: "Rollouts",
     date: "August 25, 2026",
     highlights: [
@@ -3098,6 +3348,7 @@ export const changelog: Release[] = [
   },
   {
     version: "1.1.0",
+    listed: false,
     title: "Pick your plan in the app",
     tag: "Account",
     date: "August 24, 2026",
@@ -3121,6 +3372,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.61.0",
+    listed: false,
     title: "Switch plans any time",
     tag: "Account",
     date: "August 23, 2026",
@@ -3134,6 +3386,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.60.0",
+    listed: false,
     title: "A 14-day free trial for every team",
     tag: "Account",
     date: "August 22, 2026",
@@ -3147,6 +3400,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.59.1",
+    listed: false,
     tag: "App",
     date: "August 21, 2026",
     highlights: [
@@ -3157,6 +3411,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.59.0",
+    listed: false,
     title: "A cleaner sign-in",
     tag: "Account",
     date: "August 21, 2026",
@@ -3168,6 +3423,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.58.1",
+    listed: false,
     tag: "AI",
     date: "August 21, 2026",
     highlights: [
@@ -3177,6 +3433,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.58.0",
+    listed: false,
     title: "A welcome note when you join",
     tag: "Account",
     date: "August 21, 2026",
@@ -3195,6 +3452,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.56.3",
+    listed: false,
     tag: "Rollouts",
     date: "August 18, 2026",
     highlights: [
@@ -3204,6 +3462,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.56.2",
+    listed: false,
     tag: "AI",
     date: "August 18, 2026",
     highlights: [
@@ -3213,6 +3472,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.56.1",
+    listed: false,
     tag: "AI",
     date: "August 16, 2026",
     highlights: [
@@ -3223,6 +3483,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.56.0",
+    listed: false,
     title: "A login to send your team",
     tag: "Team",
     date: "August 16, 2026",
@@ -3245,6 +3506,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.55.1",
+    listed: false,
     tag: "Rollouts",
     date: "August 15, 2026",
     highlights: [
@@ -3265,6 +3527,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.54.2",
+    listed: false,
     tag: "Rollouts",
     date: "August 14, 2026",
     highlights: [
@@ -3273,6 +3536,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.54.1",
+    listed: false,
     tag: "Rollouts",
     date: "August 14, 2026",
     highlights: [
@@ -3281,6 +3545,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.54.0",
+    listed: false,
     title: "Press kits are back",
     tag: "Pitching",
     date: "August 14, 2026",
@@ -3291,6 +3556,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.53.1",
+    listed: false,
     tag: "Rollouts",
     date: "August 14, 2026",
     highlights: [
@@ -3313,6 +3579,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.52.0",
+    listed: false,
     title: "Settings shows what you pay for",
     tag: "Account",
     date: "August 14, 2026",
@@ -3333,6 +3600,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.51.2",
+    listed: false,
     tag: "Rollouts",
     date: "August 14, 2026",
     highlights: [
@@ -3341,6 +3609,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.51.1",
+    listed: false,
     tag: "App",
     date: "August 13, 2026",
     highlights: [
@@ -3350,6 +3619,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.51.0",
+    listed: false,
     title: "Settings in four tabs",
     tag: "App",
     date: "August 13, 2026",
@@ -3362,6 +3632,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.50.2",
+    listed: false,
     tag: "Rollouts",
     date: "August 13, 2026",
     highlights: [
@@ -3381,6 +3652,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.50.0",
+    listed: false,
     title: "Take a note from UrgAns",
     tag: "AI",
     date: "August 13, 2026",
@@ -3391,6 +3663,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.49.1",
+    listed: false,
     tag: "Account",
     date: "August 13, 2026",
     highlights: [
@@ -3400,6 +3673,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.49.0",
+    listed: false,
     title: "One release opens straight in",
     tag: "Rollouts",
     date: "August 12, 2026",
@@ -3409,6 +3683,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.48.2",
+    listed: false,
     tag: "Rollouts",
     date: "August 12, 2026",
     highlights: [
@@ -3417,6 +3692,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.48.1",
+    listed: false,
     tag: "App",
     date: "August 12, 2026",
     highlights: [
@@ -3425,6 +3701,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.48.0",
+    listed: false,
     title: "Fold the side menu",
     tag: "App",
     date: "August 12, 2026",
@@ -3446,7 +3723,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.46.0",
-    title: "Pitch your songs to playlists",
+    title: "Pitch your songs to playlist curators",
     tag: "Pitching",
     date: "August 12, 2026",
     highlights: [
@@ -3458,6 +3735,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.45.2",
+    listed: false,
     tag: "AI",
     date: "August 12, 2026",
     highlights: [
@@ -3466,6 +3744,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.45.1",
+    listed: false,
     tag: "Account",
     date: "August 12, 2026",
     highlights: [
@@ -3474,6 +3753,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.45.0",
+    listed: false,
     title: "First release, no detours",
     tag: "Rollouts",
     date: "August 12, 2026",
@@ -3483,6 +3763,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.44.3",
+    listed: false,
     tag: "Pitching",
     date: "August 12, 2026",
     highlights: [
@@ -3493,6 +3774,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.44.2",
+    listed: false,
     tag: "Rollouts",
     date: "August 10, 2026",
     highlights: [
@@ -3501,6 +3783,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.44.1",
+    listed: false,
     tag: "Rollouts",
     date: "August 10, 2026",
     highlights: [
@@ -3531,6 +3814,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.42.1",
+    listed: false,
     tag: "Rollouts",
     date: "August 9, 2026",
     highlights: [
@@ -3539,6 +3823,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.42.0",
+    listed: false,
     title: "Notes",
     tag: "Rollouts",
     date: "August 9, 2026",
@@ -3548,6 +3833,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.41.4",
+    listed: false,
     tag: "App",
     date: "August 8, 2026",
     highlights: [
@@ -3559,6 +3845,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.41.3",
+    listed: false,
     tag: "App",
     date: "August 7, 2026",
     highlights: [
@@ -3567,6 +3854,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.41.2",
+    listed: false,
     tag: "Rollouts",
     date: "August 6, 2026",
     highlights: [
@@ -3575,6 +3863,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.41.1",
+    listed: false,
     tag: "Rollouts",
     date: "August 6, 2026",
     highlights: [
@@ -3584,6 +3873,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.41.0",
+    listed: false,
     title: "Create a release with nothing up front",
     tag: "Rollouts",
     date: "August 6, 2026",
@@ -3594,6 +3884,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.40.12",
+    listed: false,
     tag: "AI",
     date: "August 6, 2026",
     highlights: [
@@ -3602,6 +3893,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.40.11",
+    listed: false,
     tag: "App",
     date: "August 6, 2026",
     highlights: [
@@ -3610,6 +3902,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.40.10",
+    listed: false,
     tag: "App",
     date: "August 6, 2026",
     highlights: [
@@ -3618,6 +3911,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.40.9",
+    listed: false,
     tag: "AI",
     date: "August 6, 2026",
     highlights: [
@@ -3626,6 +3920,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.40.8",
+    listed: false,
     tag: "Rollouts",
     date: "August 6, 2026",
     highlights: [
@@ -3634,6 +3929,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.40.7",
+    listed: false,
     tag: "Rollouts",
     date: "August 6, 2026",
     highlights: [
@@ -3642,6 +3938,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.40.6",
+    listed: false,
     tag: "Rollouts",
     date: "August 5, 2026",
     highlights: [
@@ -3654,6 +3951,7 @@ export const changelog: Release[] = [
     // space — see URG-225), so the claim was trimmed to what that release
     // actually delivered rather than left standing as a false entry.
     version: "0.40.5",
+    listed: false,
     tag: "Rollouts",
     date: "August 5, 2026",
     highlights: [
@@ -3662,6 +3960,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.40.4",
+    listed: false,
     tag: "App",
     date: "August 5, 2026",
     highlights: [
@@ -3670,6 +3969,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.40.3",
+    listed: false,
     tag: "Account",
     date: "August 5, 2026",
     highlights: [
@@ -3678,6 +3978,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.40.2",
+    listed: false,
     tag: "Team",
     date: "August 5, 2026",
     highlights: [
@@ -3686,6 +3987,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.40.1",
+    listed: false,
     tag: "Rollouts",
     date: "August 5, 2026",
     highlights: [
@@ -3694,6 +3996,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.40.0",
+    listed: false,
     title: "A workspace card",
     tag: "Team",
     date: "August 5, 2026",
@@ -3703,6 +4006,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.39.1",
+    listed: false,
     tag: "Rollouts",
     date: "August 5, 2026",
     highlights: [
@@ -3711,6 +4015,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.39.0",
+    listed: false,
     title: "Release pages open instantly",
     tag: "App",
     date: "August 4, 2026",
@@ -3720,6 +4025,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.38.5",
+    listed: false,
     tag: "Rollouts",
     date: "August 4, 2026",
     highlights: [
@@ -3728,6 +4034,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.38.4",
+    listed: false,
     tag: "App",
     date: "August 4, 2026",
     highlights: [
@@ -3736,6 +4043,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.38.3",
+    listed: false,
     tag: "Rollouts",
     date: "August 4, 2026",
     highlights: [
@@ -3744,6 +4052,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.38.2",
+    listed: false,
     tag: "AI",
     date: "August 4, 2026",
     highlights: [
@@ -3752,6 +4061,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.38.1",
+    listed: false,
     tag: "App",
     date: "August 4, 2026",
     highlights: [
@@ -3760,6 +4070,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.38.0",
+    listed: false,
     title: "Chappi is now UrgAns",
     tag: "AI",
     date: "August 3, 2026",
@@ -3770,6 +4081,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.37.2",
+    listed: false,
     tag: "AI",
     date: "July 31, 2026",
     highlights: [
@@ -3778,6 +4090,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.37.1",
+    listed: false,
     tag: "AI",
     date: "July 31, 2026",
     highlights: [
@@ -3795,6 +4108,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.36.1",
+    listed: false,
     tag: "AI",
     date: "July 31, 2026",
     highlights: [
@@ -3803,6 +4117,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.36.0",
+    listed: false,
     title: "Chappi slides in beside your releases",
     tag: "AI",
     date: "July 31, 2026",
@@ -3812,6 +4127,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.35.6",
+    listed: false,
     tag: "AI",
     date: "July 31, 2026",
     highlights: [
@@ -3820,6 +4136,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.35.5",
+    listed: false,
     tag: "Account",
     date: "July 31, 2026",
     highlights: [
@@ -3828,6 +4145,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.35.4",
+    listed: false,
     tag: "Team",
     date: "July 31, 2026",
     highlights: [
@@ -3836,6 +4154,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.35.3",
+    listed: false,
     tag: "Rollouts",
     date: "July 31, 2026",
     highlights: [
@@ -3845,6 +4164,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.35.2",
+    listed: false,
     tag: "AI",
     date: "July 31, 2026",
     highlights: [
@@ -3853,6 +4173,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.35.1",
+    listed: false,
     tag: "Account",
     date: "July 31, 2026",
     highlights: [
@@ -3870,6 +4191,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.34.1",
+    listed: false,
     tag: "App",
     date: "July 31, 2026",
     highlights: [
@@ -3878,6 +4200,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.34.0",
+    listed: false,
     title: "Simpler moving around a release",
     tag: "App",
     date: "July 30, 2026",
@@ -3887,6 +4210,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.33.5",
+    listed: false,
     tag: "Rollouts",
     date: "July 30, 2026",
     highlights: [
@@ -3897,6 +4221,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.33.4",
+    listed: false,
     tag: "Pitching",
     date: "July 30, 2026",
     highlights: [
@@ -3905,6 +4230,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.33.3",
+    listed: false,
     tag: "Account",
     date: "July 29, 2026",
     highlights: [
@@ -3913,6 +4239,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.33.2",
+    listed: false,
     tag: "Team",
     date: "July 29, 2026",
     highlights: [
@@ -3921,6 +4248,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.33.1",
+    listed: false,
     tag: "AI",
     date: "July 26, 2026",
     highlights: [
@@ -3948,6 +4276,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.31.1",
+    listed: false,
     tag: "App",
     date: "July 23, 2026",
     highlights: [
@@ -3956,6 +4285,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.31.0",
+    listed: false,
     title: "Urganize cheers you on",
     tag: "App",
     date: "July 23, 2026",
@@ -3967,6 +4297,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.30.1",
+    listed: false,
     tag: "AI",
     date: "July 23, 2026",
     highlights: [
@@ -3975,6 +4306,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.30.0",
+    listed: false,
     title: "What's new after every update",
     tag: "App",
     date: "July 23, 2026",
@@ -3995,6 +4327,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.28.3",
+    listed: false,
     tag: "App",
     date: "July 23, 2026",
     highlights: [
@@ -4005,6 +4338,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.28.2",
+    listed: false,
     tag: "Team",
     date: "July 23, 2026",
     highlights: [
@@ -4013,6 +4347,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.28.1",
+    listed: false,
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
@@ -4042,6 +4377,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.26.1",
+    listed: false,
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
@@ -4063,6 +4399,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.25.2",
+    listed: false,
     tag: "Team",
     date: "July 23, 2026",
     highlights: [
@@ -4071,6 +4408,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.25.1",
+    listed: false,
     tag: "App",
     date: "July 23, 2026",
     highlights: [
@@ -4080,6 +4418,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.25.0",
+    listed: false,
     title: "Pin a chat to a release",
     tag: "AI",
     date: "July 23, 2026",
@@ -4089,6 +4428,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.24.1",
+    listed: false,
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
@@ -4112,6 +4452,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.23.2",
+    listed: false,
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
@@ -4122,6 +4463,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.23.1",
+    listed: false,
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
@@ -4132,6 +4474,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.23.0",
+    listed: false,
     title: "Follow your device's light or dark",
     tag: "App",
     date: "July 23, 2026",
@@ -4142,6 +4485,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.22.3",
+    listed: false,
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
@@ -4150,6 +4494,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.22.2",
+    listed: false,
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
@@ -4160,6 +4505,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.22.1",
+    listed: false,
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
@@ -4170,6 +4516,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.22.0",
+    listed: false,
     title: "Tasks are now activities",
     tag: "Rollouts",
     date: "July 23, 2026",
@@ -4182,6 +4529,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.21.0",
+    listed: false,
     title: "A full visual pass",
     tag: "App",
     date: "July 23, 2026",
@@ -4193,6 +4541,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.20.0",
+    listed: false,
     title: "A shorter new-release form",
     tag: "Rollouts",
     date: "July 23, 2026",
@@ -4204,6 +4553,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.19.3",
+    listed: false,
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
@@ -4212,6 +4562,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.19.2",
+    listed: false,
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
@@ -4222,6 +4573,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.19.1",
+    listed: false,
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
@@ -4241,6 +4593,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.18.1",
+    listed: false,
     tag: "App",
     date: "July 23, 2026",
     highlights: [
@@ -4251,6 +4604,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.18.0",
+    listed: false,
     title: "Tasks open in a pop-up",
     tag: "Rollouts",
     date: "July 23, 2026",
@@ -4262,6 +4616,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.17.2",
+    listed: false,
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
@@ -4271,6 +4626,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.17.1",
+    listed: false,
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
@@ -4279,6 +4635,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.17.0",
+    listed: false,
     title: "Urganize is free to use",
     tag: "Account",
     date: "July 23, 2026",
@@ -4290,6 +4647,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.16.4",
+    listed: false,
     tag: "Rollouts",
     date: "July 22, 2026",
     highlights: [
@@ -4298,6 +4656,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.16.3",
+    listed: false,
     tag: "Rollouts",
     date: "July 21, 2026",
     highlights: [
@@ -4306,6 +4665,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.16.2",
+    listed: false,
     tag: "App",
     date: "July 21, 2026",
     highlights: [
@@ -4314,6 +4674,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.16.1",
+    listed: false,
     tag: "Rollouts",
     date: "July 20, 2026",
     highlights: [
@@ -4322,6 +4683,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.16.0",
+    listed: false,
     title: "A full visual refresh",
     tag: "App",
     date: "July 20, 2026",
@@ -4331,6 +4693,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.15.1",
+    listed: false,
     tag: "App",
     date: "July 20, 2026",
     highlights: [
@@ -4339,6 +4702,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.15.0",
+    listed: false,
     title: "Content calendars",
     tag: "Pitching",
     date: "July 20, 2026",
@@ -4348,6 +4712,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.14.3",
+    listed: false,
     tag: "AI",
     date: "July 15, 2026",
     highlights: [
@@ -4357,6 +4722,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.14.1",
+    listed: false,
     tag: "Account",
     date: "July 15, 2026",
     highlights: [
@@ -4365,6 +4731,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.14.0",
+    listed: false,
     title: "Chappi floats with you",
     tag: "AI",
     date: "July 15, 2026",
@@ -4375,6 +4742,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.13.1",
+    listed: false,
     tag: "Account",
     date: "July 15, 2026",
     highlights: [
@@ -4383,6 +4751,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.13.0",
+    listed: false,
     title: "Chappi gets its own page",
     tag: "AI",
     date: "July 14, 2026",
@@ -4392,6 +4761,7 @@ export const changelog: Release[] = [
   },
   {
     version: "0.11.0",
+    listed: false,
     title: "Promo codes",
     tag: "Account",
     date: "July 13, 2026",
@@ -4401,11 +4771,11 @@ export const changelog: Release[] = [
   },
   {
     version: "0.10.0",
-    title: "Chappi joins the dashboard",
+    title: "An AI assistant joins the dashboard",
     tag: "AI",
     date: "July 13, 2026",
     highlights: [
-      "Chappi, a conversational assistant, is now built into the dashboard as the front door — ask about your releases and take actions in plain language. (Rolling out behind a flag; falls back to a command bar until fully switched on.)",
+      "A conversational AI assistant (first called Chappi, now UrgAns) is built into the dashboard as the front door: ask about your releases and take actions in plain language. (Rolling out behind a flag; falls back to a command bar until fully switched on.)",
       "Added light mode across the app, with automatic system-preference detection and a manual toggle.",
       "Faster load times — cut the app's initial load size by over 20%.",
       "Task completion is now instant and reliable, with no more silent failures when checking off a task.",
