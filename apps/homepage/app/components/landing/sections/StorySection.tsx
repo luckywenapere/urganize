@@ -83,8 +83,8 @@ const STEPS: readonly {
     alt: "An activity opened in Urganize, showing who it is assigned to, its due date and its place in the plan.",
   },
   {
-    title: "See what\u2019s done and what\u2019s late.",
-    line: "One timeline for the whole rollout.",
+    title: "Catch the delay before it kills the drop.",
+    line: "One timeline shows what\u2019s done, what\u2019s late and what\u2019s next, while there\u2019s still time to fix it.",
     shot: PRODUCT_SHOTS.timeline,
     phoneCrop: PHONE_CROPS.timeline,
     alt: "The Timeline view of a rollout in Urganize: every activity on a week axis with today marked.",
