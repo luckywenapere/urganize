@@ -76,8 +76,8 @@ const STEPS: readonly {
     alt: "A rollout open in Urganize: the activity list grouped by when it is due, with a progress bar counting finished activities against the plan.",
   },
   {
-    title: "Give every task a name.",
-    line: "Who does it and by when. No chasing.",
+    title: "Everyone can see who\u2019s holding the ball.",
+    line: "Every task has one owner and one date. No more \u201cI thought you were handling it.\u201d",
     shot: PRODUCT_SHOTS.activityDetail,
     phoneCrop: PHONE_CROPS.activityDetail,
     alt: "An activity opened in Urganize, showing who it is assigned to, its due date and its place in the plan.",
