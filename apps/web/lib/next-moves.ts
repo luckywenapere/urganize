@@ -201,6 +201,11 @@ export function movesForRollout(
     return moves;
   }
 
+  // Every activity cancelled (URG-399, Oct 19, 2026): the plan was dropped and
+  // the timeline reads All clear, so nothing is next. "Run the distribution
+  // check" under that line asked for work nobody owes.
+  if (activities.every((task) => task.status === 'cancelled')) return moves;
+
   if (!released && days !== null && days >= 1 && days <= DISTRIBUTE_WINDOW_DAYS) {
     moves.push({
       ...base,

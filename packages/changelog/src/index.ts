@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.160.2",
+    tag: "Rollouts",
+    date: "October 19, 2026",
+    listed: false,
+    highlights: [
+      "A rollout whose tasks are all cancelled no longer asks you to get ready for distribution or run the distribution check.",
+    ],
+  },
+  {
     version: "1.160.1",
     title: "Swipe between Home, UrgAns and Artists (preview)",
     tag: "App",

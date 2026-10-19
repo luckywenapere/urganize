@@ -16,6 +16,14 @@
 //                   acting on.
 //   - 'full':       everything else, as before.
 //
+// A DROPPED PLAN (URG-399, Oct 19, 2026). A rollout whose every activity is
+// cancelled reads "All clear" on its timeline (URG-389), and a "Ready to
+// distribute 0/7" row above that line contradicted it: nothing is owed, so
+// nothing is held back. It gets 'rejections', the Released treatment: the
+// readiness list goes, a distributor's answer still shows. `tasksDone` and
+// `tasksTotal` already leave cancelled work out (lib/task-progress), so the
+// cancelled count comes in on its own. Archived keeps its strip, as below.
+//
 // "Has come out" is `displayStatus` from lib/catalogue-table, the same derived
 // Released the Catalogue row and the focused rollout header show, which is
 // itself lib/recap-eligibility's rule. Not a third definition. Archived is not
@@ -31,7 +39,14 @@ export type DistributionStripInput = {
   releaseDate: string | null;
   tasksDone: number;
   tasksTotal: number;
+  /** Cancelled activities, which tasksTotal leaves out. Omitted reads as 0. */
+  tasksCancelled?: number;
 };
+
+/** Every activity was cancelled: there was a plan, and none of it is owed. */
+export function isPlanDropped(release: Pick<DistributionStripInput, 'tasksTotal' | 'tasksCancelled'>): boolean {
+  return release.tasksTotal === 0 && (release.tasksCancelled ?? 0) > 0;
+}
 
 export function distributionStripMode(
   release: DistributionStripInput,
@@ -39,5 +54,6 @@ export function distributionStripMode(
 ): DistributionStripMode {
   const isEmptyShell = !release.releaseDate && release.tasksTotal === 0;
   if (isEmptyShell) return 'none';
+  if (release.status !== 'archived' && isPlanDropped(release)) return 'rejections';
   return displayStatus(release, now) === 'released' ? 'rejections' : 'full';
 }

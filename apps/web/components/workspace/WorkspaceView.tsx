@@ -1249,6 +1249,9 @@ export function WorkspaceView() {
         releaseDate: scopedReleaseSlim.releaseDate ?? null,
         tasksDone: scopedProgress.done,
         tasksTotal: scopedProgress.total,
+        // countProgress leaves cancelled out; every one cancelled is a dropped
+        // plan, which hides the readiness row (URG-399).
+        tasksCancelled: scopedTasks.length - scopedProgress.total,
       })
     : 'none';
   const distributionStatusStrip =
