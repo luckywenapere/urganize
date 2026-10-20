@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.162.0",
+    title: "A way back to the newest reply",
+    tag: "AI",
+    date: "October 20, 2026",
+    highlights: [
+      "The UrgAns chat box sits on a frosted ground now. The last line of a reply shows through under it instead of stopping at a hard edge.",
+      "Scroll up to reread something and a small arrow appears above the box. Tap it to jump back to the newest reply.",
+    ],
+  },
+  {
     version: "1.161.6",
     tag: "App",
     date: "October 19, 2026",

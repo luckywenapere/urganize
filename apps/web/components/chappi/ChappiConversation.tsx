@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Chappi, CHAPPI_MIN_SIZE } from '@urganize/ui';
 import {
+  ArrowDown,
   ArrowUp,
   Check,
   ClipboardList,
@@ -85,6 +86,7 @@ import { mergeTranscript } from '@/lib/urgans-voice';
 import { describeStatusFacts, type StatusFacts } from '@/lib/release-status';
 import { supabase } from '@/lib/supabase/client';
 import { scrollIntoColumn } from '@/lib/scroll-in-column';
+import { isAwayFromLatest } from '@/lib/chat-scroll-position';
 import { CHAPPI_CHIPS, buildHelpReply, resolveIntent } from '@/lib/chappi/intent-router';
 import type {
   ChappiAttachment,
@@ -343,6 +345,10 @@ export function ChappiConversation({
   // not fade in word by word a second time.
   const [noRevealId, setNoRevealId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  // The transcript's scroller, so the way-back arrow can read how far up the
+  // reader is (2026-10-20). Only the active-conversation branch mounts it.
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [awayFromLatest, setAwayFromLatest] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Opening UrgAns brings the keyboard up (founder call, 2026-10-04): a person
@@ -535,6 +541,35 @@ export function ChappiConversation({
     const fromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
     if (fromBottom < 160) scrollIntoColumn(sentinel, { behavior: 'instant', block: 'end' });
   }, [previewText]);
+
+  // The way-back arrow (2026-10-20): shown while the reader is far enough up
+  // the transcript that the newest message is out of reach, gone as soon as
+  // they are back near it. The state is set from the scroller's own events and
+  // from a size observer on its content (a reply streaming in below a reader
+  // who scrolled up grows the distance without any scroll event), never from
+  // the effect body itself. The scroller only exists once a conversation does,
+  // so this re-subscribes when the landing hands over to the transcript.
+  const hasConversation = messages.length > 0;
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const measure = () => setAwayFromLatest(isAwayFromLatest(scroller));
+    scroller.addEventListener('scroll', measure, { passive: true });
+    const observer =
+      typeof ResizeObserver === 'undefined' || !scroller.firstElementChild
+        ? null
+        : new ResizeObserver(measure);
+    observer?.observe(scroller.firstElementChild as Element);
+    return () => {
+      scroller.removeEventListener('scroll', measure);
+      observer?.disconnect();
+    };
+  }, [hasConversation]);
+
+  const scrollToLatest = () => {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    scrollIntoColumn(bottomRef.current, { behavior: reduceMotion ? 'instant' : 'smooth', block: 'end' });
+  };
 
   // Appends only the ASSISTANT side of a turn. Callers own appending the
   // user side (a chip's label, or the typed prompt) — keeps each turn
@@ -1417,7 +1452,7 @@ export function ChappiConversation({
         pending={attach.pending}
         onRemove={attach.remove}
       />
-      <div className="flex items-center gap-1 rounded-full border border-stroke-default bg-bg-surface p-1.5 transition-colors focus-within:border-brand/70 focus-within:bg-bg-elevated">
+      <div className="flex items-center gap-1 rounded-full border border-stroke-default bg-bg-surface/70 p-1.5 backdrop-blur-2xl transition-colors focus-within:border-brand/70 focus-within:bg-bg-elevated/80">
         <ChappiScopePicker
           releases={releases}
           scopedReleaseId={scopedReleaseId}
@@ -1678,11 +1713,11 @@ export function ChappiConversation({
   // quiet "New chat" reset at the top of the column (the dock variant skips
   // it — its own header carries reset/expand/close).
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="relative flex h-full min-h-0 flex-col">
       {/* overscroll-contain stops the transcript's scroll from chaining to
           the page on mobile — the input never rides away (Claude-app
           mechanics, founder call, 2026-07-23). */}
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div ref={scrollerRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {/* The transcript starts at the TOP and grows down (founder call,
             2026-08-16), the shape every assistant people already use has.
             This REVERSES the messenger anchoring of 2026-07-23, which was
@@ -1727,7 +1762,38 @@ export function ChappiConversation({
         </div>
       </div>
 
-      <div className="mt-3 shrink-0">
+      {/* The composer sits on a frosted ground the transcript scrolls UNDER
+          (founder call, 2026-10-20): the wrapper pulls up over the last 40px
+          of the scroller (-mt-10; the bottom sentinel is 48px tall so a
+          message scrolled to the end still clears it), and its top padding
+          puts the pill back exactly where it was (52px = the 40px overlap plus
+          the old 12px gap). The ground fades from clear to the page colour
+          over that padding and blurs what passes beneath, the way the phone's
+          bottom bar already does, so the box reads as part of the
+          conversation rather than a form stuck to it. The panel variant
+          fades to its card's surface instead of the page. backdrop-filter
+          makes this wrapper the containing block for fixed descendants; the
+          scope and attach menus are absolute, which it does not affect. */}
+      <div
+        className={`relative z-10 -mt-10 shrink-0 bg-gradient-to-t pt-[3.25rem] backdrop-blur-xl ${
+          isPanel ? 'from-bg-surface via-bg-surface/90 to-transparent' : 'from-bg-base via-bg-base/90 to-transparent'
+        }`}
+      >
+        {awayFromLatest ? (
+          // The way back down: one round button in the frost's top edge, the
+          // same material as the pill. Only while the newest message is out of
+          // reach, so a short chat never shows it.
+          // Centred with auto margins, never a transform: the fade-up keyframe
+          // ends on transform: translateY(0) and would cancel a translateX.
+          <button
+            type="button"
+            onClick={scrollToLatest}
+            aria-label="Scroll to the latest message"
+            className="motion-focus motion-press absolute inset-x-0 top-1 z-20 mx-auto grid h-9 w-9 place-items-center rounded-full border border-stroke-default bg-bg-surface/80 text-content-primary shadow-md backdrop-blur-xl transition-colors hover:bg-bg-elevated animate-in"
+          >
+            <ArrowDown className="h-4 w-4" aria-hidden="true" />
+          </button>
+        ) : null}
         <div className={`mx-auto w-full ${isPanel ? '' : 'max-w-[46rem] px-1'}`}>
           {/* Phase 3 nudge: only once UrgAns has actually answered ("when
               UrgAns answers in a team with an empty brief", per the spec) —
@@ -1934,7 +2000,7 @@ function Transcript({
         </div>
       ) : null}
 
-      <div ref={bottomRef} />
+      <div ref={bottomRef} className="h-12 shrink-0" aria-hidden="true" />
 
       {/* Screen readers: the transcript changes under a composer that keeps
           focus, so one stable live region carries what just happened. It is
