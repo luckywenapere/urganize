@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.162.1",
+    tag: "App",
+    date: "October 20, 2026",
+    highlights: [
+      "Swiping between Home, UrgAns and Artists no longer fills your back button, so your phone back-swipe stops wandering through old tabs.",
+      "Closing Settings now takes you cleanly back, and a back-swipe with unsaved changes asks before it throws them away.",
+    ],
+  },
+  {
     version: "1.162.0",
     title: "A way back to the newest reply",
     tag: "AI",

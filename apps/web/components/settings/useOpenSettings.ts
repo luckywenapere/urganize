@@ -4,6 +4,12 @@ import { useCallback, type MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { markNavigationBlocked } from '@/lib/nav-stall-watch';
 import {
+  clearSettingsEntryMark,
+  markSettingsEntryPushed,
+  settingsEntryWasPushed,
+  shouldPopSettingsEntry,
+} from '@/lib/settings-history';
+import {
   SETTINGS_PARAM,
   buildSettingsUrl,
   canHostSettings,
@@ -78,20 +84,34 @@ export function useOpenSettings() {
  * pop-up would not.
  */
 export function writeSettingsUrl(url: string, mode: 'push' | 'replace'): void {
-  if (mode === 'push') window.history.pushState(null, '', url);
-  else window.history.replaceState(null, '', url);
+  if (mode === 'push') {
+    window.history.pushState(null, '', url);
+    markSettingsEntryPushed();
+  } else {
+    window.history.replaceState(null, '', url);
+  }
 }
 
 /**
- * Close it. REPLACE, never `router.back()`: a deep link can make the open URL
- * the first history entry in a tab, and back() would then leave the app.
+ * Close it. When THIS page life pushed the open entry and the URL still has the
+ * settings param, go back one entry so no duplicate page is left behind (and
+ * the OS back-swipe never lands on a dead "settings" entry). Otherwise REPLACE:
+ * a deep link can make the open URL the first history entry in a tab, and
+ * back() there would leave the app.
  */
 export function useCloseSettings() {
   return useCallback(() => {
     // Live pathname and search, so closing always removes the param from the URL
     // the person is actually on, never from a stale render's copy of it.
     // Shallow, like opening: nothing on the page changes but the param.
-    writeSettingsUrl(closeSettingsUrl(window.location.pathname, window.location.search), 'replace');
+    const { pathname, search } = window.location;
+    if (shouldPopSettingsEntry({ pushedByUs: settingsEntryWasPushed(), search })) {
+      clearSettingsEntryMark();
+      window.history.back();
+      return;
+    }
+    clearSettingsEntryMark();
+    writeSettingsUrl(closeSettingsUrl(pathname, search), 'replace');
   }, []);
 }
 

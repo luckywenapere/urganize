@@ -14,6 +14,7 @@ import {
   type GestureAxis,
   type SwipeTabKey,
 } from '@/lib/swipe-nav';
+import { isEdgeStart } from '@/lib/swipe-edge';
 import { prefersReducedMotion } from '@/lib/home-chat-glide';
 import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
 import { setSwipeProgress } from './progress';
@@ -46,8 +47,9 @@ function pagingFrozen(target: EventTarget | null): boolean {
  *  - Sheets, dialogs, the keyboard, a text selection and a long press freeze it.
  *  - Each page scrolls on its own, so a page keeps its place when you come back.
  *
- * Each tab is its own URL. A settled page writes it with history.pushState (no
- * route fetch, the URG-362 pattern), and Back moves the pager the other way.
+ * Each tab is its own URL. A settled page writes it with history.replaceState (no
+ * route fetch, the URG-362 pattern): tabs are peers, so the OS back-swipe must not
+ * walk tab history. Back and Forward from a deep link still move the pager.
  */
 export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> }) {
   const pathname = usePathname();
@@ -83,7 +85,7 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
     setActive(index);
     if (push && index !== previous) {
       const href = SWIPE_TABS[index].href;
-      if (window.location.pathname !== href) window.history.pushState(null, '', href);
+      if (window.location.pathname !== href) window.history.replaceState(null, '', href);
     }
   }, []);
 
@@ -210,6 +212,10 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
         return;
       }
       const touch = event.touches[0];
+      if (isEdgeStart(touch.clientX)) {
+        tracking = false;
+        return;
+      }
       startX = touch.clientX;
       startY = touch.clientY;
       startAt = performance.now();

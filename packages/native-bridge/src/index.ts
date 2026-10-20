@@ -520,3 +520,26 @@ export function createShellDispatcher(deps: {
     },
   };
 }
+
+// ── Android hardware back ───────────────────────────────────────────────────
+
+export type AndroidBackAction = 'go-back' | 'go-home' | 'exit';
+
+/**
+ * What the Android back button does, from the page's current URL alone:
+ * the settings pop-up is open (?settings=) -> step back once, which closes it;
+ * any page but Home -> go to Home; Home -> leave the app. The shell cannot see
+ * open sheets or dialogs, so those are covered only through the URL param.
+ */
+export function decideAndroidBack(url: string | null | undefined): AndroidBackAction {
+  if (!url) return 'exit';
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return 'exit';
+  }
+  if (parsed.searchParams.has('settings')) return 'go-back';
+  const path = parsed.pathname.replace(/\/+$/, '') || '/';
+  return path === '/dashboard/home' ? 'exit' : 'go-home';
+}

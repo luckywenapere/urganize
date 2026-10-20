@@ -22,6 +22,7 @@ import {
   SETTINGS_MENU,
   SETTINGS_SEGMENT_LABELS,
   closeSettingsUrl,
+  SETTINGS_PARAM,
   isPlainLeftClick,
   readSettingsFlags,
   readSettingsRequest,
@@ -32,6 +33,7 @@ import {
   type SettingsSegment,
 } from '@/lib/settings-nav';
 import { decideSettingsClose } from '@/lib/settings-dirty';
+import { clearSettingsEntryMark, decideSettingsPopstate } from '@/lib/settings-history';
 import { searchSettings } from '@/lib/settings-search';
 import { useSettingsDirtyStore } from '@/stores/useSettingsDirtyStore';
 import { getAccessToken } from './getAccessToken';
@@ -189,6 +191,7 @@ function SettingsDialog({
   const leaveTo = useCallback(
     (href: string) => {
       resetDirty();
+      clearSettingsEntryMark();
       writeSettingsUrl(closeSettingsUrl(window.location.pathname, window.location.search), 'replace');
       router.push(href);
     },
@@ -206,6 +209,31 @@ function SettingsDialog({
     resetDirty();
     closeSettings();
   };
+
+  // The OS back-swipe (or Back) while the pop-up is open pops its history entry.
+  // With unsaved edits that must ask first: put the entry back and show the
+  // "Discard changes?" prompt; with none, let it close.
+  const dirtyRef = useRef(false);
+  const lastOpenUrl = useRef('');
+  useEffect(() => {
+    dirtyRef.current = decideSettingsClose(dirtyKeys) === 'confirm';
+    lastOpenUrl.current = `${window.location.pathname}${window.location.search}`;
+  });
+  useEffect(() => {
+    const onPop = () => {
+      const action = decideSettingsPopstate({
+        settingsInUrl: new URLSearchParams(window.location.search).has(SETTINGS_PARAM),
+        dirty: dirtyRef.current,
+      });
+      if (action === 'closed') clearSettingsEntryMark();
+      if (action === 'reprompt' && lastOpenUrl.current) {
+        writeSettingsUrl(lastOpenUrl.current, 'push');
+        setConfirmingDiscard(true);
+      }
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   const keepEditing = () => {
     setConfirmingDiscard(false);

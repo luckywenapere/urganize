@@ -18,6 +18,7 @@ import {
   BRIDGE_REQUEST_TYPES,
   buildShellInfoScript,
   buildShellUserAgentSuffix,
+  decideAndroidBack,
   isFirstPartyUrl,
   parseAppearance,
   shouldRetryAfterReconnect,
@@ -69,6 +70,7 @@ async function openOutside(url: string): Promise<void> {
 export default function App() {
   const webRef = useRef<WebView>(null);
   const canGoBackRef = useRef(false);
+  const currentUrlRef = useRef<string | null>(null);
   const splashHiddenRef = useRef(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [retrying, setRetrying] = useState(false);
@@ -130,13 +132,19 @@ export default function App() {
     [bridge]
   );
 
-  // Android's back button walks the webview's history first, and only leaves
-  // the app from the first page.
+  // Android's back button: close the settings pop-up if it is open, else go to
+  // Home from any other page, else leave the app. Tabs are peers and do not
+  // keep history, so walking the webview's history is no longer the rule.
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (!canGoBackRef.current) return false;
-      webRef.current?.goBack();
+      const action = decideAndroidBack(currentUrlRef.current);
+      if (action === 'exit') return false;
+      if (action === 'go-back' && canGoBackRef.current) {
+        webRef.current?.goBack();
+      } else {
+        webRef.current?.injectJavaScript("window.location.replace('/dashboard/home'); true;");
+      }
       return true;
     });
     return () => subscription.remove();
@@ -170,6 +178,7 @@ export default function App() {
 
   const onNavigationStateChange = useCallback((state: WebViewNavigation) => {
     canGoBackRef.current = state.canGoBack;
+    currentUrlRef.current = state.url;
   }, []);
 
   const onMessage = useCallback(
@@ -232,7 +241,7 @@ export default function App() {
             domStorageEnabled
             javaScriptEnabled
             allowsInlineMediaPlayback
-            allowsBackForwardNavigationGestures
+            allowsBackForwardNavigationGestures={false}
             setSupportMultipleWindows={false}
             contentInsetAdjustmentBehavior="never"
             webviewDebuggingEnabled={__DEV__}
