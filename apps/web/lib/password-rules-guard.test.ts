@@ -74,7 +74,7 @@ describe('creating or changing a password is held to the rule', () => {
   // module, so raising or lowering the minimum is one edit.
   const CREATE_OR_CHANGE = [
     'app/onboarding/OnboardingPageClient.tsx',
-    'app/invite/accept/page.tsx',
+    'app/invite/accept/InviteAcceptPageClient.tsx',
     'app/curator/join/[code]/CuratorJoinPageClient.tsx',
     'app/auth/reset-password/page.tsx',
     'components/settings/SecuritySection.tsx',

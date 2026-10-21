@@ -13,3 +13,4 @@ One line per merged fix: version, what it fixed.
 - v1.162.3: F-03: SwipePager sets document.title on each tab change (swipeDocumentTitle in lib/swipe-nav.ts); Directory metadata no longer repeats the brand.
 - v1.162.4: F-11: ClaimWizard guards send-code and verify with an in-flight ref; a closed link says 'This link is not available'. No Back on 'Make it yours' on purpose: the claim is already used by then.
 - v1.162.5: F-12: useNeedsYouStore registers a sign-out reset ('needs-you') and ignores a load that started before it; tested.
+- v1.162.6: F-05: /invite/accept and /join/<code> read the invite on the server (lib/invite-metadata-server.ts, shared with GET /api/invites/[token]) and render it in the HTML; /join no longer redirects to a loading page. Not run against a real invite.

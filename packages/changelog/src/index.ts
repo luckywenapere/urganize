@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.162.6",
+    tag: "Team",
+    date: "October 21, 2026",
+    highlights: [
+      "Team invite links now show the real invite, or a clear 'link not available', as soon as the page opens, even on a slow phone connection.",
+    ],
+  },
+  {
     version: "1.162.5",
     tag: "Account",
     date: "October 21, 2026",
