@@ -96,7 +96,7 @@ export function ChappiAttachMenu({ disabled, onFiles }: ChappiAttachMenuProps) {
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         aria-label="Attach a photo or file"
-        className="motion-press grid h-9 w-9 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-elevated hover:text-content-primary disabled:opacity-40"
+        className="hit-44 motion-press relative grid h-9 w-9 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-elevated hover:text-content-primary disabled:opacity-40"
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
       </button>

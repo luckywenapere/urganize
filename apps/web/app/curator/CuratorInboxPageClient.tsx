@@ -64,7 +64,7 @@ const FILTERS: Array<{ key: FilterKey; label: string }> = [
 
 const statusChipClass = (status: PitchStatus, isActive: boolean): string => {
   const base =
-    'inline-flex h-9 min-w-[4.5rem] items-center justify-center gap-1 rounded-full border px-3 text-xs font-semibold transition-colors disabled:opacity-50';
+    'hit-44 relative inline-flex h-9 min-w-[4.5rem] items-center justify-center gap-1 rounded-full border px-3 text-xs font-semibold transition-colors disabled:opacity-50';
   if (!isActive) {
     return `${base} border-stroke-default text-content-secondary hover:border-stroke-strong hover:text-content-primary`;
   }
@@ -488,7 +488,7 @@ export function CuratorInboxPageClient() {
                 type="button"
                 aria-pressed={filter === entry.key}
                 onClick={() => setFilter(entry.key)}
-                className={`inline-flex h-8 items-center gap-1 rounded-full border px-3 text-xs font-semibold transition-colors ${
+                className={`hit-44 relative inline-flex h-8 items-center gap-1 rounded-full border px-3 text-xs font-semibold transition-colors ${
                   filter === entry.key
                     ? 'border-brand bg-brand/10 text-brand'
                     : 'border-stroke-default text-content-secondary hover:border-stroke-strong'

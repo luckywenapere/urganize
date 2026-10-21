@@ -97,7 +97,7 @@ export function PersonaAskCard() {
             type="button"
             onClick={close}
             aria-label="Close"
-            className="motion-focus motion-press -mr-1 -mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+            className="hit-44 relative motion-focus motion-press -mr-1 -mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
           >
             <X className="h-3.5 w-3.5" aria-hidden="true" />
           </button>

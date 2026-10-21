@@ -111,7 +111,7 @@ export function ReleasesSection() {
                     type="button"
                     onClick={() => setReleaseToDelete({ id: release.id, title: displayReleaseTitle(release.title) })}
                     aria-label={`Delete ${displayReleaseTitle(release.title)}`}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2 py-1.5 text-xs font-semibold text-content-tertiary transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
+                    className="hit-44 relative inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2 py-1.5 text-xs font-semibold text-content-tertiary transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
                   >
                     <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                     Delete

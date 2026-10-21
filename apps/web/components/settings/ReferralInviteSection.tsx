@@ -106,7 +106,7 @@ export function ReferralInviteSection() {
         <button
           type="button"
           onClick={() => void copy()}
-          className="motion-focus inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse transition-colors hover:bg-brand-hover"
+          className="hit-44 relative motion-focus inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse transition-colors hover:bg-brand-hover"
         >
           {copied ? (
             <Check className="h-3.5 w-3.5" aria-hidden="true" />

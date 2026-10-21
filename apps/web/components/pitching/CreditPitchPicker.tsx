@@ -724,7 +724,7 @@ function TopUpSheet({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="motion-focus grid h-[30px] w-[30px] shrink-0 place-items-center rounded-full bg-content-primary/10 text-content-primary/70 hover:text-content-primary"
+            className="hit-44 relative motion-focus grid h-[30px] w-[30px] shrink-0 place-items-center rounded-full bg-content-primary/10 text-content-primary/70 hover:text-content-primary"
           >
             <X className="h-3.5 w-3.5" />
           </button>

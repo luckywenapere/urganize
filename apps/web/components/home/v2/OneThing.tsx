@@ -132,7 +132,7 @@ function Slide({
         <div className="mt-5 flex items-center gap-1.5">
           <button
             type="button"
-            className="motion-focus motion-press inline-flex h-10 items-center rounded-full bg-brand px-[18px] text-[15px] font-semibold text-content-inverse hover:bg-brand-hover"
+            className="hit-44 relative motion-focus motion-press inline-flex h-10 items-center rounded-full bg-brand px-[18px] text-[15px] font-semibold text-content-inverse hover:bg-brand-hover"
             onClick={() => {
               track();
               goToMove(move);
@@ -143,7 +143,7 @@ function Slide({
           <button
             type="button"
             onClick={() => onDismissMove(move)}
-            className="motion-focus inline-flex h-10 items-center rounded-full px-1.5 text-[15px] font-medium text-content-primary/55 hover:text-content-primary"
+            className="hit-44 relative motion-focus inline-flex h-10 items-center rounded-full px-1.5 text-[15px] font-medium text-content-primary/55 hover:text-content-primary"
           >
             Not now
           </button>
@@ -253,7 +253,7 @@ export function OneThing({
               onClick={() => go(i)}
               aria-label={`Show ${i + 1} of ${items.length}`}
               aria-current={i === index || undefined}
-              className="motion-focus grid h-6 place-items-center px-0.5"
+              className="motion-focus -my-[10px] grid h-11 place-items-center px-0.5"
             >
               <span
                 className={`block h-1.5 rounded-full transition-all ${i === index ? 'w-4 bg-content-primary' : 'w-1.5 bg-content-primary/20'}`}

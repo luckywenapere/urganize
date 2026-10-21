@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.162.12",
+    tag: "App",
+    date: "October 21, 2026",
+    highlights: [
+      "Small buttons are now easier to tap on a phone: the Home dots, attach, close, tick circle, filters, links and a few more all have a full-size tap area.",
+    ],
+  },
+  {
     version: "1.162.11",
     tag: "App",
     listed: false,

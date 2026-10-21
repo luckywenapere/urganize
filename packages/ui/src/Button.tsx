@@ -144,7 +144,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
             'w-9 h-9': size === 'md',
             'w-11 h-11': size === 'lg',
           },
-          tooltip && 'tooltip',
+          tooltip ? 'tooltip' : 'hit-44 relative',
           className
         )}
         data-tooltip={tooltip}

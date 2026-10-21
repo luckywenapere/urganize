@@ -189,7 +189,7 @@ export function ReleaseSetupSheet({
               type="button"
               onClick={onDismiss}
               aria-label="Close"
-              className="motion-focus motion-press grid h-9 w-9 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+              className="hit-44 relative motion-focus motion-press grid h-9 w-9 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>

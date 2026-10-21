@@ -59,7 +59,7 @@ export default function ForgotPasswordPage() {
               <div>
                 <Link 
                   href="/auth"
-                  className="inline-flex items-center gap-1.5 text-sm text-content-tertiary hover:text-content-primary transition-colors mb-4"
+                  className="hit-44 relative inline-flex items-center gap-1.5 text-sm text-content-tertiary hover:text-content-primary transition-colors mb-4"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   Back to login
@@ -126,7 +126,7 @@ export default function ForgotPasswordPage() {
 
               <Link 
                 href="/auth"
-                className="inline-flex items-center justify-center gap-1.5 text-sm text-content-tertiary hover:text-content-primary transition-colors mt-4"
+                className="hit-44 relative inline-flex items-center justify-center gap-1.5 text-sm text-content-tertiary hover:text-content-primary transition-colors mt-4"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back to login

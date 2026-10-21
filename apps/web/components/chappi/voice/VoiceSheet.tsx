@@ -277,7 +277,7 @@ export function VoiceSheet({
               </p>
             ) : null}
             {!live ? (
-              <button type="button" onClick={close} aria-label="Close" className="grid h-9 w-9 place-items-center rounded-full text-content-secondary hover:bg-bg-elevated">
+              <button type="button" onClick={close} aria-label="Close" className="hit-44 relative grid h-9 w-9 place-items-center rounded-full text-content-secondary hover:bg-bg-elevated">
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
             ) : null}

@@ -142,7 +142,7 @@ export function WorkRequestSheet({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="motion-focus -mr-1 -mt-1 shrink-0 rounded-lg p-1.5 text-content-tertiary hover:bg-bg-hover hover:text-content-primary"
+            className="hit-44 relative motion-focus -mr-1 -mt-1 shrink-0 rounded-lg p-1.5 text-content-tertiary hover:bg-bg-hover hover:text-content-primary"
           >
             <X className="h-4 w-4" aria-hidden />
           </button>

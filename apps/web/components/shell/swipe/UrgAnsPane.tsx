@@ -338,7 +338,7 @@ function FromHomeTurn() {
               setHandoff(null);
               dismiss?.();
             }}
-            className="motion-focus inline-flex h-10 items-center rounded-full px-1.5 text-[15px] font-medium text-content-primary/55 hover:text-content-primary"
+            className="hit-44 relative motion-focus inline-flex h-10 items-center rounded-full px-1.5 text-[15px] font-medium text-content-primary/55 hover:text-content-primary"
           >
             Not now
           </button>

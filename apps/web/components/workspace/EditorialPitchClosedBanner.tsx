@@ -17,7 +17,7 @@ type EditorialPitchClosedBannerProps = {
 };
 
 const BUTTON_CLASS =
-  'motion-focus motion-press inline-flex h-9 items-center gap-2 rounded-full border border-stroke-control px-3.5 text-sm font-semibold text-content-primary transition-colors hover:border-content-secondary hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-60';
+  'motion-focus motion-press inline-flex h-11 items-center gap-2 rounded-full border border-stroke-control px-3.5 text-sm font-semibold text-content-primary transition-colors hover:border-content-secondary hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-60';
 
 /**
  * Shown at the top of a rollout whose release day is 7 days away or less while

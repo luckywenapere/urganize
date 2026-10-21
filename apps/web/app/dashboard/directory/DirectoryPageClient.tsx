@@ -284,7 +284,7 @@ function DirectoryBody() {
                         : chipFilters(entry.key)
                     )
                   }
-                  className={`motion-focus rounded-full border px-3.5 py-2 text-[13px] font-bold ${
+                  className={`hit-44 relative motion-focus rounded-full border px-3.5 py-2 text-[13px] font-bold ${
                     on
                       ? 'border-transparent bg-content-primary text-content-inverse'
                       : 'border-stroke-default text-content-secondary hover:text-content-primary'
@@ -301,7 +301,7 @@ function DirectoryBody() {
                 type="button"
                 aria-pressed
                 onClick={() => patch(chipFilters('all'))}
-                className="motion-focus rounded-full border border-transparent bg-content-primary px-3.5 py-2 text-[13px] font-bold text-content-inverse"
+                className="hit-44 relative motion-focus rounded-full border border-transparent bg-content-primary px-3.5 py-2 text-[13px] font-bold text-content-inverse"
               >
                 {DIRECTORY_ROLE_LABELS[filters.role]} ×
               </button>

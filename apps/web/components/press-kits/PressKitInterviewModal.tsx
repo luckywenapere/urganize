@@ -172,7 +172,7 @@ export function PressKitInterviewModal({ sections, onSave, onClose }: Props) {
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="motion-focus -mr-1 grid h-8 w-8 shrink-0 place-items-center rounded-full text-content-tertiary hover:bg-bg-hover hover:text-content-primary"
+            className="hit-44 relative motion-focus -mr-1 grid h-8 w-8 shrink-0 place-items-center rounded-full text-content-tertiary hover:bg-bg-hover hover:text-content-primary"
           >
             <X className="h-4 w-4" aria-hidden />
           </button>

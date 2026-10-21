@@ -437,7 +437,7 @@ export function PitchComposer({
                 type="button"
                 onClick={() => void openExternalUrl(single.url)}
                 aria-label={`Open ${single.name}`}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-content-tertiary transition-colors hover:bg-bg-elevated hover:text-content-primary"
+                className="hit-44 relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-content-tertiary transition-colors hover:bg-bg-elevated hover:text-content-primary"
               >
                 <ExternalLink className="h-4 w-4" />
               </button>

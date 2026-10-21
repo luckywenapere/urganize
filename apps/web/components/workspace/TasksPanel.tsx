@@ -518,7 +518,7 @@ export function TasksPanel({
           type="button"
           onClick={() => chooseGrouping(option)}
           aria-pressed={grouping === option}
-          className={`motion-focus whitespace-nowrap rounded-full px-2.5 font-semibold transition-colors ${bar ? 'h-[34px]' : 'py-1'} ${
+          className={`hit-44 relative motion-focus whitespace-nowrap rounded-full px-2.5 font-semibold transition-colors ${bar ? 'h-[34px]' : 'py-1'} ${
             grouping === option ? 'bg-brand/10 text-content-primary' : 'text-content-secondary hover:bg-bg-hover'
           }`}
         >

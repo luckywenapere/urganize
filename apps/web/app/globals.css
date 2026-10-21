@@ -3645,3 +3645,16 @@ html[data-theme='light'] .ec-surface {
 @media (prefers-reduced-motion: reduce) {
   .ec-sweep, .ec-pulse-live, .ec-live-dot, .ec-mark-success, .ec-row-in { animation: none !important; }
 }
+
+/* hit-44: keeps a control's look and widens its tap area to at least 44px.
+   Needs a positioned parent (add `relative` unless it is already positioned).
+   It adds no layout size, so rows do not move. */
+.hit-44::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}

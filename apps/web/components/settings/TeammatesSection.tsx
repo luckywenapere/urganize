@@ -421,14 +421,14 @@ function TeammatesSectionView({
                       <button
                         type="button"
                         onClick={() => void handleRemoveTeammate(member.id)}
-                        className="min-h-8 rounded-lg border border-status-error/40 px-2 font-semibold text-status-error hover:bg-status-error/10"
+                        className="hit-44 relative min-h-8 rounded-lg border border-status-error/40 px-2 font-semibold text-status-error hover:bg-status-error/10"
                       >
                         Remove
                       </button>
                       <button
                         type="button"
                         onClick={() => setConfirmRemoveId(null)}
-                        className="min-h-8 rounded-lg border border-stroke-default px-2 text-content-primary hover:bg-bg-hover"
+                        className="hit-44 relative min-h-8 rounded-lg border border-stroke-default px-2 text-content-primary hover:bg-bg-hover"
                       >
                         Keep
                       </button>
@@ -438,7 +438,7 @@ function TeammatesSectionView({
                       type="button"
                       onClick={() => setConfirmRemoveId(member.id)}
                       aria-label={`Remove ${member.name || member.email || 'teammate'}`}
-                      className="min-h-8 px-1 text-xs text-status-error hover:underline"
+                      className="hit-44 relative min-h-8 px-1 text-xs text-status-error hover:underline"
                     >
                       Remove
                     </button>

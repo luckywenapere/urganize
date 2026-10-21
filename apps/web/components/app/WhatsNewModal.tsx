@@ -114,7 +114,7 @@ export function WhatsNewModal() {
             type="button"
             onClick={dismiss}
             aria-label="Close"
-            className="motion-focus motion-press grid h-9 w-9 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+            className="hit-44 relative motion-focus motion-press grid h-9 w-9 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
           >
             <X className="h-4 w-4" />
           </button>

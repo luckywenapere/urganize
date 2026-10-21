@@ -123,7 +123,7 @@ function ArtistRow({
           }}
           aria-label={`Remove ${artist.name}`}
           disabled={disabled || isRemoving}
-          className="shrink-0 whitespace-nowrap rounded-lg border border-stroke-subtle px-3 py-2 text-sm font-semibold text-content-secondary hover:border-status-error hover:text-status-error disabled:opacity-50"
+          className="hit-44 relative shrink-0 whitespace-nowrap rounded-lg border border-stroke-subtle px-3 py-2 text-sm font-semibold text-content-secondary hover:border-status-error hover:text-status-error disabled:opacity-50"
         >
           {isRemoving ? 'Removing…' : 'Remove'}
         </button>

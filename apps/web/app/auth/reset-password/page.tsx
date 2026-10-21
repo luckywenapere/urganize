@@ -141,7 +141,7 @@ export default function ResetPasswordPage() {
 
               <Link 
                 href="/auth"
-                className="inline-flex items-center justify-center gap-1.5 text-sm text-content-tertiary hover:text-content-primary transition-colors"
+                className="hit-44 relative inline-flex items-center justify-center gap-1.5 text-sm text-content-tertiary hover:text-content-primary transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back to login

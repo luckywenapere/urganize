@@ -761,7 +761,7 @@ function AskStep({
           <button
             type="button"
             onClick={onDismiss}
-            className="motion-focus mt-3 block w-full text-center text-xs font-medium text-content-secondary underline decoration-content-tertiary underline-offset-4 transition-colors hover:text-content-primary"
+            className="hit-44 relative motion-focus mt-3 block w-full text-center text-xs font-medium text-content-secondary underline decoration-content-tertiary underline-offset-4 transition-colors hover:text-content-primary"
           >
             Not now
           </button>

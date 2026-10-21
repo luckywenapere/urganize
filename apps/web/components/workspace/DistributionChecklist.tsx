@@ -270,7 +270,7 @@ export function DistributionChecklist({
             type="button"
             onClick={() => fix(nextOpen.issue as DistributionIssue)}
             aria-label={`Fix: ${nextOpen.message}`}
-            className={`motion-focus inline-flex shrink-0 items-center justify-center rounded-md text-xs font-semibold text-brand transition-colors hover:bg-brand/10 ${compact ? 'h-7 px-2.5' : 'h-11 min-w-14 rounded-lg px-3 lg:h-9'}`}
+            className={`hit-44 relative motion-focus inline-flex shrink-0 items-center justify-center rounded-md text-xs font-semibold text-brand transition-colors hover:bg-brand/10 ${compact ? 'h-7 px-2.5' : 'h-11 min-w-14 rounded-lg px-3 lg:h-9'}`}
           >
             Fix
           </button>

@@ -181,7 +181,7 @@ function SwipeArtists({
         <Link
           href={ADD_ARTIST_HREF}
           aria-label="Add artist"
-          className="motion-focus motion-press mb-1 grid h-9 w-9 place-items-center rounded-full border border-content-primary/[0.14] text-content-primary/70 hover:text-content-primary"
+          className="hit-44 relative motion-focus motion-press mb-1 grid h-9 w-9 place-items-center rounded-full border border-content-primary/[0.14] text-content-primary/70 hover:text-content-primary"
         >
           <Plus className="h-[18px] w-[18px]" aria-hidden="true" />
         </Link>
