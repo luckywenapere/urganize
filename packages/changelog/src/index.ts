@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.162.3",
+    tag: "App",
+    date: "October 21, 2026",
+    highlights: [
+      "The tab title now follows the page you swipe to (Home, UrgAns or Artists), and Directory shows the brand once.",
+    ],
+  },
+  {
     version: "1.162.2",
     tag: "App",
     date: "October 21, 2026",

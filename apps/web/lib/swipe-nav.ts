@@ -96,6 +96,12 @@ export function swipeAreaForPath(pathname: string | null | undefined): SwipeTabK
   return null;
 }
 
+/** The browser tab title for a swipe tab, in the same shape the pages' own metadata gives. */
+export function swipeDocumentTitle(key: SwipeTabKey): string {
+  const tab = SWIPE_TABS.find((entry) => entry.key === key);
+  return `${tab ? tab.label : 'Home'} | Urganize`;
+}
+
 export function swipeTabIndex(key: SwipeTabKey): number {
   return SWIPE_TABS.findIndex((tab) => tab.key === key);
 }

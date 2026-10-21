@@ -193,3 +193,17 @@ describe('swipe nav is for phone-width screens only', () => {
     expect(source).toMatch(/useSyncExternalStore\(subscribeViewport, isPhoneWidth, \(\) => false\)/);
   });
 });
+
+describe('swipeDocumentTitle', () => {
+  it('names each swipe tab with the brand once', async () => {
+    const { swipeDocumentTitle } = await import('./swipe-nav');
+    expect(swipeDocumentTitle('home')).toBe('Home | Urganize');
+    expect(swipeDocumentTitle('urgans')).toBe('UrgAns | Urganize');
+    expect(swipeDocumentTitle('artists')).toBe('Artists | Urganize');
+  });
+  it('the pager sets it and Directory leaves the brand to the template', async () => {
+    const { readFileSync } = await import('node:fs');
+    expect(readFileSync('components/shell/swipe/SwipePager.tsx', 'utf8')).toContain('document.title = swipeDocumentTitle(');
+    expect(readFileSync('app/dashboard/directory/page.tsx', 'utf8')).not.toMatch(/Urganize/);
+  });
+});

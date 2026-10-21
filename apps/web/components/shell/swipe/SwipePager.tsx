@@ -9,6 +9,7 @@ import {
   settleIndex,
   springAtRest,
   springStep,
+  swipeDocumentTitle,
   swipeTabForPath,
   swipeTabIndex,
   type GestureAxis,
@@ -87,6 +88,9 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
       const href = SWIPE_TABS[index].href;
       if (window.location.pathname !== href) window.history.replaceState(null, '', href);
     }
+    // The URL is written without a route change, so Next never re-reads the
+    // page's metadata: set the tab title here to follow the page on screen.
+    if (index !== previous) document.title = swipeDocumentTitle(SWIPE_TABS[index].key);
   }, []);
 
   const animateTo = useCallback(
