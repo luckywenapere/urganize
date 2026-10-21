@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.162.4",
+    tag: "App",
+    date: "October 21, 2026",
+    highlights: [
+      "Pasting your code and tapping Verify no longer sends it twice, and a link that cannot be used now says so instead of asking you to prove who you are.",
+    ],
+  },
+  {
     version: "1.162.3",
     tag: "App",
     date: "October 21, 2026",

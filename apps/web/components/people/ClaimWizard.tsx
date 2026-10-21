@@ -85,6 +85,9 @@ export function ClaimWizard({ token, preview }: { token: string; preview: ClaimP
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Pasting the sixth digit fires onComplete and the Verify tap can land in the
+  // same tick, before the busy state paints: a ref makes the second call a no-op.
+  const inFlight = useRef(false);
   const [slug, setSlug] = useState<string | null>(null);
   const [hype, setHype] = useState('');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -138,7 +141,7 @@ export function ClaimWizard({ token, preview }: { token: string; preview: ClaimP
   if (!preview.ok) {
     return (
       <Shell>
-        <h1 className="mt-7 font-display text-[30px] leading-tight">Prove it&apos;s you</h1>
+        <h1 className="mt-7 font-display text-[30px] leading-tight">This link is not available</h1>
         <p role="status" className="mt-2 font-mono text-[15px]" style={{ color: MUTED }}>
           {closedText(preview.reason)}
         </p>
@@ -169,6 +172,8 @@ export function ClaimWizard({ token, preview }: { token: string; preview: ClaimP
   }
 
   async function sendCode() {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -196,11 +201,14 @@ export function ClaimWizard({ token, preview }: { token: string; preview: ClaimP
     } catch {
       setError('Could not reach us. Check your connection and try again.');
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   }
 
   async function verify() {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -208,6 +216,7 @@ export function ClaimWizard({ token, preview }: { token: string; preview: ClaimP
     } catch {
       setError('Could not reach us. Check your connection and try again.');
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   }

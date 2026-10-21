@@ -11,3 +11,4 @@ One line per merged fix: version, what it fixed.
 - v1.92.13: Home reads a release date held as a plain calendar day ("2026-11-24") as that local day, so the days-to-go count and the plan's week no longer come out a day early west of UTC; the Paystack webhook's signature check moved to `lib/paystack-signature.ts` and compares decoded byte lengths, so a forged non-hex signature gets a 401 instead of throwing a 500.
 - v1.162.2: F-02: ProfileFace falls back to a flat initials tile when its photo fails to load (and drops the gradient tile); pure rule in lib/profile-face.ts.
 - v1.162.3: F-03: SwipePager sets document.title on each tab change (swipeDocumentTitle in lib/swipe-nav.ts); Directory metadata no longer repeats the brand.
+- v1.162.4: F-11: ClaimWizard guards send-code and verify with an in-flight ref; a closed link says 'This link is not available'. No Back on 'Make it yours' on purpose: the claim is already used by then.
