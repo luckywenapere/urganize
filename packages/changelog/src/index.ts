@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.162.10",
+    tag: "App",
+    date: "October 21, 2026",
+    highlights: [
+      "Smaller fixes: plan dates show just the day, Locked is no longer a choice in Status, invited teammates show their email once, Escape closes the person edit form, and a blocked Push row now says so.",
+    ],
+  },
+  {
     version: "1.162.9",
     tag: "App",
     date: "October 21, 2026",

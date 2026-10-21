@@ -216,7 +216,7 @@ export function MetricsView({
           <Stat
             label="Made, all time"
             value={number.format(rollouts.total)}
-            fact={rollouts.tests > 0 ? `plus ${number.format(rollouts.tests)} test rollouts` : undefined}
+            fact={rollouts.tests > 0 ? `plus ${number.format(rollouts.tests)} test ${rollouts.tests === 1 ? 'rollout' : 'rollouts'}` : undefined}
           />
           <Stat label="Last 7 days" value={number.format(rollouts.last7d)} />
           <Stat label="Last 30 days" value={number.format(rollouts.last30d)} />

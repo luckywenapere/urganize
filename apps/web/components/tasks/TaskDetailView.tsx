@@ -31,12 +31,17 @@ import {
   getTaskStatusLabel,
   isEventMilestone,
   isTypingTarget,
-  TASK_STATUS_OPTIONS,
   type TaskDetail,
   type TaskStatus,
   type WorkspaceMember,
 } from '@/lib/tasks';
 import { TASK_OUTCOME_LABELS } from '@/lib/task-outcomes';
+import {
+  dueDateOnlyValue,
+  dueDateTimeLocalValue,
+  isDateOnlyDue,
+  selectableTaskStatuses,
+} from '@/lib/task-detail-fields';
 import {
   ROLLOUT_PHASE_LABELS,
   ROLLOUT_PHASE_ORDER,
@@ -146,21 +151,6 @@ type TaskDetailViewProps = {
   onEditComment: (commentId: string, content: string) => Promise<void>;
   onDeleteComment: (commentId: string) => Promise<void>;
 };
-
-function toDateTimeLocalValue(value: string | null): string {
-  if (!value) {
-    return '';
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
-  const offsetMinutes = date.getTimezoneOffset();
-  const localDate = new Date(date.getTime() - offsetMinutes * 60000);
-  return localDate.toISOString().slice(0, 16);
-}
 
 /**
  * Task detail body. Since 2026-07-23 this renders inside the pop-up shell
@@ -609,7 +599,7 @@ export function TaskDetailView({
                   onChange={(event) => void onSavePatch({ status: event.target.value as TaskStatus })}
                   className={`${PROPERTY_CONTROL_CLASS} pr-8`}
                 >
-                  {TASK_STATUS_OPTIONS.map((status) => (
+                  {selectableTaskStatuses(task.status).map((status) => (
                     <option key={status} value={status} className="bg-bg-elevated text-content-primary">
                       {getTaskStatusLabel(status)}
                     </option>
@@ -653,8 +643,10 @@ export function TaskDetailView({
               <CalendarDays className={DETAIL_ICON_CLASS} aria-hidden="true" />
               <span className="sr-only">Due date</span>
               <input
-                type="datetime-local"
-                value={toDateTimeLocalValue(task.dueDate)}
+                type={isDateOnlyDue(task.dueDate) ? 'date' : 'datetime-local'}
+                value={
+                  isDateOnlyDue(task.dueDate) ? dueDateOnlyValue(task.dueDate) : dueDateTimeLocalValue(task.dueDate)
+                }
                 onChange={(event) => void onSavePatch({ dueDate: event.target.value || null })}
                 className={`${PROPERTY_CONTROL_CLASS} ${DETAIL_FIELD_CLASS} [&::-webkit-calendar-picker-indicator]:opacity-0 [@media(hover:hover)]:group-hover:[&::-webkit-calendar-picker-indicator]:opacity-100 group-focus-within:[&::-webkit-calendar-picker-indicator]:opacity-100`}
               />

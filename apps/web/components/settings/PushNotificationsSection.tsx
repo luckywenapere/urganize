@@ -17,6 +17,7 @@ import {
   isNativePushAvailable,
 } from '@/lib/native-push';
 import { SettingRow, settingRowButtonClass } from './SettingRow';
+import { pushStatusLabel } from '@/lib/push-status-label';
 
 // Real push notifications (2026-07-23) — replaces the placebo prefs section
 // removed earlier the same day. Per-device: enabling here registers THIS
@@ -118,7 +119,9 @@ export function PushNotificationsSection() {
           >
             {isWorking ? 'Working…' : isEnabled ? 'Turn off on this device' : 'Turn on'}
           </button>
-        ) : null
+        ) : (
+          <span className="text-sm text-content-secondary">{pushStatusLabel(shownStatus, native)}</span>
+        )
       }
       error={error}
     />

@@ -192,7 +192,17 @@ export default function RelationshipPageClient() {
       </div>
 
       {draft ? (
-        <form onSubmit={handleSave} className="mt-6 space-y-3">
+        <form
+          onSubmit={handleSave}
+          onKeyDown={(event) => {
+            // Escape closes the edit form, the same as Cancel.
+            if (event.key === 'Escape' && !event.defaultPrevented) {
+              event.preventDefault();
+              setDraft(null);
+            }
+          }}
+          className="mt-6 space-y-3"
+        >
           <label className="block text-xs font-semibold text-content-secondary">
             Name
             <input

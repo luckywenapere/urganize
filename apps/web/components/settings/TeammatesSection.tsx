@@ -13,6 +13,7 @@ import {
 import { getAccessToken } from './getAccessToken';
 import { panelClass } from './panelClass';
 import { useNextMovesStore } from '@/stores/useNextMovesStore';
+import { teammateEmailLine } from '@/lib/teammate-display';
 
 type TeammatesSectionProps = {
   teammates: WorkspaceMember[];
@@ -405,7 +406,9 @@ function TeammatesSectionView({
                     </span>
                   ) : null}
                 </p>
-                <p className="text-xs text-content-secondary">{member.email || 'No email'}</p>
+                {teammateEmailLine(member) ? (
+                  <p className="text-xs text-content-secondary">{teammateEmailLine(member)}</p>
+                ) : null}
               </div>
               <div className="flex items-center gap-2">
                 <span className="rounded-lg border border-stroke-subtle bg-bg-surface px-2 py-1 text-xs capitalize text-content-primary">
