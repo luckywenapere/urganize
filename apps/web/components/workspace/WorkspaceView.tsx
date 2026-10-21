@@ -47,7 +47,6 @@ import { useScenePrefetch } from './useScenePrefetch';
 import { useIsDesktopViewport } from './useIsDesktopViewport';
 import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
-import { TimelineFullScreen } from '@/components/releases/TimelineFullScreen';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
 import { useReleaseSetupPrompt } from './useReleaseSetupPrompt';
@@ -252,9 +251,6 @@ export function WorkspaceView() {
     morphCommitted();
     document.querySelectorAll<HTMLElement>('[data-morph-scene]').forEach((node) => fadeIn(node));
   }, [panelBody]);
-  // The rollout the timeline was opened full screen on, or null. See
-  // `timelineIsFull` below for how it is read.
-  const [timelineFullFor, setTimelineFullFor] = useState<string | null>(null);
   const bodyIsMainView = panelBody === 'activities' || panelBody === 'timeline';
   // Which of the two always-in-the-DOM layout branches (mobile drill-down /
   // desktop focused) should receive side-effectful children — see the hook.
@@ -1206,25 +1202,6 @@ export function WorkspaceView() {
   // rollout plus the timeline being the body, and only leaving THAT resets it;
   // the viewport and the plan only decide whether the one automatic open has
   // happened yet.
-  const timelineHasPlan = scopedTasks.length > 0;
-  const timelineVisitKey =
-    panelBody === 'timeline' && scopedReleaseSlim?.id ? scopedReleaseSlim.id : null;
-  const autoFullKeyRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (timelineVisitKey === null) {
-      autoFullKeyRef.current = null;
-      return;
-    }
-    if (autoFullKeyRef.current === timelineVisitKey) return;
-    if (!(isDesktopViewport && timelineHasPlan)) return;
-    autoFullKeyRef.current = timelineVisitKey;
-    setTimelineFullFor(timelineVisitKey);
-  }, [timelineVisitKey, isDesktopViewport, timelineHasPlan]);
-  const timelineIsFull =
-    timelineHasPlan &&
-    timelineFullFor !== null &&
-    timelineFullFor === scopedReleaseSlim?.id &&
-    panelBody === 'timeline';
   // The check before distribution, shown on the rollout itself (brief 2). Only
   // while the main view is showing: inside a scene
   // the person is already working, and the Distribute scene carries the same
@@ -1283,21 +1260,12 @@ export function WorkspaceView() {
         onRescheduled={() => void loadCommandCenter({ force: true })}
         suppressEmptyState={bannerReplacesEmptyState}
         statusSlot={isDesktopViewport ? distributionStatusStrip : undefined}
-        phone={!isDesktopViewport && !timelineIsFull}
-        onFullScreen={
-          timelineIsFull || !timelineHasPlan
-            ? undefined
-            : () => setTimelineFullFor(scopedReleaseSlim.id)
-        }
+        phone={!isDesktopViewport}
       />
     ) : null;
   const scenePanel =
     timelineScene ? (
-      timelineIsFull ? (
-        <div aria-hidden="true" />
-      ) : (
-        timelineScene
-      )
+      timelineScene
     ) : panelBody !== 'activities' && scopedReleaseSlim ? (
       <ReleaseScenePanel
         scene={panelBody}
@@ -1559,24 +1527,6 @@ export function WorkspaceView() {
             {scopeAnnouncement}
           </div>
 
-          {timelineIsFull && timelineScene && scopedReleaseSlim ? (
-            <TimelineFullScreen
-              title={`Timeline for ${scopedReleaseSlim.title || 'this rollout'}`}
-              onClose={() => setTimelineFullFor(null)}
-            >
-              {/* The page's own toast sits behind the overlay, so a failed
-                  reschedule would be invisible. Shown here too while it is up. */}
-              {toast ? (
-                <div className="mt-4" role={toast.tone === 'success' ? 'status' : 'alert'}>
-                  <Toast message={toast.message} tone={toast.tone} />
-                </div>
-              ) : null}
-              <div className="mt-4">{nextMovesBanner}</div>
-              {pinnedConfirmDateCard ? <div className="mb-3 mt-3">{pinnedConfirmDateCard}</div> : null}
-              {timelineScene}
-            </TimelineFullScreen>
-          ) : null}
-
           {error ? (
             <div role="alert" className="mb-6 flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -1637,7 +1587,7 @@ export function WorkspaceView() {
                     <>
                       {isDesktopViewport ? null : distributionStatusStrip}
                       {newReleaseGuideBanner}
-                      {isDesktopViewport || timelineIsFull ? null : nextMovesBanner}
+                      {isDesktopViewport ? null : nextMovesBanner}
                     </>
                   }
                 />
@@ -1694,7 +1644,7 @@ export function WorkspaceView() {
                 banner={
                   <>
                     {newReleaseGuideBanner}
-                    {isDesktopViewport && !timelineIsFull ? nextMovesBanner : null}
+                    {isDesktopViewport ? nextMovesBanner : null}
                     {/* On the timeline the strip sits on the phase row instead
                         (2026-10-16, founder: one compact line). */}
                     {isDesktopViewport && panelBody !== 'timeline' ? distributionStatusStrip : null}

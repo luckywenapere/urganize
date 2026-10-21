@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { usePageBarToolsSlot } from '@/components/shell/PageBar';
-import { useTimelineFullScreenToolsSlot } from '@/components/releases/TimelineFullScreen';
 import { Search, SlidersHorizontal, X } from '@/components/icons';
 import { FilterPopover, FilterSheet } from '@/components/shell/ListToolbar';
 import { useAuthStore } from '@/lib/auth-store';
@@ -209,33 +208,6 @@ export function PlanListControls({
   onDone?: () => void;
 }) {
   const toolsSlot = usePageBarToolsSlot(inPageBar);
-  const fullScreenSlot = useTimelineFullScreenToolsSlot();
-  // Full screen on a desktop (URG-312): search and Filter go up into the
-  // full-screen bar, and so does the trailing legend button (URG-315).
-  // Below lg the bar slot is hidden, so the phone keeps the in-page row.
-  if (!toolsSlot && fullScreenSlot) {
-    return (
-      <>
-        <div className="lg:hidden">
-          <PlanListRow plan={plan} trailing={trailing} search="always" />
-        </div>
-        {/* URG-315 (2026-10-15, founder call): the legend (info) button goes up
-            into the bar too, at its right end beside "Exit full screen", so
-            the row it used to hold above the phases is gone. Search stays
-            centred: equal flex-1 sides around it. */}
-        {createPortal(
-          <div className="flex w-full items-center gap-3">
-            <div className="flex-1" aria-hidden="true" />
-            <div className="w-full max-w-md">
-              <PlanListRow plan={plan} search="always" />
-            </div>
-            <div className="flex flex-1 justify-end">{trailing}</div>
-          </div>,
-          fullScreenSlot
-        )}
-      </>
-    );
-  }
   if (!toolsSlot) {
     return (
       <PlanListRow

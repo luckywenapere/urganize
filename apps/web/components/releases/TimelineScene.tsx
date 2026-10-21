@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { CalendarClock, Check, ChevronDown, ChevronRight, Flag, Info, Maximize2 } from '@/components/icons';
+import { CalendarClock, Check, ChevronDown, ChevronRight, Flag, Info } from '@/components/icons';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/types/tasks';
 import {
@@ -35,7 +35,6 @@ import {
 import { RolloutPhaseStrip } from '@/components/workspace/RolloutPhases';
 import { PlanSuggestionToast } from '@/components/workspace/PlanSuggestions';
 import { pickStartHereTaskId } from '@/lib/plan-core';
-import { useTimelineFullScreenToolsSlot } from '@/components/releases/TimelineFullScreen';
 import { formatPhaseDates, summarizeRolloutPhases } from '@/lib/rollout-phases';
 import { EMPTY_PLAN_FILTERS } from '@/lib/plan-focus';
 import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
@@ -128,9 +127,6 @@ type TimelineSceneProps = {
    * the only thing that would explain an empty screen, so they stay.
    */
   suppressEmptyState?: boolean;
-  /** Shows a "Full screen" button beside the legend. Left out inside the
-   *  full-screen overlay itself, which has its own close control. */
-  onFullScreen?: () => void;
   /**
    * The check before distribution, drawn on the phase row's line on a
    * computer instead of as its own banner above the timeline (2026-10-16,
@@ -153,16 +149,14 @@ export function TimelineScene({
   onToast,
   onRescheduled,
   suppressEmptyState = false,
-  onFullScreen,
   statusSlot,
   phone = false,
 }: TimelineSceneProps) {
   const phoneSearchOpen = useRolloutPhoneChrome((state) => state.searchOpen);
   const setPhoneSearchOpen = useRolloutPhoneChrome((state) => state.setSearchOpen);
-  const fullScreenToolsSlot = useTimelineFullScreenToolsSlot();
   // The plan tools sit in the page bar (or the full-screen bar) on a computer,
   // so their in-page row is empty there and must not keep its gap.
-  const toolsInBar = Boolean(onFullScreen) || Boolean(fullScreenToolsSlot);
+  const toolsInBar = tasks.length > 0;
   // Phases default OPEN (`?? false` at the two call sites below). They shipped
   // collapsed in 2026-08, which was defensible while this was a scene you chose
   // to open — and is exactly wrong now that it is what a release lands on: the
@@ -366,9 +360,9 @@ export function TimelineScene({
           <div className={toolsInBar ? 'mb-3 lg:mb-0' : 'mb-4'}>
             <PlanListControls
               plan={plan}
-              phoneSearchOnly={Boolean(onFullScreen)}
-              inPageBar={Boolean(onFullScreen)}
-              trailing={<TimelineChrome onFullScreen={onFullScreen} />}
+              phoneSearchOnly={toolsInBar}
+              inPageBar={toolsInBar}
+              trailing={<TimelineChrome />}
             />
           </div>
 
@@ -1068,7 +1062,7 @@ function TimelineColourKey({ timeline }: { timeline: ReleaseTimeline }) {
 // Chrome
 // ---------------------------------------------------------------------------
 
-function TimelineChrome({ onFullScreen }: { onFullScreen?: () => void }) {
+function TimelineChrome() {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const legendRef = useRef<HTMLDivElement | null>(null);
@@ -1130,15 +1124,6 @@ function TimelineChrome({ onFullScreen }: { onFullScreen?: () => void }) {
           </div>
         ) : null}
       </div>
-      {/* Only where the week grid shows (`tl-grid-view`): the narrow list is
-          already the whole width of a phone, so there is nothing to enlarge. */}
-      {onFullScreen ? (
-        <span className="tl-grid-view">
-          <button type="button" onClick={onFullScreen} aria-label="Full screen" title="Full screen" className={iconButton}>
-            <Maximize2 className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </span>
-      ) : null}
     </>
   );
 }

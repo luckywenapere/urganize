@@ -461,12 +461,11 @@ describe('"Confirm your release date" pinned on top', () => {
     expect(blankSeedDueDate({ now, releaseDate: '2026-10-14' })).toBe('2026-10-14T00:00:00.000Z');
   });
 
-  it('the planner shows it above the plan, on the inline and the full-screen timeline', () => {
+  it('the planner shows it above the plan, on the timeline', () => {
     const view = code('components/workspace/WorkspaceView.tsx');
     expect(view).toContain('findPinnedConfirmDateTask(');
     expect(view).toContain('activitiesBanner={activitiesBannerNode}');
     expect(view).toContain('panelActivitiesBanner={activitiesBannerNode}');
-    expect(view).toMatch(/pinnedConfirmDateCard \? <div className="mb-3 mt-3">\{pinnedConfirmDateCard\}<\/div>/);
   });
 });
 
