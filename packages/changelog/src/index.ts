@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.162.13",
+    tag: "App",
+    date: "October 21, 2026",
+    highlights: [
+      "The Connections sheet now lists only what works. The 'Soon' rows that did nothing are gone.",
+    ],
+  },
+  {
     version: "1.162.12",
     tag: "App",
     date: "October 21, 2026",
