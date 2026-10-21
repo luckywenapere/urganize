@@ -53,7 +53,7 @@ export function SwipeSheet({
       <DialogPanel
         label={label}
         onClose={onClose}
-        className={`morph-sheet absolute inset-x-0 bottom-0 max-h-[calc(100dvh-env(safe-area-inset-top,0px)-1rem)] overflow-y-auto overscroll-contain rounded-t-[28px] bg-[#18181a] px-5 pb-[calc(1.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-10px_40px_rgba(0,0,0,0.4)] ${
+        className={`morph-sheet absolute inset-x-0 bottom-0 max-h-[calc(100dvh-env(safe-area-inset-top,0px)-1rem)] overflow-y-auto overscroll-contain rounded-t-[28px] border-t border-stroke-default bg-bg-surface px-5 pb-[calc(1.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-10px_40px_rgba(0,0,0,0.25)] ${
           desktop === 'card'
             ? 'sm:bottom-auto sm:top-[12vh] sm:mx-auto sm:w-[26rem] sm:rounded-[24px] sm:border sm:border-stroke-default'
             : ''
