@@ -3441,6 +3441,14 @@ html[data-release-focus='on'] nav a[href^='/dashboard']:not([href^='/dashboard/h
 }
 
 /* The one box on Home and Artists sits where the old bottom bar was. */
+/* The Artists / Rollouts switch lives on the Rollouts page too; only the swipe shell shows it. */
+.swipe-switch {
+  display: none;
+}
+:root[data-swipe-nav] .swipe-switch {
+  display: flex;
+}
+
 :root[data-swipe-nav] .swipe-dock {
   bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
 }

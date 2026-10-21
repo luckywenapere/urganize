@@ -1,6 +1,6 @@
 {
   "name": "@urganize/changelog",
-  "version": "1.162.13",
+  "version": "1.162.14",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",

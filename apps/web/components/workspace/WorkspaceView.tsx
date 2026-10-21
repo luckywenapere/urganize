@@ -1,5 +1,6 @@
 'use client';
 
+import { ArtistsRolloutsSwitch } from '@/components/shell/swipe/ArtistsRolloutsSwitch';
 import { countProgress } from '@/lib/task-progress';
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -1472,7 +1473,8 @@ export function WorkspaceView() {
       {/* The catalog has no visible page title, so it would have no top-level
           heading at all. A scoped rollout is named by the topbar and its own
           header, so this is only for the catalog at rest. */}
-      {!scopedReleaseId ? <h1 className="sr-only">Your rollouts</h1> : null}
+      {!scopedReleaseId ? <h1 className="sr-only">Rollouts</h1> : null}
+      {!scopedReleaseId ? <ArtistsRolloutsSwitch current="rollouts" swipeOnly /> : null}
       {/* Mobile gutter comes from AppShell's <main> (px-4). Layering another
           px-4 here on mobile compounded to 32px each side, eating content
           area on phones where TasksPanel fills the screen full-width. The

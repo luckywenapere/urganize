@@ -12,6 +12,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { artistSummary } from '@/lib/artist-overview';
 import { artistHref, describeArtistCounts, isArtistPageEnabled } from '@/lib/artist-page';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
+import { ArtistsRolloutsSwitch } from '@/components/shell/swipe/ArtistsRolloutsSwitch';
 import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
@@ -186,6 +187,7 @@ function SwipeArtists({
           <Plus className="h-[18px] w-[18px]" aria-hidden="true" />
         </Link>
       </div>
+      <ArtistsRolloutsSwitch current="artists" />
       {loading ? (
         <ul className="mt-[18px]" aria-busy="true">
           {[0, 1, 2].map((key) => (
