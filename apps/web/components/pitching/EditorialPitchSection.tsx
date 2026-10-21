@@ -13,7 +13,7 @@ import {
   type EditorialRow,
 } from '@/lib/editorial-overview';
 import { EDITORIAL_PLATFORMS } from '@/lib/editorial-pitch';
-import { editorialDueLine } from '@/lib/release-out';
+import { editorialDueLine, showEditorialPitch } from '@/lib/release-out';
 import { supabase } from '@/lib/supabase/client';
 import { openExternalUrl } from '@/lib/external-link';
 import { ChevronRight } from '@/components/icons';
@@ -53,7 +53,11 @@ export function EditorialPitchSection({
       if (!response.ok || !Array.isArray(body?.rows)) {
         throw new Error(body?.error || 'Could not load editorial pitches.');
       }
-      setRows(releaseId ? body.rows.filter((row) => row.releaseId === releaseId) : body.rows);
+      setRows(
+        releaseId
+          ? body.rows.filter((row) => row.releaseId === releaseId)
+          : body.rows.filter((row) => showEditorialPitch(row.releaseDate))
+      );
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Could not load editorial pitches.');
     }

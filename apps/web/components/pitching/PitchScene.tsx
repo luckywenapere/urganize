@@ -33,6 +33,7 @@ import { PitchKitSection, type KitShareState } from '@/components/releases/Pitch
 import type { Task } from '@/types/tasks';
 import { SentPitchRow } from './SentPitchRow';
 import { EditorialPitchSection } from './EditorialPitchSection';
+import { showEditorialPitch } from '@/lib/release-out';
 import { CreditPitchPicker } from './CreditPitchPicker';
 import { CreditAnswers } from './CreditAnswers';
 import { useAuthStore } from '@/lib/auth-store';
@@ -189,7 +190,9 @@ export function PitchScene({ release, tasks = [], onTaskAdded, onToast }: PitchS
         </section>
       ) : null}
 
-      <EditorialPitchSection releaseId={release.id} releaseDate={release.releaseDate ?? null} />
+      {showEditorialPitch(release.releaseDate) ? (
+        <EditorialPitchSection releaseId={release.id} releaseDate={release.releaseDate ?? null} />
+      ) : null}
 
       <PromoList release={release} tasks={tasks} onTaskAdded={onTaskAdded ?? (() => {})} onToast={onToast} />
 
