@@ -1,6 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
+import { registerSignOutReset } from '@/lib/sign-out-resets';
 import { supabase } from '@/lib/supabase/client';
 import type { TaskNotification } from '@/lib/tasks';
 
@@ -23,12 +24,16 @@ async function token(): Promise<string> {
 }
 
 let inFlight: Promise<void> | null = null;
+// Bumped on sign-out so a load that was still on its way cannot paint the old
+// account's notices into the next one.
+let epoch = 0;
 
 export const useNeedsYouStore = create<NeedsYouState>((set, get) => ({
   items: [],
   loaded: false,
   load: () => {
     if (inFlight) return inFlight;
+    const startedAt = epoch;
     inFlight = (async () => {
       try {
         const access = await token();
@@ -39,6 +44,7 @@ export const useNeedsYouStore = create<NeedsYouState>((set, get) => ({
         });
         if (!response.ok) return;
         const data = (await response.json().catch(() => ({}))) as { notifications?: TaskNotification[] };
+        if (startedAt !== epoch) return;
         set({ items: Array.isArray(data.notifications) ? data.notifications : [], loaded: true });
       } catch {
         // Best effort: the last list stays.
@@ -67,5 +73,12 @@ export const useNeedsYouStore = create<NeedsYouState>((set, get) => ({
     }
   },
 }));
+
+// Sign-out: see lib/sign-out-resets.ts (runs from lib/auth-store.ts).
+registerSignOutReset('needs-you', () => {
+  epoch += 1;
+  inFlight = null;
+  useNeedsYouStore.setState({ items: [], loaded: false });
+});
 
 export const selectUnread = (state: NeedsYouState) => state.items.filter((item) => !item.read);

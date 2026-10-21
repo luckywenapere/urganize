@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.162.5",
+    tag: "Account",
+    date: "October 21, 2026",
+    highlights: [
+      "Signing out now clears your Needs you notices, so the next person who signs in on the same phone never sees them.",
+    ],
+  },
+  {
     version: "1.162.4",
     tag: "App",
     date: "October 21, 2026",

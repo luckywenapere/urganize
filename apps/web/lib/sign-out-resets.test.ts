@@ -30,6 +30,7 @@ const REGISTRANTS: Record<SignOutResetId, string> = {
   activity: 'stores/useActivityStore.ts',
   home: 'stores/useHomeStore.ts',
   'swipe-nav': 'stores/useSwipeNavStore.ts',
+  'needs-you': 'stores/useNeedsYouStore.ts',
 };
 
 describe('sign-out reset registry', () => {
@@ -85,5 +86,18 @@ describe('sign-out reset registry', () => {
 
   it('keeps the registry free of imports (it is on the shared chain)', () => {
     expect(stripComments(read('lib/sign-out-resets.ts'))).not.toMatch(/^import /m);
+  });
+});
+
+describe('Needs you store', () => {
+  it('forgets its notices on sign-out', async () => {
+    vi.resetModules();
+    vi.doMock('@/lib/supabase/client', () => ({ supabase: {} }));
+    const { useNeedsYouStore } = await import('@/stores/useNeedsYouStore');
+    const { runSignOutResets: run } = await import('./sign-out-resets');
+    useNeedsYouStore.setState({ items: [{ id: 'n1', read: false } as never], loaded: true });
+    run();
+    expect(useNeedsYouStore.getState().items).toEqual([]);
+    expect(useNeedsYouStore.getState().loaded).toBe(false);
   });
 });

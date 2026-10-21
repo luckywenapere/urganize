@@ -30,7 +30,8 @@ export type SignOutResetId =
   | 'tasks'
   | 'activity'
   | 'home'
-  | 'swipe-nav';
+  | 'swipe-nav'
+  | 'needs-you';
 
 /**
  * The order resets run in. Order matters in one place: the chat history
@@ -53,6 +54,7 @@ export const SIGN_OUT_RESET_ORDER: readonly SignOutResetId[] = [
   'activity',
   'home',
   'swipe-nav',
+  'needs-you',
 ];
 
 const resets = new Map<SignOutResetId, () => void>();
