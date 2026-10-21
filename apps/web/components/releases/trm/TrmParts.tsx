@@ -84,6 +84,8 @@ export function Ring() {
 const FACE_TONES = ['bg-status-info', 'bg-status-warning'] as const;
 
 export function Face({ owner }: { owner: TrmOwner }) {
+  // Your own initial (a bare "Y") says nothing; only a teammate's is worth a circle.
+  if (owner.isYou) return null;
   return (
     <span
       title={owner.name}

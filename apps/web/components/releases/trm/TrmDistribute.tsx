@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Copy } from '@/components/icons';
 import { useSceneOverlay } from '@/components/workspace/useSceneOverlay';
+import { releaseDayHasPassed } from '@/lib/release-out';
 import { fixDestinationFor, type FixAvailability } from '@/lib/distribution-fix';
 import type { DistributionFieldPath } from '@/lib/distribution-rules';
 import {
@@ -456,6 +457,28 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
 
   // ---- Missing fields ------------------------------------------------------------
   const blocking = data.checklist.blocking;
+  if (blocking.length > 0 && releaseDayHasPassed(data.releaseDate)) {
+    // Release day has come, so this is history: no "N things before it can
+    // go", no Move on a day that is behind us. The rows that were never done
+    // stay as a record, without actions.
+    const missed = blocking.filter((r) => r.key !== 'release_date');
+    return wrap(
+      <>
+        <Hero title={`Out on ${formatShortDay(data.releaseDate)}.`} meta="Single · All stores" />
+        {missed.length > 0 ? (
+          <section>
+            <SectionLabel>Never finished</SectionLabel>
+            <List>
+              {missed.map((row) => (
+                <Row key={row.key} mark={<Todo />} title={row.title} detail={row.detail} />
+              ))}
+            </List>
+          </section>
+        ) : null}
+        <Partners sending />
+      </>
+    );
+  }
   if (blocking.length > 0) {
     return wrap(
       <>

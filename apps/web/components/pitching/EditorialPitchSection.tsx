@@ -12,21 +12,13 @@ import {
   editorialStateCopy,
   type EditorialRow,
 } from '@/lib/editorial-overview';
-import { EDITORIAL_PLATFORMS, PITCH_WINDOW_CLOSES_DAYS } from '@/lib/editorial-pitch';
+import { EDITORIAL_PLATFORMS } from '@/lib/editorial-pitch';
+import { editorialDueLine } from '@/lib/release-out';
 import { supabase } from '@/lib/supabase/client';
 import { openExternalUrl } from '@/lib/external-link';
 import { ChevronRight } from '@/components/icons';
 
 const ROLLOUT_EDITORIAL_TITLE = 'Spotify & Apple Music';
-
-/** "Do it at least 7 days before Dec 4", or the rule alone without a date. */
-export function editorialDueLine(releaseDate: string | null | undefined): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(releaseDate || '');
-  if (!match) return `Do it at least ${PITCH_WINDOW_CLOSES_DAYS} days before release day`;
-  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
-  const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-  return `Do it at least ${PITCH_WINDOW_CLOSES_DAYS} days before ${label}`;
-}
 
 const OPEN_BUTTON_CLASS =
   'motion-focus motion-press inline-flex min-h-11 shrink-0 items-center rounded-lg border border-stroke-control px-3 text-sm font-semibold text-content-secondary transition-colors hover:border-content-secondary hover:text-content-primary';
