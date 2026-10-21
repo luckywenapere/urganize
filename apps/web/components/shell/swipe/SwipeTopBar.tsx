@@ -2,9 +2,11 @@
 
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '@urganize/ui';
-import { SWIPE_TABS, lerpIndicator, swipeAreaForPath, swipeTabIndex, type SwipeTabKey } from '@/lib/swipe-nav';
+import { SWIPE_TABS, lerpIndicator, swipeAreaForPath, swipeBackFor, swipeBackTarget, swipeTabIndex, type SwipeTabKey } from '@/lib/swipe-nav';
+import { readPreviousLocation } from '@/lib/nav-history';
+import { ArrowLeft } from '@/components/icons';
 import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
 import { useNeedsYouStore } from '@/stores/useNeedsYouStore';
 import { getSwipeProgress, subscribeSwipeProgress } from './progress';
@@ -23,6 +25,8 @@ const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayout
 export function SwipeTopBar({ showHelp, pagerActive }: { showHelp: boolean; pagerActive: boolean }) {
   const pathname = usePathname();
   const area = swipeAreaForPath(pathname);
+  const router = useRouter();
+  const back = pagerActive ? null : swipeBackFor(pathname);
   const go = useSwipeNavStore((state) => state.go);
   const unread = useNeedsYouStore((state) => state.items.reduce((count, item) => (item.read ? count : count + 1), 0));
   const tabRefs = useRef<(HTMLAnchorElement | null)[]>([]);
@@ -142,6 +146,25 @@ export function SwipeTopBar({ showHelp, pagerActive }: { showHelp: boolean; page
           <AvatarMenu showHelp={showHelp} />
         </div>
       </div>
+      {back ? (
+        <div className="px-3 lg:hidden">
+          <Link
+            href={back.href}
+            data-swipe-back
+            onClick={(event) => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+              const target = swipeBackTarget(readPreviousLocation(), pathname ?? '', back.href);
+              if (target === back.href) return;
+              event.preventDefault();
+              router.push(target);
+            }}
+            className="motion-focus -ml-1 flex h-11 w-fit items-center gap-1.5 rounded-full px-3 text-[15px] font-semibold text-content-primary/70 hover:text-content-primary"
+          >
+            <ArrowLeft className="h-[18px] w-[18px]" aria-hidden="true" />
+            Back
+          </Link>
+        </div>
+      ) : null}
     </header>
   );
 }

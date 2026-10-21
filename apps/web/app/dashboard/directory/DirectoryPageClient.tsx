@@ -6,8 +6,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useOpenSettings } from '@/components/settings/useOpenSettings';
 import { Loader2 } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
+import { useAuthStore } from '@/lib/auth-store';
 import {
   applyDirectoryFilters,
+  withoutViewer,
   fallbackCounts,
   type DirectoryEntry,
   type DirectoryFilters,
@@ -94,7 +96,10 @@ function DirectoryBody() {
   // filters belong to whoever is typing — keeping them in sync with the URL
   // would make every keystroke fight a param nobody set.
   const searchParams = useSearchParams();
-  const [people, setPeople] = useState<Person[]>([]);
+  const [allPeople, setPeople] = useState<Person[]>([]);
+  // Never show the reader their own row (display only; the data keeps it).
+  const viewerId = useAuthStore((state) => state.user?.id ?? null);
+  const people = useMemo(() => withoutViewer(allPeople, viewerId), [allPeople, viewerId]);
   // Where this visit's role filter came from. The role gaps panel links here
   // pre-filtered, and demand it created is worth telling apart from demand
   // somebody typed: it is the retention mechanic either working or not.
@@ -129,10 +134,17 @@ function DirectoryBody() {
   const [viewerType, setViewerType] = useState<ProfileType>('manager');
   // The two shelves. Fetched with the list so they arrive together and never
   // push the results down after the page has painted. A failed read is no shelf.
-  const [shelves, setShelves] = useState<{ featured: ShelfPerson[]; onTheRise: ShelfPerson[] }>({
+  const [allShelves, setShelves] = useState<{ featured: ShelfPerson[]; onTheRise: ShelfPerson[] }>({
     featured: [],
     onTheRise: [],
   });
+  const shelves = useMemo(
+    () => ({
+      featured: withoutViewer(allShelves.featured, viewerId),
+      onTheRise: withoutViewer(allShelves.onTheRise, viewerId),
+    }),
+    [allShelves, viewerId]
+  );
   const [asking, setAsking] = useState<Person | null>(null);
   const [sent, setSent] = useState('');
 

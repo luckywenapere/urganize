@@ -14,6 +14,17 @@ export function releaseDayHasPassed(releaseDate: string | null | undefined, now:
 }
 
 /**
+ * Whether the Spotify editorial pitch is shown at all. After release day it is
+ * history only (founder call, 2026-10-21): the Pitch tab block, the pitch form in
+ * the activity pop-up and the all-rollouts list drop it. The plan keeps the
+ * task row, and its record (a sent pitch, a skip) stays in the task itself; it
+ * is just not promoted. An unknown date keeps it, since nothing says it is over.
+ */
+export function showEditorialPitch(releaseDate: string | null | undefined, now: Date = new Date()): boolean {
+  return !releaseDayHasPassed(releaseDate, now);
+}
+
+/**
  * The line under "Pitch to their editors" in a rollout's Pitch tab.
  *  - a date still ahead: "Do it at least 7 days before Dec 4"
  *  - no date: the rule alone

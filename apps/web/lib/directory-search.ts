@@ -145,6 +145,16 @@ export type FallbackCounts = {
  * line does not render, because the brief allows no invented numbers anywhere,
  * empty states included.
  */
+/**
+ * Hides the reader's own row (their own person, by user id). The directory is
+ * for finding other people, so you never appear in your own search, shelves or
+ * counts. The data keeps your row (others still find you); this is display only.
+ */
+export function withoutViewer<T extends { userId: string }>(entries: readonly T[], viewerId: string | null | undefined): T[] {
+  if (!viewerId) return [...entries];
+  return entries.filter((entry) => entry.userId !== viewerId);
+}
+
 export function fallbackCounts<T extends DirectoryEntry>(
   entries: T[],
   filters: DirectoryFilters

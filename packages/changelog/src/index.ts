@@ -41,6 +41,38 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.162.16",
+    tag: "Pitching",
+    date: "October 21, 2026",
+    highlights: [
+      "Once a release is out, the Spotify editorial pitch goes away. Distribute stays as the record.",
+    ],
+  },
+  {
+    version: "1.162.15",
+    tag: "App",
+    date: "October 21, 2026",
+    highlights: [
+      "On a phone, the Directory, Relationships, Opportunities and Press kits pages have a Back arrow, and you no longer see yourself in the Directory.",
+    ],
+  },
+  {
+    version: "1.162.14",
+    tag: "App",
+    date: "October 21, 2026",
+    highlights: [
+      "On a phone, the Artists and Rollouts lists now have a small switch so you can tell them apart and move between them.",
+    ],
+  },
+  {
+    version: "1.162.13",
+    tag: "App",
+    date: "October 21, 2026",
+    highlights: [
+      "The Connections sheet now lists only what works. The 'Soon' rows that did nothing are gone.",
+    ],
+  },
+  {
     version: "1.162.12",
     tag: "App",
     date: "October 21, 2026",

@@ -96,6 +96,32 @@ export function swipeAreaForPath(pathname: string | null | undefined): SwipeTabK
   return null;
 }
 
+/**
+ * Pushed pages that open from the avatar menu with no way back of their own
+ * (the Directory first). The swipe top bar draws a back arrow on exactly these,
+ * so a page opts in by being listed here. Other pushed pages (a rollout, an
+ * artist, a person, credits, notes) already carry their own back control.
+ */
+export const SWIPE_BACK_PATHS: readonly string[] = [
+  '/dashboard/directory',
+  '/dashboard/relationships',
+  '/dashboard/opportunities',
+  '/dashboard/press-kits',
+];
+
+/** Where the back arrow goes when there is no earlier in-app page, or null for no arrow. */
+export function swipeBackFor(pathname: string | null | undefined): { href: string } | null {
+  if (!pathname) return null;
+  const path = pathname.replace(/\/+$/, '') || '/';
+  return SWIPE_BACK_PATHS.includes(path) ? { href: HOME_HREF } : null;
+}
+
+/** An earlier in-app page is a fine place to go back to only when it is inside the app. */
+export function swipeBackTarget(previous: string | null, current: string, fallback: string): string {
+  if (previous && previous.startsWith('/dashboard') && previous.split('?')[0] !== current) return previous;
+  return fallback;
+}
+
 /** The browser tab title for a swipe tab, in the same shape the pages' own metadata gives. */
 export function swipeDocumentTitle(key: SwipeTabKey): string {
   const tab = SWIPE_TABS.find((entry) => entry.key === key);

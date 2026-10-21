@@ -3045,6 +3045,12 @@ html[data-native-shell] .urg-boot-frame .app-wordmark {
   filter: none;
 }
 
+/* Phone set to light: the launch screen is paper with the ink mark, so the
+ * frame keeps the mark inverted whatever theme the page itself stored. */
+html[data-native-shell][data-boot-light] .urg-boot-frame .app-wordmark {
+  filter: invert(1);
+}
+
 .urg-boot-mark {
   transform: translateY(calc(-1 * var(--boot-shift, 0px)));
 }
@@ -3075,6 +3081,10 @@ html[data-native-shell] .urg-boot-frame .app-wordmark {
 
 html[data-native-shell] .urg-boot-from-label {
   color: rgb(146 146 145);
+}
+
+html[data-native-shell][data-boot-light] .urg-boot-from-label {
+  color: rgb(75 71 64);
 }
 
 .urg-boot-from-logo {
@@ -3441,6 +3451,14 @@ html[data-release-focus='on'] nav a[href^='/dashboard']:not([href^='/dashboard/h
 }
 
 /* The one box on Home and Artists sits where the old bottom bar was. */
+/* The Artists / Rollouts switch lives on the Rollouts page too; only the swipe shell shows it. */
+.swipe-switch {
+  display: none;
+}
+:root[data-swipe-nav] .swipe-switch {
+  display: flex;
+}
+
 :root[data-swipe-nav] .swipe-dock {
   bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
 }

@@ -238,6 +238,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                     ? n.splashBackground
                     : '#0d120e';
                   root.style.setProperty('--boot-ground', ground);
+                  // A light launch ground (phone set to light) needs the dark mark.
+                  var lum = parseInt(ground.slice(1, 3), 16) * 0.299 + parseInt(ground.slice(3, 5), 16) * 0.587 + parseInt(ground.slice(5, 7), 16) * 0.114;
+                  if (lum > 140) root.setAttribute('data-boot-light', '1');
                   var top = null;
                   var bottom = null;
                   var ins = hasInfo ? n.safeAreaInsets : null;

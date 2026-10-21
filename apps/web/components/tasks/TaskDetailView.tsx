@@ -18,6 +18,7 @@ import { TaskMemberSelect } from '@/components/tasks/TaskMemberSelect';
 import { EditorialPitchPanel } from '@/components/tasks/EditorialPitchPanel';
 import { FindSomeoneRow } from '@/components/directory/FindSomeoneRow';
 import { isEditorialPitchTask } from '@/lib/editorial-pitch';
+import { showEditorialPitch } from '@/lib/release-out';
 import { ShareLoginActions } from '@/components/team/ShareLoginActions';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
@@ -706,7 +707,7 @@ export function TaskDetailView({
 
           {/* The Spotify editorial pitch's form fields (2026-10-09). Only on that
               one task, between what it waits on and the free-text notes. */}
-          {isEditorialPitchTask(task.templateTaskId) ? (
+          {isEditorialPitchTask(task.templateTaskId) && showEditorialPitch(releaseDateForPhase) ? (
             <EditorialPitchPanel key={task.id} taskId={task.id} releaseId={task.releaseId ?? null} />
           ) : null}
 
