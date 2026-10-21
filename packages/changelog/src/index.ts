@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.162.15",
+    tag: "App",
+    date: "October 21, 2026",
+    highlights: [
+      "On a phone, the Directory, Relationships, Opportunities and Press kits pages have a Back arrow, and you no longer see yourself in the Directory.",
+    ],
+  },
+  {
     version: "1.162.14",
     tag: "App",
     date: "October 21, 2026",
