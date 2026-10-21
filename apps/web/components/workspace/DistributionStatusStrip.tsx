@@ -21,7 +21,7 @@ type DistributionStatusStripProps = {
   showReadiness?: boolean;
   /** One 36px line for the timeline's phase row on a computer (2026-10-16). */
   compact?: boolean;
-  /** The phone rollout view's divider row, "Ready to distribute 5/9 ›"
+  /** The phone rollout view's divider row, "Before distribution 5/9 ›"
    *  (rollout declutter, Oct 18, 2026). */
   row?: boolean;
 };

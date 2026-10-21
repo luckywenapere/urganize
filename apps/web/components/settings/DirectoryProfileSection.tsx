@@ -278,8 +278,9 @@ export function DirectoryProfileSection() {
     // this one fifth down — on a phone that reads as a button that did
     // nothing, which is exactly how it was reported (2026-09-06).
     <section id={DIRECTORY_SETTINGS_ANCHOR} className={`${panelClass} scroll-mt-4`}>
-      <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
+      <h2 className="mb-4 flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
         Your directory record
+        <HelpTip helpKey="settings.directory" className="align-text-bottom" />
       </h2>
       {/* OPTING IN OPENS THE PAGE (founder call, 2026-09-06). "List me" used to
           save `directory` — findable, page closed — and the in-app card only
@@ -289,11 +290,6 @@ export function DirectoryProfileSection() {
           Closing the page again is one control below. */}
       {/* Three sentences until 2026-09-08. The one that stays is the one a
           person needs before deciding anything: nothing is public yet. */}
-      <p className="mb-4 text-sm text-content-secondary">
-        You are not listed until you say so, and you can close it again below.{' '}
-        <HelpTip helpKey="settings.directory" className="align-text-bottom" />
-      </p>
-
       {!loaded ? (
         <div className="h-24 animate-pulse rounded-lg bg-bg-elevated" aria-hidden />
       ) : !profile ? (

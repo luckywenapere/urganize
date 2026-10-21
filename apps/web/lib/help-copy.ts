@@ -245,7 +245,7 @@ export const HELP_COPY = {
   },
   'settings.directory': {
     label: 'Your directory record',
-    text: 'Managers here look for people who have done the work a rollout needs. Listing yourself opens your page.',
+    text: 'You are not listed until you say so. Listing yourself opens your page, and you can close it again below.',
   },
   'settings.teamBrief': {
     label: 'Team brief',

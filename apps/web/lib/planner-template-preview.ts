@@ -5,7 +5,7 @@
  * about 12 credits. Until v1.92.0 a new person was told that cost at the first
  * question with nothing to show for it. This module answers "what would I get?"
  * from the hand-written playbook the planner starts from: how many activities,
- * how they split across the four phases, and a few real activity names.
+ * how they split across the three rollout phases, and a few real activity names.
  *
  * Pure and client-safe on purpose. It reads the static templates and nothing
  * else: no model call, no credits, no network, no database. That is the whole
@@ -20,19 +20,19 @@
 
 import { getTemplate, getTemplateLeadTimeDays, getTemplateSpanDays } from './release-templates/loader';
 import type { Template } from './release-templates/types';
+import type { PlanReleaseType } from './release-planning';
 import {
-  PLAN_PHASE_LABELS,
-  PLAN_PHASE_ORDER,
-  derivePlanPhase,
-  type PlanPhase,
-  type PlanReleaseType,
-} from './release-planning';
+  DATED_ROLLOUT_PHASES,
+  ROLLOUT_PHASE_LABELS,
+  rolloutPhaseForOffset,
+  type RolloutPhase,
+} from './rollout-phases';
 
 /** How many example activity names the preview shows, at most one per phase. */
 export const PREVIEW_EXAMPLE_LIMIT = 4;
 
 export type PlannerPreviewPhase = {
-  phase: PlanPhase;
+  phase: RolloutPhase;
   label: string;
   /** Activities in the playbook that start in this phase. */
   count: number;
@@ -78,25 +78,26 @@ export function previewTemplateFor(releaseType: PlanReleaseType): {
  *
  * Examples are the first required activity of each phase in playbook order
  * (an optional one only when a phase has nothing required), so they are the
- * things every plan of this type keeps. Phases are the same boundaries the
- * plan and the timeline use (`derivePlanPhase`).
+ * things every plan of this type keeps. Phases are the three the finished
+ * rollout groups by (lib/rollout-phases.ts), so the preview and the plan name
+ * the same ones.
  */
 export function buildPlannerTemplatePreview(releaseType: PlanReleaseType): PlannerTemplatePreview {
   const { template, usesSinglePlaybook } = previewTemplateFor(releaseType);
 
-  const counts = new Map<PlanPhase, number>();
-  const firstRequired = new Map<PlanPhase, string>();
-  const firstAny = new Map<PlanPhase, string>();
+  const counts = new Map<RolloutPhase, number>();
+  const firstRequired = new Map<RolloutPhase, string>();
+  const firstAny = new Map<RolloutPhase, string>();
 
   for (const task of template.tasks) {
-    const phase = derivePlanPhase(task.offset_days);
+    const phase = rolloutPhaseForOffset(task.offset_days);
     counts.set(phase, (counts.get(phase) ?? 0) + 1);
     if (!firstAny.has(phase)) firstAny.set(phase, task.title);
     if (!task.optional && !firstRequired.has(phase)) firstRequired.set(phase, task.title);
   }
 
-  const phases: PlannerPreviewPhase[] = PLAN_PHASE_ORDER.filter((phase) => (counts.get(phase) ?? 0) > 0).map(
-    (phase) => ({ phase, label: PLAN_PHASE_LABELS[phase], count: counts.get(phase) ?? 0 })
+  const phases: PlannerPreviewPhase[] = DATED_ROLLOUT_PHASES.filter((phase) => (counts.get(phase) ?? 0) > 0).map(
+    (phase) => ({ phase, label: ROLLOUT_PHASE_LABELS[phase], count: counts.get(phase) ?? 0 })
   );
 
   const examples = phases

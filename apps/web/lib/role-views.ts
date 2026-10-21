@@ -274,7 +274,6 @@ const FEATURE_WORDS: Partial<Record<RoleViewFeature, string>> = {
   catalogue: 'Catalogue',
   credits: 'Credits',
   opportunities: 'Opportunities',
-  audience: 'Audience',
   people: 'People',
   directory: 'Directory',
   team: 'team assignment',

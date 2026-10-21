@@ -36,7 +36,7 @@ export function PlannerTemplatePreview({ releaseType }: { releaseType: PlanRelea
         <p className="text-sm font-medium text-content-secondary">{previewSummaryLine(preview)}</p>
       </div>
 
-      <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Activities by phase">
+      <ul className="mt-3 grid grid-cols-3 gap-2" aria-label="Activities by phase">
         {preview.phases.map((phase) => (
           <li
             key={phase.phase}

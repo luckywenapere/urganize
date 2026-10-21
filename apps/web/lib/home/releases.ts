@@ -1,5 +1,5 @@
 import type { Task } from '@/types/tasks';
-import type { DbReleaseType } from '@/types/releases';
+import { displayReleaseTitle, type DbReleaseType } from '@/types/releases';
 import { getTemplateStats } from '@/lib/release-templates/loader';
 import { daysUntilDate, isTaskLate, parseCalendarDayOrInstant } from './state';
 import type { HomeReleaseSummary } from './types';
@@ -87,7 +87,7 @@ export function buildReleaseSummary(
 
   return {
     id: release.id,
-    title: release.title,
+    title: displayReleaseTitle(release.title),
     artistId: release.artistId,
     artistName: release.artistName,
     releaseType: release.releaseType,

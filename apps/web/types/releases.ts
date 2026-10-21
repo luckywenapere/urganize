@@ -53,6 +53,9 @@ export function isDbReleaseType(value: unknown): value is DbReleaseType {
  */
 export const DEFAULT_RELEASE_TITLE = 'Untitled rollout';
 
+/** The tip beside the title field in the create dialog: what a blank title becomes. */
+export const TITLE_SKIP_TIP = `Skip it and we’ll call it “${DEFAULT_RELEASE_TITLE}”. You can name it later.`;
+
 /**
  * Every title the SERVER has ever applied to an unnamed release. The default
  * was "Untitled release" until the 2026-09-09 rollout rename, and rows created
@@ -75,6 +78,18 @@ const DEFAULT_RELEASE_TITLE_KEYS = new Set(
 export function isDefaultReleaseTitle(title: string | null | undefined): boolean {
   const trimmed = String(title ?? '').trim();
   return !trimmed || DEFAULT_RELEASE_TITLE_KEYS.has(trimmed.toLowerCase());
+}
+
+/**
+ * The title to SHOW. Rows made before the 2026-09-09 rename still carry the
+ * old placeholder "Untitled release", and the object is a rollout now, so a
+ * legacy placeholder is shown as the current one. A name somebody chose is
+ * returned as it is, and so is an empty one's default.
+ */
+export function displayReleaseTitle(title: string | null | undefined): string {
+  const trimmed = String(title ?? '').trim();
+  if (!trimmed) return DEFAULT_RELEASE_TITLE;
+  return trimmed.toLowerCase() === 'untitled release' ? DEFAULT_RELEASE_TITLE : String(title);
 }
 
 export interface Release {

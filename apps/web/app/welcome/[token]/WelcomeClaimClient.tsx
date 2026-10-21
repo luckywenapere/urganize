@@ -107,6 +107,10 @@ export default function WelcomeClaimClient({ token, initial }: { token: string; 
           <Link href="/auth" className={`${BUTTON} mt-6 bg-brand text-content-inverse hover:bg-brand-hover`}>
             Sign in
           </Link>
+        ) : initial.state === 'missing' ? (
+          <Link href="/" className={`${BUTTON} mt-6 bg-brand text-content-inverse hover:bg-brand-hover`}>
+            Open Urganize
+          </Link>
         ) : null}
       </Shell>
     );

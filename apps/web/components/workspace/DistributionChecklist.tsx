@@ -60,7 +60,7 @@ type DistributionChecklistProps = {
   onChangeArtist?: () => void;
   /** Folded, a 36px line that fits beside the timeline's phases (2026-10-16). */
   compact?: boolean;
-  /** The phone rollout view's one divider row, "Ready to distribute 5/9 ›"
+  /** The phone rollout view's one divider row, "Before distribution 5/9 ›"
    *  (rollout declutter, Oct 18, 2026). Tapping it opens the same checklist
    *  with its Fix buttons. Draws nothing once every item is done. */
   row?: boolean;
@@ -208,7 +208,7 @@ export function DistributionChecklist({
           aria-controls={bodyId}
           className="motion-focus flex min-h-14 w-full items-center gap-3 text-left"
         >
-          <span className="min-w-0 flex-1 truncate text-base text-content-primary">Ready to distribute</span>
+          <span className="min-w-0 flex-1 truncate text-base text-content-primary">Before distribution</span>
           <span className="shrink-0 font-mono text-sm tabular-nums text-content-secondary" aria-label={progress}>
             {checklist.doneCount}/{checklist.total}
           </span>

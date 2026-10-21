@@ -16,6 +16,7 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { ThumbImage } from '@/components/shared/ThumbImage';
+import { displayReleaseTitle } from '@/types/releases';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
 
@@ -141,7 +142,7 @@ export default function ArtistPageClient() {
           ) : null}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-content-primary">{release.title}</p>
+          <p className="truncate text-sm font-semibold text-content-primary">{displayReleaseTitle(release.title)}</p>
           <p className="text-xs text-content-secondary">
             {release.releaseType === 'ep' ? 'EP' : release.releaseType === 'album' ? 'Album' : 'Single'}
             {' · '}

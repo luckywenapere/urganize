@@ -53,7 +53,7 @@ describe('phone rollout declutter', () => {
   it('shows the readiness check as one row that goes when the checklist is complete', () => {
     expect(view).toContain('row={!isDesktopViewport}');
     expect(checklist).toMatch(/if \(row\) \{\s*if \(allDone\) return null;/);
-    expect(checklist).toContain('Ready to distribute</span>');
+    expect(checklist).toContain('Before distribution</span>');
     // Empty blocks never render: an empty checklist draws nothing at all.
     expect(checklist).toContain('if (checklist.total === 0) return null;');
   });

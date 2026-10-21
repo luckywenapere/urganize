@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.162.9",
+    tag: "App",
+    date: "October 21, 2026",
+    highlights: [
+      "Cleaner wording across the app: old \"Untitled release\" names now read \"Untitled rollout\", the planner preview shows the same three phases as your plan, and a few stray words and symbols are gone.",
+    ],
+  },
+  {
     version: "1.162.8",
     tag: "Rollouts",
     date: "October 21, 2026",

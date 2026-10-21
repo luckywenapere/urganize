@@ -104,7 +104,7 @@ function KitRow({
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold text-content-primary">
             {title}
-            <span className="sr-only">{done ? ', done' : ', not done yet'}</span>
+            <span className="sr-only">{done ? ' (done)' : ' (not done yet)'}</span>
           </span>
           <span className="block truncate text-[13px] text-content-primary/55">{value}</span>
         </span>

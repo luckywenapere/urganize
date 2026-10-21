@@ -17,7 +17,8 @@ import {
   getTemplate,
   getTemplateLeadTimeDays,
 } from '@/lib/release-templates/loader';
-import { DEFAULT_RELEASE_TITLE, type DbReleaseType } from '@/types/releases';
+import { DEFAULT_RELEASE_TITLE, TITLE_SKIP_TIP, type DbReleaseType } from '@/types/releases';
+import { InfoTip } from '@/components/shared/HelpTip';
 import { isBrowserOnline } from '@/lib/offline/status';
 
 // The release types this modal can create: authored AND switched on AND
@@ -586,6 +587,7 @@ export function CreateReleaseModal({
                 <span className="mb-2 flex items-baseline gap-2 text-sm font-medium text-content-primary">
                   What&apos;s it called?
                   <span className="text-xs font-normal text-content-tertiary">Optional</span>
+                  <InfoTip label="About the name" text={TITLE_SKIP_TIP} />
                 </span>
                 <input
                   ref={titleInputRef}
@@ -599,12 +601,7 @@ export function CreateReleaseModal({
                 />
                 {errors.title ? (
                   <p role="alert" className="mt-2 text-xs text-status-error">{errors.title}</p>
-                ) : (
-                  <p className="mt-2 text-xs leading-5 text-content-secondary">
-                    The song or project title. Skip it and we&apos;ll call it &ldquo;
-                    {DEFAULT_RELEASE_TITLE}&rdquo;. You can name it later.
-                  </p>
-                )}
+                ) : null}
               </label>
 
               {SHOW_TYPE_PICKER ? (
@@ -804,6 +801,7 @@ export function CreateReleaseModal({
                 <span className="mb-2 flex items-baseline gap-2 text-sm font-medium text-content-primary">
                   Title
                   <span className="text-xs font-normal text-content-tertiary">Optional</span>
+                  <InfoTip label="About the title" text={TITLE_SKIP_TIP} />
                 </span>
                 <input
                   ref={titleInputRef}
@@ -816,12 +814,7 @@ export function CreateReleaseModal({
                 />
                 {errors.title ? (
                   <p role="alert" className="mt-2 text-xs text-status-error">{errors.title}</p>
-                ) : (
-                  <p className="mt-2 text-xs leading-5 text-content-secondary">
-                    Skip it and we&apos;ll call it &ldquo;{DEFAULT_RELEASE_TITLE}&rdquo;. You can
-                    name it later.
-                  </p>
-                )}
+                ) : null}
               </label>
 
               <label className="block">

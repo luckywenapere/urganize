@@ -16,7 +16,7 @@ import { useTaskStore } from '@/stores/useTaskStore';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { type Task } from '@/lib/tasks';
 import { toastDismissMs } from '@/lib/toast-timing';
-import type { Release } from '@/types/releases';
+import { displayReleaseTitle, type Release } from '@/types/releases';
 import { Toast } from '@/components/shared/Toast';
 import { NewReleaseGuide } from '@/components/releases/NewReleaseGuide';
 import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
@@ -575,7 +575,7 @@ export function WorkspaceView() {
       return {
         release: {
           id: release.id,
-          title: release.title,
+          title: displayReleaseTitle(release.title),
           artistName: release.artistName,
           status: release.status,
           releaseDate: release.releaseDate,
@@ -773,7 +773,7 @@ export function WorkspaceView() {
         const releaseTasks = taskList.filter((task) => task.releaseId === card.release.id);
         return {
           id: card.release.id,
-          title: card.release.title,
+          title: displayReleaseTitle(card.release.title),
           artistId: source?.artistId ?? null,
           artistName: card.release.artistName,
           // Released is derived (lib/recap-eligibility's rule), never written.

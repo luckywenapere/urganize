@@ -61,9 +61,12 @@ export function RoleViewSection() {
           text="Pick what the menu leads with. Anything not in the menu is under More, and search still finds it."
         />
       </h2>
-      <label htmlFor="role-view-select" className="mb-2 block text-sm font-semibold text-content-primary">
-        Show the app for
-      </label>
+      <div className="mb-2 flex items-center gap-2">
+        <label htmlFor="role-view-select" className="text-sm font-semibold text-content-primary">
+          Show the app for
+        </label>
+        <InfoTip label="What this view moves" text={describeRoleView(current)} />
+      </div>
       <select
         id="role-view-select"
         value={override ?? AUTOMATIC}
@@ -78,7 +81,6 @@ export function RoleViewSection() {
           </option>
         ))}
       </select>
-      <p className="mt-2 text-sm text-content-secondary">{describeRoleView(current)}</p>
       {error ? (
         <p role="alert" className="mt-2 text-sm text-status-error">
           {error}

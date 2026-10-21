@@ -427,7 +427,7 @@ function ReadyStep({ draft, patch, disabled }: StepBodyProps) {
   return (
     <>
       <PlannerCheckboxGroup<ReadyItem>
-        legend="What is already done?"
+        legend="What's already done?"
         options={READY_TODAY_OPTIONS}
         value={draft.readyToday}
         onToggle={toggle}
@@ -473,7 +473,7 @@ function BudgetStep({ draft, patch, disabled }: StepBodyProps) {
     <>
       <PlannerRadioGroup<PlanBudget>
         name="planner-budget"
-        legend="What is the promo budget?"
+        legend="What's the promo budget?"
         options={BUDGET_OPTIONS}
         value={draft.budget}
         onChange={(budget) => patch({ budget })}

@@ -7,7 +7,7 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { DeleteReleaseDialog } from '@/components/workspace/DeleteReleaseDialog';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { useKnownReleaseCount } from '@/components/loading/known-counts';
-import type { Release } from '@/types/releases';
+import { displayReleaseTitle, type Release } from '@/types/releases';
 import { panelClass } from './panelClass';
 import { InfoTip } from '@/components/shared/HelpTip';
 import { formatRolloutCreatedLabel } from '@/lib/settings-rollout-row';
@@ -90,7 +90,7 @@ export function ReleasesSection() {
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-content-primary">
-                      {release.title}
+                      {displayReleaseTitle(release.title)}
                     </p>
                     <p className="truncate text-xs text-content-secondary">
                       {release.artistName || 'Unassigned artist'}
@@ -109,8 +109,8 @@ export function ReleasesSection() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setReleaseToDelete({ id: release.id, title: release.title })}
-                    aria-label={`Delete ${release.title}`}
+                    onClick={() => setReleaseToDelete({ id: release.id, title: displayReleaseTitle(release.title) })}
+                    aria-label={`Delete ${displayReleaseTitle(release.title)}`}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2 py-1.5 text-xs font-semibold text-content-tertiary transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
                   >
                     <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />

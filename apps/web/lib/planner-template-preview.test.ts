@@ -10,7 +10,7 @@ import {
   previewSummaryLine,
 } from './planner-template-preview';
 import { getPlannerTemplate } from './release-planning-actions-server';
-import { PLAN_PHASE_LABELS, PLAN_PHASE_ORDER, derivePlanPhase } from './release-planning';
+import { DATED_ROLLOUT_PHASES, ROLLOUT_PHASE_LABELS, rolloutPhaseForOffset } from './rollout-phases';
 import { ALBUM_RELEASE_TEMPLATE } from './release-templates/album';
 import { EP_RELEASE_TEMPLATE } from './release-templates/ep';
 import { SINGLE_RELEASE_TEMPLATE } from './release-templates/single';
@@ -42,13 +42,13 @@ function expectBuiltFrom(template: Template, releaseType: (typeof TYPES)[number]
 
   // Phase counts are the playbook's own tasks, bucketed by the plan's phase rule.
   for (const phase of preview.phases) {
-    const expected = template.tasks.filter((task) => derivePlanPhase(task.offset_days) === phase.phase).length;
+    const expected = template.tasks.filter((task) => rolloutPhaseForOffset(task.offset_days) === phase.phase).length;
     expect(phase.count).toBe(expected);
-    expect(phase.label).toBe(PLAN_PHASE_LABELS[phase.phase]);
+    expect(phase.label).toBe(ROLLOUT_PHASE_LABELS[phase.phase]);
   }
   expect(preview.phases.reduce((sum, phase) => sum + phase.count, 0)).toBe(template.tasks.length);
   // In plan order, and no empty phase is shown.
-  const order = preview.phases.map((phase) => PLAN_PHASE_ORDER.indexOf(phase.phase));
+  const order = preview.phases.map((phase) => DATED_ROLLOUT_PHASES.indexOf(phase.phase));
   expect([...order].sort((a, b) => a - b)).toEqual(order);
   expect(preview.phases.every((phase) => phase.count > 0)).toBe(true);
 
@@ -58,7 +58,7 @@ function expectBuiltFrom(template: Template, releaseType: (typeof TYPES)[number]
   expect(preview.examples.length).toBeLessThanOrEqual(PREVIEW_EXAMPLE_LIMIT);
   for (const example of preview.examples) expect(titles.has(example)).toBe(true);
   const examplePhases = preview.examples.map((title) =>
-    derivePlanPhase(template.tasks.find((task) => task.title === title)!.offset_days)
+    rolloutPhaseForOffset(template.tasks.find((task) => task.title === title)!.offset_days)
   );
   expect(new Set(examplePhases).size).toBe(examplePhases.length);
   return preview;
@@ -69,9 +69,8 @@ describe('buildPlannerTemplatePreview', () => {
     const preview = expectBuiltFrom(SINGLE_RELEASE_TEMPLATE, 'single');
     expect(preview.usesSinglePlaybook).toBe(false);
     expect(preview.phases.map((phase) => phase.label)).toEqual([
-      'Setup',
       'Pre-release',
-      'Release week',
+      'Release',
       'Post-release',
     ]);
     // The first required activity of the playbook leads the examples.
