@@ -82,6 +82,12 @@
 // the in-flight state. Failures never block the dashboard.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ONBOARDING_HISTORY_KEY,
+  decidePop,
+  historyActionForStep,
+  readOnboardingHistoryStep,
+} from '@/lib/onboarding-history';
 import { useRouter } from 'next/navigation';
 import { Chappi } from '@urganize/ui';
 import { useAuthStore } from '@/lib/auth-store';
@@ -703,6 +709,40 @@ export default function OnboardingPage() {
   );
   const LAST_STEP = sequence[sequence.length - 1];
   const TOTAL_STEPS = sequence.length;
+
+  // Device Back walks the questions one step at a time (back-gestures pass,
+  // 2026-10-21): each question step gets its own history entry, and a pop maps
+  // to the step that entry names. Once the account exists nothing is pushed and
+  // a pop just puts the person back, so a finished step is never walked into.
+  // Rules in lib/onboarding-history.ts.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const current = window.history.state as Record<string, unknown> | null;
+    const action = historyActionForStep({
+      step,
+      entryStep: readOnboardingHistoryStep(current, sequence),
+      accountCreated,
+    });
+    if (action === 'none') return;
+    const next = { ...(current ?? {}), [ONBOARDING_HISTORY_KEY]: step };
+    if (action === 'tag') window.history.replaceState(next, '');
+    else window.history.pushState(next, '');
+  }, [step, accountCreated, sequence]);
+
+  useEffect(() => {
+    const onPop = (event: PopStateEvent) => {
+      const decision = decidePop({ state: event.state, sequence, currentStep: step, accountCreated });
+      if (decision.kind === 'goto') {
+        setError('');
+        setStep(decision.step);
+      } else if (decision.kind === 'hold') {
+        const current = window.history.state as Record<string, unknown> | null;
+        window.history.pushState({ ...(current ?? {}), [ONBOARDING_HISTORY_KEY]: step }, '');
+      }
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [step, accountCreated, sequence]);
 
   // Read once per account, not on every render: the welcome step marks itself
   // seen as it hands over, and must not drop out of the list under its own feet.

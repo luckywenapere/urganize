@@ -122,6 +122,24 @@ export function swipeBackTarget(previous: string | null, current: string, fallba
   return fallback;
 }
 
+/**
+ * What the top bar's Back arrow does. With an earlier in-app page this tab came
+ * from, it goes BACK in history (so the browser's own Back is never one step
+ * behind it and the two cannot ping-pong: a push would leave the page it just
+ * left as the next Back). With none (a deep link, a fresh tab) it REPLACES the
+ * page with the fallback, so Back from the fallback leaves rather than returning.
+ */
+export function swipeBackAction(
+  previous: string | null,
+  current: string,
+  fallback: string,
+  historyLength: number
+): { kind: 'history' } | { kind: 'replace'; href: string } {
+  const hasEarlierPage = previous !== null && swipeBackTarget(previous, current, '') !== '';
+  if (hasEarlierPage && historyLength > 1) return { kind: 'history' };
+  return { kind: 'replace', href: fallback };
+}
+
 /** The browser tab title for a swipe tab, in the same shape the pages' own metadata gives. */
 export function swipeDocumentTitle(key: SwipeTabKey): string {
   const tab = SWIPE_TABS.find((entry) => entry.key === key);

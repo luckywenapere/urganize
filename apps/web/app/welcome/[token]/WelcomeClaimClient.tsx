@@ -179,7 +179,7 @@ export default function WelcomeClaimClient({ token, initial }: { token: string; 
           ) : null}
           <button
             type="button"
-            onClick={() => router.push('/dashboard?settings=directory')}
+            onClick={() => router.replace('/dashboard?settings=directory')}
             className={`${BUTTON} border border-stroke-control text-content-primary hover:border-content-secondary`}
           >
             Edit it in Settings

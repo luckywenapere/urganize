@@ -151,7 +151,7 @@ export default function App() {
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      const action = decideAndroidBack(currentUrlRef.current);
+      const action = decideAndroidBack(currentUrlRef.current, canGoBackRef.current);
       if (action === 'exit') return false;
       if (action === 'go-back' && canGoBackRef.current) {
         webRef.current?.goBack();

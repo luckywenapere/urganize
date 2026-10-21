@@ -389,7 +389,7 @@ export default function AuthPage() {
           // Ignore.
         }
       }
-      router.push(nextPath);
+      router.replace(nextPath);
     } catch (loginError) {
       const message = errorMessage(loginError, 'Login failed. Please try again.');
       if (/verify your email|email not confirmed/i.test(message)) {
@@ -455,7 +455,7 @@ export default function AuthPage() {
   // during a login attempt.
   // Confirmed in another tab of this browser: go in from here.
   useConfirmationPickup(Boolean(unconfirmed), () => {
-    router.push(nextPath);
+    router.replace(nextPath);
   });
 
   if (unconfirmed) {
