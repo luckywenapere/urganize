@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.162.18",
+    tag: "App",
+    date: "October 21, 2026",
+    highlights: [
+      "On a phone, swiping back closes the sheet or pop-up you have open before it leaves the page.",
+      "Swiping back goes up one step at a time, from a scene to its rollout to the artist.",
+    ],
+  },
+  {
     version: "1.162.17",
     tag: "App",
     date: "October 21, 2026",
