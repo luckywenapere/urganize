@@ -101,6 +101,7 @@ import { SHARE_REWARD_OFFER, SHARE_REWARD_OFFER_DETAIL } from '@/lib/share-rewar
 import { useShareImages, type ShareImageState } from './useShareImages';
 import { useShareReward, type ShareRewardState } from './useShareReward';
 import { ThumbImage } from '@/components/shared/ThumbImage';
+import { useBackToClose } from '@/lib/use-back-to-close';
 
 /**
  * Share to socials (founder request, 2026-09-23): the one sheet that turns a
@@ -259,6 +260,8 @@ function useDeferredFirstShareOffer() {
 
 function ShareDialog({ request }: { request: ShareRequest }) {
   const close = useShareStore((state) => state.close);
+  // The OS back-swipe closes the sheet instead of leaving the page under it.
+  useBackToClose(true, close);
   const openSettings = useOpenSettings();
   const userId = useAuthStore((state) => state.user?.id ?? null);
   const role = useAuthStore((state) => state.user?.role ?? null);

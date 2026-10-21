@@ -1043,7 +1043,7 @@ function TaskDetailModal() {
   // lib/dialog-stack.ts is what lets the completion sheet open ABOVE this and
   // take Tab without the two trapping against each other.
   const panelRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(isOpen, panelRef, { initialFocus: 'panel' });
+  useDialogFocus(isOpen, panelRef, { initialFocus: 'panel', onBackClose: state?.onBack });
 
   // The pop-up always opens on its title (founder screenshot, 2026-10-11: the
   // title and its checkbox opened half hidden under the sticky Delete / Close

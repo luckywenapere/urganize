@@ -81,7 +81,11 @@ export function ArchiveReleaseDialog({
   }, [open]);
 
   const panelRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(open && isMounted && Boolean(release), panelRef);
+  useDialogFocus(open && isMounted && Boolean(release), panelRef, {
+    onBackClose: () => {
+      if (!isSaving) onClose();
+    },
+  });
 
   if (!open || !isMounted || !release) return null;
 

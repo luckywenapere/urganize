@@ -61,7 +61,7 @@ export function ReleaseDetailsSheet({
       isMounted.current = false;
     };
   }, []);
-  useDialogFocus(true, panelRef);
+  useDialogFocus(true, panelRef, { onBackClose: onDismiss });
 
   // Anchored once per mount so the `min` attribute can't shift mid-interaction.
   const todayYmd = useMemo(() => formatYmdLocal(new Date()), []);

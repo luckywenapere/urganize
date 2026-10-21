@@ -65,7 +65,7 @@ function OutcomeSheetBody({
   const dragStartY = useRef<number | null>(null);
   const isMounted = useRef(true);
   const panelRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(true, panelRef);
+  useDialogFocus(true, panelRef, { onBackClose: onDismiss });
 
   useEffect(() => lockBodyScroll(), []);
 

@@ -8,6 +8,7 @@ import { Button, IconButton } from '@urganize/ui';
 
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { useDialogFocus } from '@/lib/use-dialog-focus';
+import { useBackToClose } from '@/lib/use-back-to-close';
 import { supabase } from '@/lib/supabase/client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useAuthStore } from '@/lib/auth-store';
@@ -287,6 +288,9 @@ export function PlannerIntakeModal() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [open, dismiss]);
+
+  // The OS back-swipe closes the planner (declared here because dismiss is).
+  useBackToClose(open, dismiss);
 
   const patch = useCallback((changes: Partial<PlannerIntakeDraft>) => {
     setDraft((current) => ({ ...current, ...changes }));

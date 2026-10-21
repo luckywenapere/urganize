@@ -98,7 +98,12 @@ export function ReportIssueDialog() {
   // 'none': the title field takes focus below, and the sent state has its own
   // controls, so this only adds the Tab trap and the return of focus.
   const panelRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(isOpen && isMounted, panelRef, { initialFocus: 'none' });
+  useDialogFocus(isOpen && isMounted, panelRef, {
+    initialFocus: 'none',
+    onBackClose: () => {
+      if (!isSending) closeReportIssue();
+    },
+  });
 
   useEffect(() => {
     if (!isOpen || isSent) return;

@@ -269,7 +269,12 @@ export function CreateReleaseModal({
   // while it is open, and returns to the button that opened it. This replaced a
   // hand-rolled window-level Tab trap that never moved focus in at all, and
   // that fought any modal opened above it (the quick-create modal can be).
-  useDialogFocus(open && isMounted, panelRef, { initialFocus: 'panel' });
+  useDialogFocus(open && isMounted, panelRef, {
+    initialFocus: 'panel',
+    onBackClose: () => {
+      if (!isSubmitting) onClose();
+    },
+  });
 
   useEffect(() => {
     if (!open || (!plan && !TYPE_FIRST_CREATE_ENABLED)) {

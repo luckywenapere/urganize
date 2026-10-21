@@ -146,7 +146,12 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
   // opener before the title takes focus, and is told to leave the initial
   // move to the title.
   const panelRef = useRef<HTMLDivElement | null>(null);
-  useDialogFocus(open && isMounted, panelRef, { initialFocus: 'none' });
+  useDialogFocus(open && isMounted, panelRef, {
+    initialFocus: 'none',
+    onBackClose: () => {
+      if (!isSaving && !isDeleting) onClose();
+    },
+  });
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
     if (!open || !isMounted) return;
