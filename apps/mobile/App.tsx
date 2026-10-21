@@ -4,7 +4,14 @@
 // store build or an OTA update of the shell itself.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, KeyboardAvoidingView, Linking, Platform, StyleSheet } from 'react-native';
+import {
+  Appearance as RNAppearance,
+  BackHandler,
+  KeyboardAvoidingView,
+  Linking,
+  Platform,
+  StyleSheet,
+} from 'react-native';
 import Constants from 'expo-constants';
 import { useNetworkState } from 'expo-network';
 import * as SplashScreen from 'expo-splash-screen';
@@ -26,7 +33,7 @@ import {
   type Appearance,
 } from '@urganize/native-bridge';
 import { createNativeBridge } from './src/bridge';
-import { INK, OfflineScreen } from './src/OfflineScreen';
+import { INK, PAPER, OfflineScreen } from './src/OfflineScreen';
 import { getPushPermission, getPushToken, requestPushPermission, watchPush } from './src/push';
 import { shareFile, shareText } from './src/share';
 
@@ -40,7 +47,12 @@ const SPLASH_CEILING_MS = 8000;
 
 // Until the page says otherwise: the brand's ink ground, which is also the
 // splash and the site's default theme.
-const DEFAULT_APPEARANCE: Appearance = { background: INK, statusBar: 'light' };
+const LAUNCH_IS_LIGHT = RNAppearance.getColorScheme() === 'light';
+const LAUNCH_GROUND = LAUNCH_IS_LIGHT ? PAPER : INK;
+const DEFAULT_APPEARANCE: Appearance = {
+  background: LAUNCH_GROUND,
+  statusBar: LAUNCH_IS_LIGHT ? 'dark' : 'light',
+};
 
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -52,7 +64,7 @@ const SHELL_INFO_SCRIPT = buildShellInfoScript({
   // So the site's first loading frame is the launch screen exactly: the same
   // ground, and the mark on the same spot (the splash centres it on the whole
   // screen; the webview below sits inside the safe area).
-  splashBackground: INK,
+  splashBackground: LAUNCH_GROUND,
   safeAreaInsets: initialWindowMetrics
     ? { top: initialWindowMetrics.insets.top, bottom: initialWindowMetrics.insets.bottom }
     : undefined,
@@ -264,6 +276,6 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: INK },
-  web: { flex: 1, backgroundColor: INK },
+  root: { flex: 1, backgroundColor: LAUNCH_GROUND },
+  web: { flex: 1, backgroundColor: LAUNCH_GROUND },
 });

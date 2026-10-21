@@ -6,6 +6,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 // ink #0d120e, which made the launch screen a shade greener than the site's
 // first frame: a visible second load screen). app.config.ts uses the same.
 export const INK = '#0c0c0d';
+// The light theme's ground, the launch screen in light mode (app.config.ts).
+export const PAPER = '#f5f0e6';
 const CREAM = '#f4eee2';
 const SPRING = '#7fd99a';
 

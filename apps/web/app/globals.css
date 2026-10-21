@@ -3045,6 +3045,12 @@ html[data-native-shell] .urg-boot-frame .app-wordmark {
   filter: none;
 }
 
+/* Phone set to light: the launch screen is paper with the ink mark, so the
+ * frame keeps the mark inverted whatever theme the page itself stored. */
+html[data-native-shell][data-boot-light] .urg-boot-frame .app-wordmark {
+  filter: invert(1);
+}
+
 .urg-boot-mark {
   transform: translateY(calc(-1 * var(--boot-shift, 0px)));
 }
@@ -3075,6 +3081,10 @@ html[data-native-shell] .urg-boot-frame .app-wordmark {
 
 html[data-native-shell] .urg-boot-from-label {
   color: rgb(146 146 145);
+}
+
+html[data-native-shell][data-boot-light] .urg-boot-from-label {
+  color: rgb(75 71 64);
 }
 
 .urg-boot-from-logo {

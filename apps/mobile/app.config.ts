@@ -30,6 +30,8 @@ const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID || PASTED_EAS_PROJECT_ID;
 // was #0d120e). Keep it equal to INK in src/OfflineScreen.tsx and to the
 // site's --color-bg-base, or opening the app shows two load screens.
 const INK = '#0c0c0d';
+// The light theme's ground (--color-bg-base 245 240 230 in the site's globals.css).
+const PAPER = '#f5f0e6';
 const NOTIFICATION_ICON = './assets/notification-icon.png';
 const NOTIFICATION_COLOR = '#7fd99a';
 
@@ -100,10 +102,16 @@ const config: ExpoConfig = {
     [
       'expo-splash-screen',
       {
-        image: './assets/icon-foreground.png',
+        // Follows the phone's light or dark setting: the cream mark on ink in
+        // dark, the ink mark on the site's paper ground in light.
+        image: './assets/icon-foreground-dark.png',
         imageWidth: 200,
         resizeMode: 'contain',
-        backgroundColor: INK,
+        backgroundColor: PAPER,
+        dark: {
+          image: './assets/icon-foreground.png',
+          backgroundColor: INK,
+        },
       },
     ],
     'expo-web-browser',
