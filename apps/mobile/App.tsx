@@ -19,6 +19,7 @@ import {
   buildShellInfoScript,
   buildShellUserAgentSuffix,
   decideAndroidBack,
+  SHELL_HOME_PATH,
   isFirstPartyUrl,
   parseAppearance,
   shouldRetryAfterReconnect,
@@ -143,7 +144,7 @@ export default function App() {
       if (action === 'go-back' && canGoBackRef.current) {
         webRef.current?.goBack();
       } else {
-        webRef.current?.injectJavaScript("window.location.replace('/dashboard/home'); true;");
+        webRef.current?.injectJavaScript(`window.location.replace(${JSON.stringify(SHELL_HOME_PATH)}); true;`);
       }
       return true;
     });
@@ -182,7 +183,12 @@ export default function App() {
   }, []);
 
   const onMessage = useCallback(
-    (event: WebViewMessageEvent) => bridge.onMessage(event.nativeEvent.data, event.nativeEvent.url),
+    (event: WebViewMessageEvent) => {
+      // The page tells us where it is on every message, which keeps back
+      // right after in-page route changes the webview did not report.
+      if (event.nativeEvent.url) currentUrlRef.current = event.nativeEvent.url;
+      bridge.onMessage(event.nativeEvent.data, event.nativeEvent.url);
+    },
     [bridge]
   );
 

@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.162.11",
+    tag: "App",
+    listed: false,
+    date: "October 21, 2026",
+    highlights: [
+      "Android back now goes to the right Home and no longer trusts an old address. Needs the next app build.",
+    ],
+  },
+  {
     version: "1.162.10",
     tag: "App",
     date: "October 21, 2026",

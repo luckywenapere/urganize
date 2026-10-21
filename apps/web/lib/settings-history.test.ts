@@ -7,7 +7,8 @@ import {
   shouldPopSettingsEntry,
 } from './settings-history';
 import { isEdgeStart, SWIPE_EDGE_GUARD_PX } from './swipe-edge';
-import { decideAndroidBack } from '@urganize/native-bridge';
+import { decideAndroidBack, SHELL_HOME_PATH } from '@urganize/native-bridge';
+import { HOME_PATH } from './home-path';
 
 afterEach(() => clearSettingsEntryMark());
 
@@ -60,5 +61,15 @@ describe('decideAndroidBack', () => {
     expect(decideAndroidBack(`${base}/dashboard/home/`)).toBe('exit');
     expect(decideAndroidBack(null)).toBe('exit');
     expect(decideAndroidBack('not a url')).toBe('exit');
+  });
+});
+
+describe('Android back and the web home path', () => {
+  it('the shell and the web app agree on Home', () => {
+    expect(SHELL_HOME_PATH).toBe(HOME_PATH);
+  });
+  it('an unknown or unreadable URL never sends the page to Home', () => {
+    expect(decideAndroidBack(undefined)).toBe('exit');
+    expect(decideAndroidBack('')).toBe('exit');
   });
 });

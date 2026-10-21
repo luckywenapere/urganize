@@ -525,6 +525,10 @@ export function createShellDispatcher(deps: {
 
 export type AndroidBackAction = 'go-back' | 'go-home' | 'exit';
 
+/** Where Android back lands. Must equal `HOME_PATH` in apps/web/lib/home-path.ts
+ * (a web test holds the two together). */
+export const SHELL_HOME_PATH = '/dashboard/home';
+
 /**
  * What the Android back button does, from the page's current URL alone:
  * the settings pop-up is open (?settings=) -> step back once, which closes it;
@@ -541,5 +545,5 @@ export function decideAndroidBack(url: string | null | undefined): AndroidBackAc
   }
   if (parsed.searchParams.has('settings')) return 'go-back';
   const path = parsed.pathname.replace(/\/+$/, '') || '/';
-  return path === '/dashboard/home' ? 'exit' : 'go-home';
+  return path === SHELL_HOME_PATH ? 'exit' : 'go-home';
 }
