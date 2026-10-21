@@ -65,7 +65,7 @@ function CoverArtPromptBody({
   const [dragOffset, setDragOffset] = useState(0);
   const dragStartY = useRef<number | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(true, panelRef);
+  useDialogFocus(true, panelRef, { onBackClose: onDismiss });
 
   // Whether the release already has cover art is resolved HERE rather than
   // guessed in the store: `Release.coverArtUrl` falls back to the workspace

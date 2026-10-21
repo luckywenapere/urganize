@@ -58,7 +58,7 @@ export function WorkRequestSheet({
   // returned. Focus lands on the sheet itself so the title is read first.
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(mounted, panelRef, { initialFocus: 'panel' });
+  useDialogFocus(mounted, panelRef, { initialFocus: 'panel', onBackClose: onClose });
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {

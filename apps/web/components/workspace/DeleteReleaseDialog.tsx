@@ -134,7 +134,11 @@ export function DeleteReleaseDialog({
   }, [open]);
 
   const panelRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(open && isMounted && Boolean(release), panelRef);
+  useDialogFocus(open && isMounted && Boolean(release), panelRef, {
+    onBackClose: () => {
+      if (!isDeleting) onClose();
+    },
+  });
 
   if (!open || !isMounted || !release) {
     return null;

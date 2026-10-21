@@ -70,7 +70,7 @@ export function UrgansLockedSheet({ open, message, actionType, onClose }: Urgans
   }, [open]);
 
   const panelRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(open && isMounted, panelRef);
+  useDialogFocus(open && isMounted, panelRef, { onBackClose: onClose });
 
   if (!open || !isMounted) return null;
 

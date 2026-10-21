@@ -76,7 +76,7 @@ export function WhatsNewModal() {
   }, [open]);
 
   const panelRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(open, panelRef);
+  useDialogFocus(open, panelRef, { onBackClose: dismiss });
 
   if (!open) return null;
 

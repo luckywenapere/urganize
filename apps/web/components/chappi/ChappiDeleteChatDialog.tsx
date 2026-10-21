@@ -55,7 +55,7 @@ export function ChappiDeleteChatDialog({
   }, [open]);
 
   const panelRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(open, panelRef);
+  useDialogFocus(open, panelRef, { onBackClose: () => { if (!isDeleting) onClose(); } });
 
   // No mount-guard effect, unlike NoteDeleteDialog: this only ever opens from
   // a click on a list that renders client-side, so it is never open during

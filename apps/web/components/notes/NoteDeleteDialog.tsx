@@ -63,7 +63,11 @@ export function NoteDeleteDialog({ open, noteTitle, onClose, onConfirm }: NoteDe
   }, [open]);
 
   const panelRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(open && isMounted, panelRef);
+  useDialogFocus(open && isMounted, panelRef, {
+    onBackClose: () => {
+      if (!isDeleting) onClose();
+    },
+  });
 
   if (!open || !isMounted) {
     return null;

@@ -159,7 +159,7 @@ function InviteSheet({
   useEffect(() => setMounted(true), []);
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(mounted, panelRef, { initialFocus: 'panel' });
+  useDialogFocus(mounted, panelRef, { initialFocus: 'panel', onBackClose: onClose });
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {

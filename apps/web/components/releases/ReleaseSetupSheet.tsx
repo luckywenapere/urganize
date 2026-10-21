@@ -146,7 +146,7 @@ export function ReleaseSetupSheet({
   };
 
   const panelRef = useRef<HTMLFormElement>(null);
-  useDialogFocus(true, panelRef);
+  useDialogFocus(true, panelRef, { onBackClose: onDismiss });
 
   if (typeof document === 'undefined') return null;
 

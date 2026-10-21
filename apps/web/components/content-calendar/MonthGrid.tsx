@@ -235,7 +235,7 @@ export function MonthGrid({ month, releaseDate, posts, today, onCreatePost, onOp
 
   // Focus moves in on open, stays inside while it is open, and returns to the
   // opener (the focused grid cell) on close.
-  useDialogFocus(dayListDate !== null, dayListPanelRef);
+  useDialogFocus(dayListDate !== null, dayListPanelRef, { onBackClose: () => setDayListDate(null) });
 
   const handleGridKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     const currentIndex = flatDates.indexOf(focusedDate);

@@ -72,7 +72,12 @@ export function TaskQuickCreateModal({
   // takes focus itself just below. This replaced a hand-rolled window-level
   // trap that had to be kept in step with every other modal's, and that
   // fought any modal opened above it.
-  useDialogFocus(isOpen, cardRef, { initialFocus: 'none' });
+  useDialogFocus(isOpen, cardRef, {
+    initialFocus: 'none',
+    onBackClose: () => {
+      if (!isSaving) onClose();
+    },
+  });
 
   useEffect(() => {
     if (!isOpen) {

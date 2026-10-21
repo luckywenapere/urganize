@@ -3,6 +3,7 @@
 import { useEffect, type RefObject } from 'react';
 import { DIALOG_FOCUSABLE, nextTabTarget } from '@/lib/dialog-focus';
 import { createDialogStack } from '@/lib/dialog-stack';
+import { useBackToClose } from '@/lib/use-back-to-close';
 
 // One stack for the whole page. Dialogs stack here on purpose (a completion
 // sheet over the activity pop-up, a confirmation over a sheet), and only the
@@ -36,9 +37,17 @@ type InitialFocus =
 export function useDialogFocus(
   open: boolean,
   panelRef: RefObject<HTMLElement | null>,
-  options: { initialFocus?: InitialFocus } = {}
+  options: {
+    initialFocus?: InitialFocus;
+    /** The dialog's own close. When given, the OS back-swipe / Back closes the
+     *  dialog instead of navigating (lib/back-to-close.ts). Leave it out for a
+     *  surface with its own history handling (Settings). */
+    onBackClose?: () => void;
+    isStillOpen?: () => boolean;
+  } = {}
 ): void {
-  const { initialFocus = 'first' } = options;
+  const { initialFocus = 'first', onBackClose, isStillOpen } = options;
+  useBackToClose(open, onBackClose, isStillOpen);
 
   useEffect(() => {
     if (!open) return;

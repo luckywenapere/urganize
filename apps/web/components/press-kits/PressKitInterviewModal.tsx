@@ -60,7 +60,7 @@ export function PressKitInterviewModal({ sections, onSave, onClose }: Props) {
   // runs when the step changes, so it never covered the first question), stays
   // inside while it is open, and returns to the button that opened it.
   const panelRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(mounted && questions.length > 0, panelRef, { initialFocus: 'panel' });
+  useDialogFocus(mounted && questions.length > 0, panelRef, { initialFocus: 'panel', onBackClose: onClose });
 
   useEffect(() => lockBodyScroll(), []);
 

@@ -27,7 +27,13 @@ type DialogPanelProps = {
  */
 export function DialogPanel({ label, onClose, className, initialFocus = 'panel', children }: DialogPanelProps) {
   const ref = useRef<HTMLDivElement>(null);
-  useDialogFocus(true, ref, { initialFocus });
+  // Back closes it. A sheet kept mounted for its exit animation (data-state
+  // closed on an ancestor) has already closed, so it does not count as open.
+  useDialogFocus(true, ref, {
+    initialFocus,
+    onBackClose: onClose,
+    isStillOpen: () => Boolean(ref.current?.isConnected && !ref.current.closest('[data-state="closed"]')),
+  });
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
