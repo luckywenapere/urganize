@@ -5,11 +5,16 @@ import { useRouter } from 'next/navigation';
 import { markNavigationBlocked } from '@/lib/nav-stall-watch';
 import {
   clearSettingsEntryMark,
+  clearSettingsSegmentEntries,
   markSettingsEntryPushed,
+  markSettingsSegmentPushed,
   settingsEntryWasPushed,
+  settingsSegmentEntries,
   shouldPopSettingsEntry,
+  shouldPushSegmentEntry,
 } from '@/lib/settings-history';
 import {
+  SETTINGS_MENU,
   SETTINGS_PARAM,
   buildSettingsUrl,
   canHostSettings,
@@ -67,6 +72,31 @@ export function useOpenSettings() {
         router.push(url, { scroll: false });
         return;
       }
+      const targetRequest = target?.segment ?? SETTINGS_MENU;
+      const currentRequest = new URLSearchParams(search).get(SETTINGS_PARAM);
+      // Phone: going back to the menu pops the entry the segment pushed.
+      if (
+        wasOpen &&
+        targetRequest === SETTINGS_MENU &&
+        currentRequest !== SETTINGS_MENU &&
+        settingsSegmentEntries() > 0
+      ) {
+        clearSettingsSegmentEntries();
+        window.history.back();
+        return;
+      }
+      if (
+        shouldPushSegmentEntry({
+          wasOpen,
+          narrow: !window.matchMedia('(min-width: 640px)').matches,
+          currentRequest,
+          targetRequest,
+        })
+      ) {
+        window.history.pushState(null, '', url);
+        markSettingsSegmentPushed();
+        return;
+      }
       writeSettingsUrl(url, wasOpen ? 'replace' : 'push');
     },
     [router]
@@ -106,8 +136,9 @@ export function useCloseSettings() {
     // Shallow, like opening: nothing on the page changes but the param.
     const { pathname, search } = window.location;
     if (shouldPopSettingsEntry({ pushedByUs: settingsEntryWasPushed(), search })) {
+      const steps = 1 + settingsSegmentEntries();
       clearSettingsEntryMark();
-      window.history.back();
+      window.history.go(-steps);
       return;
     }
     clearSettingsEntryMark();

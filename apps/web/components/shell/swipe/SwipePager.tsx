@@ -55,6 +55,13 @@ function pagingFrozen(target: EventTarget | null): boolean {
 export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> }) {
   const pathname = usePathname();
   const routeTab = swipeTabForPath(pathname) ?? 'home';
+  // Paging is for the three tab pages only; an artist or rollout page opened from
+  // a tab is a detail screen and a sideways drag there must not switch tabs.
+  const onTabPage = swipeTabForPath(pathname) !== null;
+  const onTabPageRef = useRef(onTabPage);
+  useEffect(() => {
+    onTabPageRef.current = onTabPage;
+  }, [onTabPage]);
   const viewportRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const position = useRef(swipeTabIndex(routeTab));
@@ -211,7 +218,7 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
     let samples: { x: number; t: number }[] = [];
 
     const onStart = (event: TouchEvent) => {
-      if (event.touches.length !== 1 || pagingFrozen(event.target)) {
+      if (event.touches.length !== 1 || !onTabPageRef.current || pagingFrozen(event.target)) {
         tracking = false;
         return;
       }

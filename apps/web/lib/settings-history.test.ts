@@ -73,3 +73,15 @@ describe('Android back and the web home path', () => {
     expect(decideAndroidBack('')).toBe('exit');
   });
 });
+
+describe('phone segment entries', () => {
+  it('pushes only from the open menu to a segment on a narrow screen', async () => {
+    const { shouldPushSegmentEntry } = await import('./settings-history');
+    const base = { wasOpen: true, narrow: true, currentRequest: 'menu', targetRequest: 'general' };
+    expect(shouldPushSegmentEntry(base)).toBe(true);
+    expect(shouldPushSegmentEntry({ ...base, narrow: false })).toBe(false);
+    expect(shouldPushSegmentEntry({ ...base, wasOpen: false })).toBe(false);
+    expect(shouldPushSegmentEntry({ ...base, currentRequest: 'billing' })).toBe(false);
+    expect(shouldPushSegmentEntry({ ...base, targetRequest: 'menu' })).toBe(false);
+  });
+});

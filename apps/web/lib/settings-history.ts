@@ -8,6 +8,31 @@
 import { SETTINGS_PARAM } from './settings-nav';
 
 let pushedByUs = false;
+// Entries pushed on top of the open entry when a phone goes menu -> segment, so
+// the OS back-swipe from a segment lands on the menu, not out of Settings.
+let segmentEntries = 0;
+
+export function markSettingsSegmentPushed(): void {
+  segmentEntries += 1;
+}
+
+export function settingsSegmentEntries(): number {
+  return segmentEntries;
+}
+
+export function clearSettingsSegmentEntries(): void {
+  segmentEntries = 0;
+}
+
+/** Phone only: opening a segment from the menu adds an entry to go back through. */
+export function shouldPushSegmentEntry(input: {
+  wasOpen: boolean;
+  narrow: boolean;
+  currentRequest: string | null;
+  targetRequest: string;
+}): boolean {
+  return input.wasOpen && input.narrow && input.currentRequest === 'menu' && input.targetRequest !== 'menu';
+}
 
 /** This page life pushed the open-Settings entry. */
 export function markSettingsEntryPushed(): void {
@@ -17,6 +42,7 @@ export function markSettingsEntryPushed(): void {
 /** Forget it: the pop-up is closed, or the entry was replaced away. */
 export function clearSettingsEntryMark(): void {
   pushedByUs = false;
+  segmentEntries = 0;
 }
 
 export function settingsEntryWasPushed(): boolean {

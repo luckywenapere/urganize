@@ -33,7 +33,7 @@ import {
   type SettingsSegment,
 } from '@/lib/settings-nav';
 import { decideSettingsClose } from '@/lib/settings-dirty';
-import { clearSettingsEntryMark, decideSettingsPopstate } from '@/lib/settings-history';
+import { clearSettingsEntryMark, clearSettingsSegmentEntries, decideSettingsPopstate } from '@/lib/settings-history';
 import { searchSettings } from '@/lib/settings-search';
 import { useSettingsDirtyStore } from '@/stores/useSettingsDirtyStore';
 import { getAccessToken } from './getAccessToken';
@@ -226,6 +226,8 @@ function SettingsDialog({
         dirty: dirtyRef.current,
       });
       if (action === 'closed') clearSettingsEntryMark();
+      // Back from a segment to the menu used up the segment's entry.
+      if (new URLSearchParams(window.location.search).get(SETTINGS_PARAM) === 'menu') clearSettingsSegmentEntries();
       if (action === 'reprompt' && lastOpenUrl.current) {
         writeSettingsUrl(lastOpenUrl.current, 'push');
         setConfirmingDiscard(true);

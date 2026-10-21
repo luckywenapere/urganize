@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.162.17",
+    tag: "App",
+    date: "October 21, 2026",
+    highlights: [
+      "The account menu is readable in light mode.",
+      "Swiping back in Settings takes you to the Settings menu, not out of Settings.",
+      "Swiping sideways on an artist or rollout page no longer switches tabs.",
+    ],
+  },
+  {
     version: "1.162.16",
     tag: "Pitching",
     date: "October 21, 2026",
