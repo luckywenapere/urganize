@@ -15,3 +15,4 @@ One line per merged fix: version, what it fixed.
 - v1.162.5: F-12: useNeedsYouStore registers a sign-out reset ('needs-you') and ignores a load that started before it; tested.
 - v1.162.6: F-05: /invite/accept and /join/<code> read the invite on the server (lib/invite-metadata-server.ts, shared with GET /api/invites/[token]) and render it in the HTML; /join no longer redirects to a loading page. Not run against a real invite.
 - F-13 (no change): /pitch/status/[token] is a stub. Real no-login status links are not built, only the sample token renders (FrontDeskStatusPage), and nothing in the app or any email shares a status link, so no dead link reaches anyone. Revisit when the status link feature is built.
+- v1.162.7: F-01: CatalogueView draws its own Add rollout button below lg (the swipe shell has no page bar or tab row); guard test in lib/catalogue-add-rollout-guard.test.ts. Type-checked and unit-tested only, not seen on a phone.

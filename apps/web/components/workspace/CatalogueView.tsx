@@ -230,6 +230,12 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
 
   return (
     <div>
+      {/* A phone has no page bar or tab row in the swipe shell, so Add rollout
+          sits in the first view of the list, right-aligned. From lg it moves
+          to the page bar (the portal below). */}
+      <div data-mobile-add-rollout className="flex justify-end pt-5 sm:pt-6 lg:hidden">
+        {addButton}
+      </div>
       {artistName ? (
         <PageHeader
           description={
@@ -247,7 +253,7 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
           }
         />
       ) : (
-        <div className="pt-5 sm:pt-6" />
+        <div className="hidden pt-6 lg:block" />
       )}
 
       {showFilters ? (
