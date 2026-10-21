@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.162.2",
+    tag: "App",
+    date: "October 21, 2026",
+    highlights: [
+      "A photo that does not load now shows the person's initials instead of a blank circle.",
+    ],
+  },
+  {
     version: "1.162.1",
     tag: "App",
     date: "October 20, 2026",
