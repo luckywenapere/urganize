@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '@urganize/ui';
-import { SWIPE_TABS, lerpIndicator, swipeAreaForPath, swipeBackFor, swipeBackTarget, swipeTabIndex, type SwipeTabKey } from '@/lib/swipe-nav';
+import { SWIPE_TABS, lerpIndicator, swipeAreaForPath, swipeBackAction, swipeBackFor, swipeTabIndex, type SwipeTabKey } from '@/lib/swipe-nav';
 import { readPreviousLocation } from '@/lib/nav-history';
 import { ArrowLeft } from '@/components/icons';
 import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
@@ -153,10 +153,10 @@ export function SwipeTopBar({ showHelp, pagerActive }: { showHelp: boolean; page
             data-swipe-back
             onClick={(event) => {
               if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
-              const target = swipeBackTarget(readPreviousLocation(), pathname ?? '', back.href);
-              if (target === back.href) return;
               event.preventDefault();
-              router.push(target);
+              const action = swipeBackAction(readPreviousLocation(), pathname ?? '', back.href, window.history.length);
+              if (action.kind === 'history') window.history.back();
+              else router.replace(action.href);
             }}
             className="motion-focus -ml-1 flex h-11 w-fit items-center gap-1.5 rounded-full px-3 text-[15px] font-semibold text-content-primary/70 hover:text-content-primary"
           >

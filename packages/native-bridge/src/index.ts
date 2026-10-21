@@ -529,13 +529,22 @@ export type AndroidBackAction = 'go-back' | 'go-home' | 'exit';
  * (a web test holds the two together). */
 export const SHELL_HOME_PATH = '/dashboard/home';
 
+/** Pages Android Back sends to Home even when history exists (tab roots and the paywall flow). */
+const GO_HOME_EXACT = ['/dashboard/urgans', '/dashboard/artists'];
+const GO_HOME_PREFIXES = [
+  '/locked',
+  '/start-trial',
+  '/payment',
+  '/auth',
+];
+
 /**
  * What the Android back button does, from the page's current URL alone:
  * the settings pop-up is open (?settings=) -> step back once, which closes it;
  * any page but Home -> go to Home; Home -> leave the app. The shell cannot see
  * open sheets or dialogs, so those are covered only through the URL param.
  */
-export function decideAndroidBack(url: string | null | undefined): AndroidBackAction {
+export function decideAndroidBack(url: string | null | undefined, canGoBack = false): AndroidBackAction {
   if (!url) return 'exit';
   let parsed: URL;
   try {
@@ -545,5 +554,14 @@ export function decideAndroidBack(url: string | null | undefined): AndroidBackAc
   }
   if (parsed.searchParams.has('settings')) return 'go-back';
   const path = parsed.pathname.replace(/\/+$/, '') || '/';
-  return path === SHELL_HOME_PATH ? 'exit' : 'go-home';
+  if (path === SHELL_HOME_PATH) return 'exit';
+  // A page below a tab (a rollout, an artist, a person, onboarding's steps)
+  // goes back ONE level through the page's own history, which the web app
+  // keeps in order (tabs replace, flow exits replace). The tab roots and the
+  // paywall flow keep the old answer: Home, which is also where the wall sends
+  // you back to, so Back can never reveal the app behind it.
+  const staysHome =
+    GO_HOME_EXACT.includes(path) || GO_HOME_PREFIXES.some((entry) => path === entry || path.startsWith(entry + '/'));
+  if (canGoBack && !staysHome) return 'go-back';
+  return 'go-home';
 }

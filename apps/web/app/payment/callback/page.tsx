@@ -199,14 +199,14 @@ function PaymentCallbackContent() {
           <div className="mt-6 flex flex-col gap-2">
             <button
               type="button"
-              onClick={() => router.push(HOME_PATH)}
+              onClick={() => router.replace(HOME_PATH)}
               className="min-h-11 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
             >
               Open dashboard
             </button>
             <button
               type="button"
-              onClick={() => router.push(settingsDeepLink({ segment: 'billing' }))}
+              onClick={() => router.replace(settingsDeepLink({ segment: 'billing' }))}
               className="min-h-11 rounded-full border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-primary hover:bg-bg-hover"
             >
               Billing
@@ -234,7 +234,7 @@ function PaymentCallbackContent() {
             </button>
             <button
               type="button"
-              onClick={() => router.push(HOME_PATH)}
+              onClick={() => router.replace(HOME_PATH)}
               className="min-h-11 rounded-full border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-primary hover:bg-bg-hover"
             >
               Open dashboard

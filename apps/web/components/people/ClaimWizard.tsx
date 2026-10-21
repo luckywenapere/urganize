@@ -305,7 +305,7 @@ export function ClaimWizard({ token, preview }: { token: string; preview: ClaimP
             View profile
           </Link>
         ) : (
-          <button type="button" className={PRIMARY} style={{ backgroundColor: ACCENT }} onClick={() => router.push('/dashboard')}>
+          <button type="button" className={PRIMARY} style={{ backgroundColor: ACCENT }} onClick={() => router.replace('/dashboard')}>
             Done
           </button>
         )}
