@@ -2,10 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
-      "main": false,
+      "main": true,
       "**": false
     }
   },
+  "ignoreCommand": "npx turbo-ignore @urganize/homepage",
   "build": {
     "env": {
       "NEXT_PRIVATE_BUILD_WORKER": "webpack"
