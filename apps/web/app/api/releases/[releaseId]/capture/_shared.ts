@@ -72,7 +72,7 @@ export const MAX_CAPTURE_LEADS_PER_PAGE = 5000;
 // route precedent). The public /capture/[token] page checks the same flag and
 // notFound()s.
 export const isCaptureFeatureEnabled = (): boolean =>
-  process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
+  (process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true' || process.env.NEXT_PUBLIC_FEATURE_ALTLINK !== 'false');
 
 // 18 random bytes → 24 URL-safe chars. Unguessable; the token IS the access
 // control for the public page, so it must never be derivable from ids.

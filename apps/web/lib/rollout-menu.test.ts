@@ -267,7 +267,7 @@ describe('what each row does', () => {
       metadata: 'Fill in details',
       coverart: 'Add cover art',
       files: 'Add files',
-      capture: 'Collect fan emails',
+      capture: 'Pre-save link',
     });
   });
 });

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { afterResponse } from '@/lib/after-response';
+import { syncSmartLinkQuietly } from '@/lib/altlink/server';
 import {
   RELEASE_EVENTS_TABLE,
   RELEASE_METADATA_TABLE,
@@ -190,6 +192,13 @@ export async function PATCH(
       { error: eventInsert.error.message || 'Could not log metadata update.' },
       { status: 500 }
     );
+  }
+
+  // A UPC or ISRC typed here makes the rollout's Altlink link by itself (or
+  // patches a new ISRC onto it). After the reply, and it never fails the save.
+  const altlinkAdmin = adminClient;
+  if (altlinkAdmin && process.env.NEXT_PUBLIC_FEATURE_ALTLINK !== 'false') {
+    afterResponse('altlink-metadata', () => syncSmartLinkQuietly(altlinkAdmin, releaseId, auth.user.id));
   }
 
   return NextResponse.json({

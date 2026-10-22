@@ -30,7 +30,7 @@ import { CaptureChecklist } from './CaptureChecklist';
  * NEXT_PUBLIC_ prefix so the value is inlined at build time for this client
  * component. The API routes guard the same flag server-side (404 when off).
  */
-const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
+const CAPTURE_ENABLED = (process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true' || process.env.NEXT_PUBLIC_FEATURE_ALTLINK !== 'false');
 
 async function getAccessToken(): Promise<string> {
   const {
@@ -71,9 +71,13 @@ function buildLeadsCsv(leads: ReleaseCaptureLead[]): string {
 type CaptureSectionProps = {
   releaseId: string;
   onToast?: (message: string, tone: 'success' | 'error' | 'warning') => void;
+  /** Inside the Pre-save link view's fold: no own heading. */
+  embedded?: boolean;
+  /** The Altlink link already has the screen's green action, so ours is plain. */
+  quiet?: boolean;
 };
 
-export function CaptureSection({ releaseId, onToast }: CaptureSectionProps) {
+export function CaptureSection({ releaseId, onToast, embedded = false, quiet = false }: CaptureSectionProps) {
   const {
     data,
     isLoading,
@@ -277,8 +281,8 @@ export function CaptureSection({ releaseId, onToast }: CaptureSectionProps) {
   if (!CAPTURE_ENABLED) return null;
 
   return (
-    <section className="mt-8">
-      <div>
+    <section className={embedded ? 'mt-4' : 'mt-8'}>
+      {embedded ? null : <div>
         <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
           Fan capture
         </h2>
@@ -286,7 +290,7 @@ export function CaptureSection({ releaseId, onToast }: CaptureSectionProps) {
           One page that trades a link for an email address. Share it from a bio, a story or a DM.
           Fans get the link the second they sign up.
         </p>
-      </div>
+      </div>}
 
       {isLoading ? (
         <ShareLinkCardSkeleton />
@@ -310,7 +314,7 @@ export function CaptureSection({ releaseId, onToast }: CaptureSectionProps) {
             type="button"
             onClick={() => void handleCreate()}
             disabled={isMutating}
-            className="mt-3 inline-flex items-center gap-2 border border-brand/25 bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
+            className={quiet ? 'mt-3 inline-flex items-center gap-2 rounded-lg border border-stroke-control px-4 py-2 text-sm font-semibold text-content-primary hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-60' : 'mt-3 inline-flex items-center gap-2 border border-brand/25 bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60'}
           >
             {isMutating ? (
               <>

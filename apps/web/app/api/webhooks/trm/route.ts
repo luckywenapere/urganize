@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/app/api/_shared/auth';
 import { applyTrmWebhook, recordRefusedDelivery } from '@/lib/trm/server';
+import { afterResponse } from '@/lib/after-response';
+import { syncSmartLinkFromTrm } from '@/lib/altlink/server';
 import { headerBag, loggableHeaders, readTrmEvent, verifyTrmWebhook } from '@/lib/trm/webhook';
 
 // TRM lifecycle webhooks (URG-392). Public, because TRM is the caller; the
@@ -47,5 +49,11 @@ export async function POST(request: NextRequest) {
     signedAt: verified.timestamp,
   });
   if (outcome === 'error') return NextResponse.json({ ok: false }, { status: 500 });
+  // Codes from TRM make (or patch) the rollout's Altlink link, after the reply.
+  if (outcome === 'applied' && (event.upc || event.isrc) && process.env.NEXT_PUBLIC_FEATURE_ALTLINK !== 'false') {
+    afterResponse('altlink-from-trm', () =>
+      syncSmartLinkFromTrm(admin, { externalReleaseId: event.externalReleaseId, trmReleaseId: event.releaseId })
+    );
+  }
   return NextResponse.json({ ok: true, outcome });
 }

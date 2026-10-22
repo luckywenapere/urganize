@@ -41,6 +41,8 @@ export const METADATA_FIX_FIELDS = [
   // The handoff to the distributor's Metadata row (URG-322) lands here when
   // the only thing missing is the words.
   'lyrics',
+  // The pre-save link's "Add UPC" lands here.
+  'upc',
 ] as const;
 
 export type MetadataFixField = (typeof METADATA_FIX_FIELDS)[number];

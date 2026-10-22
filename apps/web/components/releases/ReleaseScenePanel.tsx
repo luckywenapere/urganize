@@ -8,7 +8,7 @@ import { FIELD_PARAM, type SceneName } from '@/components/workspace/useSceneOver
 import { isMetadataFixField } from '@/lib/distribution-fix';
 import { captureFeatureDiscoveryByName } from '@/lib/analytics';
 import { MetadataSection } from '@/components/releases/MetadataSection';
-import { CaptureSection } from '@/components/releases/CaptureSection';
+import { SmartLinkSection } from '@/components/releases/SmartLinkSection';
 import { AssetSection } from '@/components/releases/AssetSection';
 import { CoverArtSection } from '@/components/releases/CoverArtSection';
 import { CalendarScene } from '@/components/content-calendar/CalendarScene';
@@ -85,7 +85,7 @@ const SCENE_LABELS: Record<SceneName, string> = {
   // same icon until that icon became a microphone in the same pass.
   calendar: 'Content',
   pitch: 'Pitch this!',
-  capture: 'Fan capture',
+  capture: 'Pre-save link',
   coverart: 'Cover art',
   timeline: 'Timeline',
   chat: 'Chat',
@@ -240,7 +240,7 @@ export function ReleaseScenePanel({
           onToast={onToast}
         />
       ) : null}
-      {scene === 'capture' ? <CaptureSection releaseId={release.id} onToast={onToast} /> : null}
+      {scene === 'capture' ? <SmartLinkSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'chat' ? <ReleaseChatSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'pitchkit' ? <PitchKitSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'distribute' ? (

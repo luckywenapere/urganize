@@ -25,7 +25,7 @@ import { DEFAULT_BUTTON_LABEL, DEFAULT_CONSENT_NOTE, isUsableDestination } from 
 const RELEASE_CAPTURE_PAGES_TABLE = 'release_capture_pages';
 
 export const isCaptureFeatureEnabled = (): boolean =>
-  process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
+  (process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true' || process.env.NEXT_PUBLIC_FEATURE_ALTLINK !== 'false');
 
 // Tokens are 24-char base64url, same shape as EPK and credit share tokens; a
 // cheap shape check keeps junk paths from reaching the database.

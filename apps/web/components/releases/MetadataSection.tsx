@@ -717,6 +717,7 @@ export function MetadataSection({
                     <Field
                       label="UPC"
                       help="metadata.field.upc"
+                      fieldKey="upc"
                       value={form.upc}
                       onChange={(v) => editForm((f) => ({ ...f, upc: v }))}
                     />

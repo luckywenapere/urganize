@@ -93,6 +93,7 @@ describe('the Metadata scene targets', () => {
       'splits',
       // The handoff's Metadata row (URG-322).
       'lyrics',
+      'upc',
     ]);
     expect(isMetadataFixField('genre')).toBe(true);
     expect(isMetadataFixField('isrc')).toBe(false);

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pre-save mocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Space+Mono&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --base:#0c0c0d; --surface:#171719; --line:rgba(255,255,255,.08); --text:#e8e8e6; --muted:rgba(232,232,230,.55); --accent:#7fd99a; --ink:#0c120e; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--base); color:var(--text); font:15px/1.5 'Instrument Sans', system-ui, sans-serif; }
+  .frame { max-width: 680px; margin: 0 auto; padding: 32px 16px 48px; border-bottom: 1px dashed rgba(255,255,255,.15); }
+  .tag { font: 11px 'Space Mono', monospace; letter-spacing:.14em; color:#888; text-transform:uppercase; margin-bottom:20px }
+  .eyebrow { display:flex; align-items:center; gap:10px; font:11px 'Space Mono', monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--muted) }
+  .chip { font:10px 'Space Mono', monospace; letter-spacing:.14em; padding:3px 8px; border-radius:999px; background:rgba(127,217,154,.12); color:var(--accent) }
+  h1 { font: 30px/1.15 'Young Serif', serif; margin: 12px 0 6px; font-weight:400 }
+  .meta { font: 11px 'Space Mono', monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--muted) }
+  .link { margin-top:20px; display:flex; align-items:center; gap:8px; background:var(--surface); border-radius:14px; padding:6px 6px 6px 14px; }
+  .link span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font: 14px 'Space Mono', monospace }
+  .ghost { height:44px; padding:0 14px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:transparent; color:var(--text); font:600 14px 'Instrument Sans'; display:inline-flex; align-items:center; gap:6px }
+  .primary { margin-top:12px; height:48px; width:100%; border:0; border-radius:12px; background:var(--accent); color:var(--ink); font:600 15px 'Instrument Sans'; }
+  .section { margin-top:28px; font:11px 'Space Mono', monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--muted) }
+  .rows { margin-top:8px; }
+  .row { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:48px; border-bottom:1px solid var(--line) }
+  .row:last-child { border-bottom:0 }
+  .num { font: 20px 'Young Serif', serif }
+  .num small { font: 11px 'Space Mono', monospace; color: var(--muted); margin-left:8px; letter-spacing:.1em }
+  .pending { color:var(--muted) }
+  .skel { display:inline-block; width:48px; height:18px; border-radius:6px; background:rgba(255,255,255,.07) }
+  .tick { color:var(--accent); margin-right:10px }
+  .quiet { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; border-radius:14px; background:var(--surface) }
+  .quiet b { font-weight:600 } .quiet .sub { color:var(--muted); font-size:13px }
+  .fold { margin-top:28px; display:flex; justify-content:space-between; align-items:center; min-height:48px; border-top:1px solid var(--line); border-bottom:1px solid var(--line) }
+  .powered { margin-top:32px; font:11px 'Space Mono', monospace; letter-spacing:.14em; color:var(--muted); text-transform:uppercase }
+  .capture { margin-top:28px; padding:20px; border-radius:14px; background:var(--surface); text-align:center }
+  .capture p { margin:0 0 12px; color:var(--muted) }
+  .spin { width:14px; height:14px; border-radius:50%; border:2px solid rgba(255,255,255,.2); border-top-color:var(--text); display:inline-block }
+  @media (min-width: 900px) { .grid { display:grid; grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="frame" id="nocode">
+  <div class="tag">State 1 · no code</div>
+  <div class="quiet"><div><b>Pre-save link</b><div class="sub">Unlocks with a UPC or ISRC</div></div><button class="ghost">Add UPC</button></div>
+  <div class="section">Fan email page</div>
+  <div class="capture"><p>Collect emails from fans who tap your link.</p><button class="primary" style="margin:0">Build the page</button></div>
+  <div class="powered">Powered by Altlink</div>
+</div>
+
+<div class="frame" id="creating">
+  <div class="tag">State 2 · creating</div>
+  <div class="quiet"><div style="display:flex;align-items:center;gap:10px"><span class="spin"></span><span>Making your pre-save link</span></div></div>
+  <div class="fold"><span>Fan email page</span><span class="pending">›</span></div>
+  <div class="powered">Powered by Altlink</div>
+</div>
+
+<div class="frame" id="live">
+  <div class="tag">State 3 · pre-save live</div>
+  <div class="eyebrow"><span class="chip">LIVE</span>Pre-save</div>
+  <h1>Drops in 15 days.</h1>
+  <div class="meta">Fri 6 Nov · Midnight Lagos · Then streaming</div>
+  <div class="link"><span>altlink.co/tems-free-mind</span><button class="ghost">Copy</button></div>
+  <button class="primary">Share link</button>
+  <div class="section">So far</div>
+  <div class="rows">
+    <div class="row"><span>Visits</span><span class="num">1,204</span></div>
+    <div class="row"><span>Clicks</span><span class="num">312</span></div>
+    <div class="row"><span>Pre-saves</span><span class="num">88</span></div>
+  </div>
+  <div class="fold"><span>Fan email page</span><span class="pending">›</span></div>
+  <div class="powered">Powered by Altlink</div>
+</div>
+
+<div class="frame" id="loading">
+  <div class="tag">State 3b · stats loading</div>
+  <div class="eyebrow"><span class="chip">LIVE</span>Pre-save</div>
+  <h1>Drops in 15 days.</h1>
+  <div class="meta">Fri 6 Nov · Midnight Lagos · Then streaming</div>
+  <div class="link"><span>altlink.co/tems-free-mind</span><button class="ghost">Copy</button></div>
+  <button class="primary">Share link</button>
+  <div class="section">So far</div>
+  <div class="rows">
+    <div class="row"><span>Visits</span><span class="skel"></span></div>
+    <div class="row"><span>Clicks</span><span class="skel"></span></div>
+    <div class="row"><span>Pre-saves</span><span class="skel"></span></div>
+  </div>
+  <div class="powered">Powered by Altlink</div>
+</div>
+
+<div class="frame" id="released">
+  <div class="tag">State 4 · released</div>
+  <div class="eyebrow"><span class="chip">OUT NOW</span>Smart link</div>
+  <h1>Out now. Same link.</h1>
+  <div class="link"><span>altlink.co/tems-free-mind</span><button class="ghost">Copy</button></div>
+  <button class="primary">Share link</button>
+  <div class="section">Stores</div>
+  <div class="rows">
+    <div class="row"><span><span class="tick">✓</span>Spotify</span><span class="pending">↗</span></div>
+    <div class="row"><span><span class="tick">✓</span>Apple Music</span><span class="pending">↗</span></div>
+    <div class="row"><span><span class="tick">✓</span>Audiomack</span><span class="pending">↗</span></div>
+    <div class="row pending"><span>Boomplay</span><span class="meta">Looking</span></div>
+  </div>
+  <div class="section">So far</div>
+  <div class="rows">
+    <div class="row"><span>Clicks</span><span class="num">2,840<small>CTR 31%</small></span></div>
+  </div>
+  <div class="section">Where fans click</div>
+  <div class="rows">
+    <div class="row"><span>Spotify</span><span class="num">52%</span></div>
+    <div class="row"><span>Apple Music</span><span class="num">28%</span></div>
+    <div class="row"><span>Audiomack</span><span class="num">20%</span></div>
+  </div>
+  <div class="fold"><span>Fan email page</span><span class="pending">›</span></div>
+  <div class="powered">Powered by Altlink</div>
+</div>
+
+<div class="frame" id="error">
+  <div class="tag">State 5 · error</div>
+  <div class="eyebrow">Pre-save</div>
+  <h1>Altlink didn’t answer.</h1>
+  <div class="meta">Nothing was created · your details are safe</div>
+  <button class="primary" style="margin-top:20px">Try again</button>
+  <div class="fold"><span>Fan email page</span><span class="pending">›</span></div>
+  <div class="powered">Powered by Altlink</div>
+</div>
+
+</body>
+</html>

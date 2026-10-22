@@ -12,7 +12,7 @@ import {
   Globe,
   Image as ImageIcon,
   ListChecks,
-  Mail,
+  Link2,
   Megaphone,
   MessageCircle,
   Newspaper,
@@ -32,6 +32,8 @@ import {
 import { ROLLOUT_MENU_FLAGS } from '@/lib/rollout-menu-flags';
 import { resolvePanelBody, type SceneName } from '@/lib/scene-cache';
 import { useCanViewSpend } from '@/stores/useSpendAccessStore';
+import { useReleaseStore } from '@/stores/useReleaseStore';
+import { isReleasedOn } from '@/lib/altlink/rules';
 import { useSceneOverlay } from './useSceneOverlay';
 
 /**
@@ -62,7 +64,8 @@ const ICONS: Record<ReleaseMenuKey, ComponentType<LucideProps>> = {
   coverart: ImageIcon,
   files: FolderOpen,
   share: Share2,
-  capture: Mail,
+  // The pre-save / smart link (with fan capture inside): a link.
+  capture: Link2,
   'change-artist': Users,
   archive: Archive,
 };
@@ -137,6 +140,11 @@ export function useRolloutMenuActions({
   // `resolvePanelBody` rather than `resolveActiveScene`, so a bare rollout (no
   // `?scene=`) lights Timeline: that is the view it is actually showing.
   const activeScene = resolvePanelBody(urlScene);
+  // The Promote row is "Pre-save link" until release day, "Smart link" after.
+  const releaseDate = useReleaseStore(
+    (state) => state.releases.find((release) => release.id === releaseId)?.releaseDate ?? null
+  );
+  const released = isReleasedOn(releaseDate, Date.now());
 
   const toggle = (scene: SceneName, id: string) => {
     if (activeScene === scene) {
@@ -152,6 +160,7 @@ export function useRolloutMenuActions({
     variant,
     flags: ROLLOUT_MENU_FLAGS,
     showSpend,
+    captureLabel: released ? 'Smart link' : 'Pre-save link',
     share,
     changeArtist,
     archive,

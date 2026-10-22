@@ -19791,3 +19791,15 @@ Curators teach UrgAns their terms once (`/curator/front-desk`); artists and mana
 - **Code:** `lib/front-desk/` (flag, server, answer, terms, text, digest-server, client, types), `components/front-desk/`, `app/api/front-desk/` (every handler gated on the flag plus an owner check; `privacy-guard.test.ts` scans for it).
 - **Tables (migration `20261018210000_curator_front_desk.sql`, additive, applied Oct 19):** `curator_desk_terms`, `pitch_desk_questions`, `pitch_desk_answers`; RLS on with no policies (server-only access).
 - **Flag:** on for every curator. `FRONT_DESK_ALL=false` (Vercel) is the off switch and falls back to the Flow Test account plus `FRONT_DESK_EMAILS`. Decided on the server from the signed-in email; the digest and public reads check the CURATOR's account the same way.
+
+## Altlink pre-save and smart links (2026-10-22, live, no new flag beyond NEXT_PUBLIC_FEATURE_ALTLINK which ships on)
+
+Altlink Partner API v2 pilot. Full record in `BUILD-NOTES-ALTLINK.md` (PM, design, engineering, QA, growth sign-offs). The rollout menu's Promote row "Pre-save link" (from release day "Smart link") reuses the old fan-capture scene key `?scene=capture` and renders `SmartLinkSection`: the Altlink link leads, the fan email page (`CaptureSection embedded`) sits in a fold under it. Fan capture is re-enabled for this view only through `CAPTURE || ALTLINK !== 'false'` (cut-features.json still forces NEXT_PUBLIC_FEATURE_CAPTURE=false).
+
+- **One entry point, `syncSmartLink` (`lib/altlink/server.ts`).** Every trigger calls it after the reply: Metadata save, TRM webhook bringing a UPC/ISRC, cover art upload, opening the view, admin backfill (`/api/admin/altlink-backfill`, GET dry run). The rule for when a link is made is `decideCreate` in `lib/altlink/rules.ts`: a UPC or ISRC, a real title, an artist, a release date; never test or archived. A past date makes a normal smart link.
+- **Idempotent by a claim row**: `release_smart_links.release_id` is unique and a `pending` row is inserted before Altlink is called. 422 `missing_identifier` = not ready (claim deleted). Other errors = `failed`, retried only by Try again or new facts.
+- **creator_email**: TRM `distribution_submissions.artist_email`, else the rollout owner's `profiles.email`.
+- **Webhook** `POST /api/webhooks/altlink`: HMAC of `"<t>." + raw body` (`lib/altlink/signature.ts`, server only; never import it from a client file), 5 minute window, `altlink_webhook_events.event_id` dedupe. 404 while `ALTLINK_WEBHOOK_SECRET` is unset.
+- **Old `/capture/<token>`** links 307 to the Altlink link once it exists. Capture tables and emails are never deleted.
+- **Not shown on purpose:** claim_url (stored), "View full analytics on Altlink", any Create tap.
+- Migration `20261022120000_altlink_smart_links.sql`, applied to production Oct 22, 2026 (additive; RLS team read; webhook table service-role only).

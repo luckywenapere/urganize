@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import { createAdminClient } from '@/app/api/_shared/auth';
+import { isAltlinkEnabled } from '@/lib/altlink/rules';
+import { loadLiveSmartLinkUrl } from '@/lib/altlink/server';
 import { loadPublicCapturePage } from '@/lib/capture-server';
 import { CaptureLeadForm } from '@/components/capture/CaptureLeadForm';
 
@@ -53,6 +56,16 @@ export default async function PublicCapturePage({ params }: PageProps) {
   const { token } = await params;
   const page = await loadPublicCapturePage(token);
   if (!page) notFound();
+
+  // Once the rollout has its Altlink pre-save / smart link, an old fan page
+  // link sends fans there instead (307, so it can change back). Emails already
+  // collected are untouched; the manager still sees them in the Pre-save view.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const admin = isAltlinkEnabled() && supabaseUrl ? createAdminClient(supabaseUrl) : null;
+  if (admin) {
+    const altlinkUrl = await loadLiveSmartLinkUrl(admin, page.releaseId);
+    if (altlinkUrl) redirect(altlinkUrl);
+  }
 
   const heading = page.headline || page.releaseTitle || 'Get the link';
 

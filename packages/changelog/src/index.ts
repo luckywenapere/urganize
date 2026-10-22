@@ -41,6 +41,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.163.0",
+    title: "Pre-save links that make themselves",
+    tag: "Rollouts",
+    date: "October 22, 2026",
+    highlights: [
+      "Once your rollout has a UPC or ISRC, Urganize makes its pre-save link for you. No button to press.",
+      "Share it in one tap, and see visits, clicks and pre-saves as they come in.",
+      "On release day the same link turns into a smart link that sends fans to every store.",
+    ],
+  },
+  {
     version: "1.162.18",
     tag: "App",
     date: "October 21, 2026",

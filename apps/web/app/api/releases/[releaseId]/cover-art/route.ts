@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { afterResponse } from '@/lib/after-response';
+import { syncSmartLinkQuietly } from '@/lib/altlink/server';
 import {
   ASSETS_TABLE,
   COVER_ART_CATEGORY,
@@ -295,6 +297,10 @@ export async function POST(
     ASSET_SIGNED_URL_TTL_SECONDS
   );
 
+  // A new cover goes onto the rollout's Altlink link quietly (or makes it).
+  if (process.env.NEXT_PUBLIC_FEATURE_ALTLINK !== 'false') {
+    afterResponse('altlink-cover-art', () => syncSmartLinkQuietly(adminClient, releaseId, auth.user.id));
+  }
   return NextResponse.json(
     { coverArt: toReleaseCoverArt(newAssetRow, downloadUrl) },
     { status: 201 }

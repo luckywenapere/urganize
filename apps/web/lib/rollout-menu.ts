@@ -86,6 +86,9 @@ export type RolloutMenuInput = {
    * leads to a refusal.
    */
   showSpend?: boolean;
+  /** The Promote row's words: "Pre-save link" until release day, "Smart link"
+   *  after (Altlink pilot, Oct 2026: one entry with fan capture). */
+  captureLabel?: string;
 };
 
 /** What pressing a row does. A `scene` swaps the panel body and toggles closed
@@ -178,7 +181,7 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     input.showSpend && !SPEND_CUT ? scene('spend', 'Track spend') : null,
     flags.notes ? note : null,
     input.share ? dialog('share', input.share) : null,
-    flags.capture ? scene('capture', 'Collect fan emails') : null,
+    flags.capture ? scene('capture', input.captureLabel ?? 'Pre-save link') : null,
     input.changeArtist ? dialog('change-artist', input.changeArtist) : null,
     input.archive ? dialog('archive', input.archive) : null,
   ];
