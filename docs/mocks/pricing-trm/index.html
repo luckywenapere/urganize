@@ -1,0 +1,527 @@
+<title>Pricing and TRM Mocks</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a review page in the app's own skin. A sticky tab row for the four mocks (a-d), each mock drawn as the screen it will be. */
+:root{
+  --bg:#f5f0e6; --surface:#faf5ec; --raised:#ffffff; --fg:#1a1611; --muted:#4b4740; --faint:#6a665f;
+  --line:rgba(26,22,17,.10); --control:#7f7a73; --brand:#14643a; --brand-ink:#f5f0e6; --brand-soft:rgba(20,100,58,.10);
+  --warn:#7e480a; --warn-soft:rgba(126,72,10,.10); --bad:#961a1a; --good:#14643a;
+  --display:"Young Serif", Georgia, serif; --body:"Instrument Sans", system-ui, -apple-system, Segoe UI, sans-serif;
+  --mono:ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d120e; --surface:#181d19; --raised:#1f2520; --fg:#f5f0e6; --muted:#a1a098; --faint:#878881;
+  --line:rgba(245,240,230,.09); --control:#6e6f69; --brand:#7fd99a; --brand-ink:#0d120e; --brand-soft:rgba(127,217,154,.12);
+  --warn:#f0b95c; --warn-soft:rgba(240,185,92,.12); --bad:#fa8a8a; --good:#7fd99a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d120e; --surface:#181d19; --raised:#1f2520; --fg:#f5f0e6; --muted:#a1a098; --faint:#878881;
+  --line:rgba(245,240,230,.09); --control:#6e6f69; --brand:#7fd99a; --brand-ink:#0d120e; --brand-soft:rgba(127,217,154,.12);
+  --warn:#f0b95c; --warn-soft:rgba(240,185,92,.12); --bad:#fa8a8a; --good:#7fd99a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+.wrap{max-width:1180px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);font-weight:400;text-wrap:balance;margin:0}
+h1{font-size:34px;line-height:1.15}
+h2{font-size:26px}
+h3{font-size:19px}
+p{margin:0}
+.muted{color:var(--muted)} .faint{color:var(--faint)}
+.num{font-variant-numeric:tabular-nums}
+header.top{padding-block:28px 12px;display:grid;gap:8px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:600}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);
+  display:flex;gap:4px;overflow-x:auto;padding-block:10px;margin-bottom:24px}
+nav.tabs button{font:inherit;font-weight:600;font-size:14px;border:1px solid var(--line);background:var(--surface);color:var(--muted);
+  border-radius:999px;padding:8px 14px;white-space:nowrap;cursor:pointer;min-height:40px}
+nav.tabs button[aria-selected="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+section.view{display:grid;gap:22px}
+.note{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:16px 18px;display:grid;gap:10px}
+.note ol,.note ul{margin:0;padding-left:20px;display:grid;gap:8px}
+.note b{font-weight:600}
+.flag{border-left:3px solid var(--warn);background:var(--warn-soft)}
+.caption{font-size:13px;color:var(--faint)}
+.screen{border:1px solid var(--line);border-radius:18px;background:var(--surface);overflow:hidden}
+.screen-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);font-size:12px;color:var(--faint)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.screen-body{padding:24px}
+/* segmented period control */
+.seg{display:inline-flex;gap:4px;padding:4px;border-radius:999px;background:var(--bg);border:1px solid var(--line);flex-wrap:wrap}
+.seg button{font:inherit;font-size:14px;font-weight:600;border:0;background:transparent;color:var(--muted);border-radius:999px;padding:8px 14px;cursor:pointer;min-height:40px;display:inline-flex;gap:6px;align-items:center}
+.seg button[aria-pressed="true"]{background:var(--raised);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.seg .tag{font-size:11px;font-weight:600;color:var(--brand);background:var(--brand-soft);border-radius:999px;padding:2px 7px}
+.cards{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.card{border:1px solid var(--line);border-radius:16px;background:var(--raised);padding:20px;display:grid;gap:14px;align-content:start;min-width:0}
+.card h3{font-size:22px}
+.price{font-family:var(--display);font-size:30px;line-height:1}
+.price small{font-family:var(--body);font-size:14px;color:var(--muted)}
+.save{font-size:13px;color:var(--good);font-weight:600;min-height:20px}
+.cta{display:inline-flex;justify-content:center;align-items:center;min-height:44px;border-radius:999px;background:var(--brand);color:var(--brand-ink);font-weight:600;border:0;font:inherit;font-weight:600;cursor:pointer;padding:0 18px;text-decoration:none}
+.cta.ghost{background:transparent;color:var(--fg);border:1px solid var(--control)}
+ul.lines{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:14px}
+ul.lines li{display:flex;gap:8px;align-items:flex-start}
+ul.lines li::before{content:"";flex:none;width:16px;height:16px;margin-top:2px;border-radius:50%;background:var(--brand-soft);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='8'/%3E%3C/svg%3E");}
+ul.lines li.tick::before{background:var(--brand)}
+ul.lines li.off{color:var(--faint)}
+ul.lines li.off::before{background:var(--line)}
+ul.lines li.hl{font-weight:600}
+.switchrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.toggle{position:relative;width:40px;height:24px;flex:none}
+.toggle input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.toggle span{position:absolute;inset:0;border-radius:999px;background:var(--line);border:1px solid var(--control);transition:background .15s}
+.toggle span::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--fg);transition:transform .15s}
+.toggle input:checked+span{background:var(--brand)}
+.toggle input:checked+span::after{transform:translateX(16px);background:var(--brand-ink)}
+.two{display:grid;gap:18px;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
+.three{display:grid;gap:18px;grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:900px){.two,.three{grid-template-columns:minmax(0,1fr)}}
+.phone{max-width:390px;width:100%;margin:0 auto;border:1px solid var(--line);border-radius:28px;background:var(--bg);overflow:hidden}
+.phone .pbody{padding:20px 16px;display:grid;gap:14px}
+.radio{border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;grid-template-columns:20px 1fr auto;gap:10px;align-items:center;background:var(--raised);cursor:pointer}
+.radio .ring{width:18px;height:18px;border-radius:50%;border:2px solid var(--control)}
+.radio.on{border-color:var(--brand);background:var(--brand-soft)}
+.radio.on .ring{border:5px solid var(--brand)}
+.radio .rp{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+.youget{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:4px;font-size:14px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.pill.good{color:var(--good);background:var(--brand-soft)}
+.pill.warn{color:var(--warn);background:var(--warn-soft)}
+.pill.plain{color:var(--muted);background:var(--line)}
+.panel{border:1px solid var(--line);border-radius:16px;background:var(--raised);padding:18px;display:grid;gap:12px}
+.lock{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--warn-soft);color:var(--warn)}
+.okbox{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--brand-soft);color:var(--good)}
+.row{display:flex;gap:12px;align-items:flex-start}
+.row>div{min-width:0}
+.checklist{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:14px}
+.checklist li{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding-bottom:8px}
+.sheet{border:1px solid var(--line);border-radius:18px 18px 0 0;background:var(--raised);padding:18px;display:grid;gap:12px}
+.sum{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:14px;font-variant-numeric:tabular-nums}
+.sum .t{font-weight:700;border-top:1px solid var(--line);padding-top:8px}
+.tiles{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:900px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{border:1px solid var(--line);border-radius:14px;background:var(--raised);padding:14px;display:grid;gap:4px;min-width:0}
+.tile .k{font-size:12px;color:var(--faint);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.tile .v{font-family:var(--display);font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile .s{font-size:13px;color:var(--muted)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--raised)}
+table{border-collapse:collapse;width:100%;min-width:980px;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{padding:10px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2),th:nth-child(3),td:nth-child(3),th:nth-child(4),td:nth-child(4){text-align:left}
+th{font-size:12px;color:var(--faint);font-weight:600;background:var(--surface)}
+tfoot td{font-weight:700;background:var(--surface)}
+td .sub{display:block;font-size:12px;color:var(--faint);font-weight:400}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:13px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;background:var(--raised);color:var(--muted)}
+.chip.on{border-color:var(--fg);color:var(--fg);font-weight:600}
+pre{margin:0;overflow-x:auto;background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:14px;font-family:var(--mono);font-size:12.5px;line-height:1.55;color:var(--fg)}
+.steps{display:grid;gap:14px;counter-reset:s}
+.step{display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;align-items:start}
+.step::before{counter-increment:s;content:counter(s);width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--brand-soft);color:var(--good);font-weight:700;font-size:14px}
+.step>div{display:grid;gap:8px;min-width:0}
+.rb{font-size:13px;color:var(--muted)}
+.rb b{color:var(--fg)}
+.kv{display:grid;grid-template-columns:minmax(0,max-content) minmax(0,1fr);gap:6px 16px;font-size:14px}
+.kv code,code{font-family:var(--mono);font-size:12.5px;background:var(--line);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <span class="eyebrow">For your yes before any code · Oct 22, 2026</span>
+  <h1>New prices and the TRM fee</h1>
+  <p class="muted">Four mocks: the prices, the distribution unlock, the admin margin view and the database change. Nothing here is built or live.</p>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Mocks">
+  <button role="tab" id="t-read" aria-controls="read" aria-selected="true">Read first</button>
+  <button role="tab" id="t-a" aria-controls="a" aria-selected="false">a. Prices</button>
+  <button role="tab" id="t-b" aria-controls="b" aria-selected="false">b. Distribution unlock</button>
+  <button role="tab" id="t-c" aria-controls="c" aria-selected="false">c. Admin margin</button>
+  <button role="tab" id="t-d" aria-controls="d" aria-selected="false">d. Migration plan</button>
+</nav>
+
+<!-- READ FIRST -->
+<section class="view" id="read" role="tabpanel" aria-labelledby="t-read">
+  <div class="note">
+    <h2>What I found in the code and the live database</h2>
+    <ol>
+      <li><b>Manager is ₦30,000/month</b>, as you said. One constant.</li>
+      <li><b>Solo is ₦7,500 live, not ₦8,000.</b> Solo changes are out of scope, so the mocks keep ₦7,500. Say if you want ₦8,000.</li>
+      <li><b>Label is ₦60,000 live, not ₦80,000.</b> It goes to ₦100,000. The ₦80,000 figures in the code are the old legacy plans, which nothing sells now.</li>
+      <li><b>Nobody pays today.</b> 0 active subscriptions; one cancelled annual row at ₦800,000 from September. Grandfathering protects future price changes but keeps nobody's price today.</li>
+      <li><b>6 months and yearly cost the same per month.</b> 5 for 6 and 10 for 12 are both 1/6 off (Manager works out at ₦25,000/month either way). Expect most people to pick 6 months. If you want yearly to win, make it 9 months' price.</li>
+    </ol>
+  </div>
+  <div class="note flag">
+    <h2>Things this depends on</h2>
+    <ol>
+      <li><b>The two earlier prompts are not built.</b> No self-serve checkout changes, no "Distribution included" entitlement, no <code>trm_partner_ledger</code>, no <code>acquisition_path</code>. Today a TRM send uses the artist's own TRM plan. This plan builds those pieces on today's code.</li>
+      <li><b>TRM has no endpoint to open an account.</b> So "register the team on TRM after payment" is a ledger entry plus a step you or TRM do by hand, until TRM gives us a way. It is the third question in TRM-REQUIREMENTS.md.</li>
+      <li><b>Switching monthly to 6 months is new.</b> Today a plan change refuses a change of period. Mock b shows: pay now, the days left on this month come off.</li>
+      <li><b>Payments do not record card or transfer today,</b> and the payments table behind the margin view only fills while referrals are switched on. Both change in this plan.</li>
+    </ol>
+  </div>
+  <div class="note">
+    <h2>The numbers, worked once</h2>
+    <div class="tablewrap"><table style="min-width:720px">
+      <thead><tr><th>Plan</th><th>Monthly</th><th>6 months</th><th>Yearly</th><th>TRM owed a month</th><th>TRM, 6 months</th><th>TRM, upfront</th></tr></thead>
+      <tbody>
+        <tr><td>Solo</td><td></td><td></td><td></td><td>₦0, no distribution</td><td>₦0</td><td>₦0</td></tr>
+        <tr><td>Manager</td><td>₦30,000</td><td>₦150,000</td><td>₦300,000</td><td>₦1,675.00</td><td>₦10,050.00</td><td>₦20,100.00</td></tr>
+        <tr><td>Label</td><td>₦100,000</td><td>₦500,000</td><td>₦1,000,000</td><td>₦8,416.67</td><td>₦50,500.00</td><td>₦101,000.00</td></tr>
+      </tbody>
+    </table></div>
+    <p class="caption">Solo stays at ₦7,500, ₦37,500 and ₦75,000. TRM fees: Single Artist ₦20,100 a year for Manager, Label ₦101,000 a year for Label. Monthly rounding is to the nearest kobo, so 12 months of Label adds 4 kobo over the list price.</p>
+  </div>
+</section>
+
+<!-- A: PRICES -->
+<section class="view" id="a" role="tabpanel" aria-labelledby="t-a" hidden>
+  <div class="toolbar">
+    <div class="seg" role="group" aria-label="Billing period">
+      <button type="button" data-period="m" aria-pressed="true">Monthly</button>
+      <button type="button" data-period="h" aria-pressed="false">6 months <span class="tag">1 month free</span></button>
+      <button type="button" data-period="y" aria-pressed="false">Yearly <span class="tag">2 months free</span></button>
+    </div>
+    <label class="switchrow" for="prepayA"><span class="toggle"><input type="checkbox" id="prepayA"><span></span></span>Preview with DISTRIBUTION_REQUIRES_PREPAY on</label>
+  </div>
+
+  <div class="screen">
+    <div class="screen-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span>urganize.app/pricing</span></div>
+    <div class="screen-body" style="display:grid;gap:18px">
+      <div style="display:grid;gap:6px;text-align:center;justify-items:center">
+        <h2 style="font-size:32px">Pick a plan for your team</h2>
+        <p class="muted">One price covers the whole team.</p>
+      </div>
+      <div class="cards" id="mkCards"></div>
+      <p class="caption" style="text-align:center" id="mkFoot">You can pay monthly, every 6 months or once a year.</p>
+    </div>
+  </div>
+  <p class="caption">Marketing pricing page. The period switch reprices all cards; the saving shows as months free and naira saved. Group stays "Let's talk".</p>
+
+  <div class="two">
+    <div class="phone" aria-label="In-app plan picker, phone">
+      <div class="screen-bar"><span>app.urganize.app/locked</span></div>
+      <div class="pbody">
+        <div style="display:grid;gap:4px"><h3 style="font-size:24px">Choose your plan</h3><p class="muted" style="font-size:14px">Your team keeps everything it made.</p></div>
+        <div class="seg" role="group" aria-label="Period in app" id="appSeg" style="width:100%;justify-content:space-between">
+          <button type="button" data-period="m" aria-pressed="false">Monthly</button>
+          <button type="button" data-period="h" aria-pressed="true">6 months</button>
+          <button type="button" data-period="y" aria-pressed="false">Yearly</button>
+        </div>
+        <div id="appRadios" style="display:grid;gap:8px"></div>
+        <div class="youget" id="appYouGet"></div>
+        <button class="cta" type="button" id="appPay">Pay ₦150,000</button>
+        <p class="caption" style="text-align:center">Paid with Paystack. Card or bank transfer.</p>
+      </div>
+    </div>
+    <div class="note" style="align-self:start">
+      <h3>What changes in the app</h3>
+      <ul>
+        <li>Three periods on the wall, the picker and checkout. A period whose Paystack plan code is missing is hidden.</li>
+        <li>"You get" line under the plans names the plan, the period, what is charged today and when it renews.</li>
+        <li>Manager and Label say "Distribution included". Solo says nothing about distribution.</li>
+        <li>Upgrade prompts and receipt emails read the same pricing package, so no ₦ figure is typed by hand anywhere.</li>
+        <li>Opening the wall logs <code>plan_price_viewed</code>; changing period logs <code>checkout_period_selected</code>. Both carry <code>acquisition_path</code>.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- B: DISTRIBUTION UNLOCK -->
+<section class="view" id="b" role="tabpanel" aria-labelledby="t-b" hidden>
+  <p class="muted">The rollout's Distribute step with DISTRIBUTION_REQUIRES_PREPAY on. Three teams, three answers.</p>
+  <div class="three">
+    <div class="screen">
+      <div class="screen-bar"><span>Manager · Monthly</span></div>
+      <div class="screen-body" style="display:grid;gap:14px">
+        <h3>Distribute</h3>
+        <div class="panel">
+          <div class="row"><div class="lock" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+            <div style="display:grid;gap:4px"><b>Distribution comes with 6-month and yearly plans</b><span class="muted" style="font-size:14px">Your rollout and its checks are saved.</span></div></div>
+          <button class="cta" type="button" data-open-sheet>Switch to 6 months</button>
+          <span class="save" style="text-align:center">₦150,000 every 6 months. You save ₦30,000.</span>
+          <button class="cta ghost" type="button">Pay yearly instead · save ₦60,000</button>
+        </div>
+      </div>
+    </div>
+    <div class="screen">
+      <div class="screen-bar"><span>Solo · any period</span></div>
+      <div class="screen-body" style="display:grid;gap:14px">
+        <h3>Distribute</h3>
+        <div class="panel">
+          <div class="row"><div class="lock" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+            <div style="display:grid;gap:4px"><b>Distribution comes with Manager and Label</b><span class="muted" style="font-size:14px">Or send it with your own TRM plan.</span></div></div>
+          <button class="cta" type="button">See plans</button>
+          <button class="cta ghost" type="button">Use my own TRM plan</button>
+        </div>
+        <p class="caption">Solo is never entitled, flag on or off. The own-plan path is today's Send to TRM.</p>
+      </div>
+    </div>
+    <div class="screen">
+      <div class="screen-bar"><span>Manager · 6 months</span></div>
+      <div class="screen-body" style="display:grid;gap:14px">
+        <h3>Distribute</h3>
+        <div class="panel">
+          <div class="row"><div class="okbox" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5L19 7"/></svg></div>
+            <div style="display:grid;gap:4px"><b>Distribution included</b><span class="muted" style="font-size:14px">On your plan until Apr 22, 2027.</span></div></div>
+          <ul class="checklist">
+            <li><span>Release date</span><span class="pill good">Done</span></li>
+            <li><span>Song and cover art</span><span class="pill good">Done</span></li>
+            <li><span>Credits and splits</span><span class="pill warn">1 to fix</span></li>
+          </ul>
+          <button class="cta" type="button">Send to TRM</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="two">
+    <div class="phone" aria-label="Switch to 6 months sheet">
+      <div class="screen-bar"><span>After tapping Switch to 6 months</span></div>
+      <div class="pbody" style="padding:0">
+        <div style="height:120px;background:var(--line)"></div>
+        <div class="sheet">
+          <h3>Switch to 6 months</h3>
+          <div class="sum">
+            <span>Manager, 6 months</span><span>₦150,000</span>
+            <span class="muted">Days left on this month (19 of 30)</span><span class="muted">−₦19,000</span>
+            <span class="t">You pay today</span><span class="t">₦131,000</span>
+          </div>
+          <p class="muted" style="font-size:14px">Your 6 months start today and renew on Apr 22, 2027 at ₦150,000. Distribution unlocks once the payment goes through.</p>
+          <button class="cta" type="button">Pay ₦131,000</button>
+          <button class="cta ghost" type="button">Not now</button>
+        </div>
+      </div>
+    </div>
+    <div class="note" style="align-self:start">
+      <h3>Rules behind these screens</h3>
+      <ul>
+        <li>Flag off (the default): Manager and Label get distribution on any period, monthly included.</li>
+        <li>Flag on: only 6-month and yearly Manager or Label teams get it.</li>
+        <li>A team is registered on TRM only after a payment goes through, never at checkout start.</li>
+        <li>Lapse is unchanged: grace period, then no new sends, and releases already live stay live.</li>
+        <li>The switch takes off the unused days of the current month (example shows 19 days left). Showing it logs <code>prepay_upsell_shown</code>; paying logs <code>prepay_upsell_accepted</code>.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- C: ADMIN MARGIN -->
+<section class="view" id="c" role="tabpanel" aria-labelledby="t-c" hidden>
+  <div class="screen">
+    <div class="screen-bar"><span>app.urganize.app/admin/billing</span></div>
+    <div class="screen-body" style="display:grid;gap:18px">
+      <div class="toolbar">
+        <div style="display:grid;gap:2px"><h2>Billing</h2><span class="muted" style="font-size:14px">October 2026 · our own accounts left out</span></div>
+        <div class="chips"><span class="chip on">This month</span><span class="chip">Last month</span><span class="chip">Export TRM CSV</span></div>
+      </div>
+      <div class="tiles">
+        <div class="tile"><span class="k">Paying teams</span><span class="v">6</span><span class="s">2 on 6 months or yearly</span></div>
+        <div class="tile"><span class="k">MRR</span><span class="v">₦270,833</span><span class="s">Prepaid plans spread per month</span></div>
+        <div class="tile"><span class="k">Contribution per team</span><span class="v">₦37,002</span><span class="s">82.0% of cash</span></div>
+        <div class="tile"><span class="k">Break-even</span><span class="v">41 teams</span><span class="s">At ₦1,500,000 fixed costs a month</span></div>
+      </div>
+      <div class="switchrow"><span class="pill plain">TRM: fixed fee, monthly pro-rata</span><span class="pill plain">Credit cost ₦6.84</span><span class="pill warn">Example rows. No team pays today.</span></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Team</th><th>Plan</th><th>Period</th><th>Paid by</th><th>Cash a month</th><th>Paystack fee</th><th>TRM owed</th><th>Credits used</th><th>Contribution</th><th>%</th></tr></thead>
+        <tbody>
+          <tr><td>Northline Music</td><td>Label</td><td>Monthly</td><td>Card</td><td>₦100,000.00</td><td>₦1,600.00</td><td>₦8,416.67</td><td>₦7,660.80<span class="sub">1,120 credits</span></td><td>₦82,322.53</td><td>82.3%</td></tr>
+          <tr><td>Lagos Sound Collective</td><td>Label</td><td>Yearly</td><td>Direct transfer</td><td>₦83,333.33<span class="sub">paid ₦1,000,000</span></td><td>₦0.00</td><td>₦8,416.67</td><td>₦6,156.00<span class="sub">900 credits</span></td><td>₦68,760.66</td><td>82.5%</td></tr>
+          <tr><td>Kemi Wale Mgmt</td><td>Manager</td><td>Monthly</td><td>Card</td><td>₦30,000.00</td><td>₦550.00</td><td>₦1,675.00</td><td>₦4,377.60<span class="sub">640 credits</span></td><td>₦23,397.40</td><td>78.0%</td></tr>
+          <tr><td>Ayo &amp; Co</td><td>Manager</td><td>6 months</td><td>Transfer</td><td>₦25,000.00<span class="sub">paid ₦150,000</span></td><td>₦50.00</td><td>₦1,675.00</td><td>₦2,804.40<span class="sub">410 credits</span></td><td>₦20,470.60</td><td>81.9%</td></tr>
+          <tr><td>Emeka Mgmt <span class="pill plain">Old price</span></td><td>Manager</td><td>Monthly</td><td>Card</td><td>₦25,000.00</td><td>₦475.00</td><td>₦1,675.00</td><td>₦2,052.00<span class="sub">300 credits</span></td><td>₦20,798.00</td><td>83.2%</td></tr>
+          <tr><td>Dorian</td><td>Solo</td><td>Monthly</td><td>Card</td><td>₦7,500.00</td><td>₦212.50</td><td>₦0.00</td><td>₦1,026.00<span class="sub">150 credits</span></td><td>₦6,261.50</td><td>83.5%</td></tr>
+        </tbody>
+        <tfoot><tr><td>6 teams</td><td></td><td></td><td></td><td>₦270,833.33</td><td>₦2,887.50</td><td>₦21,858.34</td><td>₦24,076.80</td><td>₦222,010.69</td><td>82.0%</td></tr></tfoot>
+      </table></div>
+    </div>
+  </div>
+  <div class="note">
+    <h3>How each column is worked out</h3>
+    <ul>
+      <li><b>Cash a month:</b> what the team paid, divided by the months it covers. MRR is the sum.</li>
+      <li><b>Paystack fee (estimate):</b> card 1.5% + ₦100, the ₦100 waived under ₦2,500, capped at ₦2,000. Transfer to a dedicated account 1% capped at ₦300. Direct transfer to our bank ₦0. Spread over the months paid for.</li>
+      <li><b>TRM owed:</b> from the ledger for this month. Basis and mode come from env, so the same page shows percent or upfront if you switch.</li>
+      <li><b>Credits used:</b> credits spent this month × CREDIT_COST_KOBO (₦6.84). Spend, not allowance.</li>
+      <li><b>Break-even:</b> FIXED_COSTS_MONTHLY_KOBO ÷ contribution per team. The ₦1,500,000 here is a placeholder until you set it.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- D: MIGRATION -->
+<section class="view" id="d" role="tabpanel" aria-labelledby="t-d" hidden>
+  <div class="note">
+    <h2>One migration, additive only</h2>
+    <p class="muted">File <code>supabase/migrations/20261022130000_pricing_v3_trm_fee.sql</code>. Applied after your yes, with a backup first. Code ships before it and reads every new column carefully, so either order is safe.</p>
+  </div>
+  <div class="steps">
+    <div class="step"><div>
+      <h3>Back up</h3>
+      <pre>create table public.subscriptions_backup_20261022 as select * from public.subscriptions;
+create table public.subscription_charges_backup_20261022 as select * from public.subscription_charges;</pre>
+      <p class="rb"><b>Rollback:</b> nothing to undo. Drop the two backups after 30 days.</p>
+    </div></div>
+    <div class="step"><div>
+      <h3>Subscriptions: lock the price, allow 6 months</h3>
+      <pre>alter table public.subscriptions
+  add column if not exists price_locked_kobo bigint null,
+  add column if not exists plan_version text null;
+-- widen, never narrow: monthly and annual stay valid
+alter table public.subscriptions drop constraint if exists subscriptions_billing_interval_check;
+alter table public.subscriptions add constraint subscriptions_billing_interval_check
+  check (billing_interval is null or billing_interval in ('monthly','six_month','annual'));
+-- same widening for pending_billing_interval
+-- fill the new columns on existing rows only where empty
+update public.subscriptions set price_locked_kobo = amount, plan_version = 'legacy'
+  where price_locked_kobo is null;</pre>
+      <p class="rb"><b>Rollback:</b> drop the two columns. Put the old check back only if <code>select count(*) from subscriptions where billing_interval = 'six_month'</code> is 0; otherwise those rows need a decision first.</p>
+    </div></div>
+    <div class="step"><div>
+      <h3>Payments: record how each one was paid</h3>
+      <pre>alter table public.subscription_charges
+  add column if not exists payment_channel text null
+    check (payment_channel is null or payment_channel in ('card','transfer','direct_transfer')),
+  add column if not exists billing_interval text null,
+  add column if not exists plan_version text null,
+  add column if not exists acquisition_path text null;</pre>
+      <p class="rb"><b>Rollback:</b> drop the four columns. Old rows stay empty in them; the margin view shows "Unknown" for those.</p>
+    </div></div>
+    <div class="step"><div>
+      <h3>New table: what we owe TRM</h3>
+      <pre>create table if not exists public.trm_partner_ledger (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid null references public.workspaces(id) on delete set null,
+  charge_reference text not null,          -- the Paystack reference it came from
+  entry_kind text not null default 'period' check (entry_kind in ('period','upfront','adjustment')),
+  plan text not null check (plan in ('manager','label')),
+  trm_plan text not null check (trm_plan in ('single_artist','label')),
+  cost_basis text not null check (cost_basis in ('fixed','percent')),
+  billing_mode text not null check (billing_mode in ('monthly_prorata','annual_upfront')),
+  fee_annual_kobo bigint null,
+  revenue_share_bps integer null,
+  service_months integer not null check (service_months between 1 and 12),
+  amount_paid_kobo bigint not null,
+  owed_kobo bigint not null check (owed_kobo >= 0),
+  period_start timestamptz not null,
+  period_end timestamptz not null,
+  exported_at timestamptz null,
+  created_at timestamptz not null default now(),
+  unique (charge_reference, entry_kind)    -- a redelivered webhook writes nothing twice
+);
+alter table public.trm_partner_ledger enable row level security;  -- no policies: server only</pre>
+      <p class="rb"><b>Rollback:</b> <code>drop table public.trm_partner_ledger</code>. Export it to CSV first if it has rows; that is what we owe TRM.</p>
+    </div></div>
+    <div class="step"><div>
+      <h3>Teams: when they were registered on TRM</h3>
+      <pre>alter table public.workspaces
+  add column if not exists trm_registered_at timestamptz null,
+  add column if not exists trm_plan text null check (trm_plan is null or trm_plan in ('single_artist','label'));
+-- extend prevent_workspace_billing_self_update to both columns,
+-- so an owner cannot set them from the browser</pre>
+      <p class="rb"><b>Rollback:</b> drop the two columns and restore the previous trigger function body (kept in the file as a comment).</p>
+    </div></div>
+  </div>
+
+  <div class="two">
+    <div class="note">
+      <h3>Order of work</h3>
+      <ol>
+        <li>Code ships with every new column read carefully. Nothing changes for anyone yet.</li>
+        <li>Your yes, backup, migration applied.</li>
+        <li>Your yes, then 7 Paystack plans minted: Solo 6 months; Manager monthly, 6 months, yearly; Label monthly, 6 months, yearly.</li>
+        <li>Env vars set in Vercel, then one redeploy. New prices go live here.</li>
+        <li>Old Paystack plans deactivated, never deleted, so anyone on them keeps renewing.</li>
+      </ol>
+    </div>
+    <div class="note">
+      <h3>Env vars you set in Vercel</h3>
+      <div class="kv">
+        <code>PAYSTACK_PLAN_{SOLO,MANAGER,LABEL}_{1M,6M,12M}_NGN</code><span>9 codes, new names so a missing one hides that period instead of charging an old plan. Solo 1M and 12M take today's codes.</span>
+        <code>TRM_COST_BASIS</code><span>fixed</span>
+        <code>TRM_FEE_MANAGER_ANNUAL_KOBO</code><span>2010000</span>
+        <code>TRM_FEE_LABEL_ANNUAL_KOBO</code><span>10100000</span>
+        <code>TRM_BILLING_MODE</code><span>monthly_prorata</span>
+        <code>TRM_REVENUE_SHARE_PCT</code><span>only read when basis is percent</span>
+        <code>DISTRIBUTION_REQUIRES_PREPAY</code><span>false</span>
+        <code>CREDIT_COST_KOBO</code><span>684</span>
+        <code>FIXED_COSTS_MONTHLY_KOBO</code><span>your monthly fixed costs</span>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
+<script>
+(function(){
+  var tabs=[].slice.call(document.querySelectorAll('[role=tab]'));
+  function show(id){tabs.forEach(function(t){var on=t.getAttribute('aria-controls')===id;t.setAttribute('aria-selected',on);document.getElementById(t.getAttribute('aria-controls')).hidden=!on;});}
+  tabs.forEach(function(t){t.addEventListener('click',function(){show(t.getAttribute('aria-controls'));});});
+  var h=(location.hash||'').slice(1); if(['read','a','b','c','d'].indexOf(h)>-1) show(h);
+
+  var M={solo:7500,manager:30000,label:100000};
+  var mult={m:1,h:5,y:10}, months={m:1,h:6,y:12}, word={m:'month',h:'6 months',y:'year'};
+  function ng(n){return '₦'+n.toLocaleString('en-NG');}
+  var tiers=[
+    {id:'solo',name:'Solo',aud:'For an artist and their manager.',lines:['1 artist','2 people on your team','1 release at a time','150 UrgAns credits a month'],dist:false},
+    {id:'manager',name:'Manager',aud:'For a manager running more than one artist.',lines:['Up to 3 artists','5 people on your team','3 releases at a time','660 UrgAns credits a month'],dist:true},
+    {id:'label',name:'Label',aud:'For small labels and management teams.',lines:['Unlimited artists','Unlimited team members','Unlimited releases at a time','1,500 UrgAns credits a month','We set your roster up with you','WhatsApp support, answered same day'],dist:true},
+    {id:'enterprise',name:'Group',aud:'For distributors and multi-label groups.',lines:['Everything in Label','A price agreed with you','Pay by invoice or bank transfer'],dist:true}
+  ];
+  var period='m', appPeriod='h', appTier='manager';
+  var prepay=document.getElementById('prepayA');
+  function distLine(t,p){
+    if(!t.dist) return '<li class="off">No distribution</li>';
+    if(prepay.checked && p==='m' && t.id!=='enterprise') return '<li class="off">Distribution on 6-month and yearly plans</li>';
+    return '<li class="tick hl">Distribution included</li>';
+  }
+  function renderMk(){
+    var html=tiers.map(function(t){
+      var priceHtml,save='';
+      if(t.id==='enterprise'){priceHtml='<div class="price">Let\'s talk</div>';}
+      else{var amt=M[t.id]*mult[period];priceHtml='<div class="price num">'+ng(amt)+' <small>/'+word[period]+'</small></div>';
+        if(period!=='m'){var full=M[t.id]*months[period];save=(months[period]-mult[period])+' month'+(period==='y'?'s':'')+' free · save '+ng(full-amt);}}
+      return '<article class="card"><div style="display:grid;gap:4px"><h3>'+t.name+'</h3><p class="muted" style="font-size:14px">'+t.aud+'</p></div>'+priceHtml+
+        '<div class="save">'+save+'</div>'+
+        '<a class="cta'+(t.id==='enterprise'?' ghost':'')+'" href="#a" onclick="return false">'+(t.id==='enterprise'?'Let\'s talk':'Try Urganize')+'</a>'+
+        '<ul class="lines">'+distLine(t,period)+t.lines.map(function(l){return '<li class="tick">'+l+'</li>';}).join('')+'</ul></article>';
+    }).join('');
+    document.getElementById('mkCards').innerHTML=html;
+  }
+  function renderApp(){
+    var self=tiers.filter(function(t){return t.id!=='enterprise';});
+    document.getElementById('appRadios').innerHTML=self.map(function(t){
+      var amt=M[t.id]*mult[appPeriod];
+      return '<div class="radio'+(t.id===appTier?' on':'')+'" role="radio" tabindex="0" aria-checked="'+(t.id===appTier)+'" data-tier="'+t.id+'"><span class="ring"></span><span><b>'+t.name+'</b><br><span class="faint" style="font-size:13px">'+(t.dist?((prepay.checked&&appPeriod==='m')?'Distribution on 6 months and yearly':'Distribution included'):'No distribution')+'</span></span><span class="rp">'+ng(amt)+'<br><span class="faint" style="font-size:12px;font-weight:400">/'+word[appPeriod]+'</span></span></div>';
+    }).join('');
+    var t=tiers.filter(function(x){return x.id===appTier;})[0], amt=M[appTier]*mult[appPeriod];
+    var renew={m:'Nov 22, 2026',h:'Apr 22, 2027',y:'Oct 22, 2027'}[appPeriod];
+    var dist=t.dist?((prepay.checked&&appPeriod==='m')?'no distribution on monthly':'distribution included'):'no distribution';
+    var save=appPeriod==='m'?'':' You save '+ng(M[appTier]*months[appPeriod]-amt)+'.';
+    document.getElementById('appYouGet').innerHTML='<span class="faint" style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase">You get</span><span><b>'+t.name+', '+(appPeriod==='m'?'monthly':word[appPeriod])+'</b>, '+dist+'.</span><span class="muted">'+ng(amt)+' today, then every '+word[appPeriod]+' from '+renew+'.'+save+'</span>';
+    document.getElementById('appPay').textContent='Pay '+ng(amt);
+    [].forEach.call(document.querySelectorAll('#appRadios .radio'),function(r){
+      function pick(){appTier=r.getAttribute('data-tier');renderApp();}
+      r.addEventListener('click',pick);r.addEventListener('keydown',function(e){if(e.key===' '||e.key==='Enter'){e.preventDefault();pick();}});
+    });
+  }
+  function wireSeg(sel,setter){
+    [].forEach.call(document.querySelectorAll(sel+' button'),function(b){
+      b.addEventListener('click',function(){[].forEach.call(document.querySelectorAll(sel+' button'),function(x){x.setAttribute('aria-pressed',x===b);});setter(b.getAttribute('data-period'));});
+    });
+  }
+  wireSeg('#a .toolbar .seg',function(p){period=p;renderMk();});
+  wireSeg('#appSeg',function(p){appPeriod=p;renderApp();});
+  prepay.addEventListener('change',function(){renderMk();renderApp();});
+  renderMk();renderApp();
+})();
+</script>
