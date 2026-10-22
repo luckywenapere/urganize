@@ -8,7 +8,8 @@
 // admin recording it. A partial transfer never opens a team.
 
 import type { SupabaseClient, User } from '@supabase/supabase-js';
-import { getTierPrice, type BillingInterval } from '@urganize/pricing';
+import { PRICE_LIST_VERSION, getTierPrice, type BillingInterval } from '@urganize/pricing';
+import { isMissingColumnError } from '@/lib/billing-schema';
 import { approveUser } from '@/lib/access-gate-server';
 import { advancePeriodEnd, type RecurringPlanId } from '@/lib/billing-plans';
 import { invalidateSubscriptionSnapshot } from '@/lib/subscription-access';
@@ -462,8 +463,13 @@ export async function applyTransferPeriod(
     advancePeriodEnd(input.plan as RecurringPlanId, currentEnd, input.now, input.period);
 
   const nowIso = input.now.toISOString();
-  const subscription = await admin.from('subscriptions').upsert(
+  // price_locked_kobo / plan_version (20261022170000): a transfer period is paid
+  // at the price on its invoice, so that is what this period locked. Retried
+  // without them on a database the migration has not reached.
+  const writeSubscription = (withLock: boolean) =>
+    admin.from('subscriptions').upsert(
     {
+      ...(withLock ? { price_locked_kobo: input.amountKobo, plan_version: PRICE_LIST_VERSION } : {}),
       user_id: input.userId,
       plan: input.plan,
       billing_interval: input.period,
@@ -479,6 +485,8 @@ export async function applyTransferPeriod(
     },
     { onConflict: 'user_id' }
   );
+  let subscription = await writeSubscription(true);
+  if (subscription.error && isMissingColumnError(subscription.error)) subscription = await writeSubscription(false);
   if (subscription.error) console.error('[self-serve] subscription not saved', subscription.error.message);
 
   const profile = await admin.from('profiles').update({ is_subscribed: true, paid_at: nowIso }).eq('id', input.userId);
@@ -503,6 +511,9 @@ export async function applyTransferPeriod(
     plan: input.plan,
     source,
     chargedAt: input.now,
+    channel: input.method === 'direct_transfer' ? 'direct_transfer' : 'transfer',
+    interval: input.period,
+    planVersion: PRICE_LIST_VERSION,
   });
   if (firstPayment) {
     await rewardReferrerOnFirstPayment(admin, { payerUserId: input.userId, reference: input.reference }).catch(

@@ -57,7 +57,9 @@ describe('the ledger is append-only', () => {
   // 2026-10-07) when the AI usage log is not there. Reading only, held below.
   // The founder cockpit's UrgAns panel (/admin, 2026-10-09) reads spends and
   // refunds for credits spent per week. Reading only, held below.
-  const readers = ['lib/usage-metrics-server.ts', 'lib/admin-urgans-usage-server.ts'];
+  // The billing margin view (/admin/billing, 2026-10-22) reads this month's
+  // spends and refunds per team to cost their credits. Reading only.
+  const readers = ['lib/usage-metrics-server.ts', 'lib/admin-urgans-usage-server.ts', 'lib/billing-margin-server.ts'];
 
   it('lets the readers only read', () => {
     for (const file of readers) {

@@ -14,6 +14,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { randomInt } from 'node:crypto';
 import { afterResponse } from './after-response';
 import { logBillingEvent } from './billing-events-server';
+import { isMissingColumnError } from './billing-schema';
+import { isPaymentChannel, type PaymentChannel } from './billing-margin';
+import { recordTrmFeeForPayment } from './trm/partner-ledger-server';
+import type { BillingInterval } from '@urganize/pricing';
 import { adjustCredits, readBalances } from './credits/credits-server';
 import { isEmailConfigured, sendEmail } from './email';
 import { APP_URL } from './email/links';
@@ -73,8 +77,21 @@ export type ChargeSource = 'initial' | 'renewal' | 'plan_change' | 'manual';
 
 /**
  * Writes one subscription payment into the ledger commission is worked out from.
- * Idempotent on the reference, so a redelivered webhook counts once. Does
- * nothing while the switch is off, and never throws.
+ * Idempotent on the reference, so a redelivered webhook counts once. Never
+ * throws.
+ *
+ * SINCE 2026-10-22 IT RECORDS WHETHER OR NOT REFERRALS ARE ON. The same rows
+ * feed the admin margin view (/admin/billing), which needs every payment and how
+ * it was paid. Commission is still only owed for teams a partner tagged, and
+ * tagging needs the referrals switch, so recording more rows earns nobody
+ * anything new. The three columns 20261022170000 adds are written when given and
+ * dropped on a database that does not have them yet.
+ *
+ * IT IS ALSO WHERE WE RECORD WHAT WE OWE TRM, because every paid period comes
+ * through here after the money has landed (card, transfer, Mark paid, renewal).
+ * Only when the caller names the period: guessing it from the plan would read a
+ * Label row as yearly (the legacy rule in resolveBillingInterval). Plan-change
+ * top-ups owe nothing: they pay for days already covered.
  */
 export async function recordSubscriptionCharge(
   admin: SupabaseClient,
@@ -85,29 +102,89 @@ export async function recordSubscriptionCharge(
     plan: string | null;
     source: ChargeSource;
     chargedAt?: Date;
+    /** How it was paid. */
+    channel?: PaymentChannel | null;
+    /** The period this payment buys. Required for the TRM fee to be recorded. */
+    interval?: BillingInterval | null;
+    /** PRICE_LIST_VERSION at checkout, or null when not known. */
+    planVersion?: string | null;
   }
 ): Promise<void> {
-  if (!isReferralsEnabled()) return;
   try {
     if (!input.reference || !Number.isFinite(input.amountKobo) || input.amountKobo < 0) return;
+    const chargedAt = input.chargedAt ?? new Date();
     const workspace = await admin.from('workspaces').select('id').eq('owner_id', input.userId).maybeSingle();
     const workspaceId = (workspace.data as { id: string } | null)?.id ?? null;
-    const { error } = await admin.from('subscription_charges').upsert(
-      {
-        reference: input.reference,
-        workspace_id: workspaceId,
-        user_id: input.userId,
-        amount_kobo: Math.round(input.amountKobo),
-        plan: input.plan,
-        source: input.source,
-        charged_at: (input.chargedAt ?? new Date()).toISOString(),
-      },
-      { onConflict: 'reference', ignoreDuplicates: true }
-    );
+    const base = {
+      reference: input.reference,
+      workspace_id: workspaceId,
+      user_id: input.userId,
+      amount_kobo: Math.round(input.amountKobo),
+      plan: input.plan,
+      source: input.source,
+      charged_at: chargedAt.toISOString(),
+    };
+    const extra = {
+      payment_channel: input.channel ?? null,
+      billing_interval: input.interval ?? null,
+      plan_version: input.planVersion ?? null,
+    };
+    let { error } = await admin
+      .from('subscription_charges')
+      .upsert({ ...base, ...extra }, { onConflict: 'reference', ignoreDuplicates: true });
+    if (error && isMissingColumnError(error)) {
+      ({ error } = await admin
+        .from('subscription_charges')
+        .upsert(base, { onConflict: 'reference', ignoreDuplicates: true }));
+    }
     if (error) console.error('[referrals] could not record a charge:', error.message, input.reference);
+
+    if (input.source !== 'plan_change' && input.interval) {
+      await recordTrmFeeForPayment(admin, {
+        userId: input.userId,
+        reference: input.reference,
+        plan: input.plan,
+        interval: input.interval,
+        amountPaidKobo: input.amountKobo,
+        chargedAt,
+        workspaceId,
+      });
+    }
   } catch (error) {
     console.error('[referrals] recording a charge threw:', error);
   }
+}
+
+/**
+ * How each owner last paid, for the admin margin view (/admin/billing). Reads
+ * the newest subscription_charges row per user that carries a channel. Lives
+ * here because this module is the only one allowed to touch that table. Read
+ * only; an unreadable table (or a database before 20261022170000) gives an
+ * empty map, and the page falls back to the team's payment_method.
+ */
+export async function loadLatestChargeChannels(
+  admin: SupabaseClient,
+  userIds: readonly string[]
+): Promise<Map<string, PaymentChannel>> {
+  const out = new Map<string, PaymentChannel>();
+  if (userIds.length === 0) return out;
+  try {
+    const { data, error } = await admin
+      .from('subscription_charges')
+      .select('user_id, payment_channel, charged_at')
+      .in('user_id', userIds.slice(0, 1000))
+      .not('payment_channel', 'is', null)
+      .order('charged_at', { ascending: false })
+      .limit(5000);
+    if (error) return out;
+    for (const row of (data ?? []) as Array<{ user_id: string; payment_channel: string | null }>) {
+      if (out.has(row.user_id)) continue;
+      if (isPaymentChannel(row.payment_channel)) out.set(row.user_id, row.payment_channel);
+    }
+  } catch {
+    // An empty map is the honest answer.
+  }
+  return out;
 }
 
 // ------------------------------------------------------------------- tagging

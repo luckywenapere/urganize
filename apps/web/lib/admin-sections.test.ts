@@ -63,12 +63,12 @@ describe('dashboards behind More', () => {
   it('lists every dashboard once, Growth merged away', () => {
     expect(new Set(ADMIN_SECTIONS.map((section) => section.key)).size).toBe(ADMIN_SECTIONS.length);
     expect(ADMIN_SECTIONS.map((section) => section.key)).not.toContain('growth');
-    expect(ADMIN_SECTIONS).toHaveLength(22);
+    expect(ADMIN_SECTIONS).toHaveLength(23);
     for (const section of ADMIN_SECTIONS) expect(pageExists(section.href), section.href).toBe(true);
   });
 
   it('More holds everything not in the tabs: Scoreboard and Metrics in Numbers, Chappi kept, no Teams or Emails', () => {
-    expect(ADMIN_MORE_SECTIONS).toHaveLength(20);
+    expect(ADMIN_MORE_SECTIONS).toHaveLength(21);
     const more = ADMIN_MORE_SECTIONS.map((section) => section.key);
     expect(more).toContain('chappi');
     for (const key of ['teams', 'emails']) expect(more).not.toContain(key);

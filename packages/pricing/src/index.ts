@@ -245,6 +245,12 @@ export type PricingTierId = 'solo' | 'manager' | 'label' | 'enterprise';
  *  SIX_MONTHS_BILLED months of the monthly price, so one is free. */
 export type BillingInterval = 'monthly' | 'semiannual' | 'annual';
 
+/** Which price list a new checkout is sold on. Stored on
+ *  `subscriptions.plan_version` and `subscription_charges.plan_version`, so a
+ *  subscriber's row says which prices they locked in. Bump it on every reprice;
+ *  rows written before 2026-10-22 read 'legacy'. */
+export const PRICE_LIST_VERSION = '2026-10-22';
+
 export type TierPrice = {
   /** Whole naira, for display copy. */
   amount: number;
@@ -400,6 +406,12 @@ export type PricingTierDefinition = {
    *  so the marker now sits on the tier it was always meant to describe —
    *  "most teams choose this" reads correctly on the cheapest option again. */
   recommended?: boolean;
+  /** Whether the plan includes distribution through our partner (TRM Distro).
+   *  Since 2026-10-22 Urganize pays TRM a fixed fee per entitled team, so the
+   *  plan price covers it. Solo never includes it. Whether a monthly
+   *  subscriber gets it also depends on DISTRIBUTION_REQUIRES_PREPAY, which
+   *  `distributionIncluded` takes as an argument. */
+  includesDistribution: boolean;
 };
 
 export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
@@ -436,6 +448,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // ₦75,000 and the _PER_MONTH_ / _PER_YEAR_ vars repointed before this
     // shipped; the ₦5,000 Plans stay in Paystack untouched.
     monthlyPrice: tierPrice(8_000),
+    includesDistribution: false,
     urgansMonthlyCredits: 150,
     // TWO seats since 2026-10-17 (founder-approved reprice: "artist +
     // manager"). The owner holds one, so a Solo account can invite one person.
@@ -457,6 +470,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // yearly price is ten months of this. New ₦25,000 / ₦250,000 Paystack Plans
     // were minted and the vars repointed before this shipped.
     monthlyPrice: tierPrice(30_000),
+    includesDistribution: true,
     urgansMonthlyCredits: 660,
     // 3 artists / 5 seats since 2026-10-17 (was 5 artists / 4 seats). Both are
     // enforced (the artist ceiling since rosters shipped, 2026-08-30). Lowering
@@ -509,6 +523,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // of this. New ₦60,000 / ₦600,000 Paystack Plans were minted and the vars
     // repointed before this shipped.
     monthlyPrice: tierPrice(60_000),
+    includesDistribution: true,
     urgansMonthlyCredits: 1500,
     limits: { artists: null, seats: null, activeReleases: null, urgansMonthlyActions: null },
     perks: [
@@ -537,6 +552,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
   enterprise: {
     id: 'enterprise',
     label: 'Group',
+    includesDistribution: true,
     audience: 'For distributors and multi-label groups.',
     urgansMonthlyCredits: 1500,
     limits: { artists: null, seats: null, activeReleases: null, urgansMonthlyActions: null },
@@ -599,6 +615,36 @@ export function intervalSavingCopy(id: PricingTierId, interval: BillingInterval)
   return `${free} ${free === 1 ? 'month' : 'months'} free`;
 }
 
+/** Naira saved on a prepaid interval against paying monthly for the same
+ *  months. 0 for monthly; null for a sales-led tier. */
+export function intervalSavingNaira(id: PricingTierId, interval: BillingInterval): number | null {
+  const monthly = PRICING_TIERS[id].monthlyPrice;
+  if (!monthly) return null;
+  const { covers, billed } = INTERVAL_MONTHS[interval];
+  return monthly.amount * (covers - billed);
+}
+
+/** An amount for one interval spread per month, in kobo (MRR math). */
+export function monthlyEquivalentKobo(amountKobo: number, interval: BillingInterval): number {
+  return Math.round(amountKobo / INTERVAL_MONTHS[interval].covers);
+}
+
+/** Does a team on this tier and interval get "Distribution included"?
+ *
+ *  Solo never. Manager, Label and Group do, except that with
+ *  DISTRIBUTION_REQUIRES_PREPAY on (passed in, because this package reads no
+ *  env) a monthly subscriber does not: TRM may bill a year upfront, and a
+ *  team that leaves after one month would cost more than it paid. */
+export function distributionIncluded(
+  id: PricingTierId,
+  interval: BillingInterval | null,
+  requiresPrepay: boolean
+): boolean {
+  if (!PRICING_TIERS[id].includesDistribution) return false;
+  if (requiresPrepay && interval === 'monthly') return false;
+  return true;
+}
+
 /** The interval's name as a customer reads it: "Monthly", "6 months", "Yearly". */
 export function intervalLabel(interval: BillingInterval): string {
   return interval === 'monthly' ? 'Monthly' : interval === 'semiannual' ? '6 months' : 'Yearly';
@@ -629,22 +675,28 @@ export function annualSavingCopy(id: PricingTierId): string | null {
  *  Plural handling is explicit rather than a naive `+ 's'`: "1 people" on a
  *  future one-seat tier would be the kind of small wrongness that makes a
  *  pricing page feel unfinished. */
-/** Lines every tier carries, appended after the ceilings and before the tier's
- *  own perks.
+/** The distribution line on a pricing card.
  *
- *  ONE ARRAY RATHER THAN FOUR COPIES, so "on all tiers" is a fact of the code.
- *  Four pasted strings drift the moment one card is edited, and this repo has
- *  the receipts on that.
- *
- *  Distribution line (founder, 2026-10-11): Urganize does not distribute
- *  music itself. Teams release through a distribution partner and pay that
- *  partner directly; Urganize earns a share of what they pay. The Metadata
- *  scene assembles the ISRC, UPC, splits and credits the partner asks for, so
- *  the handoff is one paste. "Distribution included" implied the plan price
- *  covered distribution, which it does not, so the line now names the partner. */
-const UNIVERSAL_HIGHLIGHTS: readonly string[] = ['Distribution through our partner'] as const;
+ *  REVERSED 2026-10-22 (founder): until then every tier said "Distribution
+ *  through our partner", because teams paid the partner themselves. Urganize
+ *  now pays TRM a fixed fee per entitled team, so Manager, Label and Group
+ *  really do include distribution and the card says so. Solo does not, and its
+ *  card says nothing about it. With DISTRIBUTION_REQUIRES_PREPAY on, the
+ *  monthly view of an entitled tier says it needs a 6-month or yearly plan. */
+export function distributionHighlight(
+  id: PricingTierId,
+  interval: BillingInterval,
+  requiresPrepay: boolean
+): string | null {
+  if (!PRICING_TIERS[id].includesDistribution) return null;
+  if (distributionIncluded(id, interval, requiresPrepay)) return 'Distribution included';
+  return 'Distribution on 6-month and yearly plans';
+}
 
-export function tierHighlights(id: PricingTierId): string[] {
+export function tierHighlights(
+  id: PricingTierId,
+  opts: { interval?: BillingInterval; distributionRequiresPrepay?: boolean } = {}
+): string[] {
   const { limits, perks, urgansMonthlyCredits, contactSales } = PRICING_TIERS[id];
   const lines: string[] = [];
 
@@ -679,7 +731,12 @@ export function tierHighlights(id: PricingTierId): string[] {
       : `${urgansMonthlyCredits.toLocaleString('en-US')} UrgAns credits a month`
   );
 
-  return [...lines, ...UNIVERSAL_HIGHLIGHTS, ...perks];
+  const distribution = distributionHighlight(
+    id,
+    opts.interval ?? DEFAULT_SELLING_INTERVAL,
+    opts.distributionRequiresPrepay ?? false
+  );
+  return [...lines, ...(distribution ? [distribution] : []), ...perks];
 }
 
 export function getTier(id: PricingTierId): PricingTierDefinition {

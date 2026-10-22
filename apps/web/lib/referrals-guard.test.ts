@@ -85,11 +85,14 @@ describe('who may write the commission tables', () => {
 });
 
 describe('the switch', () => {
-  it('stops the ledger write before it reads anything', () => {
+  it('records every payment whether or not referrals are on (the margin view and the TRM fee need them all, 2026-10-22)', () => {
+    // Commission is still only owed for teams a partner tagged, and tagging
+    // needs the switch, so recording more rows earns nobody anything new.
     const source = stripComments(read('lib/referrals-server.ts'));
-    const body = source.slice(source.indexOf('export async function recordSubscriptionCharge'));
-    expect(body.indexOf('isReferralsEnabled()')).toBeGreaterThan(-1);
-    expect(body.indexOf('isReferralsEnabled()')).toBeLessThan(body.indexOf('.from('));
+    const start = source.indexOf('export async function recordSubscriptionCharge');
+    const body = source.slice(start).split(/\r?\n}\r?\n/)[0];
+    expect(start).toBeGreaterThan(-1);
+    expect(body).not.toContain('isReferralsEnabled');
   });
 
   it('checks it before auth on the attach route, so a switched-off app answers 404 to everyone', () => {

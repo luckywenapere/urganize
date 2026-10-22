@@ -563,6 +563,11 @@ export interface AnalyticsEventPropertiesMap {
   solo_limit_hit: SelfServeEventProperties;
   upgrade_to_manager_clicked: SelfServeEventProperties;
   help_topic_selected: SelfServeEventProperties;
+  /** The Distribute step told a monthly Manager or Label team that
+   *  distribution needs a 6-month or yearly plan (only while
+   *  DISTRIBUTION_REQUIRES_PREPAY is on), and whether they acted on it. */
+  prepay_upsell_shown: SelfServeEventProperties;
+  prepay_upsell_accepted: SelfServeEventProperties;
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventPropertiesMap;

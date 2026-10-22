@@ -65,6 +65,7 @@ export const ADMIN_SECTION_ICONS: Record<string, typeof LayoutDashboard> = {
   onboarding: ClipboardList,
   nps: ThumbsUp,
   'profile-funnel': Share2,
+  billing: Wallet2,
   notifications: BellRing,
   'curator-invites': ListMusic,
   'pitch-payments': PiggyBank,
