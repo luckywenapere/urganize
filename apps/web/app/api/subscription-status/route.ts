@@ -11,7 +11,8 @@ import { isAllowlistedEmail } from '@/lib/paywall-allowlist';
 import { isCardTrialEnabled, resolveCardTrialRequirement } from '@/lib/trial-card';
 import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { getTeamAccessForUser, toTeamAccessPayload } from '@/lib/team-billing-server';
-import { purchasableTiers } from '@/lib/billing-plans';
+import { purchasableIntervalsByTier, purchasableTiers } from '@/lib/billing-plans';
+import { readTrmFeeConfig } from '@/lib/trm/partner-fee';
 import { resolveOnboardingSetupRequired } from '@/lib/onboarding-setup';
 
 // cardTrialRequired — the card-before-trial gate signal (NEXT_PUBLIC_FEATURE_CARD_TRIAL).
@@ -221,5 +222,10 @@ export async function GET(request: NextRequest) {
     // about our configuration, not about this user, and the legacy /locked
     // picker may want it later too.
     purchasableTiers: purchasableTiers(),
+    // The periods each of those tiers can be bought on (a period whose Plan is
+    // not minted is left out), and whether distribution needs a 6-month or
+    // yearly plan. Both configuration facts, like purchasableTiers.
+    purchasableIntervals: purchasableIntervalsByTier(),
+    distributionRequiresPrepay: readTrmFeeConfig().distributionRequiresPrepay,
   });
 }

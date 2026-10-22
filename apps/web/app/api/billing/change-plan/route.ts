@@ -4,10 +4,16 @@ import { isPricingV2Enabled } from '@/lib/entitlements';
 import { resolveBillingInterval } from '@/lib/billing-plans';
 import {
   PLAN_CHANGE_SOURCE,
+  PREPAY_SWITCH_KIND,
+  isPrepaySwitchRequest,
   planChangeRefusalMessage,
   quotePlanChange,
+  quotePrepaySwitch,
   type PlanChangeQuote,
+  type PrepaySwitchQuote,
 } from '@/lib/plan-change';
+import { PRICE_LIST_VERSION } from '@urganize/pricing';
+import { cleanAcquisitionPath } from '@/lib/acquisition-path';
 import { logBillingEvent } from '@/lib/billing-events-server';
 import { notifyFounder } from '@/lib/billing-alerts-server';
 import { invalidateSubscriptionSnapshot } from '@/lib/subscription-access';
@@ -44,7 +50,13 @@ import { fetchPaystackInit } from '@/lib/paystack-init';
 
 export const dynamic = 'force-dynamic';
 
-type ChangePlanRequest = { plan?: unknown; interval?: unknown };
+type ChangePlanRequest = {
+  plan?: unknown;
+  interval?: unknown;
+  /** true: answer with the quote and change nothing (the confirm sheet). */
+  preview?: unknown;
+  acquisitionPath?: unknown;
+};
 
 function generateReference(): string {
   // Same convention as start-checkout so support tooling filtering by prefix
@@ -126,12 +138,53 @@ export async function POST(request: NextRequest) {
   }
 
   const now = new Date();
+  const currentInterval = resolveBillingInterval({
+    plan: subscription.plan,
+    storedInterval: subscription.billing_interval,
+  });
+  const preview = body.preview === true;
+  const acquisitionPath = cleanAcquisitionPath(body.acquisitionPath);
+
+  // MONTHLY TO 6 MONTHS OR YEARLY (pricing v3, mock b). Same tier, a new period
+  // starting today, the unused days of this month off. Always a payment, never
+  // a pending change.
+  if (
+    isPrepaySwitchRequest({
+      currentPlan: subscription.plan,
+      currentInterval,
+      targetTier: targetPlan,
+      targetInterval,
+    })
+  ) {
+    const switchQuote: PrepaySwitchQuote = quotePrepaySwitch({
+      currentPlan: subscription.plan,
+      currentInterval,
+      targetInterval,
+      periodEndsAt: subscription.expires_at,
+      currentPaidMinorUnit: subscription.amount,
+      now,
+    });
+    if (switchQuote.kind === 'refused') {
+      return NextResponse.json(
+        { error: planChangeRefusalMessage(switchQuote.reason), reason: switchQuote.reason },
+        { status: 400 }
+      );
+    }
+    if (preview) return NextResponse.json({ ...switchQuote, preview: true });
+    return startPrepaySwitchCheckout(request, {
+      admin,
+      userId: auth.user.id,
+      userEmail: String(auth.user.email || '').trim().toLowerCase(),
+      workspaceId: workspace.id,
+      subscription,
+      quote: switchQuote,
+      acquisitionPath,
+    });
+  }
+
   const quote: PlanChangeQuote = quotePlanChange({
     currentPlan: subscription.plan,
-    currentInterval: resolveBillingInterval({
-      plan: subscription.plan,
-      storedInterval: subscription.billing_interval,
-    }),
+    currentInterval,
     targetTier: targetPlan,
     targetInterval,
     periodEndsAt: subscription.expires_at,
@@ -149,6 +202,7 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
+  if (preview) return NextResponse.json({ ...quote, preview: true });
 
   // Clearing the stored subscription code is what stops the founder's own
   // Paystack action corrupting this row. `handleSubscriptionDisable` stamps
@@ -361,6 +415,133 @@ export async function POST(request: NextRequest) {
     amountMinorUnit: quote.amountMinorUnit,
     daysRemaining: quote.daysRemaining,
     periodEndsAt: quote.periodEndsAt,
+    authorizationUrl: initPayload.data.authorization_url,
+    reference,
+  });
+}
+
+/**
+ * Starts the Paystack checkout for a monthly-to-prepay switch. The webhook
+ * (handlePrepaySwitchCharge) applies it once the payment has gone through:
+ * nothing about the subscription changes here.
+ */
+async function startPrepaySwitchCheckout(
+  request: NextRequest,
+  input: {
+    admin: NonNullable<ReturnType<typeof createAdminClient>>;
+    userId: string;
+    userEmail: string;
+    workspaceId: string;
+    subscription: { plan: string | null; expires_at: string | null; paystack_subscription_code: string | null };
+    quote: Extract<PrepaySwitchQuote, { kind: 'prepay_switch' }>;
+    acquisitionPath: string | null;
+  }
+) {
+  const { admin, quote } = input;
+  const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
+  if (!paystackSecretKey) {
+    return NextResponse.json(
+      { error: 'Payment provider is not configured on the server.' },
+      { status: 500 }
+    );
+  }
+  if (!input.userEmail) {
+    return NextResponse.json({ error: 'No email on file.' }, { status: 400 });
+  }
+
+  const reference = generateReference();
+  const paymentInsert = await admin.from('payments').insert({
+    user_id: input.userId,
+    amount: quote.amountMinorUnit,
+    reference,
+    status: 'pending',
+    plan: quote.tier,
+    paystack_response: {
+      source: PLAN_CHANGE_SOURCE,
+      change_kind: PREPAY_SWITCH_KIND,
+      currency: 'NGN',
+      selected_interval: quote.interval,
+      change_from: input.subscription.plan,
+      period_ends_at: input.subscription.expires_at,
+      full_price_kobo: quote.fullPriceMinorUnit,
+      credit_kobo: quote.creditMinorUnit,
+      days_remaining: quote.daysRemaining,
+      plan_version: PRICE_LIST_VERSION,
+      ...(input.acquisitionPath ? { acquisition_path: input.acquisitionPath } : {}),
+      workspace_id: input.workspaceId,
+      old_subscription_code: input.subscription.paystack_subscription_code,
+    },
+  });
+  if (paymentInsert.error) {
+    console.error('[billing/change-plan] prepay switch payments insert failed:', paymentInsert.error.message);
+    return NextResponse.json({ error: 'Could not start checkout.' }, { status: 500 });
+  }
+
+  // Card and transfer both, unlike a tier upgrade: a 6-month or yearly payment
+  // is large, and a bank transfer is how many teams would rather pay it.
+  const paystackResponse = await fetchPaystackInit({
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${paystackSecretKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email: input.userEmail,
+      amount: quote.amountMinorUnit,
+      reference,
+      currency: 'NGN',
+      channels: ['card', 'bank_transfer'],
+      callback_url: resolveCallbackUrl(request),
+      metadata: {
+        user_id: input.userId,
+        plan: quote.tier,
+        interval: quote.interval,
+        currency: 'NGN',
+        source: PLAN_CHANGE_SOURCE,
+        change_kind: PREPAY_SWITCH_KIND,
+        workspace_id: input.workspaceId,
+      },
+    }),
+  });
+
+  const initPayload = (await paystackResponse.json().catch(() => ({}))) as {
+    status?: boolean;
+    message?: string;
+    data?: { authorization_url?: string };
+  };
+  if (!paystackResponse.ok || !initPayload?.status || !initPayload.data?.authorization_url) {
+    await admin.from('payments').delete().eq('reference', reference);
+    console.error('[billing/change-plan] prepay switch paystack init failed:', initPayload?.message);
+    return NextResponse.json(
+      { error: initPayload?.message || 'Could not start checkout.' },
+      { status: 502 }
+    );
+  }
+
+  await logBillingEvent(admin, {
+    workspaceId: input.workspaceId,
+    ownerUserId: input.userId,
+    actorUserId: input.userId,
+    type: 'checkout_started',
+    metadata: {
+      source: PLAN_CHANGE_SOURCE,
+      change_kind: PREPAY_SWITCH_KIND,
+      tier: quote.tier,
+      interval: quote.interval,
+      amountMinorUnit: quote.amountMinorUnit,
+      creditMinorUnit: quote.creditMinorUnit,
+      plan_version: PRICE_LIST_VERSION,
+      acquisition_path: input.acquisitionPath,
+      reference,
+    },
+  });
+
+  return NextResponse.json({
+    kind: 'prepay_switch_checkout',
+    tier: quote.tier,
+    interval: quote.interval,
+    amountMinorUnit: quote.amountMinorUnit,
+    renewsAt: quote.renewsAt,
     authorizationUrl: initPayload.data.authorization_url,
     reference,
   });

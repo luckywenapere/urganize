@@ -1,4 +1,4 @@
-import { isPricingTierId } from '@urganize/pricing';
+import { isPricingTierId, monthlyEquivalentKobo } from '@urganize/pricing';
 import { ACTIVATION_WINDOW_DAYS, isWithinActivationWindow } from './activation';
 import { resolveBillingInterval } from './billing-plans';
 import type { TeamAccessState } from './team-billing';
@@ -278,7 +278,7 @@ export function monthlyAmountMinor(sub: ScoreboardSubscription): number {
     storedInterval: sub.billingInterval,
   });
   const amount = sub.amountMinor ?? 0;
-  return interval === 'annual' ? Math.round(amount / 12) : amount;
+  return monthlyEquivalentKobo(amount, interval);
 }
 
 /** How many of `memberIds` did something at or after `sinceMs`. */

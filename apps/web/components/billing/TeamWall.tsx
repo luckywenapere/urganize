@@ -11,6 +11,8 @@ import {
   formatPlanCyclePrice,
   getPlan,
   getTier,
+  getTierPrice,
+  PRICE_LIST_VERSION,
   type BillingInterval,
   type PricingTierId,
 } from '@urganize/pricing';
@@ -30,6 +32,7 @@ import { HelpTip } from '@/components/shared/HelpTip';
 import { TierPlanPicker } from '@/components/billing/TierPlanPicker';
 import { WallUrgansCard } from '@/components/billing/WallUrgansCard';
 import { readPaywallPlanChoice } from '@/lib/onboarding-paywall';
+import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import {
   wallStatTiles,
   type WallSummaryCounts,
@@ -188,6 +191,17 @@ export function TeamWall() {
   const effectiveTier = offeredTiers.includes(selectedTier)
     ? selectedTier
     : (offeredTiers[0] ?? selectedTier);
+  // The period actually in play, derived the same way and for the same reason:
+  // the server only lists periods whose Paystack Plan exists, so a stored
+  // "6 months" falls back to the first period this tier can really be bought
+  // for, and Subscribe never posts a period with no Plan behind it.
+  const offeredIntervals = team?.purchasableIntervals?.[effectiveTier];
+  const effectiveInterval: BillingInterval =
+    !Array.isArray(offeredIntervals) || offeredIntervals.length === 0
+      ? selectedInterval
+      : offeredIntervals.includes(selectedInterval)
+        ? selectedInterval
+        : offeredIntervals[0];
   // Apple forbids linking out to external payment for a digital subscription
   // from inside a reviewed iOS app. Defaults false so the pre-hydration render
   // matches the server's, then flips post-mount (the LockedPageClient pattern).
@@ -214,6 +228,39 @@ export function TeamWall() {
   const isDeliberateVisit =
     intent === 'activate' || intent === 'upgrade' || intent === 'reactivate';
   const isUpgradeIntent = intent === 'upgrade';
+  // Where this checkout came from, carried onto every checkout event and the
+  // payment row (pricing v3). A slug, never anything the user typed.
+  const acquisitionPath = intent ? `wall_${intent}` : 'wall';
+
+  // plan_price_viewed: once per tier and period actually on screen.
+  const viewedPriceRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!PRICING_V2 || isLoading || !team || !canCheckOut) return;
+    const key = `${effectiveTier}:${effectiveInterval}`;
+    if (viewedPriceRef.current === key) return;
+    viewedPriceRef.current = key;
+    captureAnalyticsEvent({
+      name: 'plan_price_viewed',
+      properties: {
+        plan: effectiveTier,
+        period: effectiveInterval,
+        price_kobo: getTierPrice(effectiveTier, effectiveInterval)?.minorUnit ?? 0,
+        plan_version: PRICE_LIST_VERSION,
+        acquisition_path: acquisitionPath,
+      },
+    });
+  }, [isLoading, team, canCheckOut, effectiveTier, effectiveInterval, acquisitionPath]);
+
+  const selectInterval = useCallback(
+    (interval: BillingInterval) => {
+      setSelectedInterval(interval);
+      captureAnalyticsEvent({
+        name: 'checkout_period_selected',
+        properties: { plan: effectiveTier, period: interval, acquisition_path: acquisitionPath },
+      });
+    },
+    [effectiveTier, acquisitionPath]
+  );
   const isReadOnlyTeam = team?.state === 'read_only';
 
   const trackedRef = useRef(false);
@@ -326,7 +373,7 @@ export function TeamWall() {
         const changeResponse = await fetch('/api/billing/change-plan', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plan: effectiveTier, interval: selectedInterval }),
+          body: JSON.stringify({ plan: effectiveTier, interval: effectiveInterval, acquisitionPath }),
         });
         const changePayload = (await changeResponse.json().catch(() => ({}))) as {
           kind?: string;
@@ -341,6 +388,15 @@ export function TeamWall() {
         // free upgrade are already done, so say so rather than redirecting
         // somewhere that would look like a failed payment.
         if (changePayload.authorizationUrl) {
+          captureAnalyticsEvent({
+            name: 'billing_checkout_started',
+            properties: {
+              plan: effectiveTier,
+              period: effectiveInterval,
+              kind: changePayload.kind === 'prepay_switch_checkout' ? 'prepay_switch' : 'plan_change',
+              acquisition_path: acquisitionPath,
+            },
+          });
           if (isNativePlatform()) {
             await openExternalUrl(changePayload.authorizationUrl);
             setIsStartingCheckout(false);
@@ -369,7 +425,7 @@ export function TeamWall() {
         body: JSON.stringify({
           plan: PRICING_V2 ? effectiveTier : selectedPlan,
           currency: 'NGN',
-          ...(PRICING_V2 ? { interval: selectedInterval } : {}),
+          ...(PRICING_V2 ? { interval: effectiveInterval, acquisitionPath } : {}),
           ...(team?.primaryWorkspaceId ? { workspaceId: team.primaryWorkspaceId } : {}),
         }),
       });
@@ -379,6 +435,17 @@ export function TeamWall() {
       };
       if (!response.ok || !payload.authorizationUrl) {
         throw new Error(payload.error || 'Could not start checkout.');
+      }
+      if (PRICING_V2) {
+        captureAnalyticsEvent({
+          name: 'billing_checkout_started',
+          properties: {
+            plan: effectiveTier,
+            period: effectiveInterval,
+            kind: 'new',
+            acquisition_path: acquisitionPath,
+          },
+        });
       }
 
       // Android: a Paystack page should not take over the app's own webview.
@@ -395,6 +462,8 @@ export function TeamWall() {
   }, [
     selectedPlan,
     effectiveTier,
+    effectiveInterval,
+    acquisitionPath,
     team?.hasAccess,
     team?.canWrite,
     team?.primaryWorkspaceId,
@@ -622,8 +691,10 @@ export function TeamWall() {
                       tiers={offeredTiers}
                       selectedTier={effectiveTier}
                       onSelectTier={setSelectedTier}
-                      selectedInterval={selectedInterval}
-                      onSelectInterval={setSelectedInterval}
+                      selectedInterval={effectiveInterval}
+                      onSelectInterval={selectInterval}
+                      intervalsByTier={team?.purchasableIntervals}
+                      distributionRequiresPrepay={team?.distributionRequiresPrepay}
                       disabled={isStartingCheckout}
                     />
                   ) : (

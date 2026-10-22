@@ -240,7 +240,24 @@ export function formatPlanCyclePrice(
 // subscriptions_plan_check (20260823100000) already permits, so bringing Group
 // back on 2026-10-02 needed no migration. Renaming the id would mean one.
 export type PricingTierId = 'solo' | 'manager' | 'label' | 'enterprise';
-export type BillingInterval = 'monthly' | 'annual';
+export type BillingInterval = 'monthly' | 'six_month' | 'annual';
+
+/** Which price list a new checkout is sold on. Stored on
+ *  `subscriptions.plan_version` and `subscription_charges.plan_version`, so a
+ *  subscriber's row says which prices they locked in. Bump it on every reprice;
+ *  rows written before 2026-10-22 read 'legacy'. */
+export const PRICE_LIST_VERSION = '2026-10-22';
+
+/** Manager's monthly price in naira (founder, 2026-10-22: ₦30,000). The one
+ *  constant to change if Manager is repriced; the 6-month and yearly figures
+ *  are arithmetic on it. */
+export const MANAGER_MONTHLY_NAIRA = 30_000;
+
+/** Label's monthly price in naira (founder, 2026-10-22: up from ₦60,000). */
+export const LABEL_MONTHLY_NAIRA = 100_000;
+
+/** Solo's monthly price in naira. Unchanged on 2026-10-22 (founder: keep ₦7,500). */
+export const SOLO_MONTHLY_NAIRA = 7_500;
 
 export type TierPrice = {
   /** Whole naira, for display copy. */
@@ -265,10 +282,35 @@ export type TierPrice = {
  *  before shipping the number. */
 export const ANNUAL_MONTHS_BILLED = 10;
 
+/** Months billed on the 6-month prepay: six months for the price of five
+ *  (founder, 2026-10-22). Same per-month rate as yearly, which is deliberate
+ *  for now and flagged in the mocks. */
+export const SIX_MONTH_MONTHS_BILLED = 5;
+
+/** How many months one payment covers, per interval. */
+export const INTERVAL_MONTHS: Record<BillingInterval, number> = {
+  monthly: 1,
+  six_month: 6,
+  annual: 12,
+};
+
+/** How many months of the monthly price one payment costs, per interval. */
+export const INTERVAL_MONTHS_BILLED: Record<BillingInterval, number> = {
+  monthly: 1,
+  six_month: SIX_MONTH_MONTHS_BILLED,
+  annual: ANNUAL_MONTHS_BILLED,
+};
+
 /** The yearly amount for a monthly one. The only place the multiplication
  *  happens, so no caller can scale or round it differently. */
 function annualAmount(monthlyAmount: number): number {
   return monthlyAmount * ANNUAL_MONTHS_BILLED;
+}
+
+/** The amount one payment of `interval` costs, from the monthly price. */
+function intervalAmount(monthlyAmount: number, interval: BillingInterval): number {
+  if (interval === 'annual') return annualAmount(monthlyAmount);
+  return monthlyAmount * INTERVAL_MONTHS_BILLED[interval];
 }
 
 /** Builds a TierPrice from a whole-naira amount, deriving the kobo figure so no
@@ -386,6 +428,12 @@ export type PricingTierDefinition = {
    *  so the marker now sits on the tier it was always meant to describe —
    *  "most teams choose this" reads correctly on the cheapest option again. */
   recommended?: boolean;
+  /** Whether the plan includes distribution through our partner (TRM Distro).
+   *  Since 2026-10-22 Urganize pays TRM a fixed fee per entitled team, so the
+   *  plan price covers it. Solo never includes it. Whether a monthly
+   *  subscriber gets it also depends on DISTRIBUTION_REQUIRES_PREPAY, which
+   *  `distributionIncluded` takes as an argument. */
+  includesDistribution: boolean;
 };
 
 export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
@@ -419,7 +467,8 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // this, see monthlyPrice. New Paystack Plans were minted at ₦7,500 /
     // ₦75,000 and the _PER_MONTH_ / _PER_YEAR_ vars repointed before this
     // shipped; the ₦5,000 Plans stay in Paystack untouched.
-    monthlyPrice: tierPrice(7_500),
+    monthlyPrice: tierPrice(SOLO_MONTHLY_NAIRA),
+    includesDistribution: false,
     urgansMonthlyCredits: 150,
     // TWO seats since 2026-10-17 (founder-approved reprice: "artist +
     // manager"). The owner holds one, so a Solo account can invite one person.
@@ -438,7 +487,8 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // ₦35,000 earlier the same day and ₦22,000 before that). Monthly only — the
     // yearly price is ten months of this. New ₦25,000 / ₦250,000 Paystack Plans
     // were minted and the vars repointed before this shipped.
-    monthlyPrice: tierPrice(25_000),
+    monthlyPrice: tierPrice(MANAGER_MONTHLY_NAIRA),
+    includesDistribution: true,
     urgansMonthlyCredits: 660,
     // 3 artists / 5 seats since 2026-10-17 (was 5 artists / 4 seats). Both are
     // enforced (the artist ceiling since rosters shipped, 2026-08-30). Lowering
@@ -490,7 +540,8 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // ₦50,000 from 2026-09-10). Monthly only — the yearly price is ten months
     // of this. New ₦60,000 / ₦600,000 Paystack Plans were minted and the vars
     // repointed before this shipped.
-    monthlyPrice: tierPrice(60_000),
+    monthlyPrice: tierPrice(LABEL_MONTHLY_NAIRA),
+    includesDistribution: true,
     urgansMonthlyCredits: 1500,
     limits: { artists: null, seats: null, activeReleases: null, urgansMonthlyActions: null },
     perks: [
@@ -519,6 +570,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
   enterprise: {
     id: 'enterprise',
     label: 'Group',
+    includesDistribution: true,
     audience: 'For distributors and multi-label groups.',
     urgansMonthlyCredits: 1500,
     limits: { artists: null, seats: null, activeReleases: null, urgansMonthlyActions: null },
@@ -563,11 +615,44 @@ export const PRICING_TIER_ORDER: readonly PricingTierId[] = [
  *  Monthly is the default because it is the price we set and the smaller
  *  number; the yearly option is the upsell beside it, carrying
  *  `annualSavingCopy`. */
-export const SELLABLE_INTERVALS: readonly BillingInterval[] = ['monthly', 'annual'] as const;
+export const SELLABLE_INTERVALS: readonly BillingInterval[] = ['monthly', 'six_month', 'annual'] as const;
 export const DEFAULT_SELLING_INTERVAL: BillingInterval = 'monthly';
 
 export function isSellableInterval(value: unknown): value is BillingInterval {
-  return value === 'monthly' || value === 'annual';
+  return value === 'monthly' || value === 'six_month' || value === 'annual';
+}
+
+/** "1 month free" / "2 months free" for a prepaid interval, null for monthly
+ *  and for a sales-led tier. Months, never a percentage (see annualSavingCopy). */
+export function intervalSavingCopy(id: PricingTierId, interval: BillingInterval): string | null {
+  if (!PRICING_TIERS[id].monthlyPrice) return null;
+  const free = INTERVAL_MONTHS[interval] - INTERVAL_MONTHS_BILLED[interval];
+  if (free <= 0) return null;
+  return `${free} ${free === 1 ? 'month' : 'months'} free`;
+}
+
+/** Naira saved on a prepaid interval against paying monthly for the same
+ *  months. 0 for monthly; null for a sales-led tier. */
+export function intervalSavingNaira(id: PricingTierId, interval: BillingInterval): number | null {
+  const monthly = PRICING_TIERS[id].monthlyPrice;
+  if (!monthly) return null;
+  return monthly.amount * (INTERVAL_MONTHS[interval] - INTERVAL_MONTHS_BILLED[interval]);
+}
+
+/** Does a team on this tier and interval get "Distribution included"?
+ *
+ *  Solo never. Manager, Label and Group do, except that with
+ *  DISTRIBUTION_REQUIRES_PREPAY on (passed in, because this package reads no
+ *  env) a monthly subscriber does not: TRM may bill a year upfront, and a
+ *  team that leaves after one month would cost more than it paid. */
+export function distributionIncluded(
+  id: PricingTierId,
+  interval: BillingInterval | null,
+  requiresPrepay: boolean
+): boolean {
+  if (!PRICING_TIERS[id].includesDistribution) return false;
+  if (requiresPrepay && interval === 'monthly') return false;
+  return true;
 }
 
 /** The yearly saving, phrased the one way the copy rules allow.
@@ -608,9 +693,29 @@ export function annualSavingCopy(id: PricingTierId): string | null {
  *  scene assembles the ISRC, UPC, splits and credits the partner asks for, so
  *  the handoff is one paste. "Distribution included" implied the plan price
  *  covered distribution, which it does not, so the line now names the partner. */
-const UNIVERSAL_HIGHLIGHTS: readonly string[] = ['Distribution through our partner'] as const;
+const UNIVERSAL_HIGHLIGHTS: readonly string[] = [] as const;
 
-export function tierHighlights(id: PricingTierId): string[] {
+/** The distribution line on a pricing card.
+ *
+ *  REVERSED 2026-10-22 (founder): Urganize now pays TRM a fixed fee per
+ *  entitled team, so Manager, Label and Group really do include distribution
+ *  and the card says so. Solo does not, and its card says nothing about it.
+ *  With DISTRIBUTION_REQUIRES_PREPAY on, the monthly view of an entitled tier
+ *  says distribution needs a 6-month or yearly plan. */
+export function distributionHighlight(
+  id: PricingTierId,
+  interval: BillingInterval,
+  requiresPrepay: boolean
+): string | null {
+  if (!PRICING_TIERS[id].includesDistribution) return null;
+  if (distributionIncluded(id, interval, requiresPrepay)) return 'Distribution included';
+  return 'Distribution on 6-month and yearly plans';
+}
+
+export function tierHighlights(
+  id: PricingTierId,
+  opts: { interval?: BillingInterval; distributionRequiresPrepay?: boolean } = {}
+): string[] {
   const { limits, perks, urgansMonthlyCredits, contactSales } = PRICING_TIERS[id];
   const lines: string[] = [];
 
@@ -645,7 +750,12 @@ export function tierHighlights(id: PricingTierId): string[] {
       : `${urgansMonthlyCredits.toLocaleString('en-US')} UrgAns credits a month`
   );
 
-  return [...lines, ...UNIVERSAL_HIGHLIGHTS, ...perks];
+  const distribution = distributionHighlight(
+    id,
+    opts.interval ?? DEFAULT_SELLING_INTERVAL,
+    opts.distributionRequiresPrepay ?? false
+  );
+  return [...lines, ...(distribution ? [distribution] : []), ...UNIVERSAL_HIGHLIGHTS, ...perks];
 }
 
 export function getTier(id: PricingTierId): PricingTierDefinition {
@@ -661,7 +771,7 @@ export function isPricingTierId(value: unknown): value is PricingTierId {
 }
 
 export function isBillingInterval(value: unknown): value is BillingInterval {
-  return value === 'monthly' || value === 'annual';
+  return value === 'monthly' || value === 'six_month' || value === 'annual';
 }
 
 /** A tier's price for one interval. Null for a sales-led tier — callers must
@@ -677,7 +787,7 @@ export function getTierPrice(
 ): TierPrice | null {
   const monthly = PRICING_TIERS[id].monthlyPrice;
   if (!monthly) return null;
-  return interval === 'monthly' ? monthly : tierPrice(annualAmount(monthly.amount));
+  return interval === 'monthly' ? monthly : tierPrice(intervalAmount(monthly.amount, interval));
 }
 
 /** A tier's price as a customer reads it: "₦7,500/month", "₦75,000/year". Null
@@ -704,5 +814,24 @@ export function formatTierPrice(
     currency: 'NGN',
     maximumFractionDigits: 0,
   }).format(price.amount);
-  return `${formatted}/${interval === 'monthly' ? 'month' : 'year'}`;
+  return `${formatted}/${INTERVAL_WORD[interval]}`;
+}
+
+/** How a period reads after a slash: "/month", "/6 months", "/year". */
+export const INTERVAL_WORD: Record<BillingInterval, string> = {
+  monthly: 'month',
+  six_month: '6 months',
+  annual: 'year',
+};
+
+/** How a period reads as a label: "Monthly", "6 months", "Yearly". */
+export const INTERVAL_LABEL: Record<BillingInterval, string> = {
+  monthly: 'Monthly',
+  six_month: '6 months',
+  annual: 'Yearly',
+};
+
+/** An amount for one interval spread per month, in kobo (MRR math). */
+export function monthlyEquivalentKobo(amountKobo: number, interval: BillingInterval): number {
+  return Math.round(amountKobo / INTERVAL_MONTHS[interval]);
 }

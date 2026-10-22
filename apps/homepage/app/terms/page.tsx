@@ -20,7 +20,7 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 // Real date discipline: moves only when the terms text changes.
-const LAST_UPDATED = "October 19, 2026";
+const LAST_UPDATED = "October 22, 2026";
 
 const CONTACT_HREF =
   "mailto:contact@urganize.app?subject=Terms%20question%20-%20Urganize";
@@ -89,8 +89,8 @@ export default function TermsPage() {
                 required. The trial covers the whole team, not each
                 person, so joining an existing team does not start a new one.
                 After the trial, continued use requires a paid subscription,
-                priced per team and paid monthly or once a year through
-                Paystack, whichever you pick. We never see or store your card
+                priced per team and paid monthly, every 6 months or once a
+                year through Paystack, whichever you pick. We never see or store your card
                 details.
               </p>
               <p>

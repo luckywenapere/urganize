@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { PRICING_TIERS } from '@urganize/pricing';
 import type { PricingTierId } from '@urganize/pricing';
-import { isSelfServeTier, purchasableTiers } from './billing-plans';
+import { isSelfServeTier, purchasableIntervals, purchasableIntervalsByTier, purchasableTiers } from './billing-plans';
 import { checkLimit, type CountableLimitKey } from './entitlements';
 
 // Every countable ceiling, on three axes: it passes at the limit, it refuses
@@ -225,25 +225,32 @@ describe('purchasableTiers only names tiers this deployment can charge', () => {
     expect(purchasableTiers()).toEqual([]);
   });
 
-  it('offers a tier only once BOTH of its intervals are configured', () => {
+  it('offers a tier once ANY of its periods is configured, and only that period', () => {
     for (const key of Object.keys(process.env)) {
       if (key.startsWith('PAYSTACK_PLAN_')) delete process.env[key];
     }
 
-    // Monthly alone is not enough. The wall's interval toggle is always live, so
-    // a half-configured tier just moves the failure one click later.
-    process.env.PAYSTACK_PLAN_SOLO_PER_MONTH_NGN = 'PLN_solo_monthly';
-    expect(purchasableTiers()).toEqual([]);
-
-    process.env.PAYSTACK_PLAN_SOLO_PER_YEAR_NGN = 'PLN_solo_annual';
+    // Since 2026-10-22 each period is offered on its own: a period with no
+    // Plan is hidden from the toggle rather than withholding the whole tier.
+    process.env.PAYSTACK_PLAN_SOLO_1M_NGN = 'PLN_solo_monthly';
     expect(purchasableTiers()).toEqual(['solo']);
+    expect(purchasableIntervals('solo')).toEqual(['monthly']);
+
+    process.env.PAYSTACK_PLAN_SOLO_12M_NGN = 'PLN_solo_annual';
+    expect(purchasableIntervals('solo')).toEqual(['monthly', 'annual']);
+
+    process.env.PAYSTACK_PLAN_SOLO_6M_NGN = 'PLN_solo_six';
+    expect(purchasableIntervals('solo')).toEqual(['monthly', 'six_month', 'annual']);
   });
 
   it('keeps pricing-page order, cheapest first', () => {
-    process.env.PAYSTACK_PLAN_SOLO_PER_MONTH_NGN = 'PLN_a';
-    process.env.PAYSTACK_PLAN_SOLO_PER_YEAR_NGN = 'PLN_b';
-    process.env.PAYSTACK_PLAN_MANAGER_PER_MONTH_NGN = 'PLN_c';
-    process.env.PAYSTACK_PLAN_MANAGER_PER_YEAR_NGN = 'PLN_d';
+    for (const key of Object.keys(process.env)) {
+      if (key.startsWith('PAYSTACK_PLAN_')) delete process.env[key];
+    }
+    process.env.PAYSTACK_PLAN_SOLO_1M_NGN = 'PLN_a';
+    process.env.PAYSTACK_PLAN_SOLO_12M_NGN = 'PLN_b';
+    process.env.PAYSTACK_PLAN_MANAGER_1M_NGN = 'PLN_c';
+    process.env.PAYSTACK_PLAN_MANAGER_12M_NGN = 'PLN_d';
     expect(purchasableTiers()).toEqual(['solo', 'manager']);
   });
 
@@ -265,8 +272,14 @@ describe('purchasableTiers only names tiers this deployment can charge', () => {
     process.env.PAYSTACK_PLAN_LABEL_NGN = 'PLN_label';
     process.env.PAYSTACK_PLAN_MONTHLY_NGN = 'PLN_legacy_monthly';
     process.env.PAYSTACK_PLAN_ANNUAL_NGN = 'PLN_legacy_annual';
-    process.env.PAYSTACK_PLAN_SOLO_PER_MONTH_NGN = 'PLN_a';
-    process.env.PAYSTACK_PLAN_SOLO_PER_YEAR_NGN = 'PLN_b';
+    for (const key of Object.keys(process.env)) {
+      if (key.startsWith('PAYSTACK_PLAN_')) delete process.env[key];
+    }
+    process.env.PAYSTACK_PLAN_LABEL_NGN = 'PLN_label';
+    process.env.PAYSTACK_PLAN_MONTHLY_NGN = 'PLN_legacy_monthly';
+    process.env.PAYSTACK_PLAN_ANNUAL_NGN = 'PLN_legacy_annual';
+    process.env.PAYSTACK_PLAN_SOLO_1M_NGN = 'PLN_a';
+    process.env.PAYSTACK_PLAN_SOLO_12M_NGN = 'PLN_b';
     const offered = purchasableTiers();
     expect(offered).not.toContain('label');
     expect(offered).toContain('solo');
@@ -283,21 +296,21 @@ describe('purchasableTiers only names tiers this deployment can charge', () => {
   });
 
   it('treats an empty env var as unset, not as a code', () => {
-    process.env.PAYSTACK_PLAN_SOLO_PER_YEAR_NGN = '   ';
+    for (const key of Object.keys(process.env)) {
+      if (key.startsWith('PAYSTACK_PLAN_')) delete process.env[key];
+    }
+    process.env.PAYSTACK_PLAN_SOLO_12M_NGN = '   ';
     expect(purchasableTiers()).not.toContain('solo');
+    expect(purchasableIntervals('solo')).toEqual([]);
   });
 
-  it('needs BOTH Plans again, because both intervals are sold', () => {
-    // It required both until 2026-09-08, only the annual one while annual was
-    // the sole interval, and both again from 2026-09-10. The requirement tracks
-    // what the wall OFFERS: a toggle with two live sides means a tier missing
-    // either Plan would 500 on one of them, so it is withheld until both exist.
-    delete process.env.PAYSTACK_PLAN_SOLO_PER_MONTH_NGN;
-    process.env.PAYSTACK_PLAN_SOLO_PER_YEAR_NGN = 'PLN_solo_year';
-    expect(purchasableTiers()).not.toContain('solo');
-
-    process.env.PAYSTACK_PLAN_SOLO_PER_MONTH_NGN = 'PLN_solo_month';
-    expect(purchasableTiers()).toContain('solo');
+  it('never offers a period whose Plan is missing (no toggle side that 500s)', () => {
+    for (const key of Object.keys(process.env)) {
+      if (key.startsWith('PAYSTACK_PLAN_')) delete process.env[key];
+    }
+    process.env.PAYSTACK_PLAN_SOLO_12M_NGN = 'PLN_solo_year';
+    expect(purchasableIntervals('solo')).toEqual(['annual']);
+    expect(purchasableIntervalsByTier()).toEqual({ solo: ['annual'] });
   });
 });
 

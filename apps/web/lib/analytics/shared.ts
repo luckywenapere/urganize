@@ -116,6 +116,17 @@ export interface AnalyticsEventPropertiesMap {
   onboarding_trial_started: { tier: string; interval: string; changed_from_preselected: boolean };
   /** "Questions? Chat with us". */
   onboarding_paywall_chat: EmptyAnalyticsProperties;
+  /** Pricing v3 (2026-10-22). A plan's price was on screen. plan_version is
+   *  PRICE_LIST_VERSION, so a reprice can be told apart in the funnel. */
+  plan_price_viewed: { plan: string; period: string; price_kobo: number; plan_version: string; acquisition_path: string };
+  /** The period toggle was moved (Monthly, 6 months, Yearly). */
+  checkout_period_selected: { plan: string; period: string; acquisition_path: string };
+  /** The Distribute step offered "Switch to 6 months" to a monthly team. */
+  prepay_upsell_shown: { plan: string; acquisition_path: string };
+  /** They went on to pay for the switch (logged when checkout starts). */
+  prepay_upsell_accepted: { plan: string; period: string; price_kobo: number; acquisition_path: string };
+  /** Checkout started from the wall, with where it came from. */
+  billing_checkout_started: { plan: string; period: string; kind: string; acquisition_path: string };
   onboarding_welcome_viewed: EmptyAnalyticsProperties;
   onboarding_welcome_go: EmptyAnalyticsProperties;
   /** "Bring your team in" was skipped (URG-274). */

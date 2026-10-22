@@ -5,10 +5,11 @@ import { RiCheckLine } from "react-icons/ri";
 import {
   DEFAULT_SELLING_INTERVAL,
   PRICING_TIER_ORDER,
+  INTERVAL_LABEL,
   SELLABLE_INTERVALS,
-  annualSavingCopy,
   formatTierPrice,
   getTier,
+  intervalSavingCopy,
   tierHighlights,
   type BillingInterval,
   type PricingTierId,
@@ -56,11 +57,6 @@ function isSelfServe(tierId: PricingTierId): boolean {
   return !getTier(tierId).contactSales;
 }
 
-const INTERVAL_LABEL: Record<BillingInterval, string> = {
-  monthly: "Monthly",
-  annual: "Yearly",
-};
-
 // THE BILLING LINE IS DERIVED FROM WHAT IS ON SALE, not typed (2026-10-09).
 // It said "Every plan is paid once a year." while the switch above the cards
 // offered Monthly and Yearly: true on 2026-09-08, when yearly was the only
@@ -68,11 +64,14 @@ const INTERVAL_LABEL: Record<BillingInterval, string> = {
 // the same drift this file's header describes for prices, so it reads the same
 // list the switch does. The both-intervals wording is the one /terms uses.
 function billingLine(intervals: readonly BillingInterval[]): string {
-  const monthly = intervals.includes("monthly");
-  const annual = intervals.includes("annual");
-  if (monthly && annual) return "You can pay monthly or once a year.";
-  if (annual) return "Every plan is paid once a year.";
-  return "Every plan is paid monthly.";
+  const words: string[] = [];
+  if (intervals.includes("monthly")) words.push("monthly");
+  if (intervals.includes("six_month")) words.push("every 6 months");
+  if (intervals.includes("annual")) words.push("once a year");
+  if (words.length === 0) return "";
+  if (words.length === 1) return `Every plan is paid ${words[0]}.`;
+  const last = words.pop();
+  return `You can pay ${words.join(", ")} or ${last}.`;
 }
 
 export function PricingTierCards() {
@@ -84,7 +83,8 @@ export function PricingTierCards() {
   // Read off the first tier that still HAS a price rather than a named one: a
   // named tier that later goes sales-led returns null and silently takes the
   // badge off the page, which has happened here once already.
-  const saving = PRICING_TIER_ORDER.map(annualSavingCopy).find(Boolean) ?? null;
+  const saving =
+    PRICING_TIER_ORDER.map((id) => intervalSavingCopy(id, interval)).find(Boolean) ?? null;
 
   return (
     <section className="relative px-6 pb-20">
@@ -125,7 +125,7 @@ export function PricingTierCards() {
           </div>
           {/* Phrased as months, never a percentage — the one wording the pricing
               package allows. Derived from ANNUAL_MONTHS_BILLED. */}
-          {saving && interval === "annual" ? (
+          {saving ? (
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--marketing-accent)]">
               {saving}
             </p>
@@ -139,7 +139,10 @@ export function PricingTierCards() {
           {PRICING_TIER_ORDER.map((tierId) => {
             const tier = getTier(tierId);
             const price = formatTierPrice(tierId, interval);
-            const highlights = tierHighlights(tierId);
+            // The distribution line follows the period on screen. The site
+            // cannot read the server's DISTRIBUTION_REQUIRES_PREPAY, so it shows
+            // the default (off); turning it on means a matching copy change here.
+            const highlights = tierHighlights(tierId, { interval });
             const selfServe = isSelfServe(tierId);
             return (
               <div
@@ -165,8 +168,19 @@ export function PricingTierCards() {
                 {/* A sales-led tier has no `prices` at all, so there is no
                     figure to render and no risk of printing one we never
                     quoted. */}
+                {/* The figure and its period are split so "/6 months" sits
+                    small beside the number instead of wrapping it at 3xl. */}
                 <p className="mt-4 text-3xl font-black tracking-tighter text-[var(--marketing-text)]">
-                  {price ?? "Let's talk"}
+                  {price ? (
+                    <>
+                      {price.slice(0, price.indexOf("/"))}
+                      <span className="whitespace-nowrap text-base font-semibold tracking-normal text-[var(--marketing-text-muted)]">
+                        {price.slice(price.indexOf("/"))}
+                      </span>
+                    </>
+                  ) : (
+                    "Let's talk"
+                  )}
                 </p>
 
                 <p className="mt-3 text-sm leading-6 text-[var(--marketing-text-muted)]">

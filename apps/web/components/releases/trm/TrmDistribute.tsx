@@ -42,6 +42,8 @@ import {
 } from './TrmParts';
 import { TrmSendSheet, TrmShell } from './TrmSendSheet';
 import { useTrm, type TrmPost } from './useTrm';
+import { DistributionPlanCard } from './DistributionPlanCard';
+import { useDistributionPlan } from './useDistributionPlan';
 
 /**
  * The Distribute step with Send to TRM (URG-392), built to the approved mocks
@@ -82,6 +84,7 @@ type Props = {
 
 export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Props) {
   const { data, loadError, reload, post } = useTrm(releaseId);
+  const { plan } = useDistributionPlan();
   const { openScene } = useSceneOverlay();
   const router = useRouter();
   const [sheet, setSheet] = useState<'send' | 'resend' | 'settings' | 'email' | null>(null);
@@ -224,6 +227,7 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
           artist={data.primaryArtist}
           releaseDate={data.releaseDate}
           initialEmail={data.artistEmail}
+          planIncluded={plan?.state === 'included'}
           resend={sheet === 'resend'}
           post={post}
           onClose={() => {
@@ -252,6 +256,7 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
   const wrap = (children: React.ReactNode) => (
     <div className="mx-auto mt-8 max-w-[880px] space-y-9">
       {children}
+      <DistributionPlanCard plan={plan} />
       {sheets}
     </div>
   );

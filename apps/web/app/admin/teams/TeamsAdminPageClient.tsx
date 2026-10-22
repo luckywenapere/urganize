@@ -249,7 +249,7 @@ export default function TeamsAdminPageClient() {
       // the scoreboard divides a yearly deal by 12 for MRR.
       const isGroup = ['group', 'enterprise'].includes(plan.toLowerCase());
       const billingInterval = isGroup
-        ? window.prompt('Billed monthly or yearly?', 'yearly')?.trim() || ''
+        ? window.prompt('Billed monthly, 6 months or yearly?', 'yearly')?.trim() || ''
         : '';
       if (isGroup && !billingInterval) return;
       const defaultNaira = team.billingLockedAmount ? String(team.billingLockedAmount / 100) : '';

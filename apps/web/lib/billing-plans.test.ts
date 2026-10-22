@@ -267,12 +267,12 @@ describe('tier plan codes and prices', () => {
   });
 
   it('reads each tier and interval from its own env var', () => {
-    vi.stubEnv('PAYSTACK_PLAN_SOLO_PER_MONTH_NGN', '  PLN_solo_m  ');
-    vi.stubEnv('PAYSTACK_PLAN_SOLO_PER_YEAR_NGN', 'PLN_solo_y');
-    vi.stubEnv('PAYSTACK_PLAN_MANAGER_PER_MONTH_NGN', 'PLN_mgr_m');
-    vi.stubEnv('PAYSTACK_PLAN_MANAGER_PER_YEAR_NGN', 'PLN_mgr_y');
-    vi.stubEnv('PAYSTACK_PLAN_LABEL_PER_MONTH_NGN', 'PLN_label_m');
-    vi.stubEnv('PAYSTACK_PLAN_LABEL_PER_YEAR_NGN', 'PLN_label_y');
+    vi.stubEnv('PAYSTACK_PLAN_SOLO_1M_NGN', '  PLN_solo_m  ');
+    vi.stubEnv('PAYSTACK_PLAN_SOLO_12M_NGN', 'PLN_solo_y');
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_1M_NGN', 'PLN_mgr_m');
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_12M_NGN', 'PLN_mgr_y');
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_1M_NGN', 'PLN_label_m');
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_12M_NGN', 'PLN_label_y');
     expect(getTierPaystackPlanCode('solo', 'monthly')).toBe('PLN_solo_m');
     expect(getTierPaystackPlanCode('solo', 'annual')).toBe('PLN_solo_y');
     expect(getTierPaystackPlanCode('manager', 'monthly')).toBe('PLN_mgr_m');
@@ -281,15 +281,22 @@ describe('tier plan codes and prices', () => {
     expect(getTierPaystackPlanCode('label', 'annual')).toBe('PLN_label_y');
   });
 
+  it('reads the 6-month Plan from its own var, and hides it when unset', () => {
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_6M_NGN', 'PLN_mgr_6');
+    expect(getTierPaystackPlanCode('manager', 'six_month')).toBe('PLN_mgr_6');
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_6M_NGN', '');
+    expect(getTierPaystackPlanCode('manager', 'six_month')).toBeNull();
+  });
+
   // THE TWO INTERVALS MUST NOT CROSS. Billing a yearly Plan for a monthly
   // request charges ten times the advertised figure, which is why the var names
-  // are PER_MONTH and PER_YEAR rather than a shared stem with a suffix.
+  // are 1M, 6M and 12M rather than one stem with an interval suffix.
   it('never answers one interval with the Plan for the other', () => {
-    vi.stubEnv('PAYSTACK_PLAN_SOLO_PER_MONTH_NGN', 'PLN_solo_m');
-    vi.stubEnv('PAYSTACK_PLAN_SOLO_PER_YEAR_NGN', '');
+    vi.stubEnv('PAYSTACK_PLAN_SOLO_1M_NGN', 'PLN_solo_m');
+    vi.stubEnv('PAYSTACK_PLAN_SOLO_12M_NGN', '');
     expect(getTierPaystackPlanCode('solo', 'annual')).toBeNull();
-    vi.stubEnv('PAYSTACK_PLAN_SOLO_PER_MONTH_NGN', '');
-    vi.stubEnv('PAYSTACK_PLAN_SOLO_PER_YEAR_NGN', 'PLN_solo_y');
+    vi.stubEnv('PAYSTACK_PLAN_SOLO_1M_NGN', '');
+    vi.stubEnv('PAYSTACK_PLAN_SOLO_12M_NGN', 'PLN_solo_y');
     expect(getTierPaystackPlanCode('solo', 'monthly')).toBeNull();
   });
 
@@ -305,28 +312,37 @@ describe('tier plan codes and prices', () => {
     vi.stubEnv('PAYSTACK_PLAN_LABEL_NGN', 'PLN_stale_750k');
     vi.stubEnv('PAYSTACK_PLAN_ANNUAL_NGN', 'PLN_shared_legacy');
     vi.stubEnv('PAYSTACK_PLAN_LABEL_YEARLY_NGN', 'PLN_superseded_5k_year');
-    vi.stubEnv('PAYSTACK_PLAN_LABEL_PER_MONTH_NGN', '');
-    vi.stubEnv('PAYSTACK_PLAN_LABEL_PER_YEAR_NGN', '');
+    // The 2026-10-17 Plans (₦60,000 a month) are stale since the 2026-10-22
+    // reprice and must not be read for a new checkout either.
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_PER_MONTH_NGN', 'PLN_stale_60k_month');
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_PER_YEAR_NGN', 'PLN_stale_600k_year');
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_1M_NGN', '');
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_6M_NGN', '');
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_12M_NGN', '');
     expect(getTierPaystackPlanCode('label', 'monthly')).toBeNull();
+    expect(getTierPaystackPlanCode('label', 'six_month')).toBeNull();
     expect(getTierPaystackPlanCode('label', 'annual')).toBeNull();
   });
 
   it('returns null when a tier plan is not configured, so checkout refuses', () => {
-    vi.stubEnv('PAYSTACK_PLAN_MANAGER_PER_MONTH_NGN', '   ');
-    vi.stubEnv('PAYSTACK_PLAN_MANAGER_PER_YEAR_NGN', '   ');
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_1M_NGN', '   ');
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_12M_NGN', '   ');
     expect(getTierPaystackPlanCode('manager', 'monthly')).toBeNull();
     expect(getTierPaystackPlanCode('manager', 'annual')).toBeNull();
   });
 
   it('prices every self-serve tier at both intervals, in kobo', () => {
-    // Monthly is the stored figure; yearly is ten months of it, computed.
-    // 2026-10-17 reprice: ₦7,500 / ₦25,000 / ₦60,000 a month.
+    // Monthly is the stored figure; 6 months is five of it and a year is ten.
+    // 2026-10-22 reprice: ₦7,500 / ₦30,000 / ₦100,000 a month.
     expect(getTierMinorUnit('solo', 'monthly')).toBe(7_500_00);
-    expect(getTierMinorUnit('manager', 'monthly')).toBe(25_000_00);
-    expect(getTierMinorUnit('label', 'monthly')).toBe(60_000_00);
+    expect(getTierMinorUnit('manager', 'monthly')).toBe(30_000_00);
+    expect(getTierMinorUnit('label', 'monthly')).toBe(100_000_00);
+    expect(getTierMinorUnit('solo', 'six_month')).toBe(37_500_00);
+    expect(getTierMinorUnit('manager', 'six_month')).toBe(150_000_00);
+    expect(getTierMinorUnit('label', 'six_month')).toBe(500_000_00);
     expect(getTierMinorUnit('solo', 'annual')).toBe(75_000_00);
-    expect(getTierMinorUnit('manager', 'annual')).toBe(250_000_00);
-    expect(getTierMinorUnit('label', 'annual')).toBe(600_000_00);
+    expect(getTierMinorUnit('manager', 'annual')).toBe(300_000_00);
+    expect(getTierMinorUnit('label', 'annual')).toBe(1_000_000_00);
   });
 });
 
@@ -405,12 +421,12 @@ describe('resolveCheckoutPurchase', () => {
   const stubLive = () => {
     vi.stubEnv('PAYSTACK_PLAN_MONTHLY_NGN', 'PLN_live_month');
     vi.stubEnv('PAYSTACK_PLAN_ANNUAL_NGN', 'PLN_live_year');
-    vi.stubEnv('PAYSTACK_PLAN_SOLO_PER_MONTH_NGN', 'PLN_solo_m');
-    vi.stubEnv('PAYSTACK_PLAN_SOLO_PER_YEAR_NGN', 'PLN_solo_y');
-    vi.stubEnv('PAYSTACK_PLAN_MANAGER_PER_MONTH_NGN', 'PLN_mgr_m');
-    vi.stubEnv('PAYSTACK_PLAN_MANAGER_PER_YEAR_NGN', 'PLN_mgr_y');
-    vi.stubEnv('PAYSTACK_PLAN_LABEL_PER_MONTH_NGN', 'PLN_label_m');
-    vi.stubEnv('PAYSTACK_PLAN_LABEL_PER_YEAR_NGN', 'PLN_label_y');
+    vi.stubEnv('PAYSTACK_PLAN_SOLO_1M_NGN', 'PLN_solo_m');
+    vi.stubEnv('PAYSTACK_PLAN_SOLO_12M_NGN', 'PLN_solo_y');
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_1M_NGN', 'PLN_mgr_m');
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_12M_NGN', 'PLN_mgr_y');
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_1M_NGN', 'PLN_label_m');
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_12M_NGN', 'PLN_label_y');
   };
 
   it('resolves a tier purchase to its Plan, price and interval', () => {
@@ -426,14 +442,14 @@ describe('resolveCheckoutPurchase', () => {
       ok: true,
       planId: 'manager',
       planCode: 'PLN_mgr_y',
-      amountMinorUnit: 250_000_00,
+      amountMinorUnit: 300_000_00,
       interval: 'annual',
     });
   });
 
   it('sells Label at its own Plan, never the stale ₦750,000 one', () => {
-    // Label became self-serve again on 2026-09-08, and is ₦60,000/month since
-    // 2026-10-17, so a year of it is ₦600,000. The trap it
+    // Label became self-serve again on 2026-09-08, and is ₦100,000/month since
+    // 2026-10-22, so a year of it is ₦1,000,000. The trap it
     // has to clear: PAYSTACK_PLAN_LABEL_NGN exists in the dashboard holding a
     // mislabeled ₦750,000 Plan, and it is one word away from the var this tier
     // actually reads. Stubbed here precisely so a regression that reached for it
@@ -451,7 +467,7 @@ describe('resolveCheckoutPurchase', () => {
       ok: true,
       planId: 'label',
       planCode: 'PLN_label_y',
-      amountMinorUnit: 600_000_00,
+      amountMinorUnit: 1_000_000_00,
       interval: 'annual',
     });
   });
@@ -473,7 +489,7 @@ describe('resolveCheckoutPurchase', () => {
       ok: true,
       planId: 'manager',
       planCode: 'PLN_mgr_m',
-      amountMinorUnit: 25_000_00,
+      amountMinorUnit: 30_000_00,
       interval: 'monthly',
     });
   });

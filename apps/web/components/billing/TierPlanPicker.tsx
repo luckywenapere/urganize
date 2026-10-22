@@ -1,10 +1,12 @@
 'use client';
 
 import {
+  INTERVAL_LABEL,
   SELLABLE_INTERVALS,
-  annualSavingCopy,
+  distributionHighlight,
   formatTierPrice,
   getTier,
+  intervalSavingCopy,
   type BillingInterval,
   type PricingTierId,
 } from '@urganize/pricing';
@@ -36,11 +38,6 @@ import { onRadioGroupKeyDown } from '@/lib/radio-group-keys';
  * worse than a tier the visitor never saw.
  */
 
-const INTERVAL_LABEL: Record<BillingInterval, string> = {
-  monthly: 'Monthly',
-  annual: 'Yearly',
-};
-
 type TierPlanPickerProps = {
   /** Which tiers to offer. Sales-led tiers do not belong here. */
   tiers: readonly PricingTierId[];
@@ -48,8 +45,36 @@ type TierPlanPickerProps = {
   onSelectTier: (tier: PricingTierId) => void;
   selectedInterval: BillingInterval;
   onSelectInterval: (interval: BillingInterval) => void;
+  /** The periods each tier can be bought on here (server fact: a period whose
+   *  Paystack Plan is not minted is missing). Absent means "not told", and
+   *  every sellable period shows. */
+  intervalsByTier?: Partial<Record<PricingTierId, readonly BillingInterval[]>>;
+  /** DISTRIBUTION_REQUIRES_PREPAY, from the server. */
+  distributionRequiresPrepay?: boolean;
   disabled?: boolean;
 };
+
+/** The periods to offer: every sellable one any offered tier can be bought on,
+ *  in display order. Exported for the tests. */
+export function pickerIntervals(
+  tiers: readonly PricingTierId[],
+  intervalsByTier?: Partial<Record<PricingTierId, readonly BillingInterval[]>>
+): BillingInterval[] {
+  if (!intervalsByTier) return [...SELLABLE_INTERVALS];
+  return SELLABLE_INTERVALS.filter((interval) =>
+    tiers.some((tier) => (intervalsByTier[tier] ?? SELLABLE_INTERVALS).includes(interval))
+  );
+}
+
+/** The tiers to show for one period: those that can be bought on it. */
+export function pickerTiersFor(
+  tiers: readonly PricingTierId[],
+  interval: BillingInterval,
+  intervalsByTier?: Partial<Record<PricingTierId, readonly BillingInterval[]>>
+): PricingTierId[] {
+  if (!intervalsByTier) return [...tiers];
+  return tiers.filter((tier) => (intervalsByTier[tier] ?? SELLABLE_INTERVALS).includes(interval));
+}
 
 export function TierPlanPicker({
   tiers,
@@ -57,12 +82,17 @@ export function TierPlanPicker({
   onSelectTier,
   selectedInterval,
   onSelectInterval,
+  intervalsByTier,
+  distributionRequiresPrepay = false,
   disabled,
 }: TierPlanPickerProps) {
+  const intervals = pickerIntervals(tiers, intervalsByTier);
+  const shownTiers = pickerTiersFor(tiers, selectedInterval, intervalsByTier);
   // Read off the first tier that HAS a price rather than a named one: a named
   // tier that later goes sales-led returns null and silently takes the badge off
   // the picker, which is exactly how the marketing page lost it once.
-  const saving = tiers.map(annualSavingCopy).find(Boolean) ?? null;
+  const saving =
+    tiers.map((tier) => intervalSavingCopy(tier, selectedInterval)).find(Boolean) ?? null;
 
   return (
     <fieldset className="flex flex-col gap-2" disabled={disabled}>
@@ -73,13 +103,13 @@ export function TierPlanPicker({
           role="radiogroup"
           aria-label="Choose how often you pay"
           onKeyDown={(event) =>
-            onRadioGroupKeyDown(event, SELLABLE_INTERVALS.indexOf(selectedInterval), (index) =>
-              onSelectInterval(SELLABLE_INTERVALS[index])
+            onRadioGroupKeyDown(event, intervals.indexOf(selectedInterval), (index) =>
+              onSelectInterval(intervals[index])
             )
           }
           className="inline-flex overflow-hidden rounded-full border border-stroke-default bg-bg-elevated p-1"
         >
-          {SELLABLE_INTERVALS.map((option) => {
+          {intervals.map((option) => {
             const isActive = selectedInterval === option;
             return (
               <button
@@ -102,15 +132,16 @@ export function TierPlanPicker({
           })}
         </div>
         {/* Phrased as months, never a percentage — the one wording the pricing
-            package allows. Derived from ANNUAL_MONTHS_BILLED. */}
-        {saving && selectedInterval === 'annual' ? (
+            package allows. Derived from INTERVAL_MONTHS_BILLED. */}
+        {saving ? (
           <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-brand">
             {saving}
           </p>
         ) : null}
       </div>
-      {tiers.map((tierId) => {
+      {shownTiers.map((tierId) => {
         const tier = getTier(tierId);
+        const distribution = distributionHighlight(tierId, selectedInterval, distributionRequiresPrepay);
         const isActive = selectedTier === tierId;
         const price = formatTierPrice(tierId, selectedInterval);
         return (
@@ -144,6 +175,9 @@ export function TierPlanPicker({
                 ) : null}
               </span>
               <span className="mt-1 block text-xs text-content-tertiary">{tier.audience}</span>
+              {distribution ? (
+                <span className="mt-1 block text-xs text-content-secondary">{distribution}</span>
+              ) : null}
             </span>
             {/* Null only for a sales-led tier, which is never offered here. */}
             {price ? (

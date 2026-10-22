@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isPricingCurrency } from '@urganize/pricing';
+import { PRICE_LIST_VERSION, isPricingCurrency } from '@urganize/pricing';
+import { cleanAcquisitionPath } from '@/lib/acquisition-path';
 import { getAuthenticatedUser, createAdminClient } from '@/app/api/releases/_shared';
 import { resolveCheckoutPurchase } from '@/lib/billing-plans';
 import { isPricingV2Enabled } from '@/lib/entitlements';
@@ -47,6 +48,9 @@ type StartCheckoutRequest = {
   /** Team the plan is being activated for (hard-paywall flow). When present,
    * the charge is credited to that team's owner. */
   workspaceId?: string;
+  /** Where the checkout was started from, for counting. See
+   *  lib/acquisition-path.ts. */
+  acquisitionPath?: unknown;
 };
 
 type StartCheckoutResponse = {
@@ -119,6 +123,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: purchase.error }, { status: purchase.status });
   }
   const { planId, planCode, amountMinorUnit, interval: selectedInterval } = purchase;
+  const acquisitionPath = cleanAcquisitionPath(body.acquisitionPath);
 
   const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
   if (!paystackSecretKey) {
@@ -203,6 +208,11 @@ export async function POST(request: NextRequest) {
       // purchase: a legacy row's plan name already carries its interval, and
       // omitting the key keeps those rows byte-identical to before.
       ...(selectedInterval ? { selected_interval: selectedInterval } : {}),
+      // The price list this checkout was sold on, and what it was sold for:
+      // the webhook copies both onto the subscription as its locked price.
+      plan_version: PRICE_LIST_VERSION,
+      price_kobo: amountMinorUnit,
+      ...(acquisitionPath ? { acquisition_path: acquisitionPath } : {}),
       ...(body.workspaceId ? { workspace_id: body.workspaceId } : {}),
       ...(subjectUserId !== userId ? { paid_by_user_id: userId } : {}),
     },
@@ -279,7 +289,15 @@ export async function POST(request: NextRequest) {
         ownerUserId: subjectUserId,
         actorUserId: userId,
         type: 'checkout_started',
-        metadata: { plan: planId, interval: selectedInterval, currency, reference, amountMinorUnit },
+        metadata: {
+          plan: planId,
+          interval: selectedInterval,
+          currency,
+          reference,
+          amountMinorUnit,
+          plan_version: PRICE_LIST_VERSION,
+          acquisition_path: acquisitionPath,
+        },
       })
     );
   }

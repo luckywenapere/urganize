@@ -82,6 +82,7 @@ export function TrmSendSheet({
   artist,
   releaseDate,
   initialEmail,
+  planIncluded = false,
   resend = false,
   post,
   onClose,
@@ -91,6 +92,8 @@ export function TrmSendSheet({
   artist: string;
   releaseDate: string | null;
   initialEmail: string | null;
+  /** The team's plan includes distribution (pricing v3): Urganize covers TRM. */
+  planIncluded?: boolean;
   /** After a rejection: the master is already at TRM unless they add a new one. */
   resend?: boolean;
   post: TrmPost;
@@ -212,7 +215,7 @@ export function TrmSendSheet({
         </label>
       </div>
 
-      <p className="mt-2 font-mono text-[11px] text-content-secondary">Uses the artist’s TRM plan</p>
+      <p className="mt-2 font-mono text-[11px] text-content-secondary">{planIncluded ? 'Included in your Urganize plan' : 'Uses the artist’s TRM plan'}</p>
 
       <div className="mt-4 flex items-center gap-3.5 border border-dashed border-stroke-strong p-4 sm:p-[18px]">
         <AudioWaveform className="h-5 w-5 shrink-0 text-content-secondary" aria-hidden="true" />

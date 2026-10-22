@@ -1,6 +1,7 @@
 import {
   getTier,
   getTierPrice,
+  INTERVAL_MONTHS,
   isPricingTierId,
   type BillingInterval,
   type PricingTierId,
@@ -59,6 +60,7 @@ import {
  * broken elsewhere — nothing here derives a start date at all. */
 const PERIOD_DAYS: Record<BillingInterval, number> = {
   monthly: 30,
+  six_month: 182,
   annual: 365,
 };
 
@@ -78,6 +80,11 @@ export const MIN_CHARGEABLE_MINOR_UNIT = 100_00;
  *  route that writes it and the webhook that acts on it — and a route importing
  *  a constant from another route is a dependency neither should have. */
 export const PLAN_CHANGE_SOURCE = 'plan_change';
+
+/** `change_kind` on a plan-change payments row that is a monthly-to-prepay
+ *  switch (a new 6-month or yearly period starting today) rather than a
+ *  prorated tier upgrade. Read by the webhook. */
+export const PREPAY_SWITCH_KIND = 'prepay_switch';
 
 export type PlanChangeRefusalReason =
   | 'same_plan'
@@ -222,7 +229,11 @@ export function quotePlanChange(input: {
     return { kind: 'refused', reason: 'legacy_current_plan' };
   }
 
-  if (input.targetInterval !== 'monthly' && input.targetInterval !== 'annual') {
+  if (
+    input.targetInterval !== 'monthly' &&
+    input.targetInterval !== 'six_month' &&
+    input.targetInterval !== 'annual'
+  ) {
     return { kind: 'refused', reason: 'interval_change' };
   }
   // The interval is fixed for a self-serve change. See the header.
@@ -298,7 +309,7 @@ export function planChangeRefusalMessage(reason: PlanChangeRefusalReason): strin
     case 'same_plan':
       return 'Your team is already on this plan.';
     case 'interval_change':
-      return 'Switching between monthly and annual is something we set up with you. Talk to us and we will sort it out.';
+      return 'Moving from monthly to 6 months or yearly is the Switch button on Billing. Any other change of period we set up with you, so talk to us.';
     case 'sales_led_target':
       return 'That plan is quoted per contract, not sold from this page. Talk to us and we will scope it with you.';
     case 'legacy_current_plan':
@@ -311,4 +322,100 @@ export function planChangeRefusalMessage(reason: PlanChangeRefusalReason): strin
     case 'no_active_period':
       return 'There is no active plan to change yet. Activate a plan first.';
   }
+}
+// ---------------------------------------------------------------- prepay switch
+
+/** A monthly team buying a 6-month or yearly period of the SAME tier (founder,
+ *  2026-10-22, mock b). Pay now; the unused days of the current month come off;
+ *  the new period starts today. It is a new purchase, so it is priced at today's
+ *  list price even for a team on an older monthly rate, and the credit is what
+ *  they actually paid for the days they have not used. */
+export type PrepaySwitchQuote =
+  | {
+      kind: 'prepay_switch';
+      tier: PricingTierId;
+      fromInterval: 'monthly';
+      interval: BillingInterval;
+      /** The new period's full price, kobo. What every renewal charges. */
+      fullPriceMinorUnit: number;
+      /** What comes off for the unused days of the current month, kobo. */
+      creditMinorUnit: number;
+      /** What to charge now, kobo. */
+      amountMinorUnit: number;
+      daysRemaining: number;
+      startsAt: string;
+      renewsAt: string;
+    }
+  | { kind: 'refused'; reason: PlanChangeRefusalReason };
+
+/** True when this request is a monthly-to-prepay switch rather than a tier
+ *  change: same tier, monthly now, 6 months or yearly asked for. */
+export function isPrepaySwitchRequest(input: {
+  currentPlan: string | null | undefined;
+  currentInterval: BillingInterval;
+  targetTier: string;
+  targetInterval: string;
+}): boolean {
+  return (
+    String(input.currentPlan ?? '').trim() === input.targetTier &&
+    input.currentInterval === 'monthly' &&
+    (input.targetInterval === 'six_month' || input.targetInterval === 'annual')
+  );
+}
+
+/** The new period's end: `start` plus the interval's months. */
+export function prepayPeriodEnd(start: Date, interval: BillingInterval): Date {
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + INTERVAL_MONTHS[interval]);
+  return end;
+}
+
+export function quotePrepaySwitch(input: {
+  currentPlan: string | null | undefined;
+  currentInterval: BillingInterval;
+  targetInterval: string;
+  periodEndsAt: string | null | undefined;
+  /** subscriptions.amount, kobo: what a month of this subscription costs. */
+  currentPaidMinorUnit: number | null | undefined;
+  now: Date;
+}): PrepaySwitchQuote {
+  const current = String(input.currentPlan ?? '').trim();
+  if (!isPricingTierId(current) || getTier(current).contactSales) {
+    return { kind: 'refused', reason: 'legacy_current_plan' };
+  }
+  if (input.currentInterval !== 'monthly') return { kind: 'refused', reason: 'interval_change' };
+  if (input.targetInterval !== 'six_month' && input.targetInterval !== 'annual') {
+    return { kind: 'refused', reason: 'interval_change' };
+  }
+  const interval: BillingInterval = input.targetInterval;
+
+  const periodEnd = input.periodEndsAt ? new Date(input.periodEndsAt) : null;
+  if (!periodEnd || Number.isNaN(periodEnd.getTime()) || periodEnd <= input.now) {
+    return { kind: 'refused', reason: 'no_active_period' };
+  }
+
+  const fullPrice = getTierPrice(current, interval)?.minorUnit ?? null;
+  if (fullPrice === null) return { kind: 'refused', reason: 'sales_led_target' };
+
+  // The credit is what THEY paid, so it must be known. Unknown fails toward a
+  // human, the isGrandfatheredRate rule.
+  const paid = Number(input.currentPaidMinorUnit);
+  if (!Number.isFinite(paid) || paid <= 0) return { kind: 'refused', reason: 'grandfathered_rate' };
+
+  const fraction = unusedFraction({ periodEnd, now: input.now, interval: 'monthly' });
+  const credit = Math.min(fullPrice, Math.round(paid * fraction));
+  const amount = fullPrice - credit;
+
+  return {
+    kind: 'prepay_switch',
+    tier: current,
+    fromInterval: 'monthly',
+    interval,
+    fullPriceMinorUnit: fullPrice,
+    creditMinorUnit: credit,
+    amountMinorUnit: amount,
+    daysRemaining: daysUntil(periodEnd, input.now),
+    startsAt: input.now.toISOString(),
+    renewsAt: prepayPeriodEnd(input.now, interval).toISOString(),
+  };
 }

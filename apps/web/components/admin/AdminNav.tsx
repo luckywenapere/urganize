@@ -28,6 +28,7 @@ import {
   Link2,
   Spotlight,
   MoreHorizontal,
+  Wallet2,
 } from '@/components/icons';
 import { ADMIN_MORE_SECTIONS, ADMIN_PRIMARY_NAV, activeNavKey, adminBackTarget } from '@/lib/admin-sections';
 import { buttonVariants, cn } from '@/components/admin/ui';
@@ -64,6 +65,7 @@ export const ADMIN_SECTION_ICONS: Record<string, typeof LayoutDashboard> = {
   onboarding: ClipboardList,
   nps: ThumbsUp,
   'profile-funnel': Share2,
+  billing: Wallet2,
   notifications: BellRing,
   'curator-invites': ListMusic,
   'pitch-payments': PiggyBank,

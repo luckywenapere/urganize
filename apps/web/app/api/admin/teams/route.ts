@@ -370,6 +370,9 @@ export async function PATCH(request: NextRequest) {
         amountKobo: action.amountMinorUnit,
         plan: action.plan,
         source: 'manual',
+        // Settled by hand means paid straight to our bank: no Paystack fee.
+        channel: 'direct_transfer',
+        interval: action.billingInterval ?? null,
       });
       // A deal settled by hand is also a first payment for a team that was invited.
       await rewardReferrerOnFirstPayment(client, {

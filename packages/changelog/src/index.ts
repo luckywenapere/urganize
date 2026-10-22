@@ -41,6 +41,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.164.0",
+    title: "Pay for 6 months or a year, with distribution included",
+    tag: "Account",
+    date: "October 22, 2026",
+    highlights: [
+      "You can now pay every 6 months or once a year and save. 6 months costs the same as 5.",
+      "Manager and Label plans now include sending your releases to stores through TRM, at no extra cost.",
+      "Already paying? Your price stays the same.",
+    ],
+  },
+  {
     version: "1.163.0",
     title: "Pre-save links that make themselves",
     tag: "Rollouts",

@@ -93,7 +93,7 @@ export function resolveBillingInterval(input: {
   storedInterval?: string | null;
 }): BillingInterval {
   const stored = String(input.storedInterval || '').trim();
-  if (stored === 'monthly' || stored === 'annual') return stored;
+  if (stored === 'monthly' || stored === 'six_month' || stored === 'annual') return stored;
 
   const plan = String(input.plan || '').trim();
   // The legacy ids, where the name is the interval. 'label' is included
@@ -190,17 +190,26 @@ const PLAN_CODE_ENV_VAR: Record<BillingPlanId, Record<PricingCurrencyCode, strin
 // Its tier price used to be byte-identical to the legacy annual plan, which is
 // why it once shared that Plan object; at ₦50,000 it does not.
 const TIER_PLAN_CODE_ENV_VAR: Record<SelfServeTierId, Record<BillingInterval, string>> = {
+  // NEW NAMES ON 2026-10-22 (price list PRICE_LIST_VERSION), the fresh-name
+  // safety mechanism again: Manager and Label changed price, so reusing the
+  // PER_MONTH / PER_YEAR names would charge a ₦25,000 or ₦60,000 Plan under a
+  // ₦30,000 or ₦100,000 card the moment this deployed. An unset name hides that
+  // period instead (`purchasableIntervals`). Solo's price did not change, so its
+  // 1M and 12M vars take the same codes as its PER_MONTH and PER_YEAR ones.
   solo: {
-    monthly: 'PAYSTACK_PLAN_SOLO_PER_MONTH_NGN',
-    annual: 'PAYSTACK_PLAN_SOLO_PER_YEAR_NGN',
+    monthly: 'PAYSTACK_PLAN_SOLO_1M_NGN',
+    six_month: 'PAYSTACK_PLAN_SOLO_6M_NGN',
+    annual: 'PAYSTACK_PLAN_SOLO_12M_NGN',
   },
   manager: {
-    monthly: 'PAYSTACK_PLAN_MANAGER_PER_MONTH_NGN',
-    annual: 'PAYSTACK_PLAN_MANAGER_PER_YEAR_NGN',
+    monthly: 'PAYSTACK_PLAN_MANAGER_1M_NGN',
+    six_month: 'PAYSTACK_PLAN_MANAGER_6M_NGN',
+    annual: 'PAYSTACK_PLAN_MANAGER_12M_NGN',
   },
   label: {
-    monthly: 'PAYSTACK_PLAN_LABEL_PER_MONTH_NGN',
-    annual: 'PAYSTACK_PLAN_LABEL_PER_YEAR_NGN',
+    monthly: 'PAYSTACK_PLAN_LABEL_1M_NGN',
+    six_month: 'PAYSTACK_PLAN_LABEL_6M_NGN',
+    annual: 'PAYSTACK_PLAN_LABEL_12M_NGN',
   },
 };
 
@@ -238,16 +247,22 @@ const TIER_PLAN_CODE_ENV_VAR: Record<SelfServeTierId, Record<BillingInterval, st
  */
 const SUPERSEDED_TIER_PLAN_CODE_ENV_VARS: Record<string, readonly string[]> = {
   solo: [
+    'PAYSTACK_PLAN_SOLO_PER_MONTH_NGN',
+    'PAYSTACK_PLAN_SOLO_PER_YEAR_NGN',
     'PAYSTACK_PLAN_SOLO_YEARLY_NGN',
     'PAYSTACK_PLAN_SOLO_ANNUAL_NGN',
     'PAYSTACK_PLAN_SOLO_MONTHLY_NGN',
   ],
   manager: [
+    'PAYSTACK_PLAN_MANAGER_PER_MONTH_NGN',
+    'PAYSTACK_PLAN_MANAGER_PER_YEAR_NGN',
     'PAYSTACK_PLAN_MANAGER_YEARLY_NGN',
     'PAYSTACK_PLAN_MANAGER_ANNUAL_NGN',
     'PAYSTACK_PLAN_MANAGER_MONTHLY_NGN',
   ],
   label: [
+    'PAYSTACK_PLAN_LABEL_PER_MONTH_NGN',
+    'PAYSTACK_PLAN_LABEL_PER_YEAR_NGN',
     'PAYSTACK_PLAN_LABEL_YEARLY_NGN',
     'PAYSTACK_PLAN_MONTHLY_NGN',
     'PAYSTACK_PLAN_ANNUAL_NGN',
@@ -324,19 +339,29 @@ export function getTierPaystackPlanCode(
  * this reprice could have taken checkout down without a test failing anywhere.
  */
 export function purchasableTiers(): PricingTierId[] {
+  // ONE PERIOD IS ENOUGH since 2026-10-22: each period is offered on its own
+  // (`purchasableIntervals`), so a tier with only its monthly Plan minted shows
+  // only Monthly rather than a toggle where one side 500s.
   return PRICING_TIER_ORDER.filter(
-    (tier) =>
-      isSelfServeTier(tier) &&
-      // BOTH intervals, because both are offered. A tier with only one Plan
-      // minted would render an interval toggle where one side 500s at checkout,
-      // and a customer who happened to pick that side would read it as the
-      // product being broken. Withholding the whole tier until both exist keeps
-      // the fresh-var-name guarantee intact: ship before minting and the card
-      // simply does not appear, rather than half-appearing.
-      SELLABLE_INTERVALS.every(
-        (interval) => getTierPaystackPlanCode(tier, interval) !== null
-      )
+    (tier) => isSelfServeTier(tier) && purchasableIntervals(tier).length > 0
   );
+}
+
+/** The periods this deployment can charge for one tier, in display order. A
+ *  period whose Paystack Plan code env var is missing is hidden, never offered
+ *  and then refused at checkout. */
+export function purchasableIntervals(tier: PricingTierId): BillingInterval[] {
+  if (!isSelfServeTier(tier)) return [];
+  return SELLABLE_INTERVALS.filter(
+    (interval) => getTierPaystackPlanCode(tier, interval) !== null
+  );
+}
+
+/** purchasableIntervals for every purchasable tier, for the wall's payload. */
+export function purchasableIntervalsByTier(): Partial<Record<PricingTierId, BillingInterval[]>> {
+  const out: Partial<Record<PricingTierId, BillingInterval[]>> = {};
+  for (const tier of purchasableTiers()) out[tier] = purchasableIntervals(tier);
+  return out;
 }
 
 /**
@@ -454,8 +479,11 @@ export function advancePeriodEnd(
   const base = currentEnd && currentEnd.getTime() > now.getTime() ? new Date(currentEnd) : new Date(now);
   // Period length comes from resolveBillingInterval, never from matching the
   // plan name here: under pricing v2 the name does not carry it.
-  if (resolveBillingInterval({ plan, storedInterval }) === 'annual') {
+  const interval = resolveBillingInterval({ plan, storedInterval });
+  if (interval === 'annual') {
     base.setFullYear(base.getFullYear() + 1);
+  } else if (interval === 'six_month') {
+    base.setMonth(base.getMonth() + 6);
   } else {
     base.setMonth(base.getMonth() + 1);
   }
@@ -675,7 +703,7 @@ export function resolveCheckoutPurchase(input: {
     // against a single permitted value. The annual-only refusal that stood here
     // is gone with the restriction it enforced.
     if (!isBillingInterval(input.interval)) {
-      return { ok: false, status: 400, error: 'interval must be "monthly" or "annual".' };
+      return { ok: false, status: 400, error: 'interval must be "monthly", "six_month" or "annual".' };
     }
     // NGN only, and refused plainly rather than half-attempted: PRICING_TIERS
     // carries no USD prices, the Paystack account offers NGN alone in plan

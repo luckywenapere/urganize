@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getPlanExpiry } from '@/lib/billing';
+import { INTERVAL_MONTHS, isBillingInterval, type BillingInterval } from '@urganize/pricing';
+import { mapPaystackChannel } from '@/lib/billing-margin';
+import { isMissingColumnError } from '@/lib/billing-schema';
+import { recordTrmFeeForPayment } from '@/lib/trm/partner-ledger-server';
 import {
   advancePeriodEnd,
   getPaystackPlanCode,
@@ -8,13 +12,14 @@ import {
   identifyPlanByCode,
   isRecurringPlan,
   planCodeMatchesSubscription,
+  resolveBillingInterval,
   type RecurringPlanId,
 } from '@/lib/billing-plans';
 import { invalidateSubscriptionSnapshot } from '@/lib/subscription-access';
 import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { invalidateTeamAccess } from '@/lib/team-billing-server';
 import { notifyFounder } from '@/lib/billing-alerts-server';
-import { PLAN_CHANGE_SOURCE } from '@/lib/plan-change';
+import { PLAN_CHANGE_SOURCE, PREPAY_SWITCH_KIND, prepayPeriodEnd } from '@/lib/plan-change';
 import { handleRefundForReferrals, recordSubscriptionCharge, rewardReferrerOnFirstPayment } from '@/lib/referrals-server';
 import {
   TRIAL_CARD_PLAN,
@@ -99,6 +104,8 @@ type PaystackWebhookPayload = {
     plan?: PaystackPlanRef | string;
     subscription?: PaystackSubscriptionRef;
     metadata?: Record<string, unknown>;
+    /** How the customer paid: 'card', 'bank_transfer', 'dedicated_nuban', ... */
+    channel?: string;
     // subscription.create / subscription.disable shape
     subscription_code?: string;
     plan_code?: string;
@@ -141,9 +148,15 @@ const planRef = (raw: PaystackWebhookPayload['data']): PaystackPlanRef | null =>
  */
 function readSelectedInterval(
   paystackResponse: Record<string, unknown> | null
-): 'monthly' | 'annual' | null {
+): BillingInterval | null {
   const value = paystackResponse?.selected_interval;
-  return value === 'monthly' || value === 'annual' ? value : null;
+  return isBillingInterval(value) ? value : null;
+}
+
+/** A short string start-checkout stashed in the jsonb, or null. */
+function readStashedString(paystackResponse: Record<string, unknown> | null, key: string): string | null {
+  const value = paystackResponse?.[key];
+  return typeof value === 'string' && value.trim() ? value.trim().slice(0, 40) : null;
 }
 
 async function applyInitialOrManualCharge(
@@ -160,14 +173,27 @@ async function applyInitialOrManualCharge(
    *  whose name already carries its interval. Persisting it is what lets every
    *  future RENEWAL know the period: a renewal has no payments row to read, so
    *  the subscription row is the only place this fact can live. */
-  billingInterval: 'monthly' | 'annual' | null = null
+  billingInterval: BillingInterval | null = null,
+  /** The price list the checkout was sold on (payments jsonb plan_version). */
+  planVersion: string | null = null
 ) {
   const expiresAt = getPlanExpiry(plan, now, billingInterval);
 
-  const { error: subError } = await admin
-    .from('subscriptions')
-    .upsert(
+  // THE LOCKED PRICE (pricing v3, 2026-10-22). A new checkout locks what one
+  // period costs today; renewals (applyRenewal) never touch it, so an existing
+  // subscriber keeps their price through every reprice. Written as extra
+  // columns and retried without them on a database the migration has not
+  // reached, so a payment is never lost to a missing column.
+  const lockColumns = {
+    price_locked_kobo: amountMinorUnit,
+    plan_version: planVersion ?? 'legacy',
+  };
+  const upsertSubscription = (withLock: boolean) =>
+    admin
+      .from('subscriptions')
+      .upsert(
       {
+        ...(withLock ? lockColumns : {}),
         user_id: userId,
         plan,
         billing_interval: billingInterval,
@@ -189,6 +215,10 @@ async function applyInitialOrManualCharge(
       },
       { onConflict: 'user_id' }
     );
+  let { error: subError } = await upsertSubscription(true);
+  if (subError && isMissingColumnError(subError)) {
+    ({ error: subError } = await upsertSubscription(false));
+  }
   if (subError) {
     console.error('[paystack-webhook] subscription upsert error:', subError.message);
   }
@@ -299,11 +329,16 @@ async function handlePlanChangeCharge(
   admin: AdminClient,
   payment: { id: string; user_id: string; plan: string; amount?: number | null; paystack_response: Record<string, unknown> | null },
   reference: string,
-  now: Date
+  now: Date,
+  channel?: string
 ) {
   const targetPlan = String(payment.plan);
   const interval = readSelectedInterval(payment.paystack_response);
   const nowIso = now.toISOString();
+
+  if (payment.paystack_response?.change_kind === PREPAY_SWITCH_KIND && interval && interval !== 'monthly') {
+    return handlePrepaySwitchCharge(admin, payment, reference, now, interval, channel);
+  }
 
   const { error: subError } = await admin
     .from('subscriptions')
@@ -363,9 +398,116 @@ async function handlePlanChangeCharge(
     plan: targetPlan,
     source: 'plan_change',
     chargedAt: now,
+    channel: mapPaystackChannel(channel),
+    interval,
   });
 
   return ack({ event: 'charge.success', reference, matched: 'plan_change', plan: targetPlan });
+}
+
+/**
+ * A monthly team paid to switch to a 6-month or yearly period (pricing v3, mock
+ * b). Unlike a tier upgrade this STARTS A NEW PERIOD today: expires_at moves to
+ * today plus the period, the interval changes, and the locked price becomes the
+ * new period's full price (what each renewal will charge). The old monthly
+ * Paystack subscription keeps running until the founder swaps it, so the alert
+ * names the monthly charge date as the deadline.
+ */
+async function handlePrepaySwitchCharge(
+  admin: AdminClient,
+  payment: { id: string; user_id: string; plan: string; amount?: number | null; paystack_response: Record<string, unknown> | null },
+  reference: string,
+  now: Date,
+  interval: BillingInterval,
+  channel?: string
+) {
+  const tier = String(payment.plan);
+  const nowIso = now.toISOString();
+  const renewsAt = prepayPeriodEnd(now, interval);
+  const fullPrice = Number(payment.paystack_response?.full_price_kobo);
+  const paidNow = Number(payment.amount) || 0;
+  const periodPrice = Number.isFinite(fullPrice) && fullPrice > 0 ? Math.round(fullPrice) : paidNow;
+  const planVersion = readStashedString(payment.paystack_response, 'plan_version');
+
+  const base = {
+    plan: tier,
+    billing_interval: interval,
+    pending_plan: null,
+    pending_billing_interval: null,
+    pending_change_requested_at: nowIso,
+    status: 'active',
+    amount: periodPrice,
+    expires_at: renewsAt.toISOString(),
+    paystack_reference: reference,
+    updated_at: nowIso,
+  };
+  let { error } = await admin
+    .from('subscriptions')
+    .update({ ...base, price_locked_kobo: periodPrice, plan_version: planVersion ?? 'legacy' })
+    .eq('user_id', payment.user_id);
+  if (error && isMissingColumnError(error)) {
+    ({ error } = await admin.from('subscriptions').update(base).eq('user_id', payment.user_id));
+  }
+  if (error) {
+    console.error('[paystack-webhook] prepay switch subscription update error:', error.message);
+  }
+
+  invalidateSubscriptionSnapshot(payment.user_id);
+  invalidateTeamAccess(payment.user_id);
+
+  const workspaceId = readWorkspaceId(payment.paystack_response);
+  if (workspaceId) {
+    const renewDay = renewsAt.toISOString().slice(0, 10);
+    afterResponse('prepay switch swap alert', () =>
+      notifyFounder(admin, {
+        kind: 'plan_change_requested',
+        workspaceId,
+        ownerUserId: payment.user_id,
+        actorUserId: payment.user_id,
+        planViewed: tier,
+        note: `Switched from monthly to ${interval === 'annual' ? 'yearly' : '6 months'} and PAID. Their new period runs to ${renewDay}. Disable the monthly Paystack subscription before ${String(payment.paystack_response?.period_ends_at ?? 'its next charge')} and create the ${tier} ${interval} subscription starting ${renewDay}, or the monthly plan charges again.`,
+        metadata: {
+          direction: 'prepay_switch',
+          tier,
+          interval,
+          reference,
+          paid: true,
+          renewsAt: renewsAt.toISOString(),
+          oldSubscriptionCode: payment.paystack_response?.old_subscription_code ?? null,
+        },
+      })
+    );
+  }
+
+  await recordSubscriptionCharge(admin, {
+    userId: payment.user_id,
+    reference,
+    amountKobo: paidNow,
+    plan: tier,
+    source: 'plan_change',
+    chargedAt: now,
+    channel: mapPaystackChannel(channel),
+    interval,
+    planVersion,
+    acquisitionPath: readStashedString(payment.paystack_response, 'acquisition_path'),
+  });
+  await recordTrmFeeForPayment(admin, {
+    userId: payment.user_id,
+    reference,
+    plan: tier,
+    interval,
+    amountPaidKobo: paidNow,
+    chargedAt: now,
+  });
+
+  return ack({
+    event: 'charge.success',
+    reference,
+    matched: 'prepay_switch',
+    plan: tier,
+    interval,
+    months: INTERVAL_MONTHS[interval],
+  });
 }
 
 /** The workspace id change-plan stashed in the jsonb, for the founder alert. */
@@ -791,7 +933,7 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
     // period the team already paid for, which is the one thing an upgrade
     // promises not to do. Keyed on the jsonb source, not on `plan`.
     if (readChargeSource(payment.paystack_response) === PLAN_CHANGE_SOURCE) {
-      return handlePlanChangeCharge(admin, payment, reference, now);
+      return handlePlanChangeCharge(admin, payment, reference, now, payload.data?.channel);
     }
 
     // Flip the reserved row to success (idempotent — re-deliveries hit this).
@@ -817,6 +959,7 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
       // does not say whether the customer bought a month or a year — and a
       // legacy plan does not, so absent stays absent.
       const selectedInterval = readSelectedInterval(payment.paystack_response);
+      const planVersion = readStashedString(payment.paystack_response, 'plan_version');
       const applied = await applyInitialOrManualCharge(
         admin,
         userId,
@@ -826,7 +969,8 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
         customerCode,
         subscriptionCode,
         now,
-        selectedInterval
+        selectedInterval,
+        planVersion
       );
       // A failed `paid_at` stamp is the one thing here worth a redelivery — see
       // the block inside applyInitialOrManualCharge. 500 rather than ack, so
@@ -847,6 +991,20 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
         amountKobo: amountMinorUnit,
         plan: planString,
         source: 'initial',
+        chargedAt: now,
+        channel: mapPaystackChannel(payload.data?.channel),
+        interval: resolveBillingInterval({ plan: planString, storedInterval: selectedInterval }),
+        planVersion,
+        acquisitionPath: readStashedString(payment.paystack_response, 'acquisition_path'),
+      });
+      // What we owe TRM, now that the payment has gone through (never at
+      // checkout start). Nothing for Solo or a plan without distribution.
+      await recordTrmFeeForPayment(admin, {
+        userId,
+        reference,
+        plan: planString,
+        interval: resolveBillingInterval({ plan: planString, storedInterval: selectedInterval }),
+        amountPaidKobo: amountMinorUnit,
         chargedAt: now,
       });
       // The team that invited this one earns credits for a first payment. Idempotent
@@ -985,12 +1143,29 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
     { plan: subRow.pending_plan, interval: subRow.pending_billing_interval }
   );
 
+  const renewedPlan = subRow.pending_plan ?? subRow.plan;
+  const renewedInterval = resolveBillingInterval({
+    plan: renewedPlan,
+    storedInterval: subRow.pending_plan
+      ? (subRow.pending_billing_interval ?? subRow.billing_interval)
+      : subRow.billing_interval,
+  });
   await recordSubscriptionCharge(admin, {
     userId: subRow.user_id,
     reference,
     amountKobo: amountMinorUnit,
-    plan: subRow.pending_plan ?? subRow.plan,
+    plan: renewedPlan,
     source: 'renewal',
+    chargedAt: now,
+    channel: mapPaystackChannel(payload.data?.channel),
+    interval: renewedInterval,
+  });
+  await recordTrmFeeForPayment(admin, {
+    userId: subRow.user_id,
+    reference,
+    plan: renewedPlan,
+    interval: renewedInterval,
+    amountPaidKobo: amountMinorUnit,
     chargedAt: now,
   });
 

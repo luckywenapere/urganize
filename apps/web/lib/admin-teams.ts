@@ -22,7 +22,7 @@ export type AdminAssignablePlan = (typeof ADMIN_ASSIGNABLE_PLANS)[number];
 /** How often a hand-recorded deal is billed. Stored on
  * subscriptions.billing_interval so MRR divides a yearly deal by 12 instead of
  * counting it as one month's revenue. */
-export type AdminBillingInterval = 'monthly' | 'annual';
+export type AdminBillingInterval = 'monthly' | 'six_month' | 'annual';
 
 /** Guard rails on extend. Long enough for a real sales conversation, short
  * enough that a slipped digit cannot silently grant a decade. An indefinite
@@ -89,11 +89,13 @@ export function parseAdminPlan(value: unknown): AdminAssignablePlan | null {
   return isAdminAssignablePlan(id) ? id : null;
 }
 
-/** "monthly", or "annual" (also "yearly"). Null for anything else, including absent. */
+/** "monthly", "six_month" (also "6 months", "6m"), or "annual" (also
+ *  "yearly"). Null for anything else, including absent. */
 export function parseAdminBillingInterval(value: unknown): AdminBillingInterval | null {
   if (typeof value !== 'string') return null;
   const interval = value.trim().toLowerCase();
   if (interval === 'monthly') return 'monthly';
+  if (interval === 'six_month' || interval === '6 months' || interval === '6m') return 'six_month';
   if (interval === 'annual' || interval === 'yearly') return 'annual';
   return null;
 }
@@ -165,12 +167,12 @@ export function parseTeamAdminAction(
       const hasInterval = raw.billingInterval !== undefined && raw.billingInterval !== null && raw.billingInterval !== '';
       const billingInterval = parseAdminBillingInterval(raw.billingInterval);
       if (hasInterval && !billingInterval) {
-        return { error: 'billingInterval must be monthly or yearly.' };
+        return { error: 'billingInterval must be monthly, 6 months or yearly.' };
       }
       // A Group price is whatever was agreed, so nothing else can say how often
       // it is billed, and the scoreboard's MRR needs to know.
       if (plan === 'enterprise' && !billingInterval) {
-        return { error: 'A Group plan needs billingInterval: monthly or yearly.' };
+        return { error: 'A Group plan needs billingInterval: monthly, 6 months or yearly.' };
       }
       const amountMinorUnit = parseAmount(raw.amountMinorUnit);
       if (amountMinorUnit === null) {

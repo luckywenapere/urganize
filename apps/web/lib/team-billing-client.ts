@@ -12,8 +12,8 @@
 // id is the smaller thing that works — the CardTrialGate precedent.
 
 import { supabase } from './supabase/client';
-import { isPricingTierId } from '@urganize/pricing';
-import type { PricingTierId } from '@urganize/pricing';
+import { isBillingInterval, isPricingTierId } from '@urganize/pricing';
+import type { BillingInterval, PricingTierId } from '@urganize/pricing';
 import type { TeamAccessReason, TeamAccessState } from './team-billing';
 
 export type TeamAccessClientSnapshot = {
@@ -50,6 +50,11 @@ export type TeamAccessClientSnapshot = {
    *  a wall with no way to pay is worse than one offering a tier that might
    *  fail. See purchasableTiers() in lib/billing-plans.ts. */
   purchasableTiers?: PricingTierId[];
+  /** The periods each purchasable tier can be bought on (pricing v3). Absent
+   *  from an older server: the picker then offers every sellable period. */
+  purchasableIntervals?: Partial<Record<PricingTierId, BillingInterval[]>>;
+  /** DISTRIBUTION_REQUIRES_PREPAY, from the server. */
+  distributionRequiresPrepay?: boolean;
 };
 
 /** How long a fetched answer is reused. Short in both directions: the wall must
@@ -91,6 +96,8 @@ async function fetchTeamAccess(): Promise<TeamAccessClientSnapshot | null> {
     const payload = (await response.json().catch(() => ({}))) as {
       teamAccess?: Partial<TeamAccessClientSnapshot> | null;
       purchasableTiers?: unknown;
+      purchasableIntervals?: unknown;
+      distributionRequiresPrepay?: unknown;
     };
     const team = payload.teamAccess;
 
@@ -126,6 +133,8 @@ async function fetchTeamAccess(): Promise<TeamAccessClientSnapshot | null> {
       // Omitted rather than sent as [] when we learned nothing, so the wall can
       // tell "no tier is chargeable" from "an older server did not say".
       ...(purchasable.length > 0 ? { purchasableTiers: purchasable } : {}),
+      ...(readIntervals(payload.purchasableIntervals) ?? {}),
+      distributionRequiresPrepay: payload.distributionRequiresPrepay === true,
     };
   } catch {
     // Fail open: null means "we do not know", and every consumer treats that
@@ -171,4 +180,18 @@ export function peekTeamAccessClient(userId: string): TeamAccessClientSnapshot |
   if (!cache || cache.userId !== userId) return null;
   if (Date.now() - cache.fetchedAt >= CACHE_TTL_MS) return null;
   return cache.snapshot;
+}
+
+/** purchasableIntervals off the wire, validated per tier and per period. */
+function readIntervals(
+  value: unknown
+): { purchasableIntervals: Partial<Record<PricingTierId, BillingInterval[]>> } | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const out: Partial<Record<PricingTierId, BillingInterval[]>> = {};
+  for (const [tier, list] of Object.entries(value as Record<string, unknown>)) {
+    if (!isPricingTierId(tier) || !Array.isArray(list)) continue;
+    const intervals = list.filter((item): item is BillingInterval => isBillingInterval(item));
+    if (intervals.length > 0) out[tier] = intervals;
+  }
+  return Object.keys(out).length > 0 ? { purchasableIntervals: out } : null;
 }

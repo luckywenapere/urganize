@@ -5,6 +5,7 @@ import {
   PRICING_TIERS,
   PRICING_TIER_ORDER,
   ANNUAL_MONTHS_BILLED,
+  SIX_MONTH_MONTHS_BILLED,
   DEFAULT_SELLING_INTERVAL,
   SELLABLE_INTERVALS,
   annualSavingCopy,
@@ -202,7 +203,8 @@ describe('tier prices and the sales-led tier', () => {
   // carries a YEARLY figure, so a yearly price that disagrees with the monthly
   // one cannot be typed into the data at all.
   it('stores a monthly price only, and computes the yearly one', () => {
-    expect(SELLABLE_INTERVALS).toEqual(['monthly', 'annual']);
+    // Three periods since 2026-10-22: 6 months is five months' money, a year ten.
+    expect(SELLABLE_INTERVALS).toEqual(['monthly', 'six_month', 'annual']);
     expect(DEFAULT_SELLING_INTERVAL).toBe('monthly');
     for (const tier of ALL_TIERS) {
       const monthly = PRICING_TIERS[tier].monthlyPrice;
@@ -213,6 +215,9 @@ describe('tier prices and the sales-led tier', () => {
       // The kobo leg is derived too, so it cannot fall out of step with the
       // naira one — a mismatch there is what a Paystack charge is built on.
       expect(annual?.minorUnit, `${tier}/annual kobo`).toBe((annual?.amount ?? 0) * 100);
+      const six = getTierPrice(tier, 'six_month');
+      expect(six?.amount, `${tier}/six_month`).toBe(monthly.amount * SIX_MONTH_MONTHS_BILLED);
+      expect(six?.minorUnit, `${tier}/six_month kobo`).toBe((six?.amount ?? 0) * 100);
     }
   });
 
@@ -222,11 +227,16 @@ describe('tier prices and the sales-led tier', () => {
   // repo has five times advertised one price and charged another. If this fails,
   // the arithmetic moved: mint the Plans and repoint the vars BEFORE shipping it.
   it('resolves the yearly prices to the figures the Plans must be minted at', () => {
-    // 2026-10-17 reprice: the ₦75,000 / ₦250,000 / ₦600,000 yearly Plans are
-    // minted (PLN_4z12z6ruske767p, PLN_2kzoyuywqp01vvv, PLN_g1n3kunp71hhu9k).
+    // 2026-10-22 reprice: Solo keeps ₦75,000 a year; Manager is ₦300,000 and
+    // Label ₦1,000,000. Their Plans are new env vars (_1M/_6M/_12M), minted
+    // only on the founder's yes, so nothing is charged at these figures until
+    // then: an unset var hides the period.
     expect(getTierPrice('solo', 'annual')?.amount).toBe(75_000);
-    expect(getTierPrice('manager', 'annual')?.amount).toBe(250_000);
-    expect(getTierPrice('label', 'annual')?.amount).toBe(600_000);
+    expect(getTierPrice('manager', 'annual')?.amount).toBe(300_000);
+    expect(getTierPrice('label', 'annual')?.amount).toBe(1_000_000);
+    expect(getTierPrice('solo', 'six_month')?.amount).toBe(37_500);
+    expect(getTierPrice('manager', 'six_month')?.amount).toBe(150_000);
+    expect(getTierPrice('label', 'six_month')?.amount).toBe(500_000);
   });
 
   it('labels each price by its interval, spelled out', () => {
@@ -234,11 +244,12 @@ describe('tier prices and the sales-led tier', () => {
     // ask for fifth-grade readable, and an abbreviation is one more thing to
     // decode. The no-argument call takes the default, which is monthly.
     expect(formatTierPrice('solo')).toBe('₦7,500/month');
-    expect(formatTierPrice('manager')).toBe('₦25,000/month');
-    expect(formatTierPrice('label')).toBe('₦60,000/month');
+    expect(formatTierPrice('manager')).toBe('₦30,000/month');
+    expect(formatTierPrice('label')).toBe('₦100,000/month');
+    expect(formatTierPrice('manager', 'six_month')).toBe('₦150,000/6 months');
     expect(formatTierPrice('solo', 'annual')).toBe('₦75,000/year');
-    expect(formatTierPrice('manager', 'annual')).toBe('₦250,000/year');
-    expect(formatTierPrice('label', 'annual')).toBe('₦600,000/year');
+    expect(formatTierPrice('manager', 'annual')).toBe('₦300,000/year');
+    expect(formatTierPrice('label', 'annual')).toBe('₦1,000,000/year');
   });
 
   it('phrases the yearly saving in months and never as a percentage', () => {

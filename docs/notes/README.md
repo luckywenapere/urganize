@@ -244,3 +244,4 @@ Adding a note: create `docs/notes/YYYY-MM-DD-short-slug.md` (start it with a `# 
 - [Send to TRM (URG-392, v1.160.0, 2026-10-19)](2026-10-19-send-to-trm.md)
 - [Curator UrgAns front desk (URG-381, v1.161.0, 2026-10-19)](2026-10-19-curator-urgans-front-desk.md)
 - [Altlink pre-save and smart links (2026-10-22, live, no new flag beyond NEXT_PUBLIC_FEATURE_ALTLINK which ships on)](2026-10-22-altlink-pre-save-and-smart-links.md)
+- [Pricing v3: 6-month and yearly prepay, the TRM fee, the margin view (2026-10-22, v1.164.0, no flag)](2026-10-22-pricing-v3-prepay-and-trm-fee.md)

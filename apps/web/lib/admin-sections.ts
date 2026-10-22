@@ -95,6 +95,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     description: 'Waitlist sign-ups and who has been contacted.',
   },
   {
+    key: 'billing',
+    label: 'Billing margin',
+    href: '/admin/billing',
+    group: 'numbers',
+    description: 'What each paying team leaves after fees, TRM and credits.',
+  },
+  {
     key: 'referrals',
     label: 'Referrals',
     href: '/admin/referrals',

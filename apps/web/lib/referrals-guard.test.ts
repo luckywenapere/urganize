@@ -32,11 +32,15 @@ describe('the payment webhook feeds the ledger', () => {
   const source = stripComments(read('app/api/webhooks/paystack/route.ts'));
 
   it('records the first charge, a renewal and a plan-change top-up, each once', () => {
-    for (const kind of ['initial', 'renewal', 'plan_change']) {
+    // 'plan_change' appears twice since 2026-10-22: the tier-change top-up and
+    // the prepay switch (monthly to 6 months or a year) are both mid-period
+    // charges on a team that already pays, so both record as plan_change.
+    const expected: Record<string, number> = { initial: 1, renewal: 1, plan_change: 2 };
+    for (const [kind, count] of Object.entries(expected)) {
       const matches = source.match(new RegExp(`source: '${kind}'`, 'g')) ?? [];
-      expect(matches, `source '${kind}'`).toHaveLength(1);
+      expect(matches, `source '${kind}'`).toHaveLength(count);
     }
-    expect(source.match(/recordSubscriptionCharge\(/g)).toHaveLength(3);
+    expect(source.match(/recordSubscriptionCharge\(/g)).toHaveLength(4);
   });
 
   it('diverts the card check away before anything is recorded, because that charge is refunded and is not a purchase', () => {
@@ -85,11 +89,11 @@ describe('who may write the commission tables', () => {
 });
 
 describe('the switch', () => {
-  it('stops the ledger write before it reads anything', () => {
+  it('records every payment whether or not referrals are on (the margin view needs them all, 2026-10-22)', () => {
     const source = stripComments(read('lib/referrals-server.ts'));
-    const body = source.slice(source.indexOf('export async function recordSubscriptionCharge'));
-    expect(body.indexOf('isReferralsEnabled()')).toBeGreaterThan(-1);
-    expect(body.indexOf('isReferralsEnabled()')).toBeLessThan(body.indexOf('.from('));
+    const start = source.indexOf('export async function recordSubscriptionCharge');
+    const body = source.slice(start).split(/\r?\n}\r?\n/)[0];
+    expect(body).not.toContain('isReferralsEnabled');
   });
 
   it('checks it before auth on the attach route, so a switched-off app answers 404 to everyone', () => {

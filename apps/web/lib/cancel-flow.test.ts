@@ -230,18 +230,18 @@ describe('budget bands', () => {
     expect(labels(22_000)).toEqual(['Under ₦10,000', '₦10,000–₦15,000', '₦15,000–₦20,000']);
   });
 
-  it('Manager at ₦25,000 (since the 2026-10-17 reprice) rounds to ₦1,000 steps', () => {
-    expect(labels(25_000)).toEqual(['Under ₦11,000', '₦11,000–₦17,000', '₦17,000–₦23,000']);
+  it('Manager at ₦30,000 (since the 2026-10-22 reprice) rounds to ₦1,000 steps', () => {
+    expect(labels(30_000)).toEqual(['Under ₦14,000', '₦14,000–₦20,000', '₦20,000–₦27,000']);
   });
 
   it('Solo and Label follow the same shape', () => {
-    // Solo ₦7,500 and Label ₦60,000 since 2026-10-17.
+    // Solo ₦7,500 (unchanged) and Label ₦100,000 since 2026-10-22.
     expect(labels(7_500)).toEqual(['Under ₦3,500', '₦3,500–₦5,000', '₦5,000–₦7,000']);
-    expect(labels(60_000)).toEqual(['Under ₦25,000', '₦25,000–₦40,000', '₦40,000–₦55,000']);
+    expect(labels(100_000)).toEqual(['Under ₦45,000', '₦45,000–₦70,000', '₦70,000–₦90,000']);
   });
 
   it('every band sits under the plan price and climbs', () => {
-    for (const price of [5_000, 7_500, 22_000, 25_000, 35_000, 50_000, 60_000]) {
+    for (const price of [5_000, 7_500, 22_000, 25_000, 30_000, 35_000, 50_000, 60_000, 100_000]) {
       const bands = budgetBands(price);
       expect(bands[0].max).toBeLessThan(bands[1].max);
       expect(bands[1].max).toBeLessThan(bands[2].max);
@@ -255,7 +255,7 @@ describe('budget bands', () => {
 });
 
 describe('matchBudgetOffer', () => {
-  const codes = { PAYSTACK_PLAN_MANAGER_RETENTION_17000: 'PLN_m17', PAYSTACK_PLAN_MANAGER_RETENTION_23000: 'PLN_m23' };
+  const codes = { PAYSTACK_PLAN_MANAGER_RETENTION_20000: 'PLN_m20', PAYSTACK_PLAN_MANAGER_RETENTION_27000: 'PLN_m27' };
 
   it('the lowest band offers the dearest cheaper plan that fits', () => {
     expect(matchBudgetOffer({ tier: 'manager', band: 'low', planCodes: {} })).toEqual({
@@ -263,12 +263,12 @@ describe('matchBudgetOffer', () => {
       tier: 'solo',
       price: 7_500,
     });
-    // Manager at ₦25,000 (2026-10-17 reprice) sits exactly on Label's lowest
-    // band ceiling (₦25,000), so it is the dearest cheaper plan that fits again.
+    // Manager at ₦30,000 (2026-10-22 reprice) fits under Label's lowest band
+    // ceiling (₦45,000), so it is the dearest cheaper plan that fits.
     expect(matchBudgetOffer({ tier: 'label', band: 'low', planCodes: {} })).toEqual({
       kind: 'switch_plan',
       tier: 'manager',
-      price: 25_000,
+      price: 30_000,
     });
     expect(matchBudgetOffer({ tier: 'solo', band: 'low', planCodes: {} })).toBeNull();
   });
@@ -277,16 +277,16 @@ describe('matchBudgetOffer', () => {
     expect(matchBudgetOffer({ tier: 'manager', band: 'mid', planCodes: codes })).toEqual({
       kind: 'discounted_plan',
       tier: 'manager',
-      price: 17_000,
+      price: 20_000,
       months: RETENTION_OFFER_MONTHS,
-      planCode: 'PLN_m17',
+      planCode: 'PLN_m20',
     });
-    expect(matchBudgetOffer({ tier: 'manager', band: 'high', planCodes: codes })?.price).toBe(23_000);
+    expect(matchBudgetOffer({ tier: 'manager', band: 'high', planCodes: codes })?.price).toBe(27_000);
   });
 
   it('hides a discounted offer whose Paystack plan is not configured', () => {
     expect(matchBudgetOffer({ tier: 'manager', band: 'mid', planCodes: {} })).toBeNull();
-    expect(matchBudgetOffer({ tier: 'label', band: 'high', planCodes: { PAYSTACK_PLAN_LABEL_RETENTION_55000: '  ' } })).toBeNull();
+    expect(matchBudgetOffer({ tier: 'label', band: 'high', planCodes: { PAYSTACK_PLAN_LABEL_RETENTION_90000: '  ' } })).toBeNull();
   });
 
   it('names the env vars the setup needs', () => {
@@ -294,10 +294,10 @@ describe('matchBudgetOffer', () => {
     expect(allRetentionPlanEnvVars().map((row) => row.envVar)).toEqual([
       'PAYSTACK_PLAN_SOLO_RETENTION_5000',
       'PAYSTACK_PLAN_SOLO_RETENTION_7000',
-      'PAYSTACK_PLAN_MANAGER_RETENTION_17000',
-      'PAYSTACK_PLAN_MANAGER_RETENTION_23000',
-      'PAYSTACK_PLAN_LABEL_RETENTION_40000',
-      'PAYSTACK_PLAN_LABEL_RETENTION_55000',
+      'PAYSTACK_PLAN_MANAGER_RETENTION_20000',
+      'PAYSTACK_PLAN_MANAGER_RETENTION_27000',
+      'PAYSTACK_PLAN_LABEL_RETENTION_70000',
+      'PAYSTACK_PLAN_LABEL_RETENTION_90000',
     ]);
   });
 
