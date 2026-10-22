@@ -1,0 +1,11 @@
+# Rollout view declutter (2026-10-14, v1.128.0, no flag)
+
+> Moved out of CLAUDE.md on 2026-10-22 (verbatim). "This file", "above", "below" and "the X section" in here refer to the old single CLAUDE.md: find the named section in docs/notes/README.md.
+
+Founder asked to declutter the desktop rollout view (the timeline started ~80% down a 1080p screen under four layers). Decisions, founder call "you decide based on how a user would use it":
+- **Say where you are once.** `WorkspaceDesktopFocused` portals its breadcrumb (Rollouts > name) into the page bar (`PAGEBAR_SLOT_CRUMB`, `usePageBarCrumbSlot` in `components/shell/PageBar.tsx`), which hides its plain title when the slot is filled. The breadcrumb row under the bar is gone. In the side menu the Rollouts parent drops its fill while a rollout's menu is nested (only the open scene is lit).
+- **Quieter header:** heading `text-2xl`; cover tile only when there is cover art (no mark placeholder); "N of M done" text instead of a bar and a mono fraction; New activity is an outline button, not the solid primary.
+- **Rollout menu groups** (desktop side menu only): `groupRolloutMenu` / `ROLLOUT_MENU_GROUPS` in `lib/release-menu.ts`: Plan (timeline, work the plan, team, content, spend, note), Release (details, distribute, cover art, song, files), Promote (pitch, pitch kit, promo, share, capture), then change artist and archive unlabelled after a hairline. Founder approved the new group words. Order inside a group stays RELEASE_MENU_ORDER's. The phone menu is unchanged.
+- **Distribution checklist** (`DistributionChecklist.tsx`) is one row folded: status icon, title, the next open item, "N of M done", a chevron, and the next item's Fix. Opening it shows the bar and every item with ticks. It still stays on the rollout until handoff.
+- **Timeline toolbar** is one row: `PlanListControls` now always uses the Filter popover (no inline selects) and takes a `trailing` slot; the timeline puts its legend behind an Info button (hint "Drag to move · tap to open" inside) and Full screen as an icon there. The timeline has bottom padding so the UrgAns button does not cover its last rows.
+- Not done: amber instead of red Overdue on untitled drafts (left as is; it is semantic).

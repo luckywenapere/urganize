@@ -1,0 +1,11 @@
+# Fan payments: Fanlly beside distribution (2026-10-11, v1.102.0, live at merge, no flag)
+
+> Moved out of CLAUDE.md on 2026-10-22 (verbatim). "This file", "above", "below" and "the X section" in here refer to the old single CLAUDE.md: find the named section in docs/notes/README.md.
+
+Fanlly (fanlly.co, Lagos) is a second partner on the Distribute step. An artist uploads a track, shares one link, and fans tip by bank transfer (Nigeria) or card / Apple Pay abroad, with no fan account; the artist is paid in naira and keeps 75% of every tip. **It is not a distributor** (it does not deliver to stores), so it never replaces Therealmusic Distro and is never the default; it is a separate "Fan payments" card below the check before distribution.
+
+- **Referral link only.** Fanlly has no public API. The card's one button opens `FAN_PAYMENTS_PARTNER.signupUrl` (our referral link to their creator sign-up) through `openExternalUrl`, so a new tab with `noopener,noreferrer` on the web and the system browser in the native shell. Nothing is recorded (no `billing_events` row, unlike TRM's hand-off), nothing is paid, and the copy claims no share of tips and no deeper integration. Do not add either without a signed agreement.
+- **One place for the link.** `lib/fan-payments.ts` is pure and holds the name, the link and the 75%. `lib/fan-payments.test.ts` fails if the referral code or `creator.fanlly.co` appears in any other source file under `app`, `components`, `lib` or `stores`, and checks the card opens the constant and the Distribute step renders the card.
+- **Not gated by the check.** The card shows whatever the distribution check says, because tips do not depend on store metadata.
+- **Where it shows:** only the Distribute scene (`?scene=distribute`, `components/releases/DistributionSection.tsx` → `FanPaymentsCard.tsx`). That scene is the only place the app surfaces TRM; the pricing line "Distribution through our partner" is marketing (`packages/pricing`), and Fanlly is not a plan feature, so pricing is untouched. `DistributionStatusStrip` lists fixes only and names no partner, so it is untouched too.
+- **Not verified:** nothing has run in a browser or with a real session, and no referral has been confirmed on Fanlly's side.

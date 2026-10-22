@@ -1,0 +1,14 @@
+# Release brief (2026-10-16, URG-281, v1.150.0, ships on)
+
+> Moved out of CLAUDE.md on 2026-10-22 (verbatim). "This file", "above", "below" and "the X section" in here refer to the old single CLAUDE.md: find the named section in docs/notes/README.md.
+
+One page per rollout that the team reads instead of scrolling WhatsApp (Bamidele demo, 2026-10-12). Mocks approved by the founder (phone 390 and desktop 1440, every state). It takes the menu slot release chat left: "Read the brief", key and scene `brief`, right after "Work the plan" (`lib/release-menu.ts`, Plan group).
+
+- **Flag:** `NEXT_PUBLIC_FEATURE_RELEASE_BRIEF`, ON when unset; only `'false'` hides it (`lib/release-brief-flag.ts`, the cancel flow's pattern). Off: no menu row, `?scene=brief` resolves to nothing, every brief route 404s, the view link reads as unavailable.
+- **Stored vs derived** (`lib/release-brief.ts` is the pure half, `lib/release-brief-server.ts` the database half): four new tables in `20261016120000_release_briefs.sql` hold only what people write: the Idea, references (links; a link to an image file is kind `image` and shows as a thumbnail), one-line decisions, a 30-row edit history (trimmed on insert, autosave bursts coalesced within 10 minutes), and the view-link token. Dates (milestones and planner-key tasks, else every dated task, plus release day) and Who's on what (task `assigned_to_user_id`, the only assignee column with rows in production) are DERIVED on every read, so there is no second place to type a date.
+- **Notes:** the brief reads `notes` where `release_id` is the rollout (not archived), server side, read only. The Notes surface itself is cut (v1.149.0) and stays cut; this is where that data is still visible. Note this widens who sees a note: Notes were private to their author, and in the brief every member of the rollout's team sees the notes linked to it (the founder's requirement 2).
+- **Access:** RLS on, no policies (release_messages' pattern); every route gates through `ensureReleaseTeamReadAccess` / `WriteAccess` and is enlisted in `release-access-guard.test.ts`. Delete a reference or decision: its author, or the rollout owner or a team owner/admin (`canManageBriefShare`). The view-link toggle is owner or team owner/admin only.
+- **UrgAns draft** is the embedded action `release.draft_brief` (draft, then Keep or Discard; metered like every embedded action; usage filed under `status`). Keep writes the Idea with revision label `UrgAns` and refuses if someone wrote an idea meanwhile.
+- **View link** `/brief/[token]` (24-character token, noindex, dark-locked, /pack/[token]'s pattern): artist, title, release day, Idea, References, Dates. Never decisions, people or notes.
+- **Not built:** image upload (links to images only), editing a decision, comments, notifications, real-time co-editing (last write wins).
+- **Migration not applied** at build time. Until it is, the scene shows "Couldn't load the brief." (the routes answer 503).
