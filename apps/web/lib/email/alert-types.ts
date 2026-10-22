@@ -29,7 +29,10 @@ export type FounderAlertKind =
   /** The cancel flow: a team took a 3-month budget price. An ACTION: swap their
    *  Paystack subscription onto the retention Plan named in the note before the
    *  next renewal, and back to full price after 3 months. */
-  | 'retention_offer_accepted';
+  | 'retention_offer_accepted'
+  /** Pricing v3: a team paid for a plan that includes distribution. An ACTION:
+   *  register the team on TRM under the plan in the note. */
+  | 'trm_registration_needed';
 
 export type FounderAlertContext = {
   teamName: string | null;
@@ -64,6 +67,7 @@ const SUBJECT_PREFIX: Record<FounderAlertKind, string> = {
   subscription_cancelled: 'Cancelled',
   subscription_paused: 'Paused',
   retention_offer_accepted: 'SWAP NEEDED (retention price)',
+  trm_registration_needed: 'REGISTER ON TRM',
 };
 
 export const FOUNDER_ALERT_HEADLINE: Record<FounderAlertKind, string> = {
@@ -85,6 +89,8 @@ export const FOUNDER_ALERT_HEADLINE: Record<FounderAlertKind, string> = {
     'This team paused their plan instead of cancelling. Nothing is charged while paused; they come back with a normal checkout.',
   retention_offer_accepted:
     'This team took a lower price to stay. Their Paystack subscription needs moving to the retention Plan in the note by hand before the next renewal, and back to full price after 3 months.',
+  trm_registration_needed:
+    'This team just paid for a plan that includes distribution. Register them on TRM under the plan in the note. The fee is now in the TRM ledger.',
 };
 
 const formatCount = (value: number | null): string => (value === null ? 'unknown' : String(value));

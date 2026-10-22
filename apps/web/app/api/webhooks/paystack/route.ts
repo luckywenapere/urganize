@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { BillingInterval } from '@urganize/pricing';
+import { PRICE_LIST_VERSION, isPricingTierId, type BillingInterval } from '@urganize/pricing';
 import { createClient } from '@supabase/supabase-js';
 import { getPlanExpiry } from '@/lib/billing';
+import { mapPaystackChannel } from '@/lib/billing-margin';
+import { isMissingColumnError } from '@/lib/billing-schema';
 import {
   advancePeriodEnd,
   getPaystackPlanCode,
@@ -154,7 +156,11 @@ const planRef = (raw: PaystackWebhookPayload['data']): PaystackPlanRef | null =>
 function readSelectedInterval(
   paystackResponse: Record<string, unknown> | null
 ): BillingInterval | null {
-  const value = paystackResponse?.selected_interval;
+  return readStoredInterval(paystackResponse?.selected_interval);
+}
+
+/** A stored billing interval, or null for anything else. */
+function readStoredInterval(value: unknown): BillingInterval | null {
   return value === 'monthly' || value === 'semiannual' || value === 'annual' ? value : null;
 }
 
@@ -176,10 +182,19 @@ async function applyInitialOrManualCharge(
 ) {
   const expiresAt = getPlanExpiry(plan, now, billingInterval);
 
-  const { error: subError } = await admin
-    .from('subscriptions')
-    .upsert(
+  // THE LOCKED PRICE (2026-10-22). A new checkout locks what one period costs
+  // today; renewals (applyRenewal) never touch it, so a subscriber keeps their
+  // price through every reprice. Written as extra columns and retried without
+  // them on a database 20261022170000 has not reached, so a payment is never
+  // lost to a missing column.
+  const lockColumns = {
+    price_locked_kobo: amountMinorUnit,
+    plan_version: isPricingTierId(plan) ? PRICE_LIST_VERSION : 'legacy',
+  };
+  const upsertSubscription = (withLock: boolean) =>
+    admin.from('subscriptions').upsert(
       {
+        ...(withLock ? lockColumns : {}),
         user_id: userId,
         plan,
         billing_interval: billingInterval,
@@ -201,6 +216,10 @@ async function applyInitialOrManualCharge(
       },
       { onConflict: 'user_id' }
     );
+  let { error: subError } = await upsertSubscription(true);
+  if (subError && isMissingColumnError(subError)) {
+    ({ error: subError } = await upsertSubscription(false));
+  }
   if (subError) {
     console.error('[paystack-webhook] subscription upsert error:', subError.message);
   }
@@ -353,7 +372,8 @@ async function handlePlanChangeCharge(
   admin: AdminClient,
   payment: { id: string; user_id: string; plan: string; amount?: number | null; paystack_response: Record<string, unknown> | null },
   reference: string,
-  now: Date
+  now: Date,
+  channel?: string | null
 ) {
   const targetPlan = String(payment.plan);
   const interval = readSelectedInterval(payment.paystack_response);
@@ -417,6 +437,8 @@ async function handlePlanChangeCharge(
     plan: targetPlan,
     source: 'plan_change',
     chargedAt: now,
+    channel: mapPaystackChannel(channel),
+    interval,
   });
 
   return ack({ event: 'charge.success', reference, matched: 'plan_change', plan: targetPlan });
@@ -845,7 +867,7 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
     // period the team already paid for, which is the one thing an upgrade
     // promises not to do. Keyed on the jsonb source, not on `plan`.
     if (readChargeSource(payment.paystack_response) === PLAN_CHANGE_SOURCE) {
-      return handlePlanChangeCharge(admin, payment, reference, now);
+      return handlePlanChangeCharge(admin, payment, reference, now, payload.data?.channel);
     }
 
     // A one-time bank-transfer checkout (self-serve, when no dedicated account
@@ -925,6 +947,11 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
         plan: planString,
         source: 'initial',
         chargedAt: now,
+        channel: mapPaystackChannel(payload.data?.channel),
+        // Only the interval start-checkout wrote: guessing from the plan would
+        // read a legacy Label row as yearly, and this also decides the TRM fee.
+        interval: selectedInterval,
+        planVersion: isPricingTierId(planString) ? PRICE_LIST_VERSION : 'legacy',
       });
       // The team that invited this one earns credits for a first payment. Idempotent
       // on the invited team, so a redelivery cannot pay it twice.
@@ -1101,6 +1128,13 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
     plan: subRow.pending_plan ?? subRow.plan,
     source: 'renewal',
     chargedAt: now,
+    channel: mapPaystackChannel(channel),
+    // The stored period this renewal buys (the pending one when a change takes
+    // effect now). Null on an old row that never stored it: no TRM fee is
+    // guessed for it.
+    interval: readStoredInterval(
+      subRow.pending_plan ? (subRow.pending_billing_interval ?? subRow.billing_interval) : subRow.billing_interval
+    ),
   });
 
   return ack({

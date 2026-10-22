@@ -245,3 +245,4 @@ Adding a note: create `docs/notes/YYYY-MM-DD-short-slug.md` (start it with a `# 
 - [Curator UrgAns front desk (URG-381, v1.161.0, 2026-10-19)](2026-10-19-curator-urgans-front-desk.md)
 - [Altlink pre-save and smart links (2026-10-22, live, no new flag beyond NEXT_PUBLIC_FEATURE_ALTLINK which ships on)](2026-10-22-altlink-pre-save-and-smart-links.md)
 - [Self-serve checkout (2026-10-22, live, no new flag)](2026-10-22-self-serve-checkout.md)
+- [TRM fee, locked prices and the margin view (2026-10-22, v1.165.0, no flag)](2026-10-22-trm-fee-and-margin-view.md)

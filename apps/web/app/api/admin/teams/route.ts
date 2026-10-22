@@ -11,6 +11,7 @@ import { invalidateSubscriptionSnapshot } from '@/lib/subscription-access';
 import { ACTION_EVENT_TYPE, parseTeamAdminAction } from '@/lib/admin-teams';
 import { logBillingEvent } from '@/lib/billing-events-server';
 import { recordSubscriptionCharge, rewardReferrerOnFirstPayment } from '@/lib/referrals-server';
+import { intervalCoveringPeriod } from '@/lib/trm/partner-fee';
 import { notifyFounder } from '@/lib/billing-alerts-server';
 import { loadBriefCompletionByWorkspace } from '@/lib/team-brief-server';
 import { sendTeamAdminNotice } from '@/lib/team-notices-server';
@@ -370,6 +371,11 @@ export async function PATCH(request: NextRequest) {
         amountKobo: action.amountMinorUnit,
         plan: action.plan,
         source: 'manual',
+        // Settled by hand means paid straight to our bank: no Paystack fee.
+        channel: 'direct_transfer',
+        // The period the deal covers, for the TRM fee: the interval the admin
+        // gave, else worked out from the end date they set.
+        interval: action.billingInterval ?? intervalCoveringPeriod(new Date(), action.expiresAt),
       });
       // A deal settled by hand is also a first payment for a team that was invited.
       await rewardReferrerOnFirstPayment(client, {

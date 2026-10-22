@@ -32,6 +32,10 @@ export const BILLING_EVENT_TYPES = [
    *  Paystack swap is owed by hand before the next renewal (the plan-change
    *  precedent), so this also emails the founder. */
   'retention_offer_accepted',
+  /** A team's first payment on a plan with "Distribution included" (pricing
+   *  v3, 2026-10-22). An ACTION: register the team on TRM by hand, since TRM's
+   *  API has no account creation. Written once, when trm_registered_at is set. */
+  'trm_registration_needed',
   /** The cancel flow: the owner cancelled (trial or paid). Metadata carries
    *  the reason they picked, if any. */
   'subscription_cancelled',

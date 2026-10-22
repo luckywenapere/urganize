@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.165.0",
+    title: "Distribution included on Manager and Label",
+    tag: "Rollouts",
+    date: "October 22, 2026",
+    highlights: [
+      "Manager and Label now include sending your releases to stores through TRM, at no extra cost.",
+      "The Distribute step tells you when your plan covers it.",
+    ],
+  },
+  {
     version: "1.164.0",
     title: "Pay for your plan and start right away",
     tag: "Account",
