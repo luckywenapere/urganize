@@ -3,6 +3,7 @@ import {
   ATTACH_WINDOW_DAYS,
   addMonthsUtc,
   buildPartnerStatement,
+  chargeExclusionWhenRecorded,
   commissionOnCharge,
   decideAttach,
   isPastDue,
@@ -11,6 +12,7 @@ import {
   normalizeReferralCode,
   parseReferralAdminAction,
   payoutDueDate,
+  REFERRALS_OFF_EXCLUSION_REASON,
   referralLink,
   type LedgerCharge,
 } from './referrals';
@@ -35,6 +37,29 @@ describe('the switch', () => {
     expect(isReferralsEnabled({ NEXT_PUBLIC_FEATURE_REFERRALS: '1' })).toBe(false);
     expect(isReferralsEnabled({ NEXT_PUBLIC_FEATURE_REFERRALS: 'yes' })).toBe(false);
     expect(isReferralsEnabled({ NEXT_PUBLIC_FEATURE_REFERRALS: ' TRUE ' })).toBe(true);
+  });
+
+  it('writes a payment made while it is off already excluded, so it earns no commission', () => {
+    const paidAt = new Date('2026-11-05T09:00:00Z');
+    expect(chargeExclusionWhenRecorded(true, paidAt)).toEqual({ excluded_at: null, excluded_reason: null });
+    expect(chargeExclusionWhenRecorded(false, paidAt)).toEqual({
+      excluded_at: '2026-11-05T09:00:00.000Z',
+      excluded_reason: REFERRALS_OFF_EXCLUSION_REASON,
+    });
+  });
+
+  it('a tagged team earns nothing on a payment recorded while it was off', () => {
+    const team = { workspaceId: 'ws-1', name: 'Team', attachedAt: '2026-10-01T00:00:00Z' };
+    const off = chargeExclusionWhenRecorded(false, new Date('2026-11-05T09:00:00Z'));
+    const statement = buildPartnerStatement({
+      terms: TERMS,
+      teams: [team],
+      charges: [charge({ reference: 'paid-while-off', excluded: off.excluded_at !== null })],
+      payouts: [],
+      now: NOW,
+    });
+    expect(statement.teams[0].chargeCount).toBe(0);
+    expect(statement.teams[0].commissionKobo).toBe(0);
   });
 });
 

@@ -266,7 +266,9 @@ describe('every paid period records the fee, in one place', () => {
   );
 
   it('records every payment whether or not referrals are on (the margin view needs them all)', () => {
-    expect(recorder).not.toContain('isReferralsEnabled');
+    // The flag only decides whether the row can earn commission, never whether
+    // it is written. See chargeExclusionWhenRecorded.
+    expect(recorder).not.toMatch(/!\s*isReferralsEnabled\(\)/);
   });
 
   it('writes the TRM fee from there, never for a plan-change top-up, and only with a named period', () => {

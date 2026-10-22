@@ -370,11 +370,26 @@ function readChargeSource(paystackResponse: Record<string, unknown> | null): str
  */
 async function handlePlanChangeCharge(
   admin: AdminClient,
-  payment: { id: string; user_id: string; plan: string; amount?: number | null; paystack_response: Record<string, unknown> | null },
+  payment: {
+    id: string;
+    user_id: string;
+    plan: string;
+    status?: string | null;
+    amount?: number | null;
+    paystack_response: Record<string, unknown> | null;
+  },
   reference: string,
   now: Date,
   channel?: string | null
 ) {
+  // This handler runs instead of the generic flip in handleChargeSuccess, so it
+  // has to mark the reserved row paid itself: /payment/callback only shows
+  // success once /api/payments/verify reads 'success' here.
+  if (payment.status !== 'success') {
+    const { error: paymentError } = await admin.from('payments').update({ status: 'success' }).eq('id', payment.id);
+    if (paymentError) console.error('[paystack-webhook] plan change payment status update error:', paymentError.message);
+  }
+
   const targetPlan = String(payment.plan);
   const interval = readSelectedInterval(payment.paystack_response);
   const nowIso = now.toISOString();

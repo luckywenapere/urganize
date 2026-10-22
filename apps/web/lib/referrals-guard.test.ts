@@ -49,6 +49,17 @@ describe('the payment webhook feeds the ledger', () => {
     expect(cardCheck).toBeLessThan(firstRecord);
   });
 
+  it('every handler that skips the generic success flip marks the payment paid itself', () => {
+    // Codex on #843: a diverted handler that forgets this leaves the payer on
+    // "still finalizing" at /payment/callback even though they were credited.
+    for (const handler of ['handlePlanChangeCharge', 'handleTransferCheckoutCharge', 'handleTrialCardCharge']) {
+      const start = source.indexOf(`async function ${handler}(`);
+      expect(start, handler).toBeGreaterThan(-1);
+      const body = source.slice(start).split(/\r?\n}\r?\n/)[0];
+      expect(body, handler).toMatch(/from\('payments'\)\s*\.update\(\{ status: 'success' \}\)/);
+    }
+  });
+
   it('records the first charge only after the profile stamp has been checked, so a redelivery can finish the job', () => {
     const stamp = source.indexOf('applied.profileWriteFailed');
     const record = source.indexOf("source: 'initial'");
@@ -86,13 +97,23 @@ describe('who may write the commission tables', () => {
 
 describe('the switch', () => {
   it('records every payment whether or not referrals are on (the margin view and the TRM fee need them all, 2026-10-22)', () => {
-    // Commission is still only owed for teams a partner tagged, and tagging
-    // needs the switch, so recording more rows earns nobody anything new.
     const source = stripComments(read('lib/referrals-server.ts'));
     const start = source.indexOf('export async function recordSubscriptionCharge');
     const body = source.slice(start).split(/\r?\n}\r?\n/)[0];
     expect(start).toBeGreaterThan(-1);
-    expect(body).not.toContain('isReferralsEnabled');
+    expect(body).not.toMatch(/!\s*isReferralsEnabled\(\)/);
+  });
+
+  it('writes a payment made while referrals are off already excluded, so a team tagged earlier earns nothing on it', () => {
+    // Codex on #844: the admin statement counts every row for a tagged team, so
+    // the flag has to be stamped on the row itself.
+    const source = stripComments(read('lib/referrals-server.ts'));
+    const start = source.indexOf('export async function recordSubscriptionCharge');
+    const body = source.slice(start).split(/\r?\n}\r?\n/)[0];
+    expect(body).toContain('chargeExclusionWhenRecorded(isReferralsEnabled(), chargedAt)');
+    // In the columns every database has, so the missing-column retry keeps it.
+    const base = body.slice(body.indexOf('const base = {'), body.indexOf('const extra = {'));
+    expect(base).toContain('chargeExclusionWhenRecorded(');
   });
 
   it('checks it before auth on the attach route, so a switched-off app answers 404 to everyone', () => {

@@ -24,14 +24,31 @@
  */
 
 /** NEXT_PUBLIC_FEATURE_REFERRALS, default off. With it off nothing is tagged and
- *  the webhook records nothing extra. Settling money that is already owed (the
- *  admin page, payouts) does not depend on it. */
+ *  no new payment earns commission (see chargeExclusionWhenRecorded). Settling
+ *  money that is already owed (the admin page, payouts) does not depend on it. */
 export function isReferralsEnabled(
   env: Record<string, string | undefined> = {
     NEXT_PUBLIC_FEATURE_REFERRALS: process.env.NEXT_PUBLIC_FEATURE_REFERRALS,
   }
 ): boolean {
   return String(env.NEXT_PUBLIC_FEATURE_REFERRALS ?? '').trim().toLowerCase() === 'true';
+}
+
+export const REFERRALS_OFF_EXCLUSION_REASON = 'Referrals were off when this was paid';
+
+/**
+ * The exclusion a new ledger row is written with. Since 2026-10-22 every payment
+ * is recorded (the margin view needs them all), but one paid while referrals are
+ * off must not earn commission for a team tagged before the switch went off, so
+ * it goes in already excluded. An admin can still Restore it on the statement.
+ */
+export function chargeExclusionWhenRecorded(
+  referralsEnabled: boolean,
+  chargedAt: Date
+): { excluded_at: string | null; excluded_reason: string | null } {
+  return referralsEnabled
+    ? { excluded_at: null, excluded_reason: null }
+    : { excluded_at: chargedAt.toISOString(), excluded_reason: REFERRALS_OFF_EXCLUSION_REASON };
 }
 
 export const REFERRAL_CODE_PATTERN = /^[A-Z0-9_-]{3,40}$/;

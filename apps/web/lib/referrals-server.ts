@@ -36,6 +36,7 @@ import {
 } from './referral-credits';
 import {
   buildPartnerStatement,
+  chargeExclusionWhenRecorded,
   decideAttach,
   describeAttachRefusal,
   isReferralsEnabled,
@@ -82,10 +83,11 @@ export type ChargeSource = 'initial' | 'renewal' | 'plan_change' | 'manual';
  *
  * SINCE 2026-10-22 IT RECORDS WHETHER OR NOT REFERRALS ARE ON. The same rows
  * feed the admin margin view (/admin/billing), which needs every payment and how
- * it was paid. Commission is still only owed for teams a partner tagged, and
- * tagging needs the referrals switch, so recording more rows earns nobody
- * anything new. The three columns 20261022170000 adds are written when given and
- * dropped on a database that does not have them yet.
+ * it was paid. A row written while referrals are off goes in already excluded
+ * (chargeExclusionWhenRecorded), because a team tagged before the switch went
+ * off would otherwise earn its partner commission on it. The three columns
+ * 20261022170000 adds are written when given and dropped on a database that
+ * does not have them yet.
  *
  * IT IS ALSO WHERE WE RECORD WHAT WE OWE TRM, because every paid period comes
  * through here after the money has landed (card, transfer, Mark paid, renewal).
@@ -123,6 +125,7 @@ export async function recordSubscriptionCharge(
       plan: input.plan,
       source: input.source,
       charged_at: chargedAt.toISOString(),
+      ...chargeExclusionWhenRecorded(isReferralsEnabled(), chargedAt),
     };
     const extra = {
       payment_channel: input.channel ?? null,

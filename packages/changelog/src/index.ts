@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.165.1",
+    tag: "Account",
+    listed: false,
+    date: "October 22, 2026",
+    highlights: [
+      "After you pay to upgrade your plan, you now see that it worked instead of a page that keeps waiting.",
+    ],
+  },
+  {
     version: "1.165.0",
     title: "Distribution included on Manager and Label",
     tag: "Rollouts",
