@@ -88,6 +88,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     description: 'Trials and deals. Extend, comp or mark paid.',
   },
   {
+    key: 'self-serve',
+    label: 'Self-serve',
+    href: '/admin/self-serve',
+    group: 'operations',
+    description: 'Checkout cohorts, recorded transfers and founder minutes.',
+  },
+  {
     key: 'waitlist',
     label: 'Waitlist',
     href: '/admin/waitlist',

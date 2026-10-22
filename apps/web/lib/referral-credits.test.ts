@@ -218,7 +218,15 @@ describe('the reward path', () => {
       .filter((file) => stripComments(readFileSync(file, 'utf8')).includes('rewardReferrerOnFirstPayment('))
       .map((file) => relative(ROOT, file).replace(/\\/g, '/'))
       .sort();
-    expect(callers).toEqual(['app/api/admin/teams/route.ts', 'app/api/webhooks/paystack/route.ts', 'lib/referrals-server.ts']);
+    // lib/self-serve-server.ts is the bank-transfer payment (self-serve
+    // checkout, 2026-10-22): a first transfer pays the same reward a first card
+    // charge does.
+    expect(callers).toEqual([
+      'app/api/admin/teams/route.ts',
+      'app/api/webhooks/paystack/route.ts',
+      'lib/referrals-server.ts',
+      'lib/self-serve-server.ts',
+    ]);
 
     const webhook = stripComments(read('app/api/webhooks/paystack/route.ts'));
     const record = webhook.indexOf("source: 'initial'");

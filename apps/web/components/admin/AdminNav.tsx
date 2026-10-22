@@ -28,6 +28,7 @@ import {
   Link2,
   Spotlight,
   MoreHorizontal,
+  Wallet2,
 } from '@/components/icons';
 import { ADMIN_MORE_SECTIONS, ADMIN_PRIMARY_NAV, activeNavKey, adminBackTarget } from '@/lib/admin-sections';
 import { buttonVariants, cn } from '@/components/admin/ui';
@@ -75,6 +76,7 @@ export const ADMIN_SECTION_ICONS: Record<string, typeof LayoutDashboard> = {
   seeding: Send,
   featured: Spotlight,
   'promo-channels': Megaphone,
+  'self-serve': Wallet2,
   waitlist: Users,
   interviews: Mic,
   chappi: Smile,

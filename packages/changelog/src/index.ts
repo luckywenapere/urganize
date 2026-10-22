@@ -41,6 +41,18 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.164.0",
+    title: "Pay for your plan and start right away",
+    tag: "Account",
+    date: "October 22, 2026",
+    highlights: [
+      "Pick Solo or Manager, pay by card or bank transfer, and start your first rollout straight away. No waiting list.",
+      "Pay monthly, every 6 months or once a year. Six months costs the price of five.",
+      "Paying by bank transfer gives you your own account number, and we remind you before it is time to pay again.",
+      "Need a hand? Tap Get help, pick what it is about, and we reply by email.",
+    ],
+  },
+  {
     version: "1.163.0",
     title: "Pre-save links that make themselves",
     tag: "Rollouts",

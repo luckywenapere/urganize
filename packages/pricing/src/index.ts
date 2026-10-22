@@ -240,7 +240,10 @@ export function formatPlanCyclePrice(
 // subscriptions_plan_check (20260823100000) already permits, so bringing Group
 // back on 2026-10-02 needed no migration. Renaming the id would mean one.
 export type PricingTierId = 'solo' | 'manager' | 'label' | 'enterprise';
-export type BillingInterval = 'monthly' | 'annual';
+/** How often a plan is paid. `semiannual` (6 months, paid up front) since
+ *  2026-10-22 (self-serve checkout, founder approved): 6 months are billed at
+ *  SIX_MONTHS_BILLED months of the monthly price, so one is free. */
+export type BillingInterval = 'monthly' | 'semiannual' | 'annual';
 
 export type TierPrice = {
   /** Whole naira, for display copy. */
@@ -265,10 +268,21 @@ export type TierPrice = {
  *  before shipping the number. */
 export const ANNUAL_MONTHS_BILLED = 10;
 
-/** The yearly amount for a monthly one. The only place the multiplication
- *  happens, so no caller can scale or round it differently. */
-function annualAmount(monthlyAmount: number): number {
-  return monthlyAmount * ANNUAL_MONTHS_BILLED;
+/** Months billed for the 6-month prepay, so one of the six is free
+ *  ("6-for-5", founder approved 2026-10-22). Same rule as ANNUAL_MONTHS_BILLED:
+ *  changing it moves every 6-month price at once, Plans included. */
+export const SIX_MONTHS_BILLED = 5;
+
+/** Months each interval covers and months it charges for. The only place the
+ *  multiplication happens, so no caller can scale or round it differently. */
+export const INTERVAL_MONTHS: Record<BillingInterval, { covers: number; billed: number }> = {
+  monthly: { covers: 1, billed: 1 },
+  semiannual: { covers: 6, billed: SIX_MONTHS_BILLED },
+  annual: { covers: 12, billed: ANNUAL_MONTHS_BILLED },
+};
+
+function intervalAmount(monthlyAmount: number, interval: BillingInterval): number {
+  return monthlyAmount * INTERVAL_MONTHS[interval].billed;
 }
 
 /** Builds a TierPrice from a whole-naira amount, deriving the kobo figure so no
@@ -414,12 +428,14 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // reprice, strategy doc section 8), when Solo went to two seats. It read
     // "For an independent artist." from 2026-10-02 while Solo was one seat.
     audience: 'For an artist and their manager.',
-    // ₦7,500 since 2026-10-17 (founder approved the reprice that day; it was
+    // ₦8,000 since 2026-10-22 (founder, self-serve checkout; new Plans must be
+    // minted at ₦8,000 / ₦40,000 / ₦80,000 and the vars repointed).
+    // ₦7,500 from 2026-10-17 (founder approved the reprice that day; it was
     // ₦5,000 from 2026-09-10). Monthly only — the yearly price is ten months of
     // this, see monthlyPrice. New Paystack Plans were minted at ₦7,500 /
     // ₦75,000 and the _PER_MONTH_ / _PER_YEAR_ vars repointed before this
     // shipped; the ₦5,000 Plans stay in Paystack untouched.
-    monthlyPrice: tierPrice(7_500),
+    monthlyPrice: tierPrice(8_000),
     urgansMonthlyCredits: 150,
     // TWO seats since 2026-10-17 (founder-approved reprice: "artist +
     // manager"). The owner holds one, so a Solo account can invite one person.
@@ -434,11 +450,13 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     id: 'manager',
     label: 'Manager',
     audience: 'For a manager running more than one artist.',
-    // ₦25,000 since 2026-10-17 (founder approved the reprice that day; it was
+    // ₦30,000 since 2026-10-22 (founder, no Manager customer had paid yet, so
+    // no grandfathering; Plans at ₦30,000 / ₦150,000 / ₦300,000).
+    // ₦25,000 from 2026-10-17 (founder approved the reprice that day; it was
     // ₦35,000 earlier the same day and ₦22,000 before that). Monthly only — the
     // yearly price is ten months of this. New ₦25,000 / ₦250,000 Paystack Plans
     // were minted and the vars repointed before this shipped.
-    monthlyPrice: tierPrice(25_000),
+    monthlyPrice: tierPrice(30_000),
     urgansMonthlyCredits: 660,
     // 3 artists / 5 seats since 2026-10-17 (was 5 artists / 4 seats). Both are
     // enforced (the artist ceiling since rosters shipped, 2026-08-30). Lowering
@@ -563,11 +581,27 @@ export const PRICING_TIER_ORDER: readonly PricingTierId[] = [
  *  Monthly is the default because it is the price we set and the smaller
  *  number; the yearly option is the upsell beside it, carrying
  *  `annualSavingCopy`. */
-export const SELLABLE_INTERVALS: readonly BillingInterval[] = ['monthly', 'annual'] as const;
+export const SELLABLE_INTERVALS: readonly BillingInterval[] = ['monthly', 'semiannual', 'annual'] as const;
 export const DEFAULT_SELLING_INTERVAL: BillingInterval = 'monthly';
 
 export function isSellableInterval(value: unknown): value is BillingInterval {
-  return value === 'monthly' || value === 'annual';
+  return value === 'monthly' || value === 'semiannual' || value === 'annual';
+}
+
+/** "1 month free" / "2 months free" for a prepaid interval, null for monthly
+ *  or a sales-led tier. Derived from INTERVAL_MONTHS so the badge and the price
+ *  are one fact. */
+export function intervalSavingCopy(id: PricingTierId, interval: BillingInterval): string | null {
+  if (!PRICING_TIERS[id].monthlyPrice) return null;
+  const { covers, billed } = INTERVAL_MONTHS[interval];
+  const free = covers - billed;
+  if (free <= 0) return null;
+  return `${free} ${free === 1 ? 'month' : 'months'} free`;
+}
+
+/** The interval's name as a customer reads it: "Monthly", "6 months", "Yearly". */
+export function intervalLabel(interval: BillingInterval): string {
+  return interval === 'monthly' ? 'Monthly' : interval === 'semiannual' ? '6 months' : 'Yearly';
 }
 
 /** The yearly saving, phrased the one way the copy rules allow.
@@ -661,7 +695,7 @@ export function isPricingTierId(value: unknown): value is PricingTierId {
 }
 
 export function isBillingInterval(value: unknown): value is BillingInterval {
-  return value === 'monthly' || value === 'annual';
+  return value === 'monthly' || value === 'semiannual' || value === 'annual';
 }
 
 /** A tier's price for one interval. Null for a sales-led tier — callers must
@@ -677,7 +711,7 @@ export function getTierPrice(
 ): TierPrice | null {
   const monthly = PRICING_TIERS[id].monthlyPrice;
   if (!monthly) return null;
-  return interval === 'monthly' ? monthly : tierPrice(annualAmount(monthly.amount));
+  return interval === 'monthly' ? monthly : tierPrice(intervalAmount(monthly.amount, interval));
 }
 
 /** A tier's price as a customer reads it: "₦7,500/month", "₦75,000/year". Null
@@ -704,5 +738,7 @@ export function formatTierPrice(
     currency: 'NGN',
     maximumFractionDigits: 0,
   }).format(price.amount);
-  return `${formatted}/${interval === 'monthly' ? 'month' : 'year'}`;
+  return interval === 'semiannual'
+    ? `${formatted} for 6 months`
+    : `${formatted}/${interval === 'monthly' ? 'month' : 'year'}`;
 }

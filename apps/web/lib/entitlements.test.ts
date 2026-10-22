@@ -5,6 +5,7 @@ import {
   PRICING_TIERS,
   PRICING_TIER_ORDER,
   ANNUAL_MONTHS_BILLED,
+  SIX_MONTHS_BILLED,
   DEFAULT_SELLING_INTERVAL,
   SELLABLE_INTERVALS,
   annualSavingCopy,
@@ -202,7 +203,7 @@ describe('tier prices and the sales-led tier', () => {
   // carries a YEARLY figure, so a yearly price that disagrees with the monthly
   // one cannot be typed into the data at all.
   it('stores a monthly price only, and computes the yearly one', () => {
-    expect(SELLABLE_INTERVALS).toEqual(['monthly', 'annual']);
+    expect(SELLABLE_INTERVALS).toEqual(['monthly', 'semiannual', 'annual']);
     expect(DEFAULT_SELLING_INTERVAL).toBe('monthly');
     for (const tier of ALL_TIERS) {
       const monthly = PRICING_TIERS[tier].monthlyPrice;
@@ -213,6 +214,8 @@ describe('tier prices and the sales-led tier', () => {
       // The kobo leg is derived too, so it cannot fall out of step with the
       // naira one — a mismatch there is what a Paystack charge is built on.
       expect(annual?.minorUnit, `${tier}/annual kobo`).toBe((annual?.amount ?? 0) * 100);
+      const six = getTierPrice(tier, 'semiannual');
+      expect(six?.amount, `${tier}/semiannual`).toBe(monthly.amount * SIX_MONTHS_BILLED);
     }
   });
 
@@ -222,10 +225,13 @@ describe('tier prices and the sales-led tier', () => {
   // repo has five times advertised one price and charged another. If this fails,
   // the arithmetic moved: mint the Plans and repoint the vars BEFORE shipping it.
   it('resolves the yearly prices to the figures the Plans must be minted at', () => {
-    // 2026-10-17 reprice: the ₦75,000 / ₦250,000 / ₦600,000 yearly Plans are
-    // minted (PLN_4z12z6ruske767p, PLN_2kzoyuywqp01vvv, PLN_g1n3kunp71hhu9k).
-    expect(getTierPrice('solo', 'annual')?.amount).toBe(75_000);
-    expect(getTierPrice('manager', 'annual')?.amount).toBe(250_000);
+    // 2026-10-22 self-serve reprice: Solo ₦8,000 / ₦40,000 / ₦80,000 and
+    // Manager ₦30,000 / ₦150,000 / ₦300,000. Mint these Plans and repoint the
+    // PAYSTACK_PLAN_* vars before the push. Label is unchanged (₦600,000 minted).
+    expect(getTierPrice('solo', 'annual')?.amount).toBe(80_000);
+    expect(getTierPrice('manager', 'annual')?.amount).toBe(300_000);
+    expect(getTierPrice('solo', 'semiannual')?.amount).toBe(40_000);
+    expect(getTierPrice('manager', 'semiannual')?.amount).toBe(150_000);
     expect(getTierPrice('label', 'annual')?.amount).toBe(600_000);
   });
 
@@ -233,11 +239,12 @@ describe('tier prices and the sales-led tier', () => {
     // "/month" and "/year" rather than "/mo" and "/yr": the founder's copy rules
     // ask for fifth-grade readable, and an abbreviation is one more thing to
     // decode. The no-argument call takes the default, which is monthly.
-    expect(formatTierPrice('solo')).toBe('₦7,500/month');
-    expect(formatTierPrice('manager')).toBe('₦25,000/month');
+    expect(formatTierPrice('solo')).toBe('₦8,000/month');
+    expect(formatTierPrice('manager')).toBe('₦30,000/month');
+    expect(formatTierPrice('manager', 'semiannual')).toBe('₦150,000 for 6 months');
     expect(formatTierPrice('label')).toBe('₦60,000/month');
-    expect(formatTierPrice('solo', 'annual')).toBe('₦75,000/year');
-    expect(formatTierPrice('manager', 'annual')).toBe('₦250,000/year');
+    expect(formatTierPrice('solo', 'annual')).toBe('₦80,000/year');
+    expect(formatTierPrice('manager', 'annual')).toBe('₦300,000/year');
     expect(formatTierPrice('label', 'annual')).toBe('₦600,000/year');
   });
 
@@ -926,5 +933,27 @@ describe('credits-only teams are on Solo (2026-10-02)', () => {
     expect(resolveTeamTier({ state: 'credits_only' })).toBe('solo');
     expect(resolveTeamTier({ state: 'credits_only', ownerPlan: 'label' })).toBe('solo');
     expect(resolveTeamTier({ state: 'credits_only', ownerPlan: 'manager', billingPlan: 'founding' })).toBe('solo');
+  });
+});
+
+describe('Solo limits point at Manager (self-serve checkout)', () => {
+  it('names Manager, its price and the proration', () => {
+    for (const key of ['seats', 'artists', 'active_releases'] as const) {
+      const limit = getEntitlement('solo', key) as number;
+      const verdict = checkLimit({ tier: 'solo', key, current: limit });
+      expect(verdict.allowed).toBe(false);
+      if (verdict.allowed) continue;
+      expect(verdict.upgradeTo).toBe('manager');
+      expect(verdict.message.toLowerCase()).toContain('upgrade to manager');
+      expect(verdict.message).toContain('30,000');
+      expect(verdict.message).toContain('come off the price');
+      expect(verdict.message).not.toMatch(/\u2014|workspace/i);
+    }
+  });
+
+  it('leaves Manager pointing at Label', () => {
+    const limit = getEntitlement('manager', 'seats') as number;
+    const verdict = checkLimit({ tier: 'manager', key: 'seats', current: limit });
+    expect(!verdict.allowed && verdict.upgradeTo).toBe('label');
   });
 });

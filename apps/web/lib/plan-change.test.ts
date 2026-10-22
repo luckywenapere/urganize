@@ -232,8 +232,9 @@ describe('quotePlanChange — a team on a price we no longer list', () => {
     expect(quote.kind).toBe('upgrade');
   });
 
-  it('refuses a team still on the old ₦80,000 Solo price', () => {
-    const quote = quotePlanChange({ ...base, currentPaidMinorUnit: 80_000_00 });
+  it('refuses a team still on the old ₦75,000 Solo price', () => {
+    // ₦75,000 a year was Solo from 2026-10-17 to the 2026-10-22 reprice.
+    const quote = quotePlanChange({ ...base, currentPaidMinorUnit: 75_000_00 });
     expect(quote).toEqual({ kind: 'refused', reason: 'grandfathered_rate' });
   });
 

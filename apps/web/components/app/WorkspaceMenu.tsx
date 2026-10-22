@@ -23,7 +23,7 @@ type WorkspaceMenuProps = {
    * below lg when MobileNavBar's "You" tab already covers Settings/sign-out
    * there. */
   className?: string;
-  /** The help rows (Report an issue, Docs, Contact us, Community, tour replay)
+  /** The help rows (Report an issue, Docs, Get help, Community, tour replay)
    *  that used to sit behind the top bar's `?` button. AppShell's showHelpMenu
    *  gate decides, exactly as it decided the `?` button. */
   showHelp?: boolean;

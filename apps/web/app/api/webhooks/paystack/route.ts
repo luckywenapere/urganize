@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { BillingInterval } from '@urganize/pricing';
 import { createClient } from '@supabase/supabase-js';
 import { getPlanExpiry } from '@/lib/billing';
 import {
@@ -24,6 +25,13 @@ import {
   isCardTrialPlan,
 } from '@/lib/trial-card';
 import { afterResponse } from '@/lib/after-response';
+import {
+  completePaidSignup,
+  findUserIdByCustomerCode,
+  recordIncomingTransfer,
+  trackSelfServe,
+} from '@/lib/self-serve-server';
+import { TRANSFER_CHECKOUT_SOURCE } from '@/lib/self-serve';
 import { validatePaystackSignature } from '@/lib/paystack-signature';
 import { isPitchPaymentReference } from '@/lib/pitch-payments';
 import { isCreditsReference } from '@/lib/credits/purchase';
@@ -71,6 +79,7 @@ type PaystackAuthorization = {
   authorization_code?: string;
   signature?: string;
   reusable?: boolean;
+  channel?: string;
 };
 
 type PaystackPlanRef = {
@@ -94,6 +103,9 @@ type PaystackWebhookPayload = {
     // charge.success / invoice.* shape
     reference?: string;
     amount?: number;
+    /** 'card', 'bank_transfer', 'dedicated_nuban' (a transfer to a
+     *  customer's own dedicated account number), ... */
+    channel?: string;
     authorization?: PaystackAuthorization;
     customer?: PaystackCustomerRef;
     plan?: PaystackPlanRef | string;
@@ -141,9 +153,9 @@ const planRef = (raw: PaystackWebhookPayload['data']): PaystackPlanRef | null =>
  */
 function readSelectedInterval(
   paystackResponse: Record<string, unknown> | null
-): 'monthly' | 'annual' | null {
+): BillingInterval | null {
   const value = paystackResponse?.selected_interval;
-  return value === 'monthly' || value === 'annual' ? value : null;
+  return value === 'monthly' || value === 'semiannual' || value === 'annual' ? value : null;
 }
 
 async function applyInitialOrManualCharge(
@@ -160,7 +172,7 @@ async function applyInitialOrManualCharge(
    *  whose name already carries its interval. Persisting it is what lets every
    *  future RENEWAL know the period: a renewal has no payments row to read, so
    *  the subscription row is the only place this fact can live. */
-  billingInterval: 'monthly' | 'annual' | null = null
+  billingInterval: BillingInterval | null = null
 ) {
   const expiresAt = getPlanExpiry(plan, now, billingInterval);
 
@@ -271,6 +283,48 @@ async function applyInitialOrManualCharge(
   }
 
   return { profileWriteFailed };
+}
+
+/** The code (SOUNDWAVE) self-serve checkout wrote into the payments jsonb. */
+function readPromoCode(paystackResponse: Record<string, unknown> | null): string | null {
+  const value = paystackResponse?.promo_code;
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function readSelfServeSource(paystackResponse: Record<string, unknown> | null): string | null {
+  return paystackResponse?.self_serve === true ? 'checkout' : null;
+}
+
+/**
+ * A one-time bank-transfer checkout cleared. It pays the invoice whose id the
+ * checkout wrote into the jsonb. Paystack only completes such a transfer for
+ * the exact amount, so this settles it; the invoice logic still refuses to
+ * open a team on anything short.
+ */
+async function handleTransferCheckoutCharge(
+  admin: AdminClient,
+  payment: { id: string; user_id: string; status?: string | null; paystack_response: Record<string, unknown> | null },
+  reference: string,
+  amountMinorUnit: number,
+  now: Date
+) {
+  if (payment.status !== 'success') {
+    await admin.from('payments').update({ status: 'success' }).eq('id', payment.id);
+  }
+  const invoiceId = typeof payment.paystack_response?.invoice_id === 'string' ? payment.paystack_response.invoice_id : null;
+  const recorded = await recordIncomingTransfer(admin, {
+    userId: payment.user_id,
+    amountKobo: amountMinorUnit,
+    source: 'paystack_bank_transfer',
+    paystackReference: reference,
+    now,
+    invoiceId,
+  });
+  if (!recorded.ok) {
+    console.error('[paystack-webhook] transfer checkout not recorded:', recorded.error);
+    return NextResponse.json({ error: 'Could not record the transfer. Please redeliver.' }, { status: 500 });
+  }
+  return ack({ event: 'charge.success', reference, matched: 'transfer_checkout', settled: recorded.settled });
 }
 
 /** The `source` start-checkout or change-plan wrote into the payments jsonb.
@@ -794,6 +848,13 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
       return handlePlanChangeCharge(admin, payment, reference, now);
     }
 
+    // A one-time bank-transfer checkout (self-serve, when no dedicated account
+    // could be made). MUST divert before the recurring branch: `plan` is a real
+    // tier id, but this money pays an invoice, not a card subscription.
+    if (readChargeSource(payment.paystack_response) === TRANSFER_CHECKOUT_SOURCE) {
+      return handleTransferCheckoutCharge(admin, payment, reference, amountMinorUnit, now);
+    }
+
     // Flip the reserved row to success (idempotent — re-deliveries hit this).
     if (payment.status !== 'success') {
       const { error: updateError } = await admin
@@ -817,6 +878,22 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
       // does not say whether the customer bought a month or a year — and a
       // legacy plan does not, so absent stays absent.
       const selectedInterval = readSelectedInterval(payment.paystack_response);
+      // Self-serve (2026-10-22): a verified card payment lets a waiting payer
+      // in, makes their team, marks it card-paid and tags who sent them.
+      // Idempotent, and a no-op for a team that already exists and is approved.
+      await completePaidSignup(admin, {
+        userId,
+        plan: planString,
+        period: selectedInterval,
+        method: 'card',
+        promoCode: readPromoCode(payment.paystack_response),
+      });
+      afterResponse('self-serve checkout record', () => trackSelfServe(userId, 'checkout_succeeded', {
+        plan: planString,
+        period: selectedInterval,
+        method: 'card',
+        source: readSelfServeSource(payment.paystack_response),
+      }));
       const applied = await applyInitialOrManualCharge(
         admin,
         userId,
@@ -886,6 +963,38 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
 
     console.warn('[paystack-webhook] payment row with unrecognized plan:', planString);
     return ack({ event: 'charge.success', reference, matched: false, reason: 'unknown_plan' });
+  }
+
+  // 1b. A TRANSFER TO A DEDICATED ACCOUNT (self-serve). No payments row: the
+  //     payer sent money to their own account number. MUST come before the
+  //     renewal match below, because Paystack keeps one customer per email, so
+  //     a card subscriber's transfer carries the same customer code a card
+  //     renewal would.
+  const channel = payload.data?.channel || payload.data?.authorization?.channel || null;
+  if (channel === 'dedicated_nuban' && customerCode) {
+    const transferUserId = await findUserIdByCustomerCode(admin, customerCode);
+    if (!transferUserId) {
+      console.warn('[paystack-webhook] transfer to an account we do not know');
+      return ack({ event: 'charge.success', reference, matched: false, reason: 'unknown_dedicated_account' });
+    }
+    const recorded = await recordIncomingTransfer(admin, {
+      userId: transferUserId,
+      amountKobo: amountMinorUnit,
+      source: 'paystack_dva',
+      paystackReference: reference,
+      now,
+    });
+    if (!recorded.ok) {
+      console.error('[paystack-webhook] transfer not recorded:', recorded.error);
+      return NextResponse.json({ error: 'Could not record the transfer. Please redeliver.' }, { status: 500 });
+    }
+    return ack({
+      event: 'charge.success',
+      reference,
+      matched: 'dedicated_transfer',
+      settled: recorded.settled,
+      duplicate: recorded.duplicate,
+    });
   }
 
   // 2. RENEWAL — no payments row for this reference (Paystack generates a

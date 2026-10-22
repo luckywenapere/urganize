@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
         limit: seats.limit,
         current: seats.current,
       });
-      return NextResponse.json({ error: seats.message }, { status: 409 });
+      return NextResponse.json({ error: seats.message, limitKey: seats.key, upgradeTo: seats.upgradeTo }, { status: 409 });
     }
 
     // A release id is only provenance, but it is a foreign key — so confirm

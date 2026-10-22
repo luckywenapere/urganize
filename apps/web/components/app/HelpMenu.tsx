@@ -4,6 +4,7 @@ import { useMemo, type ReactNode } from 'react';
 import { openExternalUrl } from '@/lib/external-link';
 import { CommunityIcon, ContactIcon, DocsIcon, ReportIcon } from '@/components/app/BrandIcons';
 import { useReportIssueStore } from '@/stores/useReportIssueStore';
+import { useHelpStore } from '@/stores/useHelpStore';
 
 // In-app issue reporting. The dialog is mounted once by AppShell and opened
 // through the store — the account menu's help rows are one of its two entry
@@ -35,6 +36,7 @@ export type HelpMenuItem = { label: string; icon: ReactNode; onClick: () => void
  */
 export function useHelpMenuGroups(): HelpMenuItem[][] {
   const openReportIssue = useReportIssueStore((state) => state.openReportIssue);
+  const openHelp = useHelpStore((state) => state.openHelp);
 
   return useMemo<HelpMenuItem[][]>(
     () => [
@@ -57,11 +59,11 @@ export function useHelpMenuGroups(): HelpMenuItem[][] {
           onClick: () => openExternalLink('https://urganize.mintlify.app/'),
         },
         {
-          label: 'Contact us',
+          // "Get help" (self-serve checkout, 2026-10-22) replaced the bare
+          // mailto: a topic, a message, and the team, plan and page attached.
+          label: 'Get help',
           icon: <ContactIcon />,
-          onClick: () => {
-            window.location.href = 'mailto:contact@urganize.app';
-          },
+          onClick: openHelp,
         },
       ],
       [
@@ -79,6 +81,6 @@ export function useHelpMenuGroups(): HelpMenuItem[][] {
       // the phone's More sheet. Settings -> Account keeps the replay. Restore
       // from git history if it's asked for.
     ],
-    [openReportIssue]
+    [openReportIssue, openHelp]
   );
 }

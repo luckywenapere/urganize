@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
         limit: allowance.limit,
         current: allowance.current,
       });
-      return NextResponse.json({ error: allowance.message }, { status: 409 });
+      return NextResponse.json({ error: allowance.message, limitKey: allowance.key, upgradeTo: allowance.upgradeTo }, { status: 409 });
     }
 
     // owner_user_id is the ACTING user, matching what the lookup-or-create

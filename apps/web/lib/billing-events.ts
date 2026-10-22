@@ -166,6 +166,12 @@ export const BILLING_EVENT_TYPES = [
    *  `metadata` carries the partner id, the code as entered and which of the two
    *  it was. The tag itself is team_referrals; this is the audit trail. */
   'referral_attached',
+  /** Self-serve checkout (2026-10-22): a transfer period paid in full through
+   *  Paystack, money an admin recorded as paid straight to our bank, and the
+   *  founder's setup minutes for a team. */
+  'transfer_paid',
+  'transfer_recorded',
+  'founder_minutes_set',
 ] as const;
 
 export type BillingEventType = (typeof BILLING_EVENT_TYPES)[number];

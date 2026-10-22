@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
         // 409, matching the invite-link cap already in this route group. The
         // client renders `error` verbatim, so this string is what the manager
         // reads.
-        return NextResponse.json({ error: seats.message }, { status: 409 });
+        return NextResponse.json({ error: seats.message, limitKey: seats.key, upgradeTo: seats.upgradeTo }, { status: 409 });
       }
 
       const insertPayload: Record<string, unknown> = {

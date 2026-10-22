@@ -12,7 +12,7 @@ import { WELCOME_CTA, WELCOME_LINE, WELCOME_ROWS, WELCOME_TITLE } from '@/lib/on
  * Welcome to Urganize (URG-251 Part 5). Shown once, between the paywall and
  * the team step. The two rows carry the icons the app itself uses: Sparkles is
  * the UrgAns tab on the phone and the UrgAns button on a computer; ContactIcon
- * is "Contact us" in the help rows. "Talk to us" opens the same WhatsApp line
+ * is "Get help" in the help rows. "Talk to us" opens the same WhatsApp line
  * as the billing wall's "Talk to us".
  *
  * It opens nothing else: the first session's quiet (lib/first-session.ts)

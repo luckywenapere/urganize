@@ -2,7 +2,7 @@
 
 import {
   SELLABLE_INTERVALS,
-  annualSavingCopy,
+  intervalSavingCopy,
   formatTierPrice,
   getTier,
   type BillingInterval,
@@ -38,6 +38,7 @@ import { onRadioGroupKeyDown } from '@/lib/radio-group-keys';
 
 const INTERVAL_LABEL: Record<BillingInterval, string> = {
   monthly: 'Monthly',
+  semiannual: '6 months',
   annual: 'Yearly',
 };
 
@@ -62,7 +63,8 @@ export function TierPlanPicker({
   // Read off the first tier that HAS a price rather than a named one: a named
   // tier that later goes sales-led returns null and silently takes the badge off
   // the picker, which is exactly how the marketing page lost it once.
-  const saving = tiers.map(annualSavingCopy).find(Boolean) ?? null;
+  const saving =
+    tiers.map((tierId) => intervalSavingCopy(tierId, selectedInterval)).find(Boolean) ?? null;
 
   return (
     <fieldset className="flex flex-col gap-2" disabled={disabled}>
@@ -103,7 +105,7 @@ export function TierPlanPicker({
         </div>
         {/* Phrased as months, never a percentage — the one wording the pricing
             package allows. Derived from ANNUAL_MONTHS_BILLED. */}
-        {saving && selectedInterval === 'annual' ? (
+        {saving ? (
           <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-brand">
             {saving}
           </p>
@@ -135,7 +137,7 @@ export function TierPlanPicker({
               <span className="block text-sm font-semibold text-content-primary">
                 {tier.label}
                 {/* Its own line on a phone, inline from sm: beside the wider
-                    ₦25,000 price at 390px the inline badge split into "Most /
+                    ₦30,000 price at 390px the inline badge split into "Most /
                     Teams" once it moved to Manager (2026-10-17). */}
                 {tier.recommended ? (
                   <span className="mt-1 block w-fit whitespace-nowrap rounded-full sm:ml-2 sm:mt-0 sm:inline-block bg-brand/12 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-brand">

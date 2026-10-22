@@ -392,14 +392,50 @@ const tierLabel = (tier: PricingTierId): string => PRICING_TIERS[tier].label;
  * Every number comes from the limit rather than being written into the string,
  * so re-cutting a tier cannot leave the copy lying. A test asserts all of that.
  */
-function limitMessage(key: CountableLimitKey, limit: number, tierLabel: string): string {
+/** Which tier lifts a limit. Solo's is Manager (self-serve checkout,
+ *  2026-10-22): the next plan up, bought on the same checkout, with the days
+ *  left on Solo coming off the price. Everyone else's is Label. */
+export function upgradeTargetFor(tier: PricingTierId): PricingTierId {
+  return tier === 'solo' ? 'manager' : 'label';
+}
+
+/** Solo's refusals name Manager's numbers and monthly price, all read from the
+ *  pricing package so a re-cut tier cannot leave the copy lying. */
+function soloLimitMessage(key: CountableLimitKey, limit: number): string {
+  const manager = PRICING_TIERS.manager;
+  const price = manager.monthlyPrice
+    ? ` for ₦${manager.monthlyPrice.amount.toLocaleString('en-US')} a month`
+    : '';
+  const artists = manager.limits.artists;
+  const seats = manager.limits.seats;
+  const both = `${artists === null ? 'unlimited' : artists} artists and ${seats === null ? 'unlimited' : seats} people`;
+  const credit = ' The days left on Solo come off the price.';
   switch (key) {
     case 'artists':
-      return `${tierLabel} plans cover ${limit} ${limit === 1 ? 'artist' : 'artists'}. Upgrade to Label for unlimited artists.`;
+      return `Solo covers ${limit} ${limit === 1 ? 'artist' : 'artists'}. Upgrade to Manager for ${both}${price}.${credit}`;
     case 'seats':
-      return `${tierLabel} plans include ${limit} ${limit === 1 ? 'person' : 'people'}. Upgrade to Label for unlimited team members.`;
+      return `Solo includes ${limit} ${limit === 1 ? 'person' : 'people'}. Upgrade to Manager for ${both}${price}.${credit}`;
+    case 'active_releases': {
+      const releases = manager.limits.activeReleases;
+      return `Solo covers ${limit} ${limit === 1 ? 'release' : 'releases'} at a time. Archive one you have finished, or upgrade to Manager for ${releases === null ? 'unlimited releases' : `${releases} at a time`}${price}.${credit}`;
+    }
+    case 'urgans_monthly_actions': {
+      const actions = manager.limits.urgansMonthlyActions;
+      return `You have used all ${limit} UrgAns actions on your plan this period. Everything else keeps working normally, and these reset when your billing period does. Upgrade to Manager for ${actions === null ? 'unlimited' : `${actions} a month`}.`;
+    }
+  }
+}
+
+function limitMessage(key: CountableLimitKey, limit: number, tier: PricingTierId): string {
+  if (tier === 'solo') return soloLimitMessage(key, limit);
+  const label = tierLabel(tier);
+  switch (key) {
+    case 'artists':
+      return `${label} plans cover ${limit} ${limit === 1 ? 'artist' : 'artists'}. Upgrade to Label for unlimited artists.`;
+    case 'seats':
+      return `${label} plans include ${limit} ${limit === 1 ? 'person' : 'people'}. Upgrade to Label for unlimited team members.`;
     case 'active_releases':
-      return `${tierLabel} plans cover ${limit} ${limit === 1 ? 'release' : 'releases'} at a time. Archive one you have finished, or upgrade to Label for unlimited releases.`;
+      return `${label} plans cover ${limit} ${limit === 1 ? 'release' : 'releases'} at a time. Archive one you have finished, or upgrade to Label for unlimited releases.`;
     case 'urgans_monthly_actions':
       return `You have used all ${limit} UrgAns actions on your plan this period. Everything else keeps working normally, and these reset when your billing period does. Upgrade to Label for unlimited.`;
   }
@@ -430,8 +466,8 @@ export function checkLimit(input: {
     key: input.key,
     limit: numericLimit,
     current: input.current,
-    message: limitMessage(input.key, numericLimit, tierLabel(input.tier)),
-    upgradeTo: 'label',
+    message: limitMessage(input.key, numericLimit, input.tier),
+    upgradeTo: upgradeTargetFor(input.tier),
   };
 }
 

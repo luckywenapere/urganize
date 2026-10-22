@@ -59,6 +59,7 @@ import {
  * broken elsewhere — nothing here derives a start date at all. */
 const PERIOD_DAYS: Record<BillingInterval, number> = {
   monthly: 30,
+  semiannual: 182,
   annual: 365,
 };
 

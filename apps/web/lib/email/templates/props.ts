@@ -23,6 +23,9 @@ import type { ReleasePaybackQuestionEmailProps } from './ReleasePaybackQuestionE
 import type { ClaimInviteEmailProps } from './ClaimInviteEmail';
 import type { ClaimPageEmailProps } from './ClaimPageEmail';
 import type { DirectoryInviteEmailProps } from './DirectoryInviteEmail';
+import type { SelfServeNudgeEmailProps } from './SelfServeNudgeEmail';
+import type { RenewalReminderEmailProps } from './RenewalReminderEmail';
+import type { HelpRequestEmailProps } from './HelpRequestEmail';
 
 export type EmailTemplateProps = {
   welcome: WelcomeEmailProps;
@@ -48,6 +51,9 @@ export type EmailTemplateProps = {
   claim_reminder: ClaimPageEmailProps;
   claim_code: ClaimCodeEmailProps;
   directory_invite: DirectoryInviteEmailProps;
+  self_serve_nudge: SelfServeNudgeEmailProps;
+  renewal_reminder: RenewalReminderEmailProps;
+  help_request: HelpRequestEmailProps;
 };
 
 export type EmailTemplateId = keyof EmailTemplateProps;

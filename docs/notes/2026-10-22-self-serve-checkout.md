@@ -1,0 +1,21 @@
+## Self-serve checkout (2026-10-22, live, no new flag)
+
+Anyone can sign up, pay for Solo or Manager (card or bank transfer; monthly, 6 months or yearly) and start a first rollout with no founder call. Paying skips the waitlist; free and trial sign-ups stay on it. Mocks in `docs/mocks/self-serve-manager/`, build notes in `BUILD-NOTES-SELF-SERVE.md`. Prices: Solo ₦8,000 / ₦40,000 / ₦80,000, Manager ₦30,000 / ₦150,000 / ₦300,000 (6 months = 5 months' price).
+
+**The one rule:** a verified payment is what lets someone in. Card: the Paystack webhook (HMAC checked) on `charge.success`. Transfer: the same webhook on the payer's dedicated account. Money paid straight to our bank: only an admin recording it at `/admin/self-serve` (counts as concierge, approval source `admin`). A part payment never opens a team. All in `lib/self-serve-server.ts` (`completePaidSignup`).
+
+**Flow:** `/pricing` "Get Solo / Get Manager" → `/checkout?plan=&period=` (sign up or sign in with the plan carried) → card (`/api/billing/start-checkout` with `selfServe: true`) or "Pay by bank transfer" (`/api/billing/transfer`: a Paystack dedicated account number when `PAYSTACK_DVA_ENABLED=true` and `PAYSTACK_DVA_BANK` set, else Paystack's bank_transfer channel) → `/checkout/welcome` → first rollout. The wall's own checkout sends an owner to `/checkout`; an admin paying for the team keeps the old start-checkout path (it credits the owner).
+
+**Card checkout checks the live Plan's price** (`lib/paystack-plan-check.ts`): before anything is written or Paystack is called, the tier's Plan is read from Paystack (cached 10 minutes, successes only) and must charge exactly the shown amount, on that interval, in NGN, or checkout answers 409 "Card payment for this plan isn't ready yet. Pay by bank transfer, or try again later." So an env var still pointing at an old Plan is refused, never charged. Bank transfer uses our own price and is unaffected.
+
+**After paying:** Home's "Your first 14 days" card (`FirstDaysCard`, facts in `lib/self-serve-checklist-server.ts`, self-serve teams only, dismissible), nudge emails day 1 / 3 / 7 while a step is undone, renewal reminders 7 / 3 / 1 days before a transfer-paid period ends (`RenewalStrip` in the app too). Both email steps ride the morning cron (`lib/self-serve-lifecycle-server.ts`): once is a `lifecycle_sends` row inserted before sending, inside the day's email budget, never retried.
+
+**Solo limits** say "Upgrade to Manager" and open `SoloLimitSheet` (same checkout, the days left on Solo come off the price). **Help:** the help menu's "Get help" opens `HelpDialog` (topic chips → `help_request` email to wenapere@urganize.app, reply-to the user). Manager and Label see "Book a 15-minute setup call" (`NEXT_PUBLIC_ONBOARDING_CALL_URL`).
+
+**Admin `/admin/self-serve`:** cohort card (self-serve against concierge, by plan and payment method: sign-ups, paid, week-2 active, median founder minutes over paying teams; our accounts left out), Record transfer, founder minutes per team. Rules in `lib/admin-self-serve-cohort.ts`.
+
+**Migration `20261022150000_self_serve_checkout.sql`:** `semiannual` joins both subscription interval CHECKs; `workspaces.acquisition_path` (self_serve / concierge / legacy, set on insert by trigger from the owner's `access_source`, backfilled), `payment_method`, `founder_minutes`, `setup_checklist_dismissed_at` (all in the owner self-update guard); new `team_payment_accounts`, `payment_invoices`, `payment_transfers` (Paystack reference unique), `lifecycle_sends`, each RLS on with no policies and explicit grants. Promo codes are checked through `lookupReferralCode` in `lib/referrals-server.ts` (the only reader of the referral tables).
+
+**Needs the founder:** mint the Paystack Plans (Solo ₦8,000 monthly / ₦40,000 biannually / ₦80,000 annually, Manager ₦30,000 / ₦150,000 / ₦300,000) and set `PAYSTACK_PLAN_{SOLO,MANAGER}_PER_{MONTH,6_MONTHS,YEAR}_NGN`; until then card checkout for that period refuses (above) and transfer works. Set `NEXT_PUBLIC_ONBOARDING_CALL_URL=https://call.urganize.app`. Optional: `PAYSTACK_DVA_ENABLED`, `PAYSTACK_DVA_BANK`, the new retention Plans (`.env.example`).
+
+**Not verified:** no real card or transfer has gone through, no webhook delivered, no email sent, nothing seen with a real session.

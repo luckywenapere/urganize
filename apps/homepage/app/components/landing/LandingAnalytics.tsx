@@ -20,7 +20,15 @@ export function LandingAnalytics() {
     const onClick = (event: MouseEvent) => {
       const target = event.target as Element | null;
       const link = target?.closest?.("a[data-track]");
-      if (!link || link.getAttribute("data-track") !== "start_trial_click") return;
+      if (!link) return;
+      if (link.getAttribute("data-track") === "pricing_plan_clicked") {
+        trackEvent("pricing_plan_clicked", {
+          plan: link.getAttribute("data-plan") ?? "unknown",
+          period: link.getAttribute("data-period") ?? "unknown",
+        });
+        return;
+      }
+      if (link.getAttribute("data-track") !== "start_trial_click") return;
       trackEvent("start_trial_click", {
         location: link.getAttribute("data-location") ?? "unknown",
       });

@@ -62,8 +62,13 @@ export const getPlanExpiry = (
   // wins, then legacy plan-name inference ('annual' / 'yearly' / 'label' →
   // annual), then monthly. See resolveBillingInterval for why monthly is the
   // safe default rather than annual.
-  if (resolveBillingInterval({ plan, storedInterval: interval }) === 'annual') {
+  const resolved = resolveBillingInterval({ plan, storedInterval: interval });
+  if (resolved === 'annual') {
     expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    return expiresAt;
+  }
+  if (resolved === 'semiannual') {
+    expiresAt.setMonth(expiresAt.getMonth() + 6);
     return expiresAt;
   }
 

@@ -8,6 +8,8 @@ import { resolveCheckoutSubject } from '@/lib/billing-events';
 import { logBillingEvent } from '@/lib/billing-events-server';
 import { fetchPaystackInit } from '@/lib/paystack-init';
 import { afterResponse } from '@/lib/after-response';
+import { validatePromoCode } from '@/lib/self-serve-server';
+import { PLAN_NOT_READY_MESSAGE, planMatchesPrice, readPaystackPlan } from '@/lib/paystack-plan-check';
 
 // App-initiated Paystack subscription checkout.
 //
@@ -47,6 +49,11 @@ type StartCheckoutRequest = {
   /** Team the plan is being activated for (hard-paywall flow). When present,
    * the charge is credited to that team's owner. */
   workspaceId?: string;
+  /** Self-serve checkout (2026-10-22): a partner or team code, checked here
+   *  and tagged to the team once the payment clears. */
+  promo?: unknown;
+  /** True from the /checkout page, for the funnel numbers. */
+  selfServe?: unknown;
 };
 
 type StartCheckoutResponse = {
@@ -128,6 +135,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // A tier's Plan must charge exactly what we show (lib/paystack-plan-check.ts).
+  // A Plan env var still pointing at an old price is refused, never charged.
+  if (selectedInterval) {
+    const plan = await readPaystackPlan(planCode, paystackSecretKey);
+    if (!planMatchesPrice(plan, { amountKobo: amountMinorUnit, interval: selectedInterval, currency })) {
+      console.error('[billing/start-checkout] plan price mismatch', { plan: planId, interval: selectedInterval });
+      return NextResponse.json({ error: PLAN_NOT_READY_MESSAGE, code: 'plan_not_ready' }, { status: 409 });
+    }
+  }
+
   const reference = generateReference();
   const callbackUrl = resolveCallbackUrl(request);
 
@@ -183,6 +200,16 @@ export async function POST(request: NextRequest) {
     subjectUserId = subject.subjectUserId;
   }
 
+  // A code is checked now (so a wrong one is said on the page, not lost), and
+  // carried to the webhook, which tags the team once it exists.
+  let promoCode: string | null = null;
+  if (body.promo !== undefined && body.promo !== null && body.promo !== '') {
+    const promo = await validatePromoCode(admin, body.promo);
+    if (!promo.ok) return NextResponse.json({ error: promo.message }, { status: 400 });
+    promoCode = promo.code;
+  }
+  const selfServe = body.selfServe === true;
+
   // Reserve the payments row BEFORE talking to Paystack. If the Paystack
   // call fails we'll have an orphan pending row, which is harmless — the
   // webhook never credits 'pending' references, and the row gives support
@@ -205,6 +232,8 @@ export async function POST(request: NextRequest) {
       ...(selectedInterval ? { selected_interval: selectedInterval } : {}),
       ...(body.workspaceId ? { workspace_id: body.workspaceId } : {}),
       ...(subjectUserId !== userId ? { paid_by_user_id: userId } : {}),
+      ...(promoCode ? { promo_code: promoCode } : {}),
+      ...(selfServe ? { self_serve: true } : {}),
     },
   });
   if (paymentInsert.error) {

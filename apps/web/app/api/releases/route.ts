@@ -581,7 +581,7 @@ export async function POST(request: NextRequest) {
               limit: allowance.limit,
               current: allowance.current,
             });
-            return NextResponse.json({ error: allowance.message }, { status: 409 });
+            return NextResponse.json({ error: allowance.message, limitKey: allowance.key, upgradeTo: allowance.upgradeTo }, { status: 409 });
           }
         }
 
@@ -652,7 +652,7 @@ export async function POST(request: NextRequest) {
         limit: releaseCap.verdict.limit,
         current: releaseCap.verdict.current,
       });
-      return NextResponse.json({ error: releaseCap.verdict.message }, { status: 409 });
+      return NextResponse.json({ error: releaseCap.verdict.message, limitKey: releaseCap.verdict.key, upgradeTo: releaseCap.verdict.upgradeTo }, { status: 409 });
     }
 
     const releaseResult = await adminClient

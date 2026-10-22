@@ -91,7 +91,8 @@ describe('every countable ceiling passes at the limit and refuses past it', () =
         // after the thing the manager can do alone right now ("Archive one you
         // have finished, or upgrade to Label") — which is the better order and
         // should not be flattened just to make this assertion simpler.
-        expect(verdict.message).toMatch(/upgrade to Label/i);
+        // Solo's refusal names Manager (self-serve checkout, 2026-10-22).
+        expect(verdict.message.toLowerCase()).toContain(`upgrade to ${PRICING_TIERS[verdict.upgradeTo].label}`.toLowerCase());
         expect(verdict.limit).toBe(limit);
         expect(verdict.key).toBe(key);
       });

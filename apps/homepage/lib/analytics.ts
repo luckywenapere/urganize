@@ -16,7 +16,10 @@ export type LandingEvent =
   | "waitlist_submit"
   | "faq_open"
   // The hero shot's Artists | Rollouts tabs (URG-378), with { tab }.
-  | "hero_tab_switch";
+  | "hero_tab_switch"
+  // Self-serve checkout (2026-10-22): a Get <Plan> card on /pricing, with
+  // { plan, period }.
+  | "pricing_plan_clicked";
 
 //
 // HERO A/B (2026-10-18, URG-376). Each event also carries `hero_variant`

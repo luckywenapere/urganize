@@ -21,6 +21,7 @@ import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
 import { isIOSApp, isNativePlatform } from '@/lib/platform';
 import { openExternalUrl } from '@/lib/external-link';
+import { checkoutPath, isCheckoutPeriod, isCheckoutPlan } from '@/lib/self-serve';
 import {
   getTeamAccessClient,
   type TeamAccessClientSnapshot,
@@ -359,6 +360,21 @@ export function TeamWall() {
         return;
       }
 
+      // Self-serve checkout (2026-10-22): the owner's own new purchase goes to
+      // the one checkout page, which offers card AND bank transfer and shows
+      // what they get. An admin paying for somebody else's team keeps the old
+      // path, which credits the owner through workspaceId.
+      if (
+        PRICING_V2 &&
+        userId &&
+        team?.ownerUserId === userId &&
+        isCheckoutPlan(effectiveTier) &&
+        isCheckoutPeriod(selectedInterval)
+      ) {
+        router.push(checkoutPath({ plan: effectiveTier, period: selectedInterval }));
+        return;
+      }
+
       const response = await fetch('/api/billing/start-checkout', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -398,6 +414,9 @@ export function TeamWall() {
     team?.hasAccess,
     team?.canWrite,
     team?.primaryWorkspaceId,
+    team?.ownerUserId,
+    selectedInterval,
+    router,
     userId,
   ]);
 

@@ -99,6 +99,11 @@ const ReportIssueDialog = dynamic(
   () => import('@/components/support/ReportIssueDialog').then((m) => m.ReportIssueDialog),
   { ssr: false }
 );
+// "Get help" (self-serve checkout, 2026-10-22), opened from the same help rows.
+const HelpDialog = dynamic(
+  () => import('@/components/support/HelpDialog').then((m) => m.HelpDialog),
+  { ssr: false }
+);
 // The settings pop-up (2026-09-29). Mounted once for the whole app because its
 // entry points (the topbar, the identity card, the workspace menu, and links from
 // the share sheet, the directory and UrgAns) live in different ownership islands,
@@ -118,6 +123,12 @@ const SettingsModalHost = dynamic(
 // The first-login push ask. Dynamic + flag-gated for the same reason the
 // planner modal is: while the flag is off its chunk is never requested, and
 // this one pulls in the Web Push + native push clients behind it.
+// Self-serve checkout (2026-10-22): the "Upgrade to Manager" sheet a Solo
+// limit opens (lib/access-redirect.ts announces it). Client-only, tiny.
+const SoloLimitSheet = dynamic(
+  () => import('@/components/billing/SoloLimitSheet').then((m) => m.SoloLimitSheet),
+  { ssr: false }
+);
 const PushPermissionPrompt = dynamic(
   () => import('@/components/app/PushPermissionPrompt').then((m) => m.PushPermissionPrompt),
   { ssr: false }
@@ -213,6 +224,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     // working on credits.
     pathname?.startsWith('/locked/') ||
     pathname === '/start-trial' ||
+    // Self-serve checkout and its welcome page (2026-10-22): a held account
+    // pays here, so no app chrome and no gates.
+    pathname?.startsWith('/checkout') ||
     pathname?.startsWith('/onboarding') ||
     pathname?.startsWith('/invite');
   const isDashboardRoute = pathname?.startsWith('/dashboard');
@@ -249,6 +263,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname?.startsWith('/pack/') ||
     // A rollout brief's view link (URG-281), opened by someone with no account.
     pathname?.startsWith('/brief/') ||
+    // Self-serve checkout: someone paying for a plan, often not let in yet.
+    pathname?.startsWith('/checkout') ||
     // The OAuth consent screen. Signed-in, but it is a decision about handing a
     // third-party client access — app chrome around it would invite the user to
     // wander off mid-authorization, and the dock floating over a consent prompt
@@ -495,6 +511,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           signed in, not mid-auth, not on a public page, not a curator. It
           opens from those rows and from Settings, both inside that same set. */}
       {REPORT_ISSUE_ENABLED && showHelpMenu ? <ReportIssueDialog /> : null}
+      {showHelpMenu ? <HelpDialog /> : null}
       {/* Deliberately NO onStartTestRelease on this instance, unlike the two
           the first-release prompt opens (WorkspaceView, ChappiPageClient).
           Two reasons: this modal only opens from deliberate "+ New rollout"
@@ -568,6 +585,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           curator-only account, whose settings live under /curator. */}
       {isAuthenticated && !isAuthLoading && showWorkspaceChrome ? <SettingsModalHost /> : null}
       {TALK_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? <VoiceSheetHost /> : null}
+      {isAuthenticated && !isAuthLoading ? <SoloLimitSheet /> : null}
       {/* "What's new" (founder request, 2026-07-23): announces changelog
           entries this device hasn't seen yet, once per release, on signed-in
           app surfaces only.

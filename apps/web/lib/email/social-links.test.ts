@@ -226,10 +226,10 @@ describe('no email can skip the shared layout', () => {
     expect(outside).toEqual([]);
   });
 
-  it('only the two internal founder alerts opt out of the social links', () => {
+  it('only the internal founder mail (two alerts and the help message) opts out of the social links', () => {
     const optedOut = files.filter((file) =>
       /socials=\{false\}/.test(readFileSync(join(TEMPLATES_DIR, file), 'utf8'))
     );
-    expect(optedOut.sort()).toEqual(['FounderBillingAlertEmail.tsx', 'FounderOpsAlertEmail.tsx']);
+    expect(optedOut.sort()).toEqual(['FounderBillingAlertEmail.tsx', 'FounderOpsAlertEmail.tsx', 'HelpRequestEmail.tsx']);
   });
 });

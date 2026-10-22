@@ -36,6 +36,20 @@ export type ReleaseCreatedSource =
   | 'test_path';
 export type TaskCreatedSource = 'quick_create' | 'inline' | 'detail_panel' | 'onboarding';
 
+/** Self-serve checkout funnel properties. Every field is optional. */
+export type SelfServeEventProperties = {
+  path?: 'self_serve' | 'concierge' | 'legacy' | null;
+  plan?: string | null;
+  period?: string | null;
+  method?: 'card' | 'transfer' | 'direct_transfer' | null;
+  step?: string | null;
+  topic?: string | null;
+  kind?: string | null;
+  days?: number | null;
+  reason?: string | null;
+  source?: string | null;
+};
+
 export interface AnalyticsEventPropertiesMap {
   /**
    * The session ended without the user asking for it — supabase-js dropped the
@@ -522,6 +536,33 @@ export interface AnalyticsEventPropertiesMap {
   pre_production_started: {
     source: 'review' | 'home';
   };
+  /**
+   * Self-serve checkout (2026-10-22, lib/self-serve.ts). One shape for the
+   * whole funnel: which path, plan, period and payment method. No amounts of a
+   * person's own, no names, no codes typed.
+   */
+  pricing_plan_clicked: SelfServeEventProperties;
+  signup_started_paid: SelfServeEventProperties;
+  checkout_started: SelfServeEventProperties;
+  checkout_succeeded: SelfServeEventProperties;
+  checkout_failed: SelfServeEventProperties;
+  payment_method_selected: SelfServeEventProperties;
+  promo_applied: SelfServeEventProperties;
+  promo_rejected: SelfServeEventProperties;
+  dva_shown: SelfServeEventProperties;
+  dva_copied: SelfServeEventProperties;
+  access_auto_approved: SelfServeEventProperties;
+  welcome_viewed: SelfServeEventProperties;
+  setup_call_clicked: SelfServeEventProperties;
+  checklist_step_done: SelfServeEventProperties;
+  checklist_dismissed: SelfServeEventProperties;
+  nudge_sent: SelfServeEventProperties;
+  nudge_clicked: SelfServeEventProperties;
+  renewal_reminder_sent: SelfServeEventProperties;
+  renewal_clicked: SelfServeEventProperties;
+  solo_limit_hit: SelfServeEventProperties;
+  upgrade_to_manager_clicked: SelfServeEventProperties;
+  help_topic_selected: SelfServeEventProperties;
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventPropertiesMap;

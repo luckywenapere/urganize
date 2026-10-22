@@ -57,6 +57,8 @@ const SAFE_AUTH_PATHS = [
   '/redeem',
   '/payment',
   '/start-trial',
+  // Self-serve checkout (2026-10-22): paying is how a held account gets in.
+  '/checkout',
   // Closed sign-up's invite link page (/start/<code>), 2026-10-15.
   '/start',
 ];

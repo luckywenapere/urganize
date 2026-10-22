@@ -76,6 +76,7 @@ describe('creating or changing a password is held to the rule', () => {
     'app/onboarding/OnboardingPageClient.tsx',
     'app/invite/accept/InviteAcceptPageClient.tsx',
     'app/curator/join/[code]/CuratorJoinPageClient.tsx',
+    'app/checkout/CheckoutPageClient.tsx',
     'app/auth/reset-password/page.tsx',
     'components/settings/SecuritySection.tsx',
     'lib/onboarding-next-hint.ts',

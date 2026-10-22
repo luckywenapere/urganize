@@ -17,6 +17,8 @@ const SAFE_PATHS = new Set([
   '/invite',
   '/redeem',
   '/start-trial',
+  // Self-serve checkout (2026-10-22): paying is how a held account gets in.
+  '/checkout',
   // Closed sign-up's invite link page (/start/<code>), 2026-10-15.
   '/start',
 ]);
@@ -86,6 +88,32 @@ const isPrefetchRequest = (input: RequestInfo | URL, init?: RequestInit): boolea
   return false;
 };
 
+/** Self-serve checkout (2026-10-22): a plan limit refused with a next plan to
+ *  buy (Solo's is Manager) opens one upgrade sheet wherever it happened, rather
+ *  than every surface growing its own. The refusal still reaches the caller as
+ *  before. Read from a clone, never throws. */
+export const SOLO_LIMIT_EVENT = 'urganize:solo-limit';
+
+export type SoloLimitDetail = { key: string; message: string };
+
+const announceUpgradeLimit = async (response: Response): Promise<void> => {
+  try {
+    const payload = (await response.clone().json().catch(() => ({}))) as {
+      upgradeTo?: unknown;
+      limitKey?: unknown;
+      error?: unknown;
+    };
+    if (payload.upgradeTo !== 'manager' || typeof payload.limitKey !== 'string') return;
+    const detail: SoloLimitDetail = {
+      key: payload.limitKey,
+      message: typeof payload.error === 'string' ? payload.error : '',
+    };
+    window.dispatchEvent(new CustomEvent<SoloLimitDetail>(SOLO_LIMIT_EVENT, { detail }));
+  } catch {
+    // The sheet is a courtesy; the caller still shows the refusal.
+  }
+};
+
 let installed = false;
 
 export function installAccessRedirect(): void {
@@ -111,6 +139,10 @@ export function installAccessRedirect(): void {
           }
         }, 0);
       }
+    }
+
+    if (response.status === 409 && isSameOrigin(input) && !isPrefetchRequest(input, init)) {
+      void announceUpgradeLimit(response);
     }
 
     return response;

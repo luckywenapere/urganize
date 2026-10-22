@@ -281,6 +281,39 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     fromAddress: 'wenapere@urganize.app',
     replyTo: 'wenapere@urganize.app',
   },
+  self_serve_nudge: {
+    id: 'self_serve_nudge',
+    category: 'onboarding',
+    name: 'Self-serve nudge (days 1, 3, 7)',
+    description:
+      'Self-serve checkout: one note on day 1, 3 or 7 to a team that paid at checkout, only while that step is undone. Copy in lib/self-serve.ts (nudgeEmailCopy).',
+    placeholderCopy: false,
+    fromName: 'Oyin at Urganize',
+    fromAddress: 'wenapere@urganize.app',
+    replyTo: 'wenapere@urganize.app',
+  },
+  renewal_reminder: {
+    id: 'renewal_reminder',
+    category: 'reminders',
+    name: 'Renewal reminder (transfer)',
+    description:
+      'Self-serve checkout: 7, 3 and 1 days before a period paid by bank transfer ends, with the payer account number. Copy in lib/self-serve.ts (renewalEmailCopy).',
+    placeholderCopy: false,
+    fromName: 'Urganize Billing',
+    fromAddress: 'billing@urganize.app',
+    replyTo: 'support@urganize.app',
+  },
+  help_request: {
+    id: 'help_request',
+    category: 'internal',
+    name: 'Help message',
+    description:
+      'Self-serve checkout: a customer’s message from the in-app Help, sent to the founder with their team, plan, page and version. Reply-To is the customer.',
+    placeholderCopy: false,
+    fromName: 'Urganize Help',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: null,
+  },
   chat_mention: {
     id: 'chat_mention',
     category: 'chat',

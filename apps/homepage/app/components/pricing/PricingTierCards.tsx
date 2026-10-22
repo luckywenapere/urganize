@@ -13,7 +13,7 @@ import {
   type BillingInterval,
   type PricingTierId,
 } from "@urganize/pricing";
-import { WAITLIST_URL } from "@/lib/app-urls";
+import { APP_ORIGIN } from "@/lib/app-urls";
 import { salesMailto } from "@/lib/sales-mailto";
 
 // The price table.
@@ -58,6 +58,7 @@ function isSelfServe(tierId: PricingTierId): boolean {
 
 const INTERVAL_LABEL: Record<BillingInterval, string> = {
   monthly: "Monthly",
+  semiannual: "6 months",
   annual: "Yearly",
 };
 
@@ -70,6 +71,9 @@ const INTERVAL_LABEL: Record<BillingInterval, string> = {
 function billingLine(intervals: readonly BillingInterval[]): string {
   const monthly = intervals.includes("monthly");
   const annual = intervals.includes("annual");
+  if (monthly && intervals.includes("semiannual") && annual) {
+    return "Pay monthly, every 6 months or once a year, by card or bank transfer.";
+  }
   if (monthly && annual) return "You can pay monthly or once a year.";
   if (annual) return "Every plan is paid once a year.";
   return "Every plan is paid monthly.";
@@ -190,17 +194,21 @@ export function PricingTierCards() {
                     which is more than uniform asks for. Deliberately NOT
                     also taking TrialButton's drop shadow; three shadowed
                     buttons in one card row is a different change. */}
+                {/* Self-serve checkout (2026-10-22): a priced card goes straight
+                    to checkout for that plan and period. Paying skips the
+                    waitlist; the app's sign-up comes first when needed. */}
                 <a
-                  href={selfServe ? WAITLIST_URL : salesMailto(tier.label)}
-                  data-track={selfServe ? "start_trial_click" : undefined}
-                  data-location={selfServe ? `pricing_${tierId}` : undefined}
+                  href={selfServe ? `${APP_ORIGIN}/checkout?plan=${tierId}&period=${interval}` : salesMailto(tier.label)}
+                  data-track={selfServe ? "pricing_plan_clicked" : undefined}
+                  data-plan={selfServe ? tierId : undefined}
+                  data-period={selfServe ? interval : undefined}
                   className="mt-6 inline-flex items-center justify-center rounded-full bg-[var(--marketing-primary)] px-5 py-3 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] transition-colors hover:bg-[var(--marketing-primary-hover)]"
                 >
                   {/* Two outcomes, not three. "Book a demo" used to sit on a
                       priced tier that was not self-serve; since 2026-09-08 the
                       two conditions are exact complements, so that branch was
                       unreachable and is gone rather than left to rot. */}
-                  {selfServe ? "Join waitlist" : "Let's talk"}
+                  {selfServe ? `Get ${tier.label}` : "Let's talk"}
                 </a>
 
                 <ul className="mt-6 flex flex-1 flex-col gap-2.5">

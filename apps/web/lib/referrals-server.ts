@@ -131,6 +131,26 @@ function refused(reason: AttachRefusal): AttachResult {
   return { ok: false, reason, message: describeAttachRefusal(reason) };
 }
 
+/** Self-serve checkout (2026-10-22): who a code belongs to, for the checkout's
+ *  "Code from <name>" line. A partner's code, then (when `teams` is on) a team's
+ *  own code. Reads only; tagging still happens through attachReferral once the
+ *  team exists. Null for anything unknown or a switched-off partner. */
+export async function lookupReferralCode(
+  admin: SupabaseClient,
+  code: string,
+  options: { teams: boolean }
+): Promise<{ kind: 'partner' | 'team'; name: string } | null> {
+  const partner = await admin.from('referral_partners').select('name,active').eq('code', code).maybeSingle();
+  const row = partner.data as { name: string | null; active: boolean | null } | null;
+  if (row && row.active !== false) return { kind: 'partner', name: row.name || 'A partner' };
+  if (!options.teams) return null;
+  const team = await admin.from('referral_codes').select('workspace_id').eq('code', code).maybeSingle();
+  const workspaceId = (team.data as { workspace_id: string } | null)?.workspace_id ?? null;
+  if (!workspaceId) return null;
+  const name = await admin.from('workspaces').select('name').eq('id', workspaceId).maybeSingle();
+  return { kind: 'team', name: (name.data as { name: string | null } | null)?.name || 'Another team' };
+}
+
 /**
  * Tags a person's own team to whoever the code on their signup link belongs to:
  * a commission partner (team_referrals) or, when referral credits are on, another

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { TRIAL_CARD_PLAN, classifyTrialCardFailure } from '@/lib/trial-card';
+import { TRANSFER_CHECKOUT_SOURCE } from '@/lib/self-serve';
 
 // Post-checkout UI confirmation endpoint.
 //
@@ -32,7 +33,12 @@ type PaymentRow = {
   status: string;
   plan: string | null;
   amount: number | null;
-  paystack_response: { failure_reason?: unknown } | null;
+  paystack_response: {
+    failure_reason?: unknown;
+    self_serve?: unknown;
+    selected_interval?: unknown;
+    source?: unknown;
+  } | null;
 };
 
 export async function GET(request: NextRequest) {
@@ -84,6 +90,18 @@ export async function GET(request: NextRequest) {
     plan: row.plan,
     amount: row.amount,
     ...(failureKind ? { failureKind } : {}),
+    // Self-serve checkout (2026-10-22): which return screen to draw. Three
+    // plain facts about the purchase, nothing about the person.
+    ...(row.paystack_response?.self_serve === true
+      ? {
+          selfServe: true,
+          interval:
+            typeof row.paystack_response.selected_interval === 'string'
+              ? row.paystack_response.selected_interval
+              : null,
+          method: row.paystack_response.source === TRANSFER_CHECKOUT_SOURCE ? 'transfer' : 'card',
+        }
+      : {}),
     reference,
   });
 }

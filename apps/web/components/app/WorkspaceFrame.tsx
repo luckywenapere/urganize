@@ -14,6 +14,7 @@ import { BottomBar } from '@/components/shell/BottomBar';
 import { KeyboardShortcuts } from '@/components/shell/KeyboardShortcuts';
 import { TeamReadOnlyStrip } from '@/components/app/TeamReadOnlyStrip';
 import { TeamTrialStrip } from '@/components/app/TeamTrialStrip';
+import { RenewalStrip } from '@/components/app/RenewalStrip';
 import { UrgansUsageStrip } from '@/components/app/UrgansUsageStrip';
 import { PolicyUpdateStrip } from '@/components/app/PolicyUpdateStrip';
 import { OfflineBanner } from '@/components/app/OfflineBanner';
@@ -165,6 +166,7 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
                 trial, and nothing at all while the flag is off. */}
             <OfflineBanner />
             <TeamTrialStrip />
+            <RenewalStrip />
             <TeamReadOnlyStrip />
             {/* Assistant-usage indicator, same slot and same contract.
                 Renders only for a team inside the last fifth of its monthly

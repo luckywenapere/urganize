@@ -83,7 +83,7 @@ const TAB_ICON: Record<string, IconComponent> = {
  * yet are listed like any other, and their page explains what is coming.
  *
  * Since 2026-10-14 the sheet ends with the same help rows as the desktop
- * account menu (Report an issue, Docs, Contact us, Community, and the rollout
+ * account menu (Report an issue, Docs, Get help, Community, and the rollout
  * replay when there is one), read from the one list in HelpMenu.tsx and behind
  * the same showHelpMenu gate AppShell hands WorkspaceMenu.
  *

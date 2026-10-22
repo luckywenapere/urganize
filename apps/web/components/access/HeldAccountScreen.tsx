@@ -16,6 +16,14 @@ import { HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';
 import { HELD_COPY } from '@/lib/access-gate';
 import { redeemPendingAccess } from '@/lib/access-intent';
+import {
+  PENDING_CHECKOUT_METADATA_KEY,
+  SELF_SERVE_COPY,
+  checkoutPath,
+  finishBody,
+  readPendingCheckout,
+  type CheckoutIntent,
+} from '@/lib/self-serve';
 
 const outlinePillClass =
   'flex w-full items-center justify-center rounded-full border border-stroke-default bg-bg-surface px-5 py-3.5 text-lg font-semibold text-content-primary transition-colors duration-fast ease-standard hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-50';
@@ -25,6 +33,9 @@ export function HeldAccountScreen() {
   const logout = useAuthStore((state) => state.logout);
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const [signingOut, setSigningOut] = useState(false);
+  // Self-serve checkout (2026-10-22): someone who picked a plan and signed up
+  // but has not paid yet. One action: finish paying.
+  const [pendingCheckout, setPendingCheckout] = useState<CheckoutIntent | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -35,6 +46,9 @@ export function HeldAccountScreen() {
         if (!cancelled) router.replace('/auth');
         return;
       }
+      const metadata = (data.session?.user.user_metadata || {}) as Record<string, unknown>;
+      const pending = readPendingCheckout({ [PENDING_CHECKOUT_METADATA_KEY]: metadata[PENDING_CHECKOUT_METADATA_KEY] });
+      if (!cancelled && pending) setPendingCheckout(pending);
       const answer = await redeemPendingAccess(token);
       // Only a real yes moves them on: a failed request must not bounce them
       // home and straight back here.
@@ -60,6 +74,43 @@ export function HeldAccountScreen() {
       router.replace('/auth');
     }
   };
+
+  if (pendingCheckout) {
+    return (
+      <div className="relative flex min-h-screen items-center justify-center px-6 py-12">
+        <div className="urg-above flex w-full max-w-sm flex-col items-center text-center">
+          <Logo />
+          <h1 className="mt-10 font-display text-2xl font-bold text-content-primary">{SELF_SERVE_COPY.finishTitle}</h1>
+          <p className="mt-3 text-base text-content-secondary">{finishBody(pendingCheckout.plan)}</p>
+          <button
+            type="button"
+            onClick={() => router.push(checkoutPath(pendingCheckout))}
+            className="mt-10 flex min-h-12 w-full items-center justify-center rounded-full bg-brand px-5 text-lg font-semibold text-content-inverse hover:bg-brand-hover"
+          >
+            Finish setting up
+          </button>
+          <p className="mt-6 text-sm text-content-secondary">
+            <button
+              type="button"
+              onClick={() => router.push(`${checkoutPath(pendingCheckout)}&change=1`)}
+              className="min-h-11 underline underline-offset-4"
+            >
+              Change plan
+            </button>
+            {' · '}
+            <button
+              type="button"
+              onClick={() => void handleSignOut()}
+              disabled={signingOut}
+              className="min-h-11 underline underline-offset-4"
+            >
+              Sign out
+            </button>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-screen items-center justify-center px-6 py-12">

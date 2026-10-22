@@ -11,6 +11,7 @@ import { MainMorph } from '@/components/motion/MainMorph';
 import { KeyboardShortcuts } from '@/components/shell/KeyboardShortcuts';
 import { TeamReadOnlyStrip } from '@/components/app/TeamReadOnlyStrip';
 import { TeamTrialStrip } from '@/components/app/TeamTrialStrip';
+import { RenewalStrip } from '@/components/app/RenewalStrip';
 import { UrgansUsageStrip } from '@/components/app/UrgansUsageStrip';
 import { PolicyUpdateStrip } from '@/components/app/PolicyUpdateStrip';
 import { OfflineBanner } from '@/components/app/OfflineBanner';
@@ -81,6 +82,7 @@ export function SwipeFrame({
     <>
       <OfflineBanner />
       <TeamTrialStrip />
+      <RenewalStrip />
       <TeamReadOnlyStrip />
       <UrgansUsageStrip />
             <PolicyUpdateStrip />

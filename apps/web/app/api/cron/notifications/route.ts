@@ -7,6 +7,7 @@ import { runWeeklyGrantSuggestions } from '@/lib/grants/weekly-run-server';
 import { GRANT_RUN_BUDGET_MS } from '@/lib/grants/weekly-run';
 import { runPauseSweep } from '@/lib/cancel-flow-server';
 import { runFrontDeskDigest } from '@/lib/front-desk/digest-server';
+import { runRenewalReminderSweep, runSelfServeNudgeSweep } from '@/lib/self-serve-lifecycle-server';
 
 // The push flush and the outbox drain below share this minute (lib/push-limits.ts).
 export const maxDuration = 60;
@@ -58,6 +59,12 @@ export async function GET(request: NextRequest) {
   // not answer for a curator. Flagged curators only, never throws, own budget.
   const frontDesk = await runFrontDeskDigest(adminClient);
 
+  // Self-serve checkout (2026-10-22): the day 1/3/7 nudges to teams that paid
+  // at checkout, and the 7/3/1-day renewal reminders for transfer periods. Each
+  // email once (a lifecycle_sends row), inside the day's budget, never throws.
+  const selfServeNudges = await runSelfServeNudgeSweep(adminClient);
+  const renewalReminders = await runRenewalReminderSweep(adminClient);
+
   // The email outbox (2026-09-30): the onboarding sequence's days 2 to 7, and
   // any broadcast the day's email limit held back. A passenger on this cron for
   // the reason the due-date cron gives for its own: the Hobby plan allows two
@@ -70,5 +77,5 @@ export async function GET(request: NextRequest) {
     maxSends: 80,
   });
 
-  return NextResponse.json({ ok: true, ...result, email, grants, pauses, frontDesk });
+  return NextResponse.json({ ok: true, ...result, email, grants, pauses, frontDesk, selfServeNudges, renewalReminders });
 }

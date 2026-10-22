@@ -169,6 +169,27 @@ const LOADERS: LoaderMap = {
       subject: (p) => m.announcementSubject(p.subject),
     };
   },
+  self_serve_nudge: async () => {
+    const m = await import('./SelfServeNudgeEmail');
+    return {
+      element: (p) => createElement(m.SelfServeNudgeEmail, p),
+      subject: (p) => m.selfServeNudgeSubject(p),
+    };
+  },
+  renewal_reminder: async () => {
+    const m = await import('./RenewalReminderEmail');
+    return {
+      element: (p) => createElement(m.RenewalReminderEmail, p),
+      subject: (p) => m.renewalReminderSubject(p),
+    };
+  },
+  help_request: async () => {
+    const m = await import('./HelpRequestEmail');
+    return {
+      element: (p) => createElement(m.HelpRequestEmail, p),
+      subject: (p) => m.helpRequestSubject(p),
+    };
+  },
   chat_mention: async () => {
     const m = await import('./ChatMentionEmail');
     return {

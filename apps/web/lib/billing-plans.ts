@@ -93,7 +93,7 @@ export function resolveBillingInterval(input: {
   storedInterval?: string | null;
 }): BillingInterval {
   const stored = String(input.storedInterval || '').trim();
-  if (stored === 'monthly' || stored === 'annual') return stored;
+  if (stored === 'monthly' || stored === 'semiannual' || stored === 'annual') return stored;
 
   const plan = String(input.plan || '').trim();
   // The legacy ids, where the name is the interval. 'label' is included
@@ -192,14 +192,19 @@ const PLAN_CODE_ENV_VAR: Record<BillingPlanId, Record<PricingCurrencyCode, strin
 const TIER_PLAN_CODE_ENV_VAR: Record<SelfServeTierId, Record<BillingInterval, string>> = {
   solo: {
     monthly: 'PAYSTACK_PLAN_SOLO_PER_MONTH_NGN',
+    // 6-month prepay (2026-10-22). Optional: card checkout hides the period
+    // until it is set; bank transfer needs no Plan.
+    semiannual: 'PAYSTACK_PLAN_SOLO_PER_6_MONTHS_NGN',
     annual: 'PAYSTACK_PLAN_SOLO_PER_YEAR_NGN',
   },
   manager: {
     monthly: 'PAYSTACK_PLAN_MANAGER_PER_MONTH_NGN',
+    semiannual: 'PAYSTACK_PLAN_MANAGER_PER_6_MONTHS_NGN',
     annual: 'PAYSTACK_PLAN_MANAGER_PER_YEAR_NGN',
   },
   label: {
     monthly: 'PAYSTACK_PLAN_LABEL_PER_MONTH_NGN',
+    semiannual: 'PAYSTACK_PLAN_LABEL_PER_6_MONTHS_NGN',
     annual: 'PAYSTACK_PLAN_LABEL_PER_YEAR_NGN',
   },
 };
@@ -333,10 +338,24 @@ export function purchasableTiers(): PricingTierId[] {
       // product being broken. Withholding the whole tier until both exist keeps
       // the fresh-var-name guarantee intact: ship before minting and the card
       // simply does not appear, rather than half-appearing.
-      SELLABLE_INTERVALS.every(
+      //
+      // The 6-month prepay (2026-10-22) is NOT required: it is optional per
+      // tier, and requiring it would withhold every tier until three more Plans
+      // were minted. `cardIntervals` says which periods a card can buy.
+      CARD_REQUIRED_INTERVALS.every(
         (interval) => getTierPaystackPlanCode(tier, interval) !== null
       )
   );
+}
+
+/** Intervals a tier must have a Plan for before the wall offers it by card. */
+const CARD_REQUIRED_INTERVALS: readonly BillingInterval[] = ['monthly', 'annual'];
+
+/** The periods a card can buy for this tier: each sellable interval whose
+ *  Paystack Plan code is set. Bank transfer needs no Plan, so its periods are
+ *  every sellable interval with a price. Server-only (reads env). */
+export function cardIntervals(tier: SelfServeTierId): BillingInterval[] {
+  return SELLABLE_INTERVALS.filter((interval) => getTierPaystackPlanCode(tier, interval) !== null);
 }
 
 /**
@@ -454,8 +473,11 @@ export function advancePeriodEnd(
   const base = currentEnd && currentEnd.getTime() > now.getTime() ? new Date(currentEnd) : new Date(now);
   // Period length comes from resolveBillingInterval, never from matching the
   // plan name here: under pricing v2 the name does not carry it.
-  if (resolveBillingInterval({ plan, storedInterval }) === 'annual') {
+  const interval = resolveBillingInterval({ plan, storedInterval });
+  if (interval === 'annual') {
     base.setFullYear(base.getFullYear() + 1);
+  } else if (interval === 'semiannual') {
+    base.setMonth(base.getMonth() + 6);
   } else {
     base.setMonth(base.getMonth() + 1);
   }
@@ -675,7 +697,7 @@ export function resolveCheckoutPurchase(input: {
     // against a single permitted value. The annual-only refusal that stood here
     // is gone with the restriction it enforced.
     if (!isBillingInterval(input.interval)) {
-      return { ok: false, status: 400, error: 'interval must be "monthly" or "annual".' };
+      return { ok: false, status: 400, error: 'interval must be "monthly", "semiannual" or "annual".' };
     }
     // NGN only, and refused plainly rather than half-attempted: PRICING_TIERS
     // carries no USD prices, the Paystack account offers NGN alone in plan

@@ -10,6 +10,7 @@ import { HomeSkeleton } from '@/components/loading/HomeSkeleton';
 import { RolloutCreateFlow } from '@/components/releases/RolloutCreateFlow';
 import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
 import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
+import { FirstDaysCard } from '@/components/home/FirstDaysCard';
 import { HomeFour, HomeLoadError } from '@/components/home/v2/HomeFour';
 import { HomeAskBar } from '@/components/home/HomeAskBar';
 import { HomeDesktopSplit } from '@/components/home/HomeDesktopSplit';
@@ -102,6 +103,11 @@ export default function HomePageClient({ swipe = false }: { swipe?: boolean } = 
   const view = (
     <ErrorBoundary name="home-view" onError={reportBoundaryError} fallback={<HomeViewFallback />}>
       {stateView}
+      {/* Your first 14 days (self-serve checkout, 2026-10-22): only for a
+          team that paid at checkout; draws nothing otherwise. */}
+      <ErrorBoundary name="home-block-first-days" onError={reportBoundaryError}>
+        <FirstDaysCard userId={viewerId} onNewRollout={openCreate} />
+      </ErrorBoundary>
     </ErrorBoundary>
   );
 

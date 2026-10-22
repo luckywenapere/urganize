@@ -40,7 +40,9 @@ export type AccessSource =
   | 'invite_email'
   | 'team_invite'
   | 'founder_seed'
-  | 'allowlist';
+  | 'allowlist'
+  /** Paid at self-serve checkout (2026-10-22): paying skips the waitlist. */
+  | 'paid_self_serve';
 
 export function normalizeAccessEmail(value: unknown): string {
   if (typeof value !== 'string') return '';

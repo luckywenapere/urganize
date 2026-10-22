@@ -14,6 +14,15 @@ import {
   type TrialCardFailureKind,
 } from '@/lib/trial-card';
 import { LoadingMark, LoadingScreen } from '@urganize/ui';
+import { captureAnalyticsEvent } from '@/lib/analytics/client';
+import { createPostHogEvent } from '@/lib/analytics/shared';
+import {
+  SELF_SERVE_COPY,
+  checkoutPath,
+  isCheckoutPeriod,
+  isCheckoutPlan,
+  planName,
+} from '@/lib/self-serve';
 
 // Paystack post-checkout landing.
 //
@@ -48,6 +57,10 @@ type VerifyResponse = {
    *  every other outcome, and 'setup' is the honest default for an absent or
    *  unrecognised value — see classifyTrialCardFailure. */
   failureKind?: TrialCardFailureKind;
+  /** Self-serve checkout (2026-10-22): draws the plain return screens. */
+  selfServe?: boolean;
+  interval?: string | null;
+  method?: 'card' | 'transfer';
 };
 
 const POLL_INTERVAL_MS = 1_500;
@@ -62,6 +75,8 @@ function PaymentCallbackContent() {
   const [status, setStatus] = useState<PaymentStatus>('verifying');
   const [result, setResult] = useState<VerifyResponse>({});
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
+  const [activeUntil, setActiveUntil] = useState<string | null>(null);
+  const userEmail = useAuthStore((state) => state.user?.email ?? null);
 
   useEffect(() => {
     if (!reference) {
@@ -82,11 +97,37 @@ function PaymentCallbackContent() {
         const payload = (await res.json().catch(() => ({}))) as VerifyResponse;
 
         if (cancelled) return;
+        if (payload.selfServe) setResult(payload);
 
         if (res.ok && payload.status === 'success') {
           setStatus('success');
           setResult(payload);
           await checkAuth({ force: true });
+          if (payload.selfServe) {
+            captureAnalyticsEvent(
+              createPostHogEvent('checkout_succeeded', {
+                path: 'self_serve',
+                plan: payload.plan ?? null,
+                period: payload.interval ?? null,
+                method: payload.method ?? 'card',
+              })
+            );
+            try {
+              const { data: sessionData } = await supabase.auth.getSession();
+              const token = sessionData.session?.access_token;
+              if (token) {
+                const statusRes = await fetch('/api/subscription-status', {
+                  headers: { Authorization: `Bearer ${token}` },
+                  cache: 'no-store',
+                });
+                const statusPayload = (await statusRes.json().catch(() => ({}))) as { expiresAt?: string | null };
+                if (!cancelled && typeof statusPayload.expiresAt === 'string') setActiveUntil(statusPayload.expiresAt);
+              }
+            } catch {
+              // The date line is a nicety; the plan is live either way.
+            }
+            return;
+          }
           if (payload.plan === TRIAL_CARD_PLAN) {
             // Render the "first charge on <date>" line from the authoritative
             // trial end. Best-effort: without it the line just doesn't show.
@@ -164,6 +205,21 @@ function PaymentCallbackContent() {
   // hidden for the trial variant.
   const planLabel = describePlanName(result.plan ?? null);
   const trialEndCopy = trialEndsAt ? formatBillingDate(trialEndsAt) : null;
+
+  if (result.selfServe && status !== 'verifying') {
+    return (
+      <SelfServeReturn
+        status={status}
+        plan={result.plan ?? null}
+        interval={result.interval ?? null}
+        method={result.method ?? 'card'}
+        activeUntil={activeUntil}
+        email={userEmail}
+        onContinue={() => router.replace('/checkout/welcome')}
+        onRetry={(path) => router.replace(path)}
+      />
+    );
+  }
 
   return (
     <div className="w-full max-w-md rounded-3xl border border-stroke-subtle bg-bg-surface/95 p-6 shadow-[0_12px_32px_rgb(var(--shadow-ink)/calc(0.18*var(--shadow-alpha-scale)))] backdrop-blur-sm">
@@ -270,6 +326,96 @@ function PaymentCallbackContent() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Self-serve checkout (2026-10-22): the three plain return screens.
+function SelfServeReturn({
+  status,
+  plan,
+  interval,
+  method,
+  activeUntil,
+  email,
+  onContinue,
+  onRetry,
+}: {
+  status: PaymentStatus;
+  plan: string | null;
+  interval: string | null;
+  method: 'card' | 'transfer';
+  activeUntil: string | null;
+  email: string | null;
+  onContinue: () => void;
+  onRetry: (path: string) => void;
+}) {
+  const checkoutPlan = isCheckoutPlan(plan) ? plan : 'manager';
+  const period = isCheckoutPeriod(interval) ? interval : 'monthly';
+  const retryPath = checkoutPath({ plan: checkoutPlan, period });
+  const primary =
+    'min-h-12 w-full rounded-full bg-brand px-5 text-base font-semibold text-content-inverse hover:bg-brand-hover';
+  const quiet =
+    'min-h-12 w-full rounded-full px-5 text-base font-semibold text-content-primary hover:bg-bg-hover';
+
+  if (status === 'success') {
+    const until = activeUntil ? formatBillingDate(activeUntil) : null;
+    return (
+      <div role="status" className="w-full max-w-sm text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-muted text-2xl text-brand" aria-hidden="true">
+          ✓
+        </div>
+        <h1 className="mt-5 font-display text-3xl text-content-primary">{SELF_SERVE_COPY.successTitle}</h1>
+        <p className="mt-3 text-content-secondary">
+          {planName(checkoutPlan)} is active{until ? ` until ${until}` : ''}.
+          {email ? ` A receipt is on its way to ${email}.` : ''}
+        </p>
+        <button type="button" onClick={onContinue} className={`mt-8 ${primary}`}>
+          Continue
+        </button>
+      </div>
+    );
+  }
+
+  if (status === 'pending') {
+    return (
+      <div role="status" aria-live="polite" className="w-full max-w-sm text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-bg-surface" aria-hidden="true">
+          <span className="h-6 w-6 animate-spin rounded-full border-2 border-stroke-control border-t-brand motion-reduce:animate-none" />
+        </div>
+        <h1 className="mt-5 font-display text-3xl text-content-primary">{SELF_SERVE_COPY.pendingTitle}</h1>
+        <p className="mt-3 text-content-secondary">{SELF_SERVE_COPY.pendingBody}</p>
+        <div className="mt-8 space-y-2">
+          <button type="button" onClick={() => window.location.reload()} className={quiet}>
+            Check again
+          </button>
+          <button type="button" onClick={() => onRetry(retryPath)} className={quiet}>
+            Back to checkout
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div role="alert" className="w-full max-w-sm text-center">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-status-error/15 text-2xl font-bold text-status-error" aria-hidden="true">
+        !
+      </div>
+      <h1 className="mt-5 font-display text-3xl text-content-primary">{SELF_SERVE_COPY.failedTitle}</h1>
+      <p className="mt-3 text-content-secondary">
+        {method === 'card' ? SELF_SERVE_COPY.failedBody : 'Nothing was taken. Nothing is lost.'}
+      </p>
+      <div className="mt-8 space-y-2">
+        <button type="button" onClick={() => onRetry(retryPath)} className={primary}>
+          Try again
+        </button>
+        {method === 'card' ? (
+          <button type="button" onClick={() => onRetry(`${retryPath}&method=transfer`)} className={quiet}>
+            Pay by bank transfer instead
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

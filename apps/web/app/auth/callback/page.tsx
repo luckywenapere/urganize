@@ -27,6 +27,7 @@ import { emailResumeClaimedHere } from '@/lib/email-confirmation-client';
 import { CheckInbox, LinkExpired, YoureIn } from '@/components/auth/EmailConfirmation';
 import { ONBOARDING_SETUP_PATH, isCardTrialEnabled } from '@/lib/trial-card';
 import type { Profile } from '@/lib/supabase/client';
+import { PENDING_CHECKOUT_METADATA_KEY, checkoutPath, readPendingCheckout } from '@/lib/self-serve';
 
 const CARD_TRIAL_ENABLED = isCardTrialEnabled();
 
@@ -328,6 +329,18 @@ export default function AuthCallbackPage() {
         // returns to its own page after the OAuth round trip.
         if (confirmedByEmail) {
           // What the sign-up was for, finished now that the email is confirmed.
+          // Self-serve checkout (2026-10-22): someone who picked a plan and
+          // signed up with email comes straight back to pay for it, on any
+          // device (the plan is in their account metadata).
+          const pendingCheckout = readPendingCheckout({
+            [PENDING_CHECKOUT_METADATA_KEY]: metadata[PENDING_CHECKOUT_METADATA_KEY],
+          });
+          if (pendingCheckout) {
+            clearPendingConfirmation();
+            await holdYoureIn();
+            router.replace(checkoutPath(pendingCheckout));
+            return;
+          }
           const finished = await finishConfirmedSignup(session.access_token, metadata);
           if (finished) {
             clearPendingConfirmation();
