@@ -1,0 +1,23 @@
+# The AI usage log (2026-10-03, live; its migration was found applied 2026-10-09)
+
+> Moved out of CLAUDE.md on 2026-10-22 (verbatim). "This file", "above", "below" and "the X section" in here refer to the old single CLAUDE.md: find the named section in docs/notes/README.md.
+
+One row per provider call in `ai_usage_events`, so the real cost of a release can be summed (migration `20261003120000_ai_usage_events.sql`, **applied in production; found in place on 2026-10-09**). It is the record of COST; the credit ledger stays the record of MONEY. They share a request id, so a charge can be set beside what it cost. Built for the per-release pricing test: the credit ledger's spend rows carried tokens in a JSON blob with no release and no feature, a failed call wrote nothing, and four AI features were not recorded at all. No flag and no changelog entry: nothing a person sees changes.
+
+**What records.** Chat turns (with the rollout the conversation was scoped to), the rollout planner from the button and from chat, press-kit drafts, Fill both, status updates and task outcomes. Feature labels: `chat`, `plan`, `press_kit`, `pitch_kit`, `status`, `outcome`. Two views, `release_ai_cost` and `release_ai_cost_by_feature`, sum it per release.
+
+**Seven things worth knowing before editing this:**
+
+1. **It never throws and never blocks.** `lib/ai/usage-log-server.ts` is the ONLY file that touches the table; a missing table (until the migration is applied), a rejected row or a database that is down costs one log line and nothing else. Rows are keyed on `(request_id, call_index)` and inserted ignoring duplicates, so recording a request twice records it once.
+2. **A failed call has an UNKNOWN cost, never zero.** The gateway reports no tokens for a call that failed, yet the provider can still bill what it had written (the 2026-10-02 timeout billed about 200 RODI for an answer nobody got). So tokens and `cost_rodi` are null on a failed row, and a check constraint holds that shape.
+3. **A failed turn still records the calls it made before it failed.** The chat runner attaches them to the error it throws (`attachUsageToError`, held in a WeakMap so no foreign object is mutated) and the route reads them back. A failed attempt that was followed by a model that answered is recorded too (`ChappiAgentResult.failedCalls`).
+4. **`onFailure` on the routed AI functions** reports every attempt that returned no answer, whether the router is off, in shadow or on. `lib/ai/usage-log-guard.test.ts` fails if a caller of the routed functions does not pass it.
+5. **Credits charged sit on a request's first row only**, so a sum over a release counts a charge once. The chat turn's ledger row and its usage rows carry the same request id (a test pins that the route does not mint a second one).
+6. **`release_id` has no foreign key**, so a release's cost outlives the release, and it is checked to be a uuid before it is written: it can come from the chat's scope picker, and one bad value rejects a whole insert.
+7. **Fill both was not being charged, and is now.** It kept only the last call's tokens and returned no calls, so it settled as a run that made none. It uses the shared usage collector now and is charged like the other embedded actions. `usage-feature.test.ts` walks the action registry so a new embedded action cannot be added without a feature label.
+
+**Not logged yet:** the short closing line after a confirmation card is approved, and voice transcription (no token counts). Cost is still converted at the estimated RODI rate until it is reconciled against the provider's invoice.
+
+**Verified:** 6,375 tests pass, `tsc` clean apart from the 8 documented `confirmed-action.test.ts` errors, `eslint` clean on every touched file, `next build` green with `/auth`, `/dashboard` and `/settings` still static. 13 deliberate breaks, each caught by a named test. The migration was run on a real Postgres engine (PGlite), twice, with every constraint and both views exercised. **Checked against production on 2026-10-09:** with the migration in place, `ai_usage_events`, `release_ai_cost` and `release_ai_cost_by_feature` all answer (empty) to a signed-out request, a made-up table name answers "not found" in the same check, and a signed-out insert is refused by row level security (42501). **Not verified:** that any usage row has been written for real (the table cannot be read without the service-role key), and nothing has run against a real model call.
+
+**Activation:** ~~apply the migration~~ (done, found applied 2026-10-09); rows start appearing on the next AI call. Then `select * from release_ai_cost order by cost_rodi desc;`.

@@ -1,0 +1,12 @@
+# The Catalogue shows Released (2026-10-09, v1.91.2, no flag)
+
+> Moved out of CLAUDE.md on 2026-10-22 (verbatim). "This file", "above", "below" and "the X section" in here refer to the old single CLAUDE.md: find the named section in docs/notes/README.md.
+
+Found by using the live app: the Catalogue's Status column read "Draft" for every rollout (all 16 of one team's), including ones whose release day had long passed, because nothing in the product writes the `released` status. **No flag**: it is a display fix to an existing column, in line with the design overhaul's "nothing behind a flag" call and the v1.91.1 fix precedent.
+
+- **Derived, never written.** `displayStatus` in `lib/catalogue-table.ts` returns `released` when `isRecapEligible` (`lib/recap-eligibility.ts`: release day has arrived, or every activity is done) says the rollout has happened, and the stored status otherwise. It is that rule reused, not a third definition (see "One definition the scoreboard will need" at the top of this file). No schema change, no migration, no write to `releases.status`.
+- **Archived stays archived.** `isRecapEligible` counts archived as happened; `displayStatus` checks archived first so a put-away rollout never resurfaces under Released.
+- **Where it shows.** `WorkspaceView` builds each `CatalogueRow.status` through it, so the table pill, the phone's stacked rows, the Cards view (`WorkspaceReleaseCard`, which hides only `draft`), the status chips and their counts all read the same value. The desktop focused rollout header (`WorkspaceDesktopFocused`) uses it too, so opening a Released row does not say Draft. A structural test in `lib/catalogue-table.test.ts` holds both call sites and the import of the shared rule.
+- **No "In progress" was derived.** `in_progress` and `ready` already exist as stored values and keep their labels; deriving "started" from a done activity would be a new definition with no owner, so it was left out.
+- **Known edge:** "today" is the browser's local midnight (the shared rule's own behaviour), and the rows are computed when the store data changes, so a tab left open across midnight updates on the next data refresh.
+- **Verified:** vitest (the new `displayStatus` cases, two mutations each caught), `tsc --noEmit` and eslint on touched files. **Not verified:** nothing seen in a browser with a real session; check the preview with a team that has past-dated rollouts.

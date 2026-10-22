@@ -1,0 +1,19 @@
+# Content calendar refinement pass (2026-08-10)
+
+> Moved out of CLAUDE.md on 2026-10-22 (verbatim). "This file", "above", "below" and "the X section" in here refer to the old single CLAUDE.md: find the named section in docs/notes/README.md.
+
+**Switched off in production (2026-09-03, founder call).** `NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR`
+is off. **Doc-drift note:** no section in this file ever recorded the flag being
+flipped ON in the first place — the same gap already caught for Web Push and the
+native mobile shell — so there is no prior "activated" entry to reconcile this
+against. Every calendar and post already created is untouched in the database;
+the Content scene, its footer pill and its API routes 404 again until the flag
+returns.
+
+A correctness + mobile/desktop polish sweep over the Phase-A calendar, which had been dormant since it shipped 2026-07-20. The load-bearing changes, in case any get re-litigated:
+
+- **The grid↔agenda swap is CONTAINER-width-based now, not viewport-based.** `MonthGrid` (`cc-month-view`) and `AgendaList` (`cc-agenda-view`) swap on the scene column's own width via CSS container queries (`.cc-scene-container`, `container-type: inline-size`, threshold 45rem — all in `globals.css` beside `.cc-island`). This retires the documented `lg:` trap: the UrgAns rail and identity panel are AppShell flex siblings that narrow the centre column without narrowing the viewport, and at 1280px with both open the old gate rendered ~54px day cells. A too-narrow column now degrades to the agenda list on ANY viewport. `@supports` fallback keeps the old viewport behavior for browsers without container queries.
+- **The scene mounts ONCE.** WorkspaceView's mobile and desktop branches are both always in the DOM (CSS-only split), and handing `scenePanel` to both TasksPanel mounts double-mounted every scene — the calendar double-fetched calendars+posts and raced two copies of its month-param sync on every open. `useIsDesktopViewport` (matchMedia via useSyncExternalStore) now routes the panel to exactly one branch.
+- **Mobile dead end fixed:** `AgendaList` only renders days with posts (plus today), so an empty future month — the default view for a future-dated release — showed "Tap a day" with zero tappable days. It now has a standalone "Plan a post" button (empty state) and an "Add a post" button (below the list); the post form's editable date field does the actual day-picking.
+- **Posts fetch got a sequence guard + loaded-key gate** (`loadedPostsKey` vs `postsKey` in CalendarScene): switching calendars no longer shows the previous calendar's posts, paging months shows the skeleton instead of a silently empty grid, and out-of-order responses are dropped.
+- Also: delete-calendar no longer fires the false "That calendar no longer exists." toast (the stale-param ref is pre-armed before the URL catches up); calendar create uses `router.replace` (mobile Back no longer walks through creations); the flag now gates the `?scene=calendar` URL param and the scene-cache prefetch list, not just the pill; `role="grid"` got real `role="row"`/`columnheader`/`rowheader` structure via `display: contents` wrappers; tap targets were raised across the feature (StatusMark 16→28px etc.); PostModal got initial-focus/focus-restore, a safe-area footer inset, a toast when the create-then-PATCH postedUrl follow-up fails, and lost its dead "Also post on other calendars — Coming soon" row; the hardcoded `/ SINGLE` eyebrow was dropped (the release type isn't even surfaced client-side); the raw Postgres-enum validation strings became manager-voice copy; `CalendarGridSkeleton` now matches the real grid template (56px gutter + header row); `WorkspaceSkeleton` hides its rails on `?scene=calendar` URLs; the four duplicate `getAccessToken` copies collapsed into `components/content-calendar/get-access-token.ts`.
