@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.166.1",
+    tag: "Account",
+    date: "October 23, 2026",
+    highlights: [
+      "Fixed your account menu hiding behind cards on the page.",
+    ],
+  },
+  {
     version: "1.166.0",
     title: "Move up the waitlist by sharing",
     tag: "Account",

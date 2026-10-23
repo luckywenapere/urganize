@@ -182,6 +182,9 @@ export function Sidebar({ userName, showHelp = false, account = true }: SidebarP
   // content box, so `overflow-x-hidden` here cut off its right border and
   // shadow and it read as fading into the page. The page list (nav) scrolls
   // and clips itself, so nothing else can spill sideways.
+  // z-20: the sticky aside is its own stacking context, so the menu's z-50 was
+  // trapped inside it and the page's `relative` cards (Home's Next card) drew
+  // over the menu's top rows. Stays under the top bar (z-30) and modals.
   const asideClass =
     mode === 'expanded'
       ? 'app-sidebar w-60 pl-4 pr-2'
@@ -195,7 +198,7 @@ export function Sidebar({ userName, showHelp = false, account = true }: SidebarP
     <aside
       aria-label={menu ? menu.area.label : 'Account'}
       data-sidebar={mode}
-      className={`sticky top-[calc(72px+env(safe-area-inset-top,0px))] hidden h-[calc(100dvh-72px-env(safe-area-inset-top,0px))] shrink-0 self-start flex-col py-4 lg:flex ${asideClass}`}
+      className={`sticky z-20 top-[calc(72px+env(safe-area-inset-top,0px))] hidden h-[calc(100dvh-72px-env(safe-area-inset-top,0px))] shrink-0 self-start flex-col py-4 lg:flex ${asideClass}`}
     >
       {menu && mode === 'collapsed' ? (
         // Folded: a thin rail of the pages' marks.
