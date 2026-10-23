@@ -24,7 +24,7 @@ function fakeAdmin(tables: Record<string, Canned>) {
       let mode: 'select' | 'insert' | 'upsert' | 'delete' = 'select';
       let single = false;
       const chain: Record<string, unknown> = {};
-      for (const method of ['select', 'order', 'limit', 'in', 'not', 'eq', 'neq', 'lte', 'gt', 'gte', 'or']) {
+      for (const method of ['select', 'order', 'limit', 'in', 'not', 'eq', 'neq', 'lte', 'gt', 'gte', 'or', 'is']) {
         chain[method] = (...args: unknown[]) => {
           filters.push({ table, method, args });
           return chain;

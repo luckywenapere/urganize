@@ -419,6 +419,7 @@ async function loadRiseInput(
       // Either way a release could have come out inside the window: it was
       // dated in it, or it was finished (and so touched) in it.
       .or(`release_date.gte.${since.slice(0, 10)},updated_at.gte.${since}`)
+      .is('deleted_at', null)
       .limit(SCAN_LIMIT),
     admin.from(RECORDS_TABLE).select('user_id, role, release_id').not('release_id', 'is', null).limit(SCAN_LIMIT * 4),
     admin.from('task_activity').select('task_id, actor_id, created_at').gte('created_at', activitySince).limit(SCAN_LIMIT * 4),

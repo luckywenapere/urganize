@@ -13,7 +13,6 @@ import {
 } from '../_shared';
 import { planReleaseEdit } from '@/lib/release-edit';
 import { isWorkspaceFeatureEnabled } from '@/lib/artists-server';
-import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-helpers';
 import {
   captureServerAnalyticsEvent,
   createPostHogEvent,
@@ -24,7 +23,8 @@ import { isReleaseActive } from '@/lib/release-activity';
 import { decideDraftDiscard, type DraftDiscardDecision } from '@/lib/release-draft-discard';
 import { RELEASE_COLLABORATORS_TABLE } from '@/lib/release-ops';
 import { countReleaseSpendLines } from '@/lib/release-spend-server';
-import { withThumbPaths } from '@/lib/image-thumb';
+import { matchesDeleteConfirmation } from '@/lib/rollout-trash';
+import { purgeRelease, softDeleteRelease } from '@/lib/rollout-trash-server';
 
 const TASKS_TABLE = 'tasks';
 const ASSETS_TABLE = 'assets';
@@ -436,58 +436,29 @@ export async function DELETE(
       }
     }
 
-    // Storage objects don't cascade with the DB row, so they go first — same
-    // ordering as the single-asset DELETE: if storage removal fails we leave
-    // everything in place for a retry, since orphan storage is recoverable
-    // but DB rows pointing at deleted objects are harder to detect.
-    const assetsResult = await adminClient!
-      .from(ASSETS_TABLE)
-      .select('storage_bucket, storage_path')
-      .eq('release_id', releaseId);
-
-    if (assetsResult.error && !isOptionalTableMissingError(assetsResult.error)) {
-      return NextResponse.json(
-        { error: assetsResult.error.message || 'Could not load rollout assets.' },
-        { status: 500 }
-      );
-    }
-
-    const pathsByBucket = new Map<string, string[]>();
-    for (const row of assetsResult.data ?? []) {
-      const storagePath = String(row.storage_path || '');
-      if (!storagePath) continue;
-      const bucket = String(row.storage_bucket || RELEASE_ASSETS_BUCKET);
-      const paths = pathsByBucket.get(bucket) ?? [];
-      paths.push(storagePath);
-      pathsByBucket.set(bucket, paths);
-    }
-
-    for (const [bucket, paths] of pathsByBucket) {
-      // withThumbPaths: cover display copies (lib/image-thumb.ts) go too.
-      const removeResult = await adminClient!.storage.from(bucket).remove(withThumbPaths(paths));
-      if (removeResult.error) {
+    // An untouched draft the planner opened and the user abandoned has nothing
+    // in it worth keeping, so it is removed outright. Every other delete goes to
+    // Trash (deleted_at) after the typed confirmation, and the purge cron or
+    // "Delete forever" removes it later; see lib/rollout-trash-server.ts.
+    if (untouchedDraftOnly) {
+      const purged = await purgeRelease(adminClient!, releaseId, auth.user.id);
+      if (!purged.ok) {
+        return NextResponse.json({ error: purged.error }, { status: purged.status });
+      }
+    } else {
+      // The same double confirmation as the dialog, enforced here so no client
+      // (including UrgAns) can delete by skipping it.
+      const body = (await request.json().catch(() => null)) as { confirmation?: unknown } | null;
+      if (!matchesDeleteConfirmation(body?.confirmation, ownership.release.title)) {
         return NextResponse.json(
-          { error: removeResult.error.message || 'Could not delete rollout files from storage.' },
-          { status: 500 }
+          { error: 'Type the rollout name or DELETE to confirm.', code: 'confirmation_required' },
+          { status: 400 }
         );
       }
-    }
-
-    // Child rows (tasks, task_groups, assets, metadata, events, playbook
-    // steps, collaborators, activity_logs) all carry ON DELETE CASCADE FKs
-    // to releases — one row delete cleans the whole tree.
-    const deleteResult = await adminClient!
-      .from('releases')
-      .delete()
-      .eq('id', releaseId)
-      .eq('owner_user_id', auth.user.id);
-
-    if (deleteResult.error) {
-      if (isOptionalTableMissingError(deleteResult.error)) return buildMissingTableResponse();
-      return NextResponse.json(
-        { error: deleteResult.error.message || 'Could not delete rollout.' },
-        { status: 500 }
-      );
+      const trashed = await softDeleteRelease(adminClient!, releaseId, auth.user.id);
+      if (!trashed.ok) {
+        return NextResponse.json({ error: trashed.error }, { status: trashed.status });
+      }
     }
 
     captureServerAnalyticsEvent(

@@ -31,6 +31,7 @@ async function countRealReleases(client: SupabaseClient, ownerUserId: string): P
     .from(RELEASES_TABLE)
     .select('metadata')
     .eq('owner_user_id', ownerUserId)
+    .is('deleted_at', null)
     .limit(RELEASE_SCAN);
   if (error || !Array.isArray(data)) return null;
   return data.filter(

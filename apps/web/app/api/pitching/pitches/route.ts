@@ -228,6 +228,7 @@ async function loadPitchReleases(
   const { data } = await adminClient
     .from('releases')
     .select('id,owner_user_id,artist_id,title')
+    .is('deleted_at', null)
     .in('id', ids);
 
   for (const row of (data || []) as Array<Record<string, unknown>>) {

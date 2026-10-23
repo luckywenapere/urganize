@@ -123,15 +123,13 @@ describe('fetchReleaseTaskCount', () => {
 describe('describeReleaseDeletion', () => {
   it('names the count when the server gave one', () => {
     expect(describeReleaseDeletion({ status: 'known', count: 32 })).toBe(
-      'This permanently deletes the rollout, its 32 activities, and all attached files. This can\u2019t be undone.'
+      'It moves to Trash with its 32 activities. Nothing is lost for 30 days.'
     );
-    expect(describeReleaseDeletion({ status: 'known', count: 1 })).toContain('its 1 activity,');
+    expect(describeReleaseDeletion({ status: 'known', count: 1 })).toContain('its 1 activity.');
   });
 
   it('leaves activities out only for a known zero', () => {
-    expect(ZERO_SENTENCE).toBe(
-      'This permanently deletes the rollout and all attached files. This can\u2019t be undone.'
-    );
+    expect(ZERO_SENTENCE).toBe('It moves to Trash. Nothing is lost for 30 days.');
   });
 
   it('never words a loading or unknown count as an empty rollout', () => {
@@ -139,7 +137,7 @@ describe('describeReleaseDeletion', () => {
       const sentence = describeReleaseDeletion(state);
       expect(sentence).not.toBe(ZERO_SENTENCE);
       expect(sentence).toMatch(/activities/);
-      expect(sentence).toMatch(/can\u2019t be undone/);
+      expect(sentence).toMatch(/Nothing is lost for 30 days/);
     }
   });
 

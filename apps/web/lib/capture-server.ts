@@ -144,6 +144,7 @@ export async function loadPublicCapturePage(token: string): Promise<PublicCaptur
       .from('releases')
       .select('id,title,artist_name,artwork_asset_id')
       .eq('id', releaseId)
+      .is('deleted_at', null)
       .maybeSingle();
 
     if (releaseError || !release) return null;

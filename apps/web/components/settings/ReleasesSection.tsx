@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabase/client';
 import { Trash2 } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
@@ -13,7 +15,8 @@ import { InfoTip } from '@/components/shared/HelpTip';
 import { formatRolloutCreatedLabel } from '@/lib/settings-rollout-row';
 
 /**
- * Deleting a release is only available here (URG-163) — the workspace's
+ * Deleting a rollout moves it to Trash (30 days, then removed; see
+ * lib/rollout-trash.ts) and is only available here (URG-163) — the workspace's
  * per-release trash icons were removed. ONE sanctioned exception since
  * 2026-09-01 (founder call): a TEST release's standing banner in the
  * workspace (TestReleaseBanner, behind NEXT_PUBLIC_FEATURE_TEST_RELEASE)
@@ -33,6 +36,9 @@ export function ReleasesSection() {
   const [releaseToDelete, setReleaseToDelete] = useState<Pick<Release, 'id' | 'title'> | null>(
     null
   );
+  // How many rollouts sit in Trash, for the link. A failed read just shows
+  // "Trash" with no number; nothing here depends on it.
+  const [trashCount, setTrashCount] = useState<number | null>(null);
   // Count-aware loading rows — matches the user's last-known roster size.
   const knownReleaseCount = useKnownReleaseCount(2, 6);
 
@@ -44,6 +50,31 @@ export function ReleasesSection() {
     if (!user) return;
     void loadCommandCenter();
   }, [user, loadCommandCenter]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
+        const response = await fetch('/api/releases/trash', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          cache: 'no-store',
+        });
+        if (!response.ok) return;
+        const payload = (await response.json()) as { items?: unknown[] };
+        if (!cancelled && Array.isArray(payload.items)) setTrashCount(payload.items.length);
+      } catch {
+        /* the link still works without a count */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, releases.length]);
 
   if (!user) return null;
 
@@ -62,15 +93,23 @@ export function ReleasesSection() {
     // Drop the release + its tasks from local state immediately, then
     // re-sync against the server — same two-step handoff the workspace used.
     removeReleaseLocal(releaseId);
+    setTrashCount((count) => (count === null ? count : count + 1));
     void loadCommandCenter({ force: true });
   };
 
   return (
     <>
       <section id="delete-rollouts" className={`${panelClass} scroll-mt-4`}>
-        <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary flex items-center gap-2">Delete rollouts
-        <InfoTip label="Delete rollouts" text="Delete a rollout here. This permanently removes it, its activities, and its attached files." />
-      </h2>
+        <h2 className="mb-1 flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
+          Delete rollout
+          <InfoTip
+            label="Delete rollout"
+            text="Deleting a rollout moves it to Trash with its activities and files. You can restore it for 30 days, then it is removed for good."
+          />
+        </h2>
+        <p className="mb-4 text-sm text-content-secondary">
+          Deleting a rollout moves it to Trash. You can restore it for 30 days.
+        </p>
         {isLoadingReleases ? (
           <div className="space-y-2">
             {Array.from({ length: knownReleaseCount }).map((_, index) => (
@@ -96,7 +135,7 @@ export function ReleasesSection() {
                       {release.artistName || 'Unassigned artist'}
                       {/* Same rule as the catalog cards: 'draft' is the
                           universal starting status, so showing it on every
-                          row is noise — the status appears only once the
+                          row is noise: the status appears only once the
                           release has moved past it. */}
                       {release.status !== 'draft' ? ` · ${release.status.replace(/_/g, ' ')}` : ''}
                     </p>
@@ -110,16 +149,22 @@ export function ReleasesSection() {
                   <button
                     type="button"
                     onClick={() => setReleaseToDelete({ id: release.id, title: displayReleaseTitle(release.title) })}
-                    aria-label={`Delete ${displayReleaseTitle(release.title)}`}
-                    className="hit-44 relative inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2 py-1.5 text-xs font-semibold text-content-tertiary transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
+                    aria-label={`Delete rollout ${displayReleaseTitle(release.title)}`}
+                    className="hit-44 relative inline-flex items-center gap-1.5 rounded-lg border border-status-error/40 bg-status-error/10 px-3 py-1.5 text-xs font-semibold text-status-error transition-colors hover:bg-status-error/20"
                   >
                     <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    Delete
+                    Delete rollout
                   </button>
                 </div>
               ))}
           </div>
         )}
+        <Link
+          href="/dashboard/trash"
+          className="hit-44 relative mt-4 inline-flex text-[13px] font-medium text-brand-primary underline underline-offset-4"
+        >
+          {trashCount === null ? 'Trash' : `Trash (${trashCount})`}
+        </Link>
       </section>
 
       <DeleteReleaseDialog

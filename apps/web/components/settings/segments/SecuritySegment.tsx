@@ -22,11 +22,13 @@ function SecuritySegmentView() {
   return (
     <div>
       <SecuritySection />
-      <div className="mt-2 border-t border-stroke-subtle pt-6">
+      <div className="mt-6 border border-status-error/40 bg-status-error/5 p-4 sm:p-5">
         <h2 className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-status-error">
           Danger zone
         </h2>
-        <p className="mt-1 text-sm text-content-secondary">These can&apos;t be undone.</p>
+        <p className="mt-1 text-sm text-content-secondary">
+          A deleted rollout goes to Trash for 30 days. Deleting your account can&apos;t be undone.
+        </p>
         <div className="mt-2 divide-y divide-stroke-subtle">
           {canDeleteRollouts(role) ? <ReleasesSection /> : null}
           <DeleteAccountSection />

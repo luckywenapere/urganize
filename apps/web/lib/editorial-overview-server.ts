@@ -37,6 +37,7 @@ export async function loadEditorialOverview(
     .from('releases')
     .select('id,owner_user_id,artist_id,title,release_date,status,metadata')
     .in('owner_user_id', ownerIds)
+    .is('deleted_at', null)
     .limit(1000);
   if (error) return null;
 

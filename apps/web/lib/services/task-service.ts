@@ -11,6 +11,7 @@ import { TaskStatus, TaskPriority, TaskRequirement } from '@/types/tasks';
 import { ReleasePipelineState } from '@/types/releases';
 import { getTaskCompletionBlocker } from '@/lib/release-execution';
 import { readAllPages, ROWS_MAX_PAGES, ROWS_PAGE_SIZE } from '@/lib/paged-rows';
+import { dropRowsOfDeletedReleases } from '@/lib/rollout-trash-server';
 import {
   TASK_DONE_STATUS,
   TASK_LOCKED_STATUS,
@@ -79,7 +80,9 @@ export class TaskService {
       );
     }
 
-    return loadTasks(this.adminClient, rows, userId, undefined, timings);
+    // Tasks of a rollout in Trash stay in the table but never list.
+    const liveRows = await dropRowsOfDeletedReleases(this.adminClient, rows, (row) => row.release_id);
+    return loadTasks(this.adminClient, liveRows, userId, undefined, timings);
   }
 
   async getWorkspaceTasks(workspaceId: string, userId: string, filters: {
@@ -108,7 +111,8 @@ export class TaskService {
       );
     }
 
-    return loadTasks(this.adminClient, rows, userId);
+    const liveRows = await dropRowsOfDeletedReleases(this.adminClient, rows, (row) => row.release_id);
+    return loadTasks(this.adminClient, liveRows, userId);
   }
 
   async getTaskById(taskId: string, userId: string) {

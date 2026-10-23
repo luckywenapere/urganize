@@ -73,6 +73,7 @@ export async function loadDistributionFacts(
       .from('releases')
       .select('title,artist_name,release_date,artwork_asset_id')
       .eq('id', releaseId)
+      .is('deleted_at', null)
       .maybeSingle(),
     admin
       .from('release_metadata')

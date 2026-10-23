@@ -68,6 +68,7 @@ export async function loadOwnedRelease(
   const { data, error } = await adminClient
     .from(RELEASES_TABLE)
     .select(RELEASE_COLUMNS)
+    .is('deleted_at', null)
     .eq('id', releaseId)
     .maybeSingle();
 

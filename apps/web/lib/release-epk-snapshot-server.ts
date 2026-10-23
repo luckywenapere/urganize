@@ -51,6 +51,7 @@ export async function runKitSnapshotSweep(admin: SupabaseClient): Promise<KitSna
     const releaseResult = await admin
       .from(RELEASES_TABLE)
       .select('id, owner_user_id, artist_id, release_date, status')
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(RELEASE_SCAN_LIMIT);
     if (releaseResult.error || !releaseResult.data) return { skipped: true, reason: 'read_failed' };

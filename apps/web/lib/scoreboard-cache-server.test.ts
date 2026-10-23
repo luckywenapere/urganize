@@ -43,6 +43,7 @@ function fakeClient(tables: Tables): SupabaseClient {
         gte: () => builder,
         lt: () => builder,
         not: () => builder,
+        is: () => builder,
         eq: () => builder,
         in: (column: string, values: unknown[]) => {
           if (column === 'id') inFilter = { column, values };

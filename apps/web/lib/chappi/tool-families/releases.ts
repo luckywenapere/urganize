@@ -153,7 +153,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
     name: 'delete_release',
     kind: 'mutate',
     description:
-      'Permanently delete a rollout and everything attached to it. Requires the user to approve a confirmation card — calling this only proposes the deletion, it does not perform it.',
+      'Move a rollout to Trash, where the user can restore it for 30 days. Requires the user to approve a confirmation card and type the rollout name or DELETE themselves — calling this only proposes the deletion, it does not perform it, and you can never supply that confirmation.',
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -181,18 +181,25 @@ export const RELEASE_TOOLS: ChappiTool[] = [
       return {
         ok: true,
         title: `Delete "${release.title}"?`,
-        detail: `This removes the rollout, its ${taskLine}, and every file attached to it. It cannot be undone.`,
+        detail: `It moves to Trash with its ${taskLine}. It stays there for 30 days and you can restore it from Settings.`,
         confirmLabel: 'Delete rollout',
+        typedConfirmation: { phrase: release.title },
       };
     },
     execute: async (ctx, args) => {
       const releaseId = argString(args, 'releaseId');
       if (!releaseId) return fail('releaseId is required.');
-      const res = await callInternalApi(ctx, `/api/releases/${releaseId}`, { method: 'DELETE' });
+      // The route re-checks the typed confirmation, so a delete that arrives
+      // without it (a stale client, a forged call) is refused with a 400.
+      const confirmation = argString(args, 'confirmation');
+      const res = await callInternalApi(ctx, `/api/releases/${releaseId}`, {
+        method: 'DELETE',
+        body: { confirmation },
+      });
       if (!res.ok) return fail(apiError(res, 'Could not delete the rollout.'));
       return {
         ok: true,
-        summary: 'Deleted the rollout.',
+        summary: 'Moved the rollout to Trash. It can be restored from Settings for 30 days.',
         // Back to the catalog: the scoped view the user may be sitting on now
         // points at a release that no longer exists.
         clientAction: { type: 'navigate', href: '/dashboard' },

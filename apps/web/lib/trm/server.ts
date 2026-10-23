@@ -89,6 +89,7 @@ export async function loadTrmFacts(admin: SupabaseClient, releaseId: string): Pr
       .from('releases')
       .select('id,title,artist_name,artist_id,owner_user_id,release_date,release_type,artwork_asset_id')
       .eq('id', releaseId)
+      .is('deleted_at', null)
       .maybeSingle(),
     admin
       .from('release_metadata')

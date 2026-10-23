@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rollout delete and Trash: mocks</title>
+<style>
+:root{
+  --bg-base:#0d120e;--bg-surface:#181d19;--bg-elevated:#1a1f1b;--bg-hover:#1c211d;
+  --brand:#7fd99a;--brand-muted:rgba(127,217,154,.14);
+  --text:#f5f0e6;--text2:#b9b6ac;--text3:#8a8a82;
+  --b-sub:rgba(245,240,230,.06);--b-def:rgba(245,240,230,.1);--b-strong:rgba(245,240,230,.16);
+  --err:#fa8a8a;--err-bg:rgba(250,138,138,.1);--err-line:rgba(250,138,138,.4);--warn:#f0b95c;
+  --sans:'Instrument Sans',-apple-system,'Segoe UI',Roboto,sans-serif;
+  --display:'Young Serif',Georgia,serif;--mono:'Space Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#080b09;color:var(--text);font:15px/1.5 var(--sans);padding:24px 16px 80px}
+h1{font:600 22px var(--display);margin:0 0 4px}
+.lede{color:var(--text2);margin:0 0 20px;max-width:70ch}
+.bar{position:sticky;top:0;z-index:5;background:#080b09;padding:8px 0 12px;display:flex;gap:8px;align-items:center}
+.bar button{font:600 13px var(--sans);color:var(--text2);background:var(--bg-surface);border:1px solid var(--b-def);padding:8px 14px;cursor:pointer}
+.bar button[aria-pressed=true]{color:var(--text);border-color:var(--brand)}
+.state{margin:28px 0}
+.state>h2{font:700 11px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--text3);margin:0 0 4px}
+.state>p{margin:0 0 10px;color:var(--text2);font-size:13px;max-width:70ch}
+.frame{width:100%;max-width:1440px;background:var(--bg-base);border:1px solid var(--b-def);padding:20px;margin:0 auto 0 0;position:relative}
+body.m .frame{max-width:390px;padding:14px}
+.panel{background:var(--bg-surface);border:1px solid var(--b-def);padding:20px}
+body.m .panel{padding:14px}
+.eyebrow{font:700 11px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--text3);margin:0 0 16px}
+.row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--b-sub);background:var(--bg-elevated);padding:10px 12px;margin-bottom:8px}
+.row .t{font-weight:600;font-size:14px;min-width:0}
+.row .s{font-size:12px;color:var(--text2)}
+.row .m{font-size:12px;color:var(--text3)}
+.btn{font:600 13px var(--sans);min-height:44px;padding:0 16px;border:1px solid var(--b-strong);background:transparent;color:var(--text);cursor:pointer}
+.btn.pri{background:var(--brand);color:#0d120e;border-color:var(--brand)}
+.btn.dng{background:var(--err);color:#2a0d0d;border-color:var(--err)}
+.btn.dng[disabled]{opacity:.35;cursor:not-allowed}
+.btn.ghost-dng{color:var(--err);border-color:var(--err-line);background:var(--err-bg)}
+.btn.sm{min-height:36px;padding:0 12px;font-size:12px}
+.zone{margin-top:20px;border:1px solid var(--err-line);background:var(--err-bg);padding:20px}
+body.m .zone{padding:14px}
+.zone h3{margin:0 0 4px;font:700 11px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--err)}
+.zone p{margin:0 0 14px;color:var(--text2);font-size:13px}
+.zone .row{background:var(--bg-surface)}
+.link{font-size:13px;color:var(--brand);text-decoration:underline;text-underline-offset:3px}
+.scrim{background:rgba(0,0,0,.72);padding:28px 12px;display:flex;justify-content:center}
+.dlg{width:100%;max-width:448px;background:var(--bg-surface);border:1px solid var(--b-strong)}
+.dlg .in{padding:20px}
+.dlg h4{font:600 20px/1.3 var(--display);margin:6px 0 8px}
+.dlg p{margin:0 0 10px;color:var(--text2);font-size:14px}
+.dlg ul{margin:0 0 14px;padding-left:18px;color:var(--text2);font-size:14px}
+.dlg label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px}
+.dlg label b{color:var(--text);font-family:var(--mono);font-weight:700}
+.dlg input{width:100%;min-height:44px;background:var(--bg-base);border:1px solid var(--b-strong);color:var(--text);font:15px var(--sans);padding:0 12px}
+.dlg input.ok{border-color:var(--brand)}
+.dlg input.bad{border-color:var(--err-line)}
+.dlg .foot{display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--b-sub);padding:16px 20px}
+body.m .dlg .foot{flex-direction:column-reverse}
+.hint{font-size:12px;color:var(--text3);margin-top:6px}
+.err{margin:0 20px 16px;border:1px solid var(--err-line);background:var(--err-bg);color:var(--err);padding:10px 12px;font-size:13px}
+.tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--b-sub)}
+.tabs span{padding:10px 12px;font-size:13px;color:var(--text3)}
+.tabs .on{color:var(--text);border-bottom:2px solid var(--brand)}
+.badge{font:700 11px var(--mono);letter-spacing:.08em;color:var(--warn)}
+.badge.late{color:var(--err)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+body.m .row .actions{width:100%}
+body.m .row .actions .btn{flex:1}
+.empty{text-align:center;padding:36px 12px;color:var(--text2)}
+.empty b{display:block;color:var(--text);font:600 18px var(--display);margin-bottom:6px}
+.toast{position:absolute;left:20px;bottom:20px;right:20px;max-width:420px;background:var(--bg-surface);border:1px solid var(--b-strong);padding:12px 14px;display:flex;justify-content:space-between;gap:12px;font-size:13px}
+.chat{max-width:520px;background:var(--bg-surface);border:1px solid var(--b-def);padding:14px}
+.chat .me{background:var(--brand-muted);padding:8px 12px;margin:0 0 10px auto;width:fit-content;max-width:90%;font-size:14px}
+.chat .ai{font-size:14px;color:var(--text2);margin-bottom:10px}
+.card{border:1px solid var(--err-line);background:var(--bg-elevated);padding:14px}
+.card h5{margin:0 0 4px;font-size:14px}
+.card p{margin:0 0 12px;font-size:13px;color:var(--text2)}
+.note{font-size:12px;color:var(--text3);margin-top:10px}
+</style>
+</head>
+<body class="d">
+<h1>Rollout delete and Trash</h1>
+<p class="lede">Mocks for approval. Same tokens as the app (dark theme shown). Nothing here is built. Use the toggle to see every state at 1440px or 390px.</p>
+<div class="bar">
+  <button id="bd" aria-pressed="true">1440px</button>
+  <button id="bm" aria-pressed="false">390px</button>
+</div>
+
+<!-- 1 -->
+<section class="state">
+<h2>1 · Settings: Danger zone</h2>
+<p>Today the section is called "Delete rollouts" and sits mid-page with a quiet grey Delete button on each row. New: a red-outlined Danger zone at the very bottom of rollout settings. The button says "Delete rollout". Trash link sits in the same zone, with a count.</p>
+<div class="frame">
+  <div class="panel">
+    <p class="eyebrow">Rollouts</p>
+    <div class="row"><div><div class="t">Midnight Run (single)</div><div class="s">Ada Kole · planning</div></div><span class="m">Created 14 Oct 2026</span></div>
+    <div class="row"><div><div class="t">Lagos to London EP</div><div class="s">Ada Kole · in progress</div></div><span class="m">Created 2 Oct 2026</span></div>
+  </div>
+  <div class="zone">
+    <h3>Danger zone</h3>
+    <p>Deleting a rollout moves it to Trash. You can restore it for 30 days.</p>
+    <div class="row"><div><div class="t">Midnight Run (single)</div><div class="s">24 activities</div></div><button class="btn ghost-dng">Delete rollout</button></div>
+    <div class="row"><div><div class="t">Lagos to London EP</div><div class="s">61 activities</div></div><button class="btn ghost-dng">Delete rollout</button></div>
+    <a class="link" href="#">Trash (2)</a>
+  </div>
+</div>
+</section>
+
+<!-- 2 -->
+<section class="state">
+<h2>2 · Confirm dialog: empty</h2>
+<p>Names the rollout and says what happens. The red button stays off until the user types the rollout name or DELETE (not case sensitive).</p>
+<div class="frame"><div class="scrim"><div class="dlg"><div class="in">
+  <p class="eyebrow" style="margin:0">Delete rollout</p>
+  <h4>Delete "Lagos to London EP"?</h4>
+  <p>It moves to Trash with its 61 activities. Nothing is lost for 30 days.</p>
+  <ul><li>It disappears from Home, the timeline and reminders.</li><li>Restore it any time from Trash.</li></ul>
+  <label for="a">Type <b>Lagos to London EP</b> or <b>DELETE</b> to confirm</label>
+  <input id="a" placeholder="Lagos to London EP">
+</div><div class="foot"><button class="btn">Cancel</button><button class="btn dng" disabled>Delete rollout</button></div></div></div></div>
+</section>
+
+<section class="state">
+<h2>3 · Confirm dialog: typing, then ready</h2>
+<p>Partial text: red border, button off. Exact match: green border, button on.</p>
+<div class="frame"><div class="scrim"><div class="dlg"><div class="in">
+  <p class="eyebrow" style="margin:0">Delete rollout</p>
+  <h4>Delete "Lagos to London EP"?</h4>
+  <p>It moves to Trash with its 61 activities. Nothing is lost for 30 days.</p>
+  <label>Type <b>Lagos to London EP</b> or <b>DELETE</b> to confirm</label>
+  <input class="bad" value="Lagos to Lon">
+  <div class="hint">Keep typing.</div>
+</div><div class="foot"><button class="btn">Cancel</button><button class="btn dng" disabled>Delete rollout</button></div></div></div></div>
+<div class="frame" style="margin-top:12px"><div class="scrim"><div class="dlg"><div class="in">
+  <p class="eyebrow" style="margin:0">Delete rollout</p>
+  <h4>Delete "Lagos to London EP"?</h4>
+  <p>It moves to Trash with its 61 activities. Nothing is lost for 30 days.</p>
+  <label>Type <b>Lagos to London EP</b> or <b>DELETE</b> to confirm</label>
+  <input class="ok" value="DELETE">
+</div><div class="foot"><button class="btn">Cancel</button><button class="btn dng">Delete rollout</button></div></div></div></div>
+</section>
+
+<section class="state">
+<h2>4 · After delete, and error</h2>
+<p>Success: dialog closes, a toast offers Undo for a few seconds (same as Restore). Error: red note inside the dialog, the typed text is kept.</p>
+<div class="frame" style="min-height:150px"><div class="toast"><span>"Lagos to London EP" moved to Trash.</span><a class="link" href="#">Undo</a></div></div>
+<div class="frame" style="margin-top:12px"><div class="scrim"><div class="dlg"><div class="in">
+  <p class="eyebrow" style="margin:0">Delete rollout</p>
+  <h4>Delete "Lagos to London EP"?</h4>
+  <input class="ok" value="DELETE" style="margin-top:8px">
+</div><div class="err">Could not delete the rollout. Check your connection and try again.</div>
+<div class="foot"><button class="btn">Cancel</button><button class="btn dng">Try again</button></div></div></div></div>
+</section>
+
+<!-- Trash -->
+<section class="state">
+<h2>5 · Trash: with items</h2>
+<p>New page, reached from the Danger zone link and from Settings. Each row shows the days left before auto-purge (amber under 7 days, red under 2). Restore is one tap. Delete forever opens its own confirm.</p>
+<div class="frame"><div class="panel">
+  <p class="eyebrow">Trash</p>
+  <p style="color:var(--text2);font-size:13px;margin:0 0 14px">Deleted rollouts stay here for 30 days, then are removed for good.</p>
+  <div class="row"><div><div class="t">Lagos to London EP</div><div class="s">Ada Kole · 61 activities</div><div class="m">Deleted 23 Oct · <span class="badge">29 days left</span></div></div><div class="actions"><button class="btn pri sm">Restore</button><button class="btn ghost-dng sm">Delete forever</button></div></div>
+  <div class="row"><div><div class="t">Old demo single</div><div class="s">Unassigned artist · 12 activities</div><div class="m">Deleted 18 Oct · <span class="badge">24 days left</span></div></div><div class="actions"><button class="btn pri sm">Restore</button><button class="btn ghost-dng sm">Delete forever</button></div></div>
+  <div class="row"><div><div class="t">Test rollout</div><div class="s">Ada Kole · 8 activities</div><div class="m">Deleted 24 Sep · <span class="badge late">1 day left</span></div></div><div class="actions"><button class="btn pri sm">Restore</button><button class="btn ghost-dng sm">Delete forever</button></div></div>
+</div></div>
+</section>
+
+<section class="state">
+<h2>6 · Trash: empty, restoring, restored</h2>
+<div class="frame"><div class="panel"><p class="eyebrow">Trash</p><div class="empty"><b>Trash is empty</b>Deleted rollouts show up here for 30 days.</div></div></div>
+<div class="frame" style="margin-top:12px"><div class="panel"><p class="eyebrow">Trash</p>
+  <div class="row"><div><div class="t">Lagos to London EP</div><div class="m">Restoring…</div></div><div class="actions"><button class="btn pri sm" disabled style="opacity:.5">Restoring…</button></div></div></div>
+  <div class="toast"><span>"Lagos to London EP" restored with 61 activities.</span><a class="link" href="#">Open</a></div><div style="height:70px"></div></div>
+</section>
+
+<section class="state">
+<h2>7 · Delete forever: separate confirm</h2>
+<p>Different wording from the first dialog, no typing, but a clear "cannot be undone" and a hold on the danger colour. Also appears for auto-purge: nothing to confirm, but a notice 3 days before.</p>
+<div class="frame"><div class="scrim"><div class="dlg"><div class="in">
+  <p class="eyebrow" style="margin:0">Delete forever</p>
+  <h4>Delete "Lagos to London EP" forever?</h4>
+  <p>This removes the rollout, its 61 activities and its files. It cannot be undone.</p>
+</div><div class="foot"><button class="btn">Keep in Trash</button><button class="btn dng">Delete forever</button></div></div></div></div>
+</section>
+
+<section class="state">
+<h2>8 · UrgAns asks first</h2>
+<p>UrgAns can only propose. The card below is the only way a delete goes through, and it uses the same typed confirm. It never deletes from inside the model loop (already true today for delete_release, kept). Deleting through UrgAns also goes to Trash.</p>
+<div class="frame"><div class="chat">
+  <div class="me">Delete my Lagos to London rollout</div>
+  <div class="ai">I can move it to Trash. You will need to confirm it yourself.</div>
+  <div class="card"><h5>Delete "Lagos to London EP"?</h5><p>61 activities. It stays in Trash for 30 days.</p>
+    <label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px">Type <b style="color:var(--text);font-family:var(--mono)">Lagos to London EP</b> or <b style="color:var(--text);font-family:var(--mono)">DELETE</b></label>
+    <input style="width:100%;min-height:44px;background:var(--bg-base);border:1px solid var(--b-strong);color:var(--text);padding:0 12px;margin-bottom:10px">
+    <div class="actions"><button class="btn">Cancel</button><button class="btn dng" disabled>Delete rollout</button></div></div>
+</div><p class="note">Open question: UrgAns will not offer "Delete forever" at all. Purging is only from the Trash page.</p></div>
+</section>
+
+<script>
+const b=document.body,d=document.getElementById('bd'),m=document.getElementById('bm');
+function set(mobile){b.classList.toggle('m',mobile);d.setAttribute('aria-pressed',!mobile);m.setAttribute('aria-pressed',mobile)}
+d.onclick=()=>set(false);m.onclick=()=>set(true);
+</script>
+</body>
+</html>

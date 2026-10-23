@@ -57,6 +57,7 @@ async function countActiveReleases(
       .from('releases')
       .select('id', { count: 'exact', head: true })
       .eq('owner_user_id', ownerUserId)
+      .is('deleted_at', null)
       // `not in` rather than a positive list, so a status added to the enum
       // later counts as active by default — the same way isReleaseActive
       // treats an unrecognised value.

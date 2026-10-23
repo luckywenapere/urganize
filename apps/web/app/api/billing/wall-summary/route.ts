@@ -41,7 +41,11 @@ export async function GET(request: NextRequest) {
 
   const [rollouts, activities, seats] = await Promise.all([
     count(() =>
-      admin.from('releases').select('id', { count: 'exact', head: true }).eq('owner_user_id', team.ownerUserId as string)
+      admin
+        .from('releases')
+        .select('id', { count: 'exact', head: true })
+        .eq('owner_user_id', team.ownerUserId as string)
+        .is('deleted_at', null)
     ),
     count(() =>
       admin

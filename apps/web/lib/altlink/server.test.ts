@@ -63,6 +63,7 @@ function fakeDb(seed: Record<string, Row[]>) {
         return builder;
       },
       limit: () => builder,
+      is: () => builder,
       or: () => builder,
       insert: (row: Row) => {
         op = 'insert';

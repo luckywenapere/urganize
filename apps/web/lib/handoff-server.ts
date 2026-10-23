@@ -200,6 +200,7 @@ export async function loadHandoff(
       .from(RELEASES_TABLE)
       .select('id,owner_user_id,artist_id,release_date,status,artwork_asset_id,metadata')
       .eq('id', releaseId)
+      .is('deleted_at', null)
       .maybeSingle(),
     admin.from('release_metadata').select('isrc,lyrics').eq('release_id', releaseId).maybeSingle(),
     loadDistributionFacts(admin, releaseId),

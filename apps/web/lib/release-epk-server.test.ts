@@ -12,7 +12,7 @@ function fakeAdmin(tables: Record<string, Canned>): SupabaseClient {
     from(table: string) {
       const answer = tables[table] ?? ok(null);
       const chain: Record<string, unknown> = {};
-      for (const method of ['select', 'eq', 'in', 'order', 'limit']) chain[method] = () => chain;
+      for (const method of ['select', 'eq', 'in', 'is', 'order', 'limit']) chain[method] = () => chain;
       chain.maybeSingle = () => Promise.resolve(answer);
       chain.then = (resolve: (value: Canned) => unknown) => resolve(answer);
       return chain;

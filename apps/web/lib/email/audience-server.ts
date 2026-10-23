@@ -96,7 +96,12 @@ async function readTeamFacts(admin: SupabaseClient) {
         .range(from, to)
     ),
     readAll<{ owner_user_id: string }>((from, to) =>
-      admin.from('releases').select('owner_user_id').order('id', { ascending: true }).range(from, to)
+      admin
+        .from('releases')
+        .select('owner_user_id')
+        .is('deleted_at', null)
+        .order('id', { ascending: true })
+        .range(from, to)
     ),
   ]);
 

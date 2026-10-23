@@ -117,6 +117,7 @@ async function loadCredits(
     const { data: releaseRows, error } = await admin
       .from('releases')
       .select('id, artwork_asset_id, release_date, metadata')
+      .is('deleted_at', null)
       .in('id', [...ids].slice(0, 300));
     if (error || !releaseRows) return { releases: 0, credits: [] };
     const releases = releaseRows

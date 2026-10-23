@@ -88,6 +88,7 @@ async function loadReleaseRow(
     .from('releases')
     .select('id,owner_user_id,title,artist_name,release_date,release_type,release_context,metadata')
     .eq('id', releaseId)
+    .is('deleted_at', null)
     .maybeSingle();
   if (error || !data) return null;
   return data as PlannerReleaseRow;

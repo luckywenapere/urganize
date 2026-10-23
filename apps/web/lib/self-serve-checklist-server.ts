@@ -52,6 +52,7 @@ export async function loadChecklistTeam(admin: Admin, ownerUserId: string): Prom
       .from('releases')
       .select('id,title,release_date,artwork_asset_id,metadata,created_at')
       .eq('owner_user_id', ownerUserId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(50),
     admin.from('workspace_members').select('user_id,status').eq('workspace_id', team.id).neq('status', 'removed'),

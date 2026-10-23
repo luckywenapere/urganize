@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
     const { data: releaseRows } = await admin
       .from('releases')
       .select('id,owner_user_id,artist_id,title')
+      .is('deleted_at', null)
       .in('id', releaseIds);
     for (const row of (releaseRows || []) as Array<Record<string, unknown>>) {
       releases.set(String(row.id), {

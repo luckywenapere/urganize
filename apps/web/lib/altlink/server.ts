@@ -82,6 +82,7 @@ export async function loadSmartLinkFacts(
       .from('releases')
       .select('id,title,artist_name,release_date,owner_user_id,artwork_asset_id,metadata,archived_at,status,release_type')
       .eq('id', releaseId)
+      .is('deleted_at', null)
       .maybeSingle(),
     admin.from('release_metadata').select('upc,isrc').eq('release_id', releaseId).maybeSingle(),
     admin

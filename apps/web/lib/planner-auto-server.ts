@@ -47,6 +47,7 @@ export async function claimPlannerAuto(
     .select(RELEASE_COLUMNS)
     .eq('id', releaseId)
     .eq('owner_user_id', ownerUserId)
+    .is('deleted_at', null)
     .maybeSingle();
   if (error || !data) return null;
   const row = data as PlannerReleaseRow;

@@ -116,6 +116,7 @@ export async function loadDirectoryGrowth(
               .from('releases')
               .select('owner_user_id, created_at, metadata')
               .in('owner_user_id', group)
+              .is('deleted_at', null)
               .order('created_at', { ascending: true })
               .order('id', { ascending: true })
               .range(from, to),

@@ -76,6 +76,7 @@ export async function loadDeliveryScan(
       .from(RELEASES_TABLE)
       .select('id, title, owner_user_id, release_date, status')
       .order('created_at', { ascending: false })
+      .is('deleted_at', null)
       .limit(RELEASE_SCAN_LIMIT);
 
     if (options.ownerUserId) {

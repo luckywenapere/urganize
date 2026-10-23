@@ -258,6 +258,7 @@ export async function ensureEditorialPitchTask(
     .from(RELEASES_TABLE)
     .select('id,owner_user_id,release_date,status,metadata,updated_at')
     .eq('id', releaseId)
+    .is('deleted_at', null)
     .maybeSingle();
   if (releaseResult.error || !releaseResult.data) return { outcome: 'skipped' };
   const release = releaseResult.data as ReleaseRow;
@@ -465,7 +466,8 @@ export async function runEditorialPitchReminderSweep(
     const releasesResult = await admin
       .from(RELEASES_TABLE)
       .select('id,title,release_date,owner_user_id,status,metadata')
-      .in('id', releaseIds);
+      .in('id', releaseIds)
+      .is('deleted_at', null);
     if (releasesResult.error || !Array.isArray(releasesResult.data)) return summary;
     const releases = new Map(
       (releasesResult.data as SweepReleaseRow[]).map((release) => [release.id, release])

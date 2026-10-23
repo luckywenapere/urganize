@@ -1280,9 +1280,11 @@ export function ChappiConversation({
    * know whether the server ran the action, and quietly routing to the local
    * intent-router would be a lie either way.
    */
-  const handleApproveConfirmation = async () => {
+  const handleApproveConfirmation = async (extraArgs?: Record<string, unknown>) => {
     if (!pendingConfirmation || isThinking) return;
-    const approved = pendingConfirmation;
+    const approved = extraArgs
+      ? { ...pendingConfirmation, args: { ...pendingConfirmation.args, ...extraArgs } }
+      : pendingConfirmation;
     captureAnalyticsEvent({
       name: 'urgans_confirmation',
       properties: { action: 'approved', tool: approved.toolName },
@@ -1742,7 +1744,7 @@ export function ChappiConversation({
             retryMessageId={canRetry ? lastMessage?.id ?? null : null}
             onRetry={handleRetry}
             pendingConfirmation={pendingConfirmation}
-            onApproveConfirmation={() => void handleApproveConfirmation()}
+            onApproveConfirmation={(extraArgs) => void handleApproveConfirmation(extraArgs)}
             onCancelConfirmation={handleCancelConfirmation}
             coverArtUpload={
               coverArtRelease
@@ -1836,7 +1838,7 @@ type TranscriptProps = {
   onRetry: () => void;
   /** A gated action the model proposed and nobody has approved yet. */
   pendingConfirmation: ChappiPendingConfirmation | null;
-  onApproveConfirmation: () => void;
+  onApproveConfirmation: (extraArgs?: Record<string, unknown>) => void;
   onCancelConfirmation: () => void;
   /** A cover art picker the assistant put in the log; null when there isn't one. */
   coverArtUpload: { releaseId: string; releaseTitle: string } | null;

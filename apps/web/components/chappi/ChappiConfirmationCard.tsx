@@ -1,13 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import { AlertTriangle, Info, Loader2 } from '@/components/icons';
 import { Button } from '@urganize/ui';
 import { confirmationTone } from '@/lib/chappi/confirmation-tone';
 import type { ChappiPendingConfirmation } from '@/lib/chappi/types';
+import { DELETE_CONFIRM_WORD, matchesDeleteConfirmation } from '@/lib/rollout-trash';
 
 type ChappiConfirmationCardProps = {
   pending: ChappiPendingConfirmation;
-  onApprove: () => void;
+  /** `extraArgs` carries what the user typed, for cards that ask for it. */
+  onApprove: (extraArgs?: Record<string, unknown>) => void;
   onCancel: () => void;
   isBusy: boolean;
 };
@@ -31,6 +34,9 @@ export function ChappiConfirmationCard({
   isBusy,
 }: ChappiConfirmationCardProps) {
   const danger = confirmationTone(pending.toolName) === 'danger';
+  const typed = pending.typedConfirmation;
+  const [confirmation, setConfirmation] = useState('');
+  const confirmed = !typed || matchesDeleteConfirmation(confirmation, typed.phrase);
 
   return (
     <div
@@ -53,6 +59,30 @@ export function ChappiConfirmationCard({
           {pending.detail ? (
             <p className="mt-1.5 text-sm leading-6 text-content-secondary">{pending.detail}</p>
           ) : null}
+          {typed ? (
+            <div className="mt-3">
+              <label
+                htmlFor="urgans-delete-confirmation"
+                className="block text-[13px] leading-5 text-content-secondary"
+              >
+                Type <span className="font-mono font-bold text-content-primary">{typed.phrase}</span> or{' '}
+                <span className="font-mono font-bold text-content-primary">{DELETE_CONFIRM_WORD}</span> to confirm
+              </label>
+              <input
+                id="urgans-delete-confirmation"
+                type="text"
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.target.value)}
+                disabled={isBusy}
+                autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder={typed.phrase}
+                className="mt-1.5 min-h-[44px] w-full border border-stroke-control bg-bg-base px-3 text-[15px] text-content-primary outline-none placeholder:text-content-tertiary focus:border-brand-primary"
+              />
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -63,8 +93,8 @@ export function ChappiConfirmationCard({
         <Button
           type="button"
           variant={danger ? 'danger' : 'primary'}
-          onClick={onApprove}
-          disabled={isBusy}
+          onClick={() => onApprove(typed ? { confirmation } : undefined)}
+          disabled={isBusy || !confirmed}
           isLoading={isBusy}
           leftIcon={isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
         >

@@ -29,6 +29,7 @@ export class ReleaseService {
         'id,owner_user_id,title,artist_id,artist_name,release_type,release_date,description,status,state,readiness_score,metadata,artwork_asset_id,created_at,updated_at'
       )
       .in('owner_user_id', ownerIds)
+      .is('deleted_at', null)
       .order('release_date', { ascending: true, nullsFirst: false });
 
     if (error) throw error;

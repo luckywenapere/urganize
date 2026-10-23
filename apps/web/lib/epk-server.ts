@@ -83,6 +83,7 @@ export async function resolveEpkSuccessorPath(token: string): Promise<string | n
       .from('releases')
       .select('artist_id')
       .eq('id', String(epk.release_id))
+      .is('deleted_at', null)
       .maybeSingle();
     if (!release?.artist_id) return null;
 
@@ -133,6 +134,7 @@ export async function loadPublicEpk(token: string): Promise<PublicEpk | null> {
         'id,owner_user_id,title,artist_name,release_type,release_date,description,artwork_asset_id'
       )
       .eq('id', String(epk.release_id))
+      .is('deleted_at', null)
       .maybeSingle();
 
     if (releaseError || !release) return null;

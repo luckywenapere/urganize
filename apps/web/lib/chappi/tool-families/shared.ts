@@ -65,7 +65,15 @@ export type ToolInputSchema = {
  * correct the arguments and propose again (e.g. "that release has no date yet").
  */
 export type ChappiConfirmOutcome =
-  | { ok: true; title: string; detail?: string; confirmLabel: string }
+  | {
+      ok: true;
+      title: string;
+      detail?: string;
+      confirmLabel: string;
+      /** The card makes the user type this phrase (or DELETE) before the button
+       * works, and sends what they typed as args.confirmation. */
+      typedConfirmation?: { phrase: string };
+    }
   | { ok: false; summary: string };
 
 export type ChappiTool = {

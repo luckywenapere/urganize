@@ -256,6 +256,7 @@ async function verifyReleaseOwnership(
       .select('id')
       .eq('id', releaseId)
       .eq('owner_user_id', userId)
+      .is('deleted_at', null)
       .maybeSingle();
     if (result.error || !result.data) return null;
     return releaseId;

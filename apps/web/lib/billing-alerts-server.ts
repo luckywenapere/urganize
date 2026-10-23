@@ -106,14 +106,17 @@ export async function buildTeamAlertContext(
       let releaseQuery = admin
         .from('releases')
         .select('id', { count: 'exact', head: true })
-        .eq('owner_user_id', workspace.owner_id);
+        .eq('owner_user_id', workspace.owner_id)
+        .is('deleted_at', null);
       if (since) releaseQuery = releaseQuery.gte('created_at', since);
       const releaseCount = await releaseQuery;
       base.releasesDuringTrial = releaseCount.error ? null : (releaseCount.count ?? 0);
 
       let taskQuery = admin
         .from('tasks')
-        .select('id', { count: 'exact', head: true })
+        // Inner join on the rollout so tasks of a rollout in Trash do not count.
+        .select('id, releases!inner(deleted_at)', { count: 'exact', head: true })
+        .is('releases.deleted_at', null)
         .eq('owner_user_id', workspace.owner_id);
       if (since) taskQuery = taskQuery.gte('created_at', since);
       const taskCount = await taskQuery;

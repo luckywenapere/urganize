@@ -228,6 +228,7 @@ const resolveExistingReleaseId = async (
     .select('id')
     .eq('id', normalizedReleaseId)
     .eq('owner_user_id', userId)
+    .is('deleted_at', null)
     .maybeSingle();
 
   if (currentReleaseResult.error || !currentReleaseResult.data?.id) {
@@ -536,6 +537,7 @@ export async function PATCH(request: NextRequest) {
         .select('id')
         .eq('id', normalizedReleaseId)
         .eq('owner_user_id', auth.user.id)
+        .is('deleted_at', null)
         .maybeSingle();
 
       if (releaseResult.error) {

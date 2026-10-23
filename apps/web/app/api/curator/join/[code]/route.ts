@@ -280,7 +280,8 @@ async function hasTeamFootprint(
   const { count: releaseCount, error: releaseError } = await adminClient
     .from('releases')
     .select('id', { count: 'exact', head: true })
-    .eq('owner_user_id', userId);
+    .eq('owner_user_id', userId)
+    .is('deleted_at', null);
 
   if (releaseError) {
     return {

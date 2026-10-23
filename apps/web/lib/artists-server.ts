@@ -530,7 +530,7 @@ export function describeArtistDeletionBlock(
     return `This artist has ${releases} ${releases === 1 ? 'rollout' : 'rollouts'} and ${scopedMembers} ${scopedMembers === 1 ? 'person' : 'people'} who can only see them. Move ${releases === 1 ? 'it' : 'them'} and change that access first.`;
   }
   if (releases > 0) {
-    return `This artist has ${releases} ${releases === 1 ? 'rollout' : 'rollouts'}. Move ${releases === 1 ? 'it' : 'them'} to another artist first, or archive ${releases === 1 ? 'it' : 'them'}.`;
+    return `This artist has ${releases} ${releases === 1 ? 'rollout' : 'rollouts'}. Move ${releases === 1 ? 'it' : 'them'} to another artist first, or archive ${releases === 1 ? 'it' : 'them'}. Rollouts in Trash count until they are deleted forever.`;
   }
   if (scopedMembers > 0) {
     return `${scopedMembers} ${scopedMembers === 1 ? 'person' : 'people'} can only see this artist. Change their access first, or they will start seeing every rollout.`;

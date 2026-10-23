@@ -15,6 +15,7 @@ import { runWorkRequestExpirySweep } from '@/lib/work-request-expiry-server';
 import { runCreditProfileSweepIfEnabled } from '@/lib/claim-sweep-server';
 import { runClaimAutoEmailSweep } from '@/lib/claim-auto-email-server';
 import { runOnTheRiseSweep } from '@/lib/featured-shelves-server';
+import { purgeExpiredReleases } from '@/lib/rollout-trash-server';
 
 // Scheduled sweep — see apps/web/vercel.json for the cron schedule. Vercel
 // Cron automatically sends `Authorization: Bearer ${CRON_SECRET}` when that
@@ -145,8 +146,17 @@ export async function GET(request: NextRequest) {
   // nothing shows while the page is dark. Never throws.
   const onTheRiseSweep = await runOnTheRiseSweep(adminClient);
 
+  // Trash purge (2026-10-23): a rollout deleted more than 30 days ago is removed
+  // for good. Another passenger, for the same reason (two schedule slots, one run
+  // a day). Idempotent, and a failure here must not take the sweeps above down.
+  const trashPurge = await purgeExpiredReleases(adminClient).catch((error: unknown) => {
+    console.error('[cron] trash purge failed:', error);
+    return { purged: 0, failed: -1 };
+  });
+
   return NextResponse.json({
     ok: true,
+    trashPurge,
     trialSweep,
     directorySweep,
     kitSnapshotSweep,

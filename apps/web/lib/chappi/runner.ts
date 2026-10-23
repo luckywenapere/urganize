@@ -691,6 +691,7 @@ export async function runChappiAgent(params: {
                 title: outcome.title,
                 detail: outcome.detail,
                 confirmLabel: outcome.confirmLabel,
+                ...(outcome.typedConfirmation ? { typedConfirmation: outcome.typedConfirmation } : {}),
               };
               result = { ok: true, summary: PROPOSED_NOT_EXECUTED };
             } else {

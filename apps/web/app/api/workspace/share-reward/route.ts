@@ -79,6 +79,7 @@ async function hasRealRollout(admin: SupabaseClient, workspaceId: string, ownerI
     .from('releases')
     .select('metadata')
     .in('owner_user_id', ids)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(RELEASE_SCAN);
   if (error) throw error;

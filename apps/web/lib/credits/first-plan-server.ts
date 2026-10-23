@@ -23,6 +23,7 @@ export async function readFirstPlanFacts(
         .from('releases')
         .select('id', { count: 'exact', head: true })
         .eq('owner_user_id', ownerUserId)
+        .is('deleted_at', null)
         .eq('metadata->>planned_by_urgans', 'true'),
     ]);
     return {

@@ -86,20 +86,21 @@ export async function fetchReleaseTaskCount(
 }
 
 /**
- * The sentence under "Delete <title>?". Only a KNOWN zero may leave the
+ * The sentence under "Delete <title>?" (a delete moves the rollout to Trash for
+ * 30 days, see lib/rollout-trash.ts). Only a KNOWN zero may leave the
  * activities out; loading and unknown both say activities go with it, so the
  * dialog can never read as "this rollout is empty" when it is not.
  */
 export function describeReleaseDeletion(state: ReleaseTaskCountState): string {
-  const tail = 'This can\u2019t be undone.';
+  const tail = 'Nothing is lost for 30 days.';
   if (state.status === 'known') {
     if (state.count === 0) {
-      return `This permanently deletes the rollout and all attached files. ${tail}`;
+      return `It moves to Trash. ${tail}`;
     }
     const noun = state.count === 1 ? 'activity' : 'activities';
-    return `This permanently deletes the rollout, its ${state.count} ${noun}, and all attached files. ${tail}`;
+    return `It moves to Trash with its ${state.count} ${noun}. ${tail}`;
   }
-  return `This permanently deletes the rollout, all of its activities, and all attached files. ${tail}`;
+  return `It moves to Trash with all of its activities. ${tail}`;
 }
 
 /** The small line under the sentence while the count is not settled. */

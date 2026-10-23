@@ -49,6 +49,7 @@ function fakeClient(tables: Tables, authUsers: AuthUser[] | 'error' = []): Supab
         order: () => builder,
         gte: () => builder,
         not: () => builder,
+        is: () => builder,
         eq: () => builder,
         in: (column: string, values: unknown[]) => {
           if (column === 'id') inFilter = { column, values };

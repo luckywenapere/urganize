@@ -40,7 +40,7 @@ export type ReleaseAccessResult =
   | { release: ReleaseAccessSummary };
 
 const RELEASE_ACCESS_COLUMNS =
-  'id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,artwork_asset_id,created_at,updated_at';
+  'id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,artwork_asset_id,created_at,updated_at,deleted_at';
 
 async function ensureReleaseAccess(
   adminClient: SupabaseClient | null,
@@ -72,7 +72,8 @@ async function ensureReleaseAccess(
     };
   }
 
-  if (!release) {
+  // A rollout in Trash is gone as far as every scene route is concerned.
+  if (!release || (release as { deleted_at?: string | null }).deleted_at) {
     return {
       error: NextResponse.json({ error: RELEASE_NOT_FOUND_MESSAGE }, { status: 404 }),
     };

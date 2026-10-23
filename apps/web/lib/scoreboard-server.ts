@@ -113,6 +113,7 @@ export async function loadScoreboardInput(
           client
             .from('releases')
             .select('id, owner_user_id, artist_id, created_at, updated_at, release_date, status, metadata')
+            .is('deleted_at', null)
             .order('created_at', { ascending: true })
             .range(from, to),
         TABLE_CAP
@@ -216,9 +217,13 @@ export async function loadScoreboardInput(
     if (workspaceId) workspaceByArtist.set(String(row.id), workspaceId);
   }
 
+  // Tasks of a rollout in Trash stay in the table; only live rollouts' tasks count.
+  const liveReleaseIds = new Set(releases.rows.map((row) => String(row.id)));
+  const liveTaskRows = tasks.rows.filter((row) => liveReleaseIds.has(String(row.release_id)));
+
   type TaskTotals = { count: number; done: number; lastDoneAt: number | null };
   const taskTotals = new Map<string, TaskTotals>();
-  for (const row of tasks.rows) {
+  for (const row of liveTaskRows) {
     const releaseId = str(row.release_id);
     if (!releaseId) continue;
     // Cancelled work is out of the count (URG-389): dropped is neither done nor owed.
@@ -387,7 +392,7 @@ export async function loadScoreboardInput(
     extras: {
       latestEvents: activity.latest,
       releaseRows: releases.rows,
-      taskRows: tasks.rows,
+      taskRows: liveTaskRows,
       ownerEmails,
       ownerNames,
       emailByUserId,

@@ -36,6 +36,7 @@ function fakeClient(tables: Tables): SupabaseClient {
         order: () => builder,
         gte: () => builder,
         not: () => builder,
+        is: () => builder,
         eq: () => builder,
         in: (column: string, values: unknown[]) => {
           // billing_events filters on `type`; the rows below carry none, so

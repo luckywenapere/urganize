@@ -148,8 +148,8 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   {
     segment: 'security',
     section: 'delete-rollouts',
-    label: 'Delete rollouts',
-    keywords: ['delete', 'remove', 'release', 'releases', 'danger'],
+    label: 'Delete rollout',
+    keywords: ['delete', 'remove', 'release', 'releases', 'danger', 'trash', 'restore', 'recover'],
   },
   {
     segment: 'security',

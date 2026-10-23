@@ -95,6 +95,7 @@ export async function loadPressKitSources(
       .from('releases')
       .select(RELEASE_COLUMNS)
       .eq('artist_id', artistId)
+      .is('deleted_at', null)
       .order('release_date', { ascending: false, nullsFirst: false })
       .limit(SOURCE_LIMIT);
 

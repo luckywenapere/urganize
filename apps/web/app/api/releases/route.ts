@@ -274,6 +274,7 @@ export async function GET(request: NextRequest) {
     .from('releases')
     .select('id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,artwork_asset_id,created_at,updated_at')
     .in('owner_user_id', visibleOwnerIds)
+    .is('deleted_at', null)
     .order('release_date', { ascending: true, nullsFirst: false });
 
   if (releasesResult.error) {
@@ -333,7 +334,8 @@ export async function POST(request: NextRequest) {
       adminClient
         .from('releases')
         .select('id', { count: 'exact', head: true })
-        .eq('owner_user_id', auth.user.id),
+        .eq('owner_user_id', auth.user.id)
+        .is('deleted_at', null),
     ]);
     if ('error' in schemaStatus) return schemaStatus.error;
 
@@ -446,6 +448,7 @@ export async function POST(request: NextRequest) {
           .from('releases')
           .select('metadata')
           .eq('owner_user_id', auth.user.id)
+          .is('deleted_at', null)
           .limit(FIRST_RELEASE_TEST_SCAN);
         priorTestFlags =
           priorError || !Array.isArray(priorRows)

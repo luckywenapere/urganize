@@ -95,6 +95,7 @@ export async function loadPublicCreditForm(token: string): Promise<PublicCreditF
       .from('releases')
       .select('id,title,artist_name,release_date')
       .eq('id', String(link!.release_id))
+      .is('deleted_at', null)
       .maybeSingle();
 
     if (releaseError || !release) return { kind: 'missing' };

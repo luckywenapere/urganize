@@ -158,7 +158,8 @@ async function loadSweepInput(
     const result = await admin
       .from(RELEASES)
       .select('id, owner_user_id, artist_id, release_date, status, metadata')
-      .in('id', ids);
+      .in('id', ids)
+      .is('deleted_at', null);
     if (result.error) return null;
     for (const row of (result.data || []).map(asRow)) releases.set(text(row.id), row);
   }
@@ -182,7 +183,8 @@ async function loadSweepInput(
     for (const row of (result.data || []).map(asRow)) ownerWorkspace.set(text(row.owner_id), text(row.id));
   }
 
-  const credits: LoadedCredit[] = rows.map((row) => {
+  // A credit on a rollout in Trash is not in `releases` (read above with deleted_at null), so it is dropped.
+  const credits: LoadedCredit[] = rows.filter((row) => releases.has(text(row.release_id))).map((row) => {
     const release = releases.get(text(row.release_id)) ?? {};
     const ownerUserId = text(release.owner_user_id);
     return {

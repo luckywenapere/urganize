@@ -110,6 +110,7 @@ export async function loadPitchKit(
     .from(RELEASES_TABLE)
     .select('id,owner_user_id,title,artist_id,artist_name,release_date,artwork_asset_id')
     .eq('id', releaseId)
+    .is('deleted_at', null)
     .maybeSingle();
   if (releaseResult.error) return { error: 'Could not load the rollout.', status: 500 };
   if (!releaseResult.data) return { error: 'Rollout not found.', status: 404 };

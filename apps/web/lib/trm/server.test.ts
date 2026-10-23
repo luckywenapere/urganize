@@ -72,6 +72,7 @@ function query(table: string) {
     eq: (col: string, val: unknown) => (filters.push((r) => r[col] === val), builder),
     in: (col: string, vals: unknown[]) => (filters.push((r) => vals.includes(r[col])), builder),
     not: (col: string) => (filters.push((r) => r[col] !== null && r[col] !== undefined), builder),
+    is: () => builder,
     gte: () => builder,
     order: () => builder,
     limit: () => builder,

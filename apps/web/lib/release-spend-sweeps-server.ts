@@ -145,6 +145,7 @@ export async function runSpendCreditsSweep(
       const { data, error } = await admin
         .from(RELEASES_TABLE)
         .select('id, owner_user_id, metadata')
+        .is('deleted_at', null)
         .in('id', ids);
       if (error || !Array.isArray(data)) {
         console.error('[release-spend] could not read the rollouts:', error?.message);
@@ -237,6 +238,7 @@ export async function runPaybackQuestionSweep(
     const due = await admin
       .from(RELEASES_TABLE)
       .select('id, title, owner_user_id, release_date, status, metadata')
+      .is('deleted_at', null)
       .gte('release_date', range.from)
       .lte('release_date', range.to)
       .limit(1000);

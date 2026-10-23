@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
           .from('releases')
           .select('id', { count: 'exact', head: true })
           .eq('owner_user_id', ownerUserId)
+          .is('deleted_at', null)
       ),
       countRows(() =>
         adminClient

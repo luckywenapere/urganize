@@ -22,6 +22,7 @@
 // of the scheduled_notifications table not existing yet (pre-migration
 // environments no-op).
 
+import { findDeletedReleaseIds } from '@/lib/rollout-trash-server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { sendPushToUsers, type PushPayload } from '@/lib/push-server';
 import { PUSH_FLUSH_BUDGET_MS } from '@/lib/push-limits';
@@ -212,7 +213,26 @@ export async function flushDueNotifications(
       body: string;
       url: string;
     };
-    const rows = dueResult.data as DueRow[];
+    let rows = dueResult.data as DueRow[];
+
+    // A reminder about a rollout in Trash is cancelled, never sent. Release
+    // reminders carry `/dashboard?release=<id>` as their url.
+    const releaseIdOf = (row: DueRow): string | null =>
+      /^\/dashboard\?release=([0-9a-f-]{36})/i.exec(row.url || '')?.[1] ?? null;
+    const reminderReleaseIds = rows.map(releaseIdOf).filter((id): id is string => Boolean(id));
+    if (reminderReleaseIds.length > 0) {
+      const deleted = await findDeletedReleaseIds(adminClient, reminderReleaseIds);
+      if (deleted.size > 0) {
+        const dropped = rows.filter((row) => deleted.has(releaseIdOf(row) ?? ''));
+        await adminClient
+          .from(SCHEDULED_NOTIFICATIONS_TABLE)
+          .update({ canceled_at: nowIso })
+          .in('id', dropped.map((row) => row.id))
+          .is('sent_at', null);
+        rows = rows.filter((row) => !deleted.has(releaseIdOf(row) ?? ''));
+        if (rows.length === 0) return { processed: 0, delivered: 0 };
+      }
+    }
 
     const sendOne = async (row: DueRow): Promise<boolean> => {
       // Mark sent FIRST (claim) so overlapping flushers can't double-send.

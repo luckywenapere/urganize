@@ -83,6 +83,7 @@ export async function ensureReleaseOwnership(
   const { data: release, error } = await adminClient
     .from('releases')
     .select('id,owner_user_id')
+    .is('deleted_at', null)
     .eq('id', releaseId)
     .maybeSingle();
 

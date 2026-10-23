@@ -52,6 +52,7 @@ import {
 import { claimPendingWorkspaceInvite } from '@/lib/invite-claims-server';
 import { isAppAccessAllowed } from '@/lib/access-gate-server';
 import { isEditorialPitchTask, isPitchReminderType } from '@/lib/editorial-pitch';
+import { dropRowsOfDeletedReleases, findDeletedReleaseIds } from '@/lib/rollout-trash-server';
 
 export const WORKSPACES_TABLE = 'workspaces';
 export const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
@@ -1034,7 +1035,8 @@ async function resolveWorkspaceAccessContext(
     const ownReleases = await adminClient
       .from(RELEASES_TABLE)
       .select('id', { count: 'exact', head: true })
-      .eq('owner_user_id', user.id);
+      .eq('owner_user_id', user.id)
+      .is('deleted_at', null);
     if (!ownReleases.error && (ownReleases.count ?? 0) === 0) {
       primaryMembership = joinedMemberships[0];
     }
@@ -1544,17 +1546,21 @@ export async function ensureTaskAccess(
   const task = result.data as TaskRow;
 
   // Artist-scoped members only touch activities on THEIR artist's releases.
+  // A task of a rollout in Trash is gone as far as the app is concerned, so the
+  // rollout is always read here (not only for artist scopes).
   const artistScope = access.artistScopeByWorkspaceId[String(task.workspace_id || '')];
-  if (artistScope && task.release_id) {
+  if (task.release_id) {
     const releaseResult = await adminClient
       .from(RELEASES_TABLE)
-      .select('id,artist_id')
+      .select('id,artist_id,deleted_at')
       .eq('id', task.release_id)
       .maybeSingle();
-    const releaseArtistId = String(
-      (releaseResult.data as { artist_id?: unknown } | null)?.artist_id || ''
-    );
-    if (releaseArtistId !== artistScope) {
+    const releaseRow = releaseResult.data as { artist_id?: unknown; deleted_at?: unknown } | null;
+    if (releaseRow?.deleted_at) {
+      return { error: NextResponse.json({ error: 'Task not found.' }, { status: 404 }) };
+    }
+    const releaseArtistId = String(releaseRow?.artist_id || '');
+    if (artistScope && releaseArtistId !== artistScope) {
       return { error: NextResponse.json({ error: 'Task not found.' }, { status: 404 }) };
     }
   }
@@ -1677,6 +1683,7 @@ export async function resolveReleaseTaskWorkspace(
     .from(RELEASES_TABLE)
     .select('id,title,artist_name,artist_id,owner_user_id')
     .eq('id', releaseId)
+    .is('deleted_at', null)
     .maybeSingle();
 
   if (releaseResult.error || !releaseResult.data) {
@@ -2185,11 +2192,23 @@ async function sendTaskAssignedEmail(
 export async function createDueDateNotificationsForAllUsers(adminClient: SupabaseClient) {
   const result = await adminClient
     .from(TASKS_TABLE)
-    .select('id,assigned_to_user_id,due_date,status,metadata')
+    .select('id,release_id,assigned_to_user_id,due_date,status,metadata')
     .not('due_date', 'is', null)
     .not('assigned_to_user_id', 'is', null);
 
   if (result.error || !Array.isArray(result.data)) {
+    return;
+  }
+
+  // Tasks of a rollout in Trash get no reminders.
+  let sweepRows: Array<Record<string, unknown>>;
+  try {
+    sweepRows = await dropRowsOfDeletedReleases(
+      adminClient,
+      result.data as Array<Record<string, unknown>>,
+      (row) => readNullableString(row.release_id)
+    );
+  } catch {
     return;
   }
 
@@ -2209,7 +2228,7 @@ export async function createDueDateNotificationsForAllUsers(adminClient: Supabas
 
   const now = Date.now();
 
-  for (const row of result.data) {
+  for (const row of sweepRows) {
     const taskId = readString((row as { id?: string }).id);
     const assigneeUserId = readNullableString(
       (row as { assigned_to_user_id?: string }).assigned_to_user_id
@@ -2296,9 +2315,17 @@ export async function listNotifications(
     const releaseId = readString(row.release_id);
     if (taskId && releaseId) releaseIdByTaskId.set(taskId, releaseId);
   }
+  // A notification about a task in a rollout that sits in Trash is hidden.
+  const deletedReleaseIds = await findDeletedReleaseIds(adminClient, [
+    ...releaseIdByTaskId.values(),
+  ]);
+  const visibleRows = rows.filter((row) => {
+    const releaseId = releaseIdByTaskId.get(row.task_id);
+    return !(releaseId && deletedReleaseIds.has(releaseId));
+  });
   const pitchReleaseIds = [
     ...new Set(
-      rows
+      visibleRows
         .filter((row) => isPitchReminderType(row.type))
         .map((row) => releaseIdByTaskId.get(row.task_id))
         .filter((id): id is string => Boolean(id))
@@ -2344,7 +2371,7 @@ export async function listNotifications(
     });
   }
 
-  return rows.map((row) => {
+  return visibleRows.map((row) => {
     const actor = row.actor_id ? profileById.get(row.actor_id) || null : null;
     const task =
       taskById.get(row.task_id) || { title: 'Task', status: 'todo' as TaskStatus, releaseId: null };

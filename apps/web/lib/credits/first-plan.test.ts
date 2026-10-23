@@ -45,6 +45,7 @@ function fakeAdmin(counts: { plans: number | null; planned: number | null; fail?
       calls.push(entry);
       const chain = {
         select: () => chain,
+        is: () => chain,
         eq: (column: string, value: unknown) => {
           entry.filters.push([column, value]);
           return chain;

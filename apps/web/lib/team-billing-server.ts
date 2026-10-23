@@ -520,7 +520,8 @@ async function resolveTeamAccessForUser(
       const countResult = await client
         .from(RELEASES_TABLE)
         .select('id', { count: 'exact', head: true })
-        .eq('owner_user_id', userId);
+        .eq('owner_user_id', userId)
+        .is('deleted_at', null);
       ownReleaseCount = countResult.error ? null : (countResult.count ?? 0);
       if (ownReleaseCount === null) return openSnapshot();
       combined = combineTeamAccess({

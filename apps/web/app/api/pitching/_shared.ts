@@ -86,6 +86,7 @@ export async function ensureReleaseVisible(
   const { data: release, error } = await adminClient
     .from('releases')
     .select('id,owner_user_id,artist_name,title')
+    .is('deleted_at', null)
     .eq('id', releaseId)
     .maybeSingle();
 

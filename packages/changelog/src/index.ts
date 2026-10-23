@@ -41,6 +41,18 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.167.0",
+    title: "Deleted rollouts go to Trash",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 23, 2026",
+    highlights: [
+      "Deleting a rollout now moves it to Trash. You can bring it back for 30 days, with all its activities.",
+      "To delete a rollout, you type its name or DELETE first, so you can't do it by accident.",
+      "You'll find Delete rollout in the Danger zone in Settings, and Trash next to it.",
+    ],
+  },
+  {
     version: "1.166.2",
     tag: "Account",
     listed: false,

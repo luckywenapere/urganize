@@ -74,6 +74,7 @@ function makeClient(db: Db, options: { failInsertOn?: string } = {}) {
 
       const chain: Record<string, any> = {
         select: () => chain,
+        is: () => chain,
         eq: (column: string, value: unknown) => {
           filters.push((row) => pathValue(row, column) === value);
           return chain;

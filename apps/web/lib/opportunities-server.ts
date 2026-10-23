@@ -75,6 +75,7 @@ async function checkLinks(
       .from('releases')
       .select('id, artist_id')
       .eq('id', links.releaseId)
+      .is('deleted_at', null)
       .maybeSingle();
     if (error) return fail('Could not check that rollout.', 500);
     const artistId = data ? text(asRow(data).artist_id) : '';

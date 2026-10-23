@@ -15,6 +15,7 @@ import {
   isDeleteBlockedByCount,
   type ReleaseTaskCountState,
 } from '@/lib/delete-release-task-count';
+import { DELETE_CONFIRM_WORD, matchesDeleteConfirmation } from '@/lib/rollout-trash';
 
 type DeleteReleaseDialogProps = {
   open: boolean;
@@ -41,7 +42,10 @@ async function getAccessToken(): Promise<string> {
 
 /**
  * Compact destructive-action confirmation for deleting a release from the
- * workspace. Mirrors CreateReleaseModal's portal + backdrop + escape + scroll
+ * workspace. Deleting moves the rollout to Trash (30 days, see
+ * lib/rollout-trash.ts); the button stays off until the user types the rollout
+ * name or DELETE, and the API checks the same thing.
+ * Mirrors CreateReleaseModal's portal + backdrop + escape + scroll
  * lock patterns; performs its own DELETE fetch (same component-owned fetch
  * convention) and reports the result through onDeleted.
  */
@@ -53,15 +57,17 @@ export function DeleteReleaseDialog({
 }: DeleteReleaseDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState('');
+  const [confirmation, setConfirmation] = useState('');
 
-  // Reset stale error when the dialog (re)opens — render-time adjust with a
-  // prev guard (same pattern as TasksPanel's scope-change expansion) instead
-  // of an effect, so no set-state-in-effect warning.
+  // Reset stale error and typed text when the dialog (re)opens — render-time
+  // adjust with a prev guard (same pattern as TasksPanel's scope-change
+  // expansion) instead of an effect, so no set-state-in-effect warning.
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
     if (open) {
       setError('');
+      setConfirmation('');
     }
   }
 
@@ -156,7 +162,11 @@ export function DeleteReleaseDialog({
 
       const response = await fetch(`/api/releases/${release.id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ confirmation }),
       });
 
       if (!response.ok) {
@@ -171,6 +181,9 @@ export function DeleteReleaseDialog({
       setIsDeleting(false);
     }
   };
+
+  const typed = confirmation.trim();
+  const confirmed = matchesDeleteConfirmation(confirmation, release.title);
 
   const dialog = (
     <div
@@ -217,6 +230,37 @@ export function DeleteReleaseDialog({
               {describeTaskCountStatus(taskCount)}
             </p>
           ) : null}
+
+          <label
+            htmlFor="delete-release-confirmation"
+            className="mt-4 block text-[13px] leading-5 text-content-secondary"
+          >
+            Type <span className="font-mono font-bold text-content-primary">{release.title}</span> or{' '}
+            <span className="font-mono font-bold text-content-primary">{DELETE_CONFIRM_WORD}</span> to confirm
+          </label>
+          <input
+            id="delete-release-confirmation"
+            type="text"
+            value={confirmation}
+            onChange={(event) => setConfirmation(event.target.value)}
+            disabled={isDeleting}
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder={release.title}
+            aria-invalid={typed.length > 0 && !confirmed}
+            className={`mt-1.5 min-h-[44px] w-full border bg-bg-base px-3 text-[15px] text-content-primary outline-none placeholder:text-content-tertiary focus:border-brand-primary ${
+              confirmed
+                ? 'border-brand-primary'
+                : typed.length > 0
+                  ? 'border-status-error/40'
+                  : 'border-stroke-control'
+            }`}
+          />
+          {typed.length > 0 && !confirmed ? (
+            <p className="mt-1.5 text-xs text-content-tertiary">Keep typing.</p>
+          ) : null}
         </div>
 
         {error ? (
@@ -234,7 +278,7 @@ export function DeleteReleaseDialog({
             type="button"
             variant="danger"
             onClick={() => void handleDelete()}
-            disabled={isDeleting || isDeleteBlockedByCount(taskCount)}
+            disabled={isDeleting || isDeleteBlockedByCount(taskCount) || !confirmed}
             isLoading={isDeleting}
             leftIcon={isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
           >

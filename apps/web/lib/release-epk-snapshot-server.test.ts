@@ -14,7 +14,7 @@ function fakeAdmin(tables: Record<string, Canned>, upsertError = false) {
   const client = {
     from(table: string) {
       const chain: Record<string, unknown> = {};
-      for (const method of ['select', 'order', 'limit', 'in', 'not', 'eq']) {
+      for (const method of ['select', 'order', 'limit', 'in', 'not', 'eq', 'is']) {
         chain[method] = () => chain;
       }
       let isUpsert = false;

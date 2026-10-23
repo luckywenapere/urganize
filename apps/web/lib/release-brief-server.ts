@@ -542,6 +542,7 @@ export async function loadPublicBrief(token: string): Promise<PublicBriefPayload
         .from('releases')
         .select('id,title,artist_name,release_date,archived_at')
         .eq('id', releaseId)
+        .is('deleted_at', null)
         .maybeSingle(),
       readReferences(admin, releaseId),
       readTasks(admin, releaseId),

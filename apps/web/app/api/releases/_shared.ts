@@ -157,7 +157,7 @@ export async function ensureReleaseOwnership(
 
   const { data: release, error } = await adminClient
     .from('releases')
-    .select('id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,created_at,updated_at')
+    .select('id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,created_at,updated_at,deleted_at')
     .eq('id', releaseId)
     .maybeSingle();
 
@@ -169,7 +169,8 @@ export async function ensureReleaseOwnership(
   }
 
   const ownerId = String(release?.owner_user_id || '');
-  if (!release || ownerId !== userId) {
+  // Trash is reached only through the trash routes, never through this check.
+  if (!release || ownerId !== userId || (release as { deleted_at?: string | null }).deleted_at) {
     return { error: NextResponse.json({ error: 'Rollout not found.' }, { status: 404 }) };
   }
 
