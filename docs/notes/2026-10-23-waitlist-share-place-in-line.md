@@ -1,0 +1,10 @@
+# Waitlist share: place in line, 3 friends lets you in (2026-10-23, v1.166.0)
+
+Founder call: the "You're on the list" wall was blank. A held account (`profiles.access_approved_at` null, `/locked?reason=not_approved`) now sees its place in line, a progress bar, its personal link and share buttons (WhatsApp, X, Telegram, LinkedIn, Facebook), plus a footer with Urganize's own socials, Terms and Privacy. Mock: `docs/mocks/held-account-share/`. No flag, live at merge.
+
+- **Rule:** each account that signs up through `/r/<code>` is one friend; 3 friends approves the sharer (`approveUser(..., 'friends')`, source `friends`). A friend stays held and gets a link of their own. Constants and copy: `lib/waitlist-share.ts` (`FRIENDS_NEEDED`).
+- **Place:** SQL function `waitlist_place_in_line(uid)`: held accounts ordered by friends (most first), then sign-up time. Measured 2026-10-23: only 2 held accounts, so places are small numbers. The waitlist on urganize.app is a separate Neon table and is NOT in this count.
+- **Tables** (migration `20261023120000_waitlist_share.sql`, applied 2026-10-23, new tables only, RLS on, service-role routes only): `waitlist_share_codes` (one code per account), `waitlist_referrals` (`referred_id` primary key: a friend is credited once, ever).
+- **Flow:** `/r/<code>` saves the code (`markFriendIntent`, localStorage, 14 days) and counts as a pending intent so the closed sign-up gate lets the wizard start. `redeemPendingAccess` posts it as `friendCode` to `POST /api/access/redeem`, which calls `recordFriend`. It counts only a held account that is not the sharer and not already credited. `GET /api/waitlist/share` makes the code on first ask.
+- **Email:** `waitlist_joined` template, sent once, when the code is first made (place + share button). Footer socials come from the shared email layout.
+- **Known gaps:** a friend's code rides localStorage only, not sign-up metadata, so an email-confirmation link opened on another device loses it (confirmation is off in production). Throwaway emails can farm friends; there is no payment or phone check. The screen has not been seen rendered with a real held account.

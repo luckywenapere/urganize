@@ -11,6 +11,7 @@
 
 import { looksLikeAccessCode, ACCESS_INVITE_TTL_DAYS } from './access-gate';
 import { readWelcomeIntent } from './welcome-intent';
+import { looksLikeShareCode, normalizeShareCode } from './waitlist-share';
 
 const ACCESS_INTENT_KEY = 'urganize.access.code';
 
@@ -54,9 +55,52 @@ export function clearAccessIntent(): void {
   }
 }
 
+// A friend link (/r/<code>, 2026-10-23): the waitlist share link. Same keeping
+// rules as the invite code above. It does not let anyone in by itself: it only
+// lets the sign-up start and credits the sharer once the account exists.
+const FRIEND_INTENT_KEY = 'urganize.friend.code';
+
+export function markFriendIntent(code: string): void {
+  if (typeof window === 'undefined' || !looksLikeShareCode(code)) return;
+  try {
+    const value: StoredIntent = { code: normalizeShareCode(code), savedAt: Date.now() };
+    window.localStorage.setItem(FRIEND_INTENT_KEY, JSON.stringify(value));
+  } catch {
+    // Blocked or full. They tap the link again.
+  }
+}
+
+export function readFriendIntent(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(FRIEND_INTENT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<StoredIntent>;
+    const fresh =
+      typeof parsed.savedAt === 'number' &&
+      Date.now() - parsed.savedAt < ACCESS_INVITE_TTL_DAYS * 24 * 60 * 60 * 1000;
+    if (!fresh || !looksLikeShareCode(parsed.code)) {
+      window.localStorage.removeItem(FRIEND_INTENT_KEY);
+      return null;
+    }
+    return parsed.code;
+  } catch {
+    return null;
+  }
+}
+
+export function clearFriendIntent(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(FRIEND_INTENT_KEY);
+  } catch {
+    // Already gone.
+  }
+}
+
 /** True when this browser carries something that may let its next account in. */
 export function hasPendingAccessIntent(): boolean {
-  return Boolean(readAccessIntent() || readWelcomeIntent());
+  return Boolean(readAccessIntent() || readWelcomeIntent() || readFriendIntent());
 }
 
 /** `answered` is false when the server gave no verdict (offline, 5xx). */
@@ -98,6 +142,7 @@ export async function redeemPendingAccess(accessToken: string): Promise<RedeemAn
   const fromToken = accessIntentFromToken(accessToken);
   const code = readAccessIntent() ?? fromToken.code;
   const welcomeToken = readWelcomeIntent() ?? fromToken.welcomeToken;
+  const friendCode = readFriendIntent();
   try {
     const response = await fetch('/api/access/redeem', {
       method: 'POST',
@@ -105,9 +150,12 @@ export async function redeemPendingAccess(accessToken: string): Promise<RedeemAn
       body: JSON.stringify({
         ...(code ? { code } : {}),
         ...(welcomeToken ? { welcomeToken } : {}),
+        ...(friendCode ? { friendCode } : {}),
       }),
     });
     if (!response.ok) return { approved: true, answered: false };
+    // The server has answered, and a friend code counts at most once per account.
+    if (friendCode) clearFriendIntent();
     const payload = (await response.json().catch(() => ({}))) as Partial<RedeemAnswer>;
     if (code && payload.outcome && payload.outcome !== 'error') clearAccessIntent();
     return { approved: payload.approved !== false, answered: true, outcome: payload.outcome };

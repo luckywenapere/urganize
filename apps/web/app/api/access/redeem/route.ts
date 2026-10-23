@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, getAuthenticatedUser } from '@/app/api/_shared/auth';
+import { recordFriend } from '@/lib/waitlist-share-server';
 import { approveUser, getAppAccess, redeemAccessCode } from '@/lib/access-gate-server';
 import { openClaimLink } from '@/lib/seeding-server';
 
@@ -45,6 +46,12 @@ export async function POST(request: NextRequest) {
     } catch {
       // A bad token approves nothing; the answer below says so.
     }
+  }
+
+  // A friend link (/r/<code>): credit this account to the sharer. Counts only a
+  // held account, so it never changes who is let in here.
+  if (typeof body.friendCode === 'string' && body.friendCode.trim()) {
+    await recordFriend(admin, auth.user.id, body.friendCode.trim());
   }
 
   const access = await getAppAccess(auth.user.id, auth.user.email, admin);

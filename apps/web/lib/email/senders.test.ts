@@ -37,6 +37,7 @@ const EXPECTED: Record<EmailTemplateId, { from: string; replyTo: string | null }
   pay_link: BILLING,
   team_admin_notice: BILLING,
   referral_reward: BILLING,
+  waitlist_joined: NOTIFY,
   welcome: FOUNDER,
   onboarding_step: FOUNDER,
   self_serve_nudge: FOUNDER,

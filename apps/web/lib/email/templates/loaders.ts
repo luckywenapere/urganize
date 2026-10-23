@@ -110,6 +110,13 @@ const LOADERS: LoaderMap = {
       subject: (p) => m.referralRewardSubject(p.credits),
     };
   },
+  waitlist_joined: async () => {
+    const m = await import('./WaitlistJoinedEmail');
+    return {
+      element: (p) => createElement(m.WaitlistJoinedEmail, p),
+      subject: (p) => m.waitlistJoinedSubject(p.place),
+    };
+  },
   founder_billing_alert: async () => {
     const [m, alerts] = await Promise.all([
       import('./FounderBillingAlertEmail'),

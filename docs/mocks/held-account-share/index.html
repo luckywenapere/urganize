@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Held account: place in line (mock)</title>
+<style>
+:root{--bg:#161616;--card:#222;--line:#333;--text:#f5f5f5;--mute:#8d8d8d;--brand:#e8c468}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:32px 20px}
+.logo{font-weight:700;letter-spacing:.04em}
+.wrap{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;max-width:980px;width:100%}
+.pass{background:linear-gradient(135deg,#2c2c2c,#1d1d1d);border:1px solid var(--line);border-radius:28px;padding:24px;display:flex;gap:22px;align-items:flex-end}
+.av{width:130px;height:130px;border-radius:18px;background:#3a3a3a;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:700;color:#bbb;flex:none}
+.pass h2{margin:0 0 6px;font-size:26px}.pass small{color:#bbb;font-size:11px;letter-spacing:.08em;text-transform:uppercase}.pass .since{color:#666;margin-top:34px;display:block}
+.right{text-align:center}.lbl{color:var(--mute);letter-spacing:.06em;text-transform:uppercase;font-size:15px}
+.num{font-size:60px;font-weight:700;margin:8px 0 26px}
+.prog{display:flex;gap:8px;justify-content:center;margin:14px 0 22px}.prog i{width:54px;height:8px;border-radius:4px;background:#333}.prog i.on{background:var(--brand)}
+.link{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);border-radius:999px;padding:16px 24px;font-size:14px;letter-spacing:.03em;text-transform:uppercase}
+.btn{background:#fff;color:#111;border:0;border-radius:999px;padding:16px 36px;font-weight:600;font-size:16px}
+.out{color:var(--mute);font-size:13px;text-decoration:underline}
+.note{color:var(--mute);font-size:12px;max-width:560px;text-align:center}
+@media(max-width:760px){.wrap{grid-template-columns:1fr;gap:28px}.pass{flex-direction:column;align-items:flex-start}.num{font-size:48px}}
+</style></head><body>
+<div class="logo">URGANIZE</div>
+<div class="wrap">
+  <div class="pass"><div class="av">OW</div><div><h2>Oyin Wenapere</h2><small>#9,266 &nbsp;·&nbsp; On the list</small><small class="since">Joined 23 Oct 2026</small></div></div>
+  <div class="right">
+    <div class="lbl">Your place in line</div>
+    <div class="num"># 9,266</div>
+    <div class="lbl">Bring 3 friends to get in early</div>
+    <div class="prog"><i class="on"></i><i></i><i></i></div>
+    <div class="note" style="margin:-8px 0 18px">1 of 3 joined. Each friend who joins moves you up.</div>
+    <div class="link"><span>app.urganize.app/r/OYIN4K9Q</span><span>⧉</span></div>
+  </div>
+</div>
+<button class="btn">Share on WhatsApp</button>
+<a class="out">Copy link</a> &nbsp; <a class="out">Sign out</a>
+<div class="note">Mock. Number and bar are placeholders.</div>
+</body></html>

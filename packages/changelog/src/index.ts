@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.166.0",
+    title: "Move up the waitlist by sharing",
+    tag: "Account",
+    listed: false,
+    date: "October 23, 2026",
+    highlights: [
+      "While you wait to get in, you now see your place in line and a link to share. Bring 3 friends and you get in early.",
+    ],
+  },
+  {
     version: "1.165.1",
     tag: "Account",
     listed: false,

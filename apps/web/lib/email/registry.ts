@@ -182,6 +182,16 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     fromAddress: 'billing@urganize.app',
     replyTo: 'support@urganize.app',
   },
+  waitlist_joined: {
+    id: 'waitlist_joined',
+    category: 'transactional',
+    name: 'Waitlist joined',
+    description: 'Tells a held account its place in line and asks it to share its link. Sent once.',
+    placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: 'support@urganize.app',
+  },
   team_admin_notice: {
     id: 'team_admin_notice',
     category: 'transactional',

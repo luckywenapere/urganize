@@ -42,7 +42,9 @@ export type AccessSource =
   | 'founder_seed'
   | 'allowlist'
   /** Paid at self-serve checkout (2026-10-22): paying skips the waitlist. */
-  | 'paid_self_serve';
+  | 'paid_self_serve'
+  /** Three friends joined through the waitlist share link (2026-10-23). */
+  | 'friends';
 
 export function normalizeAccessEmail(value: unknown): string {
   if (typeof value !== 'string') return '';
