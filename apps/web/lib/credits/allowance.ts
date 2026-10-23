@@ -19,7 +19,7 @@ import { NAIRA_PER_CREDIT_CREDITS_ONLY, NAIRA_PER_CREDIT_SUBSCRIBER } from './pr
  * Plan allowances are sized so a team's whole allowance costs about 15% of what it
  * pays, at the 3x markup (pricing.ts), assuming 1,500 naira to the dollar:
  *
- *   solo      150  (8,000 naira a month since 2026-10-22; sized at 5,000)
+ *   solo      150  (5,000 naira a month since 2026-10-23; 8,000 from 2026-10-22)
  *   manager   660  (30,000 since 2026-10-22; sized at 22,000)
  *   label     1,500 (60,000 since 2026-10-17; sized at 50,000)
  *   (The 2026-10-17 reprice left every allowance unchanged: each still costs

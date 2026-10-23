@@ -242,6 +242,8 @@ describe('budget bands', () => {
     // Solo ₦7,500 and Label ₦60,000 since 2026-10-17.
     expect(labels(7_500)).toEqual(['Under ₦3,500', '₦3,500–₦5,000', '₦5,000–₦7,000']);
     expect(labels(8_000)).toEqual(['Under ₦3,500', '₦3,500–₦5,500', '₦5,500–₦7,500']);
+    // Solo ₦5,000 since 2026-10-23.
+    expect(labels(5_000)).toEqual(['Under ₦2,500', '₦2,500–₦3,500', '₦3,500–₦4,500']);
     expect(labels(60_000)).toEqual(['Under ₦25,000', '₦25,000–₦40,000', '₦40,000–₦55,000']);
   });
 
@@ -266,14 +268,14 @@ describe('matchBudgetOffer', () => {
     expect(matchBudgetOffer({ tier: 'manager', band: 'low', planCodes: {} })).toEqual({
       kind: 'switch_plan',
       tier: 'solo',
-      price: 8_000,
+      price: 5_000,
     });
     // Manager at ₦30,000 (2026-10-22) is above Label's lowest band ceiling
     // (₦25,000), so Solo is the dearest cheaper plan that fits.
     expect(matchBudgetOffer({ tier: 'label', band: 'low', planCodes: {} })).toEqual({
       kind: 'switch_plan',
       tier: 'solo',
-      price: 8_000,
+      price: 5_000,
     });
     expect(matchBudgetOffer({ tier: 'solo', band: 'low', planCodes: {} })).toBeNull();
   });
@@ -297,8 +299,8 @@ describe('matchBudgetOffer', () => {
   it('names the env vars the setup needs', () => {
     expect(retentionPlanEnvVar('manager', 15000)).toBe('PAYSTACK_PLAN_MANAGER_RETENTION_15000');
     expect(allRetentionPlanEnvVars().map((row) => row.envVar)).toEqual([
-      'PAYSTACK_PLAN_SOLO_RETENTION_5500',
-      'PAYSTACK_PLAN_SOLO_RETENTION_7500',
+      'PAYSTACK_PLAN_SOLO_RETENTION_3500',
+      'PAYSTACK_PLAN_SOLO_RETENTION_4500',
       'PAYSTACK_PLAN_MANAGER_RETENTION_20000',
       'PAYSTACK_PLAN_MANAGER_RETENTION_27000',
       'PAYSTACK_PLAN_LABEL_RETENTION_40000',

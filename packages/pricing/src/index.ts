@@ -440,14 +440,20 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // reprice, strategy doc section 8), when Solo went to two seats. It read
     // "For an independent artist." from 2026-10-02 while Solo was one seat.
     audience: 'For an artist and their manager.',
-    // ₦8,000 since 2026-10-22 (founder, self-serve checkout; new Plans must be
-    // minted at ₦8,000 / ₦40,000 / ₦80,000 and the vars repointed).
+    // ₦5,000 since 2026-10-23 (founder approved ~02:00 WAT; no paying Solo
+    // customer, so no grandfathering). The _PER_MONTH_ / _PER_6_MONTHS_ /
+    // _PER_YEAR_ vars point at the ₦5,000 / ₦25,000 / ₦50,000 Plans (monthly
+    // and yearly reused from September, 6-month minted that day). Solo
+    // retention bands become ₦2,500 / ₦3,500 / ₦4,500, so the old _5500 /
+    // _7500 retention Plans are no longer read.
+    // ₦8,000 from 2026-10-22 (founder, self-serve checkout; Plans at
+    // ₦8,000 / ₦40,000 / ₦80,000, left in Paystack untouched).
     // ₦7,500 from 2026-10-17 (founder approved the reprice that day; it was
     // ₦5,000 from 2026-09-10). Monthly only — the yearly price is ten months of
     // this, see monthlyPrice. New Paystack Plans were minted at ₦7,500 /
     // ₦75,000 and the _PER_MONTH_ / _PER_YEAR_ vars repointed before this
     // shipped; the ₦5,000 Plans stay in Paystack untouched.
-    monthlyPrice: tierPrice(8_000),
+    monthlyPrice: tierPrice(5_000),
     includesDistribution: false,
     urgansMonthlyCredits: 150,
     // TWO seats since 2026-10-17 (founder-approved reprice: "artist +

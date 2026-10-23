@@ -225,12 +225,12 @@ describe('tier prices and the sales-led tier', () => {
   // repo has five times advertised one price and charged another. If this fails,
   // the arithmetic moved: mint the Plans and repoint the vars BEFORE shipping it.
   it('resolves the yearly prices to the figures the Plans must be minted at', () => {
-    // 2026-10-22 self-serve reprice: Solo ₦8,000 / ₦40,000 / ₦80,000 and
+    // Solo ₦5,000 / ₦25,000 / ₦50,000 since 2026-10-23 (Plans in place); 2026-10-22:
     // Manager ₦30,000 / ₦150,000 / ₦300,000. Mint these Plans and repoint the
     // PAYSTACK_PLAN_* vars before the push. Label is unchanged (₦600,000 minted).
-    expect(getTierPrice('solo', 'annual')?.amount).toBe(80_000);
+    expect(getTierPrice('solo', 'annual')?.amount).toBe(50_000);
     expect(getTierPrice('manager', 'annual')?.amount).toBe(300_000);
-    expect(getTierPrice('solo', 'semiannual')?.amount).toBe(40_000);
+    expect(getTierPrice('solo', 'semiannual')?.amount).toBe(25_000);
     expect(getTierPrice('manager', 'semiannual')?.amount).toBe(150_000);
     expect(getTierPrice('label', 'annual')?.amount).toBe(600_000);
   });
@@ -239,11 +239,11 @@ describe('tier prices and the sales-led tier', () => {
     // "/month" and "/year" rather than "/mo" and "/yr": the founder's copy rules
     // ask for fifth-grade readable, and an abbreviation is one more thing to
     // decode. The no-argument call takes the default, which is monthly.
-    expect(formatTierPrice('solo')).toBe('₦8,000/month');
+    expect(formatTierPrice('solo')).toBe('₦5,000/month');
     expect(formatTierPrice('manager')).toBe('₦30,000/month');
     expect(formatTierPrice('manager', 'semiannual')).toBe('₦150,000 for 6 months');
     expect(formatTierPrice('label')).toBe('₦60,000/month');
-    expect(formatTierPrice('solo', 'annual')).toBe('₦80,000/year');
+    expect(formatTierPrice('solo', 'annual')).toBe('₦50,000/year');
     expect(formatTierPrice('manager', 'annual')).toBe('₦300,000/year');
     expect(formatTierPrice('label', 'annual')).toBe('₦600,000/year');
   });

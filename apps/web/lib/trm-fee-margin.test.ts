@@ -33,7 +33,7 @@ import {
 } from './billing-margin';
 
 // The TRM fee and the margin view (founder, 2026-10-22), built on the
-// self-serve prices: Solo ₦8,000, Manager ₦30,000, Label ₦60,000 a month,
+// self-serve prices: Solo ₦5,000 (since 2026-10-23), Manager ₦30,000, Label ₦60,000 a month,
 // 6 months for 5, a year for 10. Manager and Label include distribution and we
 // owe TRM a fixed fee per team. Every number here is kobo unless a name says
 // naira.

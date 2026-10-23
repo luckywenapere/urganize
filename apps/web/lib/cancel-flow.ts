@@ -343,8 +343,8 @@ const roundTo = (value: number, step: number): number => Math.max(step, Math.rou
  * Three price bands under a plan's monthly price. Anchored on the founder's
  * Manager example (at the old ₦22,000: under ₦10,000 / ₦10,000–₦15,000 /
  * ₦15,000–₦20,000), which is 5/11, 15/22 and 10/11 of the price, rounded to a
- * step that suits the size of the price. Since the 2026-10-22 reprice: Solo
- * ₦8,000 gives ₦3,500 / ₦5,500 / ₦7,500; Manager ₦30,000 gives ₦14,000 /
+ * step that suits the size of the price. Solo ₦5,000 (2026-10-23) gives
+ * ₦2,500 / ₦3,500 / ₦4,500. Since the 2026-10-22 reprice: Manager ₦30,000 gives ₦14,000 /
  * ₦20,000 / ₦27,000; Label ₦60,000 gives ₦25,000 / ₦40,000 / ₦55,000. Only
  * the Label retention Plans (_40000/_55000) exist; the Solo and Manager ones
  * need minting, and until then those offers stay hidden.
@@ -428,6 +428,9 @@ export function matchBudgetOffer(input: {
     return cheaper ? { kind: 'switch_plan', tier: cheaper.tier, price: cheaper.price } : null;
   }
 
+  // Never offer a "discount" at or above the list price (a stale retention
+  // Plan left over from a dearer price must not surface after a reprice).
+  if (band.max >= price) return null;
   const planCode = String(input.planCodes[retentionPlanEnvVar(input.tier, band.max)] ?? '').trim();
   if (!planCode) return null;
   return {

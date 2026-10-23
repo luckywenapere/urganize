@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.166.2",
+    tag: "Account",
+    listed: false,
+    date: "October 23, 2026",
+    highlights: [
+      "Solo is now ₦5,000 a month, ₦25,000 for 6 months or ₦50,000 a year.",
+    ],
+  },
+  {
     version: "1.166.1",
     tag: "Account",
     date: "October 23, 2026",

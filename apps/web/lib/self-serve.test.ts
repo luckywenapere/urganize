@@ -80,9 +80,9 @@ describe('amounts come from the pricing package', () => {
   });
 
   it('Solo', () => {
-    expect(periodAmount('solo', 'monthly')).toBe(8_000);
-    expect(periodAmount('solo', 'semiannual')).toBe(40_000);
-    expect(periodAmount('solo', 'annual')).toBe(80_000);
+    expect(periodAmount('solo', 'monthly')).toBe(5_000);
+    expect(periodAmount('solo', 'semiannual')).toBe(25_000);
+    expect(periodAmount('solo', 'annual')).toBe(50_000);
   });
 
   it('says the price and the saving plainly', () => {

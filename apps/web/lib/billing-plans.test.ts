@@ -320,13 +320,13 @@ describe('tier plan codes and prices', () => {
 
   it('prices every self-serve tier at both intervals, in kobo', () => {
     // Monthly is the stored figure; yearly is ten months of it, computed.
-    // 2026-10-22 reprice: ₦8,000 / ₦30,000 a month (Label ₦60,000 unchanged).
-    expect(getTierMinorUnit('solo', 'monthly')).toBe(8_000_00);
+    // Solo ₦5,000 since 2026-10-23; Manager ₦30,000 since 2026-10-22 (Label ₦60,000 unchanged).
+    expect(getTierMinorUnit('solo', 'monthly')).toBe(5_000_00);
     expect(getTierMinorUnit('manager', 'monthly')).toBe(30_000_00);
     expect(getTierMinorUnit('label', 'monthly')).toBe(60_000_00);
-    expect(getTierMinorUnit('solo', 'annual')).toBe(80_000_00);
+    expect(getTierMinorUnit('solo', 'annual')).toBe(50_000_00);
     expect(getTierMinorUnit('manager', 'annual')).toBe(300_000_00);
-    expect(getTierMinorUnit('solo', 'semiannual')).toBe(40_000_00);
+    expect(getTierMinorUnit('solo', 'semiannual')).toBe(25_000_00);
     expect(getTierMinorUnit('manager', 'semiannual')).toBe(150_000_00);
     expect(getTierMinorUnit('label', 'annual')).toBe(600_000_00);
   });
