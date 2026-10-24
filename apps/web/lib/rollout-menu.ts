@@ -78,6 +78,9 @@ export type RolloutMenuInput = {
   share?: RolloutMenuDialogAction | null;
   changeArtist?: RolloutMenuDialogAction | null;
   archive?: RolloutMenuDialogAction | null;
+  /** Delete rollout (moves it to Trash). Owner-only; the caller passes it only
+   *  for the owner, so a teammate never sees a row the server would refuse. */
+  deleteRollout?: RolloutMenuDialogAction | null;
   /**
    * Show the Spend row. NOT a feature flag: spend is always built, and who may
    * see it is a per-person, per-rollout answer from the database (the owner and
@@ -128,7 +131,7 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
   });
 
   const dialog = (
-    key: 'share' | 'change-artist' | 'archive',
+    key: 'share' | 'change-artist' | 'archive' | 'delete',
     action: RolloutMenuDialogAction
   ): RolloutMenuEntry => ({
     key,
@@ -184,6 +187,7 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     flags.capture ? scene('capture', input.captureLabel ?? 'Pre-save link') : null,
     input.changeArtist ? dialog('change-artist', input.changeArtist) : null,
     input.archive ? dialog('archive', input.archive) : null,
+    input.deleteRollout ? dialog('delete', input.deleteRollout) : null,
   ];
 
   return orderReleaseMenu(entries.filter((entry): entry is RolloutMenuEntry => entry !== null));

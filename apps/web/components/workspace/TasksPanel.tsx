@@ -223,6 +223,8 @@ type TasksPanelProps = {
    */
   archiveAction?: TaskPanelAction | null;
   shareAction?: TaskPanelAction | null;
+  /** Delete rollout (to Trash), owner-only. Drawn in red, apart from the rest. */
+  deleteAction?: TaskPanelAction | null;
   /**
    * When set, replaces the activity buckets with this content. The rollout menu
    * (the card in the right-hand column on a desktop, the hamburger on a phone)
@@ -305,6 +307,7 @@ export function TasksPanel({
   id,
   archiveAction,
   shareAction,
+  deleteAction,
   sceneContent,
   activitiesBanner,
   activitiesFooter,
@@ -576,6 +579,7 @@ export function TasksPanel({
     variant: 'phone',
     share: shareAction,
     archive: archiveAction,
+    deleteRollout: deleteAction,
   });
 
   // The dock renders only when the menu has actions to list. Search is not here
@@ -1112,8 +1116,17 @@ function RolloutMenuSheet({
           </button>
         </div>
         <ul id={id} ref={listRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2">
-          {actions.map((action) => (
-            <li key={action.key}>
+          {actions.map((action, index) => (
+            <li
+              key={action.key}
+              // The phone draws the list upside down (orderForThumb), so Delete
+              // sits at the top, far from the thumb, with a line under it.
+              className={
+                action.destructive && index < actions.length - 1
+                  ? 'mb-1 border-b border-stroke-subtle pb-1'
+                  : undefined
+              }
+            >
               <button
                 type="button"
                 onClick={() => onSelect(action)}
@@ -1122,13 +1135,17 @@ function RolloutMenuSheet({
                 // entirely rather than announcing them as unpressed toggles.
                 aria-pressed={action.isActive}
                 className={`motion-focus flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-left text-base transition-colors disabled:opacity-60 ${
-                  action.isActive
-                    ? 'bg-brand/10 font-semibold text-content-primary'
-                    : 'text-content-primary hover:bg-bg-hover'
+                  action.destructive
+                    ? 'text-status-error hover:bg-status-error/10'
+                    : action.isActive
+                      ? 'bg-brand/10 font-semibold text-content-primary'
+                      : 'text-content-primary hover:bg-bg-hover'
                 }`}
               >
                 <action.icon
-                  className={`h-5 w-5 shrink-0 ${action.isActive ? 'text-brand' : 'text-content-tertiary'}`}
+                  className={`h-5 w-5 shrink-0 ${
+                    action.destructive ? 'text-status-error' : action.isActive ? 'text-brand' : 'text-content-tertiary'
+                  }`}
                   aria-hidden="true"
                 />
                 {action.label}

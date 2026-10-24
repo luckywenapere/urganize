@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.169.1",
+    tag: "Rollouts",
+    date: "October 24, 2026",
+    highlights: [
+      "Delete rollout is now in each rollout's own menu, last and in red, not only in Settings.",
+      "It asks you to type the rollout's name or DELETE, then moves it to Trash, where you can restore it for 30 days.",
+    ],
+  },
+  {
     version: "1.169.0",
     title: "Mark many activities done at once",
     tag: "Rollouts",

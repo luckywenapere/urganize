@@ -304,13 +304,13 @@ export function WorkspaceView() {
     resume: () => void;
   } | null>(null);
 
-  // The test release the standing banner's delete button is asking about;
-  // null = dialog closed. Only ever set for the SCOPED release, and only when
-  // it carries the test marker and the viewer owns it (the banner's own gate).
-  const [testReleaseToDelete, setTestReleaseToDelete] = useState<Pick<
-    Release,
-    'id' | 'title'
-  > | null>(null);
+  // The rollout DeleteReleaseDialog is asking about; null = dialog closed.
+  // Only ever the SCOPED release, and only for its owner. Set by the test
+  // banner's button or, since v1.169.1, the rollout menu's Delete rollout row.
+  // `isTest` picks the toast.
+  const [releaseToDelete, setReleaseToDelete] = useState<
+    (Pick<Release, 'id' | 'title'> & { isTest: boolean }) | null
+  >(null);
 
   // AI actions + toast, ported verbatim from the removed release detail page
   // (2026-08-04) — this is now the only surface a scoped release renders on.
@@ -912,6 +912,22 @@ export function WorkspaceView() {
         }
       : null;
 
+  // Delete rollout in the rollout menu (STMZ user interview, Oct 22, 2026:
+  // the only delete was buried in Settings). Owner-only, like Settings and the
+  // API. Same typed confirm; the rollout goes to Trash for 30 days.
+  const deleteAction =
+    scopedReleaseId && scopedReleaseSlim && scopedReleaseIsOwn
+      ? {
+          label: 'Delete rollout',
+          onClick: () =>
+            setReleaseToDelete({
+              id: scopedReleaseSlim.id,
+              title: displayReleaseTitle(scopedReleaseSlim.title),
+              isTest: Boolean(scopedReleaseSlim.isTest),
+            }),
+        }
+      : null;
+
   // Moving a release to another artist. Offered only when there is somewhere to
   // move it TO — the create-release picker's rule, so a one-artist team never
   // sees a control that can only tell it no.
@@ -958,7 +974,11 @@ export function WorkspaceView() {
     scopedReleaseSlim && scopedReleaseSlim.isTest && scopedReleaseIsOwn ? (
       <TestReleaseBanner
         onDelete={() =>
-          setTestReleaseToDelete({ id: scopedReleaseSlim.id, title: scopedReleaseSlim.title })
+          setReleaseToDelete({
+            id: scopedReleaseSlim.id,
+            title: scopedReleaseSlim.title,
+            isTest: true,
+          })
         }
       />
     ) : null;
@@ -1599,6 +1619,7 @@ export function WorkspaceView() {
                   scopedRelease={scopedReleaseSlim}
                   archiveAction={archiveAction}
                   shareAction={shareAction}
+                  deleteAction={deleteAction}
                   sceneContent={isDesktopViewport ? undefined : scenePanel}
                   pageBarTools={false}
                   // The one mount that owns the phone's Rollout menu sheet.
@@ -1634,6 +1655,7 @@ export function WorkspaceView() {
                 card={selectedCard}
                 share={shareAction}
                 archive={archiveAction}
+                deleteRollout={deleteAction}
                 onClose={goBack}
                 closeLabel={backLabel}
                 // Only while the main view is showing, as the "New activity"
@@ -1846,17 +1868,17 @@ export function WorkspaceView() {
         }}
       />
 
-      {/* The test path's delete exit — DeleteReleaseDialog's second-ever
-          mount (the first is Settings' ReleasesSection). Deleting REAL
-          releases stays Settings-only per URG-163; this dialog only ever
-          holds a test release, set by TestReleaseBanner's button. The
-          dialog owns the DELETE fetch itself. */}
+      {/* Delete from the workspace: the test banner's exit and, since
+          v1.169.1, the rollout menu's Delete rollout row (URG-163's
+          Settings-only rule lifted for owners after the STMZ interview). The
+          dialog owns the DELETE fetch and the typed confirm. */}
       <DeleteReleaseDialog
-        open={testReleaseToDelete !== null}
-        release={testReleaseToDelete}
-        onClose={() => setTestReleaseToDelete(null)}
+        open={releaseToDelete !== null}
+        release={releaseToDelete}
+        onClose={() => setReleaseToDelete(null)}
         onDeleted={(releaseId) => {
-          setTestReleaseToDelete(null);
+          const wasTest = releaseToDelete?.isTest ?? false;
+          setReleaseToDelete(null);
           // Same pair Settings' handler runs: drop the release locally now,
           // then resync so counts, rails and the identity card agree with
           // the server.
@@ -1869,7 +1891,10 @@ export function WorkspaceView() {
           // remembered scene on the way out.
           markCatalogRequested();
           setScope(null, { forgetScene: true });
-          setToast({ message: 'Test rollout deleted.', tone: 'success' });
+          setToast({
+            message: wasTest ? 'Test rollout deleted.' : 'Rollout moved to Trash.',
+            tone: 'success',
+          });
         }}
       />
 

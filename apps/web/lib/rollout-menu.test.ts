@@ -29,6 +29,7 @@ const MODALS = {
   share: { label: 'Share' },
   changeArtist: { label: 'Change artist' },
   archive: { label: 'Archive' },
+  deleteRollout: { label: 'Delete rollout' },
 };
 
 function build(over: Partial<RolloutMenuInput> = {}): RolloutMenuEntry[] {
@@ -136,6 +137,7 @@ describe('buildRolloutMenu', () => {
       'share',
       'change-artist',
       'archive',
+      'delete',
     ]);
   });
 
@@ -152,6 +154,7 @@ describe('buildRolloutMenu', () => {
       ['share', 'share'],
       ['changeArtist', 'change-artist'],
       ['archive', 'archive'],
+      ['deleteRollout', 'delete'],
     ];
     for (const [input, row] of cases) {
       for (const absent of [null, undefined]) {
@@ -251,7 +254,7 @@ describe('what each row does', () => {
   });
 
   it('opens a dialog from the last three, identified by their key', () => {
-    for (const key of ['share', 'change-artist', 'archive'] as const) {
+    for (const key of ['share', 'change-artist', 'archive', 'delete'] as const) {
       const entry = build().find((row) => row.key === key);
       expect(entry?.target, key).toEqual({ kind: 'modal' });
     }

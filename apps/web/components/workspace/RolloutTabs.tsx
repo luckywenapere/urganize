@@ -21,6 +21,8 @@ type RolloutTabsProps = {
   variant?: 'row' | 'side';
   share?: RolloutMenuDialogInput | null;
   archive?: RolloutMenuDialogInput | null;
+  /** Delete rollout (to Trash). Owner-only; WorkspaceView owns the dialog. */
+  deleteRollout?: RolloutMenuDialogInput | null;
 };
 
 /**
@@ -39,12 +41,19 @@ type RolloutTabsProps = {
  * (pitch kit polish, 2026-10-11): a live check found "Add cover art" and the
  * pitch kit sitting off-screen with nothing saying there was more.
  */
-export function RolloutTabs({ releaseId, variant = 'row', share, archive }: RolloutTabsProps) {
+export function RolloutTabs({
+  releaseId,
+  variant = 'row',
+  share,
+  archive,
+  deleteRollout,
+}: RolloutTabsProps) {
   const actions = useRolloutMenuActions({
     releaseId,
     variant: 'rail',
     share,
     archive,
+    deleteRollout,
   });
   const places = actions.filter((action) => action.isActive !== undefined || action.href);
   const dialogs = actions.filter((action) => action.isActive === undefined && !action.href);
@@ -71,8 +80,13 @@ export function RolloutTabs({ releaseId, variant = 'row', share, archive }: Roll
               </p>
             ) : null}
             <ul className="flex flex-col gap-0.5">
-              {group.entries.map((action) => (
-                <li key={action.key}>
+              {group.entries.map((action, index) => (
+                <li
+                  key={action.key}
+                  className={
+                    action.destructive && index > 0 ? 'mt-1 border-t border-stroke-subtle pt-1' : undefined
+                  }
+                >
                   <SideRow action={action} />
                 </li>
               ))}
@@ -217,7 +231,12 @@ function SideRow({ action }: { action: RolloutMenuAction }) {
   const Icon = action.icon;
   const content = (
     <>
-      <Icon className={`h-4 w-4 shrink-0 ${lit ? 'text-brand' : 'text-content-tertiary'}`} aria-hidden="true" />
+      <Icon
+        className={`h-4 w-4 shrink-0 ${
+          action.destructive ? 'text-status-error' : lit ? 'text-brand' : 'text-content-tertiary'
+        }`}
+        aria-hidden="true"
+      />
       <span className="min-w-0 truncate">{action.label}</span>
     </>
   );
@@ -245,7 +264,11 @@ function SideRow({ action }: { action: RolloutMenuAction }) {
         action.onClick();
       }}
       aria-pressed={isPlace ? lit : undefined}
-      className={sideRowClass(lit)}
+      className={
+        action.destructive
+          ? `${sideRowClass(false)} !text-status-error hover:!bg-status-error/10`
+          : sideRowClass(lit)
+      }
     >
       {content}
     </button>
@@ -301,19 +324,30 @@ function OverflowMenu({ actions }: { actions: RolloutMenuAction[] }) {
           {actions.map((action) => {
             const Icon = action.icon;
             return (
-              <button
+              <div
                 key={action.key}
-                type="button"
-                disabled={action.disabled}
-                onClick={() => {
-                  setOpen(false);
-                  action.onClick();
-                }}
-                className="motion-focus flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 text-left text-sm text-content-primary hover:bg-bg-hover disabled:opacity-60"
+                className={action.destructive && actions.length > 1 ? 'mt-1 border-t border-stroke-subtle pt-1' : undefined}
               >
-                <Icon className="h-4 w-4 text-content-tertiary" aria-hidden="true" />
-                {action.label}
-              </button>
+                <button
+                  type="button"
+                  disabled={action.disabled}
+                  onClick={() => {
+                    setOpen(false);
+                    action.onClick();
+                  }}
+                  className={`motion-focus flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 text-left text-sm disabled:opacity-60 ${
+                    action.destructive
+                      ? 'text-status-error hover:bg-status-error/10'
+                      : 'text-content-primary hover:bg-bg-hover'
+                  }`}
+                >
+                  <Icon
+                    className={`h-4 w-4 ${action.destructive ? 'text-status-error' : 'text-content-tertiary'}`}
+                    aria-hidden="true"
+                  />
+                  {action.label}
+                </button>
+              </div>
             );
           })}
         </div>
