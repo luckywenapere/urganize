@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.167.1",
+    tag: "App",
+    date: "October 24, 2026",
+    highlights: [
+      "On your phone, the Artists and Rollouts switch now stays in the same spot when you move between them.",
+    ],
+  },
+  {
     version: "1.167.0",
     title: "Deleted rollouts go to Trash",
     tag: "Rollouts",
