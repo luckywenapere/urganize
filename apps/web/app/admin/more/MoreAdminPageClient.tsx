@@ -7,7 +7,7 @@
 // desktop sidebar carries its own). Teams and Emails are tabs, so they are not
 // listed here. Rows are labels only on phone; the one-line descriptions show
 // on desktop and are still searched on both. Reports and Pitch payments carry
-// the same "N waiting" badge as the Overview.
+// the same "N waiting" badge as the Overview; Applications carries "N new".
 //
 // Gate: GET /api/admin/me (verifyAdmin / ADMIN_EMAILS), anyone else bounces to
 // /dashboard, as on every admin page. The Runway row opens a sheet whose form
@@ -226,7 +226,13 @@ function MoreList() {
                     <Link href={section.href} className={ROW}>
                       <Icon className="h-4 w-4 shrink-0 text-content-tertiary" aria-hidden="true" />
                       <RowText label={section.label} description={section.description} />
-                      {count > 0 ? <Badge variant="destructive">{count} waiting</Badge> : null}
+                      {count > 0 ? (
+                        section.key === 'curator-applications' ? (
+                          <Badge>{count} new</Badge>
+                        ) : (
+                          <Badge variant="destructive">{count} waiting</Badge>
+                        )
+                      ) : null}
                       <Chevron />
                     </Link>
                   </li>

@@ -144,6 +144,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     description: 'Invite links for playlist owners, and who used them.',
   },
   {
+    key: 'curator-applications',
+    label: 'Applications',
+    href: '/admin/curator-applications',
+    group: 'operations',
+    description: 'Playlist owners who applied. Approve or decline.',
+  },
+  {
     key: 'directory',
     label: 'Directory',
     href: '/admin/directory',

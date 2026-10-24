@@ -190,6 +190,13 @@ const LOADERS: LoaderMap = {
       subject: (p) => m.renewalReminderSubject(p),
     };
   },
+  curator_application_approved: async () => {
+    const m = await import('./CuratorApplicationApprovedEmail');
+    return {
+      element: (p) => createElement(m.CuratorApplicationApprovedEmail, p),
+      subject: () => m.CURATOR_APPLICATION_APPROVED_SUBJECT,
+    };
+  },
   help_request: async () => {
     const m = await import('./HelpRequestEmail');
     return {
