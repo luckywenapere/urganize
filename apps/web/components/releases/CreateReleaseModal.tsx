@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertCircle, ArrowLeft, CalendarDays, Check, Loader2, X } from '@/components/icons';
+import { AlertCircle, ArrowLeft, Loader2, X } from '@/components/icons';
 import { Button, IconButton } from '@urganize/ui';
 import { BlankSheetIllustration, PlanIllustration } from '@/components/app/BrandIcons';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
@@ -12,11 +12,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { useFirstReleaseRequired } from './useFirstReleaseRequired';
-import {
-  getAvailableReleaseTypes,
-  getTemplate,
-  getTemplateLeadTimeDays,
-} from '@/lib/release-templates/loader';
+import { getAvailableReleaseTypes } from '@/lib/release-templates/loader';
 import { DEFAULT_RELEASE_TITLE, TITLE_SKIP_TIP, type DbReleaseType } from '@/types/releases';
 import { InfoTip } from '@/components/shared/HelpTip';
 import { isBrowserOnline } from '@/lib/offline/status';
@@ -59,21 +55,24 @@ const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'tru
 // empty title still means "Untitled rollout", and ReleaseSetupSheet still
 // asks for a name only while the title is the default. Flag off, the
 // two-step modal below is unchanged.
+//
+// AMENDED 2026-10-24 (founder approved mocks, one form + glass): ONE body for
+// every mode. The first-rollout focus passes an initialPlan, and before this
+// it rendered the type-first body AND the plan body together, so Title and
+// Format showed twice in two stacked scroll areas, and the type-first submit
+// silently dropped the artist picked in the lower form. Now the one body is
+// Artist (only with more than one), Format (a compact segmented control,
+// Single preselected), Title. There is no release date field at all: the date
+// is the first activity of the rollout instead ("Set your release date",
+// SetReleaseDateCard), which is also what builds a pending plan.
 const TYPE_FIRST_CREATE_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_TYPE_FIRST_CREATE === 'true';
 
-function formatYmdLocal(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function formatYmdHuman(value: string): string {
-  const parsed = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(parsed);
-}
+// Shared field look for the glass modal: shadcn-style h-11 fields with a soft
+// translucent fill. Built on the stroke token (not white/10) so the same
+// classes read in the light theme too.
+const FIELD_CLASS =
+  'h-11 w-full rounded-lg border border-stroke-strong bg-[rgb(var(--color-stroke)/0.04)] px-3.5 text-sm text-content-primary outline-none transition-colors placeholder:text-content-tertiary hover:border-[rgb(var(--color-stroke)/0.16)] focus:border-brand/60 focus:ring-2 focus:ring-brand/20 disabled:opacity-60';
 
 export type ReleasePlanChoice = 'template' | 'blank';
 
@@ -147,7 +146,7 @@ type CreateReleaseResponse = {
   error?: string;
 };
 
-type FieldErrors = Partial<Record<'title' | 'releaseDate', string>>;
+type FieldErrors = Partial<Record<'title', string>>;
 
 async function getAccessToken(): Promise<string> {
   const {
@@ -155,24 +154,6 @@ async function getAccessToken(): Promise<string> {
   } = await supabase.auth.getSession();
 
   return session?.access_token || '';
-}
-
-// Both fields are optional as of URG-230 (founder call): creating a release
-// should have zero required fields. An empty date is valid and simply means
-// "not decided yet" — the activities view then carries a card to set it, and
-// for a Rollout-plan release that card is what builds the plan. Only a
-// malformed date is an error.
-function validateReleaseDate(value: string): string {
-  if (!value) {
-    return '';
-  }
-
-  const parsed = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) {
-    return 'Use a valid release date.';
-  }
-
-  return '';
 }
 
 export function CreateReleaseModal({
@@ -195,7 +176,6 @@ export function CreateReleaseModal({
   const titleInputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [title, setTitle] = useState('');
-  const [releaseDate, setReleaseDate] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -209,11 +189,10 @@ export function CreateReleaseModal({
   // was implicitly before the picker existed.
   const [releaseType, setReleaseType] = useState<DbReleaseType>('single');
 
-  // Type-first only: whether a card has been chosen yet. The cards used to be
-  // the submit, so a type was always an explicit answer; they are a choice now,
-  // and the planner is told the type only because somebody picked it. With a
-  // single playbook there is nothing to choose, so it counts as picked.
-  const [typeFirstPicked, setTypeFirstPicked] = useState(!SHOW_TYPE_PICKER);
+  // There is no "nothing picked yet" state any more (2026-10-24): Format opens
+  // with Single selected, in plain sight, so submitting it is an answer the
+  // manager saw and kept, and the planner may take it as one. The old
+  // "Choose Single, EP or Album first." refusal is gone with it.
 
   // WHOSE release this is. Read from the shared roster store rather than
   // fetched here: this modal opens often, and it shipped with a per-open fetch
@@ -252,7 +231,6 @@ export function CreateReleaseModal({
       // (lib/first-release-focus.ts) and must not ask a second time.
       setPlan(initialPlan);
       setReleaseType('single');
-      setTypeFirstPicked(!SHOW_TYPE_PICKER);
       setArtistId(initialArtistId ?? '');
     }
   }, [open, initialPlan, initialArtistId]);
@@ -317,40 +295,6 @@ export function CreateReleaseModal({
   // gated on not already being in flight.
   const canSubmit = useMemo(() => !isSubmitting, [isSubmitting]);
 
-  // Anchor "today" once per modal mount so the `min` attribute stays stable
-  // for the duration of the dialog. (The lead-time explainer moved to the
-  // post-create guide, NewReleaseGuide — founder call, 2026-07-23.)
-  const todayYmd = useMemo(() => formatYmdLocal(new Date()), []);
-
-  // Calm "compressed runway" note: only fires when the picked date is valid AND
-  // sooner than the template's lead time. The note frames the consequence in
-  // the catch-up language commit 2 surfaces in the tasks panel — it doesn't
-  // block submission; the user can proceed with any future date.
-  // Per playbook, not per app: an EP needs 13 weeks of runway and an album 17,
-  // so the same date that is comfortable for a single is heavily compressed for
-  // an album. Safe to call getTemplate here — the picker only ever offers types
-  // the loader resolved.
-  const leadTimeDays = useMemo(
-    () => getTemplateLeadTimeDays(getTemplate(releaseType)),
-    [releaseType]
-  );
-
-  const compressedNote = useMemo(() => {
-    if (!releaseDate) return null;
-    const picked = new Date(`${releaseDate}T00:00:00`);
-    if (Number.isNaN(picked.getTime())) return null;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    picked.setHours(0, 0, 0, 0);
-    const daysOut = Math.round((picked.getTime() - today.getTime()) / 86400000);
-    if (daysOut >= leadTimeDays) return null;
-    const compressedWeeks = Math.max(1, Math.ceil((leadTimeDays - daysOut) / 7));
-    return {
-      compressedWeeks,
-      displayDate: formatYmdHuman(releaseDate),
-    };
-  }, [releaseDate, leadTimeDays]);
-
   if (!open || !isMounted) {
     return null;
   }
@@ -364,11 +308,6 @@ export function CreateReleaseModal({
       nextErrors.title = 'Rollout title must be 140 characters or fewer.';
     }
 
-    const dateError = validateReleaseDate(releaseDate);
-    if (dateError) {
-      nextErrors.releaseDate = dateError;
-    }
-
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -377,12 +316,10 @@ export function CreateReleaseModal({
   // cards (which ARE the submit under NEXT_PUBLIC_FEATURE_TYPE_FIRST_CREATE).
   const performCreate = async (input: {
     title?: string;
-    releaseDate?: string;
     releaseType: DbReleaseType;
     plan: ReleasePlanChoice;
-    /** Sent only when the artist picker actually rendered (see handleSubmit);
-     * the type-first cards never render it, so they always take the server's
-     * implicit-artist path. */
+    /** Sent only when the artist picker actually rendered (see handleSubmit),
+     * in every mode; otherwise the server's implicit-artist path. */
     artistId?: string;
     /** Whether the type was an explicit pick (the type-first cards, or the
      * step-2 picker when it rendered) — callers hand an explicit pick to the
@@ -415,10 +352,11 @@ export function CreateReleaseModal({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          // Both may be empty — the route defaults the title and treats a
-          // missing date as "not decided yet" (URG-230).
+          // The title may be empty: the route defaults it. No date is sent
+          // (2026-10-24): it is set later from the rollout's first activity,
+          // and the route has treated a missing date as "not decided yet"
+          // since URG-230.
           title: input.title || undefined,
-          releaseDate: input.releaseDate || undefined,
           releaseType: input.releaseType,
           // Omitted unless the picker actually rendered, so a one-artist team
           // keeps taking the server's implicit-artist path untouched.
@@ -439,7 +377,6 @@ export function CreateReleaseModal({
       }
 
       setTitle('');
-      setReleaseDate('');
       setErrors({});
       // Resync the store here, with force, so the new release is guaranteed
       // to appear no matter which caller opened the modal. Callers' own
@@ -466,38 +403,35 @@ export function CreateReleaseModal({
     if (!validateForm()) {
       return;
     }
+    const pickedArtistId = showArtistPicker && selectedArtistId ? selectedArtistId : undefined;
     if (TYPE_FIRST_CREATE_ENABLED) {
-      // The type-first screen: title (optional) plus the chosen card. Enter in
-      // the title field lands here too, so an unpicked type is said plainly
-      // rather than silently defaulted to Single.
-      if (!typeFirstPicked) {
-        setSubmitError('Choose Single, EP or Album first.');
-        return;
-      }
+      // The type-first screen: artist (when there is a choice), the format
+      // (Single preselected) and an optional title. The artist used to be
+      // dropped here when the first-rollout focus rendered both bodies.
       await performCreate({
         title: title.trim(),
         releaseType,
         plan: initialPlan ?? 'template',
+        artistId: pickedArtistId,
         typeWasPicked: true,
       });
       return;
     }
     await performCreate({
       title: title.trim(),
-      releaseDate,
       releaseType,
       plan: plan || 'template',
-      artistId: showArtistPicker && selectedArtistId ? selectedArtistId : undefined,
+      artistId: pickedArtistId,
       typeWasPicked: SHOW_TYPE_PICKER,
     });
   };
 
-  // Type-first create: a card is a choice, not the submit (v1.91.3), so it
-  // can be changed until "Create rollout" is pressed.
+  // The Format control: a choice, not the submit (v1.91.3), so it can be
+  // changed until "Create" is pressed. One handler for every mode since the
+  // two Format rows became one (2026-10-24).
   const handleTypeFirstPick = (option: DbReleaseType) => {
     if (isSubmitting) return;
     setReleaseType(option);
-    setTypeFirstPicked(true);
     setSubmitError('');
   };
 
@@ -527,17 +461,26 @@ export function CreateReleaseModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-release-title"
-        className="relative mx-auto w-full max-w-3xl focus:outline-none"
+        className="relative mx-auto w-full max-w-lg focus:outline-none"
       >
         <form
           onSubmit={(event) => void handleSubmit(event)}
-          className="relative flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden urg-cartouche rounded-2xl border border-stroke-default bg-bg-surface shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))] sm:max-h-[calc(100dvh-4rem)]"
+          // Glass (2026-10-24, founder approved mock): a translucent, blurred
+          // surface on the theme's own tokens, a hairline rim and a faint top
+          // highlight, so it reads in both themes.
+          className="relative flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden rounded-2xl border border-stroke-strong bg-bg-surface/70 shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))] backdrop-blur-xl backdrop-saturate-150 sm:max-h-[calc(100dvh-4rem)]"
         >
-          <div className="flex shrink-0 items-start justify-between gap-4 border-b border-stroke-subtle p-4 sm:p-5">
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[rgb(var(--color-stroke)/0.22)] to-transparent"
+          />
+          <div className="flex shrink-0 items-start justify-between gap-4 px-5 pb-1 pt-5 sm:px-6 sm:pt-6">
             <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">
+              <p className="flex items-center gap-2 text-xs font-medium text-content-tertiary">
                 {isFirstRelease ? 'Welcome to Urganize' : 'Create rollout'}
-                {plan ? (
+                {/* The plan pill is the flag-off two-step flow's way back to
+                    the chooser. Type-first has no chooser, so no pill. */}
+                {plan && !TYPE_FIRST_CREATE_ENABLED ? (
                   <button
                     type="button"
                     onClick={() => setPlan(null)}
@@ -549,7 +492,7 @@ export function CreateReleaseModal({
                   </button>
                 ) : null}
               </p>
-              <h2 id="create-release-title" className="mt-2 font-display text-2xl font-semibold text-content-primary">
+              <h2 id="create-release-title" className="mt-1.5 font-display text-2xl font-semibold tracking-[-0.01em] text-content-primary">
                 {TYPE_FIRST_CREATE_ENABLED
                   ? 'What are you releasing?'
                   : isFirstRelease
@@ -563,7 +506,7 @@ export function CreateReleaseModal({
               {/* First-run context, echoing the onboarding wizard's own line
                   so the two first-run surfaces sound like one product. */}
               {isFirstRelease ? (
-                <p className="mt-2 max-w-xl text-sm leading-6 text-content-secondary">
+                <p className="mt-2 max-w-md text-sm leading-6 text-content-secondary">
                   Every rollout gets its own place for activities, files and your team.
                   Start with this one and everything else follows.
                 </p>
@@ -574,87 +517,11 @@ export function CreateReleaseModal({
               onClick={onClose}
               disabled={isSubmitting}
               aria-label="Close modal"
-              className="shrink-0 border-stroke-default bg-[rgb(var(--color-stroke)/0.02)]"
+              className="shrink-0 border-stroke-default bg-[rgb(var(--color-stroke)/0.04)]"
             >
               <X className="h-4 w-4" />
             </IconButton>
           </div>
-
-          {/* Type-first create (founder call, 2026-09-01): ONE screen, no plan
-              chooser (every type-first release is a rollout release). Each card
-              is just the type's name; the playbook numbers were dropped
-              (founder call, 2026-09-29). Since v1.91.3 the screen opens on an
-              optional title field, the cards are a radio choice that stays
-              changeable, and the footer's "Create rollout" is the submit. */}
-          {TYPE_FIRST_CREATE_ENABLED ? (
-            <div className="space-y-5 overflow-y-auto p-4 sm:p-5">
-              <label className="block">
-                <span className="mb-2 flex items-baseline gap-2 text-sm font-medium text-content-primary">
-                  What&apos;s it called?
-                  <span className="text-xs font-normal text-content-tertiary">Optional</span>
-                  <InfoTip label="About the name" text={TITLE_SKIP_TIP} />
-                </span>
-                <input
-                  ref={titleInputRef}
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  disabled={isSubmitting}
-                  className="input rounded-lg border-stroke-control bg-bg-elevated"
-                  placeholder={DEFAULT_RELEASE_TITLE}
-                  maxLength={140}
-                  aria-invalid={Boolean(errors.title)}
-                />
-                {errors.title ? (
-                  <p role="alert" className="mt-2 text-xs text-status-error">{errors.title}</p>
-                ) : null}
-              </label>
-
-              {SHOW_TYPE_PICKER ? (
-                <div
-                  role="radiogroup"
-                  aria-label="Format"
-                  onKeyDown={(event) =>
-                    onRadioGroupKeyDown(event, CREATABLE_RELEASE_TYPES.indexOf(releaseType), (index) =>
-                      handleTypeFirstPick(CREATABLE_RELEASE_TYPES[index])
-                    )
-                  }
-                >
-                  <span className="mb-2 block text-sm font-medium text-content-primary">Format</span>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    {CREATABLE_RELEASE_TYPES.map((option, index) => {
-                      const isSelected = typeFirstPicked && option === releaseType;
-                      // Roving tabindex: the chosen card, or the first one
-                      // before anything is chosen, is the group's one Tab stop.
-                      const isTabStop = typeFirstPicked ? isSelected : index === 0;
-                      return (
-                        <button
-                          key={option}
-                          type="button"
-                          role="radio"
-                          aria-checked={isSelected}
-                          tabIndex={isTabStop ? 0 : -1}
-                          onClick={() => handleTypeFirstPick(option)}
-                          disabled={isSubmitting}
-                          className={`motion-focus motion-press group flex items-center gap-2 rounded-xl border p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 sm:p-5 ${
-                            isSelected
-                              ? 'border-brand bg-brand/10'
-                              : 'border-stroke-default bg-bg-elevated hover:border-brand/50 hover:bg-bg-hover'
-                          }`}
-                        >
-                          {isSelected ? (
-                            <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
-                          ) : null}
-                          <span className="font-display text-base font-semibold text-content-primary">
-                            {RELEASE_TYPE_LABELS[option]}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
 
           {/* Step 1 — the chooser (founder call, 2026-07-23): two option
               cards side by side, Linear-style. Rollout plan is the
@@ -720,26 +587,16 @@ export function CreateReleaseModal({
             </div>
           ) : null}
 
-          {/* The body scrolls internally when the form exceeds the viewport
-              (small phones). Header + footer stay pinned via `shrink-0` so the
-              submit button is always reachable without scrolling the page. */}
-          <div className={plan ? 'flex-1 space-y-4 overflow-y-auto p-4 sm:p-5' : 'hidden'}>
-              {/* Release type leads the form: it decides which playbook builds
-                  the plan, so it has to be answered before the date field's
-                  runway warning means anything. Renders only when more than one
-                  playbook is switched on — with the EP/album flag off there is
-                  nothing to choose and the release is a single, as before.
-                  Deliberately not part of step 1, which asks a different
-                  question (rollout plan vs blank); a blank EP is legitimate and
-                  should still stamp the row's type. */}
-              {/* WHOSE release. Above the type picker because it is the more
-                  fundamental question, and above the date for the same reason
-                  the type picker is. Renders only when the team has more than
-                  one artist — the release-type picker's precedent exactly: no
-                  control until there is a real choice, so every one-artist team
-                  sees the form it saw before rosters existed. A <select>
-                  rather than a radio row because a roster can be long, unlike
-                  the three fixed release types. */}
+          {/* ONE body for every mode (2026-10-24): type-first always, and the
+              flag-off flow once a plan is picked. It scrolls internally when
+              it outgrows the viewport (small phones); header and footer stay
+              pinned via `shrink-0` so Create is always reachable. */}
+          {TYPE_FIRST_CREATE_ENABLED || plan ? (
+            <div className="flex-1 space-y-5 overflow-y-auto px-5 pb-5 pt-4 sm:px-6">
+              {/* WHOSE rollout. Renders only when the team has more than one
+                  artist, so every one-artist team sees no control at all. A
+                  <select> rather than a radio row because a roster can be
+                  long. Sent on submit in every mode. */}
               {showArtistPicker ? (
                 <label className="block">
                   <span className="mb-2 block text-sm font-medium text-content-primary">
@@ -748,7 +605,8 @@ export function CreateReleaseModal({
                   <select
                     value={selectedArtistId}
                     onChange={(event) => setArtistId(event.target.value)}
-                    className="w-full rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                    disabled={isSubmitting}
+                    className={`${FIELD_CLASS} pr-9`}
                   >
                     {artists.map((option) => (
                       <option key={option.id} value={option.id}>
@@ -759,20 +617,25 @@ export function CreateReleaseModal({
                 </label>
               ) : null}
 
+              {/* Format: a compact segmented control in a muted track. It
+                  decides which playbook builds the plan. Renders only when
+                  more than one playbook is switched on. Roving tabindex: the
+                  selected pill is the group's one Tab stop, arrows move it. */}
               {SHOW_TYPE_PICKER ? (
                 <div
                   role="radiogroup"
                   aria-label="Format"
                   onKeyDown={(event) =>
                     onRadioGroupKeyDown(event, CREATABLE_RELEASE_TYPES.indexOf(releaseType), (index) =>
-                      setReleaseType(CREATABLE_RELEASE_TYPES[index])
+                      handleTypeFirstPick(CREATABLE_RELEASE_TYPES[index])
                     )
                   }
                 >
-                  <span className="mb-2 block text-sm font-medium text-content-primary">
-                    Format
-                  </span>
-                  <div className="flex gap-2">
+                  <span className="mb-2 block text-sm font-medium text-content-primary">Format</span>
+                  <div
+                    className="grid gap-1 rounded-xl border border-stroke-default bg-[rgb(var(--color-stroke)/0.04)] p-1"
+                    style={{ gridTemplateColumns: `repeat(${CREATABLE_RELEASE_TYPES.length}, minmax(0, 1fr))` }}
+                  >
                     {CREATABLE_RELEASE_TYPES.map((option) => {
                       const isSelected = option === releaseType;
                       return (
@@ -782,14 +645,14 @@ export function CreateReleaseModal({
                           role="radio"
                           aria-checked={isSelected}
                           tabIndex={isSelected ? 0 : -1}
-                          onClick={() => setReleaseType(option)}
-                          className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                          onClick={() => handleTypeFirstPick(option)}
+                          disabled={isSubmitting}
+                          className={`motion-focus h-9 rounded-lg border text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60 ${
                             isSelected
-                              ? 'border-brand bg-brand/10 text-content-primary'
-                              : 'border-stroke-default bg-bg-elevated text-content-secondary hover:text-content-primary'
+                              ? 'border-brand/60 bg-brand/15 text-content-primary shadow-sm'
+                              : 'border-transparent text-content-secondary hover:bg-bg-hover hover:text-content-primary'
                           }`}
                         >
-                          {isSelected ? <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : null}
                           {RELEASE_TYPE_LABELS[option]}
                         </button>
                       );
@@ -798,10 +661,9 @@ export function CreateReleaseModal({
                 </div>
               ) : null}
 
-              {/* Both fields optional (URG-230). "Optional" sits in the label
-                  itself rather than as placeholder text, so it survives the
-                  field being filled in and is read out by screen readers with
-                  the label. */}
+              {/* "Optional" sits in the label itself rather than as
+                  placeholder text, so it survives the field being filled in
+                  and is read out with the label. */}
               <label className="block">
                 <span className="mb-2 flex items-baseline gap-2 text-sm font-medium text-content-primary">
                   Title
@@ -812,7 +674,8 @@ export function CreateReleaseModal({
                   ref={titleInputRef}
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
-                  className="input rounded-lg border-stroke-control bg-bg-elevated"
+                  disabled={isSubmitting}
+                  className={FIELD_CLASS}
                   placeholder={DEFAULT_RELEASE_TITLE}
                   maxLength={140}
                   aria-invalid={Boolean(errors.title)}
@@ -821,68 +684,38 @@ export function CreateReleaseModal({
                   <p role="alert" className="mt-2 text-xs text-status-error">{errors.title}</p>
                 ) : null}
               </label>
-
-              <label className="block">
-                <span className="mb-2 flex items-baseline gap-2 text-sm font-medium text-content-primary">
-                  <CalendarDays
-                    className="h-4 w-4 self-center text-content-tertiary"
-                    aria-hidden="true"
-                  />
-                  Release date
-                  <span className="text-xs font-normal text-content-tertiary">Optional</span>
-                </span>
-                <input
-                  type="date"
-                  min={todayYmd}
-                  value={releaseDate}
-                  onChange={(event) => setReleaseDate(event.target.value)}
-                  className="input rounded-lg border-stroke-control bg-bg-elevated"
-                  aria-invalid={Boolean(errors.releaseDate)}
-                />
-                {errors.releaseDate ? (
-                  <p role="alert" className="mt-2 text-xs text-status-error">{errors.releaseDate}</p>
-                ) : compressedNote && plan === 'template' ? (
-                  <p className="mt-2 text-xs leading-5 text-content-secondary">
-                    Heads up. A release date of {compressedNote.displayDate} compresses the first ~
-                    {compressedNote.compressedWeeks}{' '}
-                    {compressedNote.compressedWeeks === 1 ? 'week' : 'weeks'} of prep. Those
-                    early tasks will show as &ldquo;Catch up&rdquo; so you can prioritize them.
-                  </p>
-                ) : !releaseDate ? (
-                  // States the actual consequence of skipping, which differs
-                  // by plan: a rollout plan is dated off release day, so it
-                  // genuinely cannot be built yet.
-                  <p className="mt-2 text-xs leading-5 text-content-secondary">
-                    {plan === 'template'
-                      ? PLANNER_ENABLED
-                        ? "Don't have one yet? Skip it. UrgAns can suggest a date while you plan."
-                        : "Don't have one yet? Skip it. Your rollout plan gets built the moment you set a date."
-                      : "Don't have one yet? Skip it and add it whenever it's confirmed."}
-                  </p>
-                ) : null}
-              </label>
-          </div>
+            </div>
+          ) : null}
 
           {submitError ? (
-            <div role="alert" className="mx-4 mb-4 flex shrink-0 items-start gap-3 border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error sm:mx-5">
+            <div role="alert" className="mx-5 mb-4 flex shrink-0 items-start gap-3 rounded-lg border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error sm:mx-6">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <p>{submitError}</p>
             </div>
           ) : null}
 
           {plan || TYPE_FIRST_CREATE_ENABLED ? (
-            <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-stroke-subtle p-4 sm:flex-row sm:justify-end sm:p-5">
-              <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
+            // Cancel is a quiet text button on the left, Create the one
+            // primary on the right with a soft brand glow beneath it.
+            <div className="flex shrink-0 items-center gap-3 border-t border-stroke-default px-5 py-4 sm:px-6">
+              <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={!canSubmit}
-                isLoading={isSubmitting}
-                leftIcon={isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
-              >
-                Create rollout
-              </Button>
+              <div className="relative flex-1">
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-8 -bottom-1 h-6 rounded-full bg-brand/40 blur-xl"
+                />
+                <Button
+                  type="submit"
+                  disabled={!canSubmit}
+                  isLoading={isSubmitting}
+                  leftIcon={isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+                  className="relative w-full"
+                >
+                  Create
+                </Button>
+              </div>
             </div>
           ) : null}
         </form>

@@ -81,6 +81,19 @@ export interface OnboardingDraft {
   // already demonstrates a tailored suggestion, so that's the path of
   // least friction; the user can switch to 'start_from_scratch' there.
   planningPreference: OnboardingPlanningPreference;
+  // "Nothing planned yet" on step 0 (2026-10-24, lighter rollouts): the person
+  // wants to look around first. When true, releaseType stays null, the
+  // rollout steps are skipped (lib/onboarding-steps.ts), no rollout is made
+  // and the wizard lands on Home. Picking a release type turns it off.
+  nothingPlanned: boolean;
+}
+
+/** Step 0 is answered: a release type that has a playbook, or "Nothing planned yet". */
+export function hasWorkingOnAnswer(
+  draft: Pick<OnboardingDraft, 'releaseType' | 'nothingPlanned'>,
+  isTypeAvailable: (type: OnboardingReleaseType | null) => boolean
+): boolean {
+  return draft.nothingPlanned || isTypeAvailable(draft.releaseType);
 }
 
 export const EMPTY_ONBOARDING_DRAFT: OnboardingDraft = {
@@ -93,6 +106,7 @@ export const EMPTY_ONBOARDING_DRAFT: OnboardingDraft = {
   releaseDate: '',
   artistName: '',
   planningPreference: 'ai_recommendations',
+  nothingPlanned: false,
 };
 
 const STORAGE_KEY = 'urganize.onboarding.draft';
@@ -142,6 +156,8 @@ export function loadOnboardingDraft(): OnboardingDraft {
       planningPreference: isOnboardingPlanningPreference(parsed.planningPreference)
         ? parsed.planningPreference
         : EMPTY_ONBOARDING_DRAFT.planningPreference,
+      // A release type wins over a stale flag, so the two can never both be on.
+      nothingPlanned: parsed.nothingPlanned === true && !isReleaseType(parsed.releaseType),
     };
   } catch {
     return EMPTY_ONBOARDING_DRAFT;

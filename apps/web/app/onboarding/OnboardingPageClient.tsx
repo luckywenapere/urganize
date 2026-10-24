@@ -100,6 +100,7 @@ import {
   ONBOARDING_PERSONA_CHOICES,
   ONBOARDING_PERSONA_LABELS,
   ONBOARDING_PLANNING_PREFERENCE_LABELS,
+  ONBOARDING_STAGE_NOTHING_PLANNED,
   profileRoleForPersona,
   type OnboardingPersona,
   type OnboardingPlanningPreference,
@@ -113,6 +114,7 @@ import {
   type OnboardingReleaseType,
   type OnboardingWhereStuck,
   clearOnboardingDraft,
+  hasWorkingOnAnswer,
   loadOnboardingDraft,
   saveOnboardingDraft,
 } from '@/lib/onboarding-draft';
@@ -559,7 +561,7 @@ export default function OnboardingPage() {
     // new tab or the Gmail app's browser does not share. The pending
     // confirmation keeps a copy in localStorage for exactly that.
     const pendingConfirmation = readPendingConfirmation();
-    if (!loaded.title && !loaded.releaseType && pendingConfirmation?.onboarding) {
+    if (!loaded.title && !loaded.releaseType && !loaded.nothingPlanned && pendingConfirmation?.onboarding) {
       loaded = pendingConfirmation.onboarding.draft;
     }
     const pageParams = new URLSearchParams(window.location.search);
@@ -694,6 +696,9 @@ export default function OnboardingPage() {
   // The steps this person walks, in order (lib/onboarding-steps.ts). Next and
   // Back walk this list; "Step N of M" is a position in it.
   const startFromScratch = draft.planningPreference === 'start_from_scratch';
+  // "Nothing planned yet" (2026-10-24): no rollout steps, no rollout made.
+  const nothingPlanned = draft.nothingPlanned;
+  const workingOnAnswered = hasWorkingOnAnswer(draft, isReleaseTypeAvailable);
   const sequence = useMemo(
     () =>
       onboardingStepSequence({
@@ -704,8 +709,9 @@ export default function OnboardingPage() {
         welcomeEnabled: ONBOARDING_V2 && !welcomeAlreadySeen,
         previewEnabled: ONBOARDING_V2,
         optInEnabled: ONBOARDING_V2,
+        nothingPlanned,
       }),
-    [isAuthedSetup, startFromScratch, welcomeAlreadySeen]
+    [isAuthedSetup, startFromScratch, welcomeAlreadySeen, nothingPlanned]
   );
   const LAST_STEP = sequence[sequence.length - 1];
   const TOTAL_STEPS = sequence.length;
@@ -788,7 +794,7 @@ export default function OnboardingPage() {
 
   // ---- step gating -------------------------------------------------------
   const canAdvance = useMemo(() => {
-    if (step === 0) return isReleaseTypeAvailable(draft.releaseType);
+    if (step === 0) return hasWorkingOnAnswer(draft, isReleaseTypeAvailable);
     if (step === 1) return draft.whereStuck.length > 0;
     // "None of it yet" is a real answer; nothing ticked is not.
     if (step === 2) return draft.readyToday.length > 0;
@@ -824,7 +830,7 @@ export default function OnboardingPage() {
   // disabled button that does not say why is a button people tap and abandon.
   const nextHint = describeNextBlocker({
     step,
-    releaseTypeAvailable: isReleaseTypeAvailable(draft.releaseType),
+    releaseTypeAvailable: workingOnAnswered,
     whereStuckCount: draft.whereStuck.length,
     hasStage: draft.readyToday.length > 0,
     hasTitle: draft.title.trim().length > 0,
@@ -842,6 +848,8 @@ export default function OnboardingPage() {
   // (Google provides those) but DOES require a complete draft, artist name
   // included (asked on the rollout step for every role since 2026-10-11).
   const canStartGoogle = useMemo(() => {
+    // Nothing planned yet: there is no rollout to describe, so nothing else is needed.
+    if (draft.nothingPlanned) return true;
     if (!isReleaseTypeAvailable(draft.releaseType)) return false;
     if (!draft.title.trim() || !isReleaseDateValid(draft.releaseDate)) return false;
     if (!draft.artistName.trim()) return false;
@@ -940,7 +948,10 @@ export default function OnboardingPage() {
           // URG-192: these two were collected and then thrown away for the
           // whole life of this flow. They go to the server now.
           onboardingWhereStuck: draft.whereStuck,
-          onboardingStage: draft.stage,
+          // "Nothing planned yet" is recorded as the stage (2026-10-24), so the
+          // profile says this person is exploring. No migration: the column
+          // is free text, validated by the route.
+          onboardingStage: draft.nothingPlanned ? ONBOARDING_STAGE_NOTHING_PLANNED : draft.stage,
         }),
       }).catch(() => undefined);
       persisted = Boolean(response?.ok);
@@ -1041,6 +1052,16 @@ export default function OnboardingPage() {
     // themself — the same `plan` contract CreateReleaseModal uses (URG-201:
     // before this, the preference was recorded on the profile but the
     // release was always created with the full template).
+    // "Nothing planned yet" (2026-10-24): no rollout is made. Everything
+    // else (opt-in, the onboarding PATCH and its welcome email) still runs,
+    // and finishToDashboard lands on Home because nothing was created.
+    if (draft.nothingPlanned) {
+      createdReleaseRef.current = null;
+      setHandoffPhase('plan');
+      await finishHandoffAfterRelease(accessToken);
+      return;
+    }
+
     setHandoffPhase('rollout');
     setProgressMessage(onboardingProgressMessage('rollout', draft.title));
     // A slow server still gets a later line, so the screen never sits on one
@@ -1103,6 +1124,12 @@ export default function OnboardingPage() {
         }
       : null;
 
+    await finishHandoffAfterRelease(accessToken);
+  };
+
+  // The rest of the hand-off, after the rollout (or after none, for "Nothing
+  // planned yet"): the opt-in, then the paywall / welcome / invite or finish.
+  const finishHandoffAfterRelease = async (accessToken: string) => {
     // 3. Hand the opt-in choices to the new account (URG-251 Part 2): the
     // push subscription (only when the person's tap already got permission)
     // and the email answer. Bounded, so a slow service worker never holds the
@@ -1191,7 +1218,7 @@ export default function OnboardingPage() {
   };
 
   const handleCreateAccount = async () => {
-    if (!canAdvance || !draft.releaseType) {
+    if (!canAdvance || !workingOnAnswered) {
       setError('Please complete the previous steps.');
       return;
     }
@@ -1285,7 +1312,7 @@ export default function OnboardingPage() {
   // runPostSignupHandoff rather than reimplementing it — one hand-off means
   // the wizard cannot produce a different result for Google than for email.
   const handleAuthedSetupFinish = async () => {
-    if (!draft.releaseType) {
+    if (!workingOnAnswered) {
       setError('Please complete the previous steps.');
       return;
     }
@@ -1318,7 +1345,7 @@ export default function OnboardingPage() {
   // than canAdvance — we re-check the whole draft because canStartGoogle
   // gates the button independently of the email/password fields.
   const handleGoogleSignup = async () => {
-    if (!canStartGoogle || !draft.releaseType) {
+    if (!canStartGoogle || !workingOnAnswered) {
       setError('Please complete the previous steps.');
       return;
     }
@@ -1959,7 +1986,7 @@ export default function OnboardingPage() {
                         disabled={!available}
                         onChange={() => {
                           if (!available) return;
-                          setDraft((current) => ({ ...current, releaseType: option.value }));
+                          setDraft((current) => ({ ...current, releaseType: option.value, nothingPlanned: false }));
                         }}
                         className="h-4 w-4 accent-brand"
                       />

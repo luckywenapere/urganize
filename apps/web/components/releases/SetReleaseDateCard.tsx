@@ -1,10 +1,9 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
-import { CalendarPlus, Loader2 } from '@/components/icons';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { Loader2 } from '@/components/icons';
 import { Button } from '@urganize/ui';
 import { scheduleRelease } from '@/lib/schedule-release-client';
-import { getTemplateStats } from '@/lib/release-templates/loader';
 import { DEFAULT_RELEASE_TITLE, isDefaultReleaseTitle, type DbReleaseType } from '@/types/releases';
 
 function formatYmdLocal(date: Date): string {
@@ -18,74 +17,78 @@ type SetReleaseDateCardProps = {
   releaseId: string;
   releaseTitle: string;
   /** True when this release was created with the Rollout plan but has no date,
-   * so its activities have not been generated yet. Drives the card's weight:
-   * plan-waiting gets the full explainer, everything else gets one compact
-   * row. */
+   * so its activities have not been generated yet. Setting the date is what
+   * builds them, so the row says so and wears the brand tint. */
   templatePending: boolean;
-  /** Which playbook this release follows, so the explainer quotes that
-   * playbook's real numbers. An EP plans 13 weeks of runway where a single
-   * plans 8, and this card is the screen for a plan-waiting release. */
+  /** Which playbook this release follows. Kept on the props for the callers;
+   * the row no longer quotes playbook numbers (2026-10-24). */
   releaseType?: DbReleaseType;
   onSaved: (message: string) => void;
   /** Opens the activity quick-create for this release. Only used by the
-   * plan-waiting variant, where the card fills an empty view and would
+   * plan-waiting variant, where the row sits over an empty list and would
    * otherwise read as a prerequisite (URG-233). */
   onAddActivity: () => void;
 };
 
 /**
- * Sits at the top of the activities view for any release without a release
- * date (URG-230 — the date became optional at creation).
+ * The release date as the rollout's FIRST ACTIVITY (2026-10-24, founder
+ * approved mock "create-rollout-nodate"). The create modal no longer asks for
+ * a date at all; instead any release without one gets this task-style row at
+ * the top of its activities list: an open circle, "Set your release date",
+ * one line on what it unlocks, and a "Pick date" button.
  *
- * Two weights, because the stakes differ:
- *   - `templatePending`: this release owes its whole rollout plan. The
- *     activities list below is empty, so this card IS the screen — it gets
- *     the headline, the explanation of what a date unlocks, and (when the
- *     release is still unnamed) a name field, since this is the only rename
- *     affordance in the app. It also carries an explicit "add one yourself"
- *     action (URG-233): setting a date was never a prerequisite for creating
- *     activities, but a full-width brand-tinted card whose only button is
- *     "Build my plan" reads exactly like one.
- *   - otherwise: the release already has activities, or the user chose a
- *     Blank release. A date is still useful (the calendar, the press kit,
- *     due-date math) but nothing is blocked, so it stays a single quiet row
- *     that doesn't shout over the list beneath it.
+ * It is a UI pseudo-task, not a task row in the database: it cannot be
+ * assigned, dated or completed like one, and it disappears on its own the
+ * moment the store reports a date (scheduleRelease runs the forced refresh).
+ * Replaced the URG-230 banner card, which carried the same two weights:
+ *   - `templatePending`: the whole rollout plan is waiting on this date, so the
+ *     line reads "Builds the rest of your plan", the row is brand tinted, the
+ *     picker offers a name while the release still has the default title (the
+ *     card's rename affordance, kept), and a quiet "Add an activity yourself"
+ *     line stays under it (URG-233: a date was never a prerequisite).
+ *   - otherwise: nothing is blocked, so a quiet neutral row, "Unlocks calendar
+ *     and due dates".
  *
- * Deliberately not dismissible. It isn't a nag — in the pending case it's the
- * only route to the plan, and dismissing it would strand the release with no
- * way back. It disappears on its own the moment a date exists.
+ * Deliberately not dismissible: in the pending case it is the only route to
+ * the plan.
  */
 export function SetReleaseDateCard({
   releaseId,
   releaseTitle,
   templatePending,
-  releaseType = 'single',
   onSaved,
   onAddActivity,
 }: SetReleaseDateCardProps) {
-  // Never throws, and falls back to the single playbook's numbers for a type
-  // whose playbook is switched off — which is also what would be instantiated.
-  const { activityCount, spanWeeks, leadWeeks } = useMemo(
-    () => getTemplateStats(releaseType),
-    [releaseType]
-  );
+  const [isPicking, setIsPicking] = useState(false);
   const [releaseDate, setReleaseDate] = useState('');
   const [title, setTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   // Anchored once per mount so the `min` attribute can't shift mid-interaction.
   const todayYmd = useMemo(() => formatYmdLocal(new Date()), []);
 
   // Offer the rename only while the release still carries a server-applied
-  // default — someone who named it already doesn't need the field, and
-  // showing it would read as "we lost your title". isDefaultReleaseTitle
-  // (not a bare === DEFAULT_RELEASE_TITLE) is what makes this fire for a row
-  // created before the 2026-09-09 rename ("Untitled release"), not only the
-  // current default ("Untitled rollout") — a strict comparison silently
-  // stopped offering the rename to every pre-existing unnamed rollout.
-  const isUnnamed = isDefaultReleaseTitle(releaseTitle);
-  const showNameField = templatePending && isUnnamed;
+  // default. isDefaultReleaseTitle (not a bare === DEFAULT_RELEASE_TITLE) also
+  // catches rows created before the 2026-09-09 rename ("Untitled release").
+  const showNameField = templatePending && isDefaultReleaseTitle(releaseTitle);
+
+  // "Pick date" opens the picker: focus the field and, where the browser
+  // allows it, open its native calendar straight away. showPicker throws when
+  // the browser refuses (no user activation left, or unsupported), and the
+  // focused field is still one tap from the calendar then.
+  useEffect(() => {
+    if (!isPicking) return;
+    const input = dateInputRef.current;
+    if (!input) return;
+    input.focus();
+    try {
+      input.showPicker?.();
+    } catch {
+      // Focus alone is the fallback.
+    }
+  }, [isPicking]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -96,8 +99,8 @@ export function SetReleaseDateCard({
 
     // Shared with ReleaseSetupSheet (lib/schedule-release-client.ts) so the
     // 207 handling and the toast copy cannot drift between the two surfaces.
-    // The helper also runs the forced store refresh — which is what unmounts
-    // this card once the store reports a date.
+    // The helper also runs the forced store refresh, which is what unmounts
+    // this row once the store reports a date.
     const outcome = await scheduleRelease(releaseId, {
       releaseDate,
       title: showNameField ? title : undefined,
@@ -113,130 +116,126 @@ export function SetReleaseDateCard({
     setIsSaving(false);
   };
 
-  const dateInput = (
-    <input
-      type="date"
-      required
-      min={todayYmd}
-      value={releaseDate}
-      onChange={(event) => setReleaseDate(event.target.value)}
-      disabled={isSaving}
-      aria-label="Release date"
-      className="input h-10 rounded-lg border-stroke-control bg-bg-elevated sm:w-[11.5rem]"
-    />
-  );
-
-  // ---- Compact variant: activities already exist, nothing is blocked. ----
-  if (!templatePending) {
-    return (
+  return (
+    <div className="mb-4">
       <form
         onSubmit={handleSubmit}
-        className="mb-4 rounded-xl border border-stroke-default bg-bg-surface p-3"
+        className={`rounded-xl border px-4 py-3.5 ${
+          templatePending
+            ? 'border-brand/40 bg-brand/[0.06]'
+            : 'border-stroke-default bg-bg-surface'
+        }`}
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="flex min-w-0 flex-1 items-center gap-2.5">
-            <CalendarPlus
-              className="h-4 w-4 shrink-0 text-content-tertiary"
-              aria-hidden="true"
-            />
-            <p className="min-w-0 text-sm text-content-secondary">
-              <span className="font-medium text-content-primary">No release date yet.</span>{' '}
-              Add one when it&apos;s confirmed.
+        <div className="flex items-center gap-3.5">
+          <span
+            aria-hidden="true"
+            className={`h-5 w-5 shrink-0 rounded-full border-2 ${
+              templatePending ? 'border-brand/70' : 'border-stroke-control'
+            }`}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-content-primary">Set your release date</p>
+            <p
+              className={`mt-0.5 text-xs ${
+                templatePending ? 'text-brand' : 'text-content-tertiary'
+              }`}
+            >
+              {templatePending ? 'Builds the rest of your plan' : 'Unlocks calendar and due dates'}
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {dateInput}
-            <Button type="submit" size="sm" disabled={!releaseDate || isSaving} isLoading={isSaving}>
-              Save
+          {!isPicking ? (
+            <Button
+              type="button"
+              size="sm"
+              variant={templatePending ? 'primary' : 'secondary'}
+              onClick={() => setIsPicking(true)}
+              className="shrink-0"
+            >
+              Pick date
             </Button>
+          ) : null}
+        </div>
+
+        {isPicking ? (
+          // Indented to the text column so the eye runs title, then picker.
+          <div className="mt-3 space-y-3 pl-[2.125rem]">
+            {showNameField ? (
+              <label className="block">
+                <span className="mb-1.5 flex items-baseline gap-2 text-xs font-medium text-content-primary">
+                  Title
+                  <span className="font-normal text-content-tertiary">Optional</span>
+                </span>
+                <input
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  disabled={isSaving}
+                  maxLength={140}
+                  placeholder={DEFAULT_RELEASE_TITLE}
+                  className="input h-10 rounded-lg border-stroke-control bg-bg-elevated sm:max-w-[22rem]"
+                />
+              </label>
+            ) : null}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                ref={dateInputRef}
+                type="date"
+                required
+                min={todayYmd}
+                value={releaseDate}
+                onChange={(event) => setReleaseDate(event.target.value)}
+                disabled={isSaving}
+                aria-label="Release date"
+                className="input h-10 rounded-lg border-stroke-control bg-bg-elevated sm:w-[11.5rem]"
+              />
+              <div className="flex items-center gap-2">
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={!releaseDate || isSaving}
+                  isLoading={isSaving}
+                  leftIcon={isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : undefined}
+                >
+                  {templatePending ? 'Build my plan' : 'Save'}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={isSaving}
+                  onClick={() => {
+                    setIsPicking(false);
+                    setError('');
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
-        {error ? <p role="alert" className="mt-2 text-xs text-status-error">{error}</p> : null}
-      </form>
-    );
-  }
-
-  // ---- Plan-waiting variant: this card is the whole screen. ----
-  return (
-    <form
-      onSubmit={handleSubmit}
-      className="mb-6 rounded-xl border border-brand/30 bg-brand/5 p-5 sm:p-6"
-    >
-      <div className="flex items-start gap-3">
-        <span
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand/10 text-brand"
-          aria-hidden="true"
-        >
-          <CalendarPlus className="h-4 w-4" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h3 className="font-display text-base font-semibold text-content-primary">
-            Set your release date
-          </h3>
-          <p className="mt-1.5 text-sm leading-6 text-content-secondary">
-            Your rollout plan is ready to build. It has {activityCount} activities across ~
-            {spanWeeks} weeks, starting {leadWeeks} weeks before release day. Every one of
-            them is dated from your release date, so pick it and the whole plan appears.
-          </p>
-        </div>
-      </div>
-
-      {/* Inputs sit below the explainer, indented to the text column so the
-          eye runs headline → reason → action in one straight line rather
-          than jumping back out to the icon gutter. */}
-      <div className="mt-4 sm:pl-12">
-        {showNameField ? (
-          <label className="mb-3 block">
-            <span className="mb-1.5 flex items-baseline gap-2 text-xs font-medium text-content-primary">
-              Title
-              <span className="font-normal text-content-tertiary">Optional</span>
-            </span>
-            <input
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              disabled={isSaving}
-              maxLength={140}
-              placeholder={DEFAULT_RELEASE_TITLE}
-              className="input h-10 rounded-lg border-stroke-control bg-bg-elevated sm:max-w-[22rem]"
-            />
-          </label>
         ) : null}
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          {dateInput}
-          <Button
-            type="submit"
-            disabled={!releaseDate || isSaving}
-            isLoading={isSaving}
-            leftIcon={isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
-          >
-            Build my plan
-          </Button>
-        </div>
-
-        {error ? <p role="alert" className="mt-2.5 text-xs text-status-error">{error}</p> : null}
-
-        {/* The escape hatch (URG-233). A hairline separates it from the
-            primary action so it reads as "or, instead" rather than a second
-            competing CTA, and it stays inside the same indented text column
-            so the eye keeps running down one line: what this is -> the fast
-            path -> the alternative. Plain text button, not a filled one —
-            it must not compete with "Build my plan", which is still the
-            recommended route. */}
-        <div className="mt-5 border-t border-brand/20 pt-4">
-          <p className="text-xs leading-6 text-content-secondary">
-            Don&apos;t need the full plan yet?{' '}
-            <button
-              type="button"
-              onClick={onAddActivity}
-              className="motion-focus rounded font-medium text-content-primary underline decoration-content-tertiary underline-offset-4 transition-colors hover:decoration-content-primary"
-            >
-              Add an activity yourself
-            </button>
-            . You don&apos;t need a release date for that.
+        {error ? (
+          <p role="alert" className="mt-2.5 pl-[2.125rem] text-xs text-status-error">
+            {error}
           </p>
-        </div>
-      </div>
-    </form>
+        ) : null}
+      </form>
+
+      {/* The escape hatch (URG-233), kept from the old card: plain text, so it
+          reads as "or, instead" and never competes with the date. */}
+      {templatePending ? (
+        <p className="mt-3 px-1 text-xs leading-6 text-content-secondary">
+          Don&apos;t need the full plan yet?{' '}
+          <button
+            type="button"
+            onClick={onAddActivity}
+            className="motion-focus rounded font-medium text-content-primary underline decoration-content-tertiary underline-offset-4 transition-colors hover:decoration-content-primary"
+          >
+            Add an activity yourself
+          </button>
+          . You don&apos;t need a release date for that.
+        </p>
+      ) : null}
+    </div>
   );
 }

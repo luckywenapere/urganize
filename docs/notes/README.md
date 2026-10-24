@@ -250,3 +250,4 @@ Adding a note: create `docs/notes/YYYY-MM-DD-short-slug.md` (start it with a `# 
 - [Bulk mark as done (2026-10-24, v1.169.0)](2026-10-24-bulk-mark-as-done.md)
 - [Vouch, slice 1 (2026-10-24, v1.171.0, NEXT_PUBLIC_FEATURE_VOUCHES ships on)](2026-10-24-vouch-slice-1.md)
 - [Curator applications (2026-10-24, v1.172.0, behind NEXT_PUBLIC_FEATURE_PITCHING)](2026-10-24-curator-applications.md): /curator/apply, admin approve mints the single-use invite; spam guard, RLS, traps.
+- [One-form create rollout (2026-10-24, v1.173.0)](2026-10-24-one-form-create-rollout.md): one body in CreateReleaseModal, glass look, no date field; date is the first activity row (SetReleaseDateCard).

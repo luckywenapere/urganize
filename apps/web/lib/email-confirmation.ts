@@ -134,6 +134,7 @@ export type MetadataDraft = {
   ws?: string[]; // whereStuck
   rd?: string[]; // readyToday
   r?: string; // role
+  np?: 1; // "Nothing planned yet": no rollout to build (2026-10-24)
 };
 
 export function toMetadataDraft(draft: OnboardingDraft, role: OnboardingRoleForResume): MetadataDraft {
@@ -148,6 +149,7 @@ export function toMetadataDraft(draft: OnboardingDraft, role: OnboardingRoleForR
     ws: draft.whereStuck.slice(0, 10),
     rd: draft.readyToday.slice(0, 20),
     r: role,
+    ...(draft.nothingPlanned ? { np: 1 as const } : {}),
   };
 }
 
@@ -159,13 +161,15 @@ export function fromMetadataDraft(
   if (raw.v !== 1) return null;
   const title = typeof raw.t === 'string' ? raw.t.trim() : '';
   const releaseDate = typeof raw.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.d) ? raw.d : '';
-  if (!title || !releaseDate || !isReleaseType(raw.rt)) return null;
+  // "Nothing planned yet" has no title, date or type, and builds no rollout.
+  const nothingPlanned = raw.np === 1 && !isReleaseType(raw.rt);
+  if (!nothingPlanned && (!title || !releaseDate || !isReleaseType(raw.rt))) return null;
   const readyToday = Array.isArray(raw.rd) ? normalizeReadyToday(raw.rd) : [];
   return {
     role: isRole(raw.r) ? raw.r : 'artist-manager',
     draft: {
       persona: isOnboardingPersona(raw.p) ? raw.p : null,
-      releaseType: raw.rt,
+      releaseType: nothingPlanned ? null : (raw.rt as OnboardingDraft['releaseType']),
       whereStuck: Array.isArray(raw.ws) ? raw.ws.filter(isOnboardingWhereStuck) : [],
       readyToday,
       stage: readyToday.length ? deriveOnboardingStage(readyToday) : null,
@@ -173,6 +177,7 @@ export function fromMetadataDraft(
       releaseDate,
       artistName: typeof raw.a === 'string' ? raw.a.trim().slice(0, 120) : '',
       planningPreference: isOnboardingPlanningPreference(raw.pp) ? raw.pp : 'ai_recommendations',
+      nothingPlanned,
     },
   };
 }
@@ -181,6 +186,11 @@ function isDraftLike(value: unknown): value is OnboardingDraft {
   if (!value || typeof value !== 'object') return false;
   const draft = value as Partial<OnboardingDraft>;
   return typeof draft.title === 'string' && typeof draft.releaseDate === 'string';
+}
+
+/** A pending record saved before "Nothing planned yet" existed has no flag. */
+function withNothingPlanned(draft: OnboardingDraft): OnboardingDraft {
+  return { ...draft, nothingPlanned: draft.nothingPlanned === true && !draft.releaseType };
 }
 
 export function readPendingConfirmation(now = Date.now(), storage = local()): PendingConfirmation | null {
@@ -199,7 +209,7 @@ export function readPendingConfirmation(now = Date.now(), storage = local()): Pe
       parsed.kind === 'invite' || parsed.kind === 'curator' || parsed.kind === 'login' ? parsed.kind : 'onboarding';
     const onboarding =
       parsed.onboarding && isRole(parsed.onboarding.role) && isDraftLike(parsed.onboarding.draft)
-        ? { role: parsed.onboarding.role, draft: parsed.onboarding.draft }
+        ? { role: parsed.onboarding.role, draft: withNothingPlanned(parsed.onboarding.draft) }
         : undefined;
     return {
       email,

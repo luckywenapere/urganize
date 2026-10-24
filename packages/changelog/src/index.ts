@@ -41,6 +41,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.173.0",
+    title: "A simpler way to start a rollout",
+    tag: "Rollouts",
+    date: "October 24, 2026",
+    highlights: [
+      "Starting a rollout is one short form now: artist, format and an optional title. No more fields showing twice.",
+      "Single is picked for you. Tap EP or Album to change it, then Create.",
+      "No date needed up front. \"Set your release date\" is the first activity in your rollout. Pick date there and the rest of your plan follows.",
+    ],
+  },
+  {
     version: "1.172.0",
     title: "Apply to curate for Urganize",
     tag: "Pitching",
