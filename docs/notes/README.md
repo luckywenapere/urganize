@@ -139,7 +139,7 @@ Adding a note: create `docs/notes/YYYY-MM-DD-short-slug.md` (start it with a `# 
 - [The side menu is draggable too, and "New release" is "New rollout" (2026-09-09, v1.34.0)](2026-09-09-the-side-menu-is-draggable-too-and-new-release-is-new-rollou.md)
 - [Pitching gets a page; press kits move to Settings (2026-09-09, v1.36.0)](2026-09-09-pitching-gets-a-page-press-kits-move-to-settings.md)
 - [The menu drags all the way into its collapsed rail (2026-09-09, v1.38.0)](2026-09-09-the-menu-drags-all-the-way-into-its-collapsed-rail.md)
-- [First-rollout focus (2026-10-10, always on, no flag)](2026-10-10-first-rollout-focus.md)
+- [First-rollout focus (2026-10-10, always on, no flag; REMOVED 2026-10-24, see Lighter rollouts)](2026-10-10-first-rollout-focus.md)
 - [Two guided tours (2026-09-09, flag-off)](2026-09-09-two-guided-tours.md)
 - [The audience narrowed to artists and managers (2026-09-11)](2026-09-11-the-audience-narrowed-to-artists-and-managers.md)
 - [The plan is built, not drafted (2026-09-15)](2026-09-15-the-plan-is-built-not-drafted.md)
@@ -251,3 +251,4 @@ Adding a note: create `docs/notes/YYYY-MM-DD-short-slug.md` (start it with a `# 
 - [Vouch, slice 1 (2026-10-24, v1.171.0, NEXT_PUBLIC_FEATURE_VOUCHES ships on)](2026-10-24-vouch-slice-1.md)
 - [Curator applications (2026-10-24, v1.172.0, behind NEXT_PUBLIC_FEATURE_PITCHING)](2026-10-24-curator-applications.md): /curator/apply, admin approve mints the single-use invite; spam guard, RLS, traps.
 - [One-form create rollout (2026-10-24, v1.173.0)](2026-10-24-one-form-create-rollout.md): one body in CreateReleaseModal, glass look, no date field; date is the first activity row (SetReleaseDateCard).
+- [Lighter rollouts (2026-10-24, v1.174.0, NEXT_PUBLIC_FEATURE_ROLLOUT_OFFER ships on)](2026-10-24-lighter-rollouts.md): "Nothing planned yet" in onboarding, no first-rollout lock, Home card + offers on a sign, metadata.origin on rollouts.

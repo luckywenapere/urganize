@@ -8,7 +8,7 @@ import {
   isOnboardingPersona,
   isOnboardingPlanningPreference,
   isOnboardingReleaseProcess,
-  isOnboardingStage,
+  isOnboardingProfileStage,
   isOnboardingWhereStuckList,
   isUserRole,
   normalizeOnboardingState,
@@ -513,7 +513,8 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (body.onboardingStage !== undefined) {
-    if (body.onboardingStage !== null && !isOnboardingStage(body.onboardingStage)) {
+    // 'nothing_planned' too (2026-10-24): "Nothing planned yet" at sign-up.
+    if (body.onboardingStage !== null && !isOnboardingProfileStage(body.onboardingStage)) {
       return NextResponse.json(
         { error: 'Onboarding stage is invalid.' } satisfies OnboardingApiError,
         { status: 400 }

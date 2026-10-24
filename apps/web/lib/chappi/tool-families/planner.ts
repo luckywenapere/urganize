@@ -49,6 +49,7 @@ import { getPlannerTemplate } from '@/lib/release-planning-actions-server';
 import { recordChatActionRun } from '@/lib/urgans-actions/chat-log-server';
 import {
   apiError,
+  argBoolean,
   argString,
   callInternalApi,
   fail,
@@ -332,6 +333,11 @@ export const PLANNER_TOOLS: ChappiTool[] = [
           description:
             'Q7 — anything else worth knowing. Read as instructions: something ruled out here becomes an excluded scope in the plan.',
         },
+        from_offer: {
+          type: 'boolean',
+          description:
+            'True only when YOU offered to plan this rollout (the user mentioned an upcoming release and had none for it) and they said yes. Leave it out when they asked for a plan on their own. Only matters with no releaseId.',
+        },
         preset: {
           type: 'string',
           enum: [...PLAN_PRESETS],
@@ -370,6 +376,8 @@ export const PLANNER_TOOLS: ChappiTool[] = [
             releaseDate: parsed.intake.release_date ?? undefined,
             releaseType: parsed.intake.release_type,
             source: 'chappi',
+            // Made because UrgAns offered (lib/rollout-origin.ts), not asked for.
+            ...(argBoolean(args, 'from_offer') === true ? { origin: 'hint' } : {}),
           },
         });
         if (!created.ok) return fail(apiError(created, 'Could not create the rollout.'));

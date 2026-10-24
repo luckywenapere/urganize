@@ -2,6 +2,7 @@ import { isPricingTierId, monthlyEquivalentKobo } from '@urganize/pricing';
 import { ACTIVATION_WINDOW_DAYS, isWithinActivationWindow } from './activation';
 import { resolveBillingInterval } from './billing-plans';
 import type { TeamAccessState } from './team-billing';
+import type { StoredRolloutOrigin } from './rollout-origin';
 
 // The company scoreboard (2026-10-02), worked out from database rows.
 //
@@ -99,6 +100,24 @@ export type ScoreboardRelease = {
   allTasksDone: boolean;
   /** When the last activity on it was marked done. */
   lastTaskDoneAt: string | null;
+  /** Why it was made (lib/rollout-origin.ts): choice, hint, onboarding, or
+   *  unknown for a row from before 2026-10-24. Optional so older callers and
+   *  hand-built test inputs read as unknown. */
+  origin?: StoredRolloutOrigin;
+};
+
+/**
+ * Real (non-test) rollouts by why they were made (2026-10-24). `byChoice` is
+ * the honest count of rollouts people made on their own. Onboarding rollouts
+ * from before 2026-10-24 are mixed: sign-up required one then, so some were
+ * real releases and some were made only to get in.
+ */
+export type RolloutOriginSummary = {
+  total: number;
+  byChoice: number;
+  fromHint: number;
+  fromOnboarding: number;
+  unknown: number;
 };
 
 export type ScoreboardInput = {
@@ -199,6 +218,9 @@ export type Scoreboard = {
   retention: RetentionCohort[];
   trialToPaid: TrialToPaidSummary;
   activation: ActivationSummary;
+  /** Rollouts by origin (choice, hint, onboarding). Optional: a board cached
+   *  before 2026-10-24 has none. */
+  rolloutOrigins?: RolloutOriginSummary;
   /** Doc section 2, "Referred signups: signups from a user's invite". Null when
    *  the referral tables could not be read. */
   referredSignups: ReferredSignups | null;
@@ -524,6 +546,21 @@ export function referralSummary(
   return { last30d, allTime: seen.size, payingNow };
 }
 
+/** Count real (non-test) rollouts by origin. */
+export function rolloutOriginSummary(releases: ScoreboardRelease[]): RolloutOriginSummary {
+  const summary: RolloutOriginSummary = { total: 0, byChoice: 0, fromHint: 0, fromOnboarding: 0, unknown: 0 };
+  for (const release of releases) {
+    if (release.isTest) continue;
+    summary.total += 1;
+    const origin = release.origin ?? 'unknown';
+    if (origin === 'choice') summary.byChoice += 1;
+    else if (origin === 'hint') summary.fromHint += 1;
+    else if (origin === 'onboarding') summary.fromOnboarding += 1;
+    else summary.unknown += 1;
+  }
+  return summary;
+}
+
 export function buildScoreboard(input: ScoreboardInput): Scoreboard {
   const { now, teams, releases } = input;
   const nowMs = now.getTime();
@@ -590,6 +627,7 @@ export function buildScoreboard(input: ScoreboardInput): Scoreboard {
     retention: weekFourRetention(teams, input.activity, now, 8),
     trialToPaid: trialToPaidSummary(teams, now, 90),
     activation: activationSummary(teams, releases, now, 30),
+    rolloutOrigins: rolloutOriginSummary(releases),
     referredSignups: input.referrals
       ? {
           fromTeams: referralSummary(input.referrals.fromTeams, teamIds, payingIds, now),

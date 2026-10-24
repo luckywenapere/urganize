@@ -26,8 +26,19 @@ type ShellStore = {
   createOpen: boolean;
   /** How the create modal should start: 'template' (UrgAns plans it) or
    *  'blank' (the manager plans it). null = the modal's own default. Set by
-   *  the first-rollout focus (lib/first-release-focus.ts) after its choice. */
+   *  the plan choice (components/releases/PlanChoiceDialog.tsx). */
   createPlan: 'template' | 'blank' | null;
+  /** Why the rollout is being made (lib/rollout-origin.ts): 'hint' when a
+   *  rollout offer opened it, 'choice' otherwise. Sent with the create. */
+  createOrigin: 'choice' | 'hint';
+  /** The plan choice (UrgAns plans it, or plan it myself), opened by a
+   *  rollout offer: Home's "Got a release coming?" card and the empty states
+   *  of pages that need a rollout. Mounted once by AppShell. */
+  planChoiceOpen: boolean;
+  /** The artist the offer was for, carried into the create modal. */
+  planChoiceArtistId: string | null;
+  openPlanChoice: (options?: { artistId?: string | null }) => void;
+  closePlanChoice: () => void;
   /** The artist the create modal starts on, when opened from an artist's page.
    *  null = the modal's own default. */
   createArtistId: string | null;
@@ -41,7 +52,7 @@ type ShellStore = {
   hydrateSelectedArtistId: (id: string | null) => void;
   openCommand: () => void;
   closeCommand: () => void;
-  openCreate: (plan?: 'template' | 'blank') => void;
+  openCreate: (plan?: 'template' | 'blank', options?: { origin?: 'choice' | 'hint'; artistId?: string | null }) => void;
   openCreateForArtist: (artistId: string) => void;
   closeCreate: () => void;
 };
@@ -51,7 +62,10 @@ export const useShellStore = create<ShellStore>((set) => ({
   commandOpen: false,
   createOpen: false,
   createPlan: null,
+  createOrigin: 'choice',
   createArtistId: null,
+  planChoiceOpen: false,
+  planChoiceArtistId: null,
   createHandler: null,
   setCreateHandler: (handler) => set({ createHandler: handler }),
   setSelectedArtistId: (id) => {
@@ -65,9 +79,18 @@ export const useShellStore = create<ShellStore>((set) => ({
   hydrateSelectedArtistId: (id) => set({ selectedArtistId: id }),
   openCommand: () => set({ commandOpen: true }),
   closeCommand: () => set({ commandOpen: false }),
-  openCreate: (plan) => set({ createOpen: true, createPlan: plan ?? null, createArtistId: null }),
-  openCreateForArtist: (artistId) => set({ createOpen: true, createPlan: null, createArtistId: artistId }),
-  closeCreate: () => set({ createOpen: false, createPlan: null, createArtistId: null }),
+  openCreate: (plan, options) =>
+    set({
+      createOpen: true,
+      createPlan: plan ?? null,
+      createOrigin: options?.origin ?? 'choice',
+      createArtistId: options?.artistId ?? null,
+    }),
+  openCreateForArtist: (artistId) =>
+    set({ createOpen: true, createPlan: null, createOrigin: 'choice', createArtistId: artistId }),
+  closeCreate: () => set({ createOpen: false, createPlan: null, createOrigin: 'choice', createArtistId: null }),
+  openPlanChoice: (options) => set({ planChoiceOpen: true, planChoiceArtistId: options?.artistId ?? null }),
+  closePlanChoice: () => set({ planChoiceOpen: false, planChoiceArtistId: null }),
 }));
 
 /** Reads the saved choice. Returns undefined when there is none, so a stored

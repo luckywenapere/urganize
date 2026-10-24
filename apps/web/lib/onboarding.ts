@@ -86,7 +86,7 @@ export interface UpdateOnboardingBody {
   onboardingBiggestHeadache?: OnboardingBiggestHeadache | null;
   onboardingPlanningPreference?: OnboardingPlanningPreference | null;
   onboardingWhereStuck?: OnboardingWhereStuck[] | null;
-  onboardingStage?: OnboardingStage | null;
+  onboardingStage?: OnboardingProfileStage | null;
   releaseId?: string | null;
   taskId?: string | null;
 }
@@ -257,6 +257,23 @@ export const isOnboardingWhereStuckList = (value: unknown): value is OnboardingW
   Array.isArray(value) &&
   value.every(isOnboardingWhereStuck) &&
   new Set(value).size === value.length;
+
+/**
+ * "Nothing planned yet" on onboarding's first question (2026-10-24, lighter
+ * rollouts). Stored in profiles.onboarding_stage (free text, no migration) so
+ * the profile records that this person signed up to look around, not with a
+ * rollout. It is NOT an OnboardingStage: nothing maps it to a playbook task,
+ * and normalizeOnboardingState reads it back as a null stage.
+ */
+export const ONBOARDING_STAGE_NOTHING_PLANNED = 'nothing_planned' as const;
+export type OnboardingProfileStage = OnboardingStage | typeof ONBOARDING_STAGE_NOTHING_PLANNED;
+
+export const isOnboardingProfileStage = (value: unknown): value is OnboardingProfileStage =>
+  value === ONBOARDING_STAGE_NOTHING_PLANNED || isOnboardingStage(value);
+
+/** True when the profile says the person signed up with nothing planned. */
+export const isOnboardingExploring = (row: { onboarding_stage?: unknown } | null | undefined): boolean =>
+  row?.onboarding_stage === ONBOARDING_STAGE_NOTHING_PLANNED;
 
 export const isOnboardingStage = (value: unknown): value is OnboardingStage =>
   value === 'just_starting' ||

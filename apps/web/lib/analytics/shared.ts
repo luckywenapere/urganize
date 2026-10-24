@@ -134,6 +134,10 @@ export interface AnalyticsEventPropertiesMap {
   onboarding_welcome_go: EmptyAnalyticsProperties;
   /** "Bring your team in" was skipped (URG-274). */
   onboarding_invite_skipped: EmptyAnalyticsProperties;
+  /** A rollout offer's "Plan a rollout" (2026-10-24, lib/rollout-offer.ts). */
+  rollout_offer_plan: { from: 'home' | 'empty_state' };
+  /** Not now on Home's "Got a release coming?". */
+  rollout_offer_dismissed: { from: 'home' };
   onboarding_completion_screen_shown: {
     release_created: boolean;
     task_created: boolean;

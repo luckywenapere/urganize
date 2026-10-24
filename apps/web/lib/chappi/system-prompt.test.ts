@@ -34,9 +34,17 @@ const PROMPT_PROSE = new Set([
   'date_mode',
   'under_100k',
   'over_500k',
+  // An argument, not a tool: create_release / generate_release_plan's flag for a
+  // rollout UrgAns offered (2026-10-24, lib/rollout-origin.ts).
+  'from_offer',
 ]);
 
 describe('the system prompt', () => {
+  it('offers a rollout only on a sign, and tags it (2026-10-24)', () => {
+    expect(ROLE).toContain('Offer a rollout only when there is a sign.');
+    expect(ROLE).toContain('pass from_offer true');
+  });
+
   it('names every insight tool it tells the model about', () => {
     expect(ROLE).toContain('compare_releases');
     expect(ROLE).toContain('get_team_workload');

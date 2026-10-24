@@ -41,6 +41,18 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.174.0",
+    title: "Look around before you plan a rollout",
+    tag: "Rollouts",
+    date: "October 24, 2026",
+    highlights: [
+      "Nothing planned yet? Pick that when you sign up. You land on Home and can plan a rollout later.",
+      "Every part of Urganize is open from day one. No more locked links.",
+      "Home shows one small card, \"Got a release coming?\". Tap Not now and it goes away.",
+      "Tell UrgAns about a release on the way and it offers to plan it for you.",
+    ],
+  },
+  {
     version: "1.173.0",
     title: "A simpler way to start a rollout",
     tag: "Rollouts",

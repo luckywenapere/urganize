@@ -3175,14 +3175,6 @@ html.urgans-leaving .home-scene-container > :not([data-urgans-source]) {
   to { opacity: 1; }
 }
 
-/* First-rollout focus (lib/first-release-focus.ts): while it is on, the
-   in-app areas that are locked read as locked. The click catch in
-   FirstReleaseFocus.tsx does the actual blocking; this is only the look.
-   Home and Settings stay at full strength. */
-html[data-release-focus='on'] nav a[href^='/dashboard']:not([href^='/dashboard/home']) {
-  opacity: 0.5;
-}
-
 /* Top bar while a tapped link is still loading (components/app/NavPendingBar.tsx,
    2026-10-14). Creeps toward 85% and never claims to finish; it simply goes
    away when the page lands. */

@@ -6,13 +6,8 @@ import { describe, expect, it } from 'vitest';
 // watchdog, or the watchdog loads the refused page itself 7s later
 // (2026-10-14: locked links for new users "refreshed" onto the locked page).
 describe('links refused on purpose are marked for the stall watchdog', () => {
-  it('FirstReleaseFocus marks the click before cancelling it', () => {
-    const src = readFileSync(join(__dirname, '../components/releases/FirstReleaseFocus.tsx'), 'utf8');
-    const mark = src.indexOf('markNavigationBlocked(event)');
-    const cancel = src.indexOf('event.preventDefault()', mark);
-    expect(mark).toBeGreaterThan(-1);
-    expect(cancel).toBeGreaterThan(mark);
-  });
+  // (The first-rollout lock's case lived here until 2026-10-24, when the
+  // lock and its link catching were removed; see lib/rollout-offer.ts.)
 
   // 2026-10-17: the desktop UrgAns pill opens Home's chat full width in place,
   // so on Home its link to /dashboard/urgans never lands. Unmarked, the

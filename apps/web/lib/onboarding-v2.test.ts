@@ -95,6 +95,15 @@ describe('the step list', () => {
     expect(nextOnboardingStep(template, ONBOARDING_STEP.firstMove)).toBe(ONBOARDING_STEP.preview);
   });
 
+  it('"Nothing planned yet" skips the rollout steps and keeps the rest (2026-10-24)', () => {
+    const steps = onboardingStepSequence({ ...baseOptions, nothingPlanned: true });
+    expect(steps).toEqual([0, 1, 6, 7, 8, 9, 10]);
+    expect(nextOnboardingStep(steps, ONBOARDING_STEP.fallsApart)).toBe(ONBOARDING_STEP.optIn);
+    expect(firstStepAfterAccount(steps)).toBe(ONBOARDING_STEP.paywall);
+    const authed = onboardingStepSequence({ ...baseOptions, nothingPlanned: true, authedSetup: true, optInEnabled: false });
+    expect(lastQuestionStep(authed)).toBe(ONBOARDING_STEP.fallsApart);
+  });
+
   it('puts the opt-in right before the account, and the paywall right after it', () => {
     const steps = onboardingStepSequence(baseOptions);
     expect(nextOnboardingStep(steps, ONBOARDING_STEP.optIn)).toBe(ONBOARDING_STEP.account);

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { readRolloutOrigin } from './rollout-origin';
 import {
   readActivity,
   readAll,
@@ -263,6 +264,7 @@ export async function loadScoreboardInput(
       taskCount: totals?.count ?? 0,
       allTasksDone: Boolean(totals && totals.count > 0 && totals.done === totals.count),
       lastTaskDoneAt: totals?.lastDoneAt ? new Date(totals.lastDoneAt).toISOString() : null,
+      origin: readRolloutOrigin(row.metadata as Record<string, unknown> | null),
     });
   }
 

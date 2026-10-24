@@ -148,6 +148,11 @@ export const CORE_TOOLS: ChappiTool[] = [
           description:
             'A practice rollout to look around with, deletable in one tap. Only when the user asks for a test or a demo — never for real work.',
         },
+        from_offer: {
+          type: 'boolean',
+          description:
+            'True only when YOU offered to plan this rollout (the user mentioned an upcoming release and had none for it) and they said yes. Leave it out when they asked for a rollout on their own.',
+        },
       },
       required: ['title'],
     },
@@ -161,6 +166,8 @@ export const CORE_TOOLS: ChappiTool[] = [
           title,
           releaseDate: releaseDate || undefined,
           source: 'chappi',
+          // Made because UrgAns offered (lib/rollout-origin.ts), not asked for.
+          ...(argBoolean(args, 'from_offer') === true ? { origin: 'hint' } : {}),
           // A test release: the canned one-tap draft, so somebody can look
           // around without the pressure of a real rollout. The route supplies
           // the title, type and date, and refuses isTest when the test path is

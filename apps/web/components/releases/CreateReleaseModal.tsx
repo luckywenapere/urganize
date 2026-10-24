@@ -57,7 +57,7 @@ const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'tru
 // two-step modal below is unchanged.
 //
 // AMENDED 2026-10-24 (founder approved mocks, one form + glass): ONE body for
-// every mode. The first-rollout focus passes an initialPlan, and before this
+// every mode. The plan choice (once the first-rollout focus) passes an initialPlan, and before this
 // it rendered the type-first body AND the plan body together, so Title and
 // Format showed twice in two stacked scroll areas, and the type-first submit
 // silently dropped the artist picked in the lower form. Now the one body is
@@ -79,11 +79,15 @@ export type ReleasePlanChoice = 'template' | 'blank';
 type CreateReleaseModalProps = {
   open: boolean;
   onClose: () => void;
-  /** Starts past the plan chooser with this plan already picked. Only the
-   *  first-rollout focus passes it, after asking the manager itself. */
   /** Start on this artist (opened from an artist's page). */
   initialArtistId?: string | null;
+  /** Starts past the plan chooser with this plan already picked. Passed by
+   *  the plan choice a rollout offer opens (PlanChoiceDialog), or a caller
+   *  that already knows the plan. */
   initialPlan?: ReleasePlanChoice | null;
+  /** Why this rollout is being made (lib/rollout-origin.ts): 'hint' when a
+   *  rollout offer opened the modal. Default 'choice'. */
+  origin?: 'choice' | 'hint';
   /** `plan` tells the caller HOW the release was created — template
    * creations get the post-create rollout guide (?new=1); blank ones don't
    * (its copy describes the plan that doesn't exist).
@@ -163,13 +167,14 @@ export function CreateReleaseModal({
   onStartTestRelease,
   initialPlan = null,
   initialArtistId = null,
+  origin = 'choice',
 }: CreateReleaseModalProps) {
   // COPY ONLY. This modal is always dismissible — the wall URG-217 built here
   // (no Escape, no backdrop, no X, no Cancel, a Sign out escape hatch) was
   // removed 2026-08-28 (founder call): it trapped exactly the people it was
   // built around, like an invited teammate who shouldn't be creating releases
-  // at all. The zero-release nudge now lives in useFirstReleasePrompt (a
-  // deferred, once-per-session open); dismissing lands on the "No releases
+  // at all. Nothing opens it by itself any more (2026-10-24: rollout
+  // offers only open the plan choice, lib/rollout-offer.ts); dismissing lands on the "No releases
   // yet" empty state, whose Create release button reopens this. The predicate
   // is still read here so a first release keeps its warmer framing below.
   const isFirstRelease = useFirstReleaseRequired();
@@ -227,8 +232,8 @@ export function CreateReleaseModal({
   // Fresh chooser on every open.
   useEffect(() => {
     if (open) {
-      // initialPlan skips the chooser: the first-rollout focus already asked
-      // (lib/first-release-focus.ts) and must not ask a second time.
+      // initialPlan skips the chooser: the plan choice already asked
+      // (components/releases/PlanChoiceDialog.tsx) and must not ask again.
       setPlan(initialPlan);
       setReleaseType('single');
       setArtistId(initialArtistId ?? '');
@@ -362,6 +367,7 @@ export function CreateReleaseModal({
           // keeps taking the server's implicit-artist path untouched.
           artistId: input.artistId,
           source: 'dashboard',
+          origin,
           plan: input.plan,
         }),
       });

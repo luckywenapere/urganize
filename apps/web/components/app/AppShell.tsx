@@ -70,8 +70,8 @@ const InviteGate = dynamic(
   () => import('@/components/app/InviteGate').then((m) => m.InviteGate),
   { ssr: false }
 );
-const FirstReleaseFocus = dynamic(
-  () => import('@/components/releases/FirstReleaseFocus').then((m) => m.FirstReleaseFocus),
+const PlanChoiceHost = dynamic(
+  () => import('@/components/releases/PlanChoiceDialog').then((m) => m.PlanChoiceHost),
   { ssr: false }
 );
 const CreateReleaseModal = dynamic(
@@ -215,6 +215,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const closeCreateRelease = useShellStore((state) => state.closeCreate);
   const createPlan = useShellStore((state) => state.createPlan);
   const createArtistId = useShellStore((state) => state.createArtistId);
+  const createOrigin = useShellStore((state) => state.createOrigin);
 
   const isAuthRoute =
     pathname?.startsWith('/auth') ||
@@ -524,6 +525,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         onClose={closeCreateRelease}
         initialPlan={createPlan}
         initialArtistId={createArtistId}
+        origin={createOrigin}
         onCreated={(releaseId, _plan, result) => {
           // Stay on whatever page the user was on (no forced redirect); just
           // close and refresh the release store so the new release shows up.
@@ -612,13 +614,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       {TOURS_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
         <TourOverlay />
       ) : null}
-      {/* First-rollout focus: with no rollout yet, locks the other areas and
-          asks how the first one should be planned. Since 2026-10-11 it opens
-          straight away for a new account (the welcome tour it used to wait
-          for is gone, see lib/tours.ts). Renders nothing once a rollout
-          exists. */}
+      {/* The plan choice a rollout offer opens (Home's "Got a release
+          coming?", a page's "Plan a rollout"). Renders nothing until one asks.
+          It replaced the first-rollout focus (2026-10-24), which locked every
+          other area until a rollout existed; see lib/rollout-offer.ts. */}
       {isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
-        <FirstReleaseFocus />
+        <PlanChoiceHost />
       ) : null}
       {shouldLoadVercelAnalytics ? <Analytics /> : null}
       {/* FirstTimeOnboardingGate was mounted here until 2026-07-29 (URG-191).

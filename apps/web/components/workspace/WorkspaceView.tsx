@@ -24,7 +24,6 @@ import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
 import { SetReleaseDateCard } from '@/components/releases/SetReleaseDateCard';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { FirstReleaseWin } from './FirstReleaseWin';
-import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
 import { useStartTestRelease } from '@/components/releases/useStartTestRelease';
 import { TestReleaseBanner } from './TestReleaseBanner';
 import { EditorialPitchClosedBanner } from './EditorialPitchClosedBanner';
@@ -405,8 +404,8 @@ export function WorkspaceView() {
     // because they asked to be, and re-scoping them would undo the tap.
     if (isInitialLoading || hasAutoScopedRef.current || catalogRequested) return;
     // 0 or 2+ releases: the chance stays OPEN deliberately. A brand-new account
-    // has zero here and is prompted to create one (deferred — see
-    // useFirstReleasePrompt); when its first release lands, isSingleRelease
+    // has zero here (nothing prompts it to make one since 2026-10-24, see
+    // lib/rollout-offer.ts); when its first release lands, isSingleRelease
     // flips true and that account should still get its one auto-scope.
     // Consuming the chance now would silently remove it.
     if (!isSingleRelease) return;
@@ -463,14 +462,6 @@ export function WorkspaceView() {
     void loadCommandCenter();
   }, [authLoading, loadCommandCenter, router, user]);
 
-  // The deferred first-release prompt (2026-08-28, founder call — supersedes
-  // URG-217's immediate open): a zero-release account sees the workspace
-  // first, then the create modal offers itself about half a minute in, once
-  // per browser session, and can be dismissed. Only arms once the store has
-  // CONFIRMED zero releases — the predicate fails open while loading and on
-  // load errors, so a network blip never prompts anyone. Deleting your last
-  // release re-arms the condition by design (once per session still holds).
-  useFirstReleasePrompt(() => setIsCreateModalOpen(true));
 
   // The one-tap test-release create. No onError option here on purpose: on
   // this page the failure surface is the empty state itself — the entry

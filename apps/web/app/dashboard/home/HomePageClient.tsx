@@ -8,7 +8,7 @@ import { useHomeStore } from '@/stores/useHomeStore';
 import { selectHomeMovesSettled, useNextMovesStore } from '@/stores/useNextMovesStore';
 import { HomeSkeleton } from '@/components/loading/HomeSkeleton';
 import { RolloutCreateFlow } from '@/components/releases/RolloutCreateFlow';
-import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
+import { RolloutOfferCard } from '@/components/home/RolloutOfferCard';
 import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { FirstDaysCard } from '@/components/home/FirstDaysCard';
 import { HomeFour, HomeLoadError } from '@/components/home/v2/HomeFour';
@@ -70,13 +70,9 @@ export default function HomePageClient({ swipe = false }: { swipe?: boolean } = 
     void loadHome();
   }, [authLoading, loadHome, router, user]);
 
-  // The deferred first-release prompt — same hook every landing surface uses.
-  useFirstReleasePrompt(() => setIsCreateModalOpen(true));
-
-  // No welcome tour here any more (2026-10-11, founder call): a new account
-  // lands straight in the first-rollout flow (FirstReleaseFocus, mounted in
-  // AppShell, opens the plan choice), and the rollout tour is offered once a
-  // plan exists. See lib/tours.ts.
+  // No welcome tour and no first-rollout lock (2026-10-24): a team with no
+  // rollouts gets one quiet card here, "Got a release coming?"
+  // (RolloutOfferCard, lib/rollout-offer.ts), and can look around freely.
 
   // A failed first load used to leave the skeleton up for good (URG-320).
   if (!authLoading && !homeLoading && !home && homeError) {
@@ -102,6 +98,10 @@ export default function HomePageClient({ swipe = false }: { swipe?: boolean } = 
   // Each block inside is fenced too (HomeBlocks), so this is the outer net.
   const view = (
     <ErrorBoundary name="home-view" onError={reportBoundaryError} fallback={<HomeViewFallback />}>
+      {/* "Got a release coming?": zero-rollout teams only, until Not now. */}
+      <ErrorBoundary name="home-block-rollout-offer" onError={reportBoundaryError}>
+        <RolloutOfferCard />
+      </ErrorBoundary>
       {stateView}
       {/* Your first 14 days (self-serve checkout, 2026-10-22): only for a
           team that paid at checkout; draws nothing otherwise. */}

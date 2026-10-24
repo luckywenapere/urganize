@@ -2000,6 +2000,34 @@ export default function OnboardingPage() {
                   );
                 })}
               </div>
+              {/* "Nothing planned yet" (2026-10-24, founder-approved mock
+                  lighter-rollout-v1): look around first, plan a rollout later.
+                  Skips the rollout steps and makes no rollout. */}
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-content-tertiary" aria-hidden>
+                Or
+              </p>
+              <label
+                className={`flex items-center gap-3 rounded-xl border bg-bg-elevated px-4 py-3 transition-colors duration-fast ease-standard ${
+                  draft.nothingPlanned ? 'border-brand bg-brand/8' : 'border-stroke-default hover:border-stroke-strong'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="release-type"
+                  value="nothing_planned"
+                  checked={draft.nothingPlanned}
+                  onChange={() =>
+                    setDraft((current) => ({ ...current, releaseType: null, nothingPlanned: true }))
+                  }
+                  className="h-4 w-4 accent-brand"
+                />
+                <span className="flex-1">
+                  <span className="block text-sm text-content-primary">Nothing planned yet</span>
+                  <span className="mt-0.5 block text-xs text-content-secondary">
+                    Look around first. Plan a rollout later.
+                  </span>
+                </span>
+              </label>
             </div>
           ) : null}
 
@@ -2219,7 +2247,9 @@ export default function OnboardingPage() {
           {step === ONBOARDING_STEP.account ? (
             <div className="mt-5 space-y-5">
               <p className="text-sm leading-relaxed text-content-secondary">
-                Create your account to lock in your rollout and pick up this task on the other side.
+                {draft.nothingPlanned
+                  ? 'Create your account to look around. You can plan a rollout any time.'
+                  : 'Create your account to lock in your rollout and pick up this task on the other side.'}
               </p>
 
               {/* The artist name moved to the rollout step (2026-10-11) and is
@@ -2506,7 +2536,7 @@ export default function OnboardingPage() {
                 aria-describedby={nextHintId}
                 className={primaryButton}
               >
-                {isSubmitting ? 'Working…' : 'Create account & rollout'}
+                {isSubmitting ? 'Working…' : draft.nothingPlanned ? 'Create account' : 'Create account & rollout'}
               </button>
             ) : step === ONBOARDING_STEP.invite ? (
               <button
@@ -2530,7 +2560,7 @@ export default function OnboardingPage() {
                 aria-describedby={nextHintId}
                 className={primaryButton}
               >
-                {isSubmitting ? 'Working…' : 'Create my rollout'}
+                {isSubmitting ? 'Working…' : draft.nothingPlanned ? 'Continue' : 'Create my rollout'}
               </button>
             ) : (
               <button

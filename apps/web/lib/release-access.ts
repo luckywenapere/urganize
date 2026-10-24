@@ -18,7 +18,7 @@
 // read-only in it.
 //
 // Pure on purpose (no imports, no env, no I/O) so the whole decision table is
-// unit-testable — the first-release-prompt / team-brief-nudge split.
+// unit-testable — the (removed) first-release-prompt / team-brief-nudge split.
 
 /**
  * The 404 body for "not yours / doesn't exist" — shared by every release
