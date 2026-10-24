@@ -43,6 +43,29 @@ export type CompletionToastState = {
   taskId: string;
   title: string;
   tick: number;
+  /**
+   * Set only by a bulk completion (completeTasks, STMZ feedback 2026-10-22):
+   * every id the one toast covers, so its Undo reopens them all. `taskId` is
+   * the first of them, which keeps the per-id timer and dismiss logic as is.
+   */
+  taskIds?: string[];
+};
+
+/** What a bulk completion did: how many went through, how many were refused
+ * (a blocker, a failed save, or a row that is not open). */
+export type BulkCompletionResult = {
+  done: number;
+  skipped: number;
+};
+
+type CompleteTaskOptions = {
+  /**
+   * No bottom surface at all: no undo toast, no "How did it go?", no cover
+   * art ask. Used by completeTasks, which shows ONE toast for the whole batch
+   * instead of a sheet per task (that sheet was the one-by-one confirm STMZ
+   * hit, 2026-10-22).
+   */
+  quiet?: boolean;
 };
 
 /**
@@ -109,7 +132,14 @@ type TaskStore = {
   selectTask: (taskId: string | null) => void;
   createTask: (input: TaskCreateInput) => Promise<ExecutionTask | null>;
   updateRequirement: (taskId: string, requirement: TaskRequirement | null) => Promise<void>;
-  completeTask: (taskId: string) => Promise<ExecutionTask | null>;
+  completeTask: (taskId: string, options?: CompleteTaskOptions) => Promise<ExecutionTask | null>;
+  /**
+   * Marks several open tasks done in one go. Each runs through completeTask
+   * (blocker check, optimistic flip, PATCH, cascade unlock) in quiet mode, then
+   * one "N done · Undo" toast covers the batch. Done, cancelled and locked
+   * rows are skipped, never reopened.
+   */
+  completeTasks: (taskIds: string[]) => Promise<BulkCompletionResult>;
   /**
    * Reverses the most recent completion of `taskId` by patching it back to
    * `todo`, clearing any pending in-place beat, and dismissing the undo toast
@@ -255,7 +285,8 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       error: '',
     }));
   },
-  completeTask: async (taskId) => {
+  completeTask: async (taskId, options) => {
+    const quiet = options?.quiet === true;
     // Ignore clicks while a previous complete/reopen for this task is still
     // running. Clear the error first so callers' `!result` blocker checks
     // read an empty message and treat the ignored click as a no-op rather
@@ -458,17 +489,19 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     // step is the moment the manager has the file open, and asking a minute
     // later means asking after they have moved on.
     const shouldPromptCoverArt =
+      !quiet &&
       COVER_ART_ENABLED &&
       Boolean(optimisticDone.releaseId) &&
       shouldPromptCoverArtUpload(optimisticDone);
 
     const shouldPromptOutcome =
+      !quiet &&
       !shouldPromptCoverArt &&
       TASK_OUTCOMES_ENABLED &&
       Boolean(optimisticDone.releaseId) &&
       readAskAfterTasks();
 
-    const shouldShowToast = !shouldPromptCoverArt && !shouldPromptOutcome;
+    const shouldShowToast = !quiet && !shouldPromptCoverArt && !shouldPromptOutcome;
 
     // Mirror the same single-active-timer rule for the toast — the toast
     // lifetime (TOAST_DURATION_MS) is independent of the in-place beat so
@@ -509,7 +542,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         title: optimisticDone.title,
         tick: outcomePromptTick,
       };
-    } else {
+    } else if (shouldShowToast) {
       completionToastTick += 1;
       toastSnapshot = {
         taskId,
@@ -662,6 +695,50 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       // Releases the click guard for every exit path of this method.
       inFlightCompletionIds.delete(taskId);
     }
+  },
+  completeTasks: async (taskIds) => {
+    const unique = Array.from(new Set(taskIds));
+    const open = unique.filter((id) => {
+      const task = get().tasks.find((candidate) => candidate.id === id);
+      // Only open rows. A done row through completeTask would REOPEN it, and
+      // a locked one is refused anyway.
+      return (
+        !task ||
+        (task.status !== TASK_DONE_STATUS &&
+          task.status !== TASK_LOCKED_STATUS &&
+          task.status !== 'cancelled')
+      );
+    });
+    // In parallel: each call's optimistic flip is synchronous after its token
+    // read, so a dependent of two picked tasks still unlocks once (the second
+    // call sees the first one's done row).
+    const results = await Promise.all(open.map((id) => get().completeTask(id, { quiet: true })));
+    const doneIds = open.filter((_, index) => Boolean(results[index]));
+    const skipped = unique.length - doneIds.length;
+
+    if (doneIds.length > 0) {
+      const firstId = doneIds[0];
+      const existing = completionToastTimers.get(firstId);
+      if (existing) clearTimeout(existing);
+      const toastTimer = setTimeout(() => {
+        completionToastTimers.delete(firstId);
+        set((state) => (state.completionToast?.taskId === firstId ? { completionToast: null } : state));
+      }, TOAST_DURATION_MS);
+      completionToastTimers.set(firstId, toastTimer);
+      completionToastTick += 1;
+      const firstTitle = get().tasks.find((candidate) => candidate.id === firstId)?.title ?? '';
+      set({
+        completionToast: {
+          taskId: firstId,
+          title: doneIds.length === 1 ? firstTitle : `${doneIds.length} done`,
+          tick: completionToastTick,
+          taskIds: doneIds,
+        },
+        error: skipped > 0 ? `${skipped} couldn't be marked done yet.` : '',
+      });
+    }
+
+    return { done: doneIds.length, skipped };
   },
   undoCompletion: async (taskId) => {
     const beatTimer = pendingBeatTimers.get(taskId);

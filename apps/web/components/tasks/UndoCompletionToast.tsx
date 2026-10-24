@@ -43,8 +43,12 @@ export function UndoCompletionToast() {
   const handleUndo = async () => {
     if (isUndoing) return;
     setIsUndoing(true);
-    await undoCompletion(completionToast.taskId);
+    // A bulk completion's one toast reopens every task it covers.
+    const ids = completionToast.taskIds?.length ? completionToast.taskIds : [completionToast.taskId];
+    await Promise.all(ids.map((id) => undoCompletion(id)));
   };
+
+  const isBatch = (completionToast.taskIds?.length ?? 0) > 1;
 
   return (
     <div
@@ -60,12 +64,16 @@ export function UndoCompletionToast() {
       >
         <CheckCircle2 className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
         <div className="min-w-0 flex-1">
-          <p className="truncate">
-            <span className="text-content-secondary">Task completed</span>
-            <span className="ml-1 text-content-primary" title={completionToast.title}>
-              · {completionToast.title}
-            </span>
-          </p>
+          {isBatch ? (
+            <p className="truncate text-content-primary">{completionToast.title}</p>
+          ) : (
+            <p className="truncate">
+              <span className="text-content-secondary">Task completed</span>
+              <span className="ml-1 text-content-primary" title={completionToast.title}>
+                · {completionToast.title}
+              </span>
+            </p>
+          )}
         </div>
         <button
           type="button"

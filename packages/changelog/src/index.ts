@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.169.0",
+    title: "Mark many activities done at once",
+    tag: "Rollouts",
+    date: "October 24, 2026",
+    highlights: [
+      "Tap Select in your activity list, pick the ones you've finished, then tap Mark done.",
+      "You get one Undo for the lot, with no check-in after each one.",
+    ],
+  },
+  {
     version: "1.168.0",
     title: "UrgAns on every phone screen",
     tag: "App",

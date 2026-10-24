@@ -1,7 +1,7 @@
 'use client';
 
 import { shouldActivateRow } from '@/lib/row-activation';
-import { CalendarDays, Lock } from '@/components/icons';
+import { CalendarDays, Check, Lock } from '@/components/icons';
 import {
   formatMilestoneDate,
   getRelativeDueLabel,
@@ -53,6 +53,37 @@ function GroupTagPill({
   );
 }
 
+/** Select mode (bulk mark as done, STMZ feedback 2026-10-22). When set, the
+ * row picks instead of opening, and a square box replaces the round tick. */
+export type TaskRowSelection = {
+  selected: boolean;
+  /** False for rows that cannot be marked done: done, cancelled, locked, or
+   * not yet synced. They stay visible but cannot be picked. */
+  selectable: boolean;
+  onToggle: () => void;
+};
+
+function SelectBox({ selection, taskTitle }: { selection: TaskRowSelection; taskTitle: string }) {
+  const { selected, selectable } = selection;
+  return (
+    <span
+      role="checkbox"
+      aria-checked={selected}
+      aria-disabled={!selectable || undefined}
+      aria-label={`Select "${taskTitle}"`}
+      className={`grid h-5 w-5 shrink-0 place-items-center rounded-[6px] border transition ${
+        selected
+          ? 'border-brand bg-brand text-content-inverse'
+          : selectable
+            ? 'border-stroke-control bg-bg-surface text-transparent'
+            : 'border-stroke-default bg-bg-elevated/40 text-transparent opacity-50'
+      }`}
+    >
+      <Check className="h-3 w-3" strokeWidth={3} />
+    </span>
+  );
+}
+
 type TaskRowProps = {
   task: Task;
   onClick?: (task: Task) => void;
@@ -68,6 +99,8 @@ type TaskRowProps = {
   /** The first open task of a smaller plan (URG-318): accent edge and a
    *  "Start here" label. */
   startHere?: boolean;
+  /** Present only in select mode. See TaskRowSelection. */
+  selection?: TaskRowSelection;
 };
 
 function getAssigneeLabel(task: Task): string {
@@ -78,7 +111,7 @@ function getAssigneeLabel(task: Task): string {
   return task.assignee?.email || 'Unassigned';
 }
 
-export function TaskRow({ task, onClick, onBlocker, density = 'comfortable', startHere = false }: TaskRowProps) {
+export function TaskRow({ task, onClick, onBlocker, density = 'comfortable', startHere = false, selection }: TaskRowProps) {
   const due = getRelativeDueLabel(task);
   const isLocked = task.status === 'locked';
   const isMilestone = isEventMilestone(task);
@@ -99,17 +132,42 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable', sta
     isLocked ? 'text-content-secondary' : 'text-content-primary'
   } ${task.status === 'done' ? 'line-through' : ''} ${task.status === 'cancelled' ? 'line-through opacity-55' : ''}`;
 
+  // In select mode a tap picks the row (or does nothing on a row that cannot
+  // be picked) instead of opening it.
+  const activate = selection
+    ? selection.selectable
+      ? selection.onToggle
+      : undefined
+    : onClick
+      ? () => onClick(task)
+      : undefined;
   const interactionHandlers = {
-    onClick: () => onClick?.(task),
-    role: onClick ? ('button' as const) : undefined,
-    tabIndex: onClick ? 0 : undefined,
+    onClick: () => activate?.(),
+    role: activate ? ('button' as const) : undefined,
+    tabIndex: activate ? 0 : undefined,
+    'aria-pressed': selection ? selection.selected : undefined,
     onKeyDown: (event: React.KeyboardEvent) => {
-      if (onClick && shouldActivateRow(event)) {
+      if (activate && shouldActivateRow(event)) {
         event.preventDefault();
-        onClick(task);
+        activate();
       }
     },
   };
+  // One background class at a time, so a picked row's tint never fights the
+  // surface colour in the stylesheet's order.
+  const baseBgClass = selection?.selected ? 'bg-brand/10' : 'bg-bg-surface';
+  const hoverClass = activate && !selection?.selected ? 'hover:bg-bg-hover' : '';
+  const leadingControl = selection ? (
+    <SelectBox selection={selection} taskTitle={task.title} />
+  ) : (
+    <TaskCompletionCheckbox
+      taskId={task.id}
+      status={task.status}
+      onBlocker={onBlocker}
+      taskTitle={task.title}
+      disabled={task.pendingSync}
+    />
+  );
 
   if (isCompact) {
     // One-line layout: [checkbox] [title — flex-1 + truncate] [meta — shrink-0
@@ -126,19 +184,13 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable', sta
     // strikethrough. Only the POSITION moves vs. the previous two-line stack.
     return (
       <div
-        className={`group flex items-center gap-3 border-l-4 border-t border-stroke-subtle bg-bg-surface px-4 py-2.5 transition first:border-t-0 motion-focus ${borderClass} ${
-          onClick ? 'hover:bg-bg-hover' : ''
-        } ${isLocked ? 'bg-bg-surface/60' : ''}`}
+        className={`group flex items-center gap-3 border-l-4 border-t border-stroke-subtle ${baseBgClass} px-4 py-2.5 transition first:border-t-0 motion-focus ${borderClass} ${hoverClass} ${
+          isLocked && !selection?.selected ? 'bg-bg-surface/60' : ''
+        }`}
         {...interactionHandlers}
         data-ph-capture-attribute-section="tasks"
       >
-        <TaskCompletionCheckbox
-          taskId={task.id}
-          status={task.status}
-          onBlocker={onBlocker}
-          taskTitle={task.title}
-          disabled={task.pendingSync}
-        />
+        {leadingControl}
         <p
           className={`min-w-0 flex-1 ${titleClass}`}
           title={task.title}
@@ -189,19 +241,13 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable', sta
   // Comfortable (default) — release-detail page layout.
   return (
     <div
-      className={`group flex min-h-[76px] items-center gap-4 border-l-4 border-t border-stroke-subtle bg-bg-surface px-4 py-3.5 transition first:border-t-0 motion-focus ${borderClass} ${
-        onClick ? 'hover:bg-bg-hover' : ''
-      } ${isLocked ? 'bg-bg-surface/60' : ''}`}
+      className={`group flex min-h-[76px] items-center gap-4 border-l-4 border-t border-stroke-subtle ${baseBgClass} px-4 py-3.5 transition first:border-t-0 motion-focus ${borderClass} ${hoverClass} ${
+        isLocked && !selection?.selected ? 'bg-bg-surface/60' : ''
+      }`}
       {...interactionHandlers}
       data-ph-capture-attribute-section="tasks"
     >
-      <TaskCompletionCheckbox
-        taskId={task.id}
-        status={task.status}
-        onBlocker={onBlocker}
-        taskTitle={task.title}
-        disabled={task.pendingSync}
-      />
+      {leadingControl}
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
