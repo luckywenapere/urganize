@@ -248,3 +248,4 @@ Adding a note: create `docs/notes/YYYY-MM-DD-short-slug.md` (start it with a `# 
 - [TRM fee, locked prices and the margin view (2026-10-22, v1.165.0, no flag)](2026-10-22-trm-fee-and-margin-view.md)
 - [Waitlist share: place in line](2026-10-23-waitlist-share-place-in-line.md): held accounts share a link, 3 friends lets them in; tables, flow, gaps.
 - [Bulk mark as done (2026-10-24, v1.169.0)](2026-10-24-bulk-mark-as-done.md)
+- [Vouch, slice 1 (2026-10-24, v1.171.0, NEXT_PUBLIC_FEATURE_VOUCHES ships on)](2026-10-24-vouch-slice-1.md)

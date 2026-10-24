@@ -13,6 +13,15 @@ import {
   whatsappHref,
 } from '@/lib/relationships-page';
 import { MAX_INTERACTION } from '@/lib/relationships';
+import {
+  countRollouts,
+  isVouchesEnabled,
+  monthLabel,
+  vouchSkills,
+  workedTogetherLine,
+  type VouchView,
+  type WorkedTogetherRow,
+} from '@/lib/vouches';
 import { useRelationshipsStore } from '@/stores/useRelationshipsStore';
 import { PersonFace } from '../PersonFace';
 
@@ -21,6 +30,7 @@ import { PersonFace } from '../PersonFace';
 // note are kept on the row but no longer shown (founder call).
 
 const PAGE_ENABLED = isRelationshipsPageEnabled();
+const VOUCHES_ENABLED = isVouchesEnabled();
 
 const FIELD =
   'w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-base text-content-primary placeholder:text-content-tertiary hover:border-content-secondary';
@@ -43,6 +53,8 @@ export default function RelationshipPageClient() {
   const logInteraction = useRelationshipsStore((state) => state.logInteraction);
   const update = useRelationshipsStore((state) => state.update);
   const remove = useRelationshipsStore((state) => state.remove);
+  const work = useRelationshipsStore((state) => state.work[personId]);
+  const loadWork = useRelationshipsStore((state) => state.loadWork);
 
   const person = useMemo(() => relationships.find((item) => item.personId === personId) ?? null, [relationships, personId]);
 
@@ -61,7 +73,8 @@ export default function RelationshipPageClient() {
     }
     void load();
     void loadInteractions(personId);
-  }, [load, loadInteractions, personId, router]);
+    if (VOUCHES_ENABLED) void loadWork(personId);
+  }, [load, loadInteractions, loadWork, personId, router]);
 
   useEffect(() => {
     if (logging) entryRef.current?.focus();
@@ -369,9 +382,81 @@ export default function RelationshipPageClient() {
               ))}
             </ul>
           ) : null}
+
+          {VOUCHES_ENABLED && work ? (
+            <>
+              <WorkedTogether rows={work.workedTogether} />
+              <YourVouches vouches={work.vouches} />
+            </>
+          ) : null}
         </>
       )}
     </div>
+  );
+}
+
+// Vouch, slice 1. Both sections are derived or saved elsewhere: Worked
+// together from the team's activities with this person on them ("Who's doing
+// it"), vouches from the prompt after one of them is marked done. Each shows
+// only when it has something in it.
+
+function WorkedTogether({ rows }: { rows: WorkedTogetherRow[] }) {
+  if (rows.length === 0) return null;
+  const rollouts = countRollouts(rows);
+  return (
+    <section className="mt-8" aria-label="Worked together">
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 className="text-sm font-semibold text-content-primary">Worked together</h2>
+        {rollouts > 0 ? (
+          <span className="font-mono text-[13px] text-brand">
+            {rollouts} {rollouts === 1 ? 'rollout' : 'rollouts'}
+          </span>
+        ) : null}
+      </div>
+      <ul className="mt-1">
+        {rows.map((row) => (
+          <li
+            key={row.taskId}
+            className="break-words border-b border-stroke-default py-3 text-[15px] text-content-primary"
+          >
+            {workedTogetherLine(row)}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function YourVouches({ vouches }: { vouches: VouchView[] }) {
+  if (vouches.length === 0) return null;
+  const skills = vouchSkills(vouches);
+  const quotes = vouches.filter((vouch) => vouch.note);
+  return (
+    <section className="mt-8" aria-label="Your vouches">
+      <h2 className="text-sm font-semibold text-content-primary">Your vouches</h2>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {skills.map((skill) => (
+          <span
+            key={skill}
+            className="inline-flex h-8 items-center rounded-full border border-stroke-default bg-bg-surface px-3 text-sm font-semibold text-content-primary"
+          >
+            {skill}
+          </span>
+        ))}
+      </div>
+      {quotes.length > 0 ? (
+        <ul className="mt-3 space-y-2">
+          {quotes.map((vouch) => (
+            <li key={vouch.id} className="rounded-xl border border-stroke-default bg-bg-surface px-4 py-3">
+              <p className="break-words text-[15px] text-content-primary">&ldquo;{vouch.note}&rdquo;</p>
+              <p className="mt-1.5 text-[13px] text-content-secondary">
+                {[vouch.byName, vouch.skill, monthLabel(vouch.updatedAt || vouch.createdAt)].filter(Boolean).join(' · ')}
+              </p>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
   );
 }
 

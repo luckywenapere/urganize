@@ -15,6 +15,7 @@ import {
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
 import { TaskMemberSelect } from '@/components/tasks/TaskMemberSelect';
+import { TaskPersonSelect } from '@/components/tasks/TaskPersonSelect';
 import { EditorialPitchPanel } from '@/components/tasks/EditorialPitchPanel';
 import { FindSomeoneRow } from '@/components/directory/FindSomeoneRow';
 import { isEditorialPitchTask } from '@/lib/editorial-pitch';
@@ -637,6 +638,16 @@ export function TaskDetailView({
                 />
               </div>
             </div>
+
+            {/* Who did the work, from My People (Vouch, slice 1). Renders
+                nothing when the feature is off or the team has no people. */}
+            <TaskPersonSelect
+              taskId={task.id}
+              rowClassName={DETAIL_ROW_CLASS}
+              iconClassName={DETAIL_ICON_CLASS}
+              fieldClassName={DETAIL_FIELD_CLASS}
+              controlClassName={PROPERTY_CONTROL_CLASS}
+            />
 
             {/* The date input hides its own picker indicator until the row is
                 approached, so the value reads as plain text at rest. */}

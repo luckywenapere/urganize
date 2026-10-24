@@ -41,6 +41,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.171.0",
+    title: "Vouch for the people you work with",
+    tag: "Team",
+    date: "October 24, 2026",
+    highlights: [
+      "Open an activity and pick who's doing it from My People.",
+      "Each person's page shows the work you've done together.",
+      "Mark their activity done and vouch for them in one tap. Only your team sees it for now.",
+    ],
+  },
+  {
     version: "1.170.0",
     title: "Mark many done on the Timeline, or ask UrgAns",
     tag: "Rollouts",
