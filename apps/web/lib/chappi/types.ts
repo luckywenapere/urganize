@@ -167,6 +167,7 @@ export type ChappiToolName =
   | 'create_note'
   | 'update_task'
   | 'complete_task'
+  | 'complete_tasks'
   | 'reopen_task'
   | 'generate_status_update'
   | 'navigate'

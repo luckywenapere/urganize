@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CalendarClock, Check, ChevronDown, ChevronRight, Flag, Info } from '@/components/icons';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/types/tasks';
@@ -38,6 +38,9 @@ import { pickStartHereTaskId } from '@/lib/plan-core';
 import { formatPhaseDates, summarizeRolloutPhases } from '@/lib/rollout-phases';
 import { EMPTY_PLAN_FILTERS } from '@/lib/plan-focus';
 import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
+import { useTaskStore } from '@/stores/useTaskStore';
+import { TASKS_CHANGED_EVENT } from '@/components/tasks/TaskUIProvider';
+import { BulkSelectBar, SelectBox, SelectToggleButton, isSelectableTask } from '@/components/tasks/BulkSelect';
 
 /**
  * The release Timeline — every activity on one week axis, anchored to release
@@ -107,6 +110,22 @@ const TONE_TAG_CLASS: Partial<Record<TimelineTone, string>> = {
 /** Row height, shared by the grid rows and their labels so the two columns
  * stay locked together without a table. */
 const ROW_CLASS = 'h-8';
+
+/**
+ * Select mode on the Timeline (bulk mark as done, founder approved the mock
+ * 2026-10-24). Same Select button and bar as the list. While it is on, a tap
+ * on a row, its label or its bar picks it instead of opening it, and nothing
+ * drags. Release day and other milestones, locked, done and cancelled work
+ * cannot be picked. Context rather than props because the rows sit four
+ * components down in both the grid and the week list.
+ */
+type TimelineSelection = {
+  selected: ReadonlySet<string>;
+  selectable: ReadonlySet<string>;
+  toggle: (taskId: string) => void;
+};
+const TimelineSelectContext = createContext<TimelineSelection | null>(null);
+const useTimelineSelection = () => useContext(TimelineSelectContext);
 
 type TimelineSceneProps = {
   release: Pick<Release, 'id' | 'title' | 'artistName' | 'releaseDate'>;
@@ -179,6 +198,30 @@ export function TimelineScene({
   // (URG-389).
   const plan = usePlanList(tasks, release.id);
 
+  // ---- Select mode (bulk mark as done) -----------------------------------
+  const [selecting, setSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [isMarkingDone, setIsMarkingDone] = useState(false);
+  const completeTasks = useTaskStore((state) => state.completeTasks);
+  const exitSelecting = useCallback(() => {
+    setSelecting(false);
+    setSelectedIds(new Set());
+  }, []);
+  const [selectionScope, setSelectionScope] = useState(release.id);
+  if (selectionScope !== release.id) {
+    setSelectionScope(release.id);
+    setSelecting(false);
+    setSelectedIds(new Set());
+  }
+  useEffect(() => {
+    if (!selecting) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') exitSelecting();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selecting, exitSelecting]);
+
   // The axis is built from every activity that CAN show, so a bar sits in the
   // same week whichever list is showing. Hidden cancelled work is left out of
   // it (URG-389): a dropped activity months out must not stretch the grid into
@@ -219,6 +262,55 @@ export function TimelineScene({
     () => (timeline ? narrowTimeline(timeline, new Set(plan.visible.map((task) => task.id))) : null),
     [timeline, plan.visible]
   );
+
+  // What select mode can pick: open work showing on the timeline, never a
+  // milestone (release day is a date to steer for, not a job to tick).
+  const selectableIds = useMemo(() => {
+    const placed = shown ?? timeline;
+    if (!placed) return [] as string[];
+    const byId = new Map(tasks.map((task) => [task.id, task]));
+    const ids: string[] = [];
+    for (const phase of placed.phases) {
+      for (const item of phase.items) {
+        const task = byId.get(item.taskId);
+        if (!item.isMilestone && task && isSelectableTask(task)) ids.push(item.taskId);
+      }
+    }
+    return ids;
+  }, [shown, timeline, tasks]);
+  const pickedIds = selectableIds.filter((taskId) => selectedIds.has(taskId));
+  const allPicked = selectableIds.length > 0 && pickedIds.length === selectableIds.length;
+  const toggleSelected = useCallback((taskId: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  }, []);
+  const selection = useMemo<TimelineSelection | null>(
+    () => (selecting ? { selected: selectedIds, selectable: new Set(selectableIds), toggle: toggleSelected } : null),
+    [selecting, selectedIds, selectableIds, toggleSelected]
+  );
+  const markPickedDone = async () => {
+    if (isMarkingDone || pickedIds.length === 0) return;
+    setIsMarkingDone(true);
+    try {
+      await completeTasks(pickedIds);
+      window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
+      exitSelecting();
+    } finally {
+      setIsMarkingDone(false);
+    }
+  };
+  const selectControl = (bar: boolean) =>
+    selectableIds.length > 0 || selecting ? (
+      <SelectToggleButton
+        selecting={selecting}
+        bar={bar}
+        onToggle={() => (selecting ? exitSelecting() : setSelecting(true))}
+      />
+    ) : null;
 
   const reschedule = useCallback(
     async (taskId: string, newStartDay: number) => {
@@ -333,6 +425,7 @@ export function TimelineScene({
   };
 
   return (
+    <TimelineSelectContext.Provider value={selection}>
     <div className={`tl-scene-container pb-16 ${phone ? 'mt-0' : toolsInBar ? 'mt-3 lg:mt-1' : 'mt-6'}`}>
       {phone ? (
         // Phone (Oct 18, 2026): nothing above the list until the header's
@@ -362,7 +455,12 @@ export function TimelineScene({
               plan={plan}
               phoneSearchOnly={toolsInBar}
               inPageBar={toolsInBar}
-              trailing={<TimelineChrome />}
+              trailing={
+                <>
+                  {selectControl(toolsInBar)}
+                  <TimelineChrome />
+                </>
+              }
             />
           </div>
 
@@ -480,6 +578,9 @@ export function TimelineScene({
 
       {/* ---- Narrow: the week-by-week list ------------------------------ */}
       <div className="tl-list-view">
+        {phone && (selectableIds.length > 0 || selecting) ? (
+          <div className="mb-1 flex justify-end">{selectControl(false)}</div>
+        ) : null}
         <TimelineWeekList
           timeline={shown ?? timeline}
           filtering={plan.filtering}
@@ -542,7 +643,18 @@ export function TimelineScene({
           ) : null}
         </div>
       ) : null}
+
+      {selecting ? (
+        <BulkSelectBar
+          count={pickedIds.length}
+          allPicked={allPicked}
+          busy={isMarkingDone}
+          onToggleAll={() => setSelectedIds(allPicked ? new Set() : new Set(selectableIds))}
+          onMarkDone={markPickedDone}
+        />
+      ) : null}
     </div>
+    </TimelineSelectContext.Provider>
   );
 }
 
@@ -574,6 +686,7 @@ function PhaseLabels({
   onToggle: () => void;
   onOpenTask: (taskId: string) => void;
 }) {
+  const selection = useTimelineSelection();
   return (
     <div>
       <button
@@ -610,14 +723,24 @@ function PhaseLabels({
 
       {isCollapsed
         ? null
-        : phase.items.map((item) => (
+        : phase.items.map((item) => {
+            const pickable = selection?.selectable.has(item.taskId) ?? false;
+            const picked = selection?.selected.has(item.taskId) ?? false;
+            return (
             <button
               key={item.taskId}
               type="button"
-              onClick={() => onOpenTask(item.taskId)}
+              onClick={() =>
+                selection ? (pickable ? selection.toggle(item.taskId) : undefined) : onOpenTask(item.taskId)
+              }
+              aria-pressed={selection ? picked : undefined}
+              aria-disabled={selection && !pickable ? true : undefined}
               title={item.title}
-              className={`motion-focus flex ${ROW_CLASS} w-full items-center gap-1.5 rounded-md pl-5 pr-1 text-left hover:bg-bg-hover`}
+              className={`motion-focus flex ${ROW_CLASS} w-full items-center gap-1.5 rounded-md ${
+                selection ? 'pl-1' : 'pl-5'
+              } pr-1 text-left ${picked ? 'bg-brand/10' : 'hover:bg-bg-hover'}`}
             >
+              {selection ? <SelectBox selected={picked} disabled={!pickable} /> : null}
               {item.isMilestone ? (
                 <Flag className="h-3 w-3 shrink-0 text-brand" aria-hidden="true" />
               ) : null}
@@ -640,7 +763,8 @@ function PhaseLabels({
                 </span>
               ) : null}
             </button>
-          ))}
+            );
+          })}
     </div>
   );
 }
@@ -737,8 +861,13 @@ function TimelineRow({
   const position = itemPosition(item, weeks);
   const startIso = isoForDayOffset(releaseDate, item.startDay);
   const movedRef = useRef(0);
+  const selection = useTimelineSelection();
+  const pickable = selection?.selectable.has(item.taskId) ?? false;
+  const picked = selection?.selected.has(item.taskId) ?? false;
 
   const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    // Select mode: a tap picks, nothing drags.
+    if (selection) return;
     // Let a plain click through to the detail panel; only a real drag moves
     // anything. `movedRef` is what distinguishes them at pointer-up.
     const startX = event.clientX;
@@ -777,14 +906,16 @@ function TimelineRow({
   const label = `${item.title}: ${TONE_LABEL[item.tone]}${startIso ? `, ${startIso}` : ''}`;
 
   return (
-    <div className={`relative ${ROW_CLASS}`}>
+    <div className={`relative ${ROW_CLASS} ${picked ? 'bg-brand/10' : ''}`}>
       <button
         type="button"
         onPointerDown={handlePointerDown}
+        onClick={selection ? () => (pickable ? selection.toggle(item.taskId) : undefined) : undefined}
+        aria-pressed={selection ? picked : undefined}
         title={label}
         aria-label={label}
         className={`motion-focus absolute top-1/2 -translate-y-1/2 touch-none ${
-          isDragging ? 'cursor-grabbing' : 'cursor-grab'
+          selection ? (pickable ? 'cursor-pointer' : 'cursor-default') : isDragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
         style={
           item.isBar
@@ -795,14 +926,14 @@ function TimelineRow({
         {item.isBar ? (
           <span
             className={`block h-2.5 w-full rounded-full ${TONE_BAR_CLASS[item.tone]} ${
-              isDragging ? 'opacity-80 ring-2 ring-brand' : item.tone === 'cancelled' ? 'opacity-55' : ''
+              isDragging || picked ? 'opacity-80 ring-2 ring-brand' : item.tone === 'cancelled' ? 'opacity-55' : ''
             }`}
           />
         ) : (
           <span
             className={`block h-2.5 w-2.5 border ${
               item.isMilestone ? 'rotate-45' : 'rounded-full'
-            } ${dotClass(item)} ${item.tone === 'cancelled' ? 'opacity-55' : ''} ${isDragging ? 'ring-2 ring-brand' : ''}`}
+            } ${dotClass(item)} ${item.tone === 'cancelled' ? 'opacity-55' : ''} ${isDragging || picked ? 'ring-2 ring-brand ring-offset-1 ring-offset-bg-surface' : ''}`}
           />
         )}
       </button>
@@ -967,15 +1098,26 @@ function WeekRow({
 }) {
   const closed = isClosedTone(item.tone);
   const tag = !startHere && (item.tone === 'overdue' || item.tone === 'blocked') ? TONE_LABEL[item.tone] : null;
+  const selection = useTimelineSelection();
+  const pickable = selection?.selectable.has(item.taskId) ?? false;
+  const picked = selection?.selected.has(item.taskId) ?? false;
   return (
     <li>
       <button
         type="button"
-        onClick={() => onOpenTask(item.taskId)}
-        className="motion-focus -mx-2 flex min-h-12 w-[calc(100%+1rem)] items-center gap-3 rounded-md px-2 text-left hover:bg-bg-hover"
+        onClick={() =>
+          selection ? (pickable ? selection.toggle(item.taskId) : undefined) : onOpenTask(item.taskId)
+        }
+        aria-pressed={selection ? picked : undefined}
+        aria-disabled={selection && !pickable ? true : undefined}
+        className={`motion-focus -mx-2 flex min-h-12 w-[calc(100%+1rem)] items-center gap-3 rounded-md px-2 text-left ${
+          picked ? 'bg-brand/10' : 'hover:bg-bg-hover'
+        }`}
       >
         <span className="grid h-4 w-4 shrink-0 place-items-center" aria-hidden="true">
-          {item.tone === 'done' ? (
+          {selection ? (
+            <SelectBox selected={picked} disabled={!pickable} />
+          ) : item.tone === 'done' ? (
             <Check className="h-3.5 w-3.5 text-content-tertiary" />
           ) : startHere ? (
             <span className="h-2.5 w-2.5 rounded-full bg-brand" />

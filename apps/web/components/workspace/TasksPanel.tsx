@@ -5,7 +5,6 @@ import { createPortal } from 'react-dom';
 import { DialogPanel } from '@/components/shared/DialogPanel';
 import { Chappi, CHAPPI_MIN_SIZE } from '@urganize/ui';
 import {
-  Check,
   ChevronDown,
   Plus,
   X,
@@ -23,6 +22,7 @@ import { usePresence } from '@/components/motion/usePresence';
 import type { Release } from '@/types/releases';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { TaskRow, type TaskRowSelection } from '@/components/tasks/TaskRow';
+import { BulkSelectBar, SelectToggleButton, isSelectableTask } from '@/components/tasks/BulkSelect';
 import { TASKS_CHANGED_EVENT } from '@/components/tasks/TaskUIProvider';
 import { orderForThumb } from '@/lib/release-menu';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
@@ -165,22 +165,6 @@ const isPhaseCollapsed = (value: unknown): value is Partial<Record<RolloutPhase,
   typeof value === 'object' &&
   value !== null &&
   Object.values(value).every((entry) => typeof entry === 'boolean');
-
-// Same lift as the undo toast, so the select bar never lands under the phone's
-// bottom nav.
-const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
-
-/** A row select mode can pick: open work only. Done and cancelled rows have
- * nothing left to mark, a locked one is waiting on earlier work, and an
- * unsynced one has no real id yet. */
-function isSelectableTask(task: Task): boolean {
-  return (
-    task.status !== 'done' &&
-    task.status !== 'cancelled' &&
-    task.status !== 'locked' &&
-    !task.pendingSync
-  );
-}
 
 /** Inside a phase: open work by date (undated last), then done, then
  * cancelled, so the phase reads in the order it will be worked. */
@@ -444,8 +428,7 @@ export function TasksPanel({
   // "Select" turns the list into a picker; the floating bar marks every
   // picked row done in one go, with one "N done · Undo" toast and no
   // "How did it go?" sheet per task (that sheet was the one-by-one confirm).
-  // List only: the Timeline has no ticks, and completion there stays in the
-  // pop-up.
+  // The Timeline has its own Select mode with the same bar (v1.170.0).
   const [selecting, setSelecting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [isMarkingDone, setIsMarkingDone] = useState(false);
@@ -514,20 +497,11 @@ export function TasksPanel({
   };
   const selectControl = (bar: boolean) =>
     selectableIds.length > 0 || selecting ? (
-      <button
-        type="button"
-        onClick={() => (selecting ? exitSelecting() : setSelecting(true))}
-        aria-pressed={selecting}
-        className={`hit-44 relative motion-focus shrink-0 whitespace-nowrap rounded-full px-3 font-semibold transition-colors ${
-          bar ? 'h-[34px] text-[13px]' : 'h-8 text-xs'
-        } ${
-          selecting
-            ? 'text-content-secondary hover:text-content-primary'
-            : 'border border-stroke-default bg-bg-surface text-content-primary hover:bg-bg-hover'
-        }`}
-      >
-        {selecting ? 'Cancel' : 'Select'}
-      </button>
+      <SelectToggleButton
+        selecting={selecting}
+        bar={bar}
+        onToggle={() => (selecting ? exitSelecting() : setSelecting(true))}
+      />
     ) : null;
 
   // The mobile dock's two panels (2026-08-16 redesign, split 2026-08-31 —
@@ -1027,37 +1001,13 @@ export function TasksPanel({
           the aside, so the desktop's hidden phone mount (and vice versa)
           never shows a second one. */}
       {selecting ? (
-        <div
-          className={`pointer-events-none fixed inset-x-0 z-50 flex justify-center px-4 ${
-            MOBILE_NAV_ENABLED ? 'mobile-nav-raise lg:bottom-8' : 'bottom-6 sm:bottom-8'
-          }`}
-        >
-          <div
-            role="toolbar"
-            aria-label="Selected activities"
-            className="pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-full border border-stroke-default bg-bg-elevated py-2 pl-5 pr-2 text-sm shadow-lg"
-          >
-            <span className="whitespace-nowrap font-medium text-content-primary" aria-live="polite">
-              {pickedIds.length} selected
-            </span>
-            <button
-              type="button"
-              onClick={() => setSelectedIds(allPicked ? new Set() : new Set(selectableIds))}
-              className="motion-focus whitespace-nowrap text-content-secondary transition-colors hover:text-content-primary"
-            >
-              {allPicked ? 'Clear' : 'Select all'}
-            </button>
-            <button
-              type="button"
-              onClick={markPickedDone}
-              disabled={pickedIds.length === 0 || isMarkingDone}
-              className="motion-focus motion-press ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-brand px-4 font-semibold text-content-inverse transition-opacity disabled:opacity-40"
-            >
-              <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />
-              {isMarkingDone ? 'Marking…' : 'Mark done'}
-            </button>
-          </div>
-        </div>
+        <BulkSelectBar
+          count={pickedIds.length}
+          allPicked={allPicked}
+          busy={isMarkingDone}
+          onToggleAll={() => setSelectedIds(allPicked ? new Set() : new Set(selectableIds))}
+          onMarkDone={markPickedDone}
+        />
       ) : null}
     </aside>
   );

@@ -15,6 +15,7 @@ import type { ChappiClientAction } from '../types';
 import {
   argBoolean,
   argString,
+  argStringArray,
   callInternalApi,
   compactTask,
   fail,
@@ -352,6 +353,55 @@ export const CORE_TOOLS: ChappiTool[] = [
       return {
         ok: true,
         summary: `Marked the task done.${unlocked}`,
+        clientAction: { type: 'refresh' },
+      };
+    },
+  },
+  {
+    name: 'complete_tasks',
+    kind: 'mutate',
+    description:
+      'Mark several tasks done in one step (up to 50). Use this instead of calling complete_task again and again when the user asks to finish more than one ("mark all of this week\'s done"). Resolve the ids with list_tasks first; never guess. Each task gets the same dependency gate as complete_task; blocked or missing ones are skipped and reported.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        taskIds: { type: 'array', items: { type: 'string' }, description: 'Ids of the tasks to mark done.' },
+      },
+      required: ['taskIds'],
+    },
+    execute: async (ctx, args) => {
+      const taskIds = Array.from(new Set(argStringArray(args, 'taskIds')));
+      if (taskIds.length === 0) return fail('taskIds is required.');
+      if (taskIds.length > 50) return fail('Too many at once. Mark up to 50 tasks per step.');
+      const service = new TaskService(ctx.adminClient);
+      const done: string[] = [];
+      const skipped: { taskId: string; reason: string }[] = [];
+      let unlocked = 0;
+      // Sequential on purpose: completing one task can unlock the next in the
+      // same chain, and each call re-reads the release's dependency graph.
+      for (const taskId of taskIds) {
+        try {
+          const result = await service.completeTaskWithCascade(taskId, ctx.user.id, ctx.workspaceIds);
+          if (result.ok) {
+            done.push(taskId);
+            unlocked += result.unlockedIds.length;
+          } else {
+            skipped.push({ taskId, reason: result.message });
+          }
+        } catch {
+          skipped.push({ taskId, reason: 'Could not save this one.' });
+        }
+      }
+      if (done.length === 0) {
+        return fail(`None marked done. ${skipped.map((s) => s.reason).join(' ')}`.trim());
+      }
+      const parts = [`Marked ${done.length} task(s) done.`];
+      if (skipped.length) parts.push(`Skipped ${skipped.length}.`);
+      if (unlocked) parts.push(`Unlocked ${unlocked} dependent task(s).`);
+      return {
+        ok: true,
+        summary: parts.join(' '),
+        data: { done, skipped },
         clientAction: { type: 'refresh' },
       };
     },

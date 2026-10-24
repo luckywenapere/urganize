@@ -17,3 +17,8 @@ From a user interview (22 Oct 2026): a manager could not mark several activities
 
 ## Verified
 Type-check only. Not rendered in a browser.
+
+## v1.170.0 (same day)
+- Timeline gets Select mode (mock approved 2026-10-24): same Select button and bar as the list, now shared in `components/tasks/BulkSelect.tsx`. In select mode a tap on a label, bar, dot or week-list row picks it; nothing drags. Milestones, locked, done and cancelled work cannot be picked.
+- UrgAns gets `complete_tasks` (taskIds[], up to 50): runs `TaskService.completeTaskWithCascade` per id in order, skips and reports blocked ones. Also on the MCP allow-list (not confirmation-gated, same as `complete_task`).
+- Founder direction: UrgAns should be able to do anything a user can do in the app. Gap audit in progress.

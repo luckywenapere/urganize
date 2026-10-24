@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.170.0",
+    title: "Mark many done on the Timeline, or ask UrgAns",
+    tag: "Rollouts",
+    date: "October 24, 2026",
+    highlights: [
+      "The Timeline has Select too. Pick the activities you've finished and tap Mark done.",
+      "You can ask UrgAns to mark several activities done in one go, like \"mark this week's done\".",
+    ],
+  },
+  {
     version: "1.169.1",
     tag: "Rollouts",
     date: "October 24, 2026",
