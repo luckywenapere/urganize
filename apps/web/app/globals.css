@@ -3498,6 +3498,22 @@ html[data-release-focus='on'] nav a[href^='/dashboard']:not([href^='/dashboard/h
   bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* The UrgAns box on every other phone screen (.page-dock, Oct 24, 2026):
+   the page clears it, toasts sit above it, and it steps aside while another
+   field on the page has the keyboard. */
+@media (max-width: 1023px) {
+  :root[data-swipe-nav='page'][data-home-dock] .swipe-page-main {
+    padding-bottom: calc(var(--home-dock-height, 3.5rem) + 2.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  :root[data-swipe-nav='page'][data-home-dock] .mobile-nav-raise,
+  :root[data-swipe-nav='page'][data-home-dock] .mobile-nav-raise-card {
+    bottom: calc(1.75rem + var(--home-dock-height, 3.5rem) + env(safe-area-inset-bottom, 0px));
+  }
+  :root[data-swipe-nav='page'][data-keyboard-open='true'] .page-dock:not(:focus-within) {
+    display: none;
+  }
+}
+
 /* The Home card landing in Main: hidden while its copy flies (~330ms), then a
    120ms crossfade in and a green ring (35%) fading over 600ms. */
 .swipe-turn-in {

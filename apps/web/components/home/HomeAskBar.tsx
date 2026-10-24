@@ -70,8 +70,10 @@ export function HomeAskBar({
   replying = false,
 }: {
   /** 'swipe' (URG-380): the swipe navigation's one box under Home and Artists,
-   *  on phones and desktops, centred to the page column. */
-  variant?: 'home' | 'swipe';
+   *  on phones and desktops, centred to the page column. 'page' (Oct 24,
+   *  2026, founder call): the same box on every other phone screen (a
+   *  rollout, timeline, settings), phone only; desktops keep FloatingUrgAns. */
+  variant?: 'home' | 'swipe' | 'page';
   /** Replaces opening the chat page: the swipe navigation hands the message to
    *  Main and glides the pager to UrgAns instead. */
   onSend?: () => void;
@@ -203,7 +205,9 @@ export function HomeAskBar({
       className={
         variant === 'swipe'
           ? 'home-dock swipe-dock fixed inset-x-4 z-40 mx-auto max-w-[40rem]'
-          : 'home-dock fixed inset-x-3 z-40 lg:hidden'
+          : variant === 'page'
+            ? 'home-dock swipe-dock page-dock fixed inset-x-4 z-40 mx-auto max-w-[40rem] lg:hidden'
+            : 'home-dock fixed inset-x-3 z-40 lg:hidden'
       }
     >
       {voiceDriver}

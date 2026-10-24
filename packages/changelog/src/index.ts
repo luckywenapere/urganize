@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.168.0",
+    title: "UrgAns on every phone screen",
+    tag: "App",
+    date: "October 24, 2026",
+    highlights: [
+      "On your phone, the Message UrgAns box now sits at the bottom of every screen, including rollouts and the timeline.",
+      "Ask from inside a rollout and UrgAns already knows which rollout you mean.",
+    ],
+  },
+  {
     version: "1.167.1",
     tag: "App",
     date: "October 24, 2026",
