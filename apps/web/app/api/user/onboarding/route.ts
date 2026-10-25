@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { HEARD_FROM_METADATA_KEY, isHeardFromSource } from '@/lib/heard-from';
 import { createClient } from '@supabase/supabase-js';
 import {
   PROFILE_ONBOARDING_SQL,
@@ -672,6 +673,18 @@ export async function PATCH(request: NextRequest) {
       } else if (result.ok) {
         console.info(`[welcome-email] sent to ${recipient}`);
       }
+    }
+  }
+
+  // "How did you hear about Urganize?" (2026-10-25): optional, so an unknown
+  // or missing value is simply dropped. Saved to auth user metadata (no
+  // migration), best-effort: a failed write never fails onboarding.
+  if (isHeardFromSource(body.heardFrom)) {
+    const { error: metadataError } = await auth.adminClient.auth.admin.updateUserById(auth.user.id, {
+      user_metadata: { ...(auth.user.user_metadata || {}), [HEARD_FROM_METADATA_KEY]: body.heardFrom },
+    });
+    if (metadataError) {
+      console.error('[onboarding] could not save heard_from', metadataError.message);
     }
   }
 

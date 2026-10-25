@@ -28,6 +28,7 @@ import {
   isOnboardingPlanningPreference,
   isOnboardingWhereStuck,
 } from './onboarding';
+import { isHeardFromSource } from './heard-from';
 import { deriveOnboardingStage, normalizeReadyToday } from './onboarding-readiness';
 
 /** Supabase's default per-address send interval (smtp_max_frequency = 60 s). */
@@ -135,6 +136,7 @@ export type MetadataDraft = {
   rd?: string[]; // readyToday
   r?: string; // role
   np?: 1; // "Nothing planned yet": no rollout to build (2026-10-24)
+  hf?: string; // "How did you hear about Urganize?" (2026-10-25), optional
 };
 
 export function toMetadataDraft(draft: OnboardingDraft, role: OnboardingRoleForResume): MetadataDraft {
@@ -150,6 +152,7 @@ export function toMetadataDraft(draft: OnboardingDraft, role: OnboardingRoleForR
     rd: draft.readyToday.slice(0, 20),
     r: role,
     ...(draft.nothingPlanned ? { np: 1 as const } : {}),
+    ...(draft.heardFrom ? { hf: draft.heardFrom } : {}),
   };
 }
 
@@ -178,6 +181,7 @@ export function fromMetadataDraft(
       artistName: typeof raw.a === 'string' ? raw.a.trim().slice(0, 120) : '',
       planningPreference: isOnboardingPlanningPreference(raw.pp) ? raw.pp : 'ai_recommendations',
       nothingPlanned,
+      heardFrom: isHeardFromSource(raw.hf) ? raw.hf : null,
     },
   };
 }

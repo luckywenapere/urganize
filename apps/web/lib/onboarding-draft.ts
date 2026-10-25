@@ -16,6 +16,7 @@ import {
   type OnboardingStage,
   type OnboardingWhereStuck,
 } from './onboarding';
+import { isHeardFromSource, type HeardFromSource } from './heard-from';
 import { deriveOnboardingStage, normalizeReadyToday } from './onboarding-readiness';
 import type { ReadyItem } from './ready-today';
 
@@ -86,6 +87,9 @@ export interface OnboardingDraft {
   // rollout steps are skipped (lib/onboarding-steps.ts), no rollout is made
   // and the wizard lands on Home. Picking a release type turns it off.
   nothingPlanned: boolean;
+  // "How did you hear about Urganize?" (2026-10-25), optional, on the account
+  // step. Kept in the draft so it survives the Google round trip.
+  heardFrom: HeardFromSource | null;
 }
 
 /** Step 0 is answered: a release type that has a playbook, or "Nothing planned yet". */
@@ -107,6 +111,7 @@ export const EMPTY_ONBOARDING_DRAFT: OnboardingDraft = {
   artistName: '',
   planningPreference: 'ai_recommendations',
   nothingPlanned: false,
+  heardFrom: null,
 };
 
 const STORAGE_KEY = 'urganize.onboarding.draft';
@@ -158,6 +163,7 @@ export function loadOnboardingDraft(): OnboardingDraft {
         : EMPTY_ONBOARDING_DRAFT.planningPreference,
       // A release type wins over a stale flag, so the two can never both be on.
       nothingPlanned: parsed.nothingPlanned === true && !isReleaseType(parsed.releaseType),
+      heardFrom: isHeardFromSource(parsed.heardFrom) ? parsed.heardFrom : null,
     };
   } catch {
     return EMPTY_ONBOARDING_DRAFT;

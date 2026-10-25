@@ -36,6 +36,7 @@ const full: OnboardingDraft = {
   artistName: 'Tems',
   planningPreference: 'ai_recommendations',
   nothingPlanned: false,
+  heardFrom: 'instagram',
 };
 
 describe('"Nothing planned yet" (2026-10-24)', () => {

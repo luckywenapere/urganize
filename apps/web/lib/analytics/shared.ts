@@ -122,6 +122,8 @@ export interface AnalyticsEventPropertiesMap {
   onboarding_optin_choices: { push: boolean; email: boolean };
   /** The typed referral code was not a valid code (never blocks sign-up). */
   onboarding_referral_invalid: EmptyAnalyticsProperties;
+  /** "How did you hear about Urganize?" was answered at sign-up. */
+  onboarding_heard_from: { source: string };
   /** The paywall was shown, with the plan pre-selected from the persona. */
   onboarding_paywall_viewed: { preselected_tier: string; cards: number; ios_app: boolean };
   /** A swipe card came into view. `index` is 0-based. */

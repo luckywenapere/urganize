@@ -7,6 +7,7 @@ import {
   ONBOARDING_RELEASE_PROCESS_LABELS,
   normalizeOnboardingState,
 } from '@/lib/onboarding';
+import { HEARD_FROM_LABELS, HEARD_FROM_METADATA_KEY } from '@/lib/heard-from';
 import { ONBOARDING_RELEASE_TYPES, ONBOARDING_STAGE_OPTIONS, ONBOARDING_WHERE_STUCK_OPTIONS } from '@/lib/onboarding-draft';
 
 // URG-195. Read-only view of what users actually pick during /onboarding —
@@ -130,6 +131,20 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  // "How did you hear about Urganize?" (2026-10-25) lives in auth user
+  // metadata, not profiles (no migration). One page of auth users covers the
+  // 200 profiles shown; a failed read only blanks the column.
+  const heardFromById = new Map<string, string>();
+  try {
+    const { data: authUsers } = await adminResult.supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    for (const authUser of authUsers?.users || []) {
+      const value = authUser.user_metadata?.[HEARD_FROM_METADATA_KEY];
+      if (typeof value === 'string' && value) heardFromById.set(authUser.id, value);
+    }
+  } catch {
+    // Leave the column empty rather than fail the page.
+  }
+
   const rows = profiles.map((row) => {
     const onboarding = normalizeOnboardingState(row);
     return {
@@ -143,6 +158,7 @@ export async function GET(req: NextRequest) {
       planningPreference: onboarding.onboardingPlanningPreference,
       whereStuck: onboarding.onboardingWhereStuck,
       stage: onboarding.onboardingStage,
+      heardFrom: heardFromById.get(row.id) || null,
       // Legacy (Wizard B, retired URG-191) — real for a ~9-day production
       // window (see 20260720120000_profiles_backfill_onboarding_completed.sql)
       // but no live writer going forward. Shown, not hidden, per principle 8
@@ -180,6 +196,7 @@ export async function GET(req: NextRequest) {
     ),
     whereStuck: tallyMulti(rows, (row) => row.whereStuck, (value) => WHERE_STUCK_LABELS.get(value) || value),
     stage: tally(rows, (row) => row.stage, (value) => STAGE_LABELS.get(value) || value),
+    heardFrom: tally(rows, (row) => row.heardFrom, (value) => HEARD_FROM_LABELS.get(value) || value),
     legacyPersona: hasLegacyData
       ? tally(rows, (row) => row.persona, (value) => ONBOARDING_PERSONA_LABELS[value as keyof typeof ONBOARDING_PERSONA_LABELS] || value)
       : [],
@@ -211,6 +228,7 @@ export async function GET(req: NextRequest) {
       'planning_preference',
       'where_stuck',
       'stage',
+      'heard_from',
       'legacy_persona',
       'legacy_release_process',
       'legacy_biggest_headache',
@@ -227,6 +245,7 @@ export async function GET(req: NextRequest) {
         row.planningPreference || '',
         (row.whereStuck || []).join('; '),
         row.stage || '',
+        row.heardFrom ? HEARD_FROM_LABELS.get(row.heardFrom) || row.heardFrom : '',
         row.persona || '',
         row.releaseProcess || '',
         row.biggestHeadache || '',

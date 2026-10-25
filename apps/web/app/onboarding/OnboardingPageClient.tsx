@@ -118,6 +118,7 @@ import {
   loadOnboardingDraft,
   saveOnboardingDraft,
 } from '@/lib/onboarding-draft';
+import { HEARD_FROM_OPTIONS, isHeardFromSource } from '@/lib/heard-from';
 import { getOnboardingAiMoment } from '@/lib/onboarding-ai-moment';
 import {
   ONBOARDING_READY_OPTIONS,
@@ -952,9 +953,14 @@ export default function OnboardingPage() {
           // profile says this person is exploring. No migration: the column
           // is free text, validated by the route.
           onboardingStage: draft.nothingPlanned ? ONBOARDING_STAGE_NOTHING_PLANNED : draft.stage,
+          // Optional (2026-10-25): saved to auth user metadata server-side.
+          ...(draft.heardFrom ? { heardFrom: draft.heardFrom } : {}),
         }),
       }).catch(() => undefined);
       persisted = Boolean(response?.ok);
+      if (draft.heardFrom) {
+        captureAnalyticsEvent({ name: 'onboarding_heard_from', properties: { source: draft.heardFrom } });
+      }
       // Tell the server which partner's link this person came in through, now
       // that their team exists. A no-op unless a code was remembered.
       await Promise.all([referral, signupSource]);
@@ -2374,6 +2380,29 @@ export default function OnboardingPage() {
                   That code doesn&apos;t look right. You can still sign up without it.
                 </span>
               ) : null}
+            </label>
+          ) : null}
+
+          {/* How did you hear about Urganize? (2026-10-25). Optional, for
+              acquisition by channel; never blocks sign-up. */}
+          {step === ONBOARDING_STEP.account ? (
+            <label className="mt-5 block space-y-1.5">
+              <span className={labelBase}>How did you hear about Urganize?</span>
+              <select
+                value={draft.heardFrom ?? ''}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setDraft((current) => ({ ...current, heardFrom: isHeardFromSource(value) ? value : null }));
+                }}
+                className={`${inputBase} ${draft.heardFrom ? '' : 'text-content-tertiary'}`}
+              >
+                <option value="">Optional</option>
+                {HEARD_FROM_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </label>
           ) : null}
 

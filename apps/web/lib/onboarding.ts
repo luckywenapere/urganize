@@ -87,6 +87,9 @@ export interface UpdateOnboardingBody {
   onboardingPlanningPreference?: OnboardingPlanningPreference | null;
   onboardingWhereStuck?: OnboardingWhereStuck[] | null;
   onboardingStage?: OnboardingProfileStage | null;
+  // "How did you hear about Urganize?" (2026-10-25). Saved to auth user
+  // metadata (heard_from), not a profiles column. See lib/heard-from.ts.
+  heardFrom?: string | null;
   releaseId?: string | null;
   taskId?: string | null;
 }
