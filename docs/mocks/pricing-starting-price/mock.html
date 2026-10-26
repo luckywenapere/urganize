@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Starting price mocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Space+Mono:wght@400;700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* Site tokens: apps/homepage/app/globals.css (light). App tokens: apps/web light theme. */
+  :root {
+    --m-bg:#f7f4ee; --m-card:#f5f0e8; --m-text:#171311; --m-muted:#5c544a; --m-subtle:#6d6459;
+    --m-border:#ece4d8; --m-primary:#171311; --m-accent:#2f6b4a;
+    --a-bg:#f3efe6; --a-card:#f8f4ec; --a-row:#f8f4ec; --a-text:#1a1611; --a-sec:#5c544a; --a-ter:#6d6459;
+    --a-line:#e6dfd2; --a-line2:#d8d0c2; --a-brand:#14643a; --a-brand-sub:rgba(20,100,58,.06); --a-brand-mut:rgba(20,100,58,.12);
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; }
+  .screen { display:none; min-height:100vh; }
+  .screen.on { display:block; }
+  p { margin:0; }
+
+  /* ---------- Marketing site: /pricing ---------- */
+  .site { background:var(--m-bg); color:var(--m-text); padding:56px 16px 72px; }
+  .site h1 { font-size:clamp(34px,6vw,56px); font-weight:700; letter-spacing:-.04em; line-height:1.02; text-align:center; margin:0 auto 14px; max-width:720px; }
+  .site .lede { text-align:center; color:var(--m-muted); font-size:17px; max-width:520px; margin:0 auto 36px; }
+  .switch { display:flex; justify-content:center; margin-bottom:36px; }
+  .switch .seg { display:inline-flex; padding:4px; border-radius:999px; border:1px solid var(--m-border); background:var(--m-card); }
+  .switch .seg span { padding:8px 20px; border-radius:999px; font-weight:500; font-size:14px; color:var(--m-muted); }
+  .switch .seg span.on { background:var(--m-primary); color:#fff; }
+  .grid { max-width:1040px; margin:0 auto; display:grid; gap:20px; grid-template-columns:1fr; }
+  @media (min-width:720px){ .grid { grid-template-columns:repeat(3,1fr); } }
+  .tier { background:var(--m-card); border:1px solid var(--m-border); border-radius:24px; padding:24px; display:flex; flex-direction:column; }
+  .tier .name { font-size:12px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; color:var(--m-accent); }
+  .tier .price { margin-top:16px; display:flex; align-items:baseline; gap:4px; flex-wrap:wrap; }
+  .tier .price b { font-size:34px; font-weight:800; letter-spacing:-.04em; line-height:1; }
+  .tier .price i { font-style:normal; color:var(--m-muted); font-size:14px; }
+  .tier .then { margin-top:8px; font-size:13px; color:var(--m-muted); min-height:20px; }
+  .tier .aud { margin-top:12px; font-size:14px; color:var(--m-muted); }
+  .tier .cta { margin-top:20px; height:46px; border-radius:999px; background:var(--m-primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:500; font-size:14px; gap:8px; }
+  .tier .inc { margin-top:24px; font-size:13px; color:var(--m-subtle); padding-bottom:10px; border-bottom:1px solid var(--m-border); }
+  .tier ul { list-style:none; padding:0; margin:12px 0 0; display:flex; flex-direction:column; gap:10px; }
+  .tier li { display:flex; gap:10px; font-size:14px; line-height:1.45; color:var(--m-muted); }
+  .tier li svg { flex:0 0 16px; margin-top:2px; color:var(--m-accent); }
+  .tier .group-h { margin-top:18px; font-size:13px; color:var(--m-subtle); padding-bottom:10px; border-bottom:1px solid var(--m-border); }
+  .site .foot { max-width:640px; margin:32px auto 0; text-align:center; font-size:12px; line-height:1.7; color:var(--m-subtle); }
+
+  /* ---------- App: the wall ---------- */
+  .app { background:var(--a-bg); color:var(--a-text); padding:48px 16px 64px; }
+  .wrap { max-width:560px; margin:0 auto; }
+  .eyebrow { font-family:'Space Mono', monospace; font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--a-sec); }
+  .app h1 { font-family:'Young Serif', serif; font-weight:400; font-size:clamp(30px,6vw,44px); letter-spacing:-.02em; line-height:1.1; margin:10px 0 28px; }
+  .panel { background:var(--a-card); border:1px solid var(--a-line); border-radius:20px; padding:24px 20px; }
+  @media (min-width:600px){ .panel { padding:32px 36px; } }
+  .panel h2 { font-family:'Young Serif', serif; font-weight:400; font-size:20px; margin:0 0 16px; }
+  .aseg { display:flex; justify-content:center; margin-bottom:16px; }
+  .aseg div { display:inline-flex; padding:4px; border-radius:999px; border:1px solid var(--a-line); background:var(--a-card); }
+  .aseg span { min-height:36px; display:flex; align-items:center; padding:0 18px; border-radius:999px; font-weight:600; font-size:13px; color:var(--a-sec); }
+  .aseg span.on { background:var(--a-brand); color:#fff; }
+  .opt { display:flex; gap:12px; align-items:flex-start; border:1px solid var(--a-line); border-radius:12px; padding:16px; background:var(--a-row); margin-top:8px; }
+  .opt.on { border-color:var(--a-brand); background:var(--a-brand-sub); }
+  .rad { width:18px; height:18px; border-radius:50%; border:1.5px solid #8a8277; flex:0 0 18px; margin-top:2px; background:#fff; }
+  .opt.on .rad { border-color:var(--a-brand); box-shadow:inset 0 0 0 4px #fff; background:var(--a-brand); }
+  .opt .body { flex:1; min-width:0; }
+  .opt .t { font-weight:600; font-size:15px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .badge { font-family:'Space Mono', monospace; font-weight:700; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--a-brand); background:var(--a-brand-mut); border-radius:999px; padding:2px 8px; }
+  .opt .aud { font-size:13px; color:var(--a-ter); margin-top:3px; }
+  .opt .pr { text-align:right; flex:0 0 auto; }
+  .opt .pr b { display:block; font-size:15px; font-weight:600; white-space:nowrap; }
+  .opt .pr small { display:block; font-size:12px; color:var(--a-ter); white-space:nowrap; margin-top:2px; }
+  .badge { white-space:nowrap; }
+  @media (max-width:479px){
+    .opt { flex-wrap:wrap; }
+    .opt .body { flex:1 1 calc(100% - 30px); }
+    .opt .pr { flex:1 1 100%; text-align:left; padding-left:30px; margin-top:6px; }
+  }
+  .what { margin-top:20px; padding-top:16px; border-top:1px solid var(--a-line); }
+  .what p { font-size:13px; color:var(--a-sec); margin-bottom:10px; }
+  .what ul { list-style:none; padding:0; margin:0; display:grid; gap:8px; grid-template-columns:1fr; }
+  @media (min-width:600px){ .what ul { grid-template-columns:1fr 1fr; } }
+  .what li { display:flex; gap:8px; font-size:13.5px; line-height:1.4; }
+  .what li svg { flex:0 0 15px; margin-top:2px; color:var(--a-brand); }
+  .abtn { margin-top:22px; height:56px; border-radius:999px; background:var(--a-brand); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:16px; box-shadow:0 10px 24px rgba(20,100,58,.18); }
+  .note { margin-top:12px; text-align:center; font-size:12.5px; color:var(--a-ter); }
+  .help { margin-top:28px; display:flex; justify-content:center; gap:20px; font-weight:600; font-size:15px; }
+  .help a { color:var(--a-text); text-decoration:underline; text-underline-offset:4px; }
+
+  /* ---------- Mock chrome (not part of the design) ---------- */
+  .tag { position:fixed; left:12px; bottom:12px; z-index:9; background:#1a1611; color:#fff; font:600 11px 'Instrument Sans'; padding:6px 10px; border-radius:8px; opacity:.85; }
+  .index { padding:32px 16px; background:#fff; color:#111; font-size:15px; }
+  .index a { display:block; padding:6px 0; color:#14643a; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="ck" viewBox="0 0 24 24"><path fill="currentColor" d="M10 15.17 19.19 6l1.41 1.41L10 18 3.64 11.64l1.41-1.41z"/></symbol>
+  <symbol id="wa" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .1-1.3c0-.1-.2-.2-.4-.3Z"/></symbol>
+</svg>
+
+<!-- =================== SITE: /pricing, Monthly =================== -->
+<section class="screen site" id="site-monthly">
+  <h1>One price for your whole team.</h1>
+  <p class="lede">Plan every release and deliver it on time. Pay in Naira, monthly or once a year.</p>
+  <div class="switch"><div class="seg"><span class="on">Monthly</span><span>Yearly</span></div></div>
+  <div class="grid">
+    <div class="tier">
+      <p class="name">Solo</p>
+      <div class="price"><b>₦4,000</b><i>/month</i></div>
+      <p class="then">for your first 6 months, then ₦5,000/month</p>
+      <p class="aud">For an artist and their manager.</p>
+      <a class="cta">Get Solo</a>
+      <p class="inc">What you get:</p>
+      <ul class="sololist"></ul>
+    </div>
+    <div class="tier">
+      <p class="name">Manager</p>
+      <div class="price"><b>₦26,000</b><i>/month</i></div>
+      <p class="then">for your first 6 months, then ₦30,000/month</p>
+      <p class="aud">For a manager running more than one artist.</p>
+      <a class="cta">Get Manager</a>
+      <p class="inc">Everything in Solo, and:</p>
+      <ul class="mgrlist"></ul>
+    </div>
+    <div class="tier">
+      <p class="name">Label</p>
+      <div class="price"><b>Let's talk</b></div>
+      <p class="then">A price set with you, for your roster.</p>
+      <p class="aud">For small labels and management teams.</p>
+      <a class="cta"><svg width="16" height="16"><use href="#wa"/></svg>Contact us</a>
+      <p class="inc">Everything in Manager, and:</p>
+      <ul class="labellist"></ul>
+    </div>
+  </div>
+  <p class="foot">Prices are in Naira. One price covers your whole team, not each person. The first 6 months price is for teams paying for the first time. Pay monthly or once a year, by card or bank transfer.</p>
+</section>
+
+<!-- =================== SITE: /pricing, Yearly =================== -->
+<section class="screen site" id="site-yearly">
+  <h1>One price for your whole team.</h1>
+  <p class="lede">Plan every release and deliver it on time. Pay in Naira, monthly or once a year.</p>
+  <div class="switch"><div class="seg"><span>Monthly</span><span class="on">Yearly</span></div></div>
+  <div class="grid">
+    <div class="tier">
+      <p class="name">Solo</p>
+      <div class="price"><b>₦50,000</b><i>/year</i></div>
+      <p class="then">₦4,167 a month, paid once a year</p>
+      <p class="aud">For an artist and their manager.</p>
+      <a class="cta">Book a call</a>
+      <p class="inc">What you get:</p>
+      <ul class="sololist"></ul>
+    </div>
+    <div class="tier">
+      <p class="name">Manager</p>
+      <div class="price"><b>₦300,000</b><i>/year</i></div>
+      <p class="then">₦25,000 a month, paid once a year</p>
+      <p class="aud">For a manager running more than one artist.</p>
+      <a class="cta">Book a call</a>
+      <p class="inc">Everything in Solo, and:</p>
+      <ul class="mgrlist"></ul>
+    </div>
+    <div class="tier">
+      <p class="name">Label</p>
+      <div class="price"><b>Let's talk</b></div>
+      <p class="then">A price set with you, for your roster.</p>
+      <p class="aud">For small labels and management teams.</p>
+      <a class="cta"><svg width="16" height="16"><use href="#wa"/></svg>Contact us</a>
+      <p class="inc">Everything in Manager, and:</p>
+      <ul class="labellist"></ul>
+    </div>
+  </div>
+  <p class="foot">Prices are in Naira. One price covers your whole team, not each person. The first 6 months price is for teams paying for the first time. Pay monthly or once a year, by card or bank transfer.</p>
+</section>
+
+<!-- =================== APP WALL: first-time payer, Monthly =================== -->
+<section class="screen app" id="wall-monthly">
+  <div class="wrap">
+    <p class="eyebrow">Your trial has ended</p>
+    <h1>Pick up where you left off.</h1>
+    <div class="panel">
+      <h2>Pick your plan</h2>
+      <div class="aseg"><div><span class="on">Monthly</span><span>Yearly</span></div></div>
+      <div class="opt">
+        <span class="rad"></span>
+        <div class="body"><div class="t">Solo</div><div class="aud">For an artist and their manager.</div></div>
+        <div class="pr"><b>₦4,000/month</b><small>then ₦5,000 from month 7</small></div>
+      </div>
+      <div class="opt on">
+        <span class="rad"></span>
+        <div class="body"><div class="t">Manager <span class="badge">Most teams</span></div><div class="aud">For a manager running more than one artist.</div></div>
+        <div class="pr"><b>₦26,000/month</b><small>then ₦30,000 from month 7</small></div>
+      </div>
+      <div class="what">
+        <p>Manager includes everything in Solo, and:</p>
+        <ul class="mgrlist"></ul>
+      </div>
+      <div class="abtn">Activate and keep going</div>
+      <p class="note">₦26,000 today, then every month. ₦30,000 a month from month 7. Cancel any time.</p>
+    </div>
+    <div class="help"><a>WhatsApp us</a><a>Email us</a></div>
+  </div>
+</section>
+
+<!-- =================== APP WALL: first-time payer, Yearly =================== -->
+<section class="screen app" id="wall-yearly">
+  <div class="wrap">
+    <p class="eyebrow">Your trial has ended</p>
+    <h1>Pick up where you left off.</h1>
+    <div class="panel">
+      <h2>Pick your plan</h2>
+      <div class="aseg"><div><span>Monthly</span><span class="on">Yearly</span></div></div>
+      <div class="opt">
+        <span class="rad"></span>
+        <div class="body"><div class="t">Solo</div><div class="aud">For an artist and their manager.</div></div>
+        <div class="pr"><b>₦50,000/year</b><small>₦4,167 a month</small></div>
+      </div>
+      <div class="opt on">
+        <span class="rad"></span>
+        <div class="body"><div class="t">Manager <span class="badge">Most teams</span></div><div class="aud">For a manager running more than one artist.</div></div>
+        <div class="pr"><b>₦300,000/year</b><small>₦25,000 a month</small></div>
+      </div>
+      <div class="what">
+        <p>Manager includes everything in Solo, and:</p>
+        <ul class="mgrlist"></ul>
+      </div>
+      <div class="abtn">Book a call</div>
+      <p class="note">Yearly plans start with a short call. We send the payment link after.</p>
+    </div>
+    <div class="help"><a>WhatsApp us</a><a>Email us</a></div>
+  </div>
+</section>
+
+<!-- =================== APP WALL: team that paid before =================== -->
+<section class="screen app" id="wall-returning">
+  <div class="wrap">
+    <p class="eyebrow">Your plan has ended</p>
+    <h1>Pick up where you left off.</h1>
+    <div class="panel">
+      <h2>Pick your plan</h2>
+      <div class="aseg"><div><span class="on">Monthly</span><span>Yearly</span></div></div>
+      <div class="opt">
+        <span class="rad"></span>
+        <div class="body"><div class="t">Solo</div><div class="aud">For an artist and their manager.</div></div>
+        <div class="pr"><b>₦5,000/month</b></div>
+      </div>
+      <div class="opt on">
+        <span class="rad"></span>
+        <div class="body"><div class="t">Manager <span class="badge">Most teams</span></div><div class="aud">For a manager running more than one artist.</div></div>
+        <div class="pr"><b>₦30,000/month</b></div>
+      </div>
+      <div class="what">
+        <p>Manager includes everything in Solo, and:</p>
+        <ul class="mgrlist"></ul>
+      </div>
+      <div class="abtn">Activate and keep going</div>
+      <p class="note">₦30,000 today, then every month. Cancel any time.</p>
+    </div>
+    <div class="help"><a>WhatsApp us</a><a>Email us</a></div>
+  </div>
+</section>
+
+<section class="screen index" id="index">
+  <h2>Starting price mocks</h2>
+  <a href="#site-monthly">1. Site /pricing, Monthly</a>
+  <a href="#site-yearly">2. Site /pricing, Yearly</a>
+  <a href="#wall-monthly">3. App wall, first-time payer, Monthly</a>
+  <a href="#wall-yearly">4. App wall, first-time payer, Yearly</a>
+  <a href="#wall-returning">5. App wall, team that paid before</a>
+</section>
+
+<div class="tag" id="tag"></div>
+
+<script>
+  // Draft feature lines: only what the product does today. For the founder to edit.
+  var SOLO = [
+    '1 artist',
+    '2 people on your team',
+    '1 rollout at a time',
+    '150 UrgAns credits a month',
+    'A release plan for every rollout',
+    'Tasks with owners and due dates',
+    'Pitch this! kit for every release',
+    'Search the Urganize Directory'
+  ];
+  var MANAGER = [
+    'Up to 3 artists',
+    '5 people on your team',
+    '3 rollouts at a time',
+    '660 UrgAns credits a month',
+    'Distribution included'
+  ];
+  var LABEL = [
+    'Unlimited artists',
+    'Unlimited team members',
+    'Unlimited rollouts at a time',
+    '1,500 UrgAns credits a month',
+    'We set your roster up with you',
+    'WhatsApp support, answered same day'
+  ];
+  function fill(cls, lines) {
+    document.querySelectorAll('.' + cls).forEach(function (ul) {
+      ul.innerHTML = lines.map(function (l) {
+        return '<li><svg width="16" height="16"><use href="#ck"/></svg><span>' + l + '</span></li>';
+      }).join('');
+    });
+  }
+  fill('sololist', SOLO); fill('mgrlist', MANAGER); fill('labellist', LABEL);
+  function show() {
+    var s = location.hash.slice(1) || new URLSearchParams(location.search).get('s') || 'index';
+    document.querySelectorAll('.screen').forEach(function (x) { x.classList.remove('on'); });
+    var el = document.getElementById(s) || document.getElementById('index');
+    el.classList.add('on');
+    document.getElementById('tag').textContent = el.id === 'index' ? 'Mock' : 'Mock: ' + el.id;
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener('hashchange', show);
+  show();
+</script>
+</body>
+</html>

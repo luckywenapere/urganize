@@ -3,9 +3,11 @@ import { getTierPrice, isSelfServePurchase } from '@urganize/pricing';
 import { needsOnboardingCall, parseSendPaymentLink } from './call-led';
 
 describe('onboarding rules: who pays without a call', () => {
-  it('lets only monthly Solo and Manager pay on their own', () => {
-    expect(isSelfServePurchase('solo', 'monthly')).toBe(true);
-    expect(isSelfServePurchase('manager', 'monthly')).toBe(true);
+  it('lets Solo and Manager pay on their own, monthly or yearly', () => {
+    for (const plan of ['solo', 'manager'] as const) {
+      expect(isSelfServePurchase(plan, 'monthly')).toBe(true);
+      expect(isSelfServePurchase(plan, 'annual')).toBe(true);
+    }
   });
 
   it('sends Label to a call on every period', () => {
@@ -14,10 +16,10 @@ describe('onboarding rules: who pays without a call', () => {
     }
   });
 
-  it('sends every 6-month and yearly plan to a call', () => {
+  it('sends a 6-month plan to a call, and no longer a yearly one', () => {
     for (const plan of ['solo', 'manager'] as const) {
       expect(needsOnboardingCall(plan, 'semiannual')).toBe(true);
-      expect(needsOnboardingCall(plan, 'annual')).toBe(true);
+      expect(needsOnboardingCall(plan, 'annual')).toBe(false);
     }
   });
 

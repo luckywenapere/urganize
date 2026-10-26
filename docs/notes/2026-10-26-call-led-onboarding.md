@@ -1,5 +1,7 @@
 # Onboarding rules: only monthly Solo and Manager pay without a call (2026-10-26, v1.186.0)
 
+**Changed the same day (v1.191.0):** Solo and Manager yearly are self-serve too, and Label is contact-us with no checkout. See `2026-10-26-starting-price.md`.
+
 Founder rules. Solo and Manager on the monthly plan are self-serve (pricing page, checkout, card or bank transfer, no call). Label, and every 6-month or yearly plan (Solo, Manager or Label), start with an onboarding call, and the founder sends the payment link after it. Nobody pays before the call. Yearly was added to the call-led side by the founder on 2026-10-26. Label is ₦100,000 a month (₦500,000 for 6 months, ₦1,000,000 a year); it was ₦60,000. Mock: `docs/mocks/onboarding-rules/index.html`.
 
 **One rule, one place.** `isSelfServePurchase(tier, interval)` in `packages/pricing`. `lib/call-led.ts` (`needsOnboardingCall`) wraps it for the app.

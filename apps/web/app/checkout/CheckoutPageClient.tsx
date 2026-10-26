@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { BillingInterval } from '@urganize/pricing';
+import { INTRO_MONTHS, type BillingInterval } from '@urganize/pricing';
 import { Logo, LoadingMark } from '@urganize/ui';
 import { useAuthStore } from '@/lib/auth-store';
 import { BOOK_CALL_LABEL, needsOnboardingCall } from '@/lib/call-led';
@@ -30,6 +30,7 @@ import {
   periodHeadline,
   periodLabel,
   periodSaving,
+  introSubline,
   periodsForMethod,
   planName,
   setupCallUrl,
@@ -43,6 +44,8 @@ type Options = {
   /** Call-led plans this person may pay for now, as "plan:period": a payment link from the founder, or a renewal. */
   callLedAllowed: string[];
   cardPeriods: Record<CheckoutPlan, BillingInterval[]>;
+  /** Starting-price months left (2026-10-26). */
+  introMonthsLeft?: number;
   transferAccounts: boolean;
   distributionOn: boolean;
   approved: boolean;
@@ -254,12 +257,14 @@ function PlanChip({
   open,
   setOpen,
   suffix,
+  introMonthsLeft = 0,
 }: {
   plan: CheckoutPlan;
   onChange: (plan: CheckoutPlan) => void;
   open: boolean;
   setOpen: (open: boolean) => void;
   suffix?: string;
+  introMonthsLeft?: number;
 }) {
   return (
     <div>
@@ -295,7 +300,7 @@ function PlanChip({
                   : 'border-stroke-control text-content-secondary hover:bg-bg-hover'
               }`}
             >
-              {planName(option)} · {formatNaira(periodAmount(option, 'monthly') ?? 0)}/month
+              {planName(option)} · {formatNaira(periodAmount(option, 'monthly', introMonthsLeft) ?? 0)}/month
             </button>
           ))}
         </div>
@@ -405,7 +410,7 @@ function SignupStep({
           <div>
             <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">Your plan</div>
             <div className="mt-0.5 font-semibold text-content-primary">
-              {planName(intent.plan)} · {periodHeadline(intent.plan, intent.period)}
+              {planName(intent.plan)} · {periodHeadline(intent.plan, intent.period, INTRO_MONTHS)}
             </div>
           </div>
           <button
@@ -594,13 +599,18 @@ function CheckoutStep({
   const cardPeriods = options?.cardPeriods[intent.plan] ?? [];
   const cardAvailable = cardPeriods.length > 0;
   const effectiveMethod: PaymentMethodChoice = method === 'card' && options && !cardAvailable ? 'transfer' : method;
-  const periods = useMemo(
-    () => (changing && current ? [current.period] : periodsForMethod(effectiveMethod, cardPeriods)),
-    [changing, current, effectiveMethod, cardPeriods]
-  );
+  const periods = useMemo(() => {
+    if (changing && current) return [current.period];
+    const offered = periodsForMethod(effectiveMethod, cardPeriods);
+    // A team renewing a period no longer sold (6 months) still sees it.
+    return current && current.plan === intent.plan && !offered.includes(current.period)
+      ? [...offered, current.period]
+      : offered;
+  }, [changing, current, effectiveMethod, cardPeriods, intent.plan]);
   const period = periods.includes(intent.period) ? intent.period : (periods[0] ?? 'monthly');
-  const amount = periodAmount(intent.plan, period) ?? 0;
-  const saving = periodSaving(period);
+  const introMonthsLeft = options?.introMonthsLeft ?? 0;
+  const amount = periodAmount(intent.plan, period, introMonthsLeft) ?? 0;
+  const saving = introSubline(intent.plan, period, introMonthsLeft) ?? periodSaving(period);
 
   const pickMethod = (next: PaymentMethodChoice) => {
     setMethod(next);
@@ -781,14 +791,19 @@ function CheckoutStep({
               open={pickingPlan}
               setOpen={setPickingPlan}
               onChange={(plan) => setIntent((current) => ({ ...current, plan }))}
+              introMonthsLeft={introMonthsLeft}
             />
             <div>
               <h1 className="font-display text-[34px] leading-tight text-content-primary lg:text-[44px]">
-                {periodHeadline(intent.plan, period)}
+                {periodHeadline(intent.plan, period, introMonthsLeft)}
               </h1>
               {saving ? <p className="mt-1.5 text-content-secondary">{saving}</p> : null}
             </div>
-            <div role="radiogroup" aria-label="How often" className="grid grid-cols-3 gap-2">
+            <div
+              role="radiogroup"
+              aria-label="How often"
+              className={`grid gap-2 ${periods.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}
+            >
               {periods.map((option) => (
                 <button
                   key={option}
@@ -804,7 +819,7 @@ function CheckoutStep({
                 >
                   {periodLabel(option)}
                   <small className="mt-0.5 font-mono text-xs font-normal">
-                    {formatNaira(periodAmount(intent.plan, option) ?? 0)}
+                    {formatNaira(periodAmount(intent.plan, option, introMonthsLeft) ?? 0)}
                   </small>
                 </button>
               ))}

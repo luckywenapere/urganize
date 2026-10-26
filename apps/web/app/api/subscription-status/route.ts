@@ -12,6 +12,7 @@ import { isCardTrialEnabled, resolveCardTrialRequirement } from '@/lib/trial-car
 import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { getTeamAccessForUser, toTeamAccessPayload } from '@/lib/team-billing-server';
 import { purchasableTiers } from '@/lib/billing-plans';
+import { loadIntroMonthsLeft } from '@/lib/referrals-server';
 import { resolveOnboardingSetupRequired } from '@/lib/onboarding-setup';
 
 // cardTrialRequired — the card-before-trial gate signal (NEXT_PUBLIC_FEATURE_CARD_TRIAL).
@@ -195,6 +196,13 @@ export async function GET(request: NextRequest) {
     ? toTeamAccessPayload(await getTeamAccessForUser(auth.user.id, auth.user.email))
     : null;
 
+  // Starting-price months the paying owner has left (2026-10-26), so the wall
+  // shows the price the owner would actually be charged.
+  const introAdmin = createAdminClient(auth.supabaseUrl);
+  const introMonthsLeft = introAdmin
+    ? await loadIntroMonthsLeft(introAdmin, teamAccess?.ownerUserId ?? auth.user.id).catch(() => 0)
+    : 0;
+
   return NextResponse.json({
     status: snapshot.status,
     hasAccess: snapshot.hasAccess,
@@ -221,5 +229,6 @@ export async function GET(request: NextRequest) {
     // about our configuration, not about this user, and the legacy /locked
     // picker may want it later too.
     purchasableTiers: purchasableTiers(),
+    introMonthsLeft,
   });
 }

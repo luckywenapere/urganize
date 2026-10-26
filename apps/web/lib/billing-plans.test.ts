@@ -125,10 +125,9 @@ describe('isRecurringPlan', () => {
     expect(isRecurringPlan('')).toBe(false);
   });
 
-  it('sells Label again, self-serve', () => {
-    // Label came back to self-serve on 2026-09-08 with a ₦50,000/year price,
-    // having been sales-led since 2026-08-30.
-    expect(isSelfServeTier('label')).toBe(true);
+  it('sells Label by conversation, and still renews a team already on it', () => {
+    // Contact-us since 2026-10-26 (it was self-serve from 2026-09-08).
+    expect(isSelfServeTier('label')).toBe(false);
     expect(isRecurringPlan('label')).toBe(true);
   });
 
@@ -433,29 +432,17 @@ describe('resolveCheckoutPurchase', () => {
     });
   });
 
-  it('sells Label at its own Plan, never the stale ₦750,000 one', () => {
-    // Label became self-serve again on 2026-09-08, and is ₦60,000/month since
-    // 2026-10-17, so a year of it is ₦600,000. The trap it
-    // has to clear: PAYSTACK_PLAN_LABEL_NGN exists in the dashboard holding a
-    // mislabeled ₦750,000 Plan, and it is one word away from the var this tier
-    // actually reads. Stubbed here precisely so a regression that reached for it
-    // would show up as the wrong code rather than as "not configured".
+  it('refuses Label at checkout, now that it is contact-us', () => {
+    // Label went contact-us on 2026-10-26: no price on any page and no card
+    // checkout. The stale PAYSTACK_PLAN_LABEL_NGN is stubbed so a regression
+    // that reached for it shows up as a sale rather than as "not configured".
     stubLive();
     vi.stubEnv('PAYSTACK_PLAN_LABEL_NGN', 'PLN_stale_750k');
-    expect(
-      resolveCheckoutPurchase({
-        plan: 'label',
-        currency: 'NGN',
-        interval: 'annual',
-        pricingV2: true,
-      })
-    ).toEqual({
-      ok: true,
-      planId: 'label',
-      planCode: 'PLN_label_y',
-      amountMinorUnit: 1_000_000_00,
-      interval: 'annual',
-    });
+    const result = resolveCheckoutPurchase({ plan: 'label', currency: 'NGN', interval: 'annual', pricingV2: true });
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('expected a refusal');
+    expect(result.status).toBe(400);
+    expect(result.error).toContain('Label');
   });
 
   it('sells a monthly tier purchase at the monthly Plan and price', () => {
@@ -520,7 +507,7 @@ describe('resolveCheckoutPurchase', () => {
     }
   });
 
-  it('refuses the LEGACY label plan with pricing v2 off, and sells the TIER with it on', () => {
+  it('refuses the LEGACY label plan with pricing v2 off, and the TIER too since Label went contact-us', () => {
     // ⚠️ THE SHARPEST EDGE IN THIS MODULE, and a bug that shipped for a day.
     // 'label' is a valid id in both generations and the two disagree about it
     // since 2026-09-08: the TIER is a ₦50,000/year self-serve plan, while the
@@ -546,15 +533,14 @@ describe('resolveCheckoutPurchase', () => {
     expect(legacy.status).toBe(400);
     expect(legacy.error).toContain('Label');
 
+    // And the tier is refused too since 2026-10-26, when Label went contact-us.
     const tier = resolveCheckoutPurchase({
       plan: 'label',
       currency: 'NGN',
       interval: 'annual',
       pricingV2: true,
     });
-    expect(tier.ok).toBe(true);
-    if (!tier.ok) throw new Error('expected a sale');
-    expect(tier.planCode).toBe('PLN_label_y');
+    expect(tier.ok).toBe(false);
   });
 
   // Pins what `readSalesLedPlanName` actually has to guarantee: a plan that is

@@ -249,7 +249,7 @@ export type BillingInterval = 'monthly' | 'semiannual' | 'annual';
  *  `subscriptions.plan_version` and `subscription_charges.plan_version`, so a
  *  subscriber's row says which prices they locked in. Bump it on every reprice;
  *  rows written before 2026-10-22 read 'legacy'. */
-export const PRICE_LIST_VERSION = '2026-10-22';
+export const PRICE_LIST_VERSION = '2026-10-26';
 
 export type TierPrice = {
   /** Whole naira, for display copy. */
@@ -363,6 +363,13 @@ export type PricingTierDefinition = {
    *  a price we never quoted — `getTierPrice` answers null for BOTH intervals
    *  and the caller is forced into the "Let's talk" branch. */
   monthlyPrice?: TierPrice;
+  /** The starting price: what a team paying for the first time pays a month
+   *  for its first INTRO_MONTHS monthly payments (founder, 2026-10-26). Still
+   *  billed monthly; from the next payment on it is `monthlyPrice`. Absent on
+   *  a tier with no starting price. Set from the unit economics sheet so
+   *  self-serve LTV:CAC stays at 3.0x or more at the measured 1.5-month
+   *  lifetime (Solo 4.3x, Manager 3.1x). */
+  introMonthlyPrice?: TierPrice;
   /** The countable ceilings. See TierLimits for why they live here. */
   limits: TierLimits;
   /** The non-countable things this tier includes, in customer words.
@@ -454,6 +461,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // ₦75,000 and the _PER_MONTH_ / _PER_YEAR_ vars repointed before this
     // shipped; the ₦5,000 Plans stay in Paystack untouched.
     monthlyPrice: tierPrice(5_000),
+    introMonthlyPrice: tierPrice(4_000),
     includesDistribution: false,
     urgansMonthlyCredits: 150,
     // TWO seats since 2026-10-17 (founder-approved reprice: "artist +
@@ -476,6 +484,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // yearly price is ten months of this. New ₦25,000 / ₦250,000 Paystack Plans
     // were minted and the vars repointed before this shipped.
     monthlyPrice: tierPrice(30_000),
+    introMonthlyPrice: tierPrice(26_000),
     includesDistribution: true,
     urgansMonthlyCredits: 660,
     // 3 artists / 5 seats since 2026-10-17 (was 5 artists / 4 seats). Both are
@@ -540,6 +549,9 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
       'We set your roster up with you',
       'WhatsApp support, answered same day',
     ],
+    // Contact us since 2026-10-26 (founder): no price on any page and no
+    // checkout. The price stays so teams already on Label renew as they are.
+    contactSales: true,
   },
   // GROUP, BACK SINCE 2026-10-02 (strategy doc, section 8: "Group | Custom |
   // Custom | Custom | Distributors and multi-label groups"). It was removed
@@ -586,7 +598,6 @@ export const PRICING_TIER_ORDER: readonly PricingTierId[] = [
   'solo',
   'manager',
   'label',
-  'enterprise',
 ] as const;
 
 /** The intervals a new purchase may choose, and the one a surface opens on.
@@ -606,18 +617,68 @@ export const PRICING_TIER_ORDER: readonly PricingTierId[] = [
  *  Monthly is the default because it is the price we set and the smaller
  *  number; the yearly option is the upsell beside it, carrying
  *  `annualSavingCopy`. */
-export const SELLABLE_INTERVALS: readonly BillingInterval[] = ['monthly', 'semiannual', 'annual'] as const;
+// Monthly and yearly since 2026-10-26 (founder): the 6-month prepay is no
+// longer sold; the starting price on monthly takes its place. 'semiannual'
+// stays a BillingInterval so teams already on it renew as they are.
+export const SELLABLE_INTERVALS: readonly BillingInterval[] = ['monthly', 'annual'] as const;
 export const DEFAULT_SELLING_INTERVAL: BillingInterval = 'monthly';
 
 export function isSellableInterval(value: unknown): value is BillingInterval {
-  return value === 'monthly' || value === 'semiannual' || value === 'annual';
+  return value === 'monthly' || value === 'annual';
+}
+
+/** How many monthly payments are at the starting price (founder, 2026-10-26). */
+export const INTRO_MONTHS = 6;
+
+/** A tier's starting price, or null when it has none. */
+export function getIntroPrice(id: PricingTierId): TierPrice | null {
+  return PRICING_TIERS[id].introMonthlyPrice ?? null;
+}
+
+/** What one payment costs, given how many starting-price months the team has
+ *  left. Only monthly payments use the starting price. */
+export function getChargePrice(
+  id: PricingTierId,
+  interval: BillingInterval,
+  introMonthsLeft: number
+): TierPrice | null {
+  const intro = getIntroPrice(id);
+  if (interval === 'monthly' && intro && introMonthsLeft > 0) return intro;
+  return getTierPrice(id, interval);
+}
+
+/** "for your first 6 months, then ₦5,000/month", or null with no starting
+ *  price. */
+export function introThenLine(id: PricingTierId): string | null {
+  if (!getIntroPrice(id)) return null;
+  return `for your first ${INTRO_MONTHS} months, then ${formatTierPrice(id, 'monthly')}`;
+}
+
+/** The feature list under a pricing card: a lead-in line, then what this plan
+ *  adds. Each line must be true of the product today. */
+export function tierFeatures(id: PricingTierId): { heading: string; lines: string[] } {
+  const highlights = tierHighlights(id).filter((line) => !line.startsWith('Everything in'));
+  if (id === 'solo') {
+    return {
+      heading: 'What you get:',
+      lines: [
+        ...highlights,
+        'A plan for every rollout',
+        'Tasks with owners and due dates',
+        'Pitch this! kit for every rollout',
+        'Search the Urganize Directory',
+      ],
+    };
+  }
+  const below = id === 'manager' ? 'Solo' : id === 'label' ? 'Manager' : 'Label';
+  return { heading: `Everything in ${below}, and:`, lines: highlights };
 }
 
 /** "1 month free" / "2 months free" for a prepaid interval, null for monthly
  *  or a sales-led tier. Derived from INTERVAL_MONTHS so the badge and the price
  *  are one fact. */
 export function intervalSavingCopy(id: PricingTierId, interval: BillingInterval): string | null {
-  if (!PRICING_TIERS[id].monthlyPrice) return null;
+  if (!PRICING_TIERS[id].monthlyPrice || PRICING_TIERS[id].contactSales) return null;
   const { covers, billed } = INTERVAL_MONTHS[interval];
   const free = covers - billed;
   if (free <= 0) return null;
@@ -669,7 +730,7 @@ export function intervalLabel(interval: BillingInterval): string {
  *  either stale. Null for a sales-led tier, which has no monthly price and so
  *  no yearly one to save against. */
 export function annualSavingCopy(id: PricingTierId): string | null {
-  if (!PRICING_TIERS[id].monthlyPrice) return null;
+  if (!PRICING_TIERS[id].monthlyPrice || PRICING_TIERS[id].contactSales) return null;
   return `${12 - ANNUAL_MONTHS_BILLED} months free`;
 }
 
@@ -706,7 +767,7 @@ export function tierHighlights(
   id: PricingTierId,
   opts: { interval?: BillingInterval; distributionRequiresPrepay?: boolean } = {}
 ): string[] {
-  const { limits, perks, urgansMonthlyCredits, contactSales } = PRICING_TIERS[id];
+  const { limits, perks, urgansMonthlyCredits, monthlyPrice } = PRICING_TIERS[id];
   const lines: string[] = [];
 
   // Roster size leads, because it is the question a manager answers about
@@ -735,7 +796,8 @@ export function tierHighlights(
   // Credits, the unit the app actually meters (lib/credits/allowance.ts reads
   // the same field). Group's amount is agreed per deal, so it names no number.
   lines.push(
-    contactSales
+    // Only a tier with no price at all (Group) agrees its credits per deal.
+    !monthlyPrice
       ? 'UrgAns credits to fit your deal'
       : `${urgansMonthlyCredits.toLocaleString('en-US')} UrgAns credits a month`
   );
@@ -760,13 +822,13 @@ export function isPricingTierId(value: unknown): value is PricingTierId {
   );
 }
 
-/** Onboarding rules (founder, 2026-10-26). Only Solo and Manager on the monthly
- *  plan are paid for without a call. Label, and every 6-month or yearly plan,
- *  start with an onboarding call, and the founder sends the payment link
- *  afterwards. One definition, read by the pricing page, the wall, the checkout
+/** Onboarding rules (founder, 2026-10-26). Solo and Manager, monthly or
+ *  yearly, are paid for without a call (yearly joined the self-serve side the
+ *  same day). Label, and any 6-month plan, start with an onboarding call, and
+ *  the founder sends the payment link afterwards. One definition, read by the pricing page, the wall, the checkout
  *  page and the payment routes. */
 export function isSelfServePurchase(tier: PricingTierId, interval: BillingInterval): boolean {
-  return (tier === 'solo' || tier === 'manager') && interval === 'monthly';
+  return (tier === 'solo' || tier === 'manager') && (interval === 'monthly' || interval === 'annual');
 }
 
 export function isBillingInterval(value: unknown): value is BillingInterval {
@@ -806,6 +868,9 @@ export function formatTierPrice(
   id: PricingTierId,
   interval: BillingInterval = DEFAULT_SELLING_INTERVAL
 ): string | null {
+  // A contact-us tier keeps a price for the teams already on it, but no page
+  // shows it (Label, 2026-10-26).
+  if (PRICING_TIERS[id].contactSales) return null;
   const price = getTierPrice(id, interval);
   if (!price) return null;
   const formatted = new Intl.NumberFormat('en-NG', {

@@ -355,7 +355,8 @@ describe('paywall (URG-251 Part 3)', () => {
     expect(paywallTierForPersona('music_manager')).toBe('manager');
     expect(paywallTierForPersona('artist_team')).toBe('manager');
     expect(paywallTierForPersona('other')).toBe('manager');
-    expect(paywallTierForPersona('label_ar')).toBe('label');
+    // Label is contact-us since 2026-10-26, so a label lands on Manager.
+    expect(paywallTierForPersona('label_ar')).toBe('manager');
     expect(paywallTierForPersona(null)).toBe('manager');
   });
 
@@ -414,10 +415,12 @@ describe('paywall (URG-251 Part 3)', () => {
 
   it('remembers the plan they picked for the billing wall', () => {
     const now = 1_800_000_000_000;
-    expect(parsePaywallPlanChoice(JSON.stringify({ tier: 'label', interval: 'annual', at: now }), now)).toEqual({
-      tier: 'label',
+    expect(parsePaywallPlanChoice(JSON.stringify({ tier: 'manager', interval: 'annual', at: now }), now)).toEqual({
+      tier: 'manager',
       interval: 'annual',
     });
+    // Label is no longer offered there, so an old saved choice is dropped.
+    expect(parsePaywallPlanChoice(JSON.stringify({ tier: 'label', interval: 'annual', at: now }), now)).toBeNull();
     expect(parsePaywallPlanChoice(JSON.stringify({ tier: 'enterprise', interval: 'annual', at: now }), now)).toBeNull();
     expect(parsePaywallPlanChoice('nope', now)).toBeNull();
   });

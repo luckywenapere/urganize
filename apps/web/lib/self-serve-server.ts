@@ -8,7 +8,7 @@
 // admin recording it. A partial transfer never opens a team.
 
 import type { SupabaseClient, User } from '@supabase/supabase-js';
-import { PRICE_LIST_VERSION, getTierPrice, isBillingInterval, isPricingTierId, isSelfServePurchase, type BillingInterval } from '@urganize/pricing';
+import { PRICE_LIST_VERSION, getChargePrice, getIntroPrice, isBillingInterval, isPricingTierId, isSelfServePurchase, type BillingInterval } from '@urganize/pricing';
 import { consumeClearance } from '@/lib/call-led-server';
 import { isMissingColumnError } from '@/lib/billing-schema';
 import { approveUser } from '@/lib/access-gate-server';
@@ -20,6 +20,7 @@ import { isReferralsEnabled } from '@/lib/referrals';
 import { isReferralCreditsEnabled } from '@/lib/referral-credits';
 import {
   attachReferral,
+  loadIntroMonthsLeft,
   recordSubscriptionCharge,
   rewardReferrerOnFirstPayment,
   lookupReferralCode,
@@ -387,10 +388,11 @@ export async function openTransferInvoice(
     paystackReference?: string | null;
   }
 ): Promise<InvoiceRow | null> {
-  const price = getTierPrice(input.plan, input.period);
+  // Starting price on a team's first monthly payments (2026-10-26).
+  const price = getChargePrice(input.plan, input.period, await loadIntroMonthsLeft(admin, input.userId));
   if (!price) return null;
   const open = await loadOpenInvoice(admin, input.userId);
-  if (open && open.plan === input.plan && open.billing_interval === input.period) {
+  if (open && open.plan === input.plan && open.billing_interval === input.period && open.amount_kobo === price.minorUnit) {
     if (input.paystackReference && open.paystack_reference !== input.paystackReference) {
       await admin
         .from('payment_invoices')
@@ -459,6 +461,12 @@ export async function applyTransferPeriod(
   }
 ): Promise<{ periodEnd: string; workspaceId: string | null }> {
   const firstPayment = !(await hasPaidBefore(admin, input.userId));
+  // Read before this payment is written: a monthly period paid while the team
+  // still had starting-price months is one of them.
+  const intro =
+    input.period === 'monthly' &&
+    getIntroPrice(input.plan) !== null &&
+    (await loadIntroMonthsLeft(admin, input.userId)) > 0;
   const current = await admin
     .from('subscriptions')
     .select('expires_at,status')
@@ -522,6 +530,7 @@ export async function applyTransferPeriod(
     channel: input.method === 'direct_transfer' ? 'direct_transfer' : 'transfer',
     interval: input.period,
     planVersion: PRICE_LIST_VERSION,
+    intro,
   });
   if (firstPayment) {
     await rewardReferrerOnFirstPayment(admin, { payerUserId: input.userId, reference: input.reference }).catch(

@@ -2,12 +2,16 @@
 
 import {
   SELLABLE_INTERVALS,
-  intervalSavingCopy,
   formatTierPrice,
+  getChargePrice,
+  getIntroPrice,
   getTier,
+  getTierPrice,
+  tierFeatures,
   type BillingInterval,
   type PricingTierId,
 } from '@urganize/pricing';
+import { Check } from '@/components/icons';
 import { onRadioGroupKeyDown } from '@/lib/radio-group-keys';
 
 /**
@@ -15,7 +19,8 @@ import { onRadioGroupKeyDown } from '@/lib/radio-group-keys';
  *
  * TWO DIMENSIONS AGAIN SINCE 2026-09-10. It asked once between 2026-09-08 and
  * then, while everything was billed annually; monthly went back on sale, so the
- * interval radiogroup and the "2 months free" badge came back with it.
+ * interval radiogroup came back with it. No saving badge since 2026-10-26: the
+ * starting price is shown as the price itself, with the full price after it.
  *
  * The interval sits ABOVE the tier cards because it reprices every one of them,
  * and asking for it afterwards would move the numbers under the reader's cursor
@@ -42,13 +47,55 @@ const INTERVAL_LABEL: Record<BillingInterval, string> = {
   annual: 'Yearly',
 };
 
+const naira = (amount: number) =>
+  new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(amount);
+
+/** The two lines on a plan row: the price this team pays, and what follows it. */
+export function planPriceLines(
+  tierId: PricingTierId,
+  interval: BillingInterval,
+  introMonthsLeft: number
+): { price: string | null; sub: string | null } {
+  const charge = getChargePrice(tierId, interval, introMonthsLeft);
+  if (!charge) return { price: null, sub: null };
+  if (interval === 'annual') {
+    return { price: formatTierPrice(tierId, 'annual'), sub: `${naira(Math.round(charge.amount / 12))} a month` };
+  }
+  if (interval !== 'monthly') return { price: formatTierPrice(tierId, interval), sub: null };
+  const intro = getIntroPrice(tierId);
+  const full = getTierPrice(tierId, 'monthly');
+  if (intro && full && introMonthsLeft > 0 && charge.amount === intro.amount) {
+    return { price: `${naira(intro.amount)}/month`, sub: `then ${naira(full.amount)} from month ${introMonthsLeft + 1}` };
+  }
+  return { price: `${naira(charge.amount)}/month`, sub: null };
+}
+
+/** The line under the pay button: what is charged today and after. */
+export function planChargeNote(
+  tierId: PricingTierId,
+  interval: BillingInterval,
+  introMonthsLeft: number
+): string | null {
+  const charge = getChargePrice(tierId, interval, introMonthsLeft);
+  if (!charge) return null;
+  if (interval === 'annual') return `${naira(charge.amount)} today, then once a year. Cancel any time.`;
+  if (interval !== 'monthly') return null;
+  const intro = getIntroPrice(tierId);
+  const full = getTierPrice(tierId, 'monthly');
+  if (intro && full && introMonthsLeft > 0 && charge.amount === intro.amount) {
+    return `${naira(charge.amount)} today, then every month. ${naira(full.amount)} a month from month ${introMonthsLeft + 1}. Cancel any time.`;
+  }
+  return `${naira(charge.amount)} today, then every month. Cancel any time.`;
+}
+
 type TierPlanPickerProps = {
-  /** Which tiers to offer. Sales-led tiers do not belong here. */
   tiers: readonly PricingTierId[];
   selectedTier: PricingTierId;
   onSelectTier: (tier: PricingTierId) => void;
   selectedInterval: BillingInterval;
   onSelectInterval: (interval: BillingInterval) => void;
+  /** Starting-price months the paying owner has left; 0 shows full prices. */
+  introMonthsLeft: number;
   disabled?: boolean;
 };
 
@@ -58,19 +105,22 @@ export function TierPlanPicker({
   onSelectTier,
   selectedInterval,
   onSelectInterval,
+  introMonthsLeft,
   disabled,
 }: TierPlanPickerProps) {
-  // Read off the first tier that HAS a price rather than a named one: a named
-  // tier that later goes sales-led returns null and silently takes the badge off
-  // the picker, which is exactly how the marketing page lost it once.
-  const saving =
-    tiers.map((tierId) => intervalSavingCopy(tierId, selectedInterval)).find(Boolean) ?? null;
+  const selected = getTier(selectedTier);
+  const features = tierFeatures(selectedTier);
+  // "Manager includes everything in Solo, and:" / "Solo includes:".
+  const lead =
+    selectedTier === 'solo'
+      ? `${selected.label} includes:`
+      : `${selected.label} includes ${features.heading.charAt(0).toLowerCase()}${features.heading.slice(1)}`;
 
   return (
     <fieldset className="flex flex-col gap-2" disabled={disabled}>
       <legend className="sr-only">Choose a plan</legend>
 
-      <div className="mb-2 flex flex-col items-center gap-2">
+      <div className="mb-2 flex justify-center">
         <div
           role="radiogroup"
           aria-label="Choose how often you pay"
@@ -103,22 +153,15 @@ export function TierPlanPicker({
             );
           })}
         </div>
-        {/* Phrased as months, never a percentage — the one wording the pricing
-            package allows. Derived from ANNUAL_MONTHS_BILLED. */}
-        {saving ? (
-          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-brand">
-            {saving}
-          </p>
-        ) : null}
       </div>
       {tiers.map((tierId) => {
         const tier = getTier(tierId);
         const isActive = selectedTier === tierId;
-        const price = formatTierPrice(tierId, selectedInterval);
+        const { price, sub } = planPriceLines(tierId, selectedInterval, introMonthsLeft);
         return (
           <label
             key={tierId}
-            className={`flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border p-4 text-left transition-colors ${
+            className={`flex min-h-11 cursor-pointer flex-wrap items-start gap-x-3 gap-y-1.5 rounded-lg border p-4 text-left transition-colors sm:flex-nowrap ${
               isActive
                 ? 'border-brand bg-brand/8'
                 : 'border-stroke-default bg-bg-elevated hover:border-stroke-strong'
@@ -134,28 +177,41 @@ export function TierPlanPicker({
               className="mt-0.5 h-4 w-4 shrink-0 accent-brand"
             />
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-content-primary">
+              <span className="flex flex-wrap items-center gap-2 text-sm font-semibold text-content-primary">
                 {tier.label}
-                {/* Its own line on a phone, inline from sm: beside the wider
-                    ₦30,000 price at 390px the inline badge split into "Most /
-                    Teams" once it moved to Manager (2026-10-17). */}
                 {tier.recommended ? (
-                  <span className="mt-1 block w-fit whitespace-nowrap rounded-full sm:ml-2 sm:mt-0 sm:inline-block bg-brand/12 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-brand">
+                  <span className="whitespace-nowrap rounded-full bg-brand/12 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-brand">
                     Most teams
                   </span>
                 ) : null}
               </span>
               <span className="mt-1 block text-xs text-content-tertiary">{tier.audience}</span>
             </span>
-            {/* Null only for a sales-led tier, which is never offered here. */}
+            {/* Under the name on a phone (where beside it the badge and the
+                audience squeezed into three lines), on the right from sm. Null
+                only for a sales-led tier, which is never offered here. */}
             {price ? (
-              <span className="shrink-0 text-sm font-semibold text-content-primary">
-                {price}
+              <span className="basis-full pl-7 sm:basis-auto sm:shrink-0 sm:pl-0 sm:text-right">
+                <span className="block whitespace-nowrap text-sm font-semibold text-content-primary">{price}</span>
+                {sub ? <span className="mt-0.5 block whitespace-nowrap text-xs text-content-tertiary">{sub}</span> : null}
               </span>
             ) : null}
           </label>
         );
       })}
+
+      {/* What the selected plan includes, like the pricing page's cards. */}
+      <div className="mt-3 border-t border-stroke-default pt-4">
+        <p className="mb-2.5 text-xs text-content-secondary">{lead}</p>
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {features.lines.map((line) => (
+            <li key={line} className="flex items-start gap-2 text-sm text-content-primary">
+              <Check className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden="true" />
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </fieldset>
   );
 }

@@ -20,11 +20,12 @@ import { APP_URL } from '@/lib/email/links';
 import { settingsDeepLink } from '@/lib/settings-nav';
 import { loadChecklistTeam } from '@/lib/self-serve-checklist-server';
 import { loadPaymentAccount, trackSelfServe } from '@/lib/self-serve-server';
+import { loadIntroMonthsLeft } from '@/lib/referrals-server';
+import { getChargePrice } from '@urganize/pricing';
 import {
   checkoutPath,
   isCheckoutPeriod,
   isCheckoutPlan,
-  periodAmount,
   pickNudge,
   renewalReminderDue,
   type NudgeVariant,
@@ -204,7 +205,8 @@ export async function runRenewalReminderSweep(admin: Admin, now = new Date()): P
           recipientName: owner.name,
           plan: row.plan,
           expiresAt: row.expires_at,
-          amountNaira: periodAmount(row.plan, period),
+          amountNaira:
+            getChargePrice(row.plan, period, await loadIntroMonthsLeft(admin, team.owner_id))?.amount ?? null,
           account: account
             ? { bankName: account.bankName, accountNumber: account.accountNumber, accountName: account.accountName }
             : null,

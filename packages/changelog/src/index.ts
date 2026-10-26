@@ -41,6 +41,18 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.191.0",
+    title: "A lower price for your first 6 months",
+    tag: "Account",
+    date: "October 26, 2026",
+    highlights: [
+      "New teams pay ₦4,000 a month for Solo or ₦26,000 for Manager for their first 6 months, then the usual price.",
+      "You can pay for a year on your own now, no call needed.",
+      "Each plan now shows what it includes before you pay.",
+      "Label is now a plan you talk to us about.",
+    ],
+  },
+  {
     version: "1.190.7",
     tag: "App",
     listed: false,

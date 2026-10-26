@@ -3,7 +3,8 @@ import { isBillingInterval, isPricingCurrency, isPricingTierId, type BillingInte
 import { CALL_REQUIRED_ERROR } from '@/lib/call-led';
 import { mayPay } from '@/lib/call-led-server';
 import { getAuthenticatedUser, createAdminClient } from '@/app/api/releases/_shared';
-import { resolveCheckoutPurchase } from '@/lib/billing-plans';
+import { applyIntroPrice, resolveCheckoutPurchase } from '@/lib/billing-plans';
+import { loadIntroMonthsLeft } from '@/lib/referrals-server';
 import { isPricingV2Enabled } from '@/lib/entitlements';
 import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { resolveCheckoutSubject } from '@/lib/billing-events';
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
   if (!purchase.ok) {
     return NextResponse.json({ error: purchase.error }, { status: purchase.status });
   }
-  const { planId, planCode, amountMinorUnit, interval: selectedInterval } = purchase;
+  const { planId, interval: selectedInterval } = purchase;
 
   const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
   if (!paystackSecretKey) {
@@ -135,16 +136,6 @@ export async function POST(request: NextRequest) {
       { error: 'Payment provider is not configured on the server.' },
       { status: 500 }
     );
-  }
-
-  // A tier's Plan must charge exactly what we show (lib/paystack-plan-check.ts).
-  // A Plan env var still pointing at an old price is refused, never charged.
-  if (selectedInterval) {
-    const plan = await readPaystackPlan(planCode, paystackSecretKey);
-    if (!planMatchesPrice(plan, { amountKobo: amountMinorUnit, interval: selectedInterval, currency })) {
-      console.error('[billing/start-checkout] plan price mismatch', { plan: planId, interval: selectedInterval });
-      return NextResponse.json({ error: PLAN_NOT_READY_MESSAGE, code: 'plan_not_ready' }, { status: 409 });
-    }
   }
 
   const reference = generateReference();
@@ -217,6 +208,26 @@ export async function POST(request: NextRequest) {
     subjectUserId = subject.subjectUserId;
   }
 
+  // The starting price (2026-10-26) depends on the team owner's payment
+  // history, so it is applied once the owner is known, and the live Plan check
+  // runs against the amount actually charged.
+  const priced = applyIntroPrice(purchase, await loadIntroMonthsLeft(admin, subjectUserId));
+  if (!priced.ok) {
+    return NextResponse.json({ error: priced.error }, { status: priced.status });
+  }
+  const { planCode, amountMinorUnit } = priced;
+  const intro = priced.intro === true;
+
+  // A tier's Plan must charge exactly what we show (lib/paystack-plan-check.ts).
+  // A Plan env var still pointing at an old price is refused, never charged.
+  if (selectedInterval) {
+    const plan = await readPaystackPlan(planCode, paystackSecretKey);
+    if (!planMatchesPrice(plan, { amountKobo: amountMinorUnit, interval: selectedInterval, currency })) {
+      console.error('[billing/start-checkout] plan price mismatch', { plan: planId, interval: selectedInterval });
+      return NextResponse.json({ error: PLAN_NOT_READY_MESSAGE, code: 'plan_not_ready' }, { status: 409 });
+    }
+  }
+
   // A code is checked now (so a wrong one is said on the page, not lost), and
   // carried to the webhook, which tags the team once it exists.
   let promoCode: string | null = null;
@@ -251,6 +262,7 @@ export async function POST(request: NextRequest) {
       ...(subjectUserId !== userId ? { paid_by_user_id: userId } : {}),
       ...(promoCode ? { promo_code: promoCode } : {}),
       ...(selfServe ? { self_serve: true } : {}),
+      ...(intro ? { intro: true } : {}),
     },
   });
   if (paymentInsert.error) {

@@ -30,17 +30,17 @@ export const PAYWALL_LOGOS_LINE = 'Shaped with managers from';
 export const PAYWALL_CTA = 'Start my free trial';
 export const PAYWALL_CHAT_LINE = 'Questions? Chat with us';
 
-/** The plans offered on the paywall, cheapest first. Group is sales-led and absent. */
-export const PAYWALL_TIERS: readonly PricingTierId[] = ['solo', 'manager', 'label'] as const;
+/** The plans offered on the paywall, cheapest first. Label is contact-us and absent. */
+export const PAYWALL_TIERS: readonly PricingTierId[] = ['solo', 'manager'] as const;
 
 /**
  * The plan that starts selected (founder call, 2026-10-14):
- * independent artist → Solo; label / A&R → Label; manager, artist's team,
+ * independent artist → Solo; manager, label / A&R (Label is contact-us since
+ * 2026-10-26), artist's team,
  * other (and anything unanswered) → Manager. The other plans are one tap away.
  */
 export function paywallTierForPersona(persona: OnboardingPersona | null | undefined): PricingTierId {
   if (persona === 'independent_artist') return 'solo';
-  if (persona === 'label_ar') return 'label';
   return 'manager';
 }
 

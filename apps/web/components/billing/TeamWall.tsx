@@ -11,6 +11,7 @@ import {
   formatPlanCyclePrice,
   getPlan,
   getTier,
+  isSellableInterval,
   type BillingInterval,
   type PricingTierId,
 } from '@urganize/pricing';
@@ -29,7 +30,7 @@ import {
 } from '@/lib/team-billing-client';
 import { isPricingV2Enabled } from '@/lib/entitlements';
 import { HelpTip } from '@/components/shared/HelpTip';
-import { TierPlanPicker } from '@/components/billing/TierPlanPicker';
+import { TierPlanPicker, planChargeNote } from '@/components/billing/TierPlanPicker';
 import { WallUrgansCard } from '@/components/billing/WallUrgansCard';
 import { readPaywallPlanChoice } from '@/lib/onboarding-paywall';
 import {
@@ -129,7 +130,8 @@ export function TeamWall() {
     const choice = readPaywallPlanChoice();
     if (!choice) return;
     setSelectedTier(choice.tier);
-    setSelectedInterval(choice.interval);
+    // A 6-month choice saved before 2026-10-26 opens on monthly instead.
+    setSelectedInterval(isSellableInterval(choice.interval) ? choice.interval : DEFAULT_SELLING_INTERVAL);
   }, []);
   const [isStartingCheckout, setIsStartingCheckout] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -644,6 +646,7 @@ export function TeamWall() {
                       onSelectTier={setSelectedTier}
                       selectedInterval={selectedInterval}
                       onSelectInterval={setSelectedInterval}
+                      introMonthsLeft={team?.introMonthsLeft ?? 0}
                       disabled={isStartingCheckout}
                     />
                   ) : (
@@ -718,6 +721,11 @@ export function TeamWall() {
                     </Button>
                   ) : null}
 
+                  {canCheckOut && PRICING_V2 && !needsOnboardingCall(effectiveTier, selectedInterval) ? (
+                    <p className="text-center text-xs text-content-tertiary">
+                      {planChargeNote(effectiveTier, selectedInterval, team?.introMonthsLeft ?? 0)}
+                    </p>
+                  ) : null}
 
                   {checkoutError ? (
                     <p role="alert" className="flex items-start gap-2 text-sm text-status-error">

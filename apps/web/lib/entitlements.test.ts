@@ -203,7 +203,7 @@ describe('tier prices and the sales-led tier', () => {
   // carries a YEARLY figure, so a yearly price that disagrees with the monthly
   // one cannot be typed into the data at all.
   it('stores a monthly price only, and computes the yearly one', () => {
-    expect(SELLABLE_INTERVALS).toEqual(['monthly', 'semiannual', 'annual']);
+    expect(SELLABLE_INTERVALS).toEqual(['monthly', 'annual']);
     expect(DEFAULT_SELLING_INTERVAL).toBe('monthly');
     for (const tier of ALL_TIERS) {
       const monthly = PRICING_TIERS[tier].monthlyPrice;
@@ -242,10 +242,11 @@ describe('tier prices and the sales-led tier', () => {
     expect(formatTierPrice('solo')).toBe('₦5,000/month');
     expect(formatTierPrice('manager')).toBe('₦30,000/month');
     expect(formatTierPrice('manager', 'semiannual')).toBe('₦150,000 for 6 months');
-    expect(formatTierPrice('label')).toBe('₦100,000/month');
+    // Label keeps its price for teams already on it, but no page shows it.
+    expect(formatTierPrice('label')).toBeNull();
     expect(formatTierPrice('solo', 'annual')).toBe('₦50,000/year');
     expect(formatTierPrice('manager', 'annual')).toBe('₦300,000/year');
-    expect(formatTierPrice('label', 'annual')).toBe('₦1,000,000/year');
+    expect(formatTierPrice('label', 'annual')).toBeNull();
   });
 
   it('phrases the yearly saving in months and never as a percentage', () => {
@@ -265,18 +266,18 @@ describe('tier prices and the sales-led tier', () => {
   // caller into the "Let's talk" branch instead of formatting a zero. Written
   // over every contactSales tier rather than naming one, so a future sales-led
   // tier cannot ship still carrying an amount.
-  it('renders no price for the sales-led tier, which is Group alone', () => {
-    // Group (id `enterprise`) came back 2026-10-02 as the one sales-led tier.
-    // The loop proves the refusal for every contactSales tier rather than
-    // naming Group, so a second sales-led tier cannot ship carrying an amount.
+  it('renders no price for a sales-led tier: Label and Group', () => {
+    // Label joined Group as contact-us on 2026-10-26. The loop proves the
+    // refusal for every contactSales tier rather than naming them.
     const salesLed = ALL_TIERS.filter((tier) => PRICING_TIERS[tier].contactSales);
-    expect(salesLed).toEqual(['enterprise']);
+    expect(salesLed).toEqual(['label', 'enterprise']);
     for (const tier of salesLed) {
-      expect(PRICING_TIERS[tier].monthlyPrice, `${tier} monthlyPrice`).toBeUndefined();
-      expect(getTierPrice(tier, 'monthly'), `${tier}/monthly`).toBeNull();
-      expect(getTierPrice(tier, 'annual'), `${tier}/annual`).toBeNull();
       expect(formatTierPrice(tier), `${tier} formatted`).toBeNull();
+      expect(formatTierPrice(tier, 'annual'), `${tier} formatted yearly`).toBeNull();
     }
+    // Group never had a price. Label keeps one only so its teams renew.
+    expect(getTierPrice('enterprise', 'monthly')).toBeNull();
+    expect(getTierPrice('label', 'monthly')?.amount).toBe(100_000);
   });
 
   // Group (id `enterprise`) was the sales-led tier, called "Group" on every
@@ -316,13 +317,13 @@ describe('tier prices and the sales-led tier', () => {
   });
 
   it('orders the cards cheapest first and ends on the one conversation', () => {
-    // FOUR cards since 2026-10-02: three self-serve, then Group, the lone
-    // "Let's talk" card.
-    expect(PRICING_TIER_ORDER).toEqual(['solo', 'manager', 'label', 'enterprise']);
+    // THREE cards since 2026-10-26: Solo and Manager are bought on the page,
+    // Label is contact-us, and Group is off the page.
+    expect(PRICING_TIER_ORDER).toEqual(['solo', 'manager', 'label']);
     for (const tier of PRICING_TIER_ORDER.slice(0, -1)) {
       expect(PRICING_TIERS[tier].contactSales, tier).toBeUndefined();
     }
-    expect(PRICING_TIERS.enterprise.contactSales).toBe(true);
+    expect(PRICING_TIERS.label.contactSales).toBe(true);
   });
 
   it('carries a price at every sellable interval, in whole kobo', () => {

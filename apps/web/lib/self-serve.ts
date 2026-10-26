@@ -7,7 +7,10 @@
 // from @urganize/pricing, never from a number typed here.
 
 import {
+  INTRO_MONTHS,
   PRICING_TIERS,
+  getChargePrice,
+  getIntroPrice,
   getTierPrice,
   intervalLabel,
   type BillingInterval,
@@ -23,8 +26,11 @@ export function formatNaira(amount: number): string {
 // ---------------------------------------------------------------- the intent
 
 export type CheckoutPlan = Extract<PricingTierId, 'solo' | 'manager' | 'label'>;
-export const CHECKOUT_PLANS: readonly CheckoutPlan[] = ['solo', 'manager', 'label'];
-export const CHECKOUT_PERIODS: readonly BillingInterval[] = ['monthly', 'semiannual', 'annual'];
+// What checkout offers (2026-10-26): Solo and Manager, monthly or yearly.
+// Label and the 6-month period are still valid ids (isCheckoutPlan,
+// isCheckoutPeriod) so teams already on them can renew.
+export const CHECKOUT_PLANS: readonly CheckoutPlan[] = ['solo', 'manager'];
+export const CHECKOUT_PERIODS: readonly BillingInterval[] = ['monthly', 'annual'];
 export type PaymentMethodChoice = 'card' | 'transfer';
 
 export function isCheckoutPlan(value: unknown): value is CheckoutPlan {
@@ -85,14 +91,25 @@ export function planName(plan: CheckoutPlan): string {
   return PRICING_TIERS[plan].label;
 }
 
-/** Naira for one period of a plan, or null when the plan has no price. */
-export function periodAmount(plan: CheckoutPlan, period: BillingInterval): number | null {
-  return getTierPrice(plan, period)?.amount ?? null;
+/** Naira for one period of a plan, or null when the plan has no price.
+ *  `introMonthsLeft` > 0 gives the starting price on monthly. */
+export function periodAmount(plan: CheckoutPlan, period: BillingInterval, introMonthsLeft = 0): number | null {
+  return getChargePrice(plan, period, introMonthsLeft)?.amount ?? null;
+}
+
+/** "For your first 6 months, then ₦30,000 a month." when this payment is at
+ *  the starting price, else null. */
+export function introSubline(plan: CheckoutPlan, period: BillingInterval, introMonthsLeft: number): string | null {
+  const intro = getIntroPrice(plan);
+  const full = getTierPrice(plan, 'monthly');
+  if (period !== 'monthly' || !intro || !full || introMonthsLeft <= 0) return null;
+  const months = introMonthsLeft === 1 ? 'month' : `${introMonthsLeft} months`;
+  return `For your ${introMonthsLeft === INTRO_MONTHS ? 'first ' : 'next '}${months}, then ${formatNaira(full.amount)} a month.`;
 }
 
 /** "₦30,000 a month", "₦150,000 for 6 months", "₦300,000 a year". */
-export function periodHeadline(plan: CheckoutPlan, period: BillingInterval): string {
-  const amount = periodAmount(plan, period);
+export function periodHeadline(plan: CheckoutPlan, period: BillingInterval, introMonthsLeft = 0): string {
+  const amount = periodAmount(plan, period, introMonthsLeft);
   if (amount === null) return '';
   const naira = formatNaira(amount);
   if (period === 'semiannual') return `${naira} for 6 months`;

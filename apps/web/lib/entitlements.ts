@@ -242,7 +242,9 @@ export type BooleanEntitlementKey = {
  *  `contactSales` says what was always meant. */
 export function minimumTierWith<K extends BooleanEntitlementKey>(key: K): PricingTierId | null {
   for (const tier of PRICING_TIER_ORDER) {
-    if (PRICING_TIERS[tier].contactSales) continue;
+    // A tier with no price at all (Group) is never the answer; Label, contact-us
+    // since 2026-10-26, still is.
+    if (!PRICING_TIERS[tier].monthlyPrice) continue;
     if (ENTITLEMENTS[tier][key]) return tier;
   }
   return null;

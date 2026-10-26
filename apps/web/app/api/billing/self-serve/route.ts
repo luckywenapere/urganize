@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser, createAdminClient } from '@/app/api/releases/_shared';
-import { cardIntervals } from '@/lib/billing-plans';
+import { cardIntervals, getIntroPaystackPlanCode } from '@/lib/billing-plans';
+import { loadIntroMonthsLeft } from '@/lib/referrals-server';
 import { CHECKOUT_PLANS, isCheckoutPeriod, isCheckoutPlan } from '@/lib/self-serve';
 import { isDedicatedAccountEnabled, loadOpenInvoice, loadPaymentAccount, validatePromoCode } from '@/lib/self-serve-server';
 import { getAppAccess } from '@/lib/access-gate-server';
@@ -25,8 +26,16 @@ export async function GET(request: NextRequest) {
   const admin = createAdminClient(auth.supabaseUrl);
   if (!admin) return NextResponse.json({ error: 'Server environment is not configured.' }, { status: 500 });
 
+  // Starting price (2026-10-26): while a team has starting-price months left,
+  // monthly by card also needs the starting-price Plan to be set.
+  const introMonthsLeft = await loadIntroMonthsLeft(admin, auth.user.id).catch(() => 0);
   const cardPeriods = Object.fromEntries(
-    CHECKOUT_PLANS.map((plan) => [plan, cardIntervals(plan)])
+    CHECKOUT_PLANS.map((plan) => [
+      plan,
+      cardIntervals(plan).filter(
+        (period) => period !== 'monthly' || introMonthsLeft === 0 || getIntroPaystackPlanCode(plan) !== null
+      ),
+    ])
   ) as Record<(typeof CHECKOUT_PLANS)[number], string[]>;
 
   const [access, invoice, account, subscription] = await Promise.all([
@@ -75,6 +84,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     callLedAllowed,
     cardPeriods,
+    introMonthsLeft,
     transferAccounts: isDedicatedAccountEnabled(),
     distributionOn: process.env.NEXT_PUBLIC_FEATURE_TRM_SEND !== 'false',
     approved: Boolean((access as { allowed?: boolean }).allowed),

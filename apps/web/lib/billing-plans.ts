@@ -13,6 +13,8 @@ import {
   PRICING_TIERS,
   PRICING_TIER_ORDER,
   SELLABLE_INTERVALS,
+  getChargePrice,
+  getIntroPrice,
   getTierPrice,
   isBillingInterval,
   isBillingPlanId,
@@ -65,7 +67,9 @@ export type RecurringPlanId = BillingPlanId | 'manager' | 'solo';
 export type SelfServeTierId = Extract<PricingTierId, 'manager' | 'solo' | 'label'>;
 
 export function isSelfServeTier(value: unknown): value is SelfServeTierId {
-  return value === 'manager' || value === 'solo' || value === 'label';
+  // A contact-us tier (Label since 2026-10-26) is not bought here, whatever
+  // its id. Its existing subscribers still renew: see isRecurringPlan.
+  return (value === 'manager' || value === 'solo' || value === 'label') && !PRICING_TIERS[value].contactSales;
 }
 
 /**
@@ -332,6 +336,8 @@ export function purchasableTiers(): PricingTierId[] {
   return PRICING_TIER_ORDER.filter(
     (tier) =>
       isSelfServeTier(tier) &&
+      // Label is contact-us since 2026-10-26: never offered by card.
+      !PRICING_TIERS[tier].contactSales &&
       // BOTH intervals, because both are offered. A tier with only one Plan
       // minted would render an interval toggle where one side 500s at checkout,
       // and a customer who happened to pick that side would read it as the
@@ -346,6 +352,53 @@ export function purchasableTiers(): PricingTierId[] {
         (interval) => getTierPaystackPlanCode(tier, interval) !== null
       )
   );
+}
+
+// The starting-price Plans (2026-10-26): monthly, at the tier's
+// introMonthlyPrice. Mint each with invoice_limit 6, so Paystack never bills a
+// 7th month at the starting price even if the switch to the full Plan fails.
+const INTRO_PLAN_CODE_ENV_VAR: Partial<Record<SelfServeTierId, string>> = {
+  solo: 'PAYSTACK_PLAN_SOLO_PER_MONTH_INTRO_NGN',
+  manager: 'PAYSTACK_PLAN_MANAGER_PER_MONTH_INTRO_NGN',
+};
+
+/** The Paystack Plan a tier's starting price is billed on, or null when unset. */
+export function getIntroPaystackPlanCode(tier: SelfServeTierId): string | null {
+  return readPlanCodeEnv(INTRO_PLAN_CODE_ENV_VAR[tier]);
+}
+
+/** Is this Plan code one of the starting-price Plans? */
+export function isIntroPlanCode(code: string | null | undefined): boolean {
+  const target = String(code || '').trim();
+  if (!target) return false;
+  return (Object.keys(INTRO_PLAN_CODE_ENV_VAR) as SelfServeTierId[]).some(
+    (tier) => getIntroPaystackPlanCode(tier) === target
+  );
+}
+
+/**
+ * Moves a resolved tier purchase onto the starting price when the team still
+ * has starting-price months left. Monthly Solo and Manager only; everything
+ * else comes back unchanged. Refuses (rather than charging full price) when the
+ * starting-price Plan is not set, because the page promised the lower price.
+ */
+export function applyIntroPrice(
+  purchase: CheckoutPurchase,
+  introMonthsLeft: number
+): CheckoutPurchase & { intro?: boolean } {
+  if (!purchase.ok || purchase.interval !== 'monthly' || !isSelfServeTier(purchase.planId)) return purchase;
+  const price = getChargePrice(purchase.planId, 'monthly', introMonthsLeft);
+  const intro = getIntroPrice(purchase.planId);
+  if (!price || !intro || price.minorUnit !== intro.minorUnit) return purchase;
+  const planCode = getIntroPaystackPlanCode(purchase.planId);
+  if (!planCode) {
+    return {
+      ok: false,
+      status: 500,
+      error: `Paystack plan code not configured for ${purchase.planId} starting price. Set the matching PAYSTACK_PLAN_* env var.`,
+    };
+  }
+  return { ...purchase, planCode, amountMinorUnit: intro.minorUnit, intro: true };
 }
 
 /** Intervals a tier must have a Plan for before the wall offers it by card. */
@@ -394,9 +447,10 @@ export function planCodeMatchesSubscription(input: {
     // incoming code appear", so a superset can produce a false PASS but never a
     // false warning, and a false warning on a healthy renewal is the failure
     // this whole function is written to avoid.
-    for (const interval of SELLABLE_INTERVALS) {
+    for (const interval of ['monthly', 'semiannual', 'annual'] as const) {
       expected.push(getTierPaystackPlanCode(input.plan, interval));
     }
+    expected.push(getIntroPaystackPlanCode(input.plan));
     for (const envName of superseded ?? []) expected.push(readPlanCodeEnv(envName));
   } else if (superseded) {
     // A plan id that is not self-serve but still has Plans we sold it on.

@@ -61,10 +61,12 @@ describe('isContactSalesPlan', () => {
   // function and the `contactSales` field it reads stay generic
   // infrastructure for a future sales-led tier — see the removal note in
   // @urganize/pricing — but there is nothing left for either to say yes to.
-  it('is false for every plan value that exists, legacy and tier alike', () => {
+  // Label is contact-us again since 2026-10-26, so it is the one plan that
+  // says yes.
+  it('is false for every plan value that exists except Label', () => {
     expect(isContactSalesPlan('manager')).toBe(false);
     expect(isContactSalesPlan('solo')).toBe(false);
-    expect(isContactSalesPlan('label')).toBe(false);
+    expect(isContactSalesPlan('label')).toBe(true);
     expect(isContactSalesPlan('monthly')).toBe(false);
     expect(isContactSalesPlan('annual')).toBe(false);
     expect(isContactSalesPlan('access')).toBe(false);
@@ -85,8 +87,10 @@ describe('isContactSalesPlan', () => {
   // is where they would be overcharged: they cannot self-serve a CHANGE at all,
   // because `isGrandfatheredRate` refuses anyone paying something other than
   // today's list price.
-  it('treats a stored Label plan as buyable again, and a stray Group row as unrecognised', () => {
-    expect(isContactSalesPlan('label')).toBe(false);
+  // Flipped a fourth time on 2026-10-26: Label is contact-us, so a lapsed Label
+  // team is pointed at us rather than at a checkout.
+  it('treats a stored Label plan as contact-us, and a stray Group row as unrecognised', () => {
+    expect(isContactSalesPlan('label')).toBe(true);
     // Group (id `enterprise`) was the last sales-led tier and was removed
     // entirely, not merely made self-serve as Label was twice. So a stored
     // 'enterprise' row is no longer "sales-led", it is UNRECOGNISED:
@@ -233,17 +237,11 @@ describe('summarizeBilling', () => {
     expect(summarizeBilling(snapshot({ accountStatus: 'paid', plan: 'label' })).title).toBe(
       'Label plan'
     );
-    // Back to 'change'/'plans' on 2026-09-08, when Label got a price again. It
-    // read 'contact' for the nine days it was sales-led. A paying Label customer
-    // gets the ordinary change CTA; whether the change is actually quotable is
-    // the route's business, and for anyone on the old rate the answer is a
-    // refusal that names the next step rather than a wrong number.
-    expect(summarizeBilling(snapshot({ accountStatus: 'paid', plan: 'label' })).cta).toBe(
-      'change'
-    );
-    expect(summarizeBilling(snapshot({ accountStatus: 'expired', plan: 'label' })).cta).toBe(
-      'plans'
-    );
+    // 'contact' since 2026-10-26, when Label went contact-us again (it was
+    // 'change'/'plans' from 2026-09-08). A Label team changes plan by talking
+    // to us.
+    expect(summarizeBilling(snapshot({ accountStatus: 'paid', plan: 'label' })).cta).toBe('contact');
+    expect(summarizeBilling(snapshot({ accountStatus: 'expired', plan: 'label' })).cta).toBe('contact');
   });
 
   it('reports an expired plan by name with its end date', () => {

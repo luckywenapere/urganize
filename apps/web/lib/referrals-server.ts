@@ -17,6 +17,7 @@ import { logBillingEvent } from './billing-events-server';
 import { isMissingColumnError } from './billing-schema';
 import { isPaymentChannel, type PaymentChannel } from './billing-margin';
 import { recordTrmFeeForPayment } from './trm/partner-ledger-server';
+import { introMonthsLeft } from './intro-price';
 import type { BillingInterval } from '@urganize/pricing';
 import { adjustCredits, readBalances } from './credits/credits-server';
 import { isEmailConfigured, sendEmail } from './email';
@@ -110,6 +111,8 @@ export async function recordSubscriptionCharge(
     interval?: BillingInterval | null;
     /** PRICE_LIST_VERSION at checkout, or null when not known. */
     planVersion?: string | null;
+    /** Paid at the starting price (20261026200000). */
+    intro?: boolean;
   }
 ): Promise<void> {
   try {
@@ -131,6 +134,7 @@ export async function recordSubscriptionCharge(
       payment_channel: input.channel ?? null,
       billing_interval: input.interval ?? null,
       plan_version: input.planVersion ?? null,
+      intro: input.intro === true,
     };
     let { error } = await admin
       .from('subscription_charges')
@@ -156,6 +160,25 @@ export async function recordSubscriptionCharge(
   } catch (error) {
     console.error('[referrals] recording a charge threw:', error);
   }
+}
+
+/**
+ * Starting-price months a team owner has left (lib/intro-price.ts holds the
+ * rule). Reads profiles.paid_at and this table's intro rows. An unreadable
+ * table counts as no starting-price payments, so a team that paid before gets
+ * full price rather than an open-ended discount.
+ */
+export async function loadIntroMonthsLeft(admin: SupabaseClient, userId: string): Promise<number> {
+  const [profile, charges] = await Promise.all([
+    admin.from('profiles').select('paid_at').eq('id', userId).maybeSingle(),
+    admin
+      .from('subscription_charges')
+      .select('reference', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('intro', true),
+  ]);
+  const paidBefore = Boolean((profile.data as { paid_at: string | null } | null)?.paid_at);
+  return introMonthsLeft({ paidBefore, introChargesUsed: charges.error ? 0 : (charges.count ?? 0) });
 }
 
 /**

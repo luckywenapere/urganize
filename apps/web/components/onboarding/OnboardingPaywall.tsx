@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   DEFAULT_SELLING_INTERVAL,
+  INTRO_MONTHS,
   SALES_WHATSAPP_URL,
   type BillingInterval,
   type PricingTierId,
@@ -206,6 +207,7 @@ export function OnboardingPaywall({
             onSelectTier={setTier}
             selectedInterval={interval}
             onSelectInterval={setBillingInterval}
+            introMonthsLeft={INTRO_MONTHS}
             disabled={busy}
           />
         )}

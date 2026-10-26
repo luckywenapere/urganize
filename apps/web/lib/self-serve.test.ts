@@ -104,7 +104,7 @@ describe('amounts come from the pricing package', () => {
 
   it('hides a card period with no Paystack plan, never a transfer one', () => {
     expect(periodsForMethod('card', ['monthly', 'annual'])).toEqual(['monthly', 'annual']);
-    expect(periodsForMethod('transfer', [])).toEqual(['monthly', 'semiannual', 'annual']);
+    expect(periodsForMethod('transfer', [])).toEqual(['monthly', 'annual']);
   });
 });
 

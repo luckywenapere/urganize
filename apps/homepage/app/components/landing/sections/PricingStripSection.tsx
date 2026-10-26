@@ -1,10 +1,11 @@
 import {
   formatTierPrice,
+  getIntroPrice,
   getTier,
+  introThenLine,
   PRICING_TIER_ORDER,
   tierHighlights,
 } from "@urganize/pricing";
-import { salesMailto } from "@/lib/sales-mailto";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
 import { centeredHeadlineClass, wideContainerClass } from "./shared";
@@ -31,16 +32,22 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 // too from 2026-09-08 to 2026-09-09, and again since 2026-10-02: Group, the
 // fourth card, with "Let's talk" in place of a price.)
 export function PricingStripSection() {
-  // HOMEPAGE V2 (2026-10-17, URG-334): the three priced tiers only. Group
-  // ("Let's talk") is a text link under the cards, since a fourth equal card is
-  // one more choice on a page where nobody can buy yet. This reverses the
-  // 2026-10-02 four-card call on the homepage only; /pricing keeps all four.
-  const tiers = PRICING_TIER_ORDER.filter((id) => formatTierPrice(id) !== null).map((id) => {
+  // HOMEPAGE V2 (2026-10-17, URG-334): three cards. Group came off both pages
+  // on 2026-10-26.
+  // Starting price first (2026-10-26), with the full price under it. Label is
+  // contact-us, so it shows "Let's talk" and no figure.
+  const tiers = PRICING_TIER_ORDER.map((id) => {
     const tier = getTier(id);
+    const intro = getIntroPrice(id);
     return {
       id,
       tier,
-      price: formatTierPrice(id),
+      price: tier.contactSales
+        ? null
+        : intro
+          ? `${new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(intro.amount)}/month`
+          : formatTierPrice(id),
+      then: tier.contactSales ? null : introThenLine(id),
       highlights: tierHighlights(id).slice(0, 3),
     };
   });
@@ -64,11 +71,10 @@ export function PricingStripSection() {
           ) : null}
         </div>
 
-        {/* FOUR since 2026-10-02 (Group came back as the "Let's talk" card).
-            One column on a phone, two from sm, four from xl — the same
-            breakpoints /pricing's own cards use. */}
+        {/* Solo, Manager and Label ("Let's talk") since 2026-10-26, when Group
+            came off. One column on a phone, three from md, like /pricing. */}
         <ul className="mx-auto mt-12 grid max-w-[60rem] gap-4 md:grid-cols-3">
-          {tiers.map(({ id, tier, price, highlights }) => (
+          {tiers.map(({ id, tier, price, then, highlights }) => (
             <li
               key={id}
               className="flex h-full flex-col rounded-[1.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5 sm:p-6"
@@ -87,6 +93,9 @@ export function PricingStripSection() {
               <p className="mt-4 text-[1.6rem] font-semibold sm:mt-5 sm:text-[1.75rem] tracking-[-0.03em] text-[var(--marketing-text)]">
                 {price ?? "Let’s talk"}
               </p>
+              {then ? (
+                <p className="mt-1 text-[0.8rem] leading-5 text-[var(--marketing-text-muted)]">{then}</p>
+              ) : null}
               <ul className="mt-4 space-y-1 sm:mt-5 sm:space-y-2">
                 {highlights.map((line) => (
                   <li
@@ -114,12 +123,6 @@ export function PricingStripSection() {
             still renders THERE — see content/founding-member.ts, which is why
             this no longer imports it. */}
         <div className="mx-auto mt-10 flex max-w-[64rem] flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm font-medium">
-            <a
-              href={salesMailto("Group")}
-              className="text-[var(--marketing-text-muted)] underline decoration-[color:var(--marketing-text-subtle)] underline-offset-4 transition-colors hover:text-[var(--marketing-text)]"
-            >
-              Bigger team? Let&rsquo;s talk
-            </a>
             <a
               href="/pricing"
               className="text-[var(--marketing-text)] underline decoration-[color:var(--marketing-text-subtle)] underline-offset-4 transition-colors hover:decoration-[color:var(--marketing-text)]"

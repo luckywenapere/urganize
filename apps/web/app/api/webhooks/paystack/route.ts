@@ -9,6 +9,7 @@ import {
   getPaystackPlanCode,
   getPlanMinorUnit,
   identifyPlanByCode,
+  isIntroPlanCode,
   isRecurringPlan,
   planCodeMatchesSubscription,
   type RecurringPlanId,
@@ -18,7 +19,13 @@ import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { invalidateTeamAccess } from '@/lib/team-billing-server';
 import { notifyFounder } from '@/lib/billing-alerts-server';
 import { PLAN_CHANGE_SOURCE } from '@/lib/plan-change';
-import { handleRefundForReferrals, recordSubscriptionCharge, rewardReferrerOnFirstPayment } from '@/lib/referrals-server';
+import {
+  handleRefundForReferrals,
+  loadIntroMonthsLeft,
+  recordSubscriptionCharge,
+  rewardReferrerOnFirstPayment,
+} from '@/lib/referrals-server';
+import { switchToFullPrice } from '@/lib/intro-switch-server';
 import {
   TRIAL_CARD_PLAN,
   buildDelayedSubscriptionPayload,
@@ -967,6 +974,7 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
         // read a legacy Label row as yearly, and this also decides the TRM fee.
         interval: selectedInterval,
         planVersion: isPricingTierId(planString) ? PRICE_LIST_VERSION : 'legacy',
+        intro: payment.paystack_response?.intro === true,
       });
       // The team that invited this one earns credits for a first payment. Idempotent
       // on the invited team, so a redelivery cannot pay it twice.
@@ -1150,7 +1158,27 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
     interval: readStoredInterval(
       subRow.pending_plan ? (subRow.pending_billing_interval ?? subRow.billing_interval) : subRow.billing_interval
     ),
+    intro: isIntroPlanCode(incomingPlanCode),
   });
+
+  // The 6th starting-price payment: move the card onto the full-price Plan
+  // from the next period (lib/intro-switch-server.ts).
+  if (isIntroPlanCode(incomingPlanCode) && (await loadIntroMonthsLeft(admin, subRow.user_id)) === 0) {
+    const after = await admin
+      .from('subscriptions')
+      .select('expires_at,paystack_subscription_code')
+      .eq('user_id', subRow.user_id)
+      .maybeSingle();
+    const row = after.data as { expires_at: string | null; paystack_subscription_code: string | null } | null;
+    await switchToFullPrice(admin, {
+      userId: subRow.user_id,
+      plan: subRow.plan,
+      customerCode,
+      authorizationCode: payload.data?.authorization?.authorization_code ?? null,
+      oldSubscriptionCode: renewalSubscriptionCode ?? row?.paystack_subscription_code ?? null,
+      startAt: row?.expires_at ?? null,
+    });
+  }
 
   return ack({
     event: 'charge.success',

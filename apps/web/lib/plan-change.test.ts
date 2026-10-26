@@ -170,7 +170,7 @@ describe('quotePlanChange — upgrade', () => {
     expect(sawFree && sawCharged, 'the sweep must reach both branches').toBe(true);
   });
 
-  it('prices a move up to Label, which is buyable again', () => {
+  it('refuses a move up to Label, which is contact-us since 2026-10-26', () => {
     const quote = quoteAtListPrice({
       currentPlan: 'manager',
       currentInterval: 'annual',
@@ -179,11 +179,7 @@ describe('quotePlanChange — upgrade', () => {
       periodEndsAt: FULL_YEAR_LEFT,
       now: NOW,
     });
-    if (quote.kind !== 'upgrade') throw new Error('expected an upgrade');
-    const gap =
-      (getTierPrice('label', 'annual')?.minorUnit ?? 0) -
-      (getTierPrice('manager', 'annual')?.minorUnit ?? 0);
-    expect(quote.amountMinorUnit).toBe(gap);
+    expect(quote).toEqual({ kind: 'refused', reason: 'sales_led_target' });
   });
 });
 
@@ -478,12 +474,11 @@ describe('the quote can never contradict the tier table', () => {
   //
   // It reads `monthlyPrice` since 2026-09-10: that is the only price a tier
   // stores now, and the yearly one is computed from it.
-  it('carries a price for every self-serve tier, and none for the sales-led one', () => {
+  it('carries a price for every self-serve tier', () => {
+    // A sales-led tier may keep a price for teams already on it (Label since
+    // 2026-10-26) or have none (Group); either way the quote refuses it.
     for (const tier of Object.keys(PRICING_TIERS) as Array<keyof typeof PRICING_TIERS>) {
-      if (PRICING_TIERS[tier].contactSales) {
-        expect(PRICING_TIERS[tier].monthlyPrice, tier).toBeUndefined();
-        continue;
-      }
+      if (PRICING_TIERS[tier].contactSales) continue;
       expect(PRICING_TIERS[tier].monthlyPrice, tier).toBeDefined();
     }
   });
@@ -500,7 +495,7 @@ describe('the quote can never contradict the tier table', () => {
       kind: 'refused',
       reason: 'sales_led_target',
     });
-    expect(quotePlanChange({ ...base, currentPlan: 'enterprise', targetTier: 'label' })).toEqual({
+    expect(quotePlanChange({ ...base, currentPlan: 'enterprise', targetTier: 'manager' })).toEqual({
       kind: 'refused',
       reason: 'legacy_current_plan',
     });
