@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { AltlinkError, createAltlinkClient, isAltlinkConfigured, type AltlinkClient } from '@/lib/altlink/client';
+import { AltlinkError, createAltlinkClient, isAltlinkConfigured, type AltlinkClient, type CreateLinkInput } from '@/lib/altlink/client';
 import { ALTLINK_TIMEZONE, isAltlinkEnabled, isReleasedOn, normalizeIsrc, normalizeUpc, releaseYmd } from '@/lib/altlink/rules';
 import { CATALOGUE_TABLE } from './server';
 import {
@@ -198,21 +198,55 @@ export async function makeCatalogueLink(
   try {
     const artist = await admin.from('artists').select('name').eq('id', row.artist_id).maybeSingle();
     const client = input.client ?? createAltlinkClient();
-    const link = await client.createLink({
+    // The minimal request: what Altlink must have, nothing that can fail
+    // validation on its own. The id is the catalogue row's own uuid, the same
+    // shape the rollout path sends.
+    const minimal: CreateLinkInput = {
       title: row.title,
       artist_name: String((artist.data as { name?: string } | null)?.name ?? ''),
-      external_release_id: `catalogue:${row.id}`,
+      external_release_id: row.id,
       ...(upc ? { upc } : {}),
       ...(isrc ? { isrc } : {}),
+      timezone: ALTLINK_TIMEZONE,
+    };
+    const full: CreateLinkInput = {
+      ...minimal,
       // A date is sent only for a release still to come (a pre-save). Past and
-      // today's releases are plain smart links with no date: Altlink answers a
-      // past date with invalid_request (BUILD-NOTES-ALTLINK.md, the same rule
-      // decideCreate follows). Found 2026-10-26 on the first real tap.
+      // today's releases are plain smart links with no date (the same rule
+      // decideCreate follows, BUILD-NOTES-ALTLINK.md).
       ...(row.release_date && !isReleasedOn(row.release_date, nowMs) ? { release_date: releaseYmd(row.release_date) as string } : {}),
       ...(row.cover_url ? { artwork_url: row.cover_url } : {}),
       ...(input.userEmail ? { creator_email: input.userEmail } : {}),
-      timezone: ALTLINK_TIMEZONE,
-    });
+    };
+    let link;
+    try {
+      link = await client.createLink(full);
+    } catch (firstError) {
+      // Altlink said the request body was not valid and the extras are the
+      // likely cause (cover address, creator email). Try once more with the
+      // minimum; the cover is added afterwards on a best-effort basis.
+      if (!(firstError instanceof AltlinkError) || firstError.code !== 'invalid_request' || full === minimal) throw firstError;
+      console.error('[catalogue-link] full request refused, trying the minimum', {
+        releaseRowId: row.id,
+        message: firstError.message,
+        detail: firstError.detail,
+      });
+      try {
+        link = await client.createLink(minimal);
+      } catch (secondError) {
+        if (secondError instanceof AltlinkError && !secondError.detail && firstError.detail) {
+          secondError.detail = firstError.detail;
+        }
+        throw secondError;
+      }
+      if (row.cover_url) {
+        try {
+          await client.patchLink(link.id, { artwork_url: row.cover_url });
+        } catch {
+          // The link works without its cover.
+        }
+      }
+    }
     if (!link.url) throw new AltlinkError(502, 'bad_response', 'Altlink sent back no link address.');
     await admin
       .from(CATALOGUE_LINKS_TABLE)
@@ -222,8 +256,11 @@ export async function makeCatalogueLink(
   } catch (error) {
     const code = error instanceof AltlinkError ? error.code : 'error';
     // Altlink's own sentence is kept with the code, so a failed row says why.
-    const detail = error instanceof AltlinkError ? `${error.code}: ${error.message}`.slice(0, 300) : 'error';
-    console.error('[catalogue-link] create failed', { releaseRowId: row.id, code, status: error instanceof AltlinkError ? error.status : 0, message: error instanceof Error ? error.message : '' });
+    const detail =
+      error instanceof AltlinkError
+        ? `${error.code}: ${error.message}${error.detail ? ` ${error.detail}` : ''}`.slice(0, 500)
+        : 'error';
+    console.error('[catalogue-link] create failed', { releaseRowId: row.id, code, status: error instanceof AltlinkError ? error.status : 0, message: error instanceof Error ? error.message : '', detail: error instanceof AltlinkError ? error.detail : null });
     if (error instanceof AltlinkError && error.status === 422 && error.code === 'missing_identifier') {
       await admin.from(CATALOGUE_LINKS_TABLE).delete().eq('id', claimId).eq('status', 'pending');
       return { kind: 'no_code' };
