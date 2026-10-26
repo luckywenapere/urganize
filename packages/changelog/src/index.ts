@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.176.0",
+    tag: "AI",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "UrgAns now shows your sessions on the left and the open session in the middle.",
+      "Home has a small handle that hides or shows its left side, and it remembers your choice.",
+    ],
+  },
+  {
     version: "1.175.1",
     tag: "Pitching",
     date: "October 26, 2026",
