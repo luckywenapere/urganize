@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.190.0",
+    title: "Ask for ideas by email",
+    tag: "Rollouts",
+    date: "October 26, 2026",
+    highlights: [
+      "When you ask for ideas on a rollout, you can now invite someone by email, even if they are not on Urganize yet. They land on your rollout after they join.",
+      "When someone adds an idea to a rollout that already has a plan, you see it right away and can review what it would change. Nothing changes until you tap Apply.",
+    ],
+  },
+  {
     version: "1.189.1",
     tag: "App",
     listed: false,
