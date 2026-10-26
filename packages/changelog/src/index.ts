@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.180.0",
+    title: "Bring in an artist's releases",
+    tag: "App",
+    date: "October 26, 2026",
+    highlights: [
+      "Type an artist's name when you sign up and Urganize finds them and brings in their releases.",
+      "Add as many artists as you like. They show up in your catalogue, on each artist's page.",
+    ],
+  },
+  {
     version: "1.179.4",
     tag: "Rollouts",
     listed: false,

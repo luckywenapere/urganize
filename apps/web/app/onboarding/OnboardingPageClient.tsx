@@ -167,10 +167,13 @@ import {
   judgeTypedReferralCode,
 } from '@/lib/referral-intent';
 import { isReferralsEnabled } from '@/lib/referrals';
+import { OnboardingArtistImportStep } from '@/components/onboarding/OnboardingArtistImportStep';
+import { clearPendingImports, readPendingImports } from '@/lib/artist-import/pending';
 import {
   ONBOARDING_STEP,
   ONBOARDING_STEP_TITLES,
   firstStepAfterAccount,
+  isArtistImportEnabled,
   isOnboardingV2Enabled,
   isPostAccountStep,
   lastQuestionStep,
@@ -234,6 +237,9 @@ type StepIndex = OnboardingStepIndex;
 // URG-251 + URG-274 (2026-10-14): the preview, opt-in, referral field, paywall
 // and welcome screen. On unless NEXT_PUBLIC_FEATURE_ONBOARDING_V2 is 'false'.
 const ONBOARDING_V2 = isOnboardingV2Enabled();
+const ARTIST_IMPORT_ENABLED = isArtistImportEnabled();
+/** Longest the hand-off waits for the artist import to save before moving on. */
+const ARTIST_IMPORT_SAVE_TIMEOUT_MS = 12000;
 // The new paywall replaces nothing under the retired card trial, which has its
 // own card-first page; with that flag off (production) it is the paywall.
 const PAYWALL_ENABLED = ONBOARDING_V2 && !CARD_TRIAL_ENABLED;
@@ -711,6 +717,7 @@ export default function OnboardingPage() {
         previewEnabled: ONBOARDING_V2,
         optInEnabled: ONBOARDING_V2,
         nothingPlanned,
+        artistImport: ARTIST_IMPORT_ENABLED,
       }),
     [isAuthedSetup, startFromScratch, welcomeAlreadySeen, nothingPlanned]
   );
@@ -808,6 +815,8 @@ export default function OnboardingPage() {
     if (step === ONBOARDING_STEP.firstMove) return true;
     // The preview and the opt-in never block: both toggles may stay off.
     if (step === ONBOARDING_STEP.preview || step === ONBOARDING_STEP.optIn) return true;
+    // The artist import is always skippable and has its own buttons.
+    if (step === ONBOARDING_STEP.artistImport) return true;
     if (step === ONBOARDING_STEP.account) {
       // Email/password path requires all three fields plus, if the user
       // picked 'artist', an artistName. The Google button is gated
@@ -1019,6 +1028,21 @@ export default function OnboardingPage() {
   // regardless of which auth path got us here (email/password or Google).
   // Caller is responsible for setting accountCreated=true and providing a
   // valid access token (already in the supabase session).
+  const saveImportedArtists = async (accessToken: string) => {
+    const pending = readPendingImports();
+    if (pending.length === 0) return;
+    const save = Promise.allSettled(
+      pending.map((artist) =>
+        fetch('/api/artist-import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ provider: artist.provider, id: artist.id, name: artist.name }),
+        })
+      )
+    ).then(() => clearPendingImports());
+    await Promise.race([save, new Promise<void>((resolve) => window.setTimeout(resolve, ARTIST_IMPORT_SAVE_TIMEOUT_MS))]);
+  };
+
   const runPostSignupHandoff = async (accessToken: string) => {
     // 0. Closed sign-up (2026-10-15): redeem any invite this browser holds (a
     // /start link, a founder /welcome link) and ask whether this account is
@@ -1029,6 +1053,12 @@ export default function OnboardingPage() {
       router.replace('/locked?reason=not_approved');
       return;
     }
+
+    // 0b. Artist import (2026-10-26): save the artists picked on the import
+    // step, with their releases, before the rollout so the rollout's artist
+    // lookup finds the same artist. Best effort and bounded: a failure never
+    // strands the sign-up, the person adds the artist from its page instead.
+    await saveImportedArtists(accessToken);
 
     // 1. Start the 28-day trial so the next call passes the paywall.
     // 400/409 are tolerable: a trial was already used / paid status, in
@@ -1768,6 +1798,8 @@ export default function OnboardingPage() {
   const stepKicker = `Step ${visibleStepNumber} of ${visibleTotalSteps}`;
   // The paywall and the welcome screen carry their own heading and button.
   const ownsItsScreen = !personaOpen && (step === ONBOARDING_STEP.paywall || step === ONBOARDING_STEP.welcome);
+  // The artist import step draws its own Back and Continue buttons.
+  const hidesFooter = ownsItsScreen || (!personaOpen && step === ONBOARDING_STEP.artistImport);
   const authedSetupFinishStep = lastQuestionStep(sequence);
   const inviteLabels = inviteStepButtonLabels(finishing);
 
@@ -2235,6 +2267,27 @@ export default function OnboardingPage() {
             </div>
           ) : null}
 
+          {/* ----- Artist import (2026-10-26): before the account ---------- */}
+          {step === ONBOARDING_STEP.artistImport && !personaOpen ? (
+            <OnboardingArtistImportStep
+              canPlanNext={draft.nothingPlanned}
+              onBack={handleBack}
+              onDone={handleNext}
+              onPlanNext={(artistName) => {
+                // "Nothing planned yet" turns into a single for this artist.
+                // The list is recomputed on the next render; the step after
+                // the import is the same either way.
+                setDraft((current) => ({
+                  ...current,
+                  nothingPlanned: false,
+                  releaseType: 'single',
+                  artistName: artistName || current.artistName,
+                }));
+                handleNext();
+              }}
+            />
+          ) : null}
+
           {/* ----- Step 5: plan preview (read-only) --------------------- */}
           {step === ONBOARDING_STEP.preview ? (
             <OnboardingPlanPreview
@@ -2533,7 +2586,7 @@ export default function OnboardingPage() {
 
           {/* Footer / nav. None on "Who are you?": a tap is the answer. None
               on the paywall or the welcome screen either: each has one button. */}
-          {personaOpen || ownsItsScreen ? null : (
+          {personaOpen || hidesFooter ? null : (
           <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
             {step === ONBOARDING_STEP.invite ? (
               <button
