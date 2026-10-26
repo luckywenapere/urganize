@@ -110,6 +110,12 @@ export interface AnalyticsEventPropertiesMap {
   onboarding_invite_sent_during_flow: EmptyAnalyticsProperties;
   /** URG-251 funnel (2026-10-14). The read-only week-by-week preview was shown. */
   onboarding_preview_viewed: { release_type: string; weeks: number; activities: number };
+  /** Artist import step (2026-10-26): shown, an artist picked, their releases found, skipped, "plan the next release" tapped. */
+  onboarding_artist_import_viewed: EmptyAnalyticsProperties;
+  onboarding_artist_picked: { provider: string };
+  onboarding_artist_imported: { provider: string; releases: number };
+  onboarding_artist_import_skipped: EmptyAnalyticsProperties;
+  onboarding_artist_plan_next: EmptyAnalyticsProperties;
   /** The opt-in step was shown (both toggles start off). */
   onboarding_optin_viewed: EmptyAnalyticsProperties;
   /** A toggle was tapped. `result` is what the device allowed for push. */
