@@ -211,8 +211,14 @@ export function resolveMainView(): ReleaseMainView {
  * to `?scene=timeline` useful after a rollback — it lands on the bucket list
  * rather than on a blank panel.
  */
-export function resolvePanelBody(rawParam: string | null): SceneName | ReleaseMainView {
-  return resolveActiveScene(rawParam) ?? resolveMainView();
+export function resolvePanelBody(
+  rawParam: string | null,
+  /** The rollout has no release day. Its timeline has nothing to draw, so it
+   *  lands on Work the plan (2026-10-26). An explicit `?scene=timeline` still
+   *  opens the timeline. */
+  dateless = false
+): SceneName | ReleaseMainView {
+  return resolveActiveScene(rawParam) ?? (dateless ? 'activities' : resolveMainView());
 }
 
 /** Within this window a cached scene is served with NO network call at all.

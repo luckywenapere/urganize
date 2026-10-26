@@ -52,6 +52,12 @@ type WorkspaceDesktopFocusedProps = {
   panelActivitiesFooter?: ReactNode;
   /** Forwarded verbatim to TasksPanel's `bannerReplacesEmptyState`. */
   panelBannerReplacesEmptyState?: boolean;
+  /**
+   * The simple plan view (2026-10-26): a plan with no release day. The date
+   * step and the idea sit in a side column beside the task list, and the list
+   * itself drops its toolbar and group headers.
+   */
+  simpleSide?: ReactNode;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -98,6 +104,7 @@ export function WorkspaceDesktopFocused({
   panelActivitiesBanner,
   panelActivitiesFooter,
   panelBannerReplacesEmptyState,
+  simpleSide,
 }: WorkspaceDesktopFocusedProps) {
   // Cancelled work is out of both numbers (URG-389).
   const { done: tasksDone, total: tasksTotal } = countProgress(scopedTasks);
@@ -231,16 +238,26 @@ export function WorkspaceDesktopFocused({
 
       {/* The panel. TasksPanel owns its own scroll, so this stacks the one-time
           banner above it and lets the panel's flex-1 fill the rest. */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        {banner}
-        <TasksPanel
-          tasks={scopedTasks}
-          scopedRelease={scopedRelease}
-          sceneContent={panelSceneContent}
-          activitiesBanner={panelActivitiesBanner}
-          activitiesFooter={panelActivitiesFooter}
-          bannerReplacesEmptyState={panelBannerReplacesEmptyState}
-        />
+      <div
+        className={
+          simpleSide
+            ? 'grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_20rem] items-start gap-4 overflow-hidden xl:grid-cols-[minmax(0,1fr)_24rem]'
+            : 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'
+        }
+      >
+        {simpleSide ? null : banner}
+        <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
+          <TasksPanel
+            tasks={scopedTasks}
+            scopedRelease={scopedRelease}
+            sceneContent={panelSceneContent}
+            activitiesBanner={simpleSide ? undefined : panelActivitiesBanner}
+            activitiesFooter={panelActivitiesFooter}
+            bannerReplacesEmptyState={panelBannerReplacesEmptyState}
+            simple={Boolean(simpleSide)}
+          />
+        </div>
+        {simpleSide ? <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">{simpleSide}</div> : null}
       </div>
     </div>
   );

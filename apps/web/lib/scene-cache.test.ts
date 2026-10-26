@@ -403,6 +403,13 @@ describe('resolvePanelBody', () => {
     expect(off.resolvePanelBody(null)).toBe('activities');
   });
 
+  it('lands a rollout with no release day on Work the plan, and still opens the timeline on request', async () => {
+    const on = await loadResolver(true);
+    expect(on.resolvePanelBody(null, true)).toBe('activities');
+    expect(on.resolvePanelBody('timeline', true)).toBe('timeline');
+    expect(on.resolvePanelBody(null, false)).toBe('timeline');
+  });
+
   // The whole point of the change: with the flag on, the buckets are still
   // reachable — they just stop being what you land on.
   it('opens the activity list on request, in either flag state', async () => {
