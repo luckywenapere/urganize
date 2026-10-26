@@ -20,8 +20,9 @@ Founder-approved mocks, then built in two slices. A WhatsApp chat, a file, paste
 ## Voice notes and the share sheet (v1.183.0)
 - **Voice:** `POST /api/notes/import/voice` uses the same speech call, daily cap (`VOICE_DAILY_CAP`) and billing event as dictation (`source: 'notes_import'`). The dialog records live with `useVoiceInput` or takes audio files. WhatsApp `.opus` is renamed `.ogg` on the phone (`normalizeVoiceFile`). Each transcript stays whole as one card, dated by the file's modified time.
 - **Share sheet (Android Chrome, installed web app only):** `app/manifest.ts` declares `share_target` (POST `/share-target`, multipart). `public/sw-share-target.js`, loaded by BOTH `sw.js` and `sw-offline.js`, parks the share in the Cache API (`urganize-share-v1`) and redirects to `/dashboard/notes?import=share&share=<id>`; the page reads it back with `takeShare` (`lib/note-import/share.ts`) and deletes it. Unclaimed shares are swept after a day. `app/share-target/route.ts` is only a fallback for a share that arrives before the worker has control; it cannot read the share (the session is in localStorage, not a cookie) so it opens the dialog empty.
-- **Trap:** iPhone Safari has no web share targets, and the Android APK is a webview, so a native share intent there needs `expo-share-intent` and a new signed build (use the real upload key, see android-signing-key).
+- **Android app (v1.184.0):** the shell now receives the share intent itself (`apps/mobile/src/shareIntent.ts`, `components/providers/NativeShareBridge.tsx`, `lib/note-import/native-share.ts`; see `docs/mobile/expo-shell.md`). It reaches phones only with a new build signed with the real upload key (android-signing-key).
+- **Trap:** iPhone Safari has no web share targets, and iOS has no share extension yet.
 
 ## Not done
-- A native share intent in the Android app, a WhatsApp number to forward to, and "from your note" tags on plan tasks. Credits for the AI pass.
+- A share extension for iOS, a WhatsApp number to forward to, and "from your note" tags on plan tasks. Credits for the AI pass.
 - Not run against a real WhatsApp export, a real photo or the live model.

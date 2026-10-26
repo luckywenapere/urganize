@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.185.0",
+    title: "Share to Urganize from the Android app",
+    tag: "App",
+    date: "October 26, 2026",
+    highlights: [
+      "In the Android app, share a WhatsApp chat, a voice note, a photo or some text to Urganize. It opens ready to sort. This needs the new app build.",
+    ],
+  },
+  {
     version: "1.184.1",
     tag: "Rollouts",
     listed: false,
