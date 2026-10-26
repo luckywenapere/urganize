@@ -41,6 +41,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.181.0",
+    title: "Bring your notes",
+    tag: "Rollouts",
+    date: "October 26, 2026",
+    highlights: [
+      "Bring in a WhatsApp chat, a file or pasted text. Urganize finds the songs, to-dos, dates and money in it.",
+      "Choose what to keep. Notes that name a rollout attach to it, and you can turn the to-dos into a plan.",
+      "The chat is read on your phone. Only the notes you keep are saved, and you can undo the whole import.",
+    ],
+  },
+  {
     version: "1.180.0",
     title: "A new rollout starts with its plan",
     tag: "Rollouts",
