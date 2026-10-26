@@ -13,6 +13,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { BillingInterval } from '@urganize/pricing';
 import { Logo, LoadingMark } from '@urganize/ui';
 import { useAuthStore } from '@/lib/auth-store';
+import { BOOK_CALL_LABEL, needsOnboardingCall } from '@/lib/call-led';
 import { supabase } from '@/lib/supabase/client';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { createPostHogEvent } from '@/lib/analytics/shared';
@@ -31,6 +32,7 @@ import {
   periodSaving,
   periodsForMethod,
   planName,
+  setupCallUrl,
   youGet,
   type CheckoutIntent,
   type CheckoutPlan,
@@ -38,6 +40,8 @@ import {
 } from '@/lib/self-serve';
 
 type Options = {
+  /** Call-led plans this person may pay for now, as "plan:period": a payment link from the founder, or a renewal. */
+  callLedAllowed: string[];
   cardPeriods: Record<CheckoutPlan, BillingInterval[]>;
   transferAccounts: boolean;
   distributionOn: boolean;
@@ -103,6 +107,69 @@ function spacedAccountNumber(value: string): string {
   return digits.length === 10 ? `${digits.slice(0, 4)} ${digits.slice(4, 8)} ${digits.slice(8)}` : digits;
 }
 
+/** Label and every 6-month or yearly plan start with a call; nobody pays before it. */
+function CallStep({
+  intent,
+  onPickMonthly,
+}: {
+  intent: CheckoutIntent;
+  onPickMonthly: (plan: CheckoutPlan) => void;
+}) {
+  const url = setupCallUrl();
+  const name = planName(intent.plan);
+  const monthlyPlan: CheckoutPlan = intent.plan === 'label' ? 'manager' : intent.plan;
+  const steps = [
+    'Pick a time. It takes 15 minutes.',
+    'We talk through your team and your releases.',
+    'After the call, we email you a payment link.',
+  ];
+  return (
+    <main className="min-h-screen px-5 pb-16 pt-6 lg:px-10 lg:pt-10">
+      <div className="mx-auto max-w-lg">
+        <Mark />
+        <p className="mt-10 font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">
+          {name} · {periodLabel(intent.period)}
+        </p>
+        <h1 className="mt-2 font-display text-[34px] leading-tight text-content-primary">
+          Book your onboarding call
+        </h1>
+        <p className="mt-3 text-content-secondary">
+          {intent.plan === 'label'
+            ? 'Every Label team starts with a call.'
+            : `Every ${periodLabel(intent.period).toLowerCase()} plan starts with a call.`}{' '}
+          Nothing to pay today.
+        </p>
+        <ol className="mt-6 space-y-3">
+          {steps.map((line, index) => (
+            <li key={line} className="flex gap-3 text-content-primary">
+              <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-brand text-sm font-semibold text-black">
+                {index + 1}
+              </span>
+              <span>{line}</span>
+            </li>
+          ))}
+        </ol>
+        {url ? (
+          <a href={url} target="_blank" rel="noopener noreferrer" className={`mt-8 ${primaryButton}`}>
+            {BOOK_CALL_LABEL}
+          </a>
+        ) : (
+          <a href="mailto:contact@urganize.app?subject=Onboarding%20call" className={`mt-8 ${primaryButton}`}>
+            Email us to book a call
+          </a>
+        )}
+        <button
+          type="button"
+          onClick={() => onPickMonthly(monthlyPlan)}
+          className="mt-4 text-sm text-content-secondary underline underline-offset-4"
+        >
+          Prefer to start now? Pay for {planName(monthlyPlan)} monthly.
+        </button>
+      </div>
+    </main>
+  );
+}
+
 function Mark() {
   return (
     <Link href="/" aria-label="Urganize" className="inline-flex">
@@ -143,6 +210,15 @@ export default function CheckoutPageClient() {
     );
   }
 
+  const monthlyFallback = (plan: CheckoutPlan) =>
+    setIntent((current) => ({ ...current, plan, period: 'monthly' }));
+
+  // A payment link from the founder opens /checkout with cleared=1. That only
+  // shows the sign-up; the payment routes still check the real clearance.
+  if ((!isAuthenticated || !user) && needsOnboardingCall(intent.plan, intent.period) && searchParams.get('cleared') !== '1') {
+    return <CallStep intent={intent} onPickMonthly={monthlyFallback} />;
+  }
+
   if (!isAuthenticated || !user) {
     return (
       <SignupStep
@@ -164,6 +240,7 @@ export default function CheckoutPageClient() {
       setPickingPlan={setPickingPlan}
       userId={user.id}
       userEmail={user.email ?? ''}
+      onPickMonthly={monthlyFallback}
       onPaid={() => router.replace('/checkout/welcome')}
     />
   );
@@ -432,6 +509,7 @@ function CheckoutStep({
   setPickingPlan,
   userId,
   userEmail,
+  onPickMonthly,
   onPaid,
 }: {
   intent: CheckoutIntent;
@@ -442,6 +520,7 @@ function CheckoutStep({
   setPickingPlan: (open: boolean) => void;
   userId: string;
   userEmail: string;
+  onPickMonthly: (plan: CheckoutPlan) => void;
   onPaid: () => void;
 }) {
   const [options, setOptions] = useState<Options | null>(null);
@@ -652,6 +731,13 @@ function CheckoutStep({
         )}
       </main>
     );
+  }
+
+  if (
+    needsOnboardingCall(intent.plan, period) &&
+    !options.callLedAllowed.includes(`${intent.plan}:${period}`)
+  ) {
+    return <CallStep intent={{ ...intent, period }} onPickMonthly={onPickMonthly} />;
   }
 
   const payLabel = changing

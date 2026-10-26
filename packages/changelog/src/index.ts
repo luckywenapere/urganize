@@ -41,6 +41,65 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.186.0",
+    title: "Start with a call on bigger plans",
+    tag: "Account",
+    date: "October 26, 2026",
+    listed: false,
+    highlights: [
+      "Solo and Manager monthly work as before: pick, pay and start.",
+      "Label, 6-month and yearly plans start with a short call. We email you a payment link after it.",
+      "Label is now ₦100,000 a month.",
+    ],
+  },
+  {
+    version: "1.185.1",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "The activity pop-up now uses the full height of your screen, so you rarely need to scroll. The chat folds away when you don’t need it.",
+    ],
+  },
+  {
+    version: "1.185.0",
+    title: "Share to Urganize from the Android app",
+    tag: "App",
+    date: "October 26, 2026",
+    highlights: [
+      "In the Android app, share a WhatsApp chat, a voice note, a photo or some text to Urganize. It opens ready to sort. This needs the new app build.",
+    ],
+  },
+  {
+    version: "1.184.1",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "Add a new idea to a rollout that already has a plan. UrgAns suggests activities to add and dates to move, and nothing changes until you tap Apply.",
+    ],
+  },
+  {
+    version: "1.184.0",
+    title: "Bring in an artist's releases",
+    tag: "App",
+    date: "October 26, 2026",
+    highlights: [
+      "Type an artist's name when you sign up and Urganize finds them and brings in their releases.",
+      "Add as many artists as you like. They show up in your catalogue, on each artist's page.",
+    ],
+  },
+  {
+    version: "1.183.0",
+    title: "Voice notes and the share sheet",
+    tag: "Rollouts",
+    date: "October 26, 2026",
+    highlights: [
+      "Record a voice note, or bring ones from WhatsApp. Urganize writes them down and sorts them like any other note.",
+      "On Android, share a chat, a voice note, a photo or some text straight to Urganize from WhatsApp. It opens ready to sort.",
+    ],
+  },
+  {
     version: "1.182.0",
     title: "Photos and UrgAns in Bring your notes",
     tag: "Rollouts",

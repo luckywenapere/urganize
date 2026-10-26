@@ -345,9 +345,10 @@ const roundTo = (value: number, step: number): number => Math.max(step, Math.rou
  * ₦15,000–₦20,000), which is 5/11, 15/22 and 10/11 of the price, rounded to a
  * step that suits the size of the price. Solo ₦5,000 (2026-10-23) gives
  * ₦2,500 / ₦3,500 / ₦4,500. Since the 2026-10-22 reprice: Manager ₦30,000 gives ₦14,000 /
- * ₦20,000 / ₦27,000; Label ₦60,000 gives ₦25,000 / ₦40,000 / ₦55,000. Only
- * the Label retention Plans (_40000/_55000) exist; the Solo and Manager ones
- * need minting, and until then those offers stay hidden.
+ * ₦20,000 / ₦27,000; Label ₦100,000 (2026-10-26) gives ₦45,000 / ₦70,000 /
+ * ₦90,000. The retention Plans for the current prices need minting (the old
+ * Label _40000/_55000 ones no longer match), and until then those offers stay
+ * hidden.
  */
 export function budgetBands(monthlyPrice: number): BudgetBand[] {
   const step = bandStep(monthlyPrice);

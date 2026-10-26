@@ -16,6 +16,7 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { ThumbImage } from '@/components/shared/ThumbImage';
+import { ArtistCatalogueCard } from '@/components/artists/ArtistCatalogueCard';
 import { displayReleaseTitle } from '@/types/releases';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
@@ -226,6 +227,8 @@ export default function ArtistPageClient() {
           </>
         )}
       </SectionCard>
+
+      <ArtistCatalogueCard artistId={artist.id} />
     </div>
   );
 }

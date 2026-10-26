@@ -1095,9 +1095,14 @@ function TaskDetailModal() {
         role="dialog"
         aria-modal="true"
         aria-label="Activity detail"
-        className="task-sheet-panel urg-cartouche flex h-[92dvh] max-h-[92dvh] focus:outline-none w-full flex-col overflow-hidden rounded-t-2xl border-t border-stroke-strong bg-bg-surface sm:h-auto sm:rounded-2xl shadow-[0_28px_80px_-38px_rgb(var(--shadow-ink)/calc(0.68*var(--shadow-alpha-scale)))] sm:max-h-[85dvh] sm:max-w-2xl sm:border"
+        className="task-sheet-panel urg-cartouche flex h-[92dvh] max-h-[92dvh] focus:outline-none w-full flex-col overflow-hidden rounded-t-2xl border-t border-stroke-strong bg-bg-surface sm:h-[min(88dvh,56rem)] sm:max-h-[88dvh] sm:rounded-2xl shadow-[0_28px_80px_-38px_rgb(var(--shadow-ink)/calc(0.68*var(--shadow-alpha-scale)))] sm:max-w-2xl sm:border"
       >
-        <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 [overflow-anchor:none] sm:p-6">
+        {/* Fixed height from sm up (2026-10-26, founder call): the card spends
+            the viewport's height instead of shrinking to its content. The body
+            is a flex column so TaskDetailView can split it 1.618 : 1 between
+            the fields and the chat; scrolling stays as the fallback for a very
+            short window or a long list of attachments. */}
+        <div ref={bodyRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-5 [overflow-anchor:none] sm:p-6">
           <TaskDetailView
             isLoading={state.isLoading}
             isLoadingMembers={state.isLoadingMembers}

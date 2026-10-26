@@ -323,12 +323,12 @@ describe('tier plan codes and prices', () => {
     // Solo ₦5,000 since 2026-10-23; Manager ₦30,000 since 2026-10-22 (Label ₦60,000 unchanged).
     expect(getTierMinorUnit('solo', 'monthly')).toBe(5_000_00);
     expect(getTierMinorUnit('manager', 'monthly')).toBe(30_000_00);
-    expect(getTierMinorUnit('label', 'monthly')).toBe(60_000_00);
+    expect(getTierMinorUnit('label', 'monthly')).toBe(100_000_00);
     expect(getTierMinorUnit('solo', 'annual')).toBe(50_000_00);
     expect(getTierMinorUnit('manager', 'annual')).toBe(300_000_00);
     expect(getTierMinorUnit('solo', 'semiannual')).toBe(25_000_00);
     expect(getTierMinorUnit('manager', 'semiannual')).toBe(150_000_00);
-    expect(getTierMinorUnit('label', 'annual')).toBe(600_000_00);
+    expect(getTierMinorUnit('label', 'annual')).toBe(1_000_000_00);
   });
 });
 
@@ -453,7 +453,7 @@ describe('resolveCheckoutPurchase', () => {
       ok: true,
       planId: 'label',
       planCode: 'PLN_label_y',
-      amountMinorUnit: 600_000_00,
+      amountMinorUnit: 1_000_000_00,
       interval: 'annual',
     });
   });

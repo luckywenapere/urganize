@@ -220,7 +220,7 @@ describe('what one payment owes TRM', () => {
     const c = config({ costBasis: 'percent', revenueShareBps: 1000 });
     expect(pay('manager', 'monthly', c)?.owedKobo).toBe(300_000);
     expect(pay('manager', 'semiannual', c)?.owedKobo).toBe(1_500_000);
-    expect(pay('label', 'annual', c)?.owedKobo).toBe(6_000_000);
+    expect(pay('label', 'annual', c)?.owedKobo).toBe(10_000_000);
     expect(pay('label', 'annual', c)?.feeAnnualKobo).toBeNull();
   });
 

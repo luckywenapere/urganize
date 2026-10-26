@@ -197,6 +197,89 @@ function RecordTransferForm({ onDone }: { onDone: () => void }) {
   );
 }
 
+function SendPaymentLinkForm() {
+  const [form, setForm] = useState({ email: '', plan: 'manager', period: 'semiannual' });
+  const [status, setStatus] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
+  const [sending, setSending] = useState(false);
+  const set = (key: keyof typeof form) => (event: { target: { value: string } }) =>
+    setForm((current) => ({ ...current, [key]: event.target.value }));
+
+  const submit = async () => {
+    setSending(true);
+    setStatus(null);
+    try {
+      const response = await fetch('/api/admin/self-serve', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${await token()}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send_payment_link', ...form }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        emailed?: boolean;
+        planLine?: string;
+        payUrl?: string;
+      };
+      if (!response.ok) throw new Error(payload.error || 'Could not send that link.');
+      setStatus({
+        tone: 'ok',
+        text: payload.emailed
+          ? `Sent: ${payload.planLine}.`
+          : `Saved, but the email did not go. Send them this link yourself: ${payload.payUrl}`,
+      });
+      setForm((current) => ({ ...current, email: '' }));
+    } catch (error) {
+      setStatus({ tone: 'error', text: error instanceof Error ? error.message : 'Could not send that link.' });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <section className="mt-10 rounded-lg border border-stroke-default bg-bg-surface p-5">
+      <h2 className="font-display text-xl font-semibold text-content-primary">Send payment link</h2>
+      <p className="mt-1 text-sm text-content-secondary">
+        For Label and every 6-month or yearly plan. Send it after the onboarding call. It lets this email pay for this
+        plan and period, and nothing else.
+      </p>
+      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <label className="block text-sm text-content-secondary">
+          Their email
+          <input type="email" value={form.email} onChange={set('email')} className={FIELD} />
+        </label>
+        <label className="block text-sm text-content-secondary">
+          Plan
+          <select value={form.plan} onChange={set('plan')} className={FIELD}>
+            <option value="solo">Solo</option>
+            <option value="manager">Manager</option>
+            <option value="label">Label</option>
+          </select>
+        </label>
+        <label className="block text-sm text-content-secondary">
+          Period
+          <select value={form.period} onChange={set('period')} className={FIELD}>
+            <option value="monthly">Monthly</option>
+            <option value="semiannual">6 months</option>
+            <option value="annual">Yearly</option>
+          </select>
+        </label>
+      </div>
+      <div className="mt-4 flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => void submit()}
+          disabled={sending}
+          className="min-h-11 rounded-full bg-brand px-5 text-sm font-semibold text-content-inverse disabled:opacity-60"
+        >
+          {sending ? 'Sending…' : 'Send payment link'}
+        </button>
+        <p role="status" aria-live="polite" className={status?.tone === 'error' ? 'text-sm text-status-error' : 'text-sm text-content-secondary'}>
+          {status?.text ?? ''}
+        </p>
+      </div>
+    </section>
+  );
+}
+
 function MinutesInput({ team }: { team: TeamRow }) {
   const [value, setValue] = useState(String(team.founderMinutes));
   const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -280,6 +363,7 @@ export default function SelfServeAdminPageClient() {
       <CohortTable title="By plan" rows={data.summary.byPlan} />
       <CohortTable title="By how they paid" rows={data.summary.byMethod} />
 
+      <SendPaymentLinkForm />
       <RecordTransferForm onDone={() => void load()} />
 
       <section className="mt-10">

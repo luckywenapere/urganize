@@ -7,7 +7,7 @@ import { classifyText, looksLikeLyrics, type ImportKind } from './detect';
 import { matchRelease, type MatchableRelease } from './match';
 import { isWhatsAppExport, parseWhatsApp, type ChatMessage } from './whatsapp';
 
-export type ImportSource = 'whatsapp' | 'text' | 'photo';
+export type ImportSource = 'whatsapp' | 'text' | 'photo' | 'voice';
 
 export type ImportItem = {
   id: string;
@@ -154,6 +154,41 @@ export function buildImportPreview(
   };
 }
 
+/**
+ * Voice notes. Each transcript is kept whole as one block (a spoken thought is
+ * not a list), dated by when the clip was recorded when we know it. The same
+ * classifier labels it, so a rambling note that mentions a deadline reads as a
+ * to-do, and the UrgAns pass can refine it further.
+ */
+export function buildVoicePreview(
+  clips: { text: string; at: string | null }[],
+  releases: MatchableRelease[]
+): ImportPreview {
+  let items: ImportItem[] = [];
+  for (const clip of clips) {
+    const text = clip.text.trim();
+    if (!text) continue;
+    const classification = classifyText(text) ?? { kind: 'idea' as ImportKind, tags: ['idea' as ImportKind], amounts: [] };
+    const match = matchRelease(text, releases);
+    items.push({
+      id: '',
+      kind: classification.kind,
+      tags: classification.tags,
+      text: text.slice(0, MAX_NOTE_BODY_LENGTH - 200),
+      author: null,
+      at: clip.at,
+      releaseId: match.kind === 'one' ? match.release.id : null,
+      candidateReleaseIds: match.kind === 'many' ? match.candidates.map((release) => release.id) : [],
+      amountsNaira: classification.amounts,
+    });
+  }
+  items.sort((a, b) => (b.at || '').localeCompare(a.at || ''));
+  const truncated = items.length > MAX_IMPORT_ITEMS;
+  if (truncated) items = items.slice(0, MAX_IMPORT_ITEMS);
+  items = items.map((item, index) => ({ ...item, id: `i${index}` }));
+  return { source: 'voice', items, authors: [], messageCount: items.length, mediaSkipped: 0, truncated };
+}
+
 export function countImport(items: ImportItem[]): ImportCounts {
   let moneyTotalNaira = 0;
   for (const item of items) for (const amount of item.amountsNaira) moneyTotalNaira += amount;
@@ -177,7 +212,9 @@ const DAY_FORMAT = new Intl.DateTimeFormat('en-GB', {
 export function provenanceLine(item: ImportItem, source: ImportSource): string {
   const parts: string[] = [];
   if (item.author) parts.push(item.author);
-  parts.push(source === 'whatsapp' ? 'WhatsApp' : source === 'photo' ? 'Photo' : 'Brought in');
+  parts.push(
+    source === 'whatsapp' ? 'WhatsApp' : source === 'photo' ? 'Photo' : source === 'voice' ? 'Voice note' : 'Brought in'
+  );
   if (item.at) parts.push(DAY_FORMAT.format(new Date(item.at)));
   if (item.dueOn) parts.push(`Due ${DAY_FORMAT.format(new Date(`${item.dueOn}T00:00:00Z`))}`);
   return parts.join(' · ');
