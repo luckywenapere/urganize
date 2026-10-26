@@ -26,7 +26,10 @@ import { APP_ORIGIN } from "@/lib/app-urls";
 // from `tierHighlights`, which builds its lines from the same `limits` field
 // apps/web enforces against. So this page cannot advertise a seat count, a
 // release count or an UrgAns allowance that the product does not actually
-// apply — which is the failure this repo has shipped repeatedly with prices
+// apply (the distribution line too: DISTRIBUTION_ALLOWANCE, enforced by
+// apps/web/lib/distribution-limits.ts). Note this site only rebuilds when
+// apps/homepage changes, so a change in packages/pricing alone needs a nudge
+// here to reach urganize.app — which is the failure this repo has shipped repeatedly with prices
 // (four separate occasions of a page quoting one figure while checkout charged
 // another, all recorded in CLAUDE.md).
 //
