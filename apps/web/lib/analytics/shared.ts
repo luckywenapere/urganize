@@ -234,6 +234,7 @@ export interface AnalyticsEventPropertiesMap {
   planner_intake_opened: { source: 'empty_state' | 'note' | 'chip' | 'onboarding' | 'ideas'; has_release: boolean };
   planner_intake_step: { step: number };
   planner_intake_dismissed: { step: number };
+  planner_intake_skipped: { step: number };
   // Auto-plan at the end of onboarding (2026-10-17): the build the server
   // starts on its own, how long it took from the rollout's create request,
   // and why it failed when it did.

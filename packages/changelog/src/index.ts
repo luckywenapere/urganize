@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.179.1",
+    tag: "Rollouts",
+    date: "October 26, 2026",
+    highlights: [
+      "You can skip the planning questions and go straight to your rollout.",
+      "A small arrow shows when a question has more options below.",
+    ],
+  },
+  {
     version: "1.179.0",
     title: "The brief starts from your plan",
     tag: "Rollouts",
