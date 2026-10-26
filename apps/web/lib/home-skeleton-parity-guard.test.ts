@@ -18,7 +18,6 @@ const code = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\{
 const skeleton = code(read('components', 'loading', 'HomeSkeleton.tsx'));
 const oneThing = code(read('components', 'home', 'v2', 'OneThing.tsx'));
 const homeFour = code(read('components', 'home', 'v2', 'HomeFour.tsx'));
-const rows = code(read('components', 'home', 'v2', 'HomeRow.tsx'));
 const page = code(read('app', 'dashboard', 'home', 'HomePageClient.tsx'));
 const movesStore = code(read('stores', 'useNextMovesStore.ts'));
 
@@ -49,7 +48,7 @@ describe('Home skeleton matches the live Home (layout B)', () => {
   });
 
   it('keeps the blocks in the live order, with the live gaps', () => {
-    const order = ['greeting', 'one-thing', 'rows'].map((name) => column.indexOf(`data-skeleton="${name}"`));
+    const order = ['greeting', 'one-thing'].map((name) => column.indexOf(`data-skeleton="${name}"`));
     expect(order.every((at) => at > -1)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(homeFour).toMatch(/<HomeGreeting home=\{home\} \/>\s*<div className="mt-6">\s*<Fenced name="one-thing">/);
@@ -62,13 +61,9 @@ describe('Home skeleton matches the live Home (layout B)', () => {
     expect(column).toMatch(/aspect-\[1\.618\/1\][^"']*rounded-\[20px\]/);
   });
 
-  it('draws numbers as 56px rows with hairlines, not a rounded pill', () => {
-    expect(rows).toContain("HOME_ROWS = 'divide-y divide-stroke-subtle'");
-    expect(rows).toMatch(/HOME_ROW =[\s\S]*h-14/);
-    expect(column).toContain('divide-y divide-stroke-subtle" data-skeleton="rows"');
-    expect(column).toMatch(/flex h-14 items-center gap-3 px-1" data-skeleton="row"/);
-    // The old placeholder: a full-width rounded pill under the card.
-    expect(column).not.toMatch(/h-14 w-full rounded-\[20px\]/);
+  it('draws no rows under the card, like Home since 2026-10-26', () => {
+    expect(column).not.toContain('data-skeleton="rows"');
+    expect(homeFour).not.toContain('data-home-block="rows"');
   });
 });
 

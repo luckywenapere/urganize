@@ -98,10 +98,10 @@ describe('Home golden layout B (Oyin, Oct 18, 2026)', () => {
     expect(homeFour).toContain('headerReleaseId={release.id}');
   });
 
-  it('Done is a row that hides at 0 tasks and opens the rollout', () => {
-    expect(homeFour).toContain('function DoneRow');
-    expect(homeFour).toMatch(/const done = describeDone\(progress\);\s*if \(!done\) return null;/);
-    expect(homeFour).toContain('href={`/dashboard?release=${encodeURIComponent(releaseId)}`}');
+  it('has no Done, Waiting on others or grants rows under the card (2026-10-26)', () => {
+    expect(homeFour).not.toContain('<DoneRow');
+    expect(homeFour).not.toContain('<WaitingRow');
+    expect(homeFour).not.toContain('<OpportunityLine');
   });
 
   it('Waiting on others is a row, not a bordered card', () => {
@@ -112,11 +112,4 @@ describe('Home golden layout B (Oyin, Oct 18, 2026)', () => {
     expect(rows).toContain('font-mono');
   });
 
-  it('the rows sit together with hairlines between them', () => {
-    expect(rows).toContain("HOME_ROWS = 'divide-y divide-stroke-subtle'");
-    const band = homeFour.slice(homeFour.indexOf('data-home-block="rows"'));
-    expect(band.indexOf('<DoneRow')).toBeGreaterThan(-1);
-    expect(band.indexOf('<DoneRow')).toBeLessThan(band.indexOf('<WaitingRow'));
-    expect(band.indexOf('<WaitingRow')).toBeLessThan(band.indexOf('<OpportunityLine'));
-  });
 });

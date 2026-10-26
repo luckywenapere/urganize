@@ -53,10 +53,10 @@ export function OpportunitiesBlockSkeleton() {
 /**
  * The left column, drawn to Home's golden layout B (URG-356, URG-364): the
  * greeting (date, then "Good morning, Name.") with the bell top right, the
- * golden One Thing card, then 56px rows with hairlines (Done, Waiting, grants).
- * The rollout header with its phase bars and faces is gone (2026-10-26). Every
- * box takes the real block's classes and line boxes (HomeGreeting, OneThing,
- * HomeRow), so nothing moves when Home lands. Guarded by
+ * golden One Thing card. The rollout header with its phase bars and faces, and
+ * the rows under the card (Done, Waiting, grants), are gone (2026-10-26). Every
+ * box takes the real block's classes and line boxes (HomeGreeting, OneThing),
+ * so nothing moves when Home lands. Guarded by
  * lib/home-skeleton-parity-guard.test.ts.
  */
 function HomeColumnBlocks() {
@@ -80,17 +80,6 @@ function HomeColumnBlocks() {
       </div>
       <div className="mt-6" data-skeleton="one-thing">
         <SkeletonBlock className="aspect-[1.618/1] w-full rounded-[20px]" />
-      </div>
-      <div className="mt-4 divide-y divide-stroke-subtle" data-skeleton="rows">
-        {['w-16', 'w-32', 'w-44'].map((width, index) => (
-          <div key={width} className="flex h-14 items-center gap-3 px-1" data-skeleton="row">
-            <div className="min-w-0 flex-1">
-              <SkeletonBlock className={`h-4 rounded-md ${width}`} />
-            </div>
-            {index < 2 ? <SkeletonBlock className="h-4 w-14 shrink-0 rounded-md" /> : null}
-            <SkeletonBlock className="h-4 w-4 shrink-0 rounded-md" />
-          </div>
-        ))}
       </div>
     </div>
   );

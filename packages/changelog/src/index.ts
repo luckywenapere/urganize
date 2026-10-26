@@ -42,6 +42,10 @@ export type Release = {
 export const changelog: Release[] = [
   {
     version: "1.192.9",
+    tag: "App",
+    date: "October 26, 2026",
+    highlights: [
+      "Home is calmer: the Done, Waiting on others and grants rows are gone.",
     tag: "Rollouts",
     date: "October 26, 2026",
     highlights: [
