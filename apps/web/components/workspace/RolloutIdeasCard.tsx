@@ -107,8 +107,9 @@ export function RolloutIdeasCard({
   const [suggest, setSuggest] = useState<SuggestState>(null);
   const [applying, setApplying] = useState(false);
   // The owner's guided first run: idea, then invite, then the plan button.
-  const [stage, setStage] = useState<'idea' | 'invite' | 'plan' | 'waiting'>('idea');
+  const [stage, setStage] = useState<'idea' | 'invite' | 'plan' | 'waiting' | 'manual'>('idea');
   const [inviteSent, setInviteSent] = useState(false);
+  const inviteSentRef = useRef(false);
   // Ideas other people added since the owner last looked (flag off by default).
   // "Last looked" is kept on this device; the first look only sets the starting
   // point, so an old rollout never opens with a pile of old notes.
@@ -225,10 +226,11 @@ export function RolloutIdeasCard({
     if (loadFailed) {
       return canDraft ? (
         <PlanStage
+          mode="ready"
           sent={false}
-          waiting={false}
           onBuild={() => onDraftWithAi('')}
           onWait={() => undefined}
+          onAddMyself={onWriteMyself}
         />
       ) : null;
     }
@@ -531,21 +533,25 @@ export function RolloutIdeasCard({
             people={data.people}
             canInvite
             senderName={viewerName}
-            onSent={() => setInviteSent(true)}
-            onDone={() => setStage('plan')}
+            onSent={() => {
+              inviteSentRef.current = true;
+              setInviteSent(true);
+            }}
+            onDone={() => setStage(inviteSentRef.current ? 'plan' : 'manual')}
           />
         </div>
       </section>
     );
   }
 
-  if (guided && (stage === 'plan' || stage === 'waiting')) {
+  if (guided && stage !== 'idea') {
     return (
       <PlanStage
+        mode={stage === 'manual' ? 'manual' : stage === 'waiting' ? 'waiting' : 'ready'}
         sent={inviteSent}
-        waiting={stage === 'waiting'}
         onBuild={() => onDraftWithAi('')}
         onWait={() => setStage('waiting')}
+        onAddMyself={onWriteMyself}
       />
     );
   }
@@ -714,16 +720,45 @@ const FRESH_HEADING = 'font-display text-2xl font-semibold leading-tight text-co
 
 /** The plan button, shown only after the idea and invite steps (2026-10-26). */
 function PlanStage({
+  mode,
   sent,
-  waiting,
   onBuild,
   onWait,
+  onAddMyself,
 }: {
+  mode: 'ready' | 'waiting' | 'manual';
   sent: boolean;
-  waiting: boolean;
   onBuild: () => void;
   onWait: () => void;
+  onAddMyself: () => void;
 }) {
+  const waiting = mode === 'waiting';
+  if (mode === 'manual') {
+    // Skipped the invite: their own plan. Adding activities leads; UrgAns is one
+    // quiet link and never opens on its own.
+    return (
+      <section className={FRESH_COLUMN}>
+        <h2 className={FRESH_HEADING}>{COPY.manualTitle}</h2>
+        <p className="mt-2 text-sm text-content-secondary">{COPY.manualBody}</p>
+        <div className="mt-6 flex flex-col items-center gap-1">
+          <Button
+            type="button"
+            onClick={onAddMyself}
+            className="h-12 w-full max-w-[16rem] justify-center rounded-full px-8"
+          >
+            {COPY.addActivity}
+          </Button>
+          <button
+            type="button"
+            onClick={onBuild}
+            className="motion-focus min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary underline hover:text-content-primary"
+          >
+            {COPY.draftInstead}
+          </button>
+        </div>
+      </section>
+    );
+  }
   return (
     <section className={FRESH_COLUMN}>
       {sent ? (
@@ -764,6 +799,13 @@ function PlanStage({
             </button>
           ) : null}
           <p className="mt-1 text-xs text-content-tertiary">{COPY.fiveQuestions}</p>
+          <button
+            type="button"
+            onClick={onAddMyself}
+            className="motion-focus min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary underline hover:text-content-primary"
+          >
+            {COPY.addMyself}
+          </button>
         </div>
       )}
     </section>
