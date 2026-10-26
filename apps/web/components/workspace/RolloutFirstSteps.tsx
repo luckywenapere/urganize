@@ -300,7 +300,9 @@ export function RolloutFirstSteps({
         </div>
       ) : null}
 
-      <ol className="mt-4 grid gap-2 sm:grid-cols-3">
+      {/* One step is already the big action above; a chip for it is a cut-off echo. */}
+      {steps.length > 1 ? (
+      <ol className="mt-4 grid gap-2">
         {steps.map((step, index) => (
           <li key={step.key}>
             <button
@@ -333,6 +335,7 @@ export function RolloutFirstSteps({
           </li>
         ))}
       </ol>
+      ) : null}
     </section>
   );
 }
