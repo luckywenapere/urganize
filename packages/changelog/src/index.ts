@@ -41,6 +41,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.179.0",
+    title: "The brief starts from your plan",
+    tag: "Rollouts",
+    date: "October 26, 2026",
+    highlights: [
+      "Your brief now starts from the plan UrgAns built. The idea is written for you, and the goal, spend and channels show up as decisions you can keep or drop.",
+      "A rollout with no release date shows when each step is due, like \"4 weeks before\", instead of an empty list.",
+      "Draft with UrgAns works again.",
+    ],
+  },
+  {
     version: "1.178.5",
     tag: "Rollouts",
     listed: false,
