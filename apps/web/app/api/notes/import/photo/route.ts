@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { countBillingEventsSince, logBillingEvent } from '@/lib/billing-events-server';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
 import { PHOTO_DAILY_CAP, validatePhoto } from '@/lib/note-import/photo';
-import { getPhotoConfig, requestPhotoText } from '@/lib/note-import/photo-server';
+import { isPhotoReadingConfigured, requestPhotoText } from '@/lib/note-import/photo-server';
 import {
   createAdminClient,
   isNotesFeatureEnabled,
@@ -23,8 +23,7 @@ export async function POST(request: NextRequest) {
   const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
-  const config = getPhotoConfig();
-  if (!config) {
+  if (!isPhotoReadingConfigured()) {
     return NextResponse.json({ error: "Reading photos isn't available right now. Paste the text instead." }, { status: 503 });
   }
 
@@ -53,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const result = await requestPhotoText({ config, bytes: await file.arrayBuffer(), mimeType: file.type });
+  const result = await requestPhotoText({ bytes: await file.arrayBuffer(), mimeType: file.type });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
 
   if (team.primaryWorkspaceId) {

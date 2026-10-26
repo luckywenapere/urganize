@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateStructuredAiOutput, isAiConfigured, type AiUsage } from '@/lib/ai/provider';
+import { randomUUID } from 'node:crypto';
+import { isAiConfigured } from '@/lib/ai/provider';
+import { legacyModelFor } from '@/lib/ai/model-router';
+import { recordRequestUsage } from '@/lib/ai/usage-log-server';
+import { createUsageCollector } from '@/lib/credits/embedded';
+import { generateRoutedStructuredOutput } from '@/lib/ai/routed';
 import { countBillingEventsSince, logBillingEvent } from '@/lib/billing-events-server';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
 import {
@@ -91,31 +96,43 @@ export async function POST(request: NextRequest) {
 
   const sentIds = new Set(items.map((item) => item.id));
   const releaseIds = new Set(releases.map((release) => release.id));
-  let usage: AiUsage | null = null;
+  const collector = createUsageCollector(legacyModelFor('notes_import') ?? null);
 
   try {
-    const response = await generateStructuredAiOutput({
+    const response = await generateRoutedStructuredOutput({
+      surface: 'notes_import',
       messages: buildSortMessages(items, releases, new Date().toISOString().slice(0, 10)),
-      model: String(process.env.AI_NOTES_MODEL || '').trim() || undefined,
       jsonSchema: SORT_SCHEMA,
       timeoutMs: SORT_TIMEOUT_MS,
       maxRetries: 2,
       maxOutputTokens: 4000,
-      onUsage: (value) => {
-        usage = value;
-      },
+      onUsage: collector.onUsage,
+      onFailure: collector.onFailure,
       parse: (raw) => parseSortResponse(raw, sentIds, releaseIds),
       invalidFormatMessage: 'UrgAns answered in a shape we could not read.',
     });
 
+    await recordRequestUsage(adminClient, {
+      context: {
+        requestId: `notes_import:${randomUUID()}`,
+        feature: 'notes_import',
+        workspaceId: team.primaryWorkspaceId ?? null,
+        ownerUserId: team.ownerUserId ?? null,
+        actorUserId: auth.user.id,
+        releaseId: null,
+      },
+      calls: collector.calls,
+      failures: collector.failures,
+      creditsCharged: 0,
+    });
+
     if (team.primaryWorkspaceId) {
-      const seen = usage as AiUsage | null;
       await logBillingEvent(adminClient, {
         workspaceId: team.primaryWorkspaceId,
         ownerUserId: team.ownerUserId,
         actorUserId: auth.user.id,
         type: 'notes_import_sort',
-        metadata: { items: items.length, tokensIn: seen?.promptTokens ?? null, tokensOut: seen?.completionTokens ?? null, model: seen?.model ?? null },
+        metadata: { items: items.length },
       });
     }
 

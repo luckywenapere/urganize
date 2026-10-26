@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.182.0",
+    title: "Photos and UrgAns in Bring your notes",
+    tag: "Rollouts",
+    date: "October 26, 2026",
+    highlights: [
+      "Bring in a photo or screenshot of your notes. It reads the writing and sorts it.",
+      "Tap Sort with UrgAns to skip small talk, fix labels and spot dates and rollouts. It only reads the text on screen and does not save it.",
+    ],
+  },
+  {
     version: "1.181.2",
     tag: "Rollouts",
     listed: false,
