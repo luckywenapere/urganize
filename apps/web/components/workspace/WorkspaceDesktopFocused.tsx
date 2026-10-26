@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { SIDEBAR_SLOT_ROLLOUT, useSidebarSlot } from '@/components/shell/Sidebar';
 import { usePageBarCrumbSlot, usePageBarEndSlot } from '@/components/shell/PageBar';
-import { ChevronRight, Plus } from '@/components/icons';
+import { ChevronRight, Plus, Sparkles } from '@/components/icons';
 import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/lib/tasks';
@@ -34,6 +34,8 @@ type WorkspaceDesktopFocusedProps = {
    * what is showing: a scene has taken the panel otherwise, and "add an
    * activity" pointed at nothing on screen is noise. Absent, no button. */
   onNewActivity?: () => void;
+  /** Opens the idea box on a planned rollout. Absent, no button. */
+  onAddIdea?: () => void;
   /** Share and Archive: dialogs WorkspaceView owns. They sit behind the tab
    * row's overflow button. Change artist left the menu on Oct 18, 2026; it is
    * offered only in the distribution issue list now. */
@@ -102,6 +104,7 @@ export function WorkspaceDesktopFocused({
   onClose,
   closeLabel,
   onNewActivity,
+  onAddIdea,
   share,
   archive,
   deleteRollout,
@@ -179,6 +182,16 @@ export function WorkspaceDesktopFocused({
           </span>
           <ReleaseDeliveredMark total={tasksTotal} done={tasksDone} />
         </div>
+      ) : null}
+      {onAddIdea && hasPlan ? (
+        <button
+          type="button"
+          onClick={onAddIdea}
+          className="motion-focus motion-press inline-flex h-[34px] shrink-0 items-center justify-center gap-2 rounded-full border border-stroke-control px-[13px] text-[13px] font-medium text-content-primary transition-colors hover:bg-bg-hover"
+        >
+          <Sparkles className="h-4 w-4" aria-hidden="true" />
+          Add idea
+        </button>
       ) : null}
       {onNewActivity && hasPlan ? (
         <button

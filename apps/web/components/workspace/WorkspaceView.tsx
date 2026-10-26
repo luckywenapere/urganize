@@ -28,7 +28,7 @@ import { useStartTestRelease } from '@/components/releases/useStartTestRelease';
 import { TestReleaseBanner } from './TestReleaseBanner';
 import { EditorialPitchClosedBanner } from './EditorialPitchClosedBanner';
 import { DistributionStatusStrip } from './DistributionStatusStrip';
-import { RolloutFirstSteps, useRolloutFirstSteps } from './RolloutFirstSteps';
+import { ADD_IDEA_EVENT, RolloutFirstSteps, useRolloutFirstSteps } from './RolloutFirstSteps';
 import { RolloutIdeasCard } from './RolloutIdeasCard';
 import { isRolloutIdeasEnabled } from '@/lib/rollout-ideas';
 import { RolloutNextMoves } from '@/components/next-moves/RolloutNextMoves';
@@ -1414,6 +1414,13 @@ export function WorkspaceView() {
       />
     ) : null;
 
+  // The header's Add idea button (2026-10-26, founder): replaces the "New idea
+  // for this plan?" banner on a planned rollout. It opens the ideas card's box.
+  const addIdea =
+    ideasBanner && scopedReleaseSlim && scopedReleaseIsOwn && PLANNER_ENABLED && !isPlanGenerating
+      ? () => window.dispatchEvent(new CustomEvent(ADD_IDEA_EVENT, { detail: { releaseId: scopedReleaseSlim.id } }))
+      : undefined;
+
   const handleSelect = (releaseId: string) => {
     const nextScope = scopedReleaseId === releaseId ? null : releaseId;
     const stacked =
@@ -1688,6 +1695,7 @@ export function WorkspaceView() {
                   onBack={handleMobileBack}
                   showMeta={bodyIsMainView}
                   showSearch={panelBody === 'timeline' && scopedTasks.length > 0}
+                  onAddIdea={addIdea && scopedReleaseSlim.releaseDate && !onlyPreProductionWork(scopedTasks) ? addIdea : undefined}
                   below={
                     <>
                       {isDesktopViewport ? null : distributionStatusStrip}
@@ -1751,6 +1759,7 @@ export function WorkspaceView() {
                     ? () => openQuickCreate({ releaseId: scopedReleaseSlim.id, source: 'inline' })
                     : undefined
                 }
+                onAddIdea={addIdea}
                 banner={
                   <>
                     {newReleaseGuideBanner}

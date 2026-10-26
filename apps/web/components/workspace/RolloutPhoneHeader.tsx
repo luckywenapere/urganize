@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ChevronLeft, Menu, Search } from '@/components/icons';
+import { ChevronLeft, Menu, Search, Sparkles } from '@/components/icons';
 import { ArtistFace } from '@/components/shared/ArtistFace';
 import { rolloutMetaLine } from '@/lib/release-timeline';
 import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
@@ -36,8 +36,11 @@ export function RolloutPhoneHeader({
   onBack,
   showMeta,
   showSearch,
+  onAddIdea,
   below,
 }: {
+  /** Opens the idea box on a planned rollout. Absent, no button. */
+  onAddIdea?: () => void;
   releaseId: string;
   /** The cover, for the tile beside the title (Oct 24, 2026). */
   coverUrl: string | null | undefined;
@@ -80,6 +83,16 @@ export function RolloutPhoneHeader({
   const percent = total > 0 ? Math.round((done / total) * 100) : 0;
   const icons = (tour: boolean) => (
     <div className="flex shrink-0 items-center">
+      {onAddIdea ? (
+        <button
+          type="button"
+          onClick={onAddIdea}
+          className="motion-focus motion-press mr-1 inline-flex h-11 touch-manipulation items-center gap-1.5 rounded-full px-3 text-sm font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+        >
+          <Sparkles className="h-4 w-4" aria-hidden="true" />
+          Add idea
+        </button>
+      ) : null}
       {showSearch ? (
         <button
           type="button"

@@ -198,7 +198,10 @@ export function RolloutIdeasCard({
       if (target && target !== release.id) return;
       setError('');
       setTyping(true);
-      sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // After the render: the card may have been hidden until now.
+      window.requestAnimationFrame(() =>
+        sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      );
     };
     window.addEventListener(ADD_IDEA_EVENT, open);
     return () => window.removeEventListener(ADD_IDEA_EVENT, open);
@@ -372,32 +375,9 @@ export function RolloutIdeasCard({
     );
   }
 
-  // A planned rollout with no idea yet: one slim way in for the owner.
-  if (hasPlan && data.notes.length === 0 && canSuggest && !typing && !suggest) {
-    return (
-      <section
-        ref={sectionRef}
-        aria-labelledby={`ideas-title-${release.id}`}
-        className="rounded-[20px] border border-stroke-default bg-bg-surface px-5 py-4"
-      >
-        <div className="flex items-center gap-3">
-          <div className="min-w-0">
-            <h2 id={`ideas-title-${release.id}`} className="text-base font-semibold text-content-primary">
-              New idea for this plan?
-            </h2>
-            <p className="text-sm text-content-secondary">UrgAns suggests how your plan should change.</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setTyping(true)}
-            className="motion-focus ml-auto min-h-11 shrink-0 rounded-full px-3 text-sm font-medium text-content-secondary underline hover:text-content-primary"
-          >
-            {IDEA_CHANGES_COPY.addIdea}
-          </button>
-        </div>
-      </section>
-    );
-  }
+  // A planned rollout with no idea yet shows nothing here (2026-10-26, founder:
+  // the banner was too much). The header's Add idea button opens the box.
+  if (hasPlan && data.notes.length === 0 && canSuggest && !typing && !suggest) return null;
 
   const save = async () => {
     const content = draft.trim();
