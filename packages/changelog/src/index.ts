@@ -41,12 +41,41 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.178.6",
+    version: "1.179.3",
     tag: "Rollouts",
     listed: false,
     date: "October 26, 2026",
     highlights: [
       "Your idea is now a short brief your whole team can read: the goal, how you will do it, what is next and what is missing.",
+    ],
+  },
+  {
+    version: "1.179.2",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "A new rollout now scrolls like a normal page, with the idea and first steps side by side.",
+    ],
+  },
+  {
+    version: "1.179.1",
+    tag: "Rollouts",
+    date: "October 26, 2026",
+    highlights: [
+      "You can skip the planning questions and go straight to your rollout.",
+      "A small arrow shows when a question has more options below.",
+    ],
+  },
+  {
+    version: "1.179.0",
+    title: "The brief starts from your plan",
+    tag: "Rollouts",
+    date: "October 26, 2026",
+    highlights: [
+      "Your brief now starts from the plan UrgAns built. The idea is written for you, and the goal, spend and channels show up as decisions you can keep or drop.",
+      "A rollout with no release date shows when each step is due, like \"4 weeks before\", instead of an empty list.",
+      "Draft with UrgAns works again.",
     ],
   },
   {

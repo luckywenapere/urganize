@@ -1738,6 +1738,7 @@ export function WorkspaceView() {
                 panelActivitiesBanner={activitiesBannerNode}
                 panelActivitiesFooter={roleGapsFooter}
                 panelBannerReplacesEmptyState={bannerReplacesEmptyState}
+                pageScroll={scopedTasks.length === 0 && !simplePlanView}
                 simpleSide={
                   simplePlanView && isDesktopViewport ? (
                     <>

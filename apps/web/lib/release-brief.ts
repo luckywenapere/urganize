@@ -18,6 +18,8 @@
  */
 
 import { readPlanKey } from '@/lib/plan-focus';
+import { channelLabel, type Channel } from '@/lib/planner-v2/answers';
+import { readUndatedTaskMeta, relativeWhenLabel } from '@/lib/planner-v2/when';
 
 // ── Limits ───────────────────────────────────────────────────────────────────
 
@@ -57,6 +59,8 @@ export const BRIEF_COPY = {
   emptyTitle: 'One page for the whole team.',
   emptyLine: 'The idea, references and decisions. No more scrolling WhatsApp.',
   draft: 'Draft with UrgAns',
+  polish: 'Rewrite with UrgAns',
+  fromPlan: 'Written from your plan',
   writeYourself: 'Write it yourself',
   drafted: 'UrgAns drafted this',
   shareTitle: 'Share the brief',
@@ -95,7 +99,12 @@ export type BriefDateRow = {
   date: string;
   done: boolean;
   isRelease: boolean;
+  /** Set when the plan has no release day yet: "Now", "4 weeks before", "Pick a day". `date` is '' then. */
+  when?: string;
 };
+
+/** What the approved plan already says, offered to an empty brief. */
+export type BriefPlanSeed = { idea: string; decisions: string[] };
 
 export type BriefPerson = {
   key: string;
@@ -131,6 +140,8 @@ export type BriefPayload = {
   people: BriefPerson[];
   notes: BriefNote[];
   revisions: BriefRevision[];
+  /** From the approved plan (planner v2); null when there is none or it has nothing to offer. */
+  planSeed: BriefPlanSeed | null;
   share: { enabled: boolean; token: string | null };
   viewer: { id: string; canEdit: boolean; canManageShare: boolean };
 };
@@ -352,6 +363,10 @@ export function deriveBriefDates(input: {
   today: string;
 }): BriefDateRow[] {
   const releaseDay = lagosDay(input.releaseDate);
+  if (!releaseDay && !input.tasks.some((task) => lagosDay(task.due_date))) {
+    const undated = deriveUndatedBriefDates(input.tasks);
+    if (undated) return undated;
+  }
   const dated = input.tasks
     .map((task) => ({ task, day: lagosDay(task.due_date) }))
     .filter((entry): entry is { task: BriefTaskRow; day: string } => entry.day !== null)
@@ -390,6 +405,39 @@ export function deriveBriefDates(input: {
     out.push({ id: 'release', title: 'Release', date: releaseDay, done: false, isRelease: true });
   }
   return out;
+}
+
+/**
+ * Dates for a plan with no release day yet (planner v2 writes undated tasks
+ * that carry only an offset). Open key tasks, soonest first, then a
+ * "Pick a day" row for release day. Null when no task carries an offset.
+ */
+function deriveUndatedBriefDates(tasks: BriefTaskRow[]): BriefDateRow[] | null {
+  const entries = tasks
+    .filter((task) => String(task.status || '') !== 'cancelled')
+    .map((task) => ({ task, meta: readUndatedTaskMeta(task.metadata) }))
+    .filter((entry): entry is { task: BriefTaskRow; meta: NonNullable<ReturnType<typeof readUndatedTaskMeta>> } => entry.meta !== null);
+  if (entries.length === 0) return null;
+  const key = entries.filter(
+    (entry) => isMilestoneMetadata(entry.task.metadata) || readPlanKey(entry.task.metadata) === true
+  );
+  const pool = (key.length > 0 ? key : entries).filter((entry) => String(entry.task.status || '') !== 'done');
+  pool.sort(
+    (a, b) =>
+      (a.meta.now === b.meta.now ? 0 : a.meta.now ? -1 : 1) ||
+      a.meta.offset_days - b.meta.offset_days ||
+      (a.task.position ?? 0) - (b.task.position ?? 0)
+  );
+  const rows: BriefDateRow[] = pool.slice(0, MAX_DATE_ROWS - 1).map((entry) => ({
+    id: entry.task.id,
+    title: (entry.task.title || '').trim() || 'Untitled',
+    date: '',
+    done: false,
+    isRelease: false,
+    when: relativeWhenLabel(entry.meta.offset_days, entry.meta.now),
+  }));
+  rows.push({ id: 'release', title: 'Release', date: '', done: false, isRelease: true, when: 'Pick a day' });
+  return rows;
 }
 
 export type BriefProfile = { id: string; name: string | null; email: string | null };
@@ -542,6 +590,52 @@ export function formatEditedAgo(value: string | null, now: Date = new Date()): s
   return formatShortDay(value);
 }
 
+// ── From the plan ────────────────────────────────────────────────────────────
+
+/**
+ * The Idea and suggested decisions an approved planner-v2 plan already holds
+ * (its `built_for`, budget and picked channels). Pure and lenient: the plan
+ * document is stored JSON, so every field is checked. Null when it offers
+ * nothing, so the brief shows its normal empty state.
+ */
+export function buildBriefPlanSeed(planV2: unknown): BriefPlanSeed | null {
+  const root = planV2 && typeof planV2 === 'object' ? (planV2 as Record<string, unknown>) : null;
+  if (!root) return null;
+  const builtFor = root.built_for && typeof root.built_for === 'object' ? (root.built_for as Record<string, unknown>) : {};
+  const str = (value: unknown) => (typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '');
+  const summary = str(builtFor.summary);
+  const win = str(builtFor.win);
+  const constraints = Array.isArray(builtFor.constraints) ? builtFor.constraints.map(str).filter(Boolean) : [];
+
+  const idea = [
+    summary,
+    win ? `Goal: ${win.replace(/[.]+$/, '')}.` : '',
+    constraints.length > 0 ? `Keep in mind: ${constraints.slice(0, 3).join('; ').replace(/[.]+$/, '')}.` : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .slice(0, MAX_IDEA_LENGTH);
+
+  const decisions: string[] = [];
+  if (win) decisions.push(`Win: ${win}`.slice(0, MAX_DECISION_LENGTH));
+  const budget = root.budget && typeof root.budget === 'object' ? (root.budget as Record<string, unknown>) : null;
+  if (budget && typeof budget.total_naira === 'number' && Number.isFinite(budget.total_naira)) {
+    decisions.push(
+      budget.total_naira <= 0
+        ? 'Promo spend: ₦0, free channels only'
+        : `Promo spend: up to ₦${Math.round(budget.total_naira).toLocaleString('en-NG')}`
+    );
+  }
+  const answers = root.answers && typeof root.answers === 'object' ? (root.answers as Record<string, unknown>) : null;
+  const channels = Array.isArray(answers?.channels)
+    ? (answers.channels as unknown[]).filter((c): c is string => typeof c === 'string').map((c) => channelLabel(c as Channel))
+    : [];
+  if (channels.length > 0) decisions.push(`Channels: ${channels.join(', ')}`.slice(0, MAX_DECISION_LENGTH));
+
+  if (!idea && decisions.length === 0) return null;
+  return { idea, decisions };
+}
+
 // ── UrgAns draft prompt ─────────────────────────────────────────────────────
 
 export type BriefDraftContext = {
@@ -552,6 +646,8 @@ export type BriefDraftContext = {
   genre: string;
   description: string;
   taskTitles: string[];
+  /** The approved plan's own summary and goal, when there is one. */
+  planNotes?: string;
 };
 
 export function buildBriefDraftMessages(context: BriefDraftContext): { role: 'system' | 'user'; content: string }[] {
@@ -562,6 +658,7 @@ export function buildBriefDraftMessages(context: BriefDraftContext): { role: 'sy
     context.releaseDate ? `Release day: ${formatBriefDay(lagosDay(context.releaseDate))}` : '',
     context.genre ? `Genre: ${context.genre}` : '',
     context.description ? `What the team wrote about it: ${context.description}` : '',
+    context.planNotes ? `What the plan was built for: ${context.planNotes}` : '',
     context.taskTitles.length > 0 ? `Some of the plan: ${context.taskTitles.slice(0, 15).join('; ')}` : '',
   ].filter(Boolean);
 

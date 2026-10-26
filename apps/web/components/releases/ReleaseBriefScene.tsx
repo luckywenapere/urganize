@@ -278,7 +278,7 @@ function DatesBlock({ brief }: { brief: BriefPayload }) {
               {row.title}
             </span>
             <span className={`shrink-0 font-mono text-[12px] ${row.isRelease ? 'text-brand' : 'text-content-secondary'}`}>
-              {formatBriefDay(row.date)}
+              {row.when ?? formatBriefDay(row.date)}
             </span>
           </li>
         ))}
@@ -516,6 +516,41 @@ function DecisionsBlock({
 }) {
   const [value, setValue] = useState('');
   const [saving, setSaving] = useState(false);
+  const dismissKey = `urganize.brief.dismissed.${brief.releaseId}`;
+  const [dismissed, setDismissed] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(dismissKey);
+      setDismissed(raw ? (JSON.parse(raw) as string[]) : []);
+    } catch {
+      setDismissed([]);
+    }
+  }, [dismissKey]);
+  const suggestions = (brief.planSeed?.decisions ?? []).filter(
+    (text) => !dismissed.includes(text) && !brief.decisions.some((decision) => decision.body === text)
+  );
+  const dismiss = (text: string) => {
+    const next = [...dismissed, text];
+    setDismissed(next);
+    try {
+      window.localStorage.setItem(dismissKey, JSON.stringify(next));
+    } catch {
+      // Dismissals are a convenience; they come back next visit if storage is blocked.
+    }
+  };
+
+  const postDecision = async (body: string): Promise<boolean> => {
+    const result = await call<{ decision: { id: string; body: string; createdBy: string; createdAt: string } }>(
+      `/api/releases/${encodeURIComponent(brief.releaseId)}/brief/decisions`,
+      { method: 'POST', body: JSON.stringify({ body }) }
+    );
+    if (!result.ok) {
+      onToast(result.error, 'error');
+      return false;
+    }
+    onAdded({ ...result.data.decision, authorName: 'You' });
+    return true;
+  };
 
   const add = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -562,6 +597,28 @@ function DecisionsBlock({
             {decision.createdBy === brief.viewer.id || brief.viewer.canManageShare ? (
               <RemoveButton label="Delete decision" onClick={() => remove(decision)} />
             ) : null}
+          </div>
+        ))}
+        {suggestions.map((text) => (
+          <div key={text} className={`flex items-center gap-2 px-3.5 py-3 ${ROW_DIVIDER}`}>
+            <p className="min-w-0 flex-1 text-sm text-content-secondary">
+              {text}
+              <span className="ml-2 font-mono text-[11px] text-content-tertiary">From your plan</span>
+            </p>
+            <button
+              type="button"
+              onClick={() => void postDecision(text)}
+              className="motion-focus shrink-0 text-sm font-semibold text-brand"
+            >
+              Keep
+            </button>
+            <button
+              type="button"
+              onClick={() => dismiss(text)}
+              className="motion-focus shrink-0 text-sm text-content-tertiary hover:text-content-primary"
+            >
+              Drop
+            </button>
           </div>
         ))}
         <form onSubmit={add} className={`flex min-h-11 items-center gap-2 px-3.5 ${ROW_DIVIDER}`}>
@@ -758,6 +815,28 @@ export function ReleaseBriefScene({ releaseId, onToast }: Props) {
     await load();
   };
 
+  const keepPlanIdea = async (text: string) => {
+    if (settling) return;
+    setSettling(true);
+    const result = await call<{ idea: string; updatedAt: string }>(
+      `/api/releases/${encodeURIComponent(releaseId)}/brief`,
+      { method: 'PATCH', body: JSON.stringify({ idea: text }) }
+    );
+    setSettling(false);
+    if (!result.ok) {
+      onToast(result.error, 'error');
+      return;
+    }
+    await load();
+  };
+
+  const editPlanIdea = (text: string) => {
+    setIdea(text);
+    pendingIdea.current = text;
+    setWriting(true);
+    requestAnimationFrame(() => ideaRef.current?.focus());
+  };
+
   const discardDraft = async () => {
     if (!draft) return;
     const current = draft;
@@ -890,12 +969,33 @@ export function ReleaseBriefScene({ releaseId, onToast }: Props) {
         <div className={`${LIST} mt-7 p-[22px]`}>
           <p className="font-display text-[22px] leading-snug text-content-primary">{BRIEF_COPY.emptyTitle}</p>
           <p className="mt-1.5 text-sm text-content-secondary">{BRIEF_COPY.emptyLine}</p>
-          <button type="button" onClick={startDraft} disabled={drafting} className={`${PRIMARY} mt-[18px]`}>
+          {brief.planSeed?.idea ? (
+            <div className="mt-[18px] rounded-2xl border border-stroke-default p-4">
+              <p className="font-mono text-[11px] text-content-tertiary">{BRIEF_COPY.fromPlan}</p>
+              <p className="mt-2 text-[15px] leading-[1.55] text-content-primary">{brief.planSeed.idea}</p>
+              <div className="mt-3.5 flex gap-2">
+                <button type="button" onClick={() => void keepPlanIdea(brief.planSeed!.idea)} disabled={settling} className={`${PRIMARY} h-11 flex-1 text-sm`}>
+                  {settling ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : 'Keep'}
+                </button>
+                <button type="button" onClick={() => editPlanIdea(brief.planSeed!.idea)} className={`${SECONDARY} flex-1`}>
+                  Edit
+                </button>
+              </div>
+            </div>
+          ) : null}
+          <button
+            type="button"
+            onClick={startDraft}
+            disabled={drafting}
+            className={`${brief.planSeed?.idea ? SECONDARY : PRIMARY} mt-[18px]`}
+          >
             {drafting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                 UrgAns is writing…
               </>
+            ) : brief.planSeed?.idea ? (
+              BRIEF_COPY.polish
             ) : (
               BRIEF_COPY.draft
             )}

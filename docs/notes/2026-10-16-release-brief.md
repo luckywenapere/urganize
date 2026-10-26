@@ -12,3 +12,9 @@ One page per rollout that the team reads instead of scrolling WhatsApp (Bamidele
 - **View link** `/brief/[token]` (24-character token, noindex, dark-locked, /pack/[token]'s pattern): artist, title, release day, Idea, References, Dates. Never decisions, people or notes.
 - **Not built:** image upload (links to images only), editing a decision, comments, notifications, real-time co-editing (last write wins).
 - **Migration not applied** at build time. Until it is, the scene shows "Couldn't load the brief." (the routes answer 503).
+
+## From the plan (2026-10-26, v1.179.0, founder approved mocks)
+
+- **Why Draft with UrgAns failed:** the live database never had `urgans_actions` (migration `20260903100000_urgans_actions.sql` was not applied). A two-step action's run could not be logged, so the server returned an empty action id and the client rejected the draft (and Keep had no row to apply). Applied 2026-10-26 with the service_role and authenticated grants. Any two-step embedded action had the same fault.
+- **Seed from the plan:** `loadPlanSeed` reads the newest approved `release_plan_drafts` row's `doc.planner_v2` and `buildBriefPlanSeed` (pure) makes an Idea (summary, goal, constraints) and decisions (win, spend, channels). No model call, no credits. The empty brief shows it as "Written from your plan" with Keep or Edit; Decisions lists the rest as "From your plan" with Keep or Drop (drops live in localStorage per rollout). "Rewrite with UrgAns" stays, and the draft prompt now gets the plan's summary (`release-draft-brief-v2`).
+- **Dates for a plan with no release day:** `deriveBriefDates` shows `metadata.planner_v2` timing ("Now", "4 weeks before") and a "Pick a day" release row; `BriefDateRow.when` carries it, `date` is empty. The public `/brief/[token]` page reads it the same way.

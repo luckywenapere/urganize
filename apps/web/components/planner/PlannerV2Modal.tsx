@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Check, ChevronLeft, Loader2, RefreshCw, X } from '@/components/icons';
+import { Check, ChevronDown, ChevronLeft, Loader2, RefreshCw, X } from '@/components/icons';
 
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { useDialogFocus } from '@/lib/use-dialog-focus';
@@ -254,6 +254,8 @@ export function PlannerV2Modal() {
 
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const [moreBelow, setMoreBelow] = useState(false);
   const open = Boolean(intakePayload);
   const busy = view === 'writing' || view === 'applying';
   const prefill = intakePayload?.prefill;
@@ -361,6 +363,37 @@ export function PlannerV2Modal() {
           // The rollout stays, as before.
         }
       })();
+    }
+  }, [busy, closeIntake, intakePayload, loadCommandCenter, position, router]);
+
+  // The arrow over the bottom edge shows while more of the question is below.
+  const measureScroll = useCallback(() => {
+    const node = scrollerRef.current;
+    setMoreBelow(Boolean(node && node.scrollHeight - node.scrollTop - node.clientHeight > 8));
+  }, []);
+  useEffect(() => {
+    if (!open) return;
+    measureScroll();
+    const node = scrollerRef.current;
+    if (!node || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measureScroll);
+    observer.observe(node);
+    if (node.firstElementChild) observer.observe(node.firstElementChild);
+    return () => observer.disconnect();
+  }, [open, step, view, measureScroll]);
+
+  // Skip the questions: keep the rollout as it is (never discard it, unlike the
+  // close button on a rollout made only for this planner) and open it empty.
+  // The workspace's plan card still offers the planner later.
+  const skip = useCallback(() => {
+    if (busy) return;
+    captureAnalyticsEvent(createPostHogEvent('planner_intake_skipped', { step: position }));
+    const target = intakePayload?.releaseId ?? null;
+    closeIntake();
+    clearStored();
+    if (target) {
+      void loadCommandCenter({ force: true });
+      router.push(`/dashboard?release=${target}`);
     }
   }, [busy, closeIntake, intakePayload, loadCommandCenter, position, router]);
 
@@ -956,7 +989,12 @@ export function PlannerV2Modal() {
           ) : null}
         </div>
 
-        <div className="relative min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-5 sm:px-7">
+        <div className="relative flex min-h-0 flex-1 flex-col">
+        <div
+          ref={scrollerRef}
+          onScroll={measureScroll}
+          className="relative min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-5 sm:px-7"
+        >
           <div key={`${view}-${step}`} className="planner-v2-step">
             <p className="text-sm font-medium text-brand">{eyebrow}</p>
             <h2
@@ -1003,6 +1041,18 @@ export function PlannerV2Modal() {
           </div>
         </div>
 
+        {moreBelow ? (
+          <button
+            type="button"
+            aria-label="Scroll down for more"
+            onClick={() => scrollerRef.current?.scrollBy({ top: 200, behavior: 'smooth' })}
+            className="motion-focus absolute bottom-2 left-1/2 grid h-9 w-9 -translate-x-1/2 place-items-center rounded-full border border-stroke-strong bg-bg-surface text-content-secondary transition-colors hover:text-content-primary"
+          >
+            <ChevronDown className="h-4 w-4" aria-hidden="true" />
+          </button>
+        ) : null}
+        </div>
+
         {!busy ? (
           <div className="relative shrink-0 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 sm:px-7 sm:pb-6">
             {view === 'steps' ? (
@@ -1019,6 +1069,13 @@ export function PlannerV2Modal() {
                   }`}
                 >
                   {isLast ? 'Build my plan' : 'Continue'}
+                </button>
+                <button
+                  type="button"
+                  onClick={skip}
+                  className="motion-focus mt-3 block w-full text-center text-sm text-content-tertiary transition-colors hover:text-content-primary"
+                >
+                  Skip, I’ll plan it myself
                 </button>
                 {showBlockerHint ? (
                   <p

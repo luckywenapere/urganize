@@ -3,7 +3,7 @@ import { generateRoutedPlainText } from '@/lib/ai/routed';
 import { legacyModelFor, summarizeTrace, type RoutingTrace } from '@/lib/ai/model-router';
 import { createUsageCollector, sumTokens } from '@/lib/credits/embedded';
 import { buildBriefDraftMessages, cleanBriefDraft, URGANS_ACTOR_LABEL } from '@/lib/release-brief';
-import { BRIEFS_TABLE, saveBriefIdea } from '@/lib/release-brief-server';
+import { BRIEFS_TABLE, loadPlanSeed, saveBriefIdea } from '@/lib/release-brief-server';
 import type { UrgansActionDefinition } from '../types';
 
 /**
@@ -46,12 +46,12 @@ export const releaseDraftBriefAction: UrgansActionDefinition<Input, Output, Resu
   label: 'Draft the brief',
   objectTypes: ['release'],
   access: 'team_write',
-  promptVersion: 'release-draft-brief-v1',
+  promptVersion: 'release-draft-brief-v2',
 
   async execute({ admin, objectId }) {
     if (!isAiConfigured()) return { ok: false, status: 503, error: NOT_CONFIGURED };
 
-    const [releaseResult, metadataResult, tasksResult] = await Promise.all([
+    const [releaseResult, metadataResult, tasksResult, planSeed] = await Promise.all([
       admin
         .from('releases')
         .select('title,artist_name,release_type,release_date,description')
@@ -64,6 +64,7 @@ export const releaseDraftBriefAction: UrgansActionDefinition<Input, Output, Resu
         .eq('release_id', objectId)
         .order('due_date', { ascending: true, nullsFirst: false })
         .limit(40),
+      loadPlanSeed(admin, objectId),
     ]);
     if (releaseResult.error || !releaseResult.data) {
       return { ok: false, status: 404, error: 'Rollout not found.' };
@@ -90,6 +91,7 @@ export const releaseDraftBriefAction: UrgansActionDefinition<Input, Output, Resu
           genre,
           description: text(release.description),
           taskTitles,
+          planNotes: planSeed?.idea || undefined,
         }),
         timeoutMs: TIMEOUT_MS,
         maxRetries: 2,

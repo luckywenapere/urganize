@@ -6,6 +6,7 @@ import {
   SHARE_TOKEN_LENGTH,
   canManageBriefShare,
   cleanBriefDraft,
+  buildBriefPlanSeed,
   deriveBriefDates,
   deriveBriefPeople,
   firstName,
@@ -254,5 +255,53 @@ describe('isBriefEmpty and the UrgAns draft cleanup', () => {
   it('strips wrappers the model sometimes adds', () => {
     expect(cleanBriefDraft('**Idea:** "A late-night song.\n\nWarm."')).toBe('A late-night song. Warm.');
     expect(cleanBriefDraft('   ')).toBeNull();
+  });
+});
+
+describe('undated plans in the brief', () => {
+  const task = (id: string, offset: number, now = false, status = 'todo') => ({
+    id,
+    title: `Task ${id}`,
+    status,
+    due_date: null,
+    assigned_to_user_id: null,
+    metadata: { planner_v2: { offset_days: offset, now } },
+    position: 0,
+  });
+
+  it('shows relative timing and a Pick a day release row', () => {
+    const rows = deriveBriefDates({
+      tasks: [task('b', -28), task('a', -60, true), task('c', -14)],
+      releaseDate: null,
+      today: '2026-10-26',
+    });
+    expect(rows.map((r) => r.when)).toEqual(['Now', '4 weeks before', '2 weeks before', 'Pick a day']);
+    expect(rows[rows.length - 1].isRelease).toBe(true);
+  });
+
+  it('leaves done tasks out', () => {
+    const rows = deriveBriefDates({ tasks: [task('a', -28, false, 'done')], releaseDate: null, today: '2026-10-26' });
+    expect(rows.map((r) => r.id)).toEqual(['release']);
+  });
+});
+
+describe('buildBriefPlanSeed', () => {
+  it('turns the plan into an idea and decisions', () => {
+    const seed = buildBriefPlanSeed({
+      built_for: { summary: 'A Lagos single for Audiomack first.', win: '50k streams in 6 weeks', constraints: ['Two people'] },
+      budget: { total_naira: 0 },
+      answers: { channels: ['audiomack', 'tiktok'] },
+    });
+    expect(seed?.idea).toBe('A Lagos single for Audiomack first. Goal: 50k streams in 6 weeks. Keep in mind: Two people.');
+    expect(seed?.decisions).toEqual([
+      'Win: 50k streams in 6 weeks',
+      'Promo spend: ₦0, free channels only',
+      'Channels: Audiomack, TikTok',
+    ]);
+  });
+
+  it('offers nothing for a plan with no content', () => {
+    expect(buildBriefPlanSeed(null)).toBeNull();
+    expect(buildBriefPlanSeed({ built_for: {} })).toBeNull();
   });
 });
