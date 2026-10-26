@@ -135,6 +135,9 @@ export const BILLING_EVENT_TYPES = [
    *  is. This row exists to enforce a per-team daily transcription cap
    *  (VOICE_DAILY_CAP) as an abuse guard, nothing more. */
   'urgans_voice_transcription',
+  /** Bring your notes (2026-10-26): one batch of cards sorted by UrgAns, and one photo read. Daily caps only; nothing is charged yet. */
+  'notes_import_sort',
+  'notes_import_photo',
   /** Curator pitch payments (2026-09-25): the moments that need the founder.
    *  Mostly about a CURATOR, who may have no team, which is why these rows can
    *  carry a null workspace_id. Each one also emails BILLING_ALERTS_EMAIL — see

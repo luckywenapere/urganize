@@ -18,6 +18,7 @@
  */
 
 importScripts('/sw-push.js');
+importScripts('/sw-share-target.js');
 
 // Versioned to the deployment (2026-10-15, perf pass URG-314). The page
 // registers this script as /sw-offline.js?v=<build id> (lib/offline/register.ts,

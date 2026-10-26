@@ -30,6 +30,39 @@ export default function manifest(): MetadataRoute.Manifest {
     // for scalable icons and leaves a PNG's size ambiguous. This file is
     // 1004x1004 — if it is ever replaced, change this to match or the
     // desktop install offer quietly stops appearing.
+    // Bring your notes: Urganize appears in the phone's share sheet. A shared chat
+    // export, voice note, photo or text is caught by public/sw-share-target.js
+    // and opens Bring your notes with it loaded. Android Chrome only; iPhone
+    // Safari has no share targets for web apps.
+    share_target: {
+      action: '/share-target',
+      method: 'POST',
+      enctype: 'multipart/form-data',
+      params: {
+        title: 'title',
+        text: 'text',
+        url: 'url',
+        // The manifest spec wants {name, accept}; Next's type says File.
+        files: [
+          {
+            name: 'files',
+            accept: [
+              'text/plain',
+              'text/markdown',
+              '.txt',
+              '.md',
+              '.docx',
+              '.zip',
+              'application/zip',
+              'application/x-zip-compressed',
+              'image/*',
+              'audio/*',
+              '.opus',
+            ],
+          },
+        ],
+      } as unknown as NonNullable<MetadataRoute.Manifest['share_target']>['params'],
+    },
     icons: [
       {
         src: '/images/urganize-logo-square.png',

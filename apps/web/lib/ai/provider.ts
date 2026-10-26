@@ -642,6 +642,79 @@ export async function generateStructuredAiOutput<T>({
   throw lastError instanceof Error ? lastError : new Error('Unknown AI generation error');
 }
 
+/**
+ * Reads the text out of one image (Bring your notes, photos). Same gateway,
+ * key and error mapping as the generators above, but the user turn carries an
+ * image, which the string-only AiMessage cannot, so it is its own small call.
+ * One attempt: sending a picture twice doubles the worst case. Only the
+ * OpenAI-protocol gateways accept images; the Ollama one throws.
+ */
+export async function readImageText({
+  system,
+  prompt,
+  imageDataUrl,
+  model,
+  timeoutMs = 40_000,
+  maxOutputTokens = 3_000,
+  onUsage,
+}: {
+  system: string;
+  prompt: string;
+  imageDataUrl: string;
+  model?: string;
+  timeoutMs?: number;
+  maxOutputTokens?: number;
+  onUsage?: (usage: AiUsage) => void;
+}): Promise<{ text: string; model: string }> {
+  const config = getAiGatewayConfig();
+  if (!config || !config.usesOpenAiProtocol) {
+    throw new Error('AI model environment is not configured for images');
+  }
+  const resolvedModel = model || config.defaultModel;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(`${buildOpenAiBase(config.apiBase, config.isOpenRouter)}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
+      body: JSON.stringify({
+        model: resolvedModel,
+        temperature: 0,
+        max_tokens: maxOutputTokens,
+        messages: [
+          { role: 'system', content: system },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              { type: 'image_url', image_url: { url: imageDataUrl, detail: 'high' } },
+            ],
+          },
+        ],
+      }),
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const rawText = await response.text().catch(() => '');
+      let payload: Record<string, unknown> | null = null;
+      try {
+        payload = rawText ? (JSON.parse(rawText) as Record<string, unknown>) : null;
+      } catch {
+        payload = null;
+      }
+      throw parseProviderError(response.status, payload, rawText);
+    }
+    const rawText = await response.text().catch(() => '');
+    const payload = parseAiGatewayResponse(rawText) ?? {};
+    const usage = extractAiUsage(payload);
+    if (usage && onUsage) onUsage({ ...usage, cachedTokens: extractCachedTokens(payload), model: resolvedModel });
+    // A photo with no writing in it comes back empty. That is an answer, not a failure.
+    return { text: extractMessageContent(payload), model: resolvedModel };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 type GeneratePlainTextAiOutputOptions = {
   messages: AiMessage[];
   timeoutMs?: number;

@@ -16,6 +16,7 @@
  */
 
 importScripts('/sw-push.js');
+importScripts('/sw-share-target.js');
 
 const OFFLINE_CACHE_PREFIX = 'urganize-offline-';
 

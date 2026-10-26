@@ -21,6 +21,6 @@ One page per rollout that the team reads instead of scrolling WhatsApp (Bamidele
 
 ## New-rollout flow (2026-10-26, v1.180.0, mocks approved)
 
-- A rollout with no activities scrolls as a page on a computer and shows the plan card first (`pageScroll` in `WorkspaceDesktopFocused`), the idea and first-steps cards side by side below it. The phone order is unchanged.
+- A rollout with no activities scrolls as a page on a computer and shows the idea and first-steps cards first, then the plan card (`pageScroll` in `WorkspaceDesktopFocused`) (idea first, then plan, 2026-10-26 reversal: the idea → chime in → plan flow leads). The phone order is unchanged.
 - A built plan lands as `PlanLandedCard` (count, the planner's summary, the first three open steps, "Read the brief") instead of a toast. State is `planLanded` in `WorkspaceView`, cleared on dismiss.
 - The idea card's notes lead the brief's suggested Idea (`buildBriefPlanSeed(doc, notes)`), with or without a plan.

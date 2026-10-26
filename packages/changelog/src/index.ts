@@ -41,12 +41,50 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.181.2",
+    version: "1.183.1",
     tag: "Rollouts",
     listed: false,
     date: "October 26, 2026",
     highlights: [
       "Add a new idea to a rollout that already has a plan. UrgAns suggests activities to add and dates to move, and nothing changes until you tap Apply.",
+    ],
+  },
+  {
+    version: "1.183.0",
+    title: "Voice notes and the share sheet",
+    tag: "Rollouts",
+    date: "October 26, 2026",
+    highlights: [
+      "Record a voice note, or bring ones from WhatsApp. Urganize writes them down and sorts them like any other note.",
+      "On Android, share a chat, a voice note, a photo or some text straight to Urganize from WhatsApp. It opens ready to sort.",
+    ],
+  },
+  {
+    version: "1.182.0",
+    title: "Photos and UrgAns in Bring your notes",
+    tag: "Rollouts",
+    date: "October 26, 2026",
+    highlights: [
+      "Bring in a photo or screenshot of your notes. It reads the writing and sorts it.",
+      "Tap Sort with UrgAns to skip small talk, fix labels and spot dates and rollouts. It only reads the text on screen and does not save it.",
+    ],
+  },
+  {
+    version: "1.181.3",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "The idea card holds its place while it loads, so the page no longer jumps.",
+    ],
+  },
+  {
+    version: "1.181.2",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "On a new rollout the idea comes first, then the plan.",
     ],
   },
   {
