@@ -119,7 +119,7 @@ describe('makeCatalogueLink', () => {
       expect.objectContaining({
         title: 'Dai Dai',
         artist_name: 'Wizkid',
-        external_release_id: 'catalogue:rel-1',
+        external_release_id: 'rel-1',
         upc: '196874528037',
         isrc: 'USQX92602558',
         artwork_url: 'https://cdn.example/c.jpg',
@@ -147,6 +147,37 @@ describe('makeCatalogueLink', () => {
     const failing = altlink(vi.fn(async (_input: CreateInput) => Promise.reject(new AltlinkError(400, 'invalid_request', 'release_date must be in the future'))));
     await makeCatalogueLink(db.client, args(failing.client));
     expect(db.tables.catalogue_smart_links[0].last_error).toBe('invalid_request: release_date must be in the future');
+  });
+
+  it('tries again with the minimum request when the full one fails validation, then adds the cover', async () => {
+    const calls: CreateInput[] = [];
+    const patchLink = vi.fn(async () => null);
+    const createLink = vi.fn(async (input: CreateInput) => {
+      calls.push(input);
+      if (calls.length === 1) throw new AltlinkError(400, 'invalid_request', 'Request body failed validation.', '{"fields":["artwork_url"]}');
+      return { id: 'al-1', slug: 'dai-dai', url: 'https://altlink.co/dai-dai' };
+    });
+    const client = { createLink, patchLink } as unknown as AltlinkClient;
+    const db = fakeDb(seed());
+    const out = await makeCatalogueLink(db.client, args(client));
+    expect(out.kind).toBe('made');
+    expect(calls).toHaveLength(2);
+    expect(calls[0]).toHaveProperty('artwork_url');
+    expect(calls[0]).toHaveProperty('creator_email');
+    expect(calls[1]).not.toHaveProperty('artwork_url');
+    expect(calls[1]).not.toHaveProperty('creator_email');
+    expect(calls[1]).toMatchObject({ title: 'Dai Dai', upc: '196874528037', isrc: 'USQX92602558', external_release_id: 'rel-1' });
+    expect(patchLink).toHaveBeenCalledWith('al-1', { artwork_url: 'https://cdn.example/c.jpg' });
+  });
+
+  it('keeps which field Altlink named when even the minimum fails', async () => {
+    const createLink = vi.fn(async (_input: CreateInput) => {
+      throw new AltlinkError(400, 'invalid_request', 'Request body failed validation.', '{"fields":["upc"]}');
+    });
+    const db = fakeDb(seed());
+    expect((await makeCatalogueLink(db.client, args({ createLink } as unknown as AltlinkClient))).kind).toBe('failed');
+    expect(createLink).toHaveBeenCalledTimes(2);
+    expect(db.tables.catalogue_smart_links[0].last_error).toBe('invalid_request: Request body failed validation. {"fields":["upc"]}');
   });
 
   it('answers a second tap with the same link and calls Altlink once', async () => {

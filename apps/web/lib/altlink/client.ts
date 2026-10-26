@@ -10,11 +10,14 @@ const MAX_ATTEMPTS = 4;
 export class AltlinkError extends Error {
   status: number;
   code: string;
-  constructor(status: number, code: string, message: string) {
+  /** Whatever else Altlink put in its error body (which field failed), kept short. Never shown to a user. */
+  detail: string | null;
+  constructor(status: number, code: string, message: string, detail: string | null = null) {
     super(message);
     this.name = 'AltlinkError';
     this.status = status;
     this.code = code;
+    this.detail = detail;
   }
 }
 
@@ -102,7 +105,15 @@ export function createAltlinkClient(options: AltlinkClientOptions = {}) {
         typeof err === 'string' ? err : typeof err?.code === 'string' ? err.code : `http_${response.status}`;
       const message =
         typeof err === 'object' && err && typeof err.message === 'string' ? err.message : `Altlink answered ${response.status}.`;
-      lastError = new AltlinkError(response.status, code, message);
+      const extra: Record<string, unknown> = {};
+      if (json && typeof json === 'object') {
+        for (const [key, value] of Object.entries(json as Record<string, unknown>)) if (key !== 'error') extra[key] = value;
+      }
+      if (err && typeof err === 'object') {
+        for (const [key, value] of Object.entries(err)) if (key !== 'code' && key !== 'message') extra[key] = value;
+      }
+      const detail = Object.keys(extra).length ? JSON.stringify(extra).slice(0, 400) : null;
+      lastError = new AltlinkError(response.status, code, message, detail);
       const retryable = response.status === 429 || response.status >= 500;
       if (!retryable) throw lastError;
       if (attempt < MAX_ATTEMPTS - 1) await sleep(backoffMs(attempt, response.headers.get('retry-after')));
