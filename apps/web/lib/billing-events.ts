@@ -105,6 +105,10 @@ export const BILLING_EVENT_TYPES = [
    *  carries the price, the credits and the Paystack reference. For founder
    *  visibility only: the credits themselves are a `topup` row in the ledger. */
   'credits_purchased',
+  /** A team paid ₦2,100 for one release beyond its plan's distribution
+   *  allowance (lib/distribution-limits-server.ts). Metadata carries the
+   *  reference and the release. */
+  'distribution_extra_paid',
   /** A team hit the daily embedded-actions cap (EMBEDDED_ACTIONS_DAILY_CAP in
    *  lib/urgans-actions/guard.ts). Drives a founder alert, at most one per
    *  team per 24h — see shouldAlertGuardTrip. */

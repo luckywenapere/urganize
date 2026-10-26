@@ -43,6 +43,8 @@ import {
 import { TRANSFER_CHECKOUT_SOURCE } from '@/lib/self-serve';
 import { validatePaystackSignature } from '@/lib/paystack-signature';
 import { isPitchPaymentReference } from '@/lib/pitch-payments';
+import { isExtraReleaseReference } from '@/lib/distribution-limits';
+import { settleExtraRelease } from '@/lib/distribution-limits-server';
 import { isCreditsReference } from '@/lib/credits/purchase';
 import { settleCreditsPurchase } from '@/lib/credits/purchase-server';
 import { handlePitchChargeEvent, handlePitchRefundEvent } from '@/lib/pitch-payments-server';
@@ -1379,6 +1381,27 @@ async function handleCreditsCharge(payload: PaystackWebhookPayload) {
   return ack({ event: 'charge.success', credits: outcome.state });
 }
 
+// ─── extra releases beyond a plan's distribution ─────────────────────────────
+//
+// A ₦2,100 checkout for one release past the plan's allowance (2026-10-26)
+// carries a reference that starts with EXTRA_RELEASE_REFERENCE_PREFIX. Same
+// model as credits: the body is a claim, settleExtraRelease asks Paystack and
+// checks the price to the kobo, a transient failure answers 500 so Paystack
+// redelivers, and settling twice changes nothing.
+
+async function handleExtraReleaseCharge(payload: PaystackWebhookPayload) {
+  const admin = createAdminClient();
+  if (!admin) {
+    console.error('[paystack-webhook] Missing Supabase env vars for an extra release');
+    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
+  }
+  const outcome = await settleExtraRelease(admin, String(payload.data?.reference || ''), 'webhook');
+  if (outcome.state === 'error' && outcome.transient) {
+    return NextResponse.json({ error: 'Try again' }, { status: 500 });
+  }
+  return ack({ event: 'charge.success', extraRelease: outcome.state });
+}
+
 // ─── entrypoint ──────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -1408,6 +1431,9 @@ export async function POST(req: NextRequest) {
   }
   if (event === 'charge.success' && isCreditsReference(payload.data?.reference)) {
     return handleCreditsCharge(payload);
+  }
+  if (event === 'charge.success' && isExtraReleaseReference(payload.data?.reference)) {
+    return handleExtraReleaseCharge(payload);
   }
   // Refunds from any other flow (the card-trial check) are acknowledged there.
   if (event.startsWith('refund.')) {

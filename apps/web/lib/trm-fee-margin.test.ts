@@ -154,8 +154,8 @@ describe('who gets distribution', () => {
 
 describe('the pricing cards', () => {
   it('Manager, Label and Group say distribution is included; Solo says nothing about it', () => {
-    expect(tierHighlights('manager')).toContain('Distribution included');
-    expect(tierHighlights('label')).toContain('Distribution included');
+    expect(tierHighlights('manager')).toContain('Distribution for 1 artist, 7 releases a month');
+    expect(tierHighlights('label')).toContain('Distribution for 5 artists, 10 releases a month');
     expect(tierHighlights('enterprise')).toContain('Distribution included');
     expect(tierHighlights('solo').some((line) => /distribution/i.test(line))).toBe(false);
   });
@@ -171,7 +171,7 @@ describe('the pricing cards', () => {
       'Distribution on 6-month and yearly plans'
     );
     expect(tierHighlights('manager', { interval: 'semiannual', distributionRequiresPrepay: true })).toContain(
-      'Distribution included'
+      'Distribution for 1 artist, 7 releases a month'
     );
   });
 });

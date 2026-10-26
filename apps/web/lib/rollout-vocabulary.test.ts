@@ -172,6 +172,11 @@ const ALLOWED = [
   // explicit."
   /a release title/i,
   /the release is explicit/i,
+  // The distribution allowance counts what TRM counts, releases sent to the
+  // stores (founder approved the mocks, 2026-10-26): "7 releases a month",
+  // "Extra releases ₦2,100 each".
+  /releases a month/i,
+  /extra releases/i,
   // Two strings the release spend brief wrote with the word release in them,
   // kept as written: the empty state and the total's label.
   /on this release/i,

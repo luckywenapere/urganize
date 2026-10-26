@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, requireActiveAuthenticatedUser } from '@/app/api/_shared/auth';
+import { isExtraReleaseReference } from '@/lib/distribution-limits';
+import { settleExtraRelease, startExtraReleaseCheckout } from '@/lib/distribution-limits-server';
 import { ensureReleaseTeamReadAccess, ensureReleaseTeamWriteAccess } from '@/lib/release-access-server';
 import {
   canSendToTrm,
   completeMaster,
+  loadTrmFacts,
   loadTrmPayload,
   prepareTrmDraft,
   presignMaster,
@@ -24,8 +27,18 @@ import {
  * Actions: settings (artist TRM email, rights & policies), interest (not on the
  * allowlist: remember the press, call nobody), prepare (draft + cover art),
  * presign_master / complete_master (the browser PUTs the master straight to
- * TRM's storage between them), submit, refresh (poll TRM when a webhook is late).
+ * TRM's storage between them), submit, refresh (poll TRM when a webhook is late),
+ * extra_checkout (open Paystack for ₦2,100 when the plan's distribution
+ * allowance does not cover this release) and extra_verify (settle it on the
+ * way back; the webhook settles it too).
  */
+
+function appBase(request: NextRequest): string {
+  // The billing checkout's rule: NEXT_PUBLIC_APP_URL so a branch never calls
+  // back to a stale preview, else the request origin locally.
+  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  return (configured || new URL(request.url).origin).replace(/\/$/, '');
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -60,6 +73,34 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
   const actor = { id: auth.user.id, email: auth.user.email ?? null };
 
   switch (body.action) {
+    case 'extra_checkout': {
+      const facts = await loadTrmFacts(admin, releaseId);
+      if (!facts) return NextResponse.json({ error: 'Could not check this rollout. Try again.' }, { status: 500 });
+      const started = await startExtraReleaseCheckout(admin, {
+        ownerUserId: facts.ownerUserId,
+        releaseId,
+        artistId: facts.artistId,
+        artistName: facts.facts.primaryArtist || null,
+        user: actor,
+        callbackUrl: `${appBase(request)}/dashboard/distribute/${releaseId}`,
+      });
+      return started.ok
+        ? NextResponse.json({ ok: true, authorizationUrl: started.authorizationUrl, reference: started.reference })
+        : NextResponse.json({ error: started.error }, { status: started.status });
+    }
+    case 'extra_verify': {
+      const reference = typeof body.reference === 'string' ? body.reference.trim() : '';
+      if (!isExtraReleaseReference(reference)) {
+        return NextResponse.json({ error: 'That payment reference is not one of ours.' }, { status: 400 });
+      }
+      const outcome = await settleExtraRelease(admin, reference, 'callback');
+      if (outcome.state === 'paid') {
+        if (outcome.releaseId !== releaseId) return NextResponse.json({ error: 'That payment is for another release.' }, { status: 409 });
+        return NextResponse.json({ ok: true, state: 'paid' });
+      }
+      if (outcome.state === 'error') return NextResponse.json({ ok: true, state: outcome.transient ? 'pending' : 'error' });
+      return NextResponse.json({ ok: true, state: outcome.state === 'mismatch' ? 'needs_review' : 'not_paid' });
+    }
     case 'settings':
       return reply(await saveTrmSettings(admin, releaseId, actor, { artistEmail: body.artistEmail, settings: body.settings }));
     case 'interest':

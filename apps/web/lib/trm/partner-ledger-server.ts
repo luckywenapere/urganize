@@ -3,9 +3,7 @@ import type { BillingInterval } from '@urganize/pricing';
 import { afterResponse } from '../after-response';
 import { notifyFounder } from '../billing-alerts-server';
 import { isMissingColumnError, isMissingTableError } from '../billing-schema';
-import { resolveBillingInterval } from '../billing-plans';
-import { decideDistributionAccess } from '../distribution-entitlement';
-import { getTeamAccessForUser } from '../team-billing-server';
+import { loadTeamDistribution } from '../distribution-team-server';
 import {
   ledgerEntryForPayment,
   readTrmFeeConfig,
@@ -139,30 +137,17 @@ export async function recordTrmFeeForSend(
     const config = input.config ?? readTrmFeeConfig();
     if (config.costBasis !== 'fixed' || config.billingMode !== 'trm_plan' || !input.ownerUserId) return;
 
-    const [access, subscription, team] = await Promise.all([
-      getTeamAccessForUser(input.ownerUserId, null),
-      admin.from('subscriptions').select('plan, billing_interval, expires_at').eq('user_id', input.ownerUserId).maybeSingle(),
-      admin.from('workspaces').select('id').eq('owner_id', input.ownerUserId).maybeSingle(),
-    ]);
-    const sub = subscription.data as { plan: string | null; billing_interval: string | null; expires_at: string | null } | null;
-    const plan = sub?.plan ?? null;
-    const interval = plan ? resolveBillingInterval({ plan, storedInterval: sub?.billing_interval ?? null }) : null;
-    const decision = decideDistributionAccess({
-      accessState: access.state,
-      plan,
-      interval,
-      expiresAt: sub?.expires_at ?? null,
-      requiresPrepay: config.distributionRequiresPrepay,
-    });
+    const { decision, workspaceId } = await loadTeamDistribution(admin, input.ownerUserId);
     if (decision.state !== 'included') return;
-    const workspaceId = (team.data as { id: string } | null)?.id ?? null;
     if (!workspaceId) return;
 
-    // Any TRM plan we already bought for this team that still runs covers this send.
+    // Any TRM plan we already bought for this team that still runs covers this
+    // send. Extra releases (adjustment rows) are single releases, not a plan.
     const latest = await admin
       .from('trm_partner_ledger')
       .select('period_end')
       .eq('workspace_id', workspaceId)
+      .neq('entry_kind', 'adjustment')
       .order('period_end', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -213,6 +198,46 @@ export async function recordTrmFeeForSend(
   } catch (error) {
     console.error('[trm-ledger] recording a send threw:', error, reference);
   }
+}
+
+/**
+ * One extra release a team paid us ₦2,100 for (lib/distribution-limits-server.ts
+ * calls this once, when the payment settles): we owe TRM its per-release price.
+ * An 'adjustment' row, so it never counts as a TRM plan covering later sends.
+ * Keyed on the Paystack reference, so a webhook and a callback settling the
+ * same payment write one row.
+ */
+export async function recordTrmExtraRelease(
+  admin: Admin,
+  input: { workspaceId: string; reference: string; tier: 'manager' | 'label'; priceKobo: number; paidAt: Date }
+): Promise<'recorded' | 'error'> {
+  const reference = `extra:${input.reference}`;
+  const end = new Date(input.paidAt);
+  end.setMonth(end.getMonth() + 1);
+  const insert = await admin.from('trm_partner_ledger').upsert(
+    {
+      workspace_id: input.workspaceId,
+      charge_reference: reference,
+      entry_kind: 'adjustment',
+      plan: input.tier,
+      trm_plan: input.tier === 'label' ? 'label' : 'single_artist',
+      cost_basis: 'fixed',
+      billing_mode: 'trm_plan',
+      fee_annual_kobo: null,
+      revenue_share_bps: null,
+      service_months: 1,
+      amount_paid_kobo: input.priceKobo,
+      owed_kobo: input.priceKobo,
+      period_start: input.paidAt.toISOString(),
+      period_end: end.toISOString(),
+    },
+    { onConflict: 'charge_reference,entry_kind', ignoreDuplicates: true }
+  );
+  if (insert.error) {
+    console.error('[trm-ledger] could not record an extra release:', insert.error.message, reference);
+    return 'error';
+  }
+  return 'recorded';
 }
 
 /** Stamp the team as registered on TRM the first time, and tell the founder to

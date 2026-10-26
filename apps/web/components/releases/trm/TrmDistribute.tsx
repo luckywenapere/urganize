@@ -43,6 +43,8 @@ import {
 import { TrmSendSheet, TrmShell } from './TrmSendSheet';
 import { useTrm, type TrmPost } from './useTrm';
 import { DistributionPlanCard } from './DistributionPlanCard';
+import { DistributionLimitBlock } from './DistributionLimit';
+import { isExtraReleaseReference, needsPayment } from '@/lib/distribution-limits';
 import { useDistributionPlan } from './useDistributionPlan';
 
 /**
@@ -90,6 +92,59 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
   const [sheet, setSheet] = useState<'send' | 'resend' | 'settings' | 'email' | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState('');
+
+  // Back from Paystack for one extra release: settle it, then open the send
+  // sheet so the release goes on. The webhook settles it too; a slow Paystack
+  // answers 'pending' and is asked again.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reference = params.get('reference') || params.get('trxref') || '';
+    const cancelled = params.get('payment') === 'cancelled';
+    if (!isExtraReleaseReference(reference) && !cancelled) return;
+    const clean = new URL(window.location.href);
+    for (const key of ['reference', 'trxref', 'payment']) clean.searchParams.delete(key);
+    window.history.replaceState(null, '', clean.toString());
+    if (cancelled || !isExtraReleaseReference(reference)) return;
+    let stopped = false;
+    const settle = async (tries: number) => {
+      const result = await post('extra_verify', { reference });
+      if (stopped) return;
+      const state = String(result.data.state || '');
+      if (result.ok && state === 'paid') {
+        await reload();
+        setNote('Paid. Now send it.');
+        setSheet('send');
+      } else if (result.ok && state === 'pending' && tries > 0) {
+        window.setTimeout(() => void settle(tries - 1), 3_000);
+      } else if (state === 'not_paid') {
+        setNote('The payment did not go through. Nothing was charged.');
+      } else {
+        setNote(String(result.data.error || 'We are checking your payment. Refresh in a minute.'));
+      }
+    };
+    void settle(5);
+    return () => {
+      stopped = true;
+    };
+    // Once, on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const payForExtra = async () => {
+    setPayError('');
+    setPaying(true);
+    const result = await post('extra_checkout');
+    const url = typeof result.data.authorizationUrl === 'string' ? result.data.authorizationUrl : '';
+    if (result.ok && url) {
+      window.location.assign(url);
+      return;
+    }
+    setPaying(false);
+    setPayError(String(result.data.error || 'Could not open the payment page. Try again.'));
+    void reload();
+  };
 
   const status = data?.submission?.status ?? null;
   const inFlight = status !== null && IN_FLIGHT.includes(status);
@@ -256,7 +311,7 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
   const wrap = (children: React.ReactNode) => (
     <div className="mx-auto mt-8 max-w-[880px] space-y-9">
       {children}
-      <DistributionPlanCard plan={plan} />
+      <DistributionPlanCard plan={plan} limit={data.limit} />
       {sheets}
     </div>
   );
@@ -515,6 +570,8 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
             <p className="border border-stroke-default px-4 py-3 text-sm text-content-secondary">
               Sending to TRM opens soon. We’ll tell you the moment it does.
             </p>
+          ) : data.canSend && data.limit && needsPayment(data.limit.verdict) ? (
+            <DistributionLimitBlock limit={data.limit} paying={paying} error={payError} onPay={() => void payForExtra()} />
           ) : (
             <button type="button" disabled={busy} onClick={() => void pressSend()} className={PRIMARY}>
               {data.submission?.hasDraft && status === 'draft' ? 'Finish sending to TRM' : 'Send to TRM'}

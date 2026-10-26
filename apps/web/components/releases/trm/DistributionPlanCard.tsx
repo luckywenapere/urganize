@@ -6,6 +6,8 @@ import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { formatNaira } from '@/lib/money';
 import { READ_ONLY_REACTIVATE_HREF } from '@/lib/team-billing';
 import { MONO, OUTLINE, QUIET_LINK } from './TrmParts';
+import type { DistributionLimitView } from '@/lib/distribution-limits';
+import { DistributionUsage } from './DistributionLimit';
 import type { DistributionPlan } from './useDistributionPlan';
 
 /**
@@ -35,7 +37,7 @@ const formatLongDay = (iso: string | null): string => {
 
 const SWITCH_MAILTO = 'mailto:contact@urganize.app?subject=Switch%20to%206%20months';
 
-export function DistributionPlanCard({ plan }: { plan: DistributionPlan | null }) {
+export function DistributionPlanCard({ plan, limit = null }: { plan: DistributionPlan | null; limit?: DistributionLimitView | null }) {
   const [dismissed, setDismissed] = useState(false);
   const shownRef = useRef(false);
 
@@ -55,7 +57,8 @@ export function DistributionPlanCard({ plan }: { plan: DistributionPlan | null }
     return (
       <div className="border border-stroke-default bg-bg-surface px-4 py-3.5">
         <p className="text-[15px] font-semibold text-content-primary">Distribution included</p>
-        {until ? <p className={`mt-1 ${MONO}`}>On your plan until {until}.</p> : null}
+        {limit ? <DistributionUsage limit={limit} /> : null}
+        {until && !limit ? <p className={`mt-1 ${MONO}`}>On your plan until {until}.</p> : null}
       </div>
     );
   }

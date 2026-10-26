@@ -41,6 +41,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.192.0",
+    title: "Distribution limits, and paying for one more release",
+    tag: "Rollouts",
+    date: "October 26, 2026",
+    highlights: [
+      "Manager now includes distribution for 1 artist and 7 releases a month. Label includes 5 artists and 10 releases a month.",
+      "The Distribute step shows how many releases you have left this month.",
+      "Need one more, or a different artist? Pay ₦2,100 for that release and send it.",
+    ],
+  },
+  {
     version: "1.191.1",
     tag: "Account",
     date: "October 26, 2026",

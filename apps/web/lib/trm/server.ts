@@ -16,6 +16,8 @@ import { logBillingEvent } from '../billing-events-server';
 import { recordDistributionRejection, workspaceIdOf } from '../distribution-server';
 import { loadHandoff, type LoadedHandoff } from '../handoff-server';
 import { recordTrmFeeForSend } from './partner-ledger-server';
+import { checkDistributionSend, loadDistributionLimit, recordDistributionSend } from '../distribution-limits-server';
+import type { DistributionLimitView } from '../distribution-limits';
 import { readTestRelease } from '../test-release';
 import type { BillingEventType } from '../billing-events';
 import {
@@ -275,6 +277,9 @@ export type TrmPayload = {
   releaseType: TrmFacts['releaseType'];
   releaseDate: string | null;
   primaryArtist: string;
+  /** The plan's distribution allowance for this release, or null when the
+   *  team's plan has none (it sends with the artist's own TRM plan). */
+  limit: DistributionLimitView | null;
   title: string;
   checklist: Omit<TrmChecklist, 'blocking' | 'ready'> & { blocking: TrmRowView[]; ready: TrmRowView[] };
   settings: TrmSettings;
@@ -354,8 +359,17 @@ export async function loadTrmPayload(
   const settings = readTrmSettings(submission?.settings);
   const checklist = trmChecklist(loadedFacts.facts, settings, now);
   const decorate = (row: TrmRow): TrmRowView => ({ ...row, owner: ownerFor(loaded, row.ownerItem) });
-  const artistEmail = submission?.artist_email ?? (await rememberedArtistEmail(admin, loadedFacts.artistId));
+  const [artistEmail, limit] = await Promise.all([
+    submission?.artist_email ?? rememberedArtistEmail(admin, loadedFacts.artistId),
+    loadDistributionLimit(admin, {
+      ownerUserId: loadedFacts.ownerUserId,
+      releaseId,
+      artistId: loadedFacts.artistId,
+      artistName: loadedFacts.facts.primaryArtist || null,
+    }).catch(() => null),
+  ]);
   return {
+    limit: limit?.view ?? null,
     canSend: canSendToTrm(viewer.email),
     releaseType: loadedFacts.facts.releaseType,
     releaseDate: loadedFacts.facts.releaseDate,
@@ -677,6 +691,14 @@ export async function submitToTrm(admin: SupabaseClient, releaseId: string, acto
   if (!current.audio_asset_id) return fail(409, 'no_master', 'Add the master.');
   const checklist = trmChecklist(loaded.facts, readTrmSettings(current.settings), new Date());
   if (checklist.blocking.length > 0) return fail(409, 'not_ready', `${checklist.blocking.length} things before it can go.`);
+  const releaseFacts = {
+    ownerUserId: loaded.ownerUserId,
+    releaseId,
+    artistId: loaded.artistId,
+    artistName: loaded.facts.primaryArtist || null,
+  };
+  const gate = await checkDistributionSend(admin, releaseFacts);
+  if (gate.refusal) return fail(402, 'over_limit', gate.refusal);
 
   const attempt = current.submit_count + 1;
   try {
@@ -704,7 +726,11 @@ export async function submitToTrm(admin: SupabaseClient, releaseId: string, acto
     history: withHistory(current.history, { status: 'submitted', at: nowIso }),
   });
   await markHandoffSent(admin, releaseId, actor.id);
-  await recordTrmFeeForSend(admin, { ownerUserId: loaded.ownerUserId, releaseId, attempt, sentAt: new Date(nowIso) });
+  await recordDistributionSend(admin, { ...releaseFacts, actorUserId: actor.id }, gate.loaded, new Date(nowIso));
+  // A paid extra release is already in the TRM ledger (its ₦2,100); it buys no TRM plan.
+  if (gate.loaded?.view.verdict !== 'paid_extra') {
+    await recordTrmFeeForSend(admin, { ownerUserId: loaded.ownerUserId, releaseId, attempt, sentAt: new Date(nowIso) });
+  }
   await logEvent(admin, loaded.ownerUserId, actor.id, 'trm_submitted', { releaseId, trmReleaseId: current.partner_release_id, attempt });
   return { ok: true, data: { status: 'submitted' } };
 }

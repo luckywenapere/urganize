@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Distribution limits mocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Space+Mono:wght@400;700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web light theme (same as docs/mocks/pricing-starting-price). */
+  :root {
+    --a-bg:#f3efe6; --a-card:#f8f4ec; --a-text:#1a1611; --a-sec:#5c544a; --a-ter:#6d6459;
+    --a-line:#e6dfd2; --a-line2:#d8d0c2; --a-brand:#14643a; --a-brand-sub:rgba(20,100,58,.06);
+    --m-accent:#2f6b4a;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:#e9e3d7; }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--a-text); padding:32px 16px 64px; }
+  p { margin:0; }
+  .board { display:flex; flex-wrap:wrap; gap:28px; justify-content:center; }
+  .col { width:390px; max-width:100%; }
+  .tag { font-family:'Space Mono', monospace; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--a-sec); margin-bottom:6px; }
+  .why { font-size:13px; color:var(--a-ter); margin-bottom:12px; min-height:40px; }
+  .phone { background:var(--a-bg); border:1px solid var(--a-line2); border-radius:28px; padding:22px 16px 28px; min-height:640px; position:relative; overflow:hidden; }
+  .mono { font-family:'Space Mono', monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--a-sec); }
+  .h { font-family:'Young Serif', serif; font-size:24px; line-height:1.15; margin:6px 0 4px; }
+  .sub { color:var(--a-sec); font-size:14px; }
+  .box { border:1px solid var(--a-line); background:var(--a-card); padding:14px 16px; margin-top:16px; }
+  .box .t { font-size:15px; font-weight:600; }
+  .box .s { font-size:14px; color:var(--a-sec); margin-top:4px; }
+  .meter { height:6px; background:var(--a-line); margin-top:12px; }
+  .meter i { display:block; height:6px; background:var(--a-brand); }
+  .row { display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-top:1px solid var(--a-line); font-size:14px; }
+  .row:first-child { border-top:0; }
+  .row b { font-weight:600; }
+  .btn { display:flex; align-items:center; justify-content:center; height:46px; font-weight:600; font-size:14px; margin-top:12px; }
+  .green { background:var(--a-brand); color:#fff; }
+  .outline { border:1px solid var(--a-line2); color:var(--a-text); background:transparent; }
+  .quiet { color:var(--a-sec); text-decoration:underline; text-underline-offset:3px; font-size:14px; margin-top:14px; display:inline-block; }
+  .muted { opacity:.45; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; background:var(--a-card); border-top:1px solid var(--a-line2); border-radius:20px 20px 0 0; padding:20px 16px 26px; box-shadow:0 -10px 30px rgba(0,0,0,.08); }
+  .scrim { position:absolute; inset:0; background:rgba(26,22,17,.28); }
+  .grab { width:40px; height:4px; background:var(--a-line2); border-radius:4px; margin:0 auto 14px; }
+  .price { font-size:30px; font-weight:700; letter-spacing:-.03em; margin:4px 0 2px; }
+  .pay { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+  .pay div { border:1px solid var(--a-line2); padding:12px; font-size:14px; font-weight:600; text-align:center; }
+  .pay div.on { border-color:var(--a-brand); background:var(--a-brand-sub); }
+  .tier { border:1px solid var(--a-line); background:var(--a-card); border-radius:20px; padding:20px; margin-top:14px; }
+  .tier .name { font-size:12px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; color:var(--m-accent); }
+  .tier .p { font-size:28px; font-weight:800; letter-spacing:-.04em; margin-top:10px; }
+  .tier .p i { font-style:normal; font-size:14px; font-weight:400; color:var(--a-sec); }
+  .tier ul { list-style:none; padding:0; margin:14px 0 0; display:flex; flex-direction:column; gap:8px; }
+  .tier li { font-size:14px; color:var(--a-sec); padding-left:20px; position:relative; }
+  .tier li:before { content:''; position:absolute; left:2px; top:7px; width:9px; height:5px; border-left:2px solid var(--m-accent); border-bottom:2px solid var(--m-accent); transform:rotate(-45deg); }
+  .tier li.new { color:var(--a-text); font-weight:600; }
+  .note { font-size:12px; color:var(--a-ter); margin-top:10px; }
+  .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+  .chip { font-family:'Space Mono', monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; border:1px solid var(--a-line2); padding:3px 7px; color:var(--a-sec); }
+</style>
+</head>
+<body>
+<div class="board">
+
+  <!-- 1. Plan cards -->
+  <div class="col">
+    <p class="tag">1 · Plan cards</p>
+    <p class="why">The limits are on the card before anyone pays. Same lines on the site and the in-app wall.</p>
+    <div class="phone">
+      <p class="mono">Plans</p>
+      <div class="tier">
+        <p class="name">Manager</p>
+        <p class="p">₦26,000 <i>/ month for your first 6 months</i></p>
+        <ul>
+          <li class="new">Distribution for 1 artist, 7 releases a month</li>
+          <li class="muted">The rest of the plan as it is</li>
+        </ul>
+        <p class="note">More releases ₦2,100 each. More artists on Label.</p>
+      </div>
+      <div class="tier">
+        <p class="name">Label</p>
+        <p class="p">Let's talk</p>
+        <ul>
+          <li class="new">Distribution for 5 artists, 10 releases a month</li>
+          <li class="muted">The rest of the plan as it is</li>
+        </ul>
+        <p class="note">More releases ₦2,100 each.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Distribute, within the plan -->
+  <div class="col">
+    <p class="tag">2 · Distribute, within the plan</p>
+    <p class="why">The team sees what is left before it runs out. The first artist a team sends becomes the plan's artist.</p>
+    <div class="phone">
+      <div class="topbar"><span class="mono">Rollout · Tems · "Lagos Rain"</span><span class="chip">Single</span></div>
+      <p class="mono">Distribute</p>
+      <p class="h">Send it to the stores</p>
+      <div class="box">
+        <p class="t">Distribution included</p>
+        <p class="s">3 of 7 releases used this month. Resets Nov 1.</p>
+        <div class="meter"><i style="width:43%"></i></div>
+        <p class="mono" style="margin-top:10px">Your plan's artist: Tems</p>
+      </div>
+      <div class="box">
+        <div class="row"><span>Cover art</span><b>Ready</b></div>
+        <div class="row"><span>Metadata</span><b>Ready</b></div>
+        <div class="row"><span>Release day</span><b>Fri, Nov 14</b></div>
+      </div>
+      <div class="btn green">Send to TRM</div>
+    </div>
+  </div>
+
+  <!-- 3. A second artist on Manager -->
+  <div class="col">
+    <p class="tag">3 · A second artist on Manager</p>
+    <p class="why">Stopped, not stuck. They can pay for this one release or talk to us about Label.</p>
+    <div class="phone">
+      <div class="topbar"><span class="mono">Rollout · Ayra · "Sunday"</span><span class="chip">Single</span></div>
+      <p class="mono">Distribute</p>
+      <p class="h">Send it to the stores</p>
+      <div class="box">
+        <p class="t">Your plan covers 1 artist</p>
+        <p class="s">That's Tems. To send for Ayra, pay for this release or move to Label for up to 5 artists.</p>
+        <div class="btn green">Pay ₦2,100 and send</div>
+        <div class="btn outline">Talk to us about Label</div>
+      </div>
+      <div class="box muted">
+        <div class="row"><span>Cover art</span><b>Ready</b></div>
+        <div class="row"><span>Metadata</span><b>Ready</b></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Over 7 releases this month -->
+  <div class="col">
+    <p class="tag">4 · Over 7 releases this month</p>
+    <p class="why">Same choice, same price. Nothing is lost: next month the count starts again.</p>
+    <div class="phone">
+      <div class="topbar"><span class="mono">Rollout · Tems · "Harmattan"</span><span class="chip">Single</span></div>
+      <p class="mono">Distribute</p>
+      <p class="h">Send it to the stores</p>
+      <div class="box">
+        <p class="t">You've used your 7 releases this month</p>
+        <p class="s">This one is ₦2,100. Your 7 come back on Nov 1.</p>
+        <div class="meter"><i style="width:100%"></i></div>
+        <div class="btn green">Pay ₦2,100 and send</div>
+        <span class="quiet">Wait until Nov 1</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Pay for the extra release -->
+  <div class="col">
+    <p class="tag">5 · Pay for one release</p>
+    <p class="why">Paystack, card or transfer, like the plan. The release goes to TRM as soon as the payment clears.</p>
+    <div class="phone">
+      <div class="topbar"><span class="mono">Rollout · Ayra · "Sunday"</span><span class="chip">Single</span></div>
+      <p class="mono">Distribute</p>
+      <p class="h">Send it to the stores</p>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <p class="mono">One extra release</p>
+        <p class="price">₦2,100</p>
+        <p class="sub">"Sunday" by Ayra. Paid once, sent once.</p>
+        <div class="pay"><div class="on">Card</div><div>Bank transfer</div></div>
+        <div class="btn green">Pay ₦2,100</div>
+        <span class="quiet">Not now</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Paid and sent -->
+  <div class="col">
+    <p class="tag">6 · Paid, on its way</p>
+    <p class="why">Back on the step with the usual sending status. The receipt is in Billing.</p>
+    <div class="phone">
+      <div class="topbar"><span class="mono">Rollout · Ayra · "Sunday"</span><span class="chip">Single</span></div>
+      <p class="mono">Distribute</p>
+      <p class="h">Sent to TRM</p>
+      <p class="sub">TRM is checking it. We'll tell you when the stores have it.</p>
+      <div class="box">
+        <div class="row"><span>Paid</span><b>₦2,100 · Oct 26</b></div>
+        <div class="row"><span>Status</span><b>With TRM</b></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

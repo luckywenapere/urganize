@@ -745,6 +745,30 @@ export function annualSavingCopy(id: PricingTierId): string | null {
  *  Plural handling is explicit rather than a naive `+ 's'`: "1 people" on a
  *  future one-seat tier would be the kind of small wrongness that makes a
  *  pricing page feel unfinished. */
+/** What "Distribution included" covers, by tier (founder, 2026-10-26). It is
+ *  TRM's own plan for the team: Manager is TRM Independent Artist (1 artist,
+ *  7 releases a month), Label is TRM Mini Label (5 artists, 10 releases a
+ *  month). The plan's artists are the first ones a team sends; the release
+ *  count starts again on the 1st of each month, Lagos time. Anything beyond
+ *  is one paid release at TRM's per-release price. apps/web enforces exactly
+ *  these numbers (lib/distribution-limits.ts), so the card cannot promise more
+ *  than the product gives. Group agrees its own terms per deal. */
+export const DISTRIBUTION_ALLOWANCE: Partial<Record<PricingTierId, { artists: number; releasesPerMonth: number }>> = {
+  manager: { artists: 1, releasesPerMonth: 7 },
+  label: { artists: 5, releasesPerMonth: 10 },
+};
+
+/** One release beyond a plan's allowance, naira. TRM's per-release price. */
+export const EXTRA_RELEASE_PRICE_NAIRA = 2_100;
+
+/** "Distribution for 1 artist, 7 releases a month". Numbers from the allowance. */
+export function distributionAllowanceCopy(id: PricingTierId): string | null {
+  const allowance = DISTRIBUTION_ALLOWANCE[id];
+  if (!allowance) return null;
+  const artists = `${allowance.artists} ${allowance.artists === 1 ? 'artist' : 'artists'}`;
+  return `Distribution for ${artists}, ${allowance.releasesPerMonth} releases a month`;
+}
+
 /** The distribution line on a pricing card.
  *
  *  REVERSED 2026-10-22 (founder): until then every tier said "Distribution
@@ -759,7 +783,7 @@ export function distributionHighlight(
   requiresPrepay: boolean
 ): string | null {
   if (!PRICING_TIERS[id].includesDistribution) return null;
-  if (distributionIncluded(id, interval, requiresPrepay)) return 'Distribution included';
+  if (distributionIncluded(id, interval, requiresPrepay)) return distributionAllowanceCopy(id) ?? 'Distribution included';
   return 'Distribution on 6-month and yearly plans';
 }
 
@@ -807,7 +831,11 @@ export function tierHighlights(
     opts.interval ?? DEFAULT_SELLING_INTERVAL,
     opts.distributionRequiresPrepay ?? false
   );
-  return [...lines, ...(distribution ? [distribution] : []), ...perks];
+  const extra =
+    distribution && DISTRIBUTION_ALLOWANCE[id]
+      ? [`Extra releases ₦${EXTRA_RELEASE_PRICE_NAIRA.toLocaleString('en-US')} each`]
+      : [];
+  return [...lines, ...(distribution ? [distribution] : []), ...extra, ...perks];
 }
 
 export function getTier(id: PricingTierId): PricingTierDefinition {
