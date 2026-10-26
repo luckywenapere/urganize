@@ -58,6 +58,12 @@ type WorkspaceDesktopFocusedProps = {
    * itself drops its toolbar and group headers.
    */
   simpleSide?: ReactNode;
+  /**
+   * A brand-new rollout with no activities (2026-10-26): the page scrolls like
+   * any other instead of being locked to the viewport, and the cards above the
+   * panel sit side by side, so the planner card below is never squeezed out.
+   */
+  pageScroll?: boolean;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -105,6 +111,7 @@ export function WorkspaceDesktopFocused({
   panelActivitiesFooter,
   panelBannerReplacesEmptyState,
   simpleSide,
+  pageScroll = false,
 }: WorkspaceDesktopFocusedProps) {
   // Cancelled work is out of both numbers (URG-389).
   const { done: tasksDone, total: tasksTotal } = countProgress(scopedTasks);
@@ -192,7 +199,11 @@ export function WorkspaceDesktopFocused({
   // bottom padding 2.5rem. (Since URG-254 the section row is the page bar,
   // PageBar's h-14, so the sum is unchanged.)
   return (
-    <div className="workspace-mode-enter flex h-[calc(100dvh-10.5rem)] min-h-[30rem] flex-col gap-4">
+    <div
+      className={`workspace-mode-enter flex flex-col gap-4 ${
+        pageScroll ? '' : 'h-[calc(100dvh-10.5rem)] min-h-[30rem]'
+      }`}
+    >
       <div className="shrink-0">
         {/* One line at the top (founder call, 2026-10-15): the page bar holds
             where you are (Rollouts > name), who it is by and its status on
@@ -242,11 +253,17 @@ export function WorkspaceDesktopFocused({
         className={
           simpleSide
             ? 'grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_20rem] items-start gap-4 overflow-hidden xl:grid-cols-[minmax(0,1fr)_24rem]'
-            : 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'
+            : pageScroll
+              ? 'flex min-w-0 flex-col gap-4'
+              : 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'
         }
       >
-        {simpleSide ? null : banner}
-        <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
+        {simpleSide ? null : pageScroll ? (
+          <div className="grid grid-cols-2 items-start gap-4 [&>*:only-child]:col-span-2">{banner}</div>
+        ) : (
+          banner
+        )}
+        <div className={pageScroll ? 'flex min-w-0 flex-col' : 'flex h-full min-h-0 min-w-0 flex-col overflow-hidden'}>
           <TasksPanel
             tasks={scopedTasks}
             scopedRelease={scopedRelease}
