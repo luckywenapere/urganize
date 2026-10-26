@@ -31,6 +31,7 @@ import {
 import { isPricingV2Enabled } from '@/lib/entitlements';
 import { HelpTip } from '@/components/shared/HelpTip';
 import { TierPlanPicker, planChargeNote } from '@/components/billing/TierPlanPicker';
+import { PlanCards } from '@/components/billing/PlanCards';
 import { WallUrgansCard } from '@/components/billing/WallUrgansCard';
 import { readPaywallPlanChoice } from '@/lib/onboarding-paywall';
 import {
@@ -134,6 +135,7 @@ export function TeamWall() {
     setSelectedInterval(isSellableInterval(choice.interval) ? choice.interval : DEFAULT_SELLING_INTERVAL);
   }, []);
   const [isStartingCheckout, setIsStartingCheckout] = useState(false);
+  const [busyTier, setBusyTier] = useState<PricingTierId | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   /** Set when a change completed without a redirect: a downgrade, or an upgrade
    *  too small to charge for. Both need saying out loud, because a button that
@@ -305,7 +307,11 @@ export function TeamWall() {
     })();
   }, [isLoading, team, selectedPlan, effectiveTier]);
 
-  const handleActivate = useCallback(async () => {
+  const handleActivate = useCallback(async (tierArg?: PricingTierId) => {
+    // The plan card's own button passes its plan (X-style wall, 2026-10-26);
+    // the older single button uses the selection.
+    const tier = tierArg ?? effectiveTier;
+    setBusyTier(tier);
     setCheckoutError(null);
     setChangeResult(null);
     setIsStartingCheckout(true);
@@ -330,7 +336,7 @@ export function TeamWall() {
         const changeResponse = await fetch('/api/billing/change-plan', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plan: effectiveTier, interval: selectedInterval }),
+          body: JSON.stringify({ plan: tier, interval: selectedInterval }),
         });
         const changePayload = (await changeResponse.json().catch(() => ({}))) as {
           kind?: string;
@@ -371,10 +377,10 @@ export function TeamWall() {
         PRICING_V2 &&
         userId &&
         team?.ownerUserId === userId &&
-        isCheckoutPlan(effectiveTier) &&
+        isCheckoutPlan(tier) &&
         isCheckoutPeriod(selectedInterval)
       ) {
-        router.push(checkoutPath({ plan: effectiveTier, period: selectedInterval }));
+        router.push(checkoutPath({ plan: tier, period: selectedInterval }));
         return;
       }
 
@@ -386,7 +392,7 @@ export function TeamWall() {
         // because nothing else could tell the webhook how far to set
         // expires_at. Flag off, this body is byte-identical to before.
         body: JSON.stringify({
-          plan: PRICING_V2 ? effectiveTier : selectedPlan,
+          plan: PRICING_V2 ? tier : selectedPlan,
           currency: 'NGN',
           ...(PRICING_V2 ? { interval: selectedInterval } : {}),
           ...(team?.primaryWorkspaceId ? { workspaceId: team.primaryWorkspaceId } : {}),
@@ -527,13 +533,17 @@ export function TeamWall() {
   }
 
   const isOwner = Boolean(team?.isOwnerOrAdmin);
+  // The X-style plan cards (2026-10-26) whenever an owner can pay by card here.
+  // iOS, the legacy picker and "nothing to buy" keep the single card below.
+  const showCards = isOwner && PRICING_V2 && canCheckOut && !isIOSNativeApp;
+  const introMonthsLeft = team?.introMonthsLeft ?? 0;
 
   return (
     <main className="min-h-screen px-4 py-12">
-      <div className="mx-auto flex w-full max-w-xl flex-col gap-8">
+      <div className={`mx-auto flex w-full flex-col gap-8 ${showCards ? 'max-w-3xl' : 'max-w-xl'}`}>
         <Logo />
 
-        <header className="flex flex-col gap-3">
+        <header className={`flex flex-col gap-3 ${showCards ? 'items-center text-center' : ''}`}>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
             {isUpgradeIntent
               ? 'Your plan'
@@ -543,8 +553,8 @@ export function TeamWall() {
                   ? 'Your trial has ended'
                   : 'Your plan'}
           </p>
-          <div className="flex items-center gap-2">
-            <h1 className="font-display text-3xl leading-tight text-content-primary sm:text-4xl">
+          <div className={`flex items-center gap-2 ${showCards ? 'justify-center' : ''}`}>
+            <h1 className="font-display text-3xl leading-tight text-balance text-content-primary sm:text-4xl">
               {isUpgradeIntent
                 ? 'Move up a plan.'
                 : isReadOnlyTeam
@@ -579,170 +589,226 @@ export function TeamWall() {
           <div className="flex flex-col gap-4">
             {/* Activate. Annual first and highlighted: it is the better deal
                 and the one most teams should take. */}
-            <Card padding="lg" className="flex flex-col gap-5">
-              <div className="flex items-center gap-2">
-                <h2 className="font-display text-lg font-semibold text-content-primary">
-                  Pick your plan
-                </h2>
-                <HelpTip helpKey="wall.plan" />
-              </div>
+            {showCards ? (
+              <div className="flex flex-col gap-5">
+                <PlanCards
+                  tiers={offeredTiers}
+                  selectedInterval={selectedInterval}
+                  onSelectInterval={setSelectedInterval}
+                  introMonthsLeft={introMonthsLeft}
+                  currentTier={isUpgradeIntent ? (team?.tier ?? null) : null}
+                  onChoose={(tier) => {
+                    setSelectedTier(tier);
+                    void handleActivate(tier);
+                  }}
+                  busyTier={isStartingCheckout ? busyTier : null}
+                  disabled={isStartingCheckout}
+                  buttonLabel={(tier) =>
+                    needsOnboardingCall(tier, selectedInterval)
+                      ? BOOK_CALL_LABEL
+                      : isUpgradeIntent
+                        ? `Move to ${getTier(tier).label}`
+                        : `Get ${getTier(tier).label}`
+                  }
+                />
 
-              {isIOSNativeApp ? (
-                <div className="flex flex-col gap-3">
-                  {/* Apple does not let an app take payment, so the pay step happens
-                      on the web. One tap emails the owner the link, which keeps it a
-                      button and not a set of instructions. */}
-                  <Button
-                    variant="primary"
-                    className="min-h-14 w-full text-base"
-                    disabled={linkState === 'sending' || linkState === 'sent'}
-                    onClick={handleEmailLink}
+                {checkoutError ? (
+                  <p role="alert" className="flex items-start justify-center gap-2 text-sm text-status-error">
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                    <span>{checkoutError}</span>
+                  </p>
+                ) : null}
+
+                {changeResult ? (
+                  <p className="flex items-start justify-center gap-2 text-sm text-content-secondary">
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-brand" />
+                    <span>{changeResult}</span>
+                  </p>
+                ) : null}
+
+                {/* Label is contact-us: a quiet line, not a third card. */}
+                <p className="text-center text-sm text-content-secondary">
+                  Running a label?{' '}
+                  <button
+                    type="button"
+                    onClick={handleWhatsApp}
+                    className="motion-focus font-semibold text-content-primary underline underline-offset-4 hover:text-brand"
                   >
-                    {linkState === 'sending'
-                      ? 'Sending'
-                      : linkState === 'sent'
-                        ? 'Link sent'
-                        : 'Email me the link'}
-                  </Button>
-                  {linkState === 'sent' ? (
-                    <p className="text-center text-sm text-content-secondary">
-                      Sent{linkEmail ? ` to ${linkEmail}` : ''}.
-                    </p>
-                  ) : null}
-                  {linkError ? (
-                    <p role="alert" className="flex items-start gap-2 text-sm text-status-error">
-                      <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                      <span>{linkError}</span>
-                    </p>
-                  ) : null}
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      className="motion-focus min-h-11 text-center text-sm font-medium text-content-secondary underline underline-offset-4 hover:text-content-primary"
-                      onClick={() => {
-                        if (userId) void getTeamAccessClient(userId, { force: true }).then(setTeam);
-                      }}
-                    >
-                      I have paid, check again
-                    </button>
-                    <HelpTip helpKey="wall.ios" />
-                  </div>
+                    Talk to us on WhatsApp
+                  </button>
+                </p>
+                <p className="text-center text-xs leading-5 text-content-tertiary">
+                  Prices in Naira, for your whole team.
+                  {introMonthsLeft > 0 ? ' The first 6 months price is for teams paying for the first time.' : ''}{' '}
+                  Cancel any time.
+                </p>
+              </div>
+            ) : (
+              <Card padding="lg" className="flex flex-col gap-5">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-display text-lg font-semibold text-content-primary">
+                    Pick your plan
+                  </h2>
+                  <HelpTip helpKey="wall.plan" />
                 </div>
-              ) : (
-                <>
-                  {PRICING_V2 && !canCheckOut ? (
-                    // Nothing is mintable in this environment. Say so plainly
-                    // rather than rendering an empty fieldset above a button
-                    // that would 500 — and point at the card beside this one,
-                    // because a refusal with no next step is a dead end.
-                    <p className="rounded-lg border border-stroke-default bg-bg-elevated p-4 text-sm text-content-secondary">
-                      Card payment is not available right now. Talk to us and we
-                      will get your team on a plan today.
-                    </p>
-                  ) : PRICING_V2 ? (
-                    <TierPlanPicker
-                      tiers={offeredTiers}
-                      selectedTier={effectiveTier}
-                      onSelectTier={setSelectedTier}
-                      selectedInterval={selectedInterval}
-                      onSelectInterval={setSelectedInterval}
-                      introMonthsLeft={team?.introMonthsLeft ?? 0}
-                      disabled={isStartingCheckout}
-                    />
-                  ) : (
-                  /* THE LEGACY PICKER, and the one place a monthly figure
-                     survives the 2026-09-08 annual-only reprice. Deliberate:
-                     this branch only renders with NEXT_PUBLIC_FEATURE_PRICING_V2
-                     OFF, which is the documented rollback state, and its numbers
-                     come from BILLING_PLANS — what real legacy subscribers still
-                     renew against. Sweeping it would mean editing their prices
-                     to tidy a screen nobody in production sees. */
-                  <div role="radiogroup" aria-label="Choose a plan" className="flex flex-col gap-2">
-                    {PLAN_ORDER.map((planId) => {
-                      const plan = getPlan(planId);
-                      const isActive = selectedPlan === planId;
-                      return (
-                        <button
-                          key={planId}
-                          type="button"
-                          role="radio"
-                          aria-checked={isActive}
-                          onClick={() => setSelectedPlan(planId)}
-                          className={`flex items-start justify-between gap-3 rounded-lg border p-4 text-left transition-colors ${
-                            isActive
-                              ? 'border-brand bg-brand/5'
-                              : 'border-stroke-default bg-bg-elevated hover:border-stroke-strong'
-                          }`}
-                        >
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-semibold text-content-primary">
-                              {plan.label}
-                              {planId === 'annual' ? (
-                                <span className="ml-2 rounded-full bg-brand/12 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-brand">
-                                  2 months free
-                                </span>
-                              ) : null}
-                            </span>
-                            <span className="mt-1 block text-xs text-content-tertiary">
-                              {plan.description}
-                            </span>
-                          </span>
-                          <span className="shrink-0 text-sm font-semibold text-content-primary">
-                            {formatPlanCyclePrice(planId, 'NGN')}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  )}
 
-
-                  {/* HIDDEN rather than disabled when there is nothing to buy.
-                      A greyed-out button with no explanation is the pattern this
-                      repo already corrected on the seat cap: there the round
-                      trip carried the reason, and here the server has already
-                      given it, so the line above says it and the button goes. */}
-                  {canCheckOut ? (
+                {isIOSNativeApp ? (
+                  <div className="flex flex-col gap-3">
+                    {/* Apple does not let an app take payment, so the pay step happens
+                        on the web. One tap emails the owner the link, which keeps it a
+                        button and not a set of instructions. */}
                     <Button
                       variant="primary"
                       className="min-h-14 w-full text-base"
-                      disabled={isStartingCheckout}
-                      onClick={handleActivate}
+                      disabled={linkState === 'sending' || linkState === 'sent'}
+                      onClick={handleEmailLink}
                     >
-                      {isStartingCheckout
-                        ? 'Opening secure checkout'
-                        : PRICING_V2 && needsOnboardingCall(effectiveTier, selectedInterval)
-                          ? BOOK_CALL_LABEL
-                          : isUpgradeIntent
-                          ? 'Change your plan'
-                          : isReadOnlyTeam
-                            ? 'Start your plan again'
-                            : 'Activate and keep going'}
+                      {linkState === 'sending'
+                        ? 'Sending'
+                        : linkState === 'sent'
+                          ? 'Link sent'
+                          : 'Email me the link'}
                     </Button>
-                  ) : null}
+                    {linkState === 'sent' ? (
+                      <p className="text-center text-sm text-content-secondary">
+                        Sent{linkEmail ? ` to ${linkEmail}` : ''}.
+                      </p>
+                    ) : null}
+                    {linkError ? (
+                      <p role="alert" className="flex items-start gap-2 text-sm text-status-error">
+                        <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                        <span>{linkError}</span>
+                      </p>
+                    ) : null}
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        className="motion-focus min-h-11 text-center text-sm font-medium text-content-secondary underline underline-offset-4 hover:text-content-primary"
+                        onClick={() => {
+                          if (userId) void getTeamAccessClient(userId, { force: true }).then(setTeam);
+                        }}
+                      >
+                        I have paid, check again
+                      </button>
+                      <HelpTip helpKey="wall.ios" />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {PRICING_V2 && !canCheckOut ? (
+                      // Nothing is mintable in this environment. Say so plainly
+                      // rather than rendering an empty fieldset above a button
+                      // that would 500 — and point at the card beside this one,
+                      // because a refusal with no next step is a dead end.
+                      <p className="rounded-lg border border-stroke-default bg-bg-elevated p-4 text-sm text-content-secondary">
+                        Card payment is not available right now. Talk to us and we
+                        will get your team on a plan today.
+                      </p>
+                    ) : PRICING_V2 ? (
+                      <TierPlanPicker
+                        tiers={offeredTiers}
+                        selectedTier={effectiveTier}
+                        onSelectTier={setSelectedTier}
+                        selectedInterval={selectedInterval}
+                        onSelectInterval={setSelectedInterval}
+                        introMonthsLeft={team?.introMonthsLeft ?? 0}
+                        disabled={isStartingCheckout}
+                      />
+                    ) : (
+                    /* THE LEGACY PICKER, and the one place a monthly figure
+                       survives the 2026-09-08 annual-only reprice. Deliberate:
+                       this branch only renders with NEXT_PUBLIC_FEATURE_PRICING_V2
+                       OFF, which is the documented rollback state, and its numbers
+                       come from BILLING_PLANS — what real legacy subscribers still
+                       renew against. Sweeping it would mean editing their prices
+                       to tidy a screen nobody in production sees. */
+                    <div role="radiogroup" aria-label="Choose a plan" className="flex flex-col gap-2">
+                      {PLAN_ORDER.map((planId) => {
+                        const plan = getPlan(planId);
+                        const isActive = selectedPlan === planId;
+                        return (
+                          <button
+                            key={planId}
+                            type="button"
+                            role="radio"
+                            aria-checked={isActive}
+                            onClick={() => setSelectedPlan(planId)}
+                            className={`flex items-start justify-between gap-3 rounded-lg border p-4 text-left transition-colors ${
+                              isActive
+                                ? 'border-brand bg-brand/5'
+                                : 'border-stroke-default bg-bg-elevated hover:border-stroke-strong'
+                            }`}
+                          >
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-semibold text-content-primary">
+                                {plan.label}
+                                {planId === 'annual' ? (
+                                  <span className="ml-2 rounded-full bg-brand/12 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-brand">
+                                    2 months free
+                                  </span>
+                                ) : null}
+                              </span>
+                              <span className="mt-1 block text-xs text-content-tertiary">
+                                {plan.description}
+                              </span>
+                            </span>
+                            <span className="shrink-0 text-sm font-semibold text-content-primary">
+                              {formatPlanCyclePrice(planId, 'NGN')}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    )}
 
-                  {canCheckOut && PRICING_V2 && !needsOnboardingCall(effectiveTier, selectedInterval) ? (
-                    <p className="text-center text-xs text-content-tertiary">
-                      {planChargeNote(effectiveTier, selectedInterval, team?.introMonthsLeft ?? 0)}
-                    </p>
-                  ) : null}
 
-                  {checkoutError ? (
-                    <p role="alert" className="flex items-start gap-2 text-sm text-status-error">
-                      <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                      <span>{checkoutError}</span>
-                    </p>
-                  ) : null}
+                    {/* HIDDEN rather than disabled when there is nothing to buy.
+                        A greyed-out button with no explanation is the pattern this
+                        repo already corrected on the seat cap: there the round
+                        trip carried the reason, and here the server has already
+                        given it, so the line above says it and the button goes. */}
+                    {canCheckOut ? (
+                      <Button
+                        variant="primary"
+                        className="min-h-14 w-full text-base"
+                        disabled={isStartingCheckout}
+                        onClick={() => void handleActivate()}
+                      >
+                        {isStartingCheckout
+                          ? 'Opening secure checkout'
+                          : PRICING_V2 && needsOnboardingCall(effectiveTier, selectedInterval)
+                            ? BOOK_CALL_LABEL
+                            : isUpgradeIntent
+                            ? 'Change your plan'
+                            : isReadOnlyTeam
+                              ? 'Start your plan again'
+                              : 'Activate and keep going'}
+                      </Button>
+                    ) : null}
 
-                  {changeResult ? (
-                    <p className="flex items-start gap-2 text-sm text-content-secondary">
-                      <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-brand" />
-                      <span>{changeResult}</span>
-                    </p>
-                  ) : null}
-                </>
-              )}
-            </Card>
+                    {canCheckOut && PRICING_V2 && !needsOnboardingCall(effectiveTier, selectedInterval) ? (
+                      <p className="text-center text-xs text-content-tertiary">
+                        {planChargeNote(effectiveTier, selectedInterval, team?.introMonthsLeft ?? 0)}
+                      </p>
+                    ) : null}
+
+                    {checkoutError ? (
+                      <p role="alert" className="flex items-start gap-2 text-sm text-status-error">
+                        <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                        <span>{checkoutError}</span>
+                      </p>
+                    ) : null}
+
+                    {changeResult ? (
+                      <p className="flex items-start gap-2 text-sm text-content-secondary">
+                        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-brand" />
+                        <span>{changeResult}</span>
+                      </p>
+                    ) : null}
+                  </>
+                )}
+              </Card>
+            )}
 
             {/* Talk to us: a quiet second path, not a rival button. One filled action
                 converts best; teams that close over an invoice still find this in one

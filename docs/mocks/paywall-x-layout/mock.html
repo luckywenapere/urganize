@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Paywall, X layout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Space+Mono:wght@400;700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* App light tokens (apps/web light theme). */
+  :root {
+    --bg:#f3efe6; --card:#f9f5ed; --card2:#fbf8f2; --text:#1a1611; --sec:#5c544a; --ter:#7a7166;
+    --line:#e6dfd2; --line2:#d8d0c2; --brand:#14643a; --brand-sub:rgba(20,100,58,.06); --brand-mut:rgba(20,100,58,.12);
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; }
+  body { background:var(--bg); color:var(--text); font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; }
+  p { margin:0; }
+  .screen { display:none; min-height:100vh; padding:48px 16px 56px; }
+  .screen.on { display:block; }
+
+  /* 1. One header block, centred: the eye starts here. */
+  .head { text-align:center; max-width:640px; margin:0 auto; }
+  .eyebrow { font-family:'Space Mono', monospace; font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--ter); }
+  h1 { font-family:'Young Serif', serif; font-weight:400; font-size:clamp(30px,5vw,42px); line-height:1.1; letter-spacing:-.02em; margin:10px 0 0; text-wrap:balance; }
+
+  /* 2. The switch sits right under it, because it reprices both cards. */
+  .seg { display:flex; justify-content:center; margin:22px 0 28px; }
+  .seg div { display:inline-flex; padding:4px; border-radius:999px; background:#e9e3d8; }
+  .seg span { min-height:34px; display:flex; align-items:center; padding:0 18px; border-radius:999px; font-weight:600; font-size:13px; color:var(--sec); }
+  .seg span.on { background:var(--card2); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+
+  /* 3. Two cards on one grid. Every row (name, price, line, button, list)
+        lines up across them, so the eye reads left to right, not zigzag. */
+  .cards { max-width:820px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:stretch; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:24px; padding:24px; display:grid;
+          grid-template-rows:auto auto 40px auto auto 1fr; }
+  .card.rec { border-color:var(--brand); box-shadow:0 0 0 1px var(--brand) inset; background:var(--card2); }
+  .name { display:flex; align-items:center; gap:8px; font-weight:600; font-size:15px; height:24px; }
+  .badge { font-family:'Space Mono', monospace; font-weight:700; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--brand); background:var(--brand-mut); border-radius:999px; padding:2px 8px; }
+  .price { margin-top:14px; display:flex; align-items:baseline; gap:4px; }
+  .price b { font-size:40px; font-weight:700; letter-spacing:-.04em; line-height:1; }
+  .price i { font-style:normal; color:var(--sec); font-size:14px; }
+  .then { margin-top:6px; font-size:13px; color:var(--ter); }
+  .btn { margin-top:4px; height:48px; border-radius:999px; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:15px; }
+  .btn.fill { background:var(--brand); color:#fff; }
+  .btn.out { border:1.5px solid var(--line2); color:var(--text); background:transparent; }
+  .lead { margin-top:22px; padding-bottom:10px; border-bottom:1px solid var(--line); font-size:13px; color:var(--sec); }
+  ul { list-style:none; padding:0; margin:12px 0 0; display:flex; flex-direction:column; gap:10px; }
+  li { display:flex; gap:10px; font-size:14px; line-height:1.4; }
+  li svg { flex:0 0 16px; margin-top:2px; color:var(--brand); }
+
+  /* 4. Everything secondary goes quiet, at the bottom. */
+  .foot { max-width:820px; margin:22px auto 0; text-align:center; }
+  .foot .label { font-size:14px; color:var(--sec); }
+  .foot .label a { color:var(--text); font-weight:600; text-decoration:underline; text-underline-offset:4px; }
+  .fine { margin-top:14px; font-size:12px; color:var(--ter); line-height:1.6; }
+  .help { margin-top:10px; font-size:13px; color:var(--ter); }
+  .help a { color:var(--sec); text-decoration:underline; text-underline-offset:3px; }
+
+  /* Phone A: X's swipe. One card fills the screen, the next peeks in. */
+  .phoneA .cards { display:flex; overflow:hidden; gap:12px; max-width:none; margin:0 -16px; padding:0 16px; }
+  .phoneA .cards { align-items:flex-start; }
+  .phoneA .card { flex:0 0 86%; }
+  .dots { display:flex; justify-content:center; gap:6px; margin-top:14px; }
+  .dots i { width:6px; height:6px; border-radius:50%; background:var(--line2); }
+  .dots i.on { background:var(--text); width:18px; border-radius:3px; }
+
+  /* Phone B: stacked, Manager first. */
+  .phoneB .cards { grid-template-columns:1fr; }
+
+  .tag { position:fixed; left:12px; bottom:12px; background:#1a1611; color:#fff; font:600 11px 'Instrument Sans'; padding:6px 10px; border-radius:8px; opacity:.85; z-index:9; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><symbol id="ck" viewBox="0 0 24 24"><path fill="currentColor" d="M10 15.17 19.19 6l1.41 1.41L10 18 3.64 11.64l1.41-1.41z"/></symbol></svg>
+
+<template id="solo-m">
+  <div class="card">
+    <div class="name">Solo</div>
+    <div class="price"><b>₦4,000</b><i>/month</i></div>
+    <p class="then">for 6 months, then ₦5,000</p>
+    <div class="btn out">Get Solo</div>
+    <p class="lead">For an artist and their manager.</p>
+    <ul data-list="solo"></ul>
+  </div>
+</template>
+<template id="mgr-m">
+  <div class="card rec">
+    <div class="name">Manager <span class="badge">Most teams</span></div>
+    <div class="price"><b>₦26,000</b><i>/month</i></div>
+    <p class="then">for 6 months, then ₦30,000</p>
+    <div class="btn fill">Get Manager</div>
+    <p class="lead">Everything in Solo, and:</p>
+    <ul data-list="mgr"></ul>
+  </div>
+</template>
+<template id="solo-y">
+  <div class="card">
+    <div class="name">Solo</div>
+    <div class="price"><b>₦4,167</b><i>/month</i></div>
+    <p class="then">₦50,000 billed once a year</p>
+    <div class="btn out">Get Solo</div>
+    <p class="lead">For an artist and their manager.</p>
+    <ul data-list="solo"></ul>
+  </div>
+</template>
+<template id="mgr-y">
+  <div class="card rec">
+    <div class="name">Manager <span class="badge">Most teams</span></div>
+    <div class="price"><b>₦25,000</b><i>/month</i></div>
+    <p class="then">₦300,000 billed once a year</p>
+    <div class="btn fill">Get Manager</div>
+    <p class="lead">Everything in Solo, and:</p>
+    <ul data-list="mgr"></ul>
+  </div>
+</template>
+
+<template id="head">
+  <div class="head">
+    <p class="eyebrow">Your trial has ended</p>
+    <h1>Pick up where you left off.</h1>
+  </div>
+</template>
+<template id="foot">
+  <div class="foot">
+    <p class="label">Running a label? <a>Talk to us on WhatsApp</a></p>
+    <p class="fine">Prices in Naira, for your whole team. The first 6 months price is for teams paying for the first time. Cancel any time.</p>
+    <p class="help">Questions? <a>WhatsApp us</a> · <a>Email us</a></p>
+  </div>
+</template>
+
+<section class="screen" id="desktop-monthly" data-build="head|seg-m|cards:solo-m,mgr-m|foot"></section>
+<section class="screen" id="desktop-yearly" data-build="head|seg-y|cards:solo-y,mgr-y|foot"></section>
+<section class="screen phoneA" id="phone-a" data-build="head|seg-m|cards:mgr-m,solo-m|dots|foot"></section>
+<section class="screen phoneB" id="phone-b" data-build="head|seg-m|cards:mgr-m,solo-m|foot"></section>
+
+<div class="tag" id="tag"></div>
+<script>
+  var LISTS = {
+    solo: ['1 artist', '2 people on your team', '1 rollout at a time', '150 UrgAns credits a month', 'A plan for every rollout', 'Tasks with owners and due dates', 'Pitch this! kit for every rollout', 'Search the Urganize Directory'],
+    mgr: ['Up to 3 artists', '5 people on your team', '3 rollouts at a time', '660 UrgAns credits a month', 'Distribution included']
+  };
+  function seg(on) { return '<div class="seg"><div><span' + (on === 'm' ? ' class="on"' : '') + '>Monthly</span><span' + (on === 'y' ? ' class="on"' : '') + '>Yearly</span></div></div>'; }
+  document.querySelectorAll('[data-build]').forEach(function (s) {
+    var html = '';
+    s.dataset.build.split('|').forEach(function (part) {
+      if (part === 'seg-m') html += seg('m');
+      else if (part === 'seg-y') html += seg('y');
+      else if (part === 'dots') html += '<div class="dots"><i class="on"></i><i></i></div>';
+      else if (part.indexOf('cards:') === 0) html += '<div class="cards">' + part.slice(6).split(',').map(function (id) { return document.getElementById(id).innerHTML; }).join('') + '</div>';
+      else html += document.getElementById(part).innerHTML;
+    });
+    s.innerHTML = html;
+    s.querySelectorAll('[data-list]').forEach(function (ul) {
+      ul.innerHTML = LISTS[ul.dataset.list].map(function (l) { return '<li><svg width="16" height="16"><use href="#ck"/></svg><span>' + l + '</span></li>'; }).join('');
+    });
+  });
+  var id = new URLSearchParams(location.search).get('s') || 'desktop-monthly';
+  document.getElementById(id).classList.add('on');
+  document.getElementById('tag').textContent = 'Mock: ' + id;
+</script>
+</body>
+</html>

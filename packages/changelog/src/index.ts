@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.191.1",
+    tag: "Account",
+    date: "October 26, 2026",
+    highlights: [
+      "Picking a plan when your trial ends is cleaner: Solo and Manager sit side by side, each with its price, its own button and what it includes.",
+    ],
+  },
+  {
     version: "1.191.0",
     title: "A lower price for your first 6 months",
     tag: "Account",
