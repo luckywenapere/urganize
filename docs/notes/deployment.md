@@ -2,6 +2,8 @@
 
 > Moved out of CLAUDE.md on 2026-10-22 (verbatim). "This file", "above", "below" and "the X section" in here refer to the old single CLAUDE.md: find the named section in docs/notes/README.md.
 
+**Deploys are opt-in since 2026-10-27:** root `vercel.json` carries `ignoreCommand` so a push to `main` only builds when the commit message contains `[deploy]`, on both projects. See the Deploy Configuration section of CLAUDE.md.
+
 **Hosting:** Vercel, two projects pointing at the same GitHub repo:
 
 - `the-urganization` → `urganize.app` → builds `apps/homepage` (`pnpm turbo build --filter=@urganize/homepage`).

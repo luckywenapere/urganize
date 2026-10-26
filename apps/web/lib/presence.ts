@@ -11,8 +11,10 @@
 
 export const PRESENCE_TABLE = 'user_presence_days';
 
-/** How often a visible tab pings. */
-export const PING_INTERVAL_MS = 2 * 60 * 1000;
+/** How often a visible tab pings. 10 minutes since 2026-10-27 (was 2): every
+ *  ping is a Vercel function call, and the 2-minute beat was most of the free
+ *  plan's Active CPU. */
+export const PING_INTERVAL_MS = 10 * 60 * 1000;
 
 /** The shortest gap between two pings, so focus and visibility events in quick
  *  succession send one ping rather than several. */
@@ -20,7 +22,7 @@ export const PING_MIN_GAP_MS = 30 * 1000;
 
 /** Seen this recently counts as online now. More than two ping intervals, so one
  *  slow or dropped ping does not flicker someone offline. */
-export const ONLINE_WINDOW_MS = 5 * 60 * 1000;
+export const ONLINE_WINDOW_MS = 25 * 60 * 1000;
 
 export const PRESENCE_SURFACES = [
   'desktop_web',

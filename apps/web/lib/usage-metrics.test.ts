@@ -88,14 +88,14 @@ describe('dates', () => {
 });
 
 describe('online now', () => {
-  it('lists people whose last ping is within five minutes, newest first', () => {
+  it('lists people whose last ping is within 25 minutes, newest first', () => {
     const metrics = buildUsageMetrics(
       input({
         people: [person('ada'), person('ben'), person('cy')],
         presence: [
           { userId: 'ada', day: '2026-10-07', lastSeenAt: ago(60 * 1000), surface: 'phone_web' },
           { userId: 'ben', day: '2026-10-07', lastSeenAt: ago(20 * 1000), surface: 'desktop_web' },
-          { userId: 'cy', day: '2026-10-07', lastSeenAt: ago(10 * 60 * 1000), surface: 'ios_app' },
+          { userId: 'cy', day: '2026-10-07', lastSeenAt: ago(30 * 60 * 1000), surface: 'ios_app' },
         ],
       })
     );

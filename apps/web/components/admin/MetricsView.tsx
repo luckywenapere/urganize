@@ -97,7 +97,7 @@ export function MetricsView({
       <Section
         id="metrics-now"
         title="Right now"
-        info="Online now means the app was open and on screen in the last five minutes. The app checks in every two minutes while it is visible."
+        info="Online now means the app was open and on screen in the last 25 minutes. The app checks in every ten minutes while it is visible."
       >
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <div className="rounded-xl border border-brand/40 bg-brand/5 p-5">

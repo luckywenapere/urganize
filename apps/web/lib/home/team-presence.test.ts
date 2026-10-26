@@ -13,11 +13,11 @@ const member = (name: string, lastSeenAt: string | null): TeamPresenceMember => 
 });
 
 describe('teamPresenceLabel', () => {
-  it('says online inside the five minute window', () => {
+  it('says online inside the 25 minute window', () => {
     expect(teamPresenceLabel(ago(2 * MIN), now)).toBe('Online now');
   });
   it('says how long ago after that', () => {
-    expect(teamPresenceLabel(ago(20 * MIN), now)).toBe('Active 20 min ago');
+    expect(teamPresenceLabel(ago(40 * MIN), now)).toBe('Active 40 min ago');
     expect(teamPresenceLabel(ago(3 * 60 * MIN), now)).toBe('Active 3 h ago');
     expect(teamPresenceLabel(ago(30 * 60 * MIN), now)).toBe('Active yesterday');
   });

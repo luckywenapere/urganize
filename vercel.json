@@ -6,6 +6,7 @@
       "**": false
     }
   },
+  "ignoreCommand": "git log -1 --pretty=%B | grep -qF '[deploy]' && exit 1 || exit 0",
   "installCommand": "pnpm install",
   "framework": "nextjs",
   "regions": [
