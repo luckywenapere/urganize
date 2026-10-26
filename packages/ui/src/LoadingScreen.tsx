@@ -102,17 +102,17 @@ export function LoadingScreen({
       />
       <span className="sr-only">{title}</span>
       {/* "from Urganization", the company lockup under the product, the way
-          Meta signs its apps (founder, 2026-10-18: official logo is the
-          original multi-line mark centred over the wordmark). Bottom of the
-          frame, above the home indicator. Decorative: aria-hidden. */}
+          Meta signs its apps (founder, 2026-10-18). Since 2026-10-26 the mark
+          sits left of the caps wordmark at 1.618 x the letter height (founder approved mocks).
+          Bottom of the frame, above the home indicator. Decorative: aria-hidden. */}
       <div className="urg-boot-from" aria-hidden="true" data-boot-from="">
         <span className="urg-boot-from-label">from</span>
         {/* eslint-disable-next-line @next/next/no-img-element -- static SVG, no optimizer needed */}
         <img
-          src="/images/urganization-logo-stacked.svg"
+          src="/images/urganization-logo-horizontal.svg"
           alt=""
-          width={126}
-          height={60}
+          width={166}
+          height={21}
           className="app-wordmark urg-boot-from-logo"
         />
       </div>
