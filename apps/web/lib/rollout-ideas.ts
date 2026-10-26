@@ -114,6 +114,19 @@ export const ROLLOUT_IDEAS_COPY = {
   soloInviteTitle: 'Get your manager or team to chime in',
   asked: (count: number) => (count === 1 ? 'Asked 1 person' : `Asked ${count} people`),
   empty: 'Nobody else is on this rollout yet.',
+  noIdea: 'No idea yet? Ask your team',
+  inviteTitle: 'Who should help shape it?',
+  inviteBody: 'They add ideas. UrgAns turns all of it into your plan.',
+  inviteWhatsApp: 'Invite on WhatsApp',
+  inviteSent: 'Invite sent',
+  readyTitle: 'Ready when you are.',
+  readyBody: 'Build now, or wait for their ideas first.',
+  readyBodySkipped: 'Build your plan now.',
+  buildPlan: 'Build my plan',
+  waitForIdeas: 'Wait for their ideas',
+  fiveQuestions: 'Five questions. About a minute.',
+  waitingTitle: 'Waiting for their ideas.',
+  waitingBody: 'Their notes show up here. Build the plan whenever you like.',
 } as const;
 
 function firstWord(value: string): string {

@@ -102,6 +102,9 @@ export function RolloutIdeasCard({
   const [brief, setBrief] = useState<RolloutBrief | null>(null);
   const [suggest, setSuggest] = useState<SuggestState>(null);
   const [applying, setApplying] = useState(false);
+  // The owner's guided first run: idea, then invite, then the plan button.
+  const [stage, setStage] = useState<'idea' | 'invite' | 'plan' | 'waiting'>('idea');
+  const [inviteSent, setInviteSent] = useState(false);
 
   const load = useCallback(async () => {
     const headers = await authHeaders();
@@ -184,7 +187,18 @@ export function RolloutIdeasCard({
   // down when the idea card arrives (2026-10-26). Only for the full card on a
   // rollout that has no plan yet, the one case where it is always going to show.
   if (!data) {
-    if (loadFailed || condensed || hasPlan) return null;
+    if (condensed || hasPlan) return null;
+    // The plan button lives here on a new rollout, so a failed read still shows it.
+    if (loadFailed) {
+      return canDraft ? (
+        <PlanStage
+          sent={false}
+          waiting={false}
+          onBuild={() => onDraftWithAi('')}
+          onWait={() => undefined}
+        />
+      ) : null;
+    }
     return (
       <div
         aria-busy="true"
@@ -409,6 +423,51 @@ export function RolloutIdeasCard({
   // card's button directly below it. It becomes the ordinary card once a note
   // exists, someone is being asked, or a plan has been built.
   const fresh = !hasNotes && !typing && !askingWho && !hasPlan;
+  const guided = fresh && data.isOwner && canDraft && path !== 'chime_in';
+
+  if (guided && stage === 'invite') {
+    return (
+      <section aria-labelledby={`ideas-title-${release.id}`} className={FRESH_COLUMN}>
+        <h2 id={`ideas-title-${release.id}`} className={FRESH_HEADING}>
+          {COPY.inviteTitle}
+        </h2>
+        <p className="mt-2 text-sm text-content-secondary">{COPY.inviteBody}</p>
+        <div className="mt-6 flex justify-center">
+          <InviteLinkActions
+            releaseId={release.id}
+            releaseTitle={release.title}
+            senderName={viewerName}
+            path={path === 'solo' ? 'solo' : 'manager'}
+            stacked
+            onShared={() =>
+              window.setTimeout(() => {
+                setInviteSent(true);
+                setStage('plan');
+              }, 1000)
+            }
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => setStage('plan')}
+          className="motion-focus mt-4 min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary underline hover:text-content-primary"
+        >
+          {COPY.skip}
+        </button>
+      </section>
+    );
+  }
+
+  if (guided && (stage === 'plan' || stage === 'waiting')) {
+    return (
+      <PlanStage
+        sent={inviteSent}
+        waiting={stage === 'waiting'}
+        onBuild={() => onDraftWithAi('')}
+        onWait={() => setStage('waiting')}
+      />
+    );
+  }
 
   return (
     <section
@@ -513,6 +572,16 @@ export function RolloutIdeasCard({
         </div>
       )}
 
+      {guided && !typing ? (
+        <button
+          type="button"
+          onClick={() => setStage('invite')}
+          className="motion-focus mt-6 min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary underline hover:text-content-primary"
+        >
+          {COPY.noIdea}
+        </button>
+      ) : null}
+
       {error ? (
         <p role="alert" className="mt-2 text-sm text-status-error">
           {error}
@@ -555,6 +624,67 @@ export function RolloutIdeasCard({
           />
         </div>
       ) : null}
+    </section>
+  );
+}
+
+const FRESH_COLUMN = 'mx-auto w-full max-w-[26rem] px-1 pt-10 text-center sm:w-[61.8%] sm:min-w-[22rem] sm:pt-16';
+const FRESH_HEADING = 'font-display text-2xl font-semibold leading-tight text-content-primary sm:text-[1.75rem]';
+
+/** The plan button, shown only after the idea and invite steps (2026-10-26). */
+function PlanStage({
+  sent,
+  waiting,
+  onBuild,
+  onWait,
+}: {
+  sent: boolean;
+  waiting: boolean;
+  onBuild: () => void;
+  onWait: () => void;
+}) {
+  return (
+    <section className={FRESH_COLUMN}>
+      {sent ? (
+        <p className="mb-2 flex items-center justify-center gap-2 text-sm font-medium text-brand">
+          <Check className="h-4 w-4" aria-hidden="true" />
+          {COPY.inviteSent}
+        </p>
+      ) : null}
+      <h2 className={FRESH_HEADING}>{waiting ? COPY.waitingTitle : COPY.readyTitle}</h2>
+      <p className="mt-2 text-sm text-content-secondary">
+        {waiting ? COPY.waitingBody : sent ? COPY.readyBody : COPY.readyBodySkipped}
+      </p>
+      {waiting ? (
+        <button
+          type="button"
+          onClick={onBuild}
+          className="motion-focus mt-4 min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary underline hover:text-content-primary"
+        >
+          {COPY.buildPlan}
+        </button>
+      ) : (
+        <div className="mt-6 flex flex-col items-center gap-2">
+          <Button
+            type="button"
+            onClick={onBuild}
+            data-tour="plan-rollout"
+            className="h-12 w-full max-w-[16rem] justify-center rounded-full px-8"
+          >
+            {COPY.buildPlan}
+          </Button>
+          {sent ? (
+            <button
+              type="button"
+              onClick={onWait}
+              className="motion-focus min-h-11 w-full max-w-[16rem] rounded-full border border-stroke-strong px-8 text-sm font-medium text-content-primary hover:bg-bg-surface"
+            >
+              {COPY.waitForIdeas}
+            </button>
+          ) : null}
+          <p className="mt-1 text-xs text-content-tertiary">{COPY.fiveQuestions}</p>
+        </div>
+      )}
     </section>
   );
 }
@@ -1152,12 +1282,18 @@ function InviteLinkActions({
   senderName,
   path,
   autoStart = false,
+  stacked = false,
+  onShared,
 }: {
   releaseId: string;
   releaseTitle: string;
   senderName: string;
   path: 'solo' | 'manager';
   autoStart?: boolean;
+  /** The guided invite step: the WhatsApp button leads and the two stack. */
+  stacked?: boolean;
+  /** Called once the link was sent to WhatsApp or copied. */
+  onShared?: () => void;
 }) {
   const [link, setLink] = useState<string | null>(null);
   const [making, setMaking] = useState(false);
@@ -1205,6 +1341,7 @@ function InviteLinkActions({
     }
     const target = buildWhatsAppShareUrl(chimeInShareText({ senderName, releaseTitle, link: url }));
     captureAnalyticsEvent({ name: 'chime_in_link_shared', properties: { via: 'whatsapp', path } });
+    onShared?.();
     if (popup) popup.location.href = target;
     else window.location.href = target;
   };
@@ -1216,21 +1353,22 @@ function InviteLinkActions({
       captureAnalyticsEvent({ name: 'chime_in_link_shared', properties: { via: 'copy', path } });
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
+      onShared?.();
     }
   };
 
   return (
-    <div>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+    <div className={stacked ? 'w-full max-w-[16rem]' : undefined}>
+      <div className={stacked ? 'mt-2 flex flex-col items-stretch gap-2' : 'mt-2 flex flex-wrap items-center gap-2'}>
         <Button
           size="md"
-          variant="secondary"
+          variant={stacked ? 'primary' : 'secondary'}
           className="min-h-11"
           leftIcon={<MessageCircle className="h-4 w-4" aria-hidden="true" />}
           onClick={() => void shareWhatsApp()}
           disabled={making && !link}
         >
-          {COPY.shareWhatsApp}
+          {stacked ? COPY.inviteWhatsApp : COPY.shareWhatsApp}
         </Button>
         <button
           type="button"
