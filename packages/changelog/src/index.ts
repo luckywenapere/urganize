@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.177.1",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "On a phone, tap the square next to a rollout's name to add, change or remove its cover art.",
+      "The Rollout menu is shorter: Add cover art and Share to socials are gone from it.",
+    ],
+  },
+  {
     version: "1.177.0",
     tag: "AI",
     listed: false,
