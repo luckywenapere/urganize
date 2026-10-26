@@ -2,8 +2,9 @@
 //
 // Home answers one question: what do I do next for this release?
 //
-//   State A, a rollout in flight: the release header (title, days to go, the
-//   Pre-release / Release / Post-release line, the team), ONE next move with
+//   State A, a rollout in flight: the greeting with the bell (the rollout
+//   header with its phase bars and faces was removed 2026-10-26, founder call:
+//   it confused people), ONE next move with
 //   one button (up to two more a swipe away), Waiting on others as one row, a
 //   one-line opportunity when a grant matched, and Ask UrgAns.
 //
@@ -16,7 +17,6 @@
 // clock is passed in so the rules can be tested.
 
 import { getRelativeDueLabel } from '@/lib/tasks';
-import { rolloutPhaseForOffset, DATED_ROLLOUT_PHASES, type RolloutPhase } from '@/lib/rollout-phases';
 import type { NextMove } from '@/lib/next-moves';
 import type { HomeReleaseSummary, HomeStateKey, HomeTaskItem, HomeYourTasks } from './types';
 import { pickFocusTask } from './focus';
@@ -41,45 +41,6 @@ export function pickHeaderRelease(releases: readonly HomeReleaseSummary[]): Home
   const past = releases.filter((r) => r.daysOut !== null).sort((a, b) => b.daysOut! - a.daysOut!);
   if (past.length > 0) return past[0];
   return releases[0];
-}
-
-const DATE_FORMAT = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
-
-/** "Drops" and "Fri 28 Oct" (or "Out" once the date has passed). */
-export function describeDrop(release: Pick<HomeReleaseSummary, 'daysOut' | 'releaseDate'>): {
-  lead: string;
-  date: string;
-} {
-  const date =
-    release.releaseDate && Number.isFinite(Date.parse(release.releaseDate))
-      ? DATE_FORMAT.format(new Date(`${release.releaseDate.slice(0, 10)}T00:00:00Z`))
-      : '';
-  const days = release.daysOut;
-  if (days === null || !date) return { lead: 'No release date yet', date: '' };
-  return { lead: days > 0 ? 'Drops' : 'Out', date };
-}
-
-export type PhaseSegment = { phase: RolloutPhase; active: boolean; fill: number };
-
-/**
- * The three-part line under the title. The current phase is lit and filled to
- * the rollout's progress; phases behind it are full, phases ahead empty. A
- * rollout with no date has no phase yet, so no line.
- */
-export function buildPhaseLine(
-  release: Pick<HomeReleaseSummary, 'daysOut' | 'progress'>
-): PhaseSegment[] | null {
-  if (release.daysOut === null) return null;
-  const current = rolloutPhaseForOffset(-release.daysOut);
-  const index = DATED_ROLLOUT_PHASES.indexOf(current);
-  const ratio = release.progress.total > 0 ? release.progress.done / release.progress.total : 0;
-  // Never draw a lit phase as empty: a sliver says "you are here".
-  const fill = Math.max(0.06, Math.min(1, ratio));
-  return DATED_ROLLOUT_PHASES.map((phase, i) => ({
-    phase,
-    active: i === index,
-    fill: i < index ? 1 : i === index ? fill : 0,
-  }));
 }
 
 // ---------------------------------------------------------------- the one thing

@@ -21,6 +21,9 @@ export type SchedulePayload = {
   activitiesMoved?: unknown;
   /** How many should have moved but could not. */
   activitiesNotMoved?: unknown;
+  /** Planner v2 (2026-10-26): undated tasks that got a due date, and tasks UrgAns added for the date. */
+  plannerV2Dated?: unknown;
+  plannerV2Added?: unknown;
 };
 
 function count(value: unknown): number {
@@ -45,6 +48,15 @@ export function interpretScheduleResponse(
     return {
       kind: 'error',
       message: payload.error || 'Could not save the release date.',
+    };
+  }
+  // An undated plan just got its dates: one short line (Oyin, 26 Oct 2026).
+  const dated = count(payload.plannerV2Dated);
+  if (dated > 0) {
+    const added = count(payload.plannerV2Added);
+    return {
+      kind: 'saved',
+      message: added > 0 ? `Dates added. ${added} new ${added === 1 ? 'task' : 'tasks'}.` : 'Dates added.',
     };
   }
   const created = count(payload.activitiesCreated);

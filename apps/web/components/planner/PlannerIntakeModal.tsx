@@ -53,6 +53,11 @@ import {
   visibleIntakeSteps,
 } from '@/lib/planner-intake-steps';
 import { PlannerTemplatePreview } from './PlannerTemplatePreview';
+import { PlannerV2Modal } from './PlannerV2Modal';
+import { isPlannerV2Enabled } from '@/lib/planner-v2/answers';
+
+/** Planner v2 (2026-10-26): on unless NEXT_PUBLIC_FEATURE_PLANNER_V2 is 'false'. */
+const PLANNER_V2 = isPlannerV2Enabled();
 
 /**
  * The guided intake: one question per screen, seven at most, then UrgAns
@@ -117,7 +122,16 @@ async function discardAbandonedRollout(releaseId: string, createdTitle: string |
 
 const todayYmd = () => new Date().toISOString().slice(0, 10);
 
+/**
+ * The planner every entry point opens (AppShell mounts it once). Planner v2
+ * (UrgAns writes the plan, preview first) unless its flag is 'false'; the
+ * playbook intake below stays as the fallback path.
+ */
 export function PlannerIntakeModal() {
+  return PLANNER_V2 ? <PlannerV2Modal /> : <PlannerIntakeModalV1 />;
+}
+
+function PlannerIntakeModalV1() {
   // withFirstPlan: the footer says "Your first plan is free." instead of the
   // cost when the server says this team has not had a plan yet.
   const { balance, firstPlanFree, refresh: refreshCredits } = useCreditBalance({ withFirstPlan: true });

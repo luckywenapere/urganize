@@ -12,6 +12,7 @@ import { alignPlanToReleaseDate } from '@/lib/release-plan-dates-server';
 import { readTemplatePending, writeTemplatePending } from '@/lib/release-template-pending';
 import { instantiateTemplate } from '@/lib/release-templates/instantiate';
 import { getTemplate } from '@/lib/release-templates/loader';
+import { datePlanV2OnSchedule } from '@/lib/planner-v2/dates-server';
 import type { ReleaseType } from '@/lib/release-templates/types';
 import {
   captureServerAnalyticsEvent,
@@ -43,10 +44,15 @@ import {
  * activities is a large side effect to bury in a generic edit. Here it is the
  * stated job.
  */
+// Planner v2 (2026-10-26): a first date on an undated plan may ask UrgAns for
+// the date-dependent tasks, a short call with a 30s deadline.
+export const maxDuration = 60;
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
+  const startedAt = Date.now();
   const posthogServer = createServerPostHogClient();
 
   try {
@@ -196,6 +202,20 @@ export async function POST(
       activitiesNotMoved = alignment.failed;
     }
 
+    // Planner v2 (2026-10-26): an undated plan gets its due dates now, and,
+    // once per rollout, UrgAns adds the tasks that need the date. A plan that
+    // was already dated has no undated tasks, so this does nothing then.
+    let plannerV2 = { dated: 0, added: 0 };
+    if (!templatePending) {
+      plannerV2 = await datePlanV2OnSchedule(adminClient, {
+        releaseId,
+        releaseDate: releaseDateResult.value,
+        actorUserId: auth.user.id,
+        todayYmd: new Date().toISOString().slice(0, 10),
+        startedAt,
+      });
+    }
+
     if (templatePending) {
       try {
         const workspace = await ensureOwnedWorkspace(adminClient, auth.user);
@@ -258,6 +278,9 @@ export async function POST(
       // says so rather than reporting a clean move.
       activitiesNotMoved,
       templatePending: false,
+      // "Dates added. 4 new tasks." (lib/schedule-release-outcome.ts)
+      plannerV2Dated: plannerV2.dated,
+      plannerV2Added: plannerV2.added,
     });
   } finally {
     await shutdownServerAnalytics(posthogServer);

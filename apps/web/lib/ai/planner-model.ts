@@ -23,6 +23,14 @@ import { isRodiumGateway, REASONING_EFFORTS, type ReasoningEffort } from './prov
 // leads with the same model so the router on and off agree.
 export const RODIUM_PLANNER_MODEL = 'openai/gpt-5.4';
 
+/**
+ * Planner v2's quick calls (2026-10-26): a Tweak of a plan already written and
+ * the date-dependent tasks added when a release date is set. Short, schema
+ * bound, and run often, so the small sibling of the same family. Surface
+ * `planner_quick` in the router; `AI_PLANNER_QUICK_MODEL` pins it.
+ */
+export const RODIUM_PLANNER_QUICK_MODEL = 'openai/gpt-5.4-mini';
+
 export function resolvePlannerModel(): string | undefined {
   const override = String(process.env.AI_PLANNER_MODEL || '').trim();
   if (override) return override;

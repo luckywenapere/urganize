@@ -157,7 +157,8 @@ describe('only the chat route charges, and only after the confirmation branch', 
 describe('every door onto an embedded action is metered, and only after it succeeded', () => {
   // The plan route's build moved into lib/release-plan-build-server.ts (2026-10-17),
   // shared with the onboarding auto build.
-  const doors = ['lib/urgans-actions/server.ts', 'lib/release-plan-build-server.ts'];
+  // Planner v2's preview (2026-10-26) is the third: same hold and settle.
+  const doors = ['lib/urgans-actions/server.ts', 'lib/release-plan-build-server.ts', 'lib/planner-v2/server.ts'];
 
   it('is the only place outside the credits module that holds or settles a run', () => {
     const callers = [...sources]
@@ -171,6 +172,7 @@ describe('every door onto an embedded action is metered, and only after it succe
     const run: Record<string, string> = {
       'lib/urgans-actions/server.ts': 'action.execute(',
       'lib/release-plan-build-server.ts': 'createReleasePlan(admin',
+      'lib/planner-v2/server.ts': 'await writePlanV2(',
     };
     for (const door of doors) {
       const source = sources.get(door) ?? '';

@@ -513,7 +513,10 @@ export function daysUntilDue(value: string | null | undefined, now: Date = new D
 }
 
 export function getRelativeDueLabel(
-  task: Pick<Task, 'dueDate' | 'completedAt' | 'compressedRunway'> & { status?: TaskStatus | string | null },
+  task: Pick<Task, 'dueDate' | 'completedAt' | 'compressedRunway'> & {
+    status?: TaskStatus | string | null;
+    relativeWhen?: string | null;
+  },
   now = new Date()
 ): {
   label: string;
@@ -527,7 +530,8 @@ export function getRelativeDueLabel(
 
   const differenceInDays = daysUntilDue(task.dueDate, now);
   if (differenceInDays === null) {
-    return { label: 'No due date', isOverdue: false };
+    // An undated plan task says when it falls relative to release (planner v2).
+    return { label: task.relativeWhen || 'No due date', isOverdue: false };
   }
 
   if (differenceInDays === 0) {

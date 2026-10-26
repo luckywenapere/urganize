@@ -52,49 +52,33 @@ export function OpportunitiesBlockSkeleton() {
 
 /**
  * The left column, drawn to Home's golden layout B (URG-356, URG-364): the
- * release header (title, then "Drops <date>"; no eyebrow), the bell and the
- * team's faces top right, the three phase bars with their labels, the golden
- * One Thing card, then 56px rows with hairlines (Done, Waiting, grants). Every
- * box takes the real block's classes and line boxes (ReleaseHeader, OneThing,
+ * greeting (date, then "Good morning, Name.") with the bell top right, the
+ * golden One Thing card, then 56px rows with hairlines (Done, Waiting, grants).
+ * The rollout header with its phase bars and faces is gone (2026-10-26). Every
+ * box takes the real block's classes and line boxes (HomeGreeting, OneThing,
  * HomeRow), so nothing moves when Home lands. Guarded by
  * lib/home-skeleton-parity-guard.test.ts.
  */
 function HomeColumnBlocks() {
   return (
     <div className="flex flex-col" data-skeleton="home-column">
-      <div className="flex items-start justify-between gap-3" data-skeleton="release-header">
+      <div className="flex items-start justify-between gap-3" data-skeleton="greeting">
         <div className="min-w-0 flex-1">
-          {/* h1: text-[1.875rem] leading-[1.15] is a 34.5px line. */}
-          <div className="flex h-[2.15625rem] items-center" data-skeleton="title">
-            <SkeletonBlock className="h-7 w-44 rounded-lg" />
+          {/* The date: font-mono text-[11px] at leading 1.5. */}
+          <div className="flex h-[1.03125rem] items-center" data-skeleton="date">
+            <SkeletonBlock className="h-2.5 w-24 rounded-sm" />
           </div>
-          {/* "Drops Fri 6 Nov": mt-1.5, text-[15px] at body leading 1.5. */}
-          <div className="mt-1.5 flex h-[1.40625rem] items-center" data-skeleton="drop">
-            <SkeletonBlock className="h-4 w-36 rounded-md" />
-          </div>
-        </div>
-        <div className="-mr-1 flex shrink-0 items-center gap-1">
-          {/* The bell is phone only, like HomeBell (lg:hidden). */}
-          <div className="grid h-11 w-11 place-items-center lg:hidden" data-skeleton="bell">
-            <SkeletonBlock className="h-5 w-5 rounded-full" />
-          </div>
-          <div className="flex min-h-11 items-center pl-2" data-skeleton="team">
-            <SkeletonBlock className="h-[30px] w-[30px] rounded-full" />
+          {/* h1: mt-2, text-[1.875rem] leading-[1.15] is a 34.5px line. */}
+          <div className="mt-2 flex h-[2.15625rem] items-center" data-skeleton="title">
+            <SkeletonBlock className="h-7 w-52 rounded-lg" />
           </div>
         </div>
+        {/* The bell is phone only, like HomeBell (lg:hidden). */}
+        <div className="-mr-1 grid h-11 w-11 shrink-0 place-items-center lg:hidden" data-skeleton="bell">
+          <SkeletonBlock className="h-5 w-5 rounded-full" />
+        </div>
       </div>
-      <div className="mt-4 flex gap-1.5" data-skeleton="phases">
-        {['w-16', 'w-12', 'w-20'].map((width) => (
-          <div key={width} className="min-w-0 flex-1">
-            <SkeletonBlock className="h-1 w-full rounded-full" />
-            {/* Phase label: mt-1.5, text-[11px] at leading 1.5. */}
-            <div className="mt-1.5 flex h-[1.03125rem] items-center">
-              <SkeletonBlock className={`h-2.5 rounded-sm ${width}`} />
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="mt-9" data-skeleton="one-thing">
+      <div className="mt-6" data-skeleton="one-thing">
         <SkeletonBlock className="aspect-[1.618/1] w-full rounded-[20px]" />
       </div>
       <div className="mt-4 divide-y divide-stroke-subtle" data-skeleton="rows">
@@ -136,7 +120,7 @@ function PinnedAskBoxPlaceholder() {
  * Home's own loading shape, in the order the page reads. Used by
  * app/dashboard/home/loading.tsx and by HomePageClient while Home's data (and
  * its dismissed next moves) load. Keep in step with HomeFour (ReleaseHome),
- * ReleaseHeader, OneThing, HomeRow and HomeDesktopSplit.
+ * HomeGreeting, OneThing, HomeRow and HomeDesktopSplit.
  *
  * Two shapes, switched by CSS rather than by reading the viewport, so the
  * server's markup is right at every width with nothing to correct after load:

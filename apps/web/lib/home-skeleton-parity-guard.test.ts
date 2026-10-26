@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
  * the old skeleton (an eyebrow, a tall card, a rounded pill) and then an old
  * "Open it" move card flash before the golden layout B Home. vitest has no
  * layout engine, so these read the files: the skeleton must carry the same
- * blocks and box classes as ReleaseHeader, OneThing and HomeRow, and Home must
+ * blocks and box classes as HomeGreeting, OneThing and HomeRow, and Home must
  * not paint until its dismissed next moves are known.
  */
 
@@ -16,7 +16,6 @@ const read = (...parts: string[]) => readFileSync(join(WEB, ...parts), 'utf8');
 const code = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/^\s*\/\/.*$/gm, '');
 
 const skeleton = code(read('components', 'loading', 'HomeSkeleton.tsx'));
-const header = code(read('components', 'home', 'v2', 'ReleaseHeader.tsx'));
 const oneThing = code(read('components', 'home', 'v2', 'OneThing.tsx'));
 const homeFour = code(read('components', 'home', 'v2', 'HomeFour.tsx'));
 const rows = code(read('components', 'home', 'v2', 'HomeRow.tsx'));
@@ -30,33 +29,31 @@ const column = (() => {
 })();
 
 describe('Home skeleton matches the live Home (layout B)', () => {
-  it('has no eyebrow: the live header leads with the title', () => {
-    expect(header).not.toMatch(/uppercase tracking/);
-    // The first block in the column is the header row, whose first line is the title.
-    const first = column.indexOf('data-skeleton="release-header"');
+  it('leads with the greeting (date, then the name line), like the live Home', () => {
+    expect(homeFour).toContain('data-home-block="greeting"');
+    const first = column.indexOf('data-skeleton="greeting"');
     expect(first).toBeGreaterThan(-1);
-    expect(column.indexOf('data-skeleton="title"')).toBeGreaterThan(first);
-    expect(column.indexOf('data-skeleton="title"')).toBeLessThan(column.indexOf('data-skeleton="drop"'));
-    expect(column).not.toMatch(/h-3 w-32/);
+    expect(column.indexOf('data-skeleton="date"')).toBeGreaterThan(first);
+    expect(column.indexOf('data-skeleton="date"')).toBeLessThan(column.indexOf('data-skeleton="title"'));
   });
 
-  it('draws the bell (phone only, like HomeBell) and the team top right', () => {
+  it('draws no rollout hero: no drop line, faces or phase bars (removed 2026-10-26)', () => {
+    expect(column).not.toContain('data-skeleton="drop"');
+    expect(column).not.toContain('data-skeleton="team"');
+    expect(column).not.toContain('data-skeleton="phases"');
+  });
+
+  it('draws the bell (phone only, like HomeBell) top right', () => {
     expect(column).toMatch(/h-11 w-11[^"']*lg:hidden[^"']*" data-skeleton="bell"/);
-    expect(column).toContain('data-skeleton="team"');
-    expect(header).toContain('<HomeBell />');
-    expect(header).toContain('<TeamAvatars');
+    expect(homeFour).toContain('<HomeBell />');
   });
 
   it('keeps the blocks in the live order, with the live gaps', () => {
-    const order = ['release-header', 'phases', 'one-thing', 'rows'].map((name) =>
-      column.indexOf(`data-skeleton="${name}"`)
-    );
+    const order = ['greeting', 'one-thing', 'rows'].map((name) => column.indexOf(`data-skeleton="${name}"`));
     expect(order.every((at) => at > -1)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
-    expect(header).toMatch(/mt-4 flex gap-1\.5/);
-    expect(column).toMatch(/mt-4 flex gap-1\.5" data-skeleton="phases"/);
-    expect(homeFour).toMatch(/<div className="mt-9">\s*<Fenced name="one-thing">/);
-    expect(column).toContain('className="mt-9" data-skeleton="one-thing"');
+    expect(homeFour).toMatch(/<HomeGreeting home=\{home\} \/>\s*<div className="mt-6">\s*<Fenced name="one-thing">/);
+    expect(column).toContain('className="mt-6" data-skeleton="one-thing"');
   });
 
   it('draws the One Thing as the same golden card', () => {

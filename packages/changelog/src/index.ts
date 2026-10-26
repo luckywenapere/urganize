@@ -41,6 +41,19 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.178.0",
+    title: "UrgAns writes your rollout plan",
+    tag: "AI",
+    date: "October 26, 2026",
+    highlights: [
+      "Plan with UrgAns asks a few short questions: where the music is, what a win looks like, your promo budget in Naira, where your fans are and who is doing the work.",
+      "No release date yet? You still get a plan. Tasks say when they fall, like \"4 weeks before\". Set your date and UrgAns adds the dates and the tasks that need one.",
+      "Song already out? You get a push plan that starts today.",
+      "See the plan before it is saved: what it is built for, where your Naira goes and your first three tasks. Use it, tweak it or try another angle.",
+      "Home is simpler: the rollout header with the phase bars is gone.",
+    ],
+  },
+  {
     version: "1.177.1",
     tag: "Rollouts",
     listed: false,
