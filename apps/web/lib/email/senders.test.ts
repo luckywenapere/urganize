@@ -22,6 +22,7 @@ const EXPECTED: Record<EmailTemplateId, { from: string; replyTo: string | null }
   workspace_invite: NOTIFY,
   task_assigned: NOTIFY,
   chat_mention: NOTIFY,
+  chime_in: NOTIFY,
   credit_submission: NOTIFY,
   claim_invite: NOTIFY,
   claim_auto_invite: NOTIFY,

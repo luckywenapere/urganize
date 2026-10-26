@@ -211,6 +211,13 @@ const LOADERS: LoaderMap = {
       subject: (p) => m.chatMentionSubject(p.authorLabel, p.releaseTitle, p.everyone),
     };
   },
+  chime_in: async () => {
+    const m = await import('./ChimeInEmail');
+    return {
+      element: (p) => createElement(m.ChimeInEmail, p),
+      subject: (p) => m.chimeInSubject(p.authorLabel, p.releaseTitle, p.kind),
+    };
+  },
 };
 
 export async function loadEmailTemplate<Id extends EmailTemplateId>(

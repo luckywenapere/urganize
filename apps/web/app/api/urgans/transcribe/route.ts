@@ -4,9 +4,9 @@ import { requireUrgansAccess } from '@/app/api/_shared/urgans-access';
 import { getTranscriptionConfig, isChappiEnabled, isUrgansVoiceEnabled } from '@/lib/chappi/config';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
 import { countBillingEventsSince, logBillingEvent } from '@/lib/billing-events-server';
+import { requestTranscription } from '@/lib/voice-transcribe-server';
 import {
   VOICE_DAILY_CAP,
-  parseTranscription,
   parseTranscriptionSeconds,
   transcriptionMetadata,
   validateVoiceClip,
@@ -89,66 +89,19 @@ export async function POST(request: NextRequest) {
 
   const hint = formData.get('hint');
 
-  // Forward as multipart, the OpenAI transcription shape. Never set
-  // Content-Type by hand — fetch derives the boundary from the FormData body.
-  const upstreamForm = new FormData();
-  upstreamForm.append('file', file, file.name || 'audio');
-  upstreamForm.append('model', config.model);
-  upstreamForm.append('language', 'en');
-  upstreamForm.append('response_format', 'json');
-  if (typeof hint === 'string' && hint.trim()) {
-    upstreamForm.append('prompt', hint.trim());
+  // The upstream call is shared with the rollout ideas mic
+  // (lib/voice-transcribe-server.ts); the gate, the cap and the billing event
+  // stay here.
+  const result = await requestTranscription({
+    config,
+    file,
+    hint: typeof hint === 'string' ? hint : null,
+    timeoutMs: TRANSCRIBE_TIMEOUT_MS,
+  });
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: result.status });
   }
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TRANSCRIBE_TIMEOUT_MS);
-  let upstream: Response;
-  try {
-    upstream = await fetch(`${config.baseURL}/audio/transcriptions`, {
-      method: 'POST',
-      body: upstreamForm,
-      signal: controller.signal,
-      headers: { Authorization: `Bearer ${config.apiKey}` },
-    });
-  } catch (error) {
-    const isAbort = (error as { name?: string } | null)?.name === 'AbortError';
-    if (isAbort) {
-      return NextResponse.json({ error: 'That took too long. Try a shorter clip.' }, { status: 504 });
-    }
-    return NextResponse.json(
-      { error: 'Voice is unreachable right now. Try again in a moment.' },
-      { status: 503 }
-    );
-  } finally {
-    clearTimeout(timer);
-  }
-
-  if (!upstream.ok) {
-    if (upstream.status === 429) {
-      return NextResponse.json(
-        { error: 'Voice is busy right now. Try again in a moment.' },
-        { status: 503 }
-      );
-    }
-    console.error(`[urgans-transcribe] Upstream returned ${upstream.status}.`);
-    return NextResponse.json(
-      { error: 'Voice hit an error. Try again later, or type instead.' },
-      { status: 502 }
-    );
-  }
-
-  const rawText = await upstream.text().catch(() => '');
-  let rawBody: unknown = rawText;
-  try {
-    rawBody = JSON.parse(rawText);
-  } catch {
-    // Leave rawBody as the raw string — parseTranscription handles a bare string.
-  }
-
-  const text = parseTranscription(rawBody);
-  if (!text) {
-    return NextResponse.json({ error: "Didn't catch that. Try again." }, { status: 422 });
-  }
+  const { text, rawBody } = result;
 
   // Record AFTER success, for the daily cap and founder visibility. Never
   // throws (logBillingEvent swallows its own failures), so a lost count can't

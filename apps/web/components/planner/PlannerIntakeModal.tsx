@@ -448,6 +448,16 @@ export function PlannerIntakeModal() {
               })
             );
             markBuilt(releaseId, result.plan);
+            // Opened from a rollout's Ideas card (2026-10-26): tell the people
+            // who chimed in that the plan is ready. Best effort; the server
+            // checks the owner and that the rollout has ideas.
+            if (intakePayload.source === 'ideas') {
+              captureAnalyticsEvent(createPostHogEvent('ideas_plan_drafted', { via: 'ai' }));
+              void fetch(`/api/releases/${encodeURIComponent(releaseId)}/ideas/plan-ready`, {
+                method: 'POST',
+                headers,
+              }).catch(() => undefined);
+            }
             return;
           }
           // The modal has already closed and navigated back to the rollout

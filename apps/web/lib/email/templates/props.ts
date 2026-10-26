@@ -19,6 +19,7 @@ import type { FounderOpsAlertEmailProps } from './FounderOpsAlertEmail';
 import type { OnboardingStepEmailProps } from './OnboardingStepEmail';
 import type { AnnouncementEmailProps } from './AnnouncementEmail';
 import type { ChatMentionEmailProps } from './ChatMentionEmail';
+import type { ChimeInEmailProps } from './ChimeInEmail';
 import type { TeamAdminNoticeEmailProps } from './TeamAdminNoticeEmail';
 import type { ReleasePaybackQuestionEmailProps } from './ReleasePaybackQuestionEmail';
 import type { ClaimInviteEmailProps } from './ClaimInviteEmail';
@@ -47,6 +48,7 @@ export type EmailTemplateProps = {
   onboarding_step: OnboardingStepEmailProps;
   announcement: AnnouncementEmailProps;
   chat_mention: ChatMentionEmailProps;
+  chime_in: ChimeInEmailProps;
   team_admin_notice: TeamAdminNoticeEmailProps;
   release_payback_question: ReleasePaybackQuestionEmailProps;
   claim_invite: ClaimInviteEmailProps;

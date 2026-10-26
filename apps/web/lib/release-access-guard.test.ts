@@ -69,6 +69,9 @@ const TEAM_ACCESS_GROUPS = [
   // The release brief (URG-281, 2026-10-16): any member reads and writes it;
   // the view-link toggle adds an owner-or-team-admin check on top.
   'brief',
+  // Rollout ideas, "Chime in" (2026-10-26): any member reads the notes and adds
+  // one; the plan-ready push adds an owner check on top.
+  'ideas',
 ];
 
 const BANNED = /ensureReleaseOwnership|ensureOwnedRelease/;

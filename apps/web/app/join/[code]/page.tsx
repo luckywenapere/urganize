@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { readInitialInvite } from '@/lib/invite-metadata-server';
+import { safeInviteNextPath } from '@/lib/rollout-ideas';
 import InviteAcceptPageClient from '@/app/invite/accept/InviteAcceptPageClient';
 
 // The presentable invite-link entry point (founder request, 2026-07-23):
@@ -17,11 +18,17 @@ export const dynamic = 'force-dynamic';
 
 export default async function JoinPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ code: string }>;
+  searchParams: Promise<{ next?: string | string[] }>;
 }) {
   const { code } = await params;
   const token = (code || '').trim();
+  // A chime-in link (2026-10-26) carries the rollout to land on after joining.
+  // Only a same-origin dashboard path is kept (safeInviteNextPath).
+  const { next: rawNext } = await searchParams;
+  const nextPath = safeInviteNextPath(Array.isArray(rawNext) ? rawNext[0] : rawNext);
   const initialLoad = await readInitialInvite(token);
-  return <InviteAcceptPageClient token={token} initialLoad={initialLoad} />;
+  return <InviteAcceptPageClient token={token} initialLoad={initialLoad} nextPath={nextPath} />;
 }
