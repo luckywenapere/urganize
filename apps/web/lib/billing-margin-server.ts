@@ -12,6 +12,7 @@ import {
 } from './billing-margin';
 import { loadLatestChargeChannels } from './referrals-server';
 import { isDistributionEntitled, monthlyTrmFeeKobo, readTrmFeeConfig, type TrmFeeConfig } from './trm/partner-fee';
+import { loadTrmCostThisMonth } from './trm/partner-ledger-server';
 
 // The reads behind /admin/billing (founder, 2026-10-22). Read only: every query
 // is a select. The arithmetic is lib/billing-margin.ts; this file only finds the
@@ -48,15 +49,18 @@ export function monthStartUtc(now: Date): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }
 
-/** What we owe TRM for one team's month, kobo. Fixed: the plan's annual fee
- *  over 12 when the plan includes distribution. Percent: the share of the
- *  month's cash. Upfront and pro-rata cost the same per month; only the timing
- *  of the bill differs, and the CSV is where timing shows. */
+/** What we owe TRM for one team's month, kobo. trm_plan: only what the
+ *  ledger holds for a team that sent a release (a month's fee, or a twelfth of
+ *  a yearly plan), so a team that never distributes costs nothing. Other fixed
+ *  modes: the plan's fee per month when the plan includes distribution.
+ *  Percent: the share of the month's cash. */
 export function trmOwedMonthKobo(input: {
   plan: string;
   interval: ReturnType<typeof resolveBillingInterval>;
   cashMonthKobo: number;
   config: TrmFeeConfig;
+  /** trm_plan only: this team's ledger cost for the month, or 0 if it sent nothing. */
+  usedMonthKobo?: number;
 }): number {
   const entitled = isDistributionEntitled({
     plan: input.plan,
@@ -64,6 +68,9 @@ export function trmOwedMonthKobo(input: {
     requiresPrepay: input.config.distributionRequiresPrepay,
   });
   if (!entitled) return 0;
+  if (input.config.costBasis === 'fixed' && input.config.billingMode === 'trm_plan') {
+    return Math.max(0, Math.round(input.usedMonthKobo ?? 0));
+  }
   if (input.config.costBasis === 'percent' && input.config.revenueShareBps !== null) {
     return Math.round((input.cashMonthKobo * input.config.revenueShareBps) / 10_000);
   }
@@ -154,6 +161,15 @@ export async function loadBillingMargin(
     }
   }
 
+  // trm_plan: a team costs TRM only in a month a ledger row covers (made when
+  // it sent a release). A yearly plan counts a twelfth a month.
+  let trmUsed = new Map<string, number>();
+  if (workspaceIds.length && config.costBasis === 'fixed' && config.billingMode === 'trm_plan') {
+    const used = await loadTrmCostThisMonth(admin, { workspaceIds, monthStart, now: input.now });
+    if (used) trmUsed = used;
+    else notRead.push('trm_partner_ledger');
+  }
+
   const rows: MarginTeamRow[] = paying.map((sub) => {
     const plan = String(sub.plan);
     const interval = resolveBillingInterval({ plan, storedInterval: sub.billing_interval });
@@ -171,7 +187,13 @@ export async function loadBillingMargin(
         channel: channels.get(sub.user_id) ?? team?.method ?? 'other',
         path: team?.path ?? null,
         periodAmountKobo,
-        trmOwedMonthKobo: trmOwedMonthKobo({ plan, interval, cashMonthKobo, config }),
+        trmOwedMonthKobo: trmOwedMonthKobo({
+          plan,
+          interval,
+          cashMonthKobo,
+          config,
+          usedMonthKobo: team ? (trmUsed.get(team.id) ?? 0) : 0,
+        }),
         creditsUsed: Math.max(0, team ? (creditsUsed.get(team.id) ?? 0) : 0),
       },
       creditCostKobo

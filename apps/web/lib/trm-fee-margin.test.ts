@@ -541,3 +541,41 @@ describe('who writes the TRM ledger', () => {
     expect(touching).toEqual(['lib/trm/partner-ledger-server.ts']);
   });
 });
+
+describe('we owe TRM only when a team sends (trm_plan, 2026-10-26)', () => {
+  it('a payment records nothing on trm_plan', () => {
+    const body = functionBody(source('lib/trm/partner-ledger-server.ts'), 'export async function recordTrmFeeForPayment(');
+    expect(body).toMatch(/billingMode === 'trm_plan'\) return;/);
+  });
+
+  it('submitting a release to TRM records the fee, after the submit succeeded', () => {
+    const body = functionBody(source('lib/trm/server.ts'), 'export async function submitToTrm(');
+    const submitted = body.indexOf("status: 'submitted'");
+    const record = body.indexOf('recordTrmFeeForSend(');
+    expect(record).toBeGreaterThan(submitted);
+    expect(submitted).toBeGreaterThan(body.indexOf('await submitTrmRelease('));
+  });
+
+  it('a send is charged only for a team whose plan includes distribution, once per TRM period', () => {
+    const body = functionBody(source('lib/trm/partner-ledger-server.ts'), 'export async function recordTrmFeeForSend(');
+    expect(body).toContain("decision.state !== 'included'");
+    expect(body).toContain('upfrontCoveredUntil');
+    // Any covering row counts, monthly or yearly, so the query must not filter on entry_kind.
+    expect(body).not.toContain(".eq('entry_kind'");
+  });
+
+  it('a later send inside a bought month owes nothing; after it ends, a new month is bought', () => {
+    const c = config();
+    const sentAt = new Date('2026-10-26T12:00:00.000Z');
+    const first = ledgerEntryForPayment({ plan: 'manager', interval: 'monthly', amountPaidKobo: 0, chargedAt: sentAt, config: c });
+    expect(first?.owedKobo).toBe(710_000);
+    const later = new Date('2026-11-10T12:00:00.000Z');
+    expect(
+      ledgerEntryForPayment({ plan: 'manager', interval: 'monthly', amountPaidKobo: 0, chargedAt: later, config: c, upfrontCoveredUntil: first!.periodEnd })
+    ).toBeNull();
+    const after = new Date('2026-12-01T12:00:00.000Z');
+    expect(
+      ledgerEntryForPayment({ plan: 'manager', interval: 'monthly', amountPaidKobo: 0, chargedAt: after, config: c, upfrontCoveredUntil: first!.periodEnd })?.owedKobo
+    ).toBe(710_000);
+  });
+});

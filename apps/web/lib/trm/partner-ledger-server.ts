@@ -3,6 +3,9 @@ import type { BillingInterval } from '@urganize/pricing';
 import { afterResponse } from '../after-response';
 import { notifyFounder } from '../billing-alerts-server';
 import { isMissingColumnError, isMissingTableError } from '../billing-schema';
+import { resolveBillingInterval } from '../billing-plans';
+import { decideDistributionAccess } from '../distribution-entitlement';
+import { getTeamAccessForUser } from '../team-billing-server';
 import {
   ledgerEntryForPayment,
   readTrmFeeConfig,
@@ -11,13 +14,20 @@ import {
 } from './partner-fee';
 
 // The ONLY writer of trm_partner_ledger, and of workspaces.trm_registered_at /
-// trm_plan. Called only from recordSubscriptionCharge (lib/referrals-server.ts),
-// which every paid period goes through after the money has landed: a first card
-// charge, a card renewal, a bank-transfer period (self-serve checkout) and
-// /admin/teams' Mark paid. Plan-change top-ups are skipped there: they pay for
-// days already covered. Never throws: what we owe TRM is a record, and a
-// failure to write it must never fail the payment that caused it. A failure is
-// logged with the reference so it can be added by hand.
+// trm_plan. Two entry points:
+//   recordTrmFeeForSend (trm_plan, the default since 2026-10-26): called from
+//     submitToTrm. We owe TRM only when a team on a plan with distribution
+//     actually sends a release: the first send buys TRM's monthly plan for a
+//     monthly team (1 month) or its yearly plan for a prepaid team (12 months),
+//     and later sends inside that period add nothing. A team that never sends
+//     costs nothing and is never registered on TRM.
+//   recordTrmFeeForPayment (monthly_prorata, annual_upfront, percent): called
+//     from recordSubscriptionCharge (lib/referrals-server.ts) after the money
+//     has landed. Plan-change top-ups are skipped there. On trm_plan it does
+//     nothing.
+// Never throws: what we owe TRM is a record, and a failure to write it must
+// never fail the payment or the send that caused it. A failure is logged with
+// the reference so it can be added by hand.
 //
 // Before 20261022170000_trm_fee_and_price_lock.sql is applied the table is
 // missing: the write logs once per call and returns.
@@ -40,6 +50,8 @@ export async function recordTrmFeeForPayment(
 ): Promise<void> {
   try {
     const config = input.config ?? readTrmFeeConfig();
+    // trm_plan is recorded when a release is sent, not when a team pays.
+    if (config.costBasis === 'fixed' && config.billingMode === 'trm_plan') return;
     let workspaceId = input.workspaceId ?? null;
     if (!workspaceId) {
       const workspaceResult = await admin
@@ -51,7 +63,7 @@ export async function recordTrmFeeForPayment(
     }
 
     let upfrontCoveredUntil: Date | null = null;
-    if (config.costBasis === 'fixed' && config.billingMode !== 'monthly_prorata' && workspaceId) {
+    if (config.costBasis === 'fixed' && config.billingMode === 'annual_upfront' && workspaceId) {
       const latest = await admin
         .from('trm_partner_ledger')
         .select('period_end')
@@ -112,6 +124,97 @@ export async function recordTrmFeeForPayment(
   }
 }
 
+/**
+ * What one send to TRM adds to the ledger, on trm_plan. Reads the team owner's
+ * plan the same way the Distribute step does (decideDistributionAccess): only
+ * a paying Manager or Label team owes anything. A team on Solo, a trial or no
+ * plan sends with the artist's own TRM plan, which costs us nothing.
+ */
+export async function recordTrmFeeForSend(
+  admin: Admin,
+  input: { ownerUserId: string; releaseId: string; attempt: number; sentAt: Date; config?: TrmFeeConfig }
+): Promise<void> {
+  const reference = `send:${input.releaseId}:${input.attempt}`;
+  try {
+    const config = input.config ?? readTrmFeeConfig();
+    if (config.costBasis !== 'fixed' || config.billingMode !== 'trm_plan' || !input.ownerUserId) return;
+
+    const [access, subscription, team] = await Promise.all([
+      getTeamAccessForUser(input.ownerUserId, null),
+      admin.from('subscriptions').select('plan, billing_interval, expires_at').eq('user_id', input.ownerUserId).maybeSingle(),
+      admin.from('workspaces').select('id').eq('owner_id', input.ownerUserId).maybeSingle(),
+    ]);
+    const sub = subscription.data as { plan: string | null; billing_interval: string | null; expires_at: string | null } | null;
+    const plan = sub?.plan ?? null;
+    const interval = plan ? resolveBillingInterval({ plan, storedInterval: sub?.billing_interval ?? null }) : null;
+    const decision = decideDistributionAccess({
+      accessState: access.state,
+      plan,
+      interval,
+      expiresAt: sub?.expires_at ?? null,
+      requiresPrepay: config.distributionRequiresPrepay,
+    });
+    if (decision.state !== 'included') return;
+    const workspaceId = (team.data as { id: string } | null)?.id ?? null;
+    if (!workspaceId) return;
+
+    // Any TRM plan we already bought for this team that still runs covers this send.
+    const latest = await admin
+      .from('trm_partner_ledger')
+      .select('period_end')
+      .eq('workspace_id', workspaceId)
+      .order('period_end', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (latest.error) {
+      if (isMissingTableError(latest.error)) {
+        console.warn('[trm-ledger] table missing; apply the TRM fee migration. Not recorded:', reference);
+      } else {
+        console.error('[trm-ledger] could not read the ledger:', latest.error.message, reference);
+      }
+      return;
+    }
+    const end = (latest.data as { period_end: string } | null)?.period_end;
+
+    const entry = ledgerEntryForPayment({
+      plan: decision.tier,
+      interval: decision.interval,
+      amountPaidKobo: 0,
+      chargedAt: input.sentAt,
+      config,
+      upfrontCoveredUntil: end ? new Date(end) : null,
+    });
+    if (!entry) return;
+
+    const insert = await admin.from('trm_partner_ledger').upsert(
+      {
+        workspace_id: workspaceId,
+        charge_reference: reference,
+        entry_kind: entry.entryKind,
+        plan: entry.plan,
+        trm_plan: entry.trmPlan,
+        cost_basis: entry.costBasis,
+        billing_mode: entry.billingMode,
+        fee_annual_kobo: entry.feeAnnualKobo,
+        revenue_share_bps: entry.revenueShareBps,
+        service_months: entry.serviceMonths,
+        amount_paid_kobo: entry.amountPaidKobo,
+        owed_kobo: entry.owedKobo,
+        period_start: entry.periodStart.toISOString(),
+        period_end: entry.periodEnd.toISOString(),
+      },
+      { onConflict: 'charge_reference,entry_kind', ignoreDuplicates: true }
+    );
+    if (insert.error) {
+      console.error('[trm-ledger] could not record what we owe TRM:', insert.error.message, reference);
+      return;
+    }
+    await markTrmRegistered(admin, workspaceId, input.ownerUserId, entry.trmPlan, input.sentAt);
+  } catch (error) {
+    console.error('[trm-ledger] recording a send threw:', error, reference);
+  }
+}
+
 /** Stamp the team as registered on TRM the first time, and tell the founder to
  *  do the registration (TRM's API has no account creation). A later payment on
  *  a different tier updates trm_plan without a second alert. */
@@ -142,7 +245,7 @@ async function markTrmRegistered(
         workspaceId,
         ownerUserId,
         actorUserId: ownerUserId,
-        note: `Register this team on TRM under the ${trmPlan === 'label' ? 'Label' : 'Single Artist'} plan.`,
+        note: `Register this team on TRM under the ${trmPlan === 'label' ? 'Mini Label' : 'Independent Artist'} plan.`,
         metadata: { trmPlan },
       })
     );
@@ -156,6 +259,33 @@ async function markTrmRegistered(
   if (update.error && !isMissingColumnError(update.error)) {
     console.error('[trm-ledger] could not update trm_plan:', update.error.message);
   }
+}
+
+/** trm_plan: each team's TRM cost for the month, from ledger rows that cover
+ *  it (a monthly plan's fee, or a twelfth of a yearly plan). A team with no row
+ *  sent nothing and is absent. Null when the table cannot be read. */
+export async function loadTrmCostThisMonth(
+  admin: Admin,
+  input: { workspaceIds: string[]; monthStart: Date; now: Date }
+): Promise<Map<string, number> | null> {
+  const rows = await admin
+    .from('trm_partner_ledger')
+    .select('workspace_id, owed_kobo, service_months')
+    .in('workspace_id', input.workspaceIds.slice(0, 1000))
+    .gt('period_end', input.monthStart.toISOString())
+    .lte('period_start', input.now.toISOString())
+    .limit(5000);
+  if (rows.error) {
+    if (!isMissingTableError(rows.error)) console.error('[trm-ledger] read failed:', rows.error.message);
+    return null;
+  }
+  const cost = new Map<string, number>();
+  for (const row of (rows.data ?? []) as Array<{ workspace_id: string | null; owed_kobo: number | null; service_months: number | null }>) {
+    if (!row.workspace_id) continue;
+    const perMonth = Number(row.owed_kobo ?? 0) / Math.max(1, Number(row.service_months ?? 1));
+    cost.set(row.workspace_id, (cost.get(row.workspace_id) ?? 0) + perMonth);
+  }
+  return cost;
 }
 
 /** Ledger rows whose period starts in [from, to), with team names, for the CSV

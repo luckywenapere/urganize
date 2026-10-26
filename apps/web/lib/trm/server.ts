@@ -15,6 +15,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { logBillingEvent } from '../billing-events-server';
 import { recordDistributionRejection, workspaceIdOf } from '../distribution-server';
 import { loadHandoff, type LoadedHandoff } from '../handoff-server';
+import { recordTrmFeeForSend } from './partner-ledger-server';
 import { readTestRelease } from '../test-release';
 import type { BillingEventType } from '../billing-events';
 import {
@@ -703,6 +704,7 @@ export async function submitToTrm(admin: SupabaseClient, releaseId: string, acto
     history: withHistory(current.history, { status: 'submitted', at: nowIso }),
   });
   await markHandoffSent(admin, releaseId, actor.id);
+  await recordTrmFeeForSend(admin, { ownerUserId: loaded.ownerUserId, releaseId, attempt, sentAt: new Date(nowIso) });
   await logEvent(admin, loaded.ownerUserId, actor.id, 'trm_submitted', { releaseId, trmReleaseId: current.partner_release_id, attempt });
   return { ok: true, data: { status: 'submitted' } };
 }

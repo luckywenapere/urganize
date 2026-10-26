@@ -16,8 +16,8 @@ import type { DistributionPlan } from './useDistributionPlan';
  * distribution comes with 6-month and yearly plans. A team paying by transfer
  * goes to /checkout for the 6 months; a card team cannot change period there
  * (self-serve checkout keeps a card plan's period), so it asks us and the
- * founder swaps the Paystack plan by hand. The team is registered on TRM only
- * once a payment has gone through (recordSubscriptionCharge does it).
+ * founder swaps the Paystack plan by hand. The team is registered on TRM, and
+ * we owe TRM, only once it sends a release (recordTrmFeeForSend).
  *
  * Buttons are outlines, not green: the step keeps at most one green action
  * (Send to TRM).
