@@ -1,6 +1,6 @@
 'use client';
 
-import { Archive, ArrowLeft, Pin, Plus, X } from '@/components/icons';
+import { Archive, ArrowLeft, Pin, Plus, Upload, X } from '@/components/icons';
 import { ListToolbar } from '@/components/shell/ListToolbar';
 import type { NotesView } from '@/lib/note-archive';
 import Image from 'next/image';
@@ -29,6 +29,8 @@ type NotesListProps = {
   onSearchChange: (query: string) => void;
   onSelect: (noteId: string) => void;
   onNewNote: () => void;
+  /** Opens the Bring your notes dialog. */
+  onBringNotes: () => void;
   onClearFilter: () => void;
   /** Another page exists on the server. */
   hasMore: boolean;
@@ -62,6 +64,7 @@ export function NotesList({
   onSearchChange,
   onSelect,
   onNewNote,
+  onBringNotes,
   onClearFilter,
   hasMore,
   isLoadingMore,
@@ -129,6 +132,14 @@ export function NotesList({
               className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
             >
               <Archive className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={onBringNotes}
+              className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+            >
+              <Upload className="h-3.5 w-3.5" aria-hidden="true" />
+              Bring notes
             </button>
             <button
               type="button"
@@ -266,6 +277,14 @@ export function NotesList({
                 >
                   <Plus className="h-4 w-4" aria-hidden="true" />
                   New note
+                </button>
+                <button
+                  type="button"
+                  onClick={onBringNotes}
+                  className="motion-focus motion-press inline-flex h-9 items-center gap-1.5 rounded-full border border-stroke-default px-4 text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+                >
+                  <Upload className="h-4 w-4" aria-hidden="true" />
+                  Bring your notes
                 </button>
                 {isFiltering ? (
                   <button

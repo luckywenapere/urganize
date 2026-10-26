@@ -4,8 +4,8 @@ import { ensureReleaseTeamReadAccess } from '@/lib/release-access-server';
 import { readHasTeam } from '@/lib/next-moves-server';
 
 /**
- * What a new rollout's first steps tick off from (URG-293): is the cover art
- * there, does the caller's team have anyone in it yet. Read
+ * What a new rollout's first steps tick off from (URG-293): is there an idea
+ * note on it, does the caller's team have anyone in it yet. Read
  * only, and only what the checklist needs, so it stays cheap enough to re-read
  * every time a scene closes. Any read that fails comes back as null (unknown),
  * which the card treats as not done rather than guessing.
@@ -33,23 +33,12 @@ export async function GET(
   const access = await ensureReleaseTeamReadAccess(admin, releaseId, auth.user);
   if ('error' in access) return access.error;
 
-  const [releaseResult, hasTeam] = await Promise.all([
-    admin.from('releases').select('artwork_asset_id').eq('id', releaseId).maybeSingle(),
+  // Idea notes are rows in release_messages (lib/rollout-ideas-server.ts).
+  const [ideaResult, hasTeam] = await Promise.all([
+    admin.from('release_messages').select('id', { count: 'exact', head: true }).eq('release_id', releaseId),
     readHasTeam(admin, auth.user.id).catch(() => null),
   ]);
+  const hasIdea: boolean | null = ideaResult.error ? null : (ideaResult.count ?? 0) > 0;
 
-  let hasCoverArt: boolean | null = null;
-  if (!releaseResult.error) {
-    const artworkId = (releaseResult.data as { artwork_asset_id?: string | null } | null)
-      ?.artwork_asset_id;
-    if (!artworkId) {
-      hasCoverArt = false;
-    } else {
-      // A pointer to a row that is gone reads as no artwork, as in distribution.
-      const artwork = await admin.from('assets').select('id').eq('id', artworkId).maybeSingle();
-      hasCoverArt = artwork.error ? null : Boolean(artwork.data);
-    }
-  }
-
-  return NextResponse.json({ firstSteps: { hasCoverArt, hasTeam } });
+  return NextResponse.json({ firstSteps: { hasIdea, hasTeam } });
 }

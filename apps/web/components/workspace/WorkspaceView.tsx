@@ -1095,6 +1095,8 @@ export function WorkspaceView() {
         }
       : null,
     isOwner: scopedReleaseIsOwn,
+    // The idea is the first step while the Ideas card is up (no plan built yet).
+    ideaAvailable: ROLLOUT_IDEAS_ENABLED && onlyPreProductionWork(scopedTasks),
     pinnedConfirmDate: pinnedConfirmDateTask
       ? { title: pinnedConfirmDateTask.title, onOpen: () => openTask(pinnedConfirmDateTask.id) }
       : null,
