@@ -21,3 +21,11 @@ Founder approved the mock ("alright build"). A new onboarding step, right after 
 - Not verified here: the post-account save (`saveImportedArtists`, `POST /api/artist-import`) was type-checked and reasoned through but not run end to end, because a test sign-up on this machine writes to the live database. Manual pass: sign up with an artist picked, check the artist page's Catalogue card and that the roster has one artist, not two.
 - A Deezer outage at search time falls back to Apple for that search; the edge cache keeps that answer for an hour.
 - 19 unrelated guard tests in `pnpm test` fail on this Windows checkout (CRLF reads in file-scanning tests); they failed before this change.
+
+## Existing accounts (v1.187.0, founder approved mock "import-releases-existing")
+
+- **Import releases** button: Artists page (a quiet button beside the + on the phone header; under the list on desktop, because `section-content-top-guard` keeps anything out from between the tab row and the list) and the Catalogue card on each artist's page, which now always draws and prefills the artist's name.
+- `components/artists/ImportReleasesDialog.tsx` (dialog plus `ImportReleasesButton`, which owns its open state): search, pull, done, add another. It saves at once through `saveArtistImport` (`lib/artist-import/client.ts`, POST `/api/artist-import`); an artist already on the roster by name gets the releases, no duplicate. The covers come from the public lookup, the save pulls again on the server.
+- After a save it dispatches `CATALOGUE_CHANGED_EVENT` (the Catalogue card refetches) and force-loads the roster store.
+- Shared bits (`Cover`, `formatFans`, `kindLabel`, `initials`) moved to `components/artists/ImportParts.tsx`; the onboarding step uses them too.
+- Tested 2026-10-26 with a throwaway account: Wizkid imported (78), a second import said "already up to date", the card showed 78 covers; account, data and invite deleted afterwards.

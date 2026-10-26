@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.187.0",
+    title: "Import releases any time",
+    tag: "App",
+    date: "October 26, 2026",
+    highlights: [
+      "Use Import releases on the Artists page to bring in an artist's releases by name.",
+      "Each artist's page has the same button, next to their catalogue.",
+    ],
+  },
+  {
     version: "1.186.0",
     title: "Start with a call on bigger plans",
     tag: "Account",
