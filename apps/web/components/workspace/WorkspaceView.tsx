@@ -1358,6 +1358,8 @@ export function WorkspaceView() {
       <RolloutIdeasCard
         key={scopedReleaseSlim.id}
         condensed={simplePlanView}
+        tasks={scopedTasks}
+        hasReleaseDate={Boolean(scopedReleaseSlim.releaseDate)}
         release={{ id: scopedReleaseSlim.id, title: scopedReleaseSlim.title }}
         hasPlan={!onlyPreProductionWork(scopedTasks)}
         canDraft={PLANNER_ENABLED && scopedReleaseIsOwn && !isPlanGenerating}

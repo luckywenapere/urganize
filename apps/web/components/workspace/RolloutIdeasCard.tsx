@@ -20,6 +20,12 @@ import {
   type IdeasPath,
   type IdeasPerson,
 } from '@/lib/rollout-ideas';
+import {
+  missingItems,
+  nextUp,
+  type BriefTask,
+  type RolloutBrief,
+} from '@/lib/rollout-brief';
 import { copyText } from '@/lib/share-file';
 import { supabase } from '@/lib/supabase/client';
 import type { OnboardingPersona } from '@/lib/onboarding';
@@ -55,9 +61,14 @@ export function RolloutIdeasCard({
   onDraftWithAi,
   onWriteMyself,
   condensed = false,
+  tasks = [],
+  hasReleaseDate = false,
 }: {
-  /** The simple plan view: a short read-only summary with Edit, not the full card. */
+  /** The simple plan view: the team brief with Edit idea, not the full card. */
   condensed?: boolean;
+  /** The rollout's plan, for the brief's Next up and Missing. */
+  tasks?: ReadonlyArray<BriefTask>;
+  hasReleaseDate?: boolean;
   release: { id: string; title: string };
   /** The rollout already has its plan (more than the seeded pre-production work). */
   hasPlan: boolean;
@@ -76,6 +87,7 @@ export function RolloutIdeasCard({
   const [askingWho, setAskingWho] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const fromVoiceRef = useRef(false);
+  const [brief, setBrief] = useState<RolloutBrief | null>(null);
 
   const load = useCallback(async () => {
     const headers = await authHeaders();
@@ -96,6 +108,33 @@ export function RolloutIdeasCard({
   useEffect(() => {
     if (ENABLED) void load();
   }, [load]);
+
+  // The brief is written from the notes and the plan's task titles, so it is asked
+  // for again only when those change (the server answers from its saved copy when
+  // they have not).
+  const briefKey = condensed && data?.notes.length ? `${data.notes.map((n) => n.content).join('|')}#${tasks.map((t) => t.title).join('|')}` : '';
+  useEffect(() => {
+    if (!ENABLED || !briefKey) return;
+    let cancelled = false;
+    void (async () => {
+      const headers = await authHeaders();
+      if (!headers) return;
+      try {
+        const response = await fetch(`/api/releases/${encodeURIComponent(release.id)}/ideas/brief`, {
+          method: 'POST',
+          headers,
+        });
+        if (!response.ok) return;
+        const payload = (await response.json()) as { brief?: RolloutBrief | null };
+        if (!cancelled && payload.brief) setBrief(payload.brief);
+      } catch {
+        // The card keeps showing the owner's own words.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [briefKey, release.id]);
 
   const path: IdeasPath = ideasPathFor({
     isOwner: Boolean(data?.isOwner),
@@ -147,6 +186,8 @@ export function RolloutIdeasCard({
   };
 
   if (condensed && !expanded && data.notes.length > 0 && !typing && !askingWho) {
+    const next = nextUp(tasks);
+    const missing = missingItems({ hasReleaseDate, next });
     return (
       <section
         aria-labelledby={`ideas-title-${release.id}`}
@@ -154,19 +195,36 @@ export function RolloutIdeasCard({
       >
         <div className="flex items-center gap-3">
           <h2 id={`ideas-title-${release.id}`} className="text-base font-semibold text-content-primary">
-            Your idea
+            {brief ? 'Rollout brief' : 'Your idea'}
           </h2>
           <button
             type="button"
             onClick={() => setExpanded(true)}
             className="motion-focus ml-auto min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary underline hover:text-content-primary"
           >
-            Edit
+            Edit idea
           </button>
         </div>
-        <p className="line-clamp-3 break-words text-sm text-content-secondary">
-          {data.notes.map((note) => note.content).join(' ')}
-        </p>
+        {brief ? (
+          <div className="space-y-4 text-sm">
+            <p className="break-words text-base text-content-primary">{brief.goal}</p>
+            {brief.moves.length ? (
+              <BriefList title="How we'll do it" items={brief.moves.map((move) => ({ text: move }))} />
+            ) : null}
+            {next.length ? (
+              <BriefList
+                title="Next up"
+                marker="circle"
+                items={next.map((item) => ({ text: item.title, owner: item.owner || 'Unassigned' }))}
+              />
+            ) : null}
+            {missing.length ? <BriefList title="Missing" items={missing.map((text) => ({ text }))} /> : null}
+          </div>
+        ) : (
+          <p className="line-clamp-3 break-words text-sm text-content-secondary">
+            {data.notes.map((note) => note.content).join(' ')}
+          </p>
+        )}
       </section>
     );
   }
@@ -318,6 +376,33 @@ export function RolloutIdeasCard({
         </div>
       ) : null}
     </section>
+  );
+}
+
+function BriefList({
+  title,
+  items,
+  marker = 'dot',
+}: {
+  title: string;
+  items: Array<{ text: string; owner?: string }>;
+  marker?: 'dot' | 'circle';
+}) {
+  return (
+    <div>
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-content-tertiary">{title}</h3>
+      <ul className="mt-1.5 space-y-1">
+        {items.map((item) => (
+          <li key={item.text} className="flex items-baseline gap-2 text-content-secondary">
+            <span aria-hidden="true" className="text-content-tertiary">
+              {marker === 'circle' ? '○' : '•'}
+            </span>
+            <span className="min-w-0 break-words">{item.text}</span>
+            {item.owner ? <span className="ml-auto shrink-0 pl-2 text-xs text-content-tertiary">{item.owner}</span> : null}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
