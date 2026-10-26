@@ -22,6 +22,8 @@ import { isPitchPaymentsEnabled } from '@/lib/pitch-payments';
 import { CURATOR_NOW_PAID, CURATOR_UNAVAILABLE, UNPAID_PITCH_EXISTS } from '@/lib/pitch-payment-copy';
 import { PAYMENTS_TABLE, loadCuratorPaymentStates } from '@/lib/pitch-payments-server';
 import { isPitchCreditsEnabled, normalizeCreditPrice } from '@/lib/pitch-credits';
+import { afterResponse } from '@/lib/after-response';
+import { notifyCuratorOfNewPitch } from '@/lib/pitch-submission-notice-server';
 
 /**
  * Pitches this team has sent, newest first.
@@ -408,6 +410,11 @@ export async function POST(request: NextRequest) {
   }
   if (!data) {
     return NextResponse.json({ error: 'Could not send the pitch.' }, { status: 500 });
+  }
+
+  const newPitchId = String((data as unknown as Record<string, unknown>).id || '');
+  if (newPitchId) {
+    afterResponse('pitch-new-notify', () => notifyCuratorOfNewPitch(auth.adminClient, newPitchId));
   }
 
   const [names, photos] = await Promise.all([

@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.175.1",
+    tag: "Pitching",
+    date: "October 26, 2026",
+    highlights: [
+      "Curators now get an email and a notification when someone sends a song to their playlist.",
+      "Curators who were never told about a waiting pitch get a late notice with an apology.",
+    ],
+  },
+  {
     version: "1.175.0",
     title: "Tell us how you found Urganize",
     tag: "Account",
