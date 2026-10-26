@@ -34,6 +34,7 @@ import { Button, Card, Input, Logo } from '@urganize/ui';
 import { Mail, Lock, UserCircle, AlertTriangle, CheckCircle2 } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { HOME_PATH } from '@/lib/home-path';
+import { safeInviteNextPath } from '@/lib/rollout-ideas';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
 import type { InviteInitialLoad } from '@/lib/invite-metadata-server';
@@ -104,11 +105,20 @@ function writeResumeToken(token: string): void {
 export default function InviteAcceptPageClient({
   token,
   initialLoad,
+  nextPath = null,
 }: {
   token: string;
   initialLoad?: InviteInitialLoad;
+  /** Where to land after joining: a chime-in link's rollout (2026-10-26).
+   *  Already checked by safeInviteNextPath on the server; checked again here. */
+  nextPath?: string | null;
 }) {
   const router = useRouter();
+  const afterJoinPath = safeInviteNextPath(nextPath) ?? HOME_PATH;
+  // This page's own address, with the landing kept, for the sign-in round trips.
+  const selfPath = `/invite/accept?token=${encodeURIComponent(token)}${
+    afterJoinPath !== HOME_PATH ? `&next=${encodeURIComponent(afterJoinPath)}` : ''
+  }`;
 
   const { signup, loginWithGoogle, logout, user, isAuthenticated, isLoading: authLoading } =
     useAuthStore();
@@ -237,7 +247,7 @@ export default function InviteAcceptPageClient({
       const result = await acceptInvite();
       if (result.ok) {
         setSuccessMessage('Joined! Taking you in…');
-        router.replace(HOME_PATH);
+        router.replace(afterJoinPath);
       } else {
         setError(result.message || 'Could not accept invite.');
         setIsSubmitting(false);
@@ -292,7 +302,7 @@ export default function InviteAcceptPageClient({
         );
       }
       setSuccessMessage('Joined! Taking you in…');
-      router.replace(HOME_PATH);
+      router.replace(afterJoinPath);
     } catch (signupError) {
       setError(errorMessage(signupError, 'Could not finish signup.'));
       setIsSubmitting(false);
@@ -304,7 +314,7 @@ export default function InviteAcceptPageClient({
     void (async () => {
       const result = await acceptInvite();
       clearPendingConfirmation();
-      router.replace(result.ok ? HOME_PATH : `/invite/accept?token=${encodeURIComponent(token)}`);
+      router.replace(result.ok ? afterJoinPath : selfPath);
       if (!result.ok) setConfirmation(null);
     })();
   });
@@ -317,7 +327,7 @@ export default function InviteAcceptPageClient({
       writeResumeToken(token);
       // The Google round-trip lands on /auth/callback then back here via
       // `next=`. On return the resume effect (above) calls acceptInvite.
-      await loginWithGoogle(`/invite/accept?token=${encodeURIComponent(token)}`);
+      await loginWithGoogle(selfPath);
     } catch (oauthError) {
       if (typeof window !== 'undefined') {
         try {
@@ -338,7 +348,7 @@ export default function InviteAcceptPageClient({
     const result = await acceptInvite();
     if (result.ok) {
       setSuccessMessage('Joined! Taking you in…');
-      router.replace(HOME_PATH);
+      router.replace(afterJoinPath);
     } else {
       setError(result.message || 'Could not accept invite.');
       setIsSubmitting(false);
@@ -622,7 +632,7 @@ export default function InviteAcceptPageClient({
                     <p className="text-center text-xs text-content-tertiary">
                       Already have an account?{' '}
                       <Link
-                        href={`/auth?next=${encodeURIComponent(`/invite/accept?token=${token}`)}`}
+                        href={`/auth?next=${encodeURIComponent(selfPath)}`}
                         className="text-brand hover:underline"
                       >
                         Sign in

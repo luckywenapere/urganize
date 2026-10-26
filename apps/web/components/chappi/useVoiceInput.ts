@@ -45,8 +45,15 @@ export function useVoiceInput(options: {
   enabled: boolean;
   onTranscript: (text: string) => void;
   getHints?: () => Hints;
+  /** Where the clip goes. UrgAns's own route unless a caller has its own
+   *  (the rollout ideas mic posts to /api/releases/[id]/ideas/transcribe). */
+  endpoint?: string;
+  /** What to say when the microphone is refused. */
+  deniedMessage?: string;
 }): VoiceInputValue {
   const { enabled, onTranscript, getHints } = options;
+  const endpoint = options.endpoint || '/api/urgans/transcribe';
+  const deniedMessage = options.deniedMessage || 'Allow the microphone to talk to UrgAns.';
 
   // Feature detection runs once. If any piece is missing, the button is hidden —
   // a control that cannot work is worse than none.
@@ -116,7 +123,7 @@ export function useVoiceInput(options: {
       const hint = buildTranscriptionPrompt(hints);
       if (hint) form.append('hint', hint);
 
-      const response = await fetch('/api/urgans/transcribe', {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: form,
@@ -146,7 +153,7 @@ export function useVoiceInput(options: {
     } finally {
       setState('idle');
     }
-  }, []);
+  }, [endpoint]);
 
   const stop = useCallback(() => {
     const recorder = recorderRef.current;
@@ -171,7 +178,7 @@ export function useVoiceInput(options: {
     } catch (err) {
       const name = (err as { name?: string } | null)?.name;
       if (name === 'NotAllowedError' || name === 'SecurityError') {
-        setError('Allow the microphone to talk to UrgAns.');
+        setError(deniedMessage);
       } else if (name === 'NotFoundError') {
         setError('No microphone found.');
       } else {
@@ -221,7 +228,7 @@ export function useVoiceInput(options: {
     // Stop automatically at the ceiling so a stuck recording can't grow past the
     // size limit or the person's intent.
     autoStopRef.current = setTimeout(() => stop(), MAX_VOICE_CLIP_SECONDS * 1000);
-  }, [releaseMic, stop, transcribe]);
+  }, [deniedMessage, releaseMic, stop, transcribe]);
 
   const toggle = useCallback(() => {
     if (state === 'recording') {

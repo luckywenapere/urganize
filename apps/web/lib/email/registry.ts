@@ -346,6 +346,20 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     fromAddress: 'notifications@urganize.app',
     replyTo: 'support@urganize.app',
   },
+  chime_in: {
+    id: 'chime_in',
+    // Rollout ideas (2026-10-26). In the chat category on purpose: it is the
+    // same kind of mail (a teammate's words on a rollout), so one switch turns
+    // both off.
+    category: 'chat',
+    name: 'Chime in on a rollout',
+    description:
+      'Sent when someone is asked to chime in on a rollout, and to the owner when someone adds a note to its ideas.',
+    placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: 'support@urganize.app',
+  },
   announcement: {
     id: 'announcement',
     category: 'announcements',

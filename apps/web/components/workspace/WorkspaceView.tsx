@@ -29,6 +29,8 @@ import { TestReleaseBanner } from './TestReleaseBanner';
 import { EditorialPitchClosedBanner } from './EditorialPitchClosedBanner';
 import { DistributionStatusStrip } from './DistributionStatusStrip';
 import { RolloutFirstSteps, useRolloutFirstSteps } from './RolloutFirstSteps';
+import { RolloutIdeasCard } from './RolloutIdeasCard';
+import { isRolloutIdeasEnabled } from '@/lib/rollout-ideas';
 import { RolloutNextMoves } from '@/components/next-moves/RolloutNextMoves';
 import { requestEditorialPitchBackfill } from '@/lib/editorial-pitch-client';
 import { daysToRelease, isEditorialPitchTask, pitchWindowState } from '@/lib/editorial-pitch';
@@ -100,6 +102,7 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 // until a plan is approved. Supersedes the immediate-apply tailor-plan feature,
 // which mutated real task rows the moment the model answered.
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
+const ROLLOUT_IDEAS_ENABLED = isRolloutIdeasEnabled();
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 const DIRECTORY_REQUESTS_ENABLED =
   DIRECTORY_ENABLED && process.env.NEXT_PUBLIC_FEATURE_DIRECTORY_REQUESTS === 'true';
@@ -1325,6 +1328,31 @@ export function WorkspaceView() {
       />
     ) : null;
 
+  // Rollout ideas, "Chime in" (2026-10-26): talk or type an idea, ask others
+  // to chime in, then Draft with AI (the planner, the notes prefilled as its
+  // last answer) or Write it myself. The card hides itself on a planned
+  // rollout with no notes. Mounted once, in the layout branch on screen.
+  const ideasBanner =
+    ROLLOUT_IDEAS_ENABLED && bodyIsMainView && scopedReleaseSlim && !scopedReleaseSlim.isTest ? (
+      <RolloutIdeasCard
+        key={scopedReleaseSlim.id}
+        release={{ id: scopedReleaseSlim.id, title: scopedReleaseSlim.title }}
+        hasPlan={!onlyPreProductionWork(scopedTasks)}
+        canDraft={PLANNER_ENABLED && scopedReleaseIsOwn && !isPlanGenerating}
+        onDraftWithAi={(extraNotes) =>
+          openIntake({
+            source: 'ideas',
+            releaseId: scopedReleaseSlim.id,
+            prefill: {
+              ...scopedRolloutIntakePrefill(scopedReleaseSlim),
+              ...(extraNotes ? { extraNotes } : {}),
+            },
+          })
+        }
+        onWriteMyself={() => openQuickCreate({ releaseId: scopedReleaseSlim.id, source: 'inline' })}
+      />
+    ) : null;
+
   const handleSelect = (releaseId: string) => {
     const nextScope = scopedReleaseId === releaseId ? null : releaseId;
     const stacked =
@@ -1600,6 +1628,7 @@ export function WorkspaceView() {
                     <>
                       {isDesktopViewport ? null : distributionStatusStrip}
                       {newReleaseGuideBanner}
+                      {isDesktopViewport ? null : ideasBanner}
                       {isDesktopViewport ? null : nextMovesBanner}
                     </>
                   }
@@ -1659,6 +1688,7 @@ export function WorkspaceView() {
                 banner={
                   <>
                     {newReleaseGuideBanner}
+                    {isDesktopViewport ? ideasBanner : null}
                     {isDesktopViewport ? nextMovesBanner : null}
                     {/* On the timeline the strip sits on the phase row instead
                         (2026-10-16, founder: one compact line). */}

@@ -149,6 +149,14 @@ const FILES = [
   join(WEB, 'lib', 'urgans-voice.ts'),
   join(WEB, 'components', 'chappi', 'useVoiceInput.ts'),
   ...walk(join(WEB, 'app', 'api', 'urgans', 'transcribe')),
+  join(WEB, 'lib', 'voice-transcribe-server.ts'),
+  // Rollout ideas, "Chime in" (2026-10-26): the card, its copy module, its
+  // routes and its email.
+  join(WEB, 'lib', 'rollout-ideas.ts'),
+  join(WEB, 'lib', 'rollout-ideas-server.ts'),
+  join(WEB, 'components', 'workspace', 'RolloutIdeasCard.tsx'),
+  join(WEB, 'lib', 'email', 'templates', 'ChimeInEmail.tsx'),
+  ...walk(join(WEB, 'app', 'api', 'releases', '[releaseId]', 'ideas')),
 ].filter((path) => /\.tsx?$/.test(path) && !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'));
 
 // Reads through `readableCopy`, not the narrower `userFacingStrings` this file

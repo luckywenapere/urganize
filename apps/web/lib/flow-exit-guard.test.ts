@@ -14,7 +14,8 @@ const EXITS: Array<[string, RegExp[]]> = [
   ['app/payment/callback/page.tsx', [/router\.replace\(HOME_PATH\)/, /router\.replace\(settingsDeepLink/]],
   ['app/welcome/[token]/WelcomeClaimClient.tsx', [/router\.replace\('\/dashboard\?settings=directory'\)/]],
   ['components/people/ClaimWizard.tsx', [/router\.replace\('\/dashboard'\)/]],
-  ['app/invite/accept/InviteAcceptPageClient.tsx', [/router\.replace\(HOME_PATH\)/]],
+  // Lands on HOME_PATH, or on the rollout a chime-in link names (2026-10-26).
+  ['app/invite/accept/InviteAcceptPageClient.tsx', [/router\.replace\(afterJoinPath\)/, /safeInviteNextPath\(nextPath\) \?\? HOME_PATH/]],
   ['app/redeem/RedeemPageClient.tsx', [/router\.replace\(HOME_PATH\)/]],
   ['app/start-trial/StartTrialPageClient.tsx', [/router\.replace\(HOME_PATH\)/]],
 ];

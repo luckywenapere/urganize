@@ -26,7 +26,8 @@ import type { CreatedPlan, PlanBudget, PlanReleaseType, ReadyItem } from '@/lib/
  */
 
 /** 'onboarding' (2026-10-11): the first plan, opened straight after signup. */
-export type PlannerIntakeSource = 'empty_state' | 'note' | 'chip' | 'onboarding';
+/** 'ideas' (2026-10-26): Draft with AI on a rollout's Ideas card; the notes ride in as extraNotes. */
+export type PlannerIntakeSource = 'empty_state' | 'note' | 'chip' | 'onboarding' | 'ideas';
 
 export type PlannerIntakePrefill = {
   releaseType?: PlanReleaseType;

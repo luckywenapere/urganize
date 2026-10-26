@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { readInitialInvite } from '@/lib/invite-metadata-server';
 import InviteAcceptPageClient from './InviteAcceptPageClient';
+import { safeInviteNextPath } from '@/lib/rollout-ideas';
 
 export const metadata: Metadata = {
   title: 'Team invite',
@@ -17,10 +18,12 @@ export const dynamic = 'force-dynamic';
 export default async function InviteAcceptPage({
   searchParams,
 }: {
-  searchParams: Promise<{ token?: string | string[] }>;
+  searchParams: Promise<{ token?: string | string[]; next?: string | string[] }>;
 }) {
-  const { token: rawToken } = await searchParams;
+  const { token: rawToken, next: rawNext } = await searchParams;
   const token = (Array.isArray(rawToken) ? rawToken[0] : rawToken || '').trim();
+  // Where to land after joining (a chime-in link's rollout), validated.
+  const nextPath = safeInviteNextPath(Array.isArray(rawNext) ? rawNext[0] : rawNext);
   const initialLoad = await readInitialInvite(token);
-  return <InviteAcceptPageClient token={token} initialLoad={initialLoad} />;
+  return <InviteAcceptPageClient token={token} initialLoad={initialLoad} nextPath={nextPath} />;
 }

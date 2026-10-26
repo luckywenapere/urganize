@@ -140,6 +140,16 @@ export interface AnalyticsEventPropertiesMap {
   rollout_offer_plan: { from: 'home' | 'empty_state' };
   /** Not now on Home's "Got a release coming?". */
   rollout_offer_dismissed: { from: 'home' };
+  /** Rollout ideas (2026-10-26, lib/rollout-ideas.ts). A note was added on a
+   * rollout's Ideas card, spoken (then read back) or typed. Never the text. */
+  idea_added: { via: 'voice' | 'typed'; path: 'chime_in' | 'solo' | 'manager'; note_count: number };
+  /** "Ask to chime in" sent to teammates already on the rollout. */
+  chime_in_requested: { count: number; artist_ticked: boolean };
+  /** An invite link to chime in was shared from the Ideas card. */
+  chime_in_link_shared: { via: 'whatsapp' | 'copy'; path: 'solo' | 'manager' };
+  /** The notes were turned into a plan: 'ai' when the planner built it from
+   * the Ideas card, 'manual' when Write it myself was tapped. */
+  ideas_plan_drafted: { via: 'ai' | 'manual'; note_count?: number };
   onboarding_completion_screen_shown: {
     release_created: boolean;
     task_created: boolean;
@@ -221,7 +231,7 @@ export interface AnalyticsEventPropertiesMap {
   // model got to tailor the rest. (Until 2026-09-15 the intake produced a
   // draft to review and approve; the scene, approve and discard events went
   // with that step.)
-  planner_intake_opened: { source: 'empty_state' | 'note' | 'chip' | 'onboarding'; has_release: boolean };
+  planner_intake_opened: { source: 'empty_state' | 'note' | 'chip' | 'onboarding' | 'ideas'; has_release: boolean };
   planner_intake_step: { step: number };
   planner_intake_dismissed: { step: number };
   // Auto-plan at the end of onboarding (2026-10-17): the build the server
@@ -232,7 +242,7 @@ export interface AnalyticsEventPropertiesMap {
   plan_auto_failed: { release_id: string; code: string };
   plan_auto_retry: { release_id: string };
   planner_plan_created: {
-    source: 'empty_state' | 'note' | 'chip' | 'onboarding';
+    source: 'empty_state' | 'note' | 'chip' | 'onboarding' | 'ideas';
     release_type: 'single' | 'ep' | 'album';
     task_count: number;
     tasks_removed: number;

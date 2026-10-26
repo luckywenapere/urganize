@@ -38,6 +38,9 @@ const GUARDED_FILES = [
   'components/releases/NeedsRolloutEmpty.tsx',
   'components/home/RolloutOfferCard.tsx',
   'lib/rollout-offer.ts',
+  // Rollout ideas, "Chime in" (2026-10-26).
+  'components/workspace/RolloutIdeasCard.tsx',
+  'lib/rollout-ideas.ts',
   'components/workspace/WorkspaceView.tsx',
   'components/workspace/TasksPanel.tsx',
   // The rollout menu (2026-09-30). Its row labels, the "On <title>" header and
