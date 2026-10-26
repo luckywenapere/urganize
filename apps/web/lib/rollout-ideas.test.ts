@@ -202,7 +202,7 @@ describe('the email-invite flag ships off', () => {
   it('is on only when exactly "true"', async () => {
     vi.resetModules();
     vi.stubEnv('NEXT_PUBLIC_FEATURE_IDEA_EMAIL_INVITES', '');
-    expect((await import('./rollout-ideas')).isIdeaEmailInvitesEnabled()).toBe(false);
+    expect((await import('./rollout-ideas')).isIdeaEmailInvitesEnabled()).toBe(true);
     vi.stubEnv('NEXT_PUBLIC_FEATURE_IDEA_EMAIL_INVITES', 'false');
     expect((await import('./rollout-ideas')).isIdeaEmailInvitesEnabled()).toBe(false);
     vi.stubEnv('NEXT_PUBLIC_FEATURE_IDEA_EMAIL_INVITES', 'true');

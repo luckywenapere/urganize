@@ -523,28 +523,18 @@ export function RolloutIdeasCard({
           {COPY.inviteTitle}
         </h2>
         <p className="mt-2 text-sm text-content-secondary">{COPY.inviteBody}</p>
-        <div className="mt-6 flex justify-center">
-          <InviteLinkActions
+        <div className="text-left">
+          <WhoShouldChimeIn
+            bare
             releaseId={release.id}
             releaseTitle={release.title}
+            people={data.people}
+            canInvite
             senderName={viewerName}
-            path={path === 'solo' ? 'solo' : 'manager'}
-            stacked
-            onShared={() =>
-              window.setTimeout(() => {
-                setInviteSent(true);
-                setStage('plan');
-              }, 1000)
-            }
+            onSent={() => setInviteSent(true)}
+            onDone={() => setStage('plan')}
           />
         </div>
-        <button
-          type="button"
-          onClick={() => setStage('plan')}
-          className="motion-focus mt-4 min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary underline hover:text-content-primary"
-        >
-          {COPY.skip}
-        </button>
       </section>
     );
   }
@@ -1050,6 +1040,8 @@ function WhoShouldChimeIn({
   canInvite,
   senderName,
   onDone,
+  onSent,
+  bare = false,
 }: {
   releaseId: string;
   releaseTitle: string;
@@ -1057,6 +1049,10 @@ function WhoShouldChimeIn({
   canInvite: boolean;
   senderName: string;
   onDone: () => void;
+  /** Called when the asks went out, just before onDone. */
+  onSent?: () => void;
+  /** The guided invite step: its own heading above, no title or rule here. */
+  bare?: boolean;
 }) {
   const [picked, setPicked] = useState<Set<string>>(
     () => new Set(people.filter((person) => person.isArtist).map((person) => person.userId))
@@ -1163,6 +1159,7 @@ function WhoShouldChimeIn({
         });
       }
       setSent(asked + invited);
+      onSent?.();
       window.setTimeout(onDone, 1200);
     } catch (askError) {
       setError(askError instanceof Error ? askError.message : 'Could not ask them.');
@@ -1172,8 +1169,8 @@ function WhoShouldChimeIn({
   };
 
   return (
-    <div className="mt-4 border-t border-stroke-default pt-4">
-      <p className="text-sm font-semibold text-content-primary">{COPY.whoTitle}</p>
+    <div className={bare ? 'mt-6' : 'mt-4 border-t border-stroke-default pt-4'}>
+      {bare ? null : <p className="text-sm font-semibold text-content-primary">{COPY.whoTitle}</p>}
       {people.length ? (
         <ul className="mt-2 divide-y divide-stroke-default">
           {people.map((person) => {
@@ -1373,18 +1370,12 @@ function InviteLinkActions({
   senderName,
   path,
   autoStart = false,
-  stacked = false,
-  onShared,
 }: {
   releaseId: string;
   releaseTitle: string;
   senderName: string;
   path: 'solo' | 'manager';
   autoStart?: boolean;
-  /** The guided invite step: the WhatsApp button leads and the two stack. */
-  stacked?: boolean;
-  /** Called once the link was sent to WhatsApp or copied. */
-  onShared?: () => void;
 }) {
   const [link, setLink] = useState<string | null>(null);
   const [making, setMaking] = useState(false);
@@ -1432,7 +1423,6 @@ function InviteLinkActions({
     }
     const target = buildWhatsAppShareUrl(chimeInShareText({ senderName, releaseTitle, link: url }));
     captureAnalyticsEvent({ name: 'chime_in_link_shared', properties: { via: 'whatsapp', path } });
-    onShared?.();
     if (popup) popup.location.href = target;
     else window.location.href = target;
   };
@@ -1444,22 +1434,21 @@ function InviteLinkActions({
       captureAnalyticsEvent({ name: 'chime_in_link_shared', properties: { via: 'copy', path } });
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
-      onShared?.();
     }
   };
 
   return (
-    <div className={stacked ? 'w-full max-w-[16rem]' : undefined}>
-      <div className={stacked ? 'mt-2 flex flex-col items-stretch gap-2' : 'mt-2 flex flex-wrap items-center gap-2'}>
+    <div>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
         <Button
           size="md"
-          variant={stacked ? 'primary' : 'secondary'}
+          variant="secondary"
           className="min-h-11"
           leftIcon={<MessageCircle className="h-4 w-4" aria-hidden="true" />}
           onClick={() => void shareWhatsApp()}
           disabled={making && !link}
         >
-          {stacked ? COPY.inviteWhatsApp : COPY.shareWhatsApp}
+          {COPY.shareWhatsApp}
         </Button>
         <button
           type="button"

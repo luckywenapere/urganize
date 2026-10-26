@@ -1,4 +1,4 @@
-# Ask for ideas: invite by email (2026-10-26, flag NEXT_PUBLIC_FEATURE_IDEA_EMAIL_INVITES, OFF)
+# Ask for ideas: invite by email (2026-10-26, flag NEXT_PUBLIC_FEATURE_IDEA_EMAIL_INVITES, ON unless 'false' since v1.190.3)
 
 Slice 2 of the founder-approved mock ("Rollout idea flow mock": one idea card, Ask for ideas, keep planning, review when an idea changes). Decisions made with the founder:
 - Asking for an idea is the invite moment. A person not on Urganize gets a **full team invite** (uses a seat), not a no-seat idea link.

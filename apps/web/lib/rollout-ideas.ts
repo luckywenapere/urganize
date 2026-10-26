@@ -24,10 +24,11 @@ export const isRolloutIdeasEnabled = (): boolean =>
 /**
  * NEXT_PUBLIC_FEATURE_IDEA_EMAIL_INVITES: "Ask for ideas" can invite someone
  * who is not on Urganize by email (a full team invite, so it uses a seat).
- * OFF unless exactly 'true'.
+ * ON unless exactly 'false' (2026-10-26, founder: the invite step is email, the
+ * normal team invite, not a WhatsApp link).
  */
 export const isIdeaEmailInvitesEnabled = (): boolean =>
-  process.env.NEXT_PUBLIC_FEATURE_IDEA_EMAIL_INVITES === 'true';
+  process.env.NEXT_PUBLIC_FEATURE_IDEA_EMAIL_INVITES !== 'false';
 
 /** The two roles "Ask for ideas" offers a new person. Both map to the invite route's roles. */
 export type IdeaInviteRole = 'artist' | 'team-member';
@@ -157,7 +158,6 @@ export const ROLLOUT_IDEAS_COPY = {
   noIdea: 'No idea yet? Ask your team',
   inviteTitle: 'Who should help shape it?',
   inviteBody: 'They add ideas. UrgAns turns all of it into your plan.',
-  inviteWhatsApp: 'Invite on WhatsApp',
   inviteSent: 'Invite sent',
   readyTitle: 'Ready when you are.',
   readyBody: 'Build now, or wait for their ideas first.',
