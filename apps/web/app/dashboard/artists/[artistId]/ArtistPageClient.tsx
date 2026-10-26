@@ -228,7 +228,7 @@ export default function ArtistPageClient() {
         )}
       </SectionCard>
 
-      <ArtistCatalogueCard artistId={artist.id} />
+      <ArtistCatalogueCard artistId={artist.id} artistName={artist.name} />
     </div>
   );
 }

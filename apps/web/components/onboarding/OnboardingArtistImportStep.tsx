@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
+import { Cover, formatFans, initials, kindLabel } from '@/components/artists/ImportParts';
 import {
   describeCadence,
   type ImportArtistCandidate,
@@ -25,49 +26,6 @@ const primaryButton =
   'motion-press inline-flex min-h-12 items-center justify-center rounded-full bg-content-primary px-6 text-sm font-semibold text-content-inverse transition-opacity duration-fast ease-standard hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
 const secondaryButton =
   'motion-press inline-flex min-h-12 items-center justify-center rounded-full border border-stroke-default bg-bg-surface px-6 text-sm font-medium text-content-secondary transition-colors duration-fast ease-standard hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-50';
-
-function formatFans(value: number | null): string {
-  if (value === null) return '';
-  if (value >= 1_000_000) return `${(Math.round(value / 100_000) / 10).toString()}M fans`;
-  if (value >= 1000) return `${(Math.round(value / 100) / 10).toString()}K fans`;
-  return `${value} fans`;
-}
-
-function kindLabel(kind: ImportRelease['kind']): string {
-  return kind === 'ep' ? 'EP' : kind === 'album' ? 'Album' : 'Single';
-}
-
-function initials(name: string): string {
-  return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part.charAt(0).toUpperCase())
-      .join('') || '?'
-  );
-}
-
-function Cover({ release }: { release: ImportRelease }) {
-  const [failed, setFailed] = useState(false);
-  if (release.coverUrl && !failed) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element -- remote covers, never optimised or stored
-      <img
-        src={release.coverUrl}
-        alt=""
-        loading="lazy"
-        onError={() => setFailed(true)}
-        className="aspect-square w-full rounded-lg bg-bg-surface object-cover"
-      />
-    );
-  }
-  return (
-    <div className="flex aspect-square w-full items-center justify-center rounded-lg bg-bg-surface text-lg font-semibold text-content-secondary">
-      {release.title.charAt(0).toUpperCase()}
-    </div>
-  );
-}
 
 /**
  * "Who is the artist?" (2026-10-26). Type a name, pick the profile, watch the

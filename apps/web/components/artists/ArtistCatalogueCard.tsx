@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { fetchArtistCatalogue, type CatalogueRow } from '@/lib/artist-import/client';
+import { CATALOGUE_CHANGED_EVENT, fetchArtistCatalogue, type CatalogueRow } from '@/lib/artist-import/client';
+import { ImportReleasesButton } from './ImportReleasesDialog';
 
 function kindLabel(kind: CatalogueRow['kind']): string {
   return kind === 'ep' ? 'EP' : kind === 'album' ? 'Album' : 'Single';
@@ -9,28 +10,42 @@ function kindLabel(kind: CatalogueRow['kind']): string {
 
 /**
  * The artist's past releases, brought in from a public catalogue during
- * onboarding (2026-10-26). Shows nothing at all for an artist with none, so
- * an artist made by hand sees no empty card.
+ * onboarding or the Import releases dialog (2026-10-26). Always drawn, so the
+ * button to bring releases in is where the artist is; it refreshes itself when
+ * an import finishes.
  */
-export function ArtistCatalogueCard({ artistId }: { artistId: string }) {
+export function ArtistCatalogueCard({ artistId, artistName }: { artistId: string; artistName: string }) {
   const [rows, setRows] = useState<CatalogueRow[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    void fetchArtistCatalogue(artistId).then((found) => {
-      if (!cancelled) setRows(found);
-    });
+    const load = () =>
+      void fetchArtistCatalogue(artistId).then((found) => {
+        if (!cancelled) setRows(found);
+      });
+    load();
+    window.addEventListener(CATALOGUE_CHANGED_EVENT, load);
     return () => {
       cancelled = true;
+      window.removeEventListener(CATALOGUE_CHANGED_EVENT, load);
     };
   }, [artistId]);
 
-  if (rows.length === 0) return null;
-
   return (
     <section className="rounded-xl border border-stroke-default bg-bg-surface p-4">
-      <h2 className="font-display text-base font-semibold text-content-primary">Catalogue</h2>
-      <p className="mt-1 text-xs text-content-tertiary">Brought in from their public releases.</p>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-display text-base font-semibold text-content-primary">Catalogue</h2>
+        <ImportReleasesButton
+          from="artist"
+          initialQuery={artistName}
+          className="motion-focus motion-press inline-flex min-h-9 items-center rounded-full border border-stroke-default px-3.5 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+        >
+          Import releases
+        </ImportReleasesButton>
+      </div>
+      {rows.length === 0 ? (
+        <p className="mt-2 text-sm text-content-tertiary">No releases yet. Bring them in from their public profile.</p>
+      ) : null}
       <ul className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
         {rows.map((row) => {
           const body = (
