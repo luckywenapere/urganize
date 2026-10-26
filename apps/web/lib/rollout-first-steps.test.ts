@@ -7,52 +7,57 @@ import {
   withDismissed,
 } from './rollout-first-steps';
 
-const all = { cover: true, team: true };
+const all = { idea: true, team: true };
 const now = new Date('2026-10-15T12:00:00Z');
 
 describe('rollout first steps (URG-293)', () => {
-  it('orders cover, team and ticks from facts (no song step since Oct 17, 2026)', () => {
-    const steps = buildFirstSteps({ hasCoverArt: false, hasTeam: null }, all);
+  it('orders idea, team (the cover art is no longer a first step, Oct 26, 2026) and ticks from facts (no song step since Oct 17, 2026)', () => {
+    const steps = buildFirstSteps({ hasIdea: false, hasTeam: null }, all);
     expect(steps.map((s) => [s.key, s.done])).toEqual([
-      ['cover', false],
+      ['idea', false],
       ['team', false],
     ]);
-    expect(nextFirstStep(steps)?.key).toBe('cover');
+    expect(nextFirstStep(steps)?.key).toBe('idea');
   });
 
-  it('leads with the pinned Confirm your release date when there is one (Oct 17, 2026)', () => {
-    const steps = buildFirstSteps({ hasCoverArt: true, hasTeam: true }, all, { title: 'Confirm your release date' });
+  it('puts the pinned Confirm your release date after the idea (Oct 26, 2026)', () => {
+    const steps = buildFirstSteps({ hasIdea: true, hasTeam: true }, all, { title: 'Confirm your release date' });
     expect(steps.map((s) => [s.key, s.done])).toEqual([
+      ['idea', true],
       ['date', false],
-      ['cover', true],
     ]);
     expect(nextFirstStep(steps)?.key).toBe('date');
-    expect(steps[0].action).toBe('Confirm the date');
+    expect(steps[1].action).toBe('Confirm the date');
+    // Until the idea is added, it is the next step.
+    expect(
+      nextFirstStep(buildFirstSteps({ hasIdea: false, hasTeam: true }, all, { title: 'Confirm your release date' }))?.key
+    ).toBe('idea');
+    expect(buildFirstSteps({ hasIdea: false, hasTeam: true }, all)[0].action).toBe('Add your idea');
     // Without a pin there is no date step.
-    expect(buildFirstSteps({ hasCoverArt: false, hasTeam: false }, all).some((s) => s.key === 'date')).toBe(false);
+    expect(buildFirstSteps({ hasIdea: false, hasTeam: false }, all).some((s) => s.key === 'date')).toBe(false);
   });
 
   it('drops steps that do not exist for this person', () => {
     const steps = buildFirstSteps(
-      { hasCoverArt: false, hasTeam: false },
-      { cover: true, team: false }
+      { hasIdea: false, hasTeam: false },
+      { idea: true, team: false }
     );
-    expect(steps.map((s) => s.key)).toEqual(['cover']);
+    expect(steps.map((s) => s.key)).toEqual(['idea']);
   });
 
   it('never shows Invite your team once there is a teammate, not even ticked (Oct 17, 2026)', () => {
-    const steps = buildFirstSteps({ hasCoverArt: false, hasTeam: true }, all);
-    expect(steps.map((s) => s.key)).toEqual(['cover']);
+    const steps = buildFirstSteps({ hasIdea: false, hasTeam: true }, all);
+    expect(steps.map((s) => s.key)).toEqual(['idea']);
     expect(steps.some((s) => s.title === 'Invite your team')).toBe(false);
     // Unknown team still offers the step; only a known teammate hides it.
-    expect(buildFirstSteps({ hasCoverArt: false, hasTeam: null }, all).map((s) => s.key)).toEqual([
-      'cover',
+    expect(buildFirstSteps({ hasIdea: false, hasTeam: null }, all).map((s) => s.key)).toEqual([
+      'idea',
       'team',
     ]);
   });
 
   it('renders nothing when the teammate rule leaves no steps', () => {
-    const steps = buildFirstSteps({ hasCoverArt: false, hasTeam: true }, { cover: false, team: true });
+    const steps = buildFirstSteps({ hasIdea: false, hasTeam: true }, { idea: false, team: true });
     expect(steps).toEqual([]);
     expect(
       shouldShowFirstSteps({
@@ -82,7 +87,7 @@ describe('rollout first steps (URG-293)', () => {
     now,
     dismissed: false,
     factsKnown: true,
-    steps: buildFirstSteps({ hasCoverArt: false, hasTeam: false }, all),
+    steps: buildFirstSteps({ hasIdea: false, hasTeam: false }, all),
   };
 
   it('shows on a new rollout with work left', () => {
@@ -90,7 +95,7 @@ describe('rollout first steps (URG-293)', () => {
   });
 
   it('disappears once every step is done', () => {
-    const steps = buildFirstSteps({ hasCoverArt: true, hasTeam: true }, all);
+    const steps = buildFirstSteps({ hasIdea: true, hasTeam: true }, all);
     expect(shouldShowFirstSteps({ ...base, steps })).toBe(false);
   });
 
