@@ -103,4 +103,20 @@ describe('phone rollout declutter', () => {
     expect(rowAt).toBeGreaterThan(-1);
     expect(cardAt).toBeGreaterThan(rowAt);
   });
+
+  it('lays the header out in two rows on golden-ratio steps (mock option A, Oct 26, 2026)', () => {
+    const tile = read('components/workspace/RolloutCoverTile.tsx');
+    // Back and the icons on their own row, then the cover beside the title.
+    const navRow = header.indexOf('mb-[13px] flex items-center justify-between');
+    const back = header.indexOf('aria-label={backLabel}');
+    const titleRow = header.indexOf('flex items-center gap-[13px]');
+    expect(navRow).toBeGreaterThan(-1);
+    expect(back).toBeGreaterThan(navRow);
+    expect(titleRow).toBeGreaterThan(back);
+    // Cover 55 = eyebrow line 21 + title line 34; no dashed line on an empty cover.
+    expect(tile).toContain('h-[55px] w-[55px]');
+    expect(tile).not.toContain('border-dashed');
+    expect(header).toContain('flex h-[21px]');
+    expect(header).toContain('leading-[34px]');
+  });
 });

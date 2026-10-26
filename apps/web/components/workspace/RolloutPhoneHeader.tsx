@@ -105,31 +105,37 @@ export function RolloutPhoneHeader({
 
   return (
     <>
-      <div ref={headerRef} data-rollout-phone-header className="mb-4 flex items-center gap-1">
-        {/* Same handler as the desktop arrow, deliberately (see WorkspaceView):
-            every complaint about this button so far arrived as a phone
-            screenshot, and letting the two diverge is how it drifted before. */}
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label={backLabel}
-          className="motion-focus motion-press -ml-3 grid h-11 w-11 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
-        >
-          <ChevronLeft className="h-6 w-6" aria-hidden="true" />
-        </button>
-        {/* Cover art is edited here, on the tile, not from the menu (founder
-            approved mock, Oct 24, 2026). */}
-        <div className="mr-2">
+      {/* Two rows on golden-ratio steps (8, 13, 21, 34, 55; founder approved
+          mock option A, Oct 26, 2026): the way back and the icons on their own
+          row, then the cover and the title with the full width. The cover is
+          55, the eyebrow line 21 plus the title line 34. */}
+      <div ref={headerRef} data-rollout-phone-header className="mb-[21px]">
+        <div className="-mx-3 mb-[13px] flex items-center justify-between">
+          {/* Same handler as the desktop arrow, deliberately (see WorkspaceView):
+              every complaint about this button so far arrived as a phone
+              screenshot, and letting the two diverge is how it drifted before. */}
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label={backLabel}
+            className="motion-focus motion-press grid h-11 w-11 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+          >
+            <ChevronLeft className="h-6 w-6" aria-hidden="true" />
+          </button>
+          <div className="mr-2">{icons(true)}</div>
+        </div>
+        <div className="flex items-center gap-[13px]">
+          {/* Cover art is edited here, on the tile, not from the menu (founder
+              approved mock, Oct 24, 2026). */}
           <RolloutCoverTile releaseId={releaseId} title={title} coverUrl={coverUrl} onToast={onToast} />
+          <div className="min-w-0 flex-1">
+            <p className="flex h-[21px] min-w-0 items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-content-tertiary">
+              <ArtistFace artistId={artistId} name={artistName} size={16} />
+              <span className="truncate">{artistName || 'Unassigned artist'}</span>
+            </p>
+            <h2 className="truncate font-display text-[28px] font-semibold leading-[34px] text-content-primary">{title}</h2>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="flex min-w-0 items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-content-tertiary">
-            <ArtistFace artistId={artistId} name={artistName} size={16} />
-            <span className="truncate">{artistName || 'Unassigned artist'}</span>
-          </p>
-          <h2 className="truncate font-display text-[28px] font-semibold leading-tight text-content-primary">{title}</h2>
-        </div>
-        {icons(true)}
       </div>
 
       {showMeta ? (

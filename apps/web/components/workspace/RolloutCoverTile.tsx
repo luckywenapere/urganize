@@ -110,14 +110,14 @@ export function RolloutCoverTile({
         type="button"
         onClick={onTileClick}
         aria-label={coverUrl ? `Cover art for ${title}. Change or remove` : `Add cover art for ${title}`}
-        className={`motion-focus motion-press relative grid h-14 w-14 shrink-0 touch-manipulation place-items-center overflow-hidden rounded-[10px] ${
-          coverUrl ? 'bg-bg-surface' : 'border border-dashed border-stroke-strong bg-bg-surface hover:bg-bg-hover'
+        className={`motion-focus motion-press relative grid h-[55px] w-[55px] shrink-0 touch-manipulation place-items-center overflow-hidden rounded-[13px] ${
+          coverUrl ? 'bg-bg-surface' : 'bg-bg-hover'
         }`}
       >
         {coverUrl ? (
           <img src={coverUrl} alt="" className="h-full w-full object-cover" />
         ) : (
-          <Plus className="h-5 w-5 text-brand" aria-hidden="true" />
+          <Plus className="h-[21px] w-[21px] text-brand" aria-hidden="true" />
         )}
         {busy ? (
           <span className="absolute inset-0 grid place-items-center bg-black/50">

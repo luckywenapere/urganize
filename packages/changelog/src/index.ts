@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.190.6",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "On your phone, the top of a rollout is calmer: back and menu sit on their own row, with the cover and title below.",
+    ],
+  },
+  {
     version: "1.190.5",
     tag: "Rollouts",
     listed: false,
