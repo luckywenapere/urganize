@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.178.1",
+    tag: "AI",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "On your phone, UrgAns opens on your sessions. Tap one to open it, and go Back to return.",
+    ],
+  },
+  {
     version: "1.178.0",
     title: "UrgAns writes your rollout plan",
     tag: "AI",
