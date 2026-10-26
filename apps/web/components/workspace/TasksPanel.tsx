@@ -667,7 +667,13 @@ export function TasksPanel({
           was open. (On a desktop the same rows are the card at the top of the
           right-hand column.) */}
 
-      {/* Scrollable body — desktop-only internal scroll box (`lg:` prefix).
+      {/* No scroll box here at any width since 2026-10-26: the desktop rollout
+          page scrolls as one page now (WorkspaceDesktopFocused), so this box has
+          no height bound, and `overflow-y-auto` + `overscroll-contain` on it
+          ate the mouse wheel over the timeline (founder report). The history
+          below explains why the same pair was already banned on a phone.
+
+          Was: scrollable body, a desktop-only internal scroll box (`lg:` prefix).
           On desktop this box gets a real bounded height from the ancestor
           chain (WorkspaceDesktopFocused's viewport-locked column), so it's
           the ONLY thing that scrolls there and its native scrollbar (the
@@ -691,7 +697,7 @@ export function TasksPanel({
           activity buckets do; the pills stay put either way — the desktop
           header row above, the mobile rows above and below — so the scene
           switcher never disappears (founder call, 2026-08-05). */}
-      <div data-morph-scene="" className="flex min-h-0 flex-1 flex-col pb-4 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
+      <div data-morph-scene="" className="flex min-h-0 flex-1 flex-col pb-4">
       {/* Above the body rather than inside the buckets, so it survives the
           timeline taking the main view — see `bodyIsMainView`. Deliberately
           NOT shown over the named scenes: a "Plan the rollout" card on top of
