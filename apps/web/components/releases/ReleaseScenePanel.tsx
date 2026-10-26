@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/types/tasks';
@@ -20,6 +21,8 @@ import { PitchKitSection } from '@/components/releases/PitchKitSection';
 import { DistributionSection } from '@/components/releases/DistributionSection';
 import { SpendSection } from '@/components/releases/SpendSection';
 import { ReleaseBriefScene } from '@/components/releases/ReleaseBriefScene';
+import { BriefIdeaGate } from '@/components/releases/BriefIdeaGate';
+import { onlyPreProductionWork } from '@/lib/pre-production';
 import { SPEND_ADD_FIELD } from '@/lib/home/spend-card';
 import { calendarFontVariables } from '@/components/content-calendar/calendar-fonts';
 
@@ -116,6 +119,9 @@ type ReleaseScenePanelProps = {
    *  who may use them (the owner), so a Fix button never leads to a refusal. */
   onOpenDetails?: () => void;
   onChangeArtist?: () => void;
+  /** The rollout's idea card, shown in the Brief's place until the rollout
+   *  has a plan or a recorded idea (BriefIdeaGate). */
+  briefIdeaScreen?: ReactNode;
 };
 
 export function ReleaseScenePanel({
@@ -128,6 +134,7 @@ export function ReleaseScenePanel({
   onTaskRescheduled,
   onOpenDetails,
   onChangeArtist,
+  briefIdeaScreen,
 }: ReleaseScenePanelProps) {
   // The input a Fix button sent the person to (`?field=`). Read here and passed
   // down, with the section KEYED on it, so a different field is a fresh arrival:
@@ -270,7 +277,14 @@ export function ReleaseScenePanel({
         />
       ) : null}
       {scene === 'brief' ? (
-        <ReleaseBriefScene key={release.id} releaseId={release.id} onToast={onToast} />
+        <BriefIdeaGate
+          key={release.id}
+          releaseId={release.id}
+          hasPlan={!onlyPreProductionWork(tasks)}
+          ideaScreen={briefIdeaScreen}
+        >
+          <ReleaseBriefScene releaseId={release.id} onToast={onToast} />
+        </BriefIdeaGate>
       ) : null}
       {scene === 'timeline' ? (
         <TimelineScene

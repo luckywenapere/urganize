@@ -1309,6 +1309,33 @@ export function WorkspaceView() {
         phone={!isDesktopViewport}
       />
     ) : null;
+  // The rollout's Ideas card: on the main view (ideasBanner), and in the
+  // Brief's place until the rollout has a plan or an idea (BriefIdeaGate).
+  const ideasCard = () =>
+    ROLLOUT_IDEAS_ENABLED && scopedReleaseSlim && !scopedReleaseSlim.isTest ? (
+      <RolloutIdeasCard
+        key={scopedReleaseSlim.id}
+        condensed={simplePlanView}
+        tasks={scopedTasks}
+        hasReleaseDate={Boolean(scopedReleaseSlim.releaseDate)}
+        onPlanChanged={() => void loadCommandCenter({ force: true })}
+        release={{ id: scopedReleaseSlim.id, title: scopedReleaseSlim.title }}
+        hasPlan={!onlyPreProductionWork(scopedTasks)}
+        canDraft={PLANNER_ENABLED && scopedReleaseIsOwn && !isPlanGenerating}
+        onDraftWithAi={(extraNotes) =>
+          openIntake({
+            source: 'ideas',
+            releaseId: scopedReleaseSlim.id,
+            prefill: {
+              ...scopedRolloutIntakePrefill(scopedReleaseSlim),
+              ...(extraNotes ? { extraNotes } : {}),
+            },
+          })
+        }
+        onWriteMyself={() => openQuickCreate({ releaseId: scopedReleaseSlim.id, source: 'inline' })}
+      />
+    ) : null;
+
   const scenePanel =
     timelineScene ? (
       timelineScene
@@ -1323,6 +1350,7 @@ export function WorkspaceView() {
         onTaskRescheduled={() => void loadCommandCenter({ force: true })}
         onOpenDetails={scopedReleaseIsOwn ? () => setIsDetailsOpen(true) : undefined}
         onChangeArtist={changeArtistAction ? changeArtistAction.onClick : undefined}
+        briefIdeaScreen={panelBody === 'brief' ? ideasCard() : null}
       />
     ) : undefined;
 
@@ -1389,30 +1417,7 @@ export function WorkspaceView() {
       />
     ) : null;
 
-  const ideasBanner =
-    ROLLOUT_IDEAS_ENABLED && bodyIsMainView && scopedReleaseSlim && !scopedReleaseSlim.isTest ? (
-      <RolloutIdeasCard
-        key={scopedReleaseSlim.id}
-        condensed={simplePlanView}
-        tasks={scopedTasks}
-        hasReleaseDate={Boolean(scopedReleaseSlim.releaseDate)}
-        onPlanChanged={() => void loadCommandCenter({ force: true })}
-        release={{ id: scopedReleaseSlim.id, title: scopedReleaseSlim.title }}
-        hasPlan={!onlyPreProductionWork(scopedTasks)}
-        canDraft={PLANNER_ENABLED && scopedReleaseIsOwn && !isPlanGenerating}
-        onDraftWithAi={(extraNotes) =>
-          openIntake({
-            source: 'ideas',
-            releaseId: scopedReleaseSlim.id,
-            prefill: {
-              ...scopedRolloutIntakePrefill(scopedReleaseSlim),
-              ...(extraNotes ? { extraNotes } : {}),
-            },
-          })
-        }
-        onWriteMyself={() => openQuickCreate({ releaseId: scopedReleaseSlim.id, source: 'inline' })}
-      />
-    ) : null;
+  const ideasBanner = bodyIsMainView ? ideasCard() : null;
 
   // The header's Add idea button (2026-10-26, founder): replaces the "New idea
   // for this plan?" banner on a planned rollout. It opens the ideas card's box.
