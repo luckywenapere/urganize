@@ -259,11 +259,11 @@ export function WorkspaceDesktopFocused({
         }
       >
         {simpleSide ? null : pageScroll ? (
-          <div className="grid grid-cols-2 items-start gap-4 [&>*:only-child]:col-span-2">{banner}</div>
+          <div className="order-2 grid grid-cols-2 items-start gap-4 [&>*:only-child]:col-span-2">{banner}</div>
         ) : (
           banner
         )}
-        <div className={pageScroll ? 'flex min-w-0 flex-col' : 'flex h-full min-h-0 min-w-0 flex-col overflow-hidden'}>
+        <div className={pageScroll ? 'order-1 flex min-w-0 flex-col' : 'flex h-full min-h-0 min-w-0 flex-col overflow-hidden'}>
           <TasksPanel
             tasks={scopedTasks}
             scopedRelease={scopedRelease}

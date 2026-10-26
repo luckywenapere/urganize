@@ -11,6 +11,7 @@ import { usePlannerStore } from '@/stores/usePlannerStore';
 import { NotesList } from '@/components/notes/NotesList';
 import { NoteEditor, NoteEditorEmpty } from '@/components/notes/NoteEditor';
 import { NoteDeleteDialog } from '@/components/notes/NoteDeleteDialog';
+import { BringNotesDialog } from '@/components/notes/import/BringNotesDialog';
 import { useNoteSelection } from '@/components/notes/useNoteSelection';
 import { useNoteAutosave } from '@/components/notes/useNoteAutosave';
 import { NotesPageSkeleton } from '@/components/loading/NotesPageSkeleton';
@@ -57,6 +58,7 @@ export default function NotesPageClient() {
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   /**
    * Search is local state, deliberately NOT a URL param. Typing would push a
    * history entry per keystroke, and this page already carries `?note=` and
@@ -72,6 +74,17 @@ export default function NotesPageClient() {
 
   const releaseFilterId = searchParams.get('release');
   const wantsNewNote = searchParams.get('new') === '1';
+  const wantsImport = searchParams.get('import') === '1';
+
+  // /dashboard/notes?import=1 opens Bring your notes (UrgAns and Home link here).
+  useEffect(() => {
+    if (!wantsImport || isInitialLoading) return;
+    setIsImportOpen(true);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('import');
+    const query = params.toString();
+    router.replace(`${pathname ?? ''}${query ? `?${query}` : ''}`, { scroll: false });
+  }, [isInitialLoading, pathname, router, searchParams, wantsImport]);
 
   // Fire immediately rather than behind authLoading — the stores read their
   // own token from getSession() (local), so waiting on the auth store's GoTrue
@@ -374,6 +387,7 @@ export default function NotesPageClient() {
             onSearchChange={setSearchQuery}
             onSelect={handleSelect}
             onNewNote={() => void handleNewNote()}
+            onBringNotes={() => setIsImportOpen(true)}
             onClearFilter={clearFilter}
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}
@@ -415,6 +429,19 @@ export default function NotesPageClient() {
           )}
         </section>
       </div>
+
+      <BringNotesDialog
+        open={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        releases={releases.map((release) => ({ id: release.id, title: release.title }))}
+        onMakePlan={
+          PLANNER_ENABLED
+            ? ({ releaseId, extraNotes }) =>
+                openIntake({ source: 'note', releaseId, prefill: { extraNotes } })
+            : undefined
+        }
+        releaseHasActivities={(releaseId) => tasks.some((task) => task.releaseId === releaseId)}
+      />
 
       <NoteDeleteDialog
         open={isDeleteOpen && Boolean(selectedNote)}

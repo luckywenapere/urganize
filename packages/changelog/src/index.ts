@@ -41,12 +41,43 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.179.4",
+    version: "1.181.1",
     tag: "Rollouts",
     listed: false,
     date: "October 26, 2026",
     highlights: [
       "A new rollout now starts with your idea, not the cover art. Say what you see and your plan is built from it.",
+    ],
+  },
+  {
+    version: "1.181.0",
+    title: "Bring your notes",
+    tag: "Rollouts",
+    date: "October 26, 2026",
+    highlights: [
+      "Bring in a WhatsApp chat, a file or pasted text. Urganize finds the songs, to-dos, dates and money in it.",
+      "Choose what to keep. Notes that name a rollout attach to it, and you can turn the to-dos into a plan.",
+      "The chat is read on your phone. Only the notes you keep are saved, and you can undo the whole import.",
+    ],
+  },
+  {
+    version: "1.180.0",
+    title: "A new rollout starts with its plan",
+    tag: "Rollouts",
+    date: "October 26, 2026",
+    highlights: [
+      "On a new rollout the plan comes first, with the idea and first steps below it.",
+      "When your plan is ready you see how many steps it has, the first three, and a button to read the brief.",
+      "What you say on the idea card now starts the brief.",
+    ],
+  },
+  {
+    version: "1.179.4",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "The plan card on a new rollout is one line and one button.",
     ],
   },
   {

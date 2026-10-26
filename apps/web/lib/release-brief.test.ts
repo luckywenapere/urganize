@@ -304,4 +304,10 @@ describe('buildBriefPlanSeed', () => {
     expect(buildBriefPlanSeed(null)).toBeNull();
     expect(buildBriefPlanSeed({ built_for: {} })).toBeNull();
   });
+
+  it('leads with what the team said on the idea card, with or without a plan', () => {
+    expect(buildBriefPlanSeed(null, ['Slow burn, late night.'])?.idea).toBe('Slow burn, late night.');
+    const seed = buildBriefPlanSeed({ built_for: { summary: 'Built for Audiomack.' } }, ['Slow burn.', 'Hazy video.']);
+    expect(seed?.idea).toBe('Slow burn. Hazy video. Built for Audiomack.');
+  });
 });
