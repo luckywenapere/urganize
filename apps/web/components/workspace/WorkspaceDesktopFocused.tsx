@@ -1,6 +1,7 @@
 'use client';
 
 import { countProgress } from '@/lib/task-progress';
+import { onlyPreProductionWork } from '@/lib/pre-production';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { SIDEBAR_SLOT_ROLLOUT, useSidebarSlot } from '@/components/shell/Sidebar';
@@ -100,6 +101,9 @@ export function WorkspaceDesktopFocused({
 }: WorkspaceDesktopFocusedProps) {
   // Cancelled work is out of both numbers (URG-389).
   const { done: tasksDone, total: tasksTotal } = countProgress(scopedTasks);
+  // A fresh rollout (no release day yet, or only the seeded pre-production
+  // starters) shows no count and no New activity (2026-10-26, declutter).
+  const hasPlan = Boolean(card.release.releaseDate) && !onlyPreProductionWork(scopedTasks);
   const rolloutMenuSlot = useSidebarSlot(SIDEBAR_SLOT_ROLLOUT);
   const crumbSlot = usePageBarCrumbSlot(true);
   const endSlot = usePageBarEndSlot(true);
@@ -154,13 +158,15 @@ export function WorkspaceDesktopFocused({
       />
       {/* One plain count (2026-10-14 declutter), worded like the
           distribution checklist's. */}
-      <div className="hidden items-center gap-2 xl:flex">
-        <span className="text-sm tabular-nums text-content-secondary">
-          {tasksDone} of {tasksTotal} done
-        </span>
-        <ReleaseDeliveredMark total={tasksTotal} done={tasksDone} />
-      </div>
-      {onNewActivity ? (
+      {hasPlan ? (
+        <div className="hidden items-center gap-2 xl:flex">
+          <span className="text-sm tabular-nums text-content-secondary">
+            {tasksDone} of {tasksTotal} done
+          </span>
+          <ReleaseDeliveredMark total={tasksTotal} done={tasksDone} />
+        </div>
+      ) : null}
+      {onNewActivity && hasPlan ? (
         <button
           type="button"
           onClick={onNewActivity}

@@ -232,13 +232,14 @@ export function RolloutIdeasCard({
           </div>
         </div>
       ) : (
-        <div className="mt-4 flex flex-col items-center gap-1">
+        <div className={hasNotes ? 'mt-3 flex flex-wrap items-center gap-2' : 'mt-4 flex flex-col items-center gap-1'}>
           {data.voice ? (
             <IdeaMic
+              compact={hasNotes}
               releaseId={release.id}
               onTranscript={onTranscript}
               onError={setError}
-              typeLink={typeButton(COPY.orType)}
+              typeLink={typeButton(hasNotes ? 'Type it' : COPY.orType)}
               fallback={typeButton('Type it')}
             />
           ) : (
@@ -298,7 +299,10 @@ function IdeaMic({
   onError,
   typeLink,
   fallback,
+  compact = false,
 }: {
+  /** Small pill instead of the big mic, once a note is saved. */
+  compact?: boolean;
   releaseId: string;
   onTranscript: (text: string) => void;
   onError: (message: string) => void;
@@ -378,19 +382,28 @@ function IdeaMic({
         onKeyDown={onKey}
         disabled={busy}
         style={{ touchAction: 'none' }}
-        className={`motion-focus flex h-16 w-16 select-none items-center justify-center rounded-full text-content-inverse transition-transform duration-fast ${
-          recording ? 'scale-110 bg-brand-hover ring-4 ring-brand/25' : 'bg-brand hover:bg-brand-hover'
-        } disabled:opacity-70`}
+        className={
+          compact
+            ? `motion-focus inline-flex min-h-11 select-none items-center gap-2 rounded-full px-4 text-sm font-medium text-content-inverse ${
+                recording ? 'bg-brand-hover ring-4 ring-brand/25' : 'bg-brand hover:bg-brand-hover'
+              } disabled:opacity-70`
+            : `motion-focus flex h-16 w-16 select-none items-center justify-center rounded-full text-content-inverse transition-transform duration-fast ${
+                recording ? 'scale-110 bg-brand-hover ring-4 ring-brand/25' : 'bg-brand hover:bg-brand-hover'
+              } disabled:opacity-70`
+        }
       >
         {voice.state === 'transcribing' ? (
-          <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
+          <Loader2 className={compact ? 'h-4 w-4 animate-spin' : 'h-6 w-6 animate-spin'} aria-hidden="true" />
         ) : (
-          <Mic className="h-6 w-6" aria-hidden="true" />
+          <Mic className={compact ? 'h-4 w-4' : 'h-6 w-6'} aria-hidden="true" />
         )}
+        {compact ? (recording || busy ? label : COPY.addAnother) : null}
       </button>
-      <p aria-live="polite" className="mt-1 text-xs text-content-tertiary">
-        {label}
-      </p>
+      {compact ? null : (
+        <p aria-live="polite" className="mt-1 text-xs text-content-tertiary">
+          {label}
+        </p>
+      )}
       {recording || busy ? null : typeLink}
     </>
   );

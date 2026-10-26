@@ -1278,7 +1278,9 @@ export function WorkspaceView() {
         onOpenTask={openTask}
         onToast={(message, tone) => setToast({ message, tone })}
         onRescheduled={() => void loadCommandCenter({ force: true })}
-        suppressEmptyState={bannerReplacesEmptyState}
+        // The date row above already asks for the date; the timeline's own
+        // "Set a release date first" panel repeated it (2026-10-26, declutter).
+        suppressEmptyState={bannerReplacesEmptyState || Boolean(setReleaseDateBanner)}
         statusSlot={isDesktopViewport ? distributionStatusStrip : undefined}
         phone={!isDesktopViewport}
       />

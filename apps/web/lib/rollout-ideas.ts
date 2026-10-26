@@ -53,6 +53,7 @@ export const ROLLOUT_IDEAS_COPY = {
   listening: 'Listening',
   working: 'Writing it down',
   orType: 'or type it',
+  addAnother: 'Add another',
   placeholder: 'Say what you see for this rollout',
   add: 'Add note',
   cancel: 'Cancel',

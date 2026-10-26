@@ -151,6 +151,13 @@ export function useRolloutMenuActions({
     (state) => state.releases.find((release) => release.id === releaseId)?.releaseDate ?? null
   );
   const released = isReleasedOn(releaseDate, Date.now());
+  // Distribute, Pitch this! and the Pre-save link all hang off release day, so
+  // they wait for a date (2026-10-26, declutter). Unknown release: show all.
+  const dateMissing = useReleaseStore((state) => {
+    const found = state.releases.find((release) => release.id === releaseId);
+    return Boolean(found) && !found?.releaseDate;
+  });
+  const NEEDS_DATE: ReadonlyArray<ReleaseMenuKey> = ['distribute', 'pitch', 'capture'];
 
   const toggle = (scene: SceneName, id: string) => {
     if (activeScene === scene) {
@@ -160,7 +167,7 @@ export function useRolloutMenuActions({
     openScene(scene, id);
   };
 
-  const entries = buildRolloutMenu({
+  const allEntries = buildRolloutMenu({
     releaseId,
     activeScene,
     variant,
@@ -173,7 +180,9 @@ export function useRolloutMenuActions({
     deleteRollout,
   });
 
-  const dialogFor = (key: ReleaseMenuKey): RolloutMenuDialogInput | null | undefined =>
+  const entries = dateMissing ? allEntries.filter((entry) => !NEEDS_DATE.includes(entry.key)) : allEntries;
+
+  const dialogFor =(key: ReleaseMenuKey): RolloutMenuDialogInput | null | undefined =>
     key === 'share' ? share : key === 'change-artist' ? changeArtist : key === 'archive' ? archive : key === 'delete' ? deleteRollout : null;
 
   return entries.map((entry): RolloutMenuAction => {
