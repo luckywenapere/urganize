@@ -23,10 +23,13 @@ import {
 } from '@/lib/rollout-first-steps';
 import { supabase } from '@/lib/supabase/client';
 
-// A step only shows when the place it sends you to exists.
-const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
+/** The Ideas card listens for this to open its text box; "Add your idea" sends
+ *  it. The card sends IDEAS_CHANGED_EVENT after a note is saved, so the step
+ *  ticks itself off. */
+export const ADD_IDEA_EVENT = 'urganize:add-idea';
+export const IDEAS_CHANGED_EVENT = 'urganize:ideas-changed';
 
-const UNKNOWN: FirstStepsFacts = { hasCoverArt: null, hasTeam: null };
+const UNKNOWN: FirstStepsFacts = { hasIdea: null, hasTeam: null };
 /** Never keep the rollout's next moves waiting on the first-steps read longer
  *  than this (same fallthrough as the next-moves store, URG-367). */
 const FIRST_STEPS_SETTLE_MS = 4000;
@@ -58,16 +61,19 @@ export type RolloutFirstStepsState = {
 export function useRolloutFirstSteps({
   release,
   isOwner,
+  ideaAvailable = false,
   pinnedConfirmDate = null,
 }: {
   release: { id: string; createdAt: string | null; isTest: boolean } | null;
   isOwner: boolean;
+  /** The Ideas card is on screen (ideas on, plan not built yet): "Add your idea" is a step. */
+  ideaAvailable?: boolean;
   /** The pinned "Confirm your release date" activity, while open. */
   pinnedConfirmDate?: { title: string; onOpen: () => void } | null;
 }): RolloutFirstStepsState {
   const user = useAuthStore((state) => state.user);
   const openSettings = useOpenSettings();
-  const { activeScene, openScene } = useSceneOverlay();
+  const { activeScene } = useSceneOverlay();
   const [facts, setFacts] = useState<FirstStepsFacts>(UNKNOWN);
   const [factsKnown, setFactsKnown] = useState(false);
   // True once a read has finished either way, so an unreachable server ends
@@ -142,6 +148,14 @@ export function useRolloutFirstSteps({
     return () => clearTimeout(timer);
   }, [isNew, dismissed, factsSettled, releaseId]);
 
+  // A saved idea ticks its step off.
+  useEffect(() => {
+    if (!isNew || dismissed !== false) return;
+    const onChanged = () => void load();
+    window.addEventListener(IDEAS_CHANGED_EVENT, onChanged);
+    return () => window.removeEventListener(IDEAS_CHANGED_EVENT, onChanged);
+  }, [isNew, dismissed, load]);
+
   // Coming back from Settings → Team (or another tab) re-reads the team.
   useEffect(() => {
     if (!isNew || dismissed !== false) return;
@@ -161,10 +175,10 @@ export function useRolloutFirstSteps({
     () =>
       buildFirstSteps(
         facts,
-        { cover: COVER_ART_ENABLED, team: canInvite },
+        { idea: ideaAvailable, team: canInvite },
         pinnedTitle !== null ? { title: pinnedTitle } : null
       ),
-    [facts, canInvite, pinnedTitle]
+    [facts, canInvite, ideaAvailable, pinnedTitle]
   );
   const visible =
     Boolean(release) &&
@@ -194,7 +208,7 @@ export function useRolloutFirstSteps({
       properties: { release_id: releaseId, step: step.key, done: doneCount, total: steps.length },
     });
     if (step.key === 'date') onOpenPinned?.();
-    else if (step.key === 'cover') openScene('coverart', releaseId);
+    else if (step.key === 'idea') window.dispatchEvent(new CustomEvent(ADD_IDEA_EVENT, { detail: { releaseId } }));
     else openSettings({ segment: 'team', section: 'teammates' });
   };
 

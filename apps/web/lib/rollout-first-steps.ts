@@ -3,9 +3,11 @@
  *
  * In the founder's Oct 14 demo a manager made a rollout and then sat looking at
  * it, not knowing what to do next. So a new rollout now opens with ONE obvious
- * next action and a short checklist under it: add the cover art, invite your
+ * next action and a short checklist under it: add your idea, invite your
  * team. ("Add the song" was the first step until song upload was removed
- * everywhere, Oct 17, 2026.) Each item ticks itself off from what the rollout and the
+ * everywhere, Oct 17, 2026; "Add the cover art" was the first step until
+ * Oct 26, 2026, when the idea took its place: the plan is built from the idea,
+ * and the cover art task comes later in that plan.) Each item ticks itself off from what the rollout and the
  * team actually hold (never from a click); Invite your team is dropped outright
  * once there is a teammate (Oct 17, 2026), and the whole card goes away once
  * every item is done, when it is dismissed, or once the rollout is no longer new.
@@ -15,11 +17,11 @@
  * done; this decides what shows.
  */
 
-export type FirstStepKey = 'date' | 'cover' | 'team';
+export type FirstStepKey = 'date' | 'idea' | 'team';
 
 /** The steps a person can switch on. "Confirm the release date" is not here:
  *  it is only ever lent by the pinned activity (see buildFirstSteps' `pinned`). */
-export const FIRST_STEP_ORDER: readonly Exclude<FirstStepKey, 'date'>[] = ['cover', 'team'];
+export const FIRST_STEP_ORDER: readonly Exclude<FirstStepKey, 'date'>[] = ['idea', 'team'];
 
 export const FIRST_STEPS_COPY = {
   label: 'Your first steps',
@@ -35,10 +37,10 @@ export const FIRST_STEPS_COPY = {
       detail: 'Every other activity is planned around it.',
       action: 'Confirm the date',
     },
-    cover: {
-      title: 'Add the cover art',
-      detail: 'Put the artwork in one place for promo and distribution.',
-      action: 'Add cover art',
+    idea: {
+      title: 'Add your idea',
+      detail: 'Say what you see for this rollout. Your plan is built from it.',
+      action: 'Add your idea',
     },
     team: {
       title: 'Invite your team',
@@ -54,15 +56,16 @@ export const FIRST_STEPS_WINDOW_DAYS = 14;
 
 /** Which steps exist for this person right now. */
 export type FirstStepsAvailability = {
-  /** The Cover art scene is switched on. */
-  cover: boolean;
+  /** The Ideas card is on screen: ideas are on and the plan is not built yet. */
+  idea: boolean;
   /** This person can invite (a manager account; Settings → Team only renders for them). */
   team: boolean;
 };
 
 /** What is already done. Null means not read yet. */
 export type FirstStepsFacts = {
-  hasCoverArt: boolean | null;
+  /** The rollout has at least one idea note. */
+  hasIdea: boolean | null;
   hasTeam: boolean | null;
 };
 
@@ -83,23 +86,27 @@ export function buildFirstSteps(
   pinned: { title: string } | null = null
 ): FirstStep[] {
   const doneFor: Record<Exclude<FirstStepKey, 'date'>, boolean> = {
-    cover: facts.hasCoverArt === true,
+    idea: facts.hasIdea === true,
     team: facts.hasTeam === true,
   };
   const dateStep: FirstStep[] = pinned
     ? [{ key: 'date', ...FIRST_STEPS_COPY.steps.date, title: pinned.title || FIRST_STEPS_COPY.steps.date.title, done: false }]
     : [];
-  return [...dateStep, ...FIRST_STEP_ORDER.filter((key) => available[key])
+  const toStep = (key: Exclude<FirstStepKey, 'date'>): FirstStep => ({
+    key,
+    ...FIRST_STEPS_COPY.steps[key],
+    done: doneFor[key],
+  });
+  // The idea leads, then the pinned date, then the team.
+  const ideaStep: FirstStep[] = available.idea ? [toStep('idea')] : [];
+  const teamStep: FirstStep[] = FIRST_STEP_ORDER.filter((key) => key === 'team' && available[key])
     // Invite your team never shows once the person has a teammate, not even as
     // a ticked chip (founder, Oct 17, 2026: "this should not show at all if
     // user already has a teammate"). If that leaves no steps, the card does not
     // render (shouldShowFirstSteps), so no empty row.
     .filter((key) => !(key === 'team' && doneFor.team))
-    .map((key) => ({
-    key,
-    ...FIRST_STEPS_COPY.steps[key],
-    done: doneFor[key],
-  }))];
+    .map(toStep);
+  return [...ideaStep, ...dateStep, ...teamStep];
 }
 
 /** The one action to put front and centre: the first step not done yet. */
