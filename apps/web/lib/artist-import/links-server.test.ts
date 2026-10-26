@@ -93,7 +93,10 @@ const seed = (releases: Row[] = [release()], extra: Record<string, Row[]> = {}) 
   ...extra,
 });
 
-function altlink(createLink = vi.fn(async () => ({ id: 'al-1', slug: 'dai-dai', url: 'https://altlink.co/dai-dai' }))) {
+type CreateInput = Record<string, unknown>;
+function altlink(
+  createLink = vi.fn(async (_input: CreateInput) => ({ id: 'al-1', slug: 'dai-dai', url: 'https://altlink.co/dai-dai' }))
+) {
   return { client: { createLink } as unknown as AltlinkClient, createLink };
 }
 const args = (client: AltlinkClient, over: Row = {}) => ({
@@ -120,10 +123,30 @@ describe('makeCatalogueLink', () => {
         upc: '196874528037',
         isrc: 'USQX92602558',
         artwork_url: 'https://cdn.example/c.jpg',
-        release_date: '2026-08-07',
       })
     );
     expect(db.tables.catalogue_smart_links[0]).toMatchObject({ status: 'made', url: 'https://altlink.co/dai-dai' });
+  });
+
+  it('sends no release date for a past release (Altlink refuses one) and sends it for a future one', async () => {
+    const past = altlink();
+    await makeCatalogueLink(fakeDb(seed()).client, args(past.client));
+    expect(past.createLink.mock.calls[0][0]).not.toHaveProperty('release_date');
+
+    const future = altlink();
+    await makeCatalogueLink(fakeDb(seed([release({ release_date: '2026-11-20' })])).client, args(future.client));
+    expect(future.createLink.mock.calls[0][0]).toMatchObject({ release_date: '2026-11-20' });
+
+    const today = altlink();
+    await makeCatalogueLink(fakeDb(seed([release({ release_date: '2026-10-26' })])).client, args(today.client));
+    expect(today.createLink.mock.calls[0][0]).not.toHaveProperty('release_date');
+  });
+
+  it('keeps Altlink’s own message on a failed row', async () => {
+    const db = fakeDb(seed());
+    const failing = altlink(vi.fn(async (_input: CreateInput) => Promise.reject(new AltlinkError(400, 'invalid_request', 'release_date must be in the future'))));
+    await makeCatalogueLink(db.client, args(failing.client));
+    expect(db.tables.catalogue_smart_links[0].last_error).toBe('invalid_request: release_date must be in the future');
   });
 
   it('answers a second tap with the same link and calls Altlink once', async () => {
@@ -196,7 +219,7 @@ describe('makeCatalogueLink', () => {
 
   it('does not count a failed attempt, and lets the person try again', async () => {
     const db = fakeDb(seed());
-    const failing = altlink(vi.fn(async () => Promise.reject(new AltlinkError(500, 'boom', 'x'))));
+    const failing = altlink(vi.fn(async (_input: CreateInput) => Promise.reject(new AltlinkError(500, 'boom', 'x'))));
     expect((await makeCatalogueLink(db.client, args(failing.client))).kind).toBe('failed');
     expect(db.tables.catalogue_smart_links[0]).toMatchObject({ status: 'failed' });
     const ok = await makeCatalogueLink(db.client, args(altlink().client));
@@ -205,7 +228,7 @@ describe('makeCatalogueLink', () => {
 
   it('gives a rate limit from Altlink back as "busy, try later" and leaves no claim behind', async () => {
     const db = fakeDb(seed());
-    const limited = altlink(vi.fn(async () => Promise.reject(new AltlinkError(429, 'rate_limited', 'slow'))));
+    const limited = altlink(vi.fn(async (_input: CreateInput) => Promise.reject(new AltlinkError(429, 'rate_limited', 'slow'))));
     expect(await makeCatalogueLink(db.client, args(limited.client))).toEqual({ kind: 'rate_limited' });
     expect(db.tables.catalogue_smart_links).toHaveLength(0);
   });

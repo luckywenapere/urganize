@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { AltlinkError, createAltlinkClient, isAltlinkConfigured, type AltlinkClient } from '@/lib/altlink/client';
-import { ALTLINK_TIMEZONE, isAltlinkEnabled, normalizeIsrc, normalizeUpc } from '@/lib/altlink/rules';
+import { ALTLINK_TIMEZONE, isAltlinkEnabled, isReleasedOn, normalizeIsrc, normalizeUpc, releaseYmd } from '@/lib/altlink/rules';
 import { CATALOGUE_TABLE } from './server';
 import {
   LINKS_PER_DAY_SETTING_KEY,
@@ -204,7 +204,11 @@ export async function makeCatalogueLink(
       external_release_id: `catalogue:${row.id}`,
       ...(upc ? { upc } : {}),
       ...(isrc ? { isrc } : {}),
-      ...(row.release_date ? { release_date: row.release_date } : {}),
+      // A date is sent only for a release still to come (a pre-save). Past and
+      // today's releases are plain smart links with no date: Altlink answers a
+      // past date with invalid_request (BUILD-NOTES-ALTLINK.md, the same rule
+      // decideCreate follows). Found 2026-10-26 on the first real tap.
+      ...(row.release_date && !isReleasedOn(row.release_date, nowMs) ? { release_date: releaseYmd(row.release_date) as string } : {}),
       ...(row.cover_url ? { artwork_url: row.cover_url } : {}),
       ...(input.userEmail ? { creator_email: input.userEmail } : {}),
       timezone: ALTLINK_TIMEZONE,
@@ -217,7 +221,9 @@ export async function makeCatalogueLink(
     return { kind: 'made', url: link.url, cap: decideLinkCap({ used: cap.used + 1, limit: cap.limit }) };
   } catch (error) {
     const code = error instanceof AltlinkError ? error.code : 'error';
-    console.error('[catalogue-link] create failed', { releaseRowId: row.id, code });
+    // Altlink's own sentence is kept with the code, so a failed row says why.
+    const detail = error instanceof AltlinkError ? `${error.code}: ${error.message}`.slice(0, 300) : 'error';
+    console.error('[catalogue-link] create failed', { releaseRowId: row.id, code, status: error instanceof AltlinkError ? error.status : 0, message: error instanceof Error ? error.message : '' });
     if (error instanceof AltlinkError && error.status === 422 && error.code === 'missing_identifier') {
       await admin.from(CATALOGUE_LINKS_TABLE).delete().eq('id', claimId).eq('status', 'pending');
       return { kind: 'no_code' };
@@ -226,7 +232,7 @@ export async function makeCatalogueLink(
       await admin.from(CATALOGUE_LINKS_TABLE).delete().eq('id', claimId).eq('status', 'pending');
       return { kind: 'rate_limited' };
     }
-    await admin.from(CATALOGUE_LINKS_TABLE).update({ status: 'failed', last_error: code }).eq('id', claimId);
+    await admin.from(CATALOGUE_LINKS_TABLE).update({ status: 'failed', last_error: detail }).eq('id', claimId);
     return { kind: 'failed' };
   }
 }
