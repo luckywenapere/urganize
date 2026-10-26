@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.189.2",
+    tag: "App",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "Get link tries again with the simplest request when Altlink turns the first one down.",
+    ],
+  },
+  {
     version: "1.189.1",
     tag: "App",
     listed: false,
