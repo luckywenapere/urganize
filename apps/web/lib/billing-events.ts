@@ -176,6 +176,10 @@ export const BILLING_EVENT_TYPES = [
   'transfer_paid',
   'transfer_recorded',
   'founder_minutes_set',
+  /** Planner v2 (2026-10-26): the AI gateway wallet (ours, not the team's)
+   *  ran dry and a plan fell back to the quick plan. Founder emailed at most
+   *  once a day across all teams (lib/ai/wallet-alert-server.ts). */
+  'ai_wallet_empty',
 ] as const;
 
 export type BillingEventType = (typeof BILLING_EVENT_TYPES)[number];

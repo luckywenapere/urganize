@@ -4,10 +4,10 @@ import { describe, expect, it } from 'vitest';
 import { buildSettingsUrl, closeSettingsUrl } from '@/lib/settings-nav';
 
 /**
- * Home's header on a phone (2026-10-17, founder call): no artist / "+1 rollout"
- * eyebrow above the title, Notifications as a bell at the top right left of the
- * team's faces, and "Manage team" from those faces opens Settings over Home so
- * closing it returns to Home (it used to land on Artists). Read from the
+ * Home's header on a phone. 2026-10-17 (founder call): Notifications as a bell
+ * at the top right. 2026-10-26 (founder call): the rollout hero (title, drop
+ * line, team faces, phase bars) is gone; the greeting and bell stay in every
+ * state. Read from the
  * source, since there are no component tests in this repo.
  */
 
@@ -17,24 +17,24 @@ const strip = (text: string) =>
 const read = (...parts: string[]) => strip(readFileSync(join(WEB, ...parts), 'utf8'));
 
 describe("Home's header", () => {
-  const header = read('components', 'home', 'v2', 'ReleaseHeader.tsx');
+  const homeFour = read('components', 'home', 'v2', 'HomeFour.tsx');
 
-  it('has no artist eyebrow or "+1 rollout" menu above the title', () => {
-    expect(header).not.toContain('release.artistName');
-    expect(header).not.toContain('moreRollouts');
-    expect(header).not.toContain('others');
-    expect(header).not.toContain('font-mono');
+  it('has no rollout hero (title, drop line, faces, phase bars): removed 2026-10-26, founder call', () => {
+    const { existsSync } = require('node:fs') as typeof import('node:fs');
+    expect(existsSync(join(WEB, 'components', 'home', 'v2', 'ReleaseHeader.tsx'))).toBe(false);
+    expect(existsSync(join(WEB, 'components', 'home', 'v2', 'TeamAvatars.tsx'))).toBe(false);
+    expect(homeFour).not.toContain('ReleaseHeader');
+    expect(homeFour).not.toContain('TeamAvatars');
+    expect(homeFour).not.toContain('buildPhaseLine');
+    expect(homeFour).not.toContain('describeDrop');
   });
 
-  it('puts the bell immediately left of the team faces', () => {
-    const bell = header.indexOf('<HomeBell />');
-    const faces = header.indexOf('<TeamAvatars');
-    expect(bell).toBeGreaterThan(header.indexOf('</h1>'));
-    expect(bell).toBeLessThan(faces);
-  });
-
-  it('shows the bell in the other Home states too', () => {
-    expect(read('components', 'home', 'v2', 'HomeFour.tsx')).toContain('<HomeBell />');
+  it('keeps the bell reachable in every Home state, the same greeting both ways', () => {
+    expect(homeFour).toContain('<HomeBell />');
+    const release = homeFour.slice(homeFour.indexOf('function ReleaseHome'), homeFour.indexOf('function StartNextCard'));
+    const between = homeFour.slice(homeFour.indexOf('function BetweenHome'), homeFour.indexOf('export function HomeFour'));
+    expect(release).toContain('<HomeGreeting home={home} />');
+    expect(between).toContain('<HomeGreeting home={home}');
     expect(read('components', 'home', 'HomeHeaderRow.tsx')).toContain('<HomeBell />');
   });
 
@@ -46,14 +46,7 @@ describe("Home's header", () => {
   });
 });
 
-describe('Manage team from the faces on Home', () => {
-  const faces = read('components', 'home', 'v2', 'TeamAvatars.tsx');
-
-  it('opens Settings over the page you are on, not by navigating to /dashboard', () => {
-    expect(faces).toContain("useSettingsLinkClick({ segment: 'team' }");
-    expect(faces).toMatch(/href=\{HOME_TEAM_HREF\}\s*onClick=\{openTeam\}/);
-  });
-
+describe('Manage team opens over the page you are on', () => {
   it('closes back onto Home', () => {
     const opened = buildSettingsUrl('/dashboard/home', '', { segment: 'team', section: 'teammates' });
     expect(opened).toBe('/dashboard/home?settings=team&section=teammates');

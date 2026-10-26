@@ -1,3 +1,4 @@
+import { readUndatedTaskMeta, relativeWhenLabel } from '@/lib/planner-v2/when';
 import type { Timings } from '@/lib/server-timing';
 import { readPlanCore, readPlanKey } from '@/lib/plan-focus';
 import { readTaskPhase } from '@/lib/rollout-phases';
@@ -1422,6 +1423,7 @@ function toTask(
     templateTaskId: readTemplateTaskId(row.metadata),
     durationDays: readDurationDays(row.metadata),
     compressedRunway: readCompressedRunway(row.metadata),
+    relativeWhen: row.due_date ? null : readRelativeWhen(row.metadata),
     planKey: readPlanKey(row.metadata),
     planCore: readPlanCore(row.metadata),
     phase: readTaskPhase(row.metadata),
@@ -2511,4 +2513,10 @@ export function buildStoragePathForTaskAttachment(
 ): string {
   const extension = fileName.includes('.') ? fileName.split('.').pop() || 'bin' : 'bin';
   return `${userId}/${taskId}/${Date.now()}-${randomUUID()}.${extension}`;
+}
+
+/** Planner v2's undated task timing, read from metadata.planner_v2 (lib/planner-v2/when.ts). */
+function readRelativeWhen(metadata: unknown): string | null {
+  const meta = readUndatedTaskMeta(metadata);
+  return meta ? relativeWhenLabel(meta.offset_days, meta.now) : null;
 }

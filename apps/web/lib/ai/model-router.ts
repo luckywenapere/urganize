@@ -13,7 +13,7 @@ import {
   type LadderRung,
   type ModelTier,
 } from './model-ladder';
-import { RODIUM_PLANNER_MODEL } from './planner-model';
+import { RODIUM_PLANNER_MODEL, RODIUM_PLANNER_QUICK_MODEL } from './planner-model';
 import { isCreditsEnabled } from '../credits/config';
 import type { ReasoningEffort } from './provider';
 
@@ -48,6 +48,8 @@ export type RouteSurface =
   | 'chat'
   | 'chat_closeout'
   | 'planner'
+  /** Planner v2's tweak and date-adds calls (2026-10-26). */
+  | 'planner_quick'
   | 'status'
   | 'outcome'
   | 'press_kit';
@@ -108,6 +110,8 @@ const SURFACE_FLOOR: Record<RouteSurface, ModelTier> = {
   // to ~110 tasks and holds a strict JSON schema. A small model gets that wrong
   // in ways that look plausible, so this floor beats any plan ceiling.
   planner: 'pro',
+  // A tweak or the date-dependent tasks: a short, schema-bound edit.
+  planner_quick: 'standard',
   status: 'quick',
   outcome: 'quick',
   press_kit: 'standard',
@@ -118,6 +122,7 @@ const SURFACE_MAX_HOPS: Record<RouteSurface, number> = {
   chat: 2,
   chat_closeout: 1,
   planner: 2,
+  planner_quick: 1,
   status: 2,
   // The outcome sheet gives the model three seconds in all. A second attempt
   // cannot fit, so this surface never hops.
@@ -135,6 +140,8 @@ function pinnedModelFor(surface: RouteSurface, env: EnvLike): string | undefined
   switch (surface) {
     case 'planner':
       return get('AI_PLANNER_MODEL');
+    case 'planner_quick':
+      return get('AI_PLANNER_QUICK_MODEL');
     case 'status':
       return get('AI_STATUS_MODEL');
     case 'outcome':
@@ -163,6 +170,12 @@ export function legacyModelFor(surface: RouteSurface, env: EnvLike = process.env
       if (pin) return pin;
       const base = String(env.AI_API_BASE ?? '').trim();
       return RODIUM_HOST.test(hostnameOf(base)) ? RODIUM_PLANNER_MODEL : undefined;
+    }
+    case 'planner_quick': {
+      const pin = get('AI_PLANNER_QUICK_MODEL');
+      if (pin) return pin;
+      const base = String(env.AI_API_BASE ?? '').trim();
+      return RODIUM_HOST.test(hostnameOf(base)) ? RODIUM_PLANNER_QUICK_MODEL : undefined;
     }
     default:
       return pinnedModelFor(surface, env);

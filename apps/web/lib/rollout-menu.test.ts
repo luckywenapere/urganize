@@ -94,7 +94,8 @@ describe('buildRolloutMenu', () => {
     // built for it (so a ranked entry silently never appears), and a row built
     // in an order the ranking does not agree with.
     expect(keysOf(build())).toEqual([...ALL_ON_ORDER]);
-    expect(keysOf(build({ variant: 'phone' }))).toEqual([...ALL_ON_ORDER]);
+    // The phone's cover is the tile by the title (Oct 24, 2026), not a row.
+    expect(keysOf(build({ variant: 'phone' }))).toEqual(ALL_ON_ORDER.filter((key) => key !== 'coverart'));
   });
 
   it('is empty without a rollout, however much else is passed', () => {
@@ -298,10 +299,12 @@ describe('the two variants', () => {
     expect(note?.target).toEqual({ kind: 'link', href: '/dashboard/notes?release=a%20b%2Fc' });
   });
 
-  it('differs only in the notes row', () => {
+  it('differs only in the notes and cover art rows', () => {
     // Everything else must be identical, or a rollout would read differently on
-    // a phone and a laptop for no reason anybody chose.
-    const strip = (entries: RolloutMenuEntry[]) => entries.filter((entry) => entry.key !== 'note');
+    // a phone and a laptop for no reason anybody chose. Cover art is chosen:
+    // the phone's cover is the tile by the title (Oct 24, 2026).
+    const strip = (entries: RolloutMenuEntry[]) =>
+      entries.filter((entry) => entry.key !== 'note' && entry.key !== 'coverart');
     expect(strip(build({ variant: 'phone' }))).toEqual(strip(build({ variant: 'rail' })));
   });
 });

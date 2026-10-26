@@ -6,6 +6,7 @@ import { ArtistFace } from '@/components/shared/ArtistFace';
 import { rolloutMetaLine } from '@/lib/release-timeline';
 import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
 import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
+import { RolloutCoverTile } from './RolloutCoverTile';
 
 /**
  * The phone rollout header (rollout declutter, founder approved Oct 18, 2026:
@@ -22,6 +23,9 @@ import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
  * Below lg only. The computer's header is WorkspaceDesktopFocused, unchanged.
  */
 export function RolloutPhoneHeader({
+  releaseId,
+  coverUrl,
+  onToast,
   artistId,
   artistName,
   title,
@@ -33,7 +37,12 @@ export function RolloutPhoneHeader({
   showMeta,
   showSearch,
   below,
+  cover,
 }: {
+  releaseId: string;
+  /** The cover, for the tile beside the title (Oct 24, 2026). */
+  coverUrl: string | null | undefined;
+  onToast: (message: string, tone: 'success' | 'error' | 'warning') => void;
   artistId: string | null | undefined;
   artistName: string | null | undefined;
   title: string;
@@ -48,6 +57,8 @@ export function RolloutPhoneHeader({
   showSearch: boolean;
   /** The readiness row and banners, which hide with the header in search. */
   below?: ReactNode;
+  /** The cover tile left of the title (RolloutCoverTile, Oct 24, 2026). */
+  cover?: ReactNode;
 }) {
   const searchOpen = useRolloutPhoneChrome((state) => state.searchOpen);
   const setSearchOpen = useRolloutPhoneChrome((state) => state.setSearchOpen);
@@ -109,6 +120,12 @@ export function RolloutPhoneHeader({
         >
           <ChevronLeft className="h-6 w-6" aria-hidden="true" />
         </button>
+        {/* Cover art is edited here, on the tile, not from the menu (founder
+            approved mock, Oct 24, 2026). */}
+        <div className="mr-2">
+          <RolloutCoverTile releaseId={releaseId} title={title} coverUrl={coverUrl} onToast={onToast} />
+        </div>
+        {cover ? <div className="mr-2 shrink-0">{cover}</div> : null}
         <div className="min-w-0 flex-1">
           <p className="flex min-w-0 items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-content-tertiary">
             <ArtistFace artistId={artistId} name={artistName} size={16} />

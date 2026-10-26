@@ -32,7 +32,10 @@ export type FounderAlertKind =
   | 'retention_offer_accepted'
   /** Pricing v3: a team paid for a plan that includes distribution. An ACTION:
    *  register the team on TRM under the plan in the note. */
-  | 'trm_registration_needed';
+  | 'trm_registration_needed'
+  /** The AI gateway wallet is empty: plans fall back to the quick plan. An
+   *  ACTION: top up RodiumAi. At most one a day across all teams. */
+  | 'ai_wallet_empty';
 
 export type FounderAlertContext = {
   teamName: string | null;
@@ -68,6 +71,7 @@ const SUBJECT_PREFIX: Record<FounderAlertKind, string> = {
   subscription_paused: 'Paused',
   retention_offer_accepted: 'SWAP NEEDED (retention price)',
   trm_registration_needed: 'REGISTER ON TRM',
+  ai_wallet_empty: 'TOP UP AI WALLET',
 };
 
 export const FOUNDER_ALERT_HEADLINE: Record<FounderAlertKind, string> = {
@@ -91,6 +95,8 @@ export const FOUNDER_ALERT_HEADLINE: Record<FounderAlertKind, string> = {
     'This team took a lower price to stay. Their Paystack subscription needs moving to the retention Plan in the note by hand before the next renewal, and back to full price after 3 months.',
   trm_registration_needed:
     'This team just paid for a plan that includes distribution. Register them on TRM under the plan in the note. The fee is now in the TRM ledger.',
+  ai_wallet_empty:
+    'The AI wallet is empty, so UrgAns could not write a plan and gave a quick plan instead. Top up RodiumAi to bring tailored plans back.',
 };
 
 const formatCount = (value: number | null): string => (value === null ? 'unknown' : String(value));

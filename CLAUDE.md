@@ -348,7 +348,9 @@ The hand-crafted templates are the heart of v1. Template infrastructure (types, 
 3. Drop tasks that don't apply (no marketing budget → drop paid promo tasks).
 4. Output a list of concrete tasks ready to insert into the `tasks` table.
 
-The template provides the structure. The AI provides the tailoring. Never let the AI invent tasks from scratch without a template — that's the failure mode we're explicitly avoiding.
+~~The template provides the structure. The AI provides the tailoring. Never let the AI invent tasks from scratch without a template — that's the failure mode we're explicitly avoiding.~~
+
+**UrgAns may write its own tasks — Oyin approved 24 Oct 2026.** Planner v2 (`lib/planner-v2/`, v1.176.0, flag `NEXT_PUBLIC_FEATURE_PLANNER_V2`, on unless `'false'`) lets the model write the whole plan, using the playbooks plus a Nigeria pack as a menu of moves rather than a fence. The fence is code: `validatePlanV2` checks every plan (dates against release day, distributor and release-day tasks present, dependencies ordered, spend within the Naira budget, ₦0 means free only, only the channels picked, pace for the team), one retry sends back only the errors, code repairs what it can, and anything still failing becomes the playbook quick plan with a visible Retry. Templates stay the domain knowledge and the fallback, so the product still works with AI off. See `docs/notes/2026-10-26-planner-v2.md`.
 
 ---
 

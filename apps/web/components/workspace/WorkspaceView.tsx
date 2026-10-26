@@ -2,11 +2,12 @@
 
 import { ArtistsRolloutsSwitch } from '@/components/shell/swipe/ArtistsRolloutsSwitch';
 import { countProgress } from '@/lib/task-progress';
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { AlertCircle } from '@/components/icons';
 import { RolloutPhoneHeader } from './RolloutPhoneHeader';
+import { RolloutCoverTile } from './RolloutCoverTile';
 import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
 import { useAuthStore } from '@/lib/auth-store';
 import { isCatalogRequested, markCatalogRequested } from '@/lib/catalog-intent';
@@ -80,8 +81,6 @@ import { findRoleGaps } from '@/lib/role-gaps';
 import { RoleGapsPanel } from '@/components/directory/RoleGapsPanel';
 import { SentRequestsList } from '@/components/directory/SentRequestsList';
 import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
-import { isSocialShareEnabled } from '@/lib/social-share';
-import { useShareStore } from '@/stores/useShareStore';
 import { useShellStore } from '@/stores/useShellStore';
 
 const TASKS_PANEL_ID = 'workspace-tasks';
@@ -132,7 +131,6 @@ const TEST_RELEASE_ENABLED = isTestReleaseEnabled();
 // Share to socials (2026-09-23): the Share button on every rollout, and the
 // once-only offer after the first one, made on Home in the next visit (see
 // withFirstShareOffer).
-const SOCIAL_SHARE_ENABLED = isSocialShareEnabled();
 
 // Dynamic for the same reason AppShell already loads it that way — a static
 // import here defeated that, dragging the ~460-line modal into the /dashboard
@@ -317,6 +315,10 @@ export function WorkspaceView() {
   // AI actions + toast, ported verbatim from the removed release detail page
   // (2026-08-04) — this is now the only surface a scoped release renders on.
   const [toast, setToast] = useState<ToastState | null>(null);
+  const showCoverToast = useCallback(
+    (message: string, tone: 'success' | 'error' | 'warning') => setToast({ message, tone }),
+    []
+  );
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isChangeArtistOpen, setIsChangeArtistOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -589,6 +591,17 @@ export function WorkspaceView() {
   // show/hide condition; `templatePending` picks that card's variant
   // (URG-230). The panels that only need id/title/artistName accept this
   // wider shape structurally.
+  // The phone header's cover tile (Oct 24, 2026). Thumb first: it is drawn at 56px.
+  const scopedCoverUrl = useMemo(() => {
+    if (!scopedReleaseId) return null;
+    const found = releases.find((r) => r.id === scopedReleaseId);
+    return found?.coverThumbUrl ?? found?.coverArtUrl ?? null;
+  }, [releases, scopedReleaseId]);
+  const showHeaderToast = useCallback(
+    (message: string, tone: 'success' | 'error' | 'warning') => setToast({ message, tone }),
+    []
+  );
+
   const scopedReleaseSlim = useMemo<
     | (Pick<
         Release,
@@ -934,18 +947,10 @@ export function WorkspaceView() {
       ? { label: 'Change artist', onClick: () => setIsChangeArtistOpen(true) }
       : null;
 
-  // Share to socials (founder request, 2026-09-23): after the first rollout's
-  // one-time offer, this is how every rollout gets shared. NOT owner-only,
-  // unlike the two actions above: making a post changes nothing, and the image
-  // route is a team READ, so any member (and a read-only guest) can use it.
-  const shareAction =
-    SOCIAL_SHARE_ENABLED && scopedReleaseId
-      ? {
-          label: 'Share to socials',
-          onClick: () =>
-            useShareStore.getState().open({ releaseId: scopedReleaseId, source: 'rollout_menu' }),
-        }
-      : null;
+  // Share to socials left the Rollout menu (founder call, Oct 24, 2026: never
+  // used, solves nothing). The first rollout's one-time offer (AppShell) and
+  // the share-card route stay; only the menu door is gone.
+  const shareAction = null;
 
   // With the planner on, a scoped release with no activities shows the planner
   // card as its ENTIRE body — no empty list under it, nothing above it. That is
@@ -1614,6 +1619,9 @@ export function WorkspaceView() {
                     The check before distribution is one divider row right
                     under the meta line, on the timeline and Activities alike. */}
                 <RolloutPhoneHeader
+                  releaseId={scopedReleaseSlim.id}
+                  coverUrl={scopedCoverUrl}
+                  onToast={showHeaderToast}
                   artistId={scopedReleaseSlim.artistId}
                   artistName={scopedReleaseSlim.artistName}
                   title={scopedReleaseSlim.title}
@@ -1624,6 +1632,17 @@ export function WorkspaceView() {
                   onBack={handleMobileBack}
                   showMeta={bodyIsMainView}
                   showSearch={panelBody === 'timeline' && scopedTasks.length > 0}
+                  cover={
+                    <RolloutCoverTile
+                      releaseId={scopedReleaseSlim.id}
+                      title={scopedReleaseSlim.title}
+                      coverUrl={(() => {
+                        const found = releases.find((r) => r.id === scopedReleaseSlim.id);
+                        return found?.coverThumbUrl ?? found?.coverArtUrl ?? null;
+                      })()}
+                      onToast={showCoverToast}
+                    />
+                  }
                   below={
                     <>
                       {isDesktopViewport ? null : distributionStatusStrip}

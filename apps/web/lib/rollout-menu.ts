@@ -167,7 +167,11 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     flags.releaseChat ? scene('chat', 'Talk to the team') : null,
     flags.contentCalendar ? scene('calendar', 'Plan content') : null,
     // Release prep in the order the work happens (2026-10-16).
-    flags.coverArt ? scene('coverart', 'Add cover art') : null,
+    // Not on a phone (founder call, Oct 24, 2026: "this menu is too crowded"):
+    // the phone's cover lives on the tile beside the rollout title
+    // (RolloutCoverTile), so the row would be a second door to one place. The
+    // computer's header has no cover, so the rail keeps the row.
+    flags.coverArt && variant !== 'phone' ? scene('coverart', 'Add cover art') : null,
     flags.metadata ? scene('metadata', 'Fill in details') : null,
     scene('distribute', 'Distribute now'),
     flags.files ? scene('files', 'Add files') : null,

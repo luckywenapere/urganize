@@ -251,6 +251,17 @@ export interface AnalyticsEventPropertiesMap {
     exclusions_count: number;
     ai_applied: boolean;
   };
+  /** Planner v2 (2026-10-26): UrgAns wrote a plan to preview. `source` says
+   *  whether the model's plan passed (ai), passed after code repair
+   *  (ai_repaired) or the quick plan stood in (fallback, with its reason). */
+  planner_v2_previewed: {
+    mode: 'generate' | 'reroll' | 'tweak';
+    source: 'ai' | 'ai_repaired' | 'fallback' | null;
+    fallback_reason: string | null;
+    task_count: number;
+    stage: 'making' | 'finished' | 'out';
+    budget: string;
+  };
   // UrgAns reply action row (2026-08-12): copy / retry / thumbs under each
   // assistant reply. Thumbs are the first structured feedback signal on
   // assistant quality — worth watching once the agent model is wired.

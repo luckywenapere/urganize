@@ -1031,6 +1031,24 @@ export type ReleasePlanDraftDoc = {
    *  activities, and the other live tasks are offered as suggestions.
    *  Absent on plans built before 2026-10-16, which stay as they are. */
   core_only?: boolean;
+  /** Planner v2 (2026-10-26): the plan UrgAns wrote for these answers, its
+   *  "Built for you" card, the Naira budget split and the v2 answers. Absent
+   *  on every playbook plan. Typed loosely here so this module stays free of
+   *  the v2 code; lib/planner-v2/plan.ts owns the shape. */
+  planner_v2?: {
+    version: 1;
+    source: 'ai' | 'ai_repaired' | 'fallback';
+    built_for: {
+      summary: string;
+      win: string;
+      target: string | null;
+      constraints: string[];
+      start_point: 'making' | 'finished' | 'out';
+    };
+    budget: { total_naira: number; lines: Array<{ item: string; naira: number; why: string }> };
+    assumptions: string[];
+    answers: Record<string, unknown>;
+  };
 };
 
 /** A saved plan document, as read back from `release_plan_drafts`. */
@@ -2270,6 +2288,10 @@ export function parseDraftDoc(
     applied_exclusions: appliedExclusions,
     tasks,
     ...(record.core_only === true ? { core_only: true } : {}),
+    // Planner v2's card rides along untouched (shape owned by lib/planner-v2).
+    ...(record.planner_v2 && typeof record.planner_v2 === 'object'
+      ? { planner_v2: record.planner_v2 as NonNullable<ReleasePlanDraftDoc['planner_v2']> }
+      : {}),
   };
 
   return { ok: true, doc };

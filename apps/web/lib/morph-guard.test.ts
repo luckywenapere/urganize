@@ -68,7 +68,6 @@ describe('the fade never anchors fixed elements', () => {
 describe('sheets and pop-overs animate in and out', () => {
   const bar = strip(read('components/shell/BottomBar.tsx'));
   const panel = strip(read('components/workspace/TasksPanel.tsx'));
-  const team = strip(read('components/home/v2/TeamAvatars.tsx'));
   const css = read('app/globals.css');
 
   it('keeps the More sheet mounted for its exit and slides it', () => {
@@ -88,10 +87,6 @@ describe('sheets and pop-overs animate in and out', () => {
     expect(panel).toMatch(/closeMobilePanels\(\);\s*if \(changesScene && phoneMenuOpen && !prefersReducedMotion\(\)\) \{\s*window\.setTimeout\(\(\) => action\.onClick\(\), MORPH_EXIT_MS\);/);
   });
 
-  it('fades the team list in and out', () => {
-    expect(team).toMatch(/usePresence\(open, MORPH_POP_EXIT_MS\)/);
-    expect(team).toMatch(/className="morph-pop /);
-  });
 
   it('makes a closing surface click-through and scopes data-state to morph surfaces', () => {
     expect(css).toMatch(/\.morph-presence\[data-state='closed'\] \{\s*pointer-events: none;/);

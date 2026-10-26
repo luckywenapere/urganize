@@ -229,7 +229,7 @@ function ArtistStep({ draft, patch, disabled, knownArtistName }: StepBodyProps) 
   );
 }
 
-function DateStep({ draft, patch, disabled, leadTimeDays, otherRollouts }: StepBodyProps) {
+export function DateStep({ draft, patch, disabled, leadTimeDays, otherRollouts }: StepBodyProps) {
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   // "Help me pick" opens a short list of Fridays, each checked against what
   // Urganize knows (lib/release-date-options.ts). It used to fill in one date

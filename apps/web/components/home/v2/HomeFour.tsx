@@ -21,7 +21,6 @@ import { useHomeFocusData } from '../useHomeFocusData';
 import { useHomeNextMoves } from '../useHomeNextMoves';
 import { ManagerNewView } from '../ManagerNewView';
 import { OpportunitiesCard } from '../OpportunitiesCard';
-import { ReleaseHeader } from './ReleaseHeader';
 import { HomeBell } from './HomeBell';
 import { OneThing } from './OneThing';
 import { WaitingRow } from './WaitingRow';
@@ -95,16 +94,17 @@ function ReleaseHome({ home, viewerId }: { home: HomePayload; viewerId: string }
   const showWaiting = waitingItems.length > 0 || live.waitingOnTimeCount > 0;
   const showBand = showDone || showWaiting || matched > 0;
 
-  // Golden layout B (2026-10-18, founder approved): header band, the One Thing
+  // Golden layout B (2026-10-18, founder approved): greeting, the One Thing
   // as a golden card, its dots, then numbers in rows (Done, Waiting on others,
   // grants). On a short phone the page scrolls above the UrgAns box
   // (.home-main-padding clears it); nothing is pinned.
   return (
     <div className="flex flex-col">
-      <Fenced name="release">
-        <ReleaseHeader release={release} team={home.team ?? []} />
-      </Fenced>
-      <div className="mt-9">
+      {/* The rollout header (title, drop date, faces, phase bars) was removed
+          2026-10-26 (founder call): people found it confusing. The greeting and
+          the bell stay, the same as Home with nothing in flight. */}
+      <HomeGreeting home={home} />
+      <div className="mt-6">
         <Fenced name="one-thing">
           <OneThing
             items={items}
@@ -166,23 +166,30 @@ function StartNextCard() {
   );
 }
 
+/** The date, "Good morning, Name." and the phone's bell top right. Both states. */
+function HomeGreeting({ home, line }: { home: HomePayload; line?: string }) {
+  return (
+    <header data-home-block="greeting" className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-primary/55">{home.header.dateLabel}</p>
+        <h1 className="mt-2 font-display text-[1.875rem] leading-[1.15] text-content-primary">
+          {home.header.greeting}, {home.header.firstName}.
+        </h1>
+        {line ? <p className="mt-1.5 text-[15px] text-content-secondary">{line}</p> : null}
+      </div>
+      {/* The phone's bell sits top right on Home in every state (2026-10-17). */}
+      <div className="-mr-1 shrink-0">
+        <HomeBell />
+      </div>
+    </header>
+  );
+}
+
 /** State B: nothing in flight. */
 function BetweenHome({ home }: { home: HomePayload; onNewRollout: () => void }) {
   return (
     <div className="flex flex-col">
-      <header data-home-block="greeting" className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-primary/55">{home.header.dateLabel}</p>
-          <h1 className="mt-2 font-display text-[1.875rem] leading-[1.15] text-content-primary">
-            {home.header.greeting}, {home.header.firstName}.
-          </h1>
-          <p className="mt-1.5 text-[15px] text-content-secondary">{HOME_FOUR_COPY.noRelease}</p>
-        </div>
-        {/* The phone's bell sits top right on Home in every state (2026-10-17). */}
-        <div className="-mr-1 shrink-0">
-          <HomeBell />
-        </div>
-      </header>
+      <HomeGreeting home={home} line={HOME_FOUR_COPY.noRelease} />
       {/* The post-release review (URG-253): renders nothing when no review is open. */}
       <Fenced name="release-review">
         <div className="mt-6 empty:hidden">

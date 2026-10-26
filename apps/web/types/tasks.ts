@@ -196,6 +196,10 @@ export interface Task {
    * rows that predate this flag (legacy template tasks fall through to the
    * normal overdue treatment when past-due). */
   compressedRunway: boolean;
+  /** Planner v2 (2026-10-26): an undated plan task's timing relative to
+   *  release ("Now", "4 weeks before", "Release week", "After release").
+   *  Null or absent once the task has a due date. */
+  relativeWhen?: string | null;
   /** Lightweight single-tag label stored directly on the task row (no
    * tag table). Picker offers presets in GROUP_PRESETS or a custom name.
    * Distinct from `groupId` / `group` which point at the legacy task_groups

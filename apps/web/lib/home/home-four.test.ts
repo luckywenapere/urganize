@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildOneThing,
-  buildPhaseLine,
   describeDone,
-  describeDrop,
   describeTaskLabel,
   describeTaskWhere,
   describeWaiting,
@@ -63,29 +61,6 @@ describe('pickHeaderRelease', () => {
     expect(pickHeaderRelease([a, b, c])?.id).toBe('b');
     expect(pickHeaderRelease([c, release({ id: 'd', daysOut: -9 })])?.id).toBe('c');
     expect(pickHeaderRelease([])).toBeNull();
-  });
-});
-
-describe('describeDrop', () => {
-  it('says Drops or Out, then the date', () => {
-    expect(describeDrop({ daysOut: 12, releaseDate: '2026-10-28' })).toEqual({ lead: 'Drops', date: 'Wed 28 Oct' });
-    expect(describeDrop({ daysOut: 1, releaseDate: '2026-10-17' }).lead).toBe('Drops');
-    expect(describeDrop({ daysOut: 0, releaseDate: '2026-10-16' }).lead).toBe('Out');
-    expect(describeDrop({ daysOut: -5, releaseDate: '2026-10-11' }).lead).toBe('Out');
-    expect(describeDrop({ daysOut: null, releaseDate: null })).toEqual({ lead: 'No release date yet', date: '' });
-  });
-});
-
-describe('buildPhaseLine', () => {
-  it('lights the current phase and fills it to progress', () => {
-    const line = buildPhaseLine({ daysOut: 30, progress: { done: 10, total: 40 } })!;
-    expect(line.map((s) => s.active)).toEqual([true, false, false]);
-    expect(line[0].fill).toBeCloseTo(0.25);
-    const release = buildPhaseLine({ daysOut: 2, progress: { done: 0, total: 40 } })!;
-    expect(release.map((s) => s.fill)).toEqual([1, 0.06, 0]);
-  });
-  it('no date, no line', () => {
-    expect(buildPhaseLine({ daysOut: null, progress: { done: 0, total: 0 } })).toBeNull();
   });
 });
 
