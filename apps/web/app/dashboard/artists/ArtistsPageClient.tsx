@@ -13,6 +13,7 @@ import { artistSummary } from '@/lib/artist-overview';
 import { artistHref, describeArtistCounts, isArtistPageEnabled } from '@/lib/artist-page';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { ArtistsRolloutsSwitch } from '@/components/shell/swipe/ArtistsRolloutsSwitch';
+import { ImportReleasesButton } from '@/components/artists/ImportReleasesDialog';
 import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
@@ -136,6 +137,17 @@ export default function ArtistsPageClient({ swipe = false }: { swipe?: boolean }
           </ul>
         </div>
       )}
+
+      {/* Under the list, not above it: nothing sits between the tab row and
+          the list (lib/section-content-top-guard.test.ts). */}
+      <div className="mt-3 flex justify-end">
+        <ImportReleasesButton
+          from="artists"
+          className="motion-focus motion-press inline-flex min-h-10 items-center rounded-full border border-stroke-default bg-bg-surface px-4 text-sm font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+        >
+          Import releases
+        </ImportReleasesButton>
+      </div>
     </div>
   );
 }
@@ -182,13 +194,21 @@ function SwipeArtists({
       <ArtistsRolloutsSwitch current="artists" />
       <div className="mt-3 flex items-end justify-between">
         <h1 className="font-display text-[40px] leading-[1.1] tracking-[-0.3px] text-content-primary">Artists</h1>
-        <Link
-          href={ADD_ARTIST_HREF}
-          aria-label="Add artist"
-          className="hit-44 relative motion-focus motion-press mb-1 grid h-9 w-9 place-items-center rounded-full border border-content-primary/[0.14] text-content-primary/70 hover:text-content-primary"
-        >
-          <Plus className="h-[18px] w-[18px]" aria-hidden="true" />
-        </Link>
+        <div className="mb-1 flex items-center gap-2">
+          <ImportReleasesButton
+            from="artists"
+            className="hit-44 relative motion-focus motion-press inline-flex h-9 items-center rounded-full border border-content-primary/[0.14] px-3.5 text-[13px] font-medium text-content-primary/70 hover:text-content-primary"
+          >
+            Import releases
+          </ImportReleasesButton>
+          <Link
+            href={ADD_ARTIST_HREF}
+            aria-label="Add artist"
+            className="hit-44 relative motion-focus motion-press grid h-9 w-9 place-items-center rounded-full border border-content-primary/[0.14] text-content-primary/70 hover:text-content-primary"
+          >
+            <Plus className="h-[18px] w-[18px]" aria-hidden="true" />
+          </Link>
+        </div>
       </div>
       {loading ? (
         <ul className="mt-[18px]" aria-busy="true">

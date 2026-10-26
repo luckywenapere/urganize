@@ -184,7 +184,7 @@ export function RolloutIdeasCard({
       <div
         aria-busy="true"
         aria-label="Loading"
-        className="min-h-[17rem] animate-pulse rounded-2xl border border-stroke-default bg-bg-surface"
+        className="mx-auto mt-10 min-h-[15rem] w-full max-w-[26rem] animate-pulse rounded-2xl bg-bg-surface sm:w-[61.8%] sm:min-w-[22rem]"
       />
     );
   }
@@ -399,15 +399,35 @@ export function RolloutIdeasCard({
     </button>
   );
 
+  // The first thing on a new rollout (2026-10-26, mock A): no box, one centered
+  // column 61.8% of the width, its headline near the 38.2% line, and the plan
+  // card's button directly below it. It becomes the ordinary card once a note
+  // exists, someone is being asked, or a plan has been built.
+  const fresh = !hasNotes && !typing && !askingWho && !hasPlan;
+
   return (
     <section
       ref={sectionRef}
       aria-labelledby={`ideas-title-${release.id}`}
-      className="rounded-[20px] border border-stroke-default bg-bg-surface px-5 py-4"
+      className={
+        fresh
+          ? 'mx-auto w-full max-w-[26rem] px-1 pt-10 text-center sm:w-[61.8%] sm:min-w-[22rem] sm:pt-16'
+          : 'rounded-[20px] border border-stroke-default bg-bg-surface px-5 py-4'
+      }
     >
-      <h2 id={`ideas-title-${release.id}`} className="text-base font-semibold text-content-primary">
-        {title}
+      <h2
+        id={`ideas-title-${release.id}`}
+        className={
+          fresh
+            ? 'font-display text-2xl font-semibold leading-tight text-content-primary sm:text-[1.75rem]'
+            : 'text-base font-semibold text-content-primary'
+        }
+      >
+        {fresh && path !== 'chime_in' ? COPY.titleFor(release.title) : title}
       </h2>
+      {fresh && path !== 'chime_in' ? (
+        <p className="mt-2 text-sm text-content-secondary">{COPY.freshBody}</p>
+      ) : null}
 
       {hasNotes ? (
         <ul className="mt-3 space-y-3">
@@ -472,7 +492,7 @@ export function RolloutIdeasCard({
           </div>
         </div>
       ) : (
-        <div className={hasNotes ? 'mt-3 flex flex-wrap items-center gap-2' : 'mt-4 flex flex-col items-center gap-1'}>
+        <div className={hasNotes ? 'mt-3 flex flex-wrap items-center gap-2' : fresh ? 'mt-6 flex flex-col items-center gap-1' : 'mt-4 flex flex-col items-center gap-1'}>
           {data.voice ? (
             <IdeaMic
               compact={hasNotes}

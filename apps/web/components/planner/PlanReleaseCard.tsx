@@ -65,24 +65,23 @@ export function PlanReleaseCard({ state, failureMessage, onPlan, onAddActivity }
   // themselves, so no eyebrow and no paragraph stand between a new rollout and
   // its plan (2026-10-26, founder call).
   if (state === 'fresh') {
+    // Mock A (2026-10-26): the same 61.8% column as the idea card above it, so
+    // the two read as one flow. The headline stays for screen readers; the idea
+    // card's question is what sighted people read first.
     return (
-      <div className="flex flex-col gap-4 rounded-2xl border border-brand/25 bg-brand/5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-        <div>
-          <h3 className="font-display text-xl font-semibold leading-tight text-content-primary">
-            {copy.headline}
-          </h3>
-          <p className="mt-1 text-sm text-content-secondary">Five questions. About a minute.</p>
-        </div>
+      <div className="mx-auto flex w-full max-w-[26rem] flex-col items-center gap-2 px-1 pb-10 pt-6 text-center sm:w-[61.8%] sm:min-w-[22rem]">
+        <h3 className="sr-only">{copy.headline}</h3>
         <Button
           type="button"
           onClick={onPlan}
           // Guided-tour anchor (lib/tours.ts); inert without the flag.
           data-tour="plan-rollout"
-          className="h-12 w-full justify-center gap-2 rounded-full px-6 sm:w-auto"
+          className="h-12 justify-center gap-2 whitespace-nowrap rounded-full px-8"
         >
           {copy.cta}
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Button>
+        <p className="text-xs text-content-tertiary">Five questions. About a minute.</p>
       </div>
     );
   }

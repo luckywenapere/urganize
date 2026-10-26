@@ -48,6 +48,11 @@ export const MAX_CHIME_IN_RECIPIENTS = 25;
 
 export const ROLLOUT_IDEAS_COPY = {
   title: "What's the idea?",
+  titleFor: (releaseTitle: string) => {
+    const name = String(releaseTitle || '').trim();
+    return name ? `What's the idea for ${name}?` : "What's the idea?";
+  },
+  freshBody: 'Say it, or type it. UrgAns turns it into your plan.',
   chimeInTitle: (name: string) => `Chime in on ${firstWord(name) || 'the team'}'s idea`,
   holdToTalk: 'Hold to talk',
   listening: 'Listening',
