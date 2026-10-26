@@ -1,4 +1,4 @@
-# Artist import in onboarding (2026-10-26, v1.180.0, NEXT_PUBLIC_FEATURE_ARTIST_IMPORT ships on)
+# Artist import in onboarding (2026-10-26, v1.183.0, NEXT_PUBLIC_FEATURE_ARTIST_IMPORT ships on)
 
 Founder approved the mock ("alright build"). A new onboarding step, right after "What are you working on?" and before the account: type an artist's name, pick the profile, watch their releases arrive, then "Add another artist?". Skippable at every point.
 

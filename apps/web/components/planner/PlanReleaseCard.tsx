@@ -67,9 +67,12 @@ export function PlanReleaseCard({ state, failureMessage, onPlan, onAddActivity }
   if (state === 'fresh') {
     return (
       <div className="flex flex-col gap-4 rounded-2xl border border-brand/25 bg-brand/5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-        <h3 className="font-display text-xl font-semibold leading-tight text-content-primary">
-          {copy.headline}
-        </h3>
+        <div>
+          <h3 className="font-display text-xl font-semibold leading-tight text-content-primary">
+            {copy.headline}
+          </h3>
+          <p className="mt-1 text-sm text-content-secondary">Five questions. About a minute.</p>
+        </div>
         <Button
           type="button"
           onClick={onPlan}

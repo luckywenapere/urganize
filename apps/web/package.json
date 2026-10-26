@@ -1,7 +1,7 @@
 {
   "name": "@urganize/web",
   "description": "Urganize is where music teams plan every release and deliver it on time.",
-  "version": "1.180.0",
+  "version": "1.183.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -24,6 +24,7 @@
     "@urganize/ui": "workspace:*",
     "@vercel/analytics": "^1.6.1",
     "date-fns": "^4.1.0",
+    "fflate": "0.8.3",
     "lucide-react": "^0.469.0",
     "mammoth": "^1.13.0",
     "next": "^16.1.1",

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Button } from '@urganize/ui';
+import { ADD_IDEA_EVENT, IDEAS_CHANGED_EVENT } from './RolloutFirstSteps';
 import { Check, Copy, Loader2, MessageCircle, Mic, Sparkles, UserPlus } from '@/components/icons';
 import { useVoiceInput } from '@/components/chappi/useVoiceInput';
 import { buildWhatsAppShareUrl } from '@/lib/access-gate';
@@ -80,6 +81,7 @@ export function RolloutIdeasCard({
   const persona = useAuthStore((state) => (state.user?.onboarding_persona ?? null) as OnboardingPersona | null);
   const viewerName = useAuthStore((state) => String(state.user?.name || '').trim());
   const [data, setData] = useState<IdeasData | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [typing, setTyping] = useState(false);
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
@@ -87,6 +89,7 @@ export function RolloutIdeasCard({
   const [askingWho, setAskingWho] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const fromVoiceRef = useRef(false);
+  const sectionRef = useRef<HTMLElement | null>(null);
   const [brief, setBrief] = useState<RolloutBrief | null>(null);
 
   const load = useCallback(async () => {
@@ -97,10 +100,14 @@ export function RolloutIdeasCard({
         headers,
         cache: 'no-store',
       });
-      if (!response.ok) return;
+      if (!response.ok) {
+        setLoadFailed(true);
+        return;
+      }
       setData((await response.json()) as IdeasData);
     } catch {
       // The card simply stays away when its read fails.
+      setLoadFailed(true);
     }
   }, [release.id]);
 
@@ -136,6 +143,19 @@ export function RolloutIdeasCard({
     };
   }, [briefKey, release.id]);
 
+  // The first steps' "Add your idea" opens the text box here.
+  useEffect(() => {
+    const open = (event: Event) => {
+      const target = (event as CustomEvent<{ releaseId?: string }>).detail?.releaseId;
+      if (target && target !== release.id) return;
+      setError('');
+      setTyping(true);
+      sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+    window.addEventListener(ADD_IDEA_EVENT, open);
+    return () => window.removeEventListener(ADD_IDEA_EVENT, open);
+  }, [release.id]);
+
   const path: IdeasPath = ideasPathFor({
     isOwner: Boolean(data?.isOwner),
     persona,
@@ -148,7 +168,20 @@ export function RolloutIdeasCard({
     setTyping(true);
   }, []);
 
-  if (!ENABLED || !data) return null;
+  if (!ENABLED) return null;
+  // Hold the card's place while it loads, so the plan card below it does not jump
+  // down when the idea card arrives (2026-10-26). Only for the full card on a
+  // rollout that has no plan yet, the one case where it is always going to show.
+  if (!data) {
+    if (loadFailed || condensed || hasPlan) return null;
+    return (
+      <div
+        aria-busy="true"
+        aria-label="Loading"
+        className="min-h-[17rem] animate-pulse rounded-2xl border border-stroke-default bg-bg-surface"
+      />
+    );
+  }
   if (hasPlan && data.notes.length === 0) return null;
 
   const save = async () => {
@@ -176,6 +209,7 @@ export function RolloutIdeasCard({
       if (!payload.notes) void load();
       setDraft('');
       setTyping(false);
+      window.dispatchEvent(new Event(IDEAS_CHANGED_EVENT));
       // A manager is asked who should chime in after their note.
       if (path === 'manager') setAskingWho(true);
     } catch (saveError) {
@@ -249,6 +283,7 @@ export function RolloutIdeasCard({
 
   return (
     <section
+      ref={sectionRef}
       aria-labelledby={`ideas-title-${release.id}`}
       className="rounded-[20px] border border-stroke-default bg-bg-surface px-5 py-4"
     >

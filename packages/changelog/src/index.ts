@@ -41,13 +41,72 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.180.0",
+    version: "1.183.0",
     title: "Bring in an artist's releases",
     tag: "App",
     date: "October 26, 2026",
     highlights: [
       "Type an artist's name when you sign up and Urganize finds them and brings in their releases.",
       "Add as many artists as you like. They show up in your catalogue, on each artist's page.",
+    ],
+  },
+  {
+    version: "1.182.0",
+    title: "Photos and UrgAns in Bring your notes",
+    tag: "Rollouts",
+    date: "October 26, 2026",
+    highlights: [
+      "Bring in a photo or screenshot of your notes. It reads the writing and sorts it.",
+      "Tap Sort with UrgAns to skip small talk, fix labels and spot dates and rollouts. It only reads the text on screen and does not save it.",
+    ],
+  },
+  {
+    version: "1.181.3",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "The idea card holds its place while it loads, so the page no longer jumps.",
+    ],
+  },
+  {
+    version: "1.181.2",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "On a new rollout the idea comes first, then the plan.",
+    ],
+  },
+  {
+    version: "1.181.1",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "A new rollout now starts with your idea, not the cover art. Say what you see and your plan is built from it.",
+    ],
+  },
+  {
+    version: "1.181.0",
+    title: "Bring your notes",
+    tag: "Rollouts",
+    date: "October 26, 2026",
+    highlights: [
+      "Bring in a WhatsApp chat, a file or pasted text. Urganize finds the songs, to-dos, dates and money in it.",
+      "Choose what to keep. Notes that name a rollout attach to it, and you can turn the to-dos into a plan.",
+      "The chat is read on your phone. Only the notes you keep are saved, and you can undo the whole import.",
+    ],
+  },
+  {
+    version: "1.180.0",
+    title: "A new rollout starts with its plan",
+    tag: "Rollouts",
+    date: "October 26, 2026",
+    highlights: [
+      "On a new rollout the plan comes first, with the idea and first steps below it.",
+      "When your plan is ready you see how many steps it has, the first three, and a button to read the brief.",
+      "What you say on the idea card now starts the brief.",
     ],
   },
   {

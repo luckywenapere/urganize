@@ -52,7 +52,9 @@ export type RouteSurface =
   | 'planner_quick'
   | 'status'
   | 'outcome'
-  | 'press_kit';
+  | 'press_kit'
+  /** Bring your notes: UrgAns labels the cards of an import (2026-10-26). */
+  | 'notes_import';
 
 // ── Switches ─────────────────────────────────────────────────────────────────
 
@@ -115,6 +117,8 @@ const SURFACE_FLOOR: Record<RouteSurface, ModelTier> = {
   status: 'quick',
   outcome: 'quick',
   press_kit: 'standard',
+  // Labelling short cards against a fixed list of kinds. The smallest rung is enough.
+  notes_import: 'quick',
 };
 
 /** How many times one request may change model. */
@@ -128,6 +132,7 @@ const SURFACE_MAX_HOPS: Record<RouteSurface, number> = {
   // cannot fit, so this surface never hops.
   outcome: 0,
   press_kit: 2,
+  notes_import: 1,
 };
 
 /**
@@ -148,6 +153,8 @@ function pinnedModelFor(surface: RouteSurface, env: EnvLike): string | undefined
       return get('AI_OUTCOME_MODEL') ?? get('AI_STATUS_MODEL');
     case 'press_kit':
       return get('AI_PRESSKIT_MODEL') ?? get('AI_STATUS_MODEL');
+    case 'notes_import':
+      return get('AI_NOTES_MODEL') ?? get('AI_STATUS_MODEL');
     default:
       return undefined;
   }

@@ -63,6 +63,10 @@ import { PinnedConfirmDateCard } from './PinnedConfirmDateCard';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { buildCreatedRolloutIntake } from '@/lib/release-draft-discard';
 import { PlanReleaseCard } from '@/components/planner/PlanReleaseCard';
+import { PlanLandedCard } from '@/components/planner/PlanLandedCard';
+import { RELEASE_BRIEF_ENABLED } from '@/lib/release-brief-flag';
+import { compareForTopUp, isOpenTask } from '@/lib/plan-focus';
+import { formatShortDay } from '@/lib/release-brief';
 import { AutoPlanCard } from '@/components/planner/AutoPlanCard';
 import { useAutoPlan } from '@/components/planner/useAutoPlan';
 import { readPlannerAuto } from '@/lib/planner-auto';
@@ -283,6 +287,7 @@ export function WorkspaceView() {
   // refused with nothing created (typed notes UrgAns could not read).
   const lastBuilt = usePlannerStore((state) => state.lastBuilt);
   const clearBuilt = usePlannerStore((state) => state.clearBuilt);
+  const [planLanded, setPlanLanded] = useState<{ releaseId: string; count: number; summary: string | null } | null>(null);
   const buildError = usePlannerStore((state) => state.buildError);
   const planBuildError =
     buildError && buildError.releaseId === scopedReleaseId ? buildError.message : null;
@@ -503,11 +508,12 @@ export function WorkspaceView() {
     if (!lastBuilt || lastBuilt.releaseId !== scopedReleaseId) return;
     clearBuilt();
     void loadCommandCenter({ force: true });
-    setToast({
-      message: `Plan built: ${lastBuilt.plan.tasksCreated} ${
-        lastBuilt.plan.tasksCreated === 1 ? 'activity' : 'activities'
-      }.`,
-      tone: 'success',
+    // The plan's arrival is a card on the rollout, not a toast (new-rollout
+    // flow, 2026-10-26). It stays until dismissed or the rollout is left.
+    setPlanLanded({
+      releaseId: lastBuilt.releaseId,
+      count: lastBuilt.plan.tasksCreated,
+      summary: lastBuilt.plan.rationale,
     });
     // The post-plan press kit offer left Oct 17, 2026 with the standalone
     // press kit (founder approved "cuts-3"); the kit is Pitch this!'s now.
@@ -1089,6 +1095,8 @@ export function WorkspaceView() {
         }
       : null,
     isOwner: scopedReleaseIsOwn,
+    // The idea is the first step while the Ideas card is up (no plan built yet).
+    ideaAvailable: ROLLOUT_IDEAS_ENABLED && onlyPreProductionWork(scopedTasks),
     pinnedConfirmDate: pinnedConfirmDateTask
       ? { title: pinnedConfirmDateTask.title, onOpen: () => openTask(pinnedConfirmDateTask.id) }
       : null,
@@ -1353,6 +1361,29 @@ export function WorkspaceView() {
   // to chime in, then Draft with AI (the planner, the notes prefilled as its
   // last answer) or Write it myself. The card hides itself on a planned
   // rollout with no notes. Mounted once, in the layout branch on screen.
+  const landedBanner =
+    planLanded && planLanded.releaseId === scopedReleaseId && bodyIsMainView && scopedTasks.length > 0 ? (
+      <PlanLandedCard
+        count={planLanded.count}
+        summary={planLanded.summary}
+        steps={scopedTasks
+          .filter(isOpenTask)
+          .sort(compareForTopUp)
+          .slice(0, 3)
+          .map((task) => ({
+            id: task.id,
+            title: task.title,
+            when: task.relativeWhen ?? (task.dueDate ? formatShortDay(task.dueDate) : ''),
+          }))}
+        onReadBrief={
+          RELEASE_BRIEF_ENABLED
+            ? () => router.push(`/dashboard?release=${planLanded.releaseId}&scene=brief`)
+            : null
+        }
+        onDismiss={() => setPlanLanded(null)}
+      />
+    ) : null;
+
   const ideasBanner =
     ROLLOUT_IDEAS_ENABLED && bodyIsMainView && scopedReleaseSlim && !scopedReleaseSlim.isTest ? (
       <RolloutIdeasCard
@@ -1666,6 +1697,7 @@ export function WorkspaceView() {
                     <>
                       {isDesktopViewport ? null : distributionStatusStrip}
                       {newReleaseGuideBanner}
+                      {isDesktopViewport ? null : landedBanner}
                       {isDesktopViewport ? null : ideasBanner}
                       {isDesktopViewport ? null : nextMovesBanner}
                     </>
@@ -1727,6 +1759,7 @@ export function WorkspaceView() {
                 banner={
                   <>
                     {newReleaseGuideBanner}
+                    {isDesktopViewport ? landedBanner : null}
                     {isDesktopViewport ? ideasBanner : null}
                     {isDesktopViewport ? nextMovesBanner : null}
                     {/* On the timeline the strip sits on the phase row instead

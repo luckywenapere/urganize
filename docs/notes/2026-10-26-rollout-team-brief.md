@@ -9,3 +9,6 @@ The condensed Ideas panel (simple Work the plan view, rollout with no date) show
 - **Fallback:** no AI, no notes or a failed call returns `brief: null` and the card shows the owner's own words, as before. "Edit idea" opens the full card.
 - Migration `20261026120000_release_team_briefs.sql` applied to production 2026-10-26 (new table, nothing to back up).
 - Verified: type-check, `rollout-brief.test.ts`, route guards. Not rendered in a browser and the AI call not run against the real gateway.
+
+## First step is the idea (patch 1.179.4)
+"Your first steps" no longer starts with the cover art. The steps are now: Add your idea (done once the rollout has an idea note, read from `release_messages` by `/first-steps`), then the pinned date, then Invite your team. The idea step only exists while the Ideas card does (ideas on, plan not built yet). Its button sends `ADD_IDEA_EVENT`, which opens the card's text box; saving a note sends `IDEAS_CHANGED_EVENT`, which re-reads and ticks the step. The cover art is still a task inside the plan, later. `just-planned-cuts-guard.test.ts` fails on this Windows checkout (CRLF) with or without this change.
