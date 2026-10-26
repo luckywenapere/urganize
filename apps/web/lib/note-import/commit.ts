@@ -24,7 +24,8 @@ export function parseCommitPayload(
 ): { ok: true; value: CommitPayload } | { ok: false; error: string } {
   if (typeof payload !== 'object' || payload === null) return { ok: false, error: 'Nothing to save.' };
   const record = payload as Record<string, unknown>;
-  const source: ImportSource = record.source === 'whatsapp' ? 'whatsapp' : 'text';
+  const source: ImportSource =
+    record.source === 'whatsapp' ? 'whatsapp' : record.source === 'photo' ? 'photo' : 'text';
   if (!Array.isArray(record.items) || record.items.length === 0) {
     return { ok: false, error: 'Choose at least one note to keep.' };
   }

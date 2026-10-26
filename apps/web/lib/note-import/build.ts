@@ -7,7 +7,7 @@ import { classifyText, looksLikeLyrics, type ImportKind } from './detect';
 import { matchRelease, type MatchableRelease } from './match';
 import { isWhatsAppExport, parseWhatsApp, type ChatMessage } from './whatsapp';
 
-export type ImportSource = 'whatsapp' | 'text';
+export type ImportSource = 'whatsapp' | 'text' | 'photo';
 
 export type ImportItem = {
   id: string;
@@ -22,6 +22,10 @@ export type ImportItem = {
   /** Releases it could mean, when more than one title matched. */
   candidateReleaseIds: string[];
   amountsNaira: number[];
+  /** A day the note names (YYYY-MM-DD), set by the AI pass. */
+  dueOn?: string | null;
+  /** True once UrgAns has read this card. */
+  aiSorted?: boolean;
 };
 
 export type ImportPreview = {
@@ -84,12 +88,18 @@ function chatBlocks(messages: ChatMessage[]): Block[] {
 
 const BULLET = /^\s*(?:[-*•]|\d{1,2}[.)])\s+/;
 
-function plainBlocks(text: string): Block[] {
+function plainBlocks(text: string, perLine = false): Block[] {
   const blocks: Block[] = [];
   for (const chunk of text.replace(/\r\n?/g, '\n').split(/\n{2,}/)) {
     const trimmed = chunk.trim();
     if (!trimmed) continue;
     const lines = trimmed.split('\n').filter((line) => line.trim());
+    // A transcribed photo is often one run of lines with no blank gaps. Lyrics
+    // stay together; anything else is read a line at a time.
+    if (perLine && lines.length >= 2 && !looksLikeLyrics(trimmed)) {
+      for (const line of lines) blocks.push({ text: line.replace(BULLET, '').trim(), author: null, at: null });
+      continue;
+    }
     // A bullet list is a stack of separate things, not one note.
     if (lines.length >= 2 && lines.every((line) => BULLET.test(line))) {
       for (const line of lines) blocks.push({ text: line.replace(BULLET, '').trim(), author: null, at: null });
@@ -100,11 +110,15 @@ function plainBlocks(text: string): Block[] {
   return blocks;
 }
 
-export function buildImportPreview(rawText: string, releases: MatchableRelease[]): ImportPreview {
+export function buildImportPreview(
+  rawText: string,
+  releases: MatchableRelease[],
+  from: 'text' | 'photo' = 'text'
+): ImportPreview {
   const text = rawText.slice(0, MAX_IMPORT_CHARS);
   const whatsapp = isWhatsAppExport(text);
   const parsed = whatsapp ? parseWhatsApp(text) : null;
-  const blocks = parsed ? chatBlocks(parsed.messages) : plainBlocks(text);
+  const blocks = parsed ? chatBlocks(parsed.messages) : plainBlocks(text, from === 'photo');
 
   let items: ImportItem[] = [];
   for (const block of blocks) {
@@ -131,7 +145,7 @@ export function buildImportPreview(rawText: string, releases: MatchableRelease[]
   items = items.map((item, index) => ({ ...item, id: `i${index}` }));
 
   return {
-    source: parsed ? 'whatsapp' : 'text',
+    source: parsed ? 'whatsapp' : from,
     items,
     authors: parsed?.authors ?? [],
     messageCount: parsed?.messages.length ?? blocks.length,
@@ -163,8 +177,9 @@ const DAY_FORMAT = new Intl.DateTimeFormat('en-GB', {
 export function provenanceLine(item: ImportItem, source: ImportSource): string {
   const parts: string[] = [];
   if (item.author) parts.push(item.author);
-  parts.push(source === 'whatsapp' ? 'WhatsApp' : 'Brought in');
+  parts.push(source === 'whatsapp' ? 'WhatsApp' : source === 'photo' ? 'Photo' : 'Brought in');
   if (item.at) parts.push(DAY_FORMAT.format(new Date(item.at)));
+  if (item.dueOn) parts.push(`Due ${DAY_FORMAT.format(new Date(`${item.dueOn}T00:00:00Z`))}`);
   return parts.join(' · ');
 }
 

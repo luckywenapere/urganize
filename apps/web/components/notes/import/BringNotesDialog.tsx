@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, ClipboardList, FileText, Loader2, Lock, MessageCircle, X } from '@/components/icons';
+import { Camera, Check, ClipboardList, FileText, Loader2, Lock, MessageCircle, Sparkles, X } from '@/components/icons';
 import { DialogPanel } from '@/components/shared/DialogPanel';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { supabase } from '@/lib/supabase/client';
@@ -10,6 +10,8 @@ import { trackEvent } from '@/lib/analytics/client';
 import { useNotesStore } from '@/stores/useNotesStore';
 import { buildImportPreview, countImport, noteBodyFor, type ImportItem, type ImportPreview } from '@/lib/note-import/build';
 import { IMPORT_FILE_ACCEPT, readImportFile } from '@/lib/note-import/read-file';
+import { readPhotoText, sortWithAi } from '@/lib/note-import/client';
+import { PHOTO_MAX_COUNT, PHOTO_TYPES } from '@/lib/note-import/photo';
 import type { ImportKind } from '@/lib/note-import/detect';
 
 type Step = 'choose' | 'whatsapp' | 'paste' | 'review' | 'done';
@@ -66,6 +68,15 @@ export function BringNotesDialog({ open, onClose, releases, onMakePlan, releaseH
   const [releaseChoice, setReleaseChoice] = useState<Map<string, string | null>>(new Map());
   const [saved, setSaved] = useState<{ importId: string; count: number; items: ImportItem[] } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const photoInput = useRef<HTMLInputElement>(null);
+  const [photoProgress, setPhotoProgress] = useState<{ done: number; total: number } | null>(null);
+  const [ai, setAi] = useState<{ running: boolean; done: number; total: number; summary: string; error: string }>({
+    running: false,
+    done: 0,
+    total: 0,
+    summary: '',
+    error: '',
+  });
 
   const load = useNotesStore((state) => state.load);
 
@@ -88,6 +99,8 @@ export function BringNotesDialog({ open, onClose, releases, onMakePlan, releaseH
       setUnticked(new Set());
       setReleaseChoice(new Map());
       setSaved(null);
+      setPhotoProgress(null);
+      setAi({ running: false, done: 0, total: 0, summary: '', error: '' });
     }
   }
 
@@ -106,8 +119,8 @@ export function BringNotesDialog({ open, onClose, releases, onMakePlan, releaseH
   const counts = useMemo(() => countImport(visibleItems), [visibleItems]);
 
   const process = useCallback(
-    (text: string, from: 'paste' | 'file') => {
-      const result = buildImportPreview(text, releases);
+    (text: string, from: 'paste' | 'file' | 'photo') => {
+      const result = buildImportPreview(text, releases, from === 'photo' ? 'photo' : 'text');
       if (result.items.length === 0) {
         setError('Nothing worth keeping turned up in that. Try a longer piece of text or another chat.');
         setIsReading(false);
@@ -119,6 +132,7 @@ export function BringNotesDialog({ open, onClose, releases, onMakePlan, releaseH
       setReleaseChoice(new Map());
       setError('');
       setIsReading(false);
+      setAi({ running: false, done: 0, total: 0, summary: '', error: '' });
       setStep('review');
       trackEvent('notes_import_sorted', {
         payload: { source: result.source, from, found: result.items.length, messages: result.messageCount },
@@ -143,6 +157,69 @@ export function BringNotesDialog({ open, onClose, releases, onMakePlan, releaseH
     },
     [process]
   );
+
+  const handlePhotos = useCallback(
+    async (fileList: FileList | null) => {
+      const files = Array.from(fileList ?? []).slice(0, PHOTO_MAX_COUNT);
+      if (files.length === 0) return;
+      setError('');
+      setIsReading(true);
+      trackEvent('notes_import_started', { payload: { from: 'photo', photos: files.length } });
+      const token = await accessToken();
+      const texts: string[] = [];
+      let firstError = '';
+      for (let index = 0; index < files.length; index += 1) {
+        setPhotoProgress({ done: index, total: files.length });
+        const result = await readPhotoText(files[index], token);
+        if (result.ok) {
+          if (result.text.trim()) texts.push(result.text.trim());
+        } else if (!firstError) {
+          firstError = result.error;
+        }
+      }
+      setPhotoProgress(null);
+      if (texts.length === 0) {
+        setError(firstError || 'No writing turned up in that photo. Try a clearer one.');
+        setIsReading(false);
+        return;
+      }
+      process(texts.join('\n\n'), 'photo');
+    },
+    [process]
+  );
+
+  const handleAiSort = useCallback(async () => {
+    if (!preview || ai.running) return;
+    const target = preview.items.filter((item) => !item.author || !hiddenAuthors.has(item.author));
+    setAi({ running: true, done: 0, total: target.length, summary: '', error: '' });
+    const token = await accessToken();
+    const outcome = await sortWithAi(target, token, (done, total) =>
+      setAi((current) => ({ ...current, done, total }))
+    );
+    if (!outcome.ok) {
+      setAi({ running: false, done: 0, total: 0, summary: '', error: outcome.error });
+      return;
+    }
+    const { applied, summary } = outcome;
+    const byId = new Map(applied.items.map((item) => [item.id, item]));
+    setPreview({ ...preview, items: preview.items.map((item) => byId.get(item.id) ?? item) });
+    setUnticked((current) => new Set([...current, ...applied.skippedIds]));
+    const parts = [
+      summary,
+      applied.skippedIds.length > 0 ? `${applied.skippedIds.length} skipped as chatter.` : '',
+      applied.changed > 0 ? `${applied.changed} relabelled.` : '',
+    ].filter(Boolean);
+    setAi({
+      running: false,
+      done: target.length,
+      total: target.length,
+      summary: parts.join(' ') || 'UrgAns read it. Nothing needed changing.',
+      error: '',
+    });
+    trackEvent('notes_import_ai_sorted', {
+      payload: { items: target.length, changed: applied.changed, skipped: applied.skippedIds.length },
+    });
+  }, [ai.running, hiddenAuthors, preview]);
 
   const handleSave = useCallback(async () => {
     if (!preview || keptItems.length === 0) return;
@@ -247,6 +324,21 @@ export function BringNotesDialog({ open, onClose, releases, onMakePlan, releaseH
     />
   );
 
+  const photoPicker = (
+    <input
+      ref={photoInput}
+      type="file"
+      accept={PHOTO_TYPES.join(',')}
+      multiple
+      className="sr-only"
+      tabIndex={-1}
+      onChange={(event) => {
+        void handlePhotos(event.target.files);
+        event.target.value = '';
+      }}
+    />
+  );
+
   const errorLine = error ? (
     <p role="alert" className="mt-3 text-sm text-status-danger">
       {error}
@@ -307,13 +399,27 @@ export function BringNotesDialog({ open, onClose, releases, onMakePlan, releaseH
               <span className="block text-xs text-content-tertiary">Word, text or a WhatsApp zip</span>
             </span>
           </button>
-          <p className="pt-1 text-xs text-content-tertiary">Photos and voice notes are coming next.</p>
+          <button type="button" className={tile} onClick={() => photoInput.current?.click()} disabled={isReading}>
+            <Camera className="h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
+            <span>
+              <span className="block text-sm font-semibold text-content-primary">Photo or screenshot</span>
+              <span className="block text-xs text-content-tertiary">Handwriting, a notes app, a chat. Up to {PHOTO_MAX_COUNT}</span>
+            </span>
+          </button>
+          <p className="pt-1 text-xs text-content-tertiary">Voice notes are coming next.</p>
           {isReading ? (
             <p className="flex items-center gap-2 text-sm text-content-secondary">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              Reading...
+              {photoProgress
+                ? `Reading photo ${Math.min(photoProgress.done + 1, photoProgress.total)} of ${photoProgress.total}...`
+                : 'Reading...'}
             </p>
-          ) : null}
+          ) : (
+            <p className="flex items-start gap-1.5 text-xs text-content-tertiary">
+              <Lock className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
+              Photos are read once to get the words out. They are not saved.
+            </p>
+          )}
           {errorLine}
         </div>
       </>
@@ -392,6 +498,31 @@ export function BringNotesDialog({ open, onClose, releases, onMakePlan, releaseH
             <Pill>{counts.total} in all</Pill>
           </div>
 
+          <div className="rounded-xl border border-stroke-default bg-bg-surface p-2.5">
+            <button
+              type="button"
+              onClick={() => void handleAiSort()}
+              disabled={ai.running}
+              className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover disabled:opacity-60"
+            >
+              {ai.running ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+              )}
+              {ai.running
+                ? `Reading ${Math.min(ai.done + 1, ai.total)} of ${ai.total}...`
+                : ai.summary
+                  ? 'Sort again with UrgAns'
+                  : 'Sort with UrgAns'}
+            </button>
+            <p className="mt-1.5 text-xs text-content-tertiary">
+              {ai.summary ||
+                ai.error ||
+                'Better labels, skips small talk, spots dates. This sends the text shown here to UrgAns to read. It is not saved.'}
+            </p>
+          </div>
+
           {isChat && preview.authors.length > 1 ? (
             <div>
               <p className={`${eyebrow} pb-1.5`}>Keep messages from</p>
@@ -448,6 +579,7 @@ export function BringNotesDialog({ open, onClose, releases, onMakePlan, releaseH
                         {KIND_LABEL[item.kind]}
                         {item.author ? ` · ${item.author}` : ''}
                         {item.at ? ` · ${dayFormat.format(new Date(item.at))}` : ''}
+                        {item.dueOn ? ` · Due ${dayFormat.format(new Date(`${item.dueOn}T00:00:00Z`))}` : ''}
                       </p>
                       <p className={`mt-0.5 whitespace-pre-line break-words text-sm text-content-primary ${on ? '' : 'opacity-50'} line-clamp-4`}>
                         {item.text}
@@ -552,6 +684,7 @@ export function BringNotesDialog({ open, onClose, releases, onMakePlan, releaseH
       >
         {body}
         {filePicker}
+        {photoPicker}
       </DialogPanel>
     </div>,
     document.body
