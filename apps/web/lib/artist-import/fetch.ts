@@ -14,7 +14,9 @@ import {
   type ImportArtistCandidate,
   type ImportProvider,
   type ImportRelease,
+  type ImportReleaseKind,
 } from './providers';
+import { readDeezerAlbumCodes, readDeezerTrackIsrc } from './codes';
 
 const TIMEOUT_MS = 6000;
 
@@ -58,4 +60,27 @@ export async function fetchImportReleases(
   }
   const json = await getJson(`https://itunes.apple.com/lookup?id=${id}&entity=album&limit=200`);
   return json === null ? null : dedupeReleases(parseItunesAlbums(json));
+}
+
+/**
+ * A Deezer release's UPC and, for a single, the ISRC of its one track. An EP or
+ * album takes the UPC only: that alone is enough to make a link, and an ISRC
+ * for every track would be a call each. Null means Deezer could not be reached,
+ * so the caller can try again later; both codes null means Deezer has none.
+ */
+export async function fetchDeezerCodes(
+  albumId: string,
+  kind: ImportReleaseKind
+): Promise<{ upc: string | null; isrc: string | null } | null> {
+  if (!isSafeSourceId(albumId)) return null;
+  const album = await getJson(`https://api.deezer.com/album/${albumId}`);
+  if (album === null) return null;
+  const { upc, firstTrackId } = readDeezerAlbumCodes(album);
+  let isrc: string | null = null;
+  if (kind === 'single' && firstTrackId) {
+    const track = await getJson(`https://api.deezer.com/track/${firstTrackId}`);
+    if (track === null) return null;
+    isrc = readDeezerTrackIsrc(track);
+  }
+  return { upc, isrc };
 }

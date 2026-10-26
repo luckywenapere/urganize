@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.189.0",
+    title: "Links for your imported releases",
+    tag: "App",
+    date: "October 26, 2026",
+    highlights: [
+      "Imported releases now show their UPC and ISRC.",
+      "Tap Get link on any release to make a public link for it. You see a notice first, and each team can make 10 links a day for now.",
+    ],
+  },
+  {
     version: "1.188.0",
     title: "Ask your team when you have no idea yet",
     tag: "Rollouts",

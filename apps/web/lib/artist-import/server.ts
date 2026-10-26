@@ -104,6 +104,15 @@ async function saveCatalogueRows(
     return null;
   }
 
+  // Apple gives no UPC or ISRC, so there is nothing to look up for those rows.
+  // Stamped separately: a bulk upsert would reset the stamp on the others.
+  await adminClient
+    .from(CATALOGUE_TABLE)
+    .update({ codes_checked_at: new Date().toISOString() })
+    .eq('artist_id', input.artistId)
+    .eq('source', 'itunes')
+    .is('codes_checked_at', null);
+
   const after = await adminClient
     .from(CATALOGUE_TABLE)
     .select('id', { count: 'exact', head: true })
