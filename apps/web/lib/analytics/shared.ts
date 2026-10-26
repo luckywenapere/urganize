@@ -119,6 +119,9 @@ export interface AnalyticsEventPropertiesMap {
   /** Artist import for existing accounts (2026-10-26): the dialog opened from `from`, and an artist saved. */
   artist_import_opened: { from: 'artists' | 'artist' };
   artist_import_saved: { provider: string; added: number; created_artist: boolean };
+  /** Catalogue Get link (2026-10-26): a link was made, or the team hit its daily cap. */
+  catalogue_link_made: { existing: boolean };
+  catalogue_link_cap_hit: EmptyAnalyticsProperties;
   /** The opt-in step was shown (both toggles start off). */
   onboarding_optin_viewed: EmptyAnalyticsProperties;
   /** A toggle was tapped. `result` is what the device allowed for push. */

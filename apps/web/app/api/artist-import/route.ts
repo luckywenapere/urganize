@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuthenticatedAdmin, ensureOwnedWorkspace } from '@/lib/tasks-server';
 import { isImportProvider, isSafeSourceId } from '@/lib/artist-import/providers';
 import { importArtistCatalogue } from '@/lib/artist-import/server';
+import { enrichCatalogueCodes } from '@/lib/artist-import/links-server';
+import { afterResponse } from '@/lib/after-response';
 
 // Saves an artist and their releases onto the signed-in team. Body:
 // { provider, id, name }. The releases are pulled again here from the source
@@ -29,6 +31,9 @@ export async function POST(request: NextRequest) {
       const status = outcome.reason === 'artist_limit' ? 403 : outcome.reason === 'source_unreachable' ? 502 : 500;
       return NextResponse.json({ error: outcome.message, reason: outcome.reason }, { status });
     }
+    // UPC and ISRC fill in after the reply; the catalogue read finishes what
+    // this batch leaves.
+    afterResponse('catalogue codes', () => enrichCatalogueCodes(auth.adminClient, outcome.artistId));
     return NextResponse.json(outcome);
   } catch (error) {
     return NextResponse.json(
