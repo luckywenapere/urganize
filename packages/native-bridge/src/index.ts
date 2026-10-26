@@ -43,6 +43,8 @@ export type BridgeRequestType =
   | 'push.register'
   | 'shareFile'
   | 'shareText'
+  | 'share.readFile'
+  | 'share.done'
   | 'appearance';
 
 export const BRIDGE_REQUEST_TYPES: readonly BridgeRequestType[] = [
@@ -54,12 +56,14 @@ export const BRIDGE_REQUEST_TYPES: readonly BridgeRequestType[] = [
   'push.register',
   'shareFile',
   'shareText',
+  'share.readFile',
+  'share.done',
   'appearance',
 ];
 
-export type BridgeEventType = 'pushTap' | 'pushToken';
+export type BridgeEventType = 'pushTap' | 'pushToken' | 'shareReceived';
 
-export const BRIDGE_EVENT_TYPES: readonly BridgeEventType[] = ['pushTap', 'pushToken'];
+export const BRIDGE_EVENT_TYPES: readonly BridgeEventType[] = ['pushTap', 'pushToken', 'shareReceived'];
 
 export type PushPermission = 'granted' | 'denied' | 'default';
 
@@ -81,6 +85,18 @@ export interface BridgeRequestMap {
   shareFile: { payload: ShareFilePayload; result: { outcome: 'shared' | 'cancelled' } };
   /** Plain text to the share sheet, e.g. a message someone can DM. */
   shareText: { payload: { text: string; title?: string }; result: { outcome: 'shared' | 'cancelled' } };
+  /**
+   * Bring your notes, Android share sheet. The shell holds a shared file and
+   * hands it over in pieces, because a chat export can be several MB and one
+   * injected script that size is not safe. `offset` is a position in the file's
+   * base64 text (a multiple of 4); `next` is where to ask next, or null at the end.
+   */
+  'share.readFile': {
+    payload: { id: string; index: number; offset: number };
+    result: { data: string; next: number | null };
+  };
+  /** The page has everything it wanted from this share; the shell lets go of the files. */
+  'share.done': { payload: { id: string }; result: { ok: true } };
   /** The page's ground colour, so the bars above and below it can match. */
   appearance: { payload: Appearance; result: { ok: true } };
 }
@@ -94,9 +110,68 @@ export interface Appearance {
   statusBar: StatusBarStyle;
 }
 
+/** One file someone shared to the app (Bring your notes). */
+export interface SharedFileInfo {
+  index: number;
+  name: string;
+  mimeType: string;
+  /** Bytes, when the sending app said. */
+  size: number | null;
+}
+
+export interface SharedPayload {
+  /** Names this share in `share.readFile` and `share.done`. */
+  id: string;
+  /** Shared text, link included. Empty when only files came. */
+  text: string;
+  title: string;
+  files: SharedFileInfo[];
+}
+
 export interface BridgeEventMap {
   pushTap: { url: string };
   pushToken: { token: string };
+  /** The Android share sheet handed Urganize something. Held until the page is ready. */
+  shareReceived: SharedPayload;
+}
+
+/** Base64 characters per `share.readFile` answer: about 384 KB of the file, a multiple of 4. */
+export const SHARE_CHUNK_CHARS = 524_288;
+
+/**
+ * The slice of a file's base64 text that answers one `share.readFile`. The
+ * offset must be a whole number, a multiple of 4 (a base64 group) and inside
+ * the text; anything else is null and the shell answers with an error.
+ */
+export function sliceBase64Chunk(base64: string, offset: number): { data: string; next: number | null } | null {
+  if (!Number.isInteger(offset) || offset < 0 || offset % 4 !== 0 || offset > base64.length) return null;
+  const end = Math.min(offset + SHARE_CHUNK_CHARS, base64.length);
+  return { data: base64.slice(offset, end), next: end >= base64.length ? null : end };
+}
+
+/** Reads a `shareReceived` event the shell sent. Null for anything malformed. */
+export function parseSharedPayload(value: unknown): SharedPayload | null {
+  if (!isRecord(value)) return null;
+  const { id, text, title, files } = value;
+  if (!isNonEmptyString(id) || id.length > 64 || !/^[A-Za-z0-9-]+$/.test(id)) return null;
+  if (!Array.isArray(files) || files.length > 8) return null;
+  const parsed: SharedFileInfo[] = [];
+  for (const file of files) {
+    if (!isRecord(file)) return null;
+    if (typeof file.index !== 'number' || !Number.isInteger(file.index) || file.index < 0) return null;
+    parsed.push({
+      index: file.index,
+      name: typeof file.name === 'string' && file.name ? file.name.slice(0, 200) : 'file',
+      mimeType: typeof file.mimeType === 'string' ? file.mimeType : '',
+      size: typeof file.size === 'number' && Number.isFinite(file.size) && file.size >= 0 ? file.size : null,
+    });
+  }
+  return {
+    id,
+    text: typeof text === 'string' ? text : '',
+    title: typeof title === 'string' ? title : '',
+    files: parsed,
+  };
 }
 
 export interface ShellInfo {
