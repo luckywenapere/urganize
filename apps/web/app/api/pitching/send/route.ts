@@ -17,6 +17,7 @@ import { MAX_WAITING_PITCHES_PER_RELEASE, detectPitchPlatform } from '@/lib/pitc
 import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
 import { curatorsOnTheTeam } from '@/lib/pitch-quotes-server';
 import { afterResponse } from '@/lib/after-response';
+import { notifyCuratorOfNewPitch } from '@/lib/pitch-submission-notice-server';
 import {
   CURATOR_PAUSED,
   MAX_CREDIT_PITCHES_PER_SEND,
@@ -311,6 +312,10 @@ async function sendFreeBeforeMigration(input: {
     }
     if (data) sent.push(data as unknown as Record<string, unknown>);
   }
+  const sentIds = sent.map((row) => String(row.id || '')).filter(Boolean);
+  afterResponse('pitch-new-notify', async () => {
+    for (const id of sentIds) await notifyCuratorOfNewPitch(input.admin as never, id);
+  });
 
   return NextResponse.json(
     {

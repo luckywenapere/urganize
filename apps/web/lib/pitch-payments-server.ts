@@ -991,6 +991,8 @@ export async function notifyUser(
     ctaLabel: string;
     quote?: string;
     footnote: string;
+    /** Makes the email send at most once per key (a retry or a backfill is harmless). */
+    dedupeKey?: string;
   }
 ): Promise<void> {
   if (!userId) return;
@@ -1012,6 +1014,7 @@ export async function notifyUser(
       to: contact.email,
       recipientUserId: userId,
       trigger: notice.trigger,
+      dedupeKey: notice.dedupeKey ?? null,
       props: {
         recipientName: contact.name,
         subject: notice.title,
