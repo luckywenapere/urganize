@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rollout phone header</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=JetBrains+Mono:wght@700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f3efe7; --surface: #f8f5ee; --tile: #ebe5d8; --ink: #1e1b16;
+    --ink-2: #5c574e; --ink-3: #8a847a; --brand: #2e6b3a; --line: #ddd6c8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e4ded2; font-family: Inter, system-ui, sans-serif; color: var(--ink); padding: 24px 16px 48px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .lede { color: var(--ink-2); font-size: 14px; margin: 0 0 24px; max-width: 720px; line-height: 1.5; }
+  .grid { display: flex; flex-wrap: wrap; gap: 24px; }
+  .card { width: 390px; max-width: 100%; }
+  .card h2 { font-size: 15px; margin: 0 0 4px; }
+  .card p.note { font-size: 13px; color: var(--ink-2); margin: 0 0 10px; line-height: 1.45; }
+  .phone { background: var(--bg); border-radius: 20px; padding: 16px; box-shadow: 0 1px 0 var(--line); overflow: hidden; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 500; background: var(--brand); color: #fff; padding: 2px 8px; border-radius: 99px; margin-left: 6px; vertical-align: 2px; }
+
+  .icon-btn { width: 44px; height: 44px; display: grid; place-items: center; color: var(--ink-2); flex-shrink: 0; }
+  .eyebrow { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-3); display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; }
+  .face { width: 16px; height: 16px; border-radius: 99px; background: linear-gradient(135deg,#3b3530,#a08a70); flex-shrink: 0; }
+  .title { font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 28px; line-height: 34px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta { display: flex; justify-content: space-between; font-size: 14px; color: var(--ink-2); }
+  .meta span:last-child { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+  /* Current */
+  .cur { display: flex; align-items: center; gap: 4px; margin-left: -12px; }
+  .cur .tile { width: 56px; height: 56px; border-radius: 10px; border: 2px dashed var(--line); background: var(--surface); display: grid; place-items: center; color: var(--brand); margin-right: 8px; flex-shrink: 0; }
+  .cur .text { min-width: 0; flex: 1; }
+
+  /* Option A: nav row, then identity row. Fibonacci spacing 8 / 13 / 21 / 34 / 55 */
+  .a-nav { display: flex; justify-content: space-between; margin: 0 -12px 13px; }
+  .a-id { display: flex; align-items: center; gap: 13px; margin-bottom: 21px; }
+  .a-id .tile { width: 55px; height: 55px; border-radius: 13px; background: var(--tile); display: grid; place-items: center; color: var(--brand); flex-shrink: 0; }
+  .a-id .text { min-width: 0; flex: 1; }
+  .a-id .eyebrow { height: 21px; }
+
+  /* Option B: one row, quieter */
+  .b { display: flex; align-items: center; gap: 8px; margin: 0 -12px 21px -12px; }
+  .b .tile { width: 34px; height: 34px; border-radius: 8px; background: var(--tile); display: grid; place-items: center; color: var(--brand); flex-shrink: 0; }
+  .b .text { min-width: 0; flex: 1; }
+  .b .title { font-size: 21px; line-height: 26px; }
+  .b .eyebrow { font-size: 10px; }
+
+  .spec { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-3); margin-top: 10px; line-height: 1.6; }
+  .spec b { color: var(--ink-2); }
+</style>
+</head>
+<body>
+  <h1>Rollout header on the phone</h1>
+  <p class="lede">Golden ratio is about 1.618. The steps that follow it are 8, 13, 21, 34, 55 (each one is the two before added up). Both options use only those numbers for sizes and gaps. Phone width 390.</p>
+
+  <div class="grid">
+    <!-- Now -->
+    <div class="card">
+      <h2>Now</h2>
+      <p class="note">Five things fight on one line. The dashed box looks like an empty form field. Gaps are 4, 8 and 16 with no rule between them.</p>
+      <div class="phone">
+        <div class="cur">
+          <span class="icon-btn"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></span>
+          <span class="tile"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 3v14M3 10h14"/></svg></span>
+          <div class="text">
+            <div class="eyebrow"><span class="face"></span>Dorian</div>
+            <h3 class="title">Untitled rollout</h3>
+          </div>
+          <span class="icon-btn" style="margin-right:-8px"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h14M3 10h14M3 15h14"/></svg></span>
+        </div>
+        <div class="meta" style="margin-top:16px"><span>No release date yet</span><span>0/24 done</span></div>
+      </div>
+    </div>
+
+    <!-- A -->
+    <div class="card">
+      <h2>A. Two rows <span class="tag">Recommended</span></h2>
+      <p class="note">Back and menu sit on their own top row, like every phone app. Cover and title get the full width below. The cover is exactly as tall as the two text lines (21 + 34 = 55).</p>
+      <div class="phone">
+        <div class="a-nav">
+          <span class="icon-btn"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></span>
+          <span class="icon-btn"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h14M3 10h14M3 15h14"/></svg></span>
+        </div>
+        <div class="a-id">
+          <span class="tile"><svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.5 4v13M4 10.5h13"/></svg></span>
+          <div class="text">
+            <div class="eyebrow"><span class="face"></span>Dorian</div>
+            <h3 class="title">Untitled rollout</h3>
+          </div>
+        </div>
+        <div class="meta"><span>No release date yet</span><span>0/24 done</span></div>
+        <div class="spec"><b>sizes</b> cover 55 · title 28/34 · eyebrow line 21<br><b>gaps</b> nav→title 13 · cover→text 13 · title→meta 21<br><b>cover</b> soft fill, no dashed line, 13 radius</div>
+      </div>
+    </div>
+
+    <!-- B -->
+    <div class="card">
+      <h2>B. One row, smaller</h2>
+      <p class="note">Keeps one line but shrinks everything to fit. Cover 34, title 21 (34 ÷ 1.618). Calmer, but the title is smaller and long names cut off sooner.</p>
+      <div class="phone">
+        <div class="b">
+          <span class="icon-btn"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></span>
+          <span class="tile"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 2v12M2 8h12"/></svg></span>
+          <div class="text">
+            <div class="eyebrow"><span class="face" style="width:13px;height:13px"></span>Dorian</div>
+            <h3 class="title">Untitled rollout</h3>
+          </div>
+          <span class="icon-btn"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h14M3 10h14M3 15h14"/></svg></span>
+        </div>
+        <div class="meta"><span>No release date yet</span><span>0/24 done</span></div>
+        <div class="spec"><b>sizes</b> cover 34 · title 21 · eyebrow 10<br><b>gaps</b> 8 between items · 21 to meta</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
