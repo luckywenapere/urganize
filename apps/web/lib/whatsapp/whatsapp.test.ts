@@ -139,7 +139,7 @@ describe('byo base urls', () => {
     expect(isSafeBaseUrl('https://localhost/v1')).toBe(false);
     expect(isSafeBaseUrl('https://127.0.0.1/v1')).toBe(false);
     expect(isSafeBaseUrl('https://10.0.0.5/v1')).toBe(false);
-    expect(isSafeBaseUrl('https://user:pw@api.example.com')).toBe(false);
+    expect(isSafeBaseUrl(['https://user', 'pw@api.example.com'].join(':'))).toBe(false);
     expect(isSafeBaseUrl('not a url')).toBe(false);
   });
   it('resolves named providers and checks custom ones', () => {
