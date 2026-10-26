@@ -241,7 +241,11 @@ export function WorkspaceView() {
    * WorkspaceSkeleton, so the body, the lit pill and the reserved layout
    * cannot disagree.
    */
-  const panelBody = resolvePanelBody(urlScene);
+  const scopedHasNoDate = useReleaseStore((state) => {
+    const found = state.releases.find((release) => release.id === scopedReleaseId);
+    return Boolean(found) && !found?.releaseDate;
+  });
+  const panelBody = resolvePanelBody(urlScene, scopedHasNoDate);
   // A scene opened or closed (lib/morph.ts): tell the view transition the new
   // body has drawn, so it crossfades to the finished scene; with no view
   // transition (an older iPhone) the scene body fades in on its own instead.

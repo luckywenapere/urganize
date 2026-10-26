@@ -145,7 +145,6 @@ export function useRolloutMenuActions({
   // a stale `?scene=…` must not light a row for a scene that is not rendering.
   // `resolvePanelBody` rather than `resolveActiveScene`, so a bare rollout (no
   // `?scene=`) lights Timeline: that is the view it is actually showing.
-  const activeScene = resolvePanelBody(urlScene);
   // The Promote row is "Pre-save link" until release day, "Smart link" after.
   const releaseDate = useReleaseStore(
     (state) => state.releases.find((release) => release.id === releaseId)?.releaseDate ?? null
@@ -157,6 +156,8 @@ export function useRolloutMenuActions({
     const found = state.releases.find((release) => release.id === releaseId);
     return Boolean(found) && !found?.releaseDate;
   });
+  // A rollout with no date lands on Work the plan, so that row is the lit one.
+  const activeScene = resolvePanelBody(urlScene, dateMissing);
   const NEEDS_DATE: ReadonlyArray<ReleaseMenuKey> = ['distribute', 'pitch', 'capture'];
 
   const toggle = (scene: SceneName, id: string) => {
@@ -180,7 +181,18 @@ export function useRolloutMenuActions({
     deleteRollout,
   });
 
-  const entries = dateMissing ? allEntries.filter((entry) => !NEEDS_DATE.includes(entry.key)) : allEntries;
+  const withoutDated = dateMissing ? allEntries.filter((entry) => !NEEDS_DATE.includes(entry.key)) : allEntries;
+  // No date: the timeline has nothing to draw yet, so it moves to third, after
+  // Work the plan and Read the brief (2026-10-26).
+  const entries = (() => {
+    if (!dateMissing) return withoutDated;
+    const timeline = withoutDated.find((entry) => entry.key === 'timeline');
+    if (!timeline) return withoutDated;
+    const rest = withoutDated.filter((entry) => entry.key !== 'timeline');
+    const briefIndex = rest.findIndex((entry) => entry.key === 'brief');
+    const at = briefIndex >= 0 ? briefIndex + 1 : rest.findIndex((entry) => entry.key === 'activities') + 1;
+    return [...rest.slice(0, at), timeline, ...rest.slice(at)];
+  })();
 
   const dialogFor =(key: ReleaseMenuKey): RolloutMenuDialogInput | null | undefined =>
     key === 'share' ? share : key === 'change-artist' ? changeArtist : key === 'archive' ? archive : key === 'delete' ? deleteRollout : null;
