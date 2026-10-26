@@ -9,24 +9,13 @@ describe('links refused on purpose are marked for the stall watchdog', () => {
   // (The first-rollout lock's case lived here until 2026-10-24, when the
   // lock and its link catching were removed; see lib/rollout-offer.ts.)
 
-  // 2026-10-17: the desktop UrgAns pill opens Home's chat full width in place,
-  // so on Home its link to /dashboard/urgans never lands. Unmarked, the
-  // watchdog hard-loaded /dashboard/urgans 7s later and a computer bounced back
-  // to Home with the column open.
-  it('the top bar UrgAns pill marks its click when it stays on Home', () => {
+  // 2026-10-26: the Home and UrgAns pills are plain links between two views
+  // (Home, and the sessions layout at /dashboard/urgans), so no click of theirs
+  // is refused and nothing needs marking.
+  it('the top bar pills are plain links that refuse no click', () => {
     const src = readFileSync(join(__dirname, '../components/shell/TopNav.tsx'), 'utf8');
-    const branch = src.indexOf("area.key === 'urgans' && !event.metaKey");
-    expect(branch).toBeGreaterThan(-1);
-    const mark = src.indexOf('if (onHome) markNavigationBlocked(event.nativeEvent)', branch);
-    expect(mark).toBeGreaterThan(branch);
-  });
-
-  it('a computer landing on /dashboard/urgans opens Home with the chat full width', () => {
-    const src = readFileSync(join(__dirname, '../app/dashboard/urgans/ChappiPageClient.tsx'), 'utf8');
-    const fold = src.indexOf('useHomeChatStore.getState().setListCollapsed(true)');
-    const go = src.indexOf('router.replace(HOME_PATH)', fold);
-    expect(fold).toBeGreaterThan(-1);
-    expect(go).toBeGreaterThan(fold);
+    expect(src).not.toContain('markNavigationBlocked');
+    expect(src).not.toContain('preventDefault');
   });
 
   it('the watchdog waits for the click to finish dispatching before it watches', () => {

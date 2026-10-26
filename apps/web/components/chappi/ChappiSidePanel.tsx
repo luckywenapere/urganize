@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { History, Maximize2, MessageCircle, RotateCcw, X } from '@/components/icons';
 import { useChappiStore } from '@/stores/useChappiStore';
-import { useHomeChatStore } from '@/stores/useHomeChatStore';
 import { HOME_PATH } from '@/lib/home-path';
 import { isChappiHistoryEnabled } from '@/lib/chappi/history-flag';
 import { ChappiConversation } from './ChappiConversation';
@@ -124,7 +123,6 @@ export function ChappiSidePanel({ open, onNewRelease }: ChappiSidePanelProps) {
               // and the transcript follows. The drawer is closed first, or it
               // would pop open again on the next page after Home.
               setRailOpen(false);
-              useHomeChatStore.getState().setPane('chat');
               router.push(HOME_PATH);
             }}
             aria-label="Open UrgAns on Home"

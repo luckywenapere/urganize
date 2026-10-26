@@ -1,22 +1,17 @@
 import { create } from 'zustand';
 
 /**
- * Which side of desktop Home's right column is showing (2026-10-07): the live
- * UrgAns conversation, or the list of past sessions. A store rather than local
- * state so the top bar's "UrgAns sessions" item can open the list from any
- * page. Not saved: a reload starts on the conversation.
- */
-export type HomeChatPane = 'chat' | 'sessions';
-
-/**
- * Which conversation the 'chat' pane shows (2026-10-10): Home's permanent chat,
- * or a separate session the person started or opened from Sessions.
+ * Which conversation Home's chat shows (2026-10-10): Home's permanent chat, or
+ * a separate session the person opened. Sessions are listed on the UrgAns page
+ * (2026-10-26); Home itself has no list.
  */
 export type HomeChatMode = 'home' | 'session';
 
+/** Where the fold of Home's left column is remembered on this device. */
+export const HOME_LIST_COLLAPSED_KEY = 'urganize.home.list-collapsed';
+export const HOME_LIST_COLLAPSED_VERSION = 1;
+
 type HomeChatState = {
-  pane: HomeChatPane;
-  setPane: (pane: HomeChatPane) => void;
   mode: HomeChatMode;
   setMode: (mode: HomeChatMode) => void;
   /** Home's left column is folded away so the conversation fills the width. */
@@ -26,8 +21,6 @@ type HomeChatState = {
 };
 
 export const useHomeChatStore = create<HomeChatState>((set) => ({
-  pane: 'chat',
-  setPane: (pane) => set({ pane }),
   mode: 'home',
   setMode: (mode) => set({ mode }),
   listCollapsed: false,

@@ -3,19 +3,17 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, History, Plus } from '@/components/icons';
-import { HOME_PATH } from '@/lib/home-path';
 import { consumeArrivingFromHome } from '@/lib/home-chat-glide';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
-import { useHomeChatStore } from '@/stores/useHomeChatStore';
 import { ChappiConversation } from '@/components/chappi/ChappiConversation';
 import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
 import { ChappiPageSkeleton } from '@/components/loading/ChappiPageSkeleton';
-import { HomeSkeleton } from '@/components/loading/HomeSkeleton';
 import { RolloutCreateFlow } from '@/components/releases/RolloutCreateFlow';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { ChappiHistoryList } from '@/components/chappi/ChappiHistoryList';
+import { UrgansSessionsLayout } from '@/components/chappi/UrgansSessionsLayout';
 import { isChappiHistoryEnabled } from '@/lib/chappi/history-flag';
 import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 
@@ -34,12 +32,10 @@ const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true'
 const HISTORY_ENABLED = isChappiHistoryEnabled();
 
 /**
- * The full UrgAns page. A phone's page only since 2026-10-07 (founder call): on
- * a computer Home IS the chat (components/home/HomeDesktopSplit.tsx), so this
- * page sends a computer to Home and shows Home's skeleton while it goes, and
- * the conversation is never mounted here at that width. Links, an installed
- * app's old start page and the search bar can all still land here on a
- * computer.
+ * The full UrgAns page. On a computer it is the sessions layout (sessions on
+ * the left, the open session in the middle; 2026-10-26, founder call), and the
+ * Home pill takes you back to Home, which carries its own chat. On a phone it
+ * is one column with a Sessions toggle that swaps the list and the chat.
  */
 export default function ChappiPageClient() {
   const router = useRouter();
@@ -53,20 +49,6 @@ export default function ChappiPageClient() {
   // The sessions list is showing in place of the conversation.
   const [showSessions, setShowSessions] = useState(false);
   const hasConversation = useChappiStore((state) => state.messages.length > 0);
-
-  // A computer has the chat on Home, and UrgAns there is Home's chat full
-  // width (the top bar's UrgAns pill), so a computer that lands here opens
-  // exactly that rather than Home with its column showing (2026-10-17). One
-  // tick later on purpose: leaving Home resets the fold on a zero-delay timer
-  // (HomeDesktopSplit), and this must come after it.
-  useEffect(() => {
-    if (!CHAPPI_ENABLED || !isDesktop) return;
-    const timer = window.setTimeout(() => {
-      useHomeChatStore.getState().setListCollapsed(true);
-      router.replace(HOME_PATH);
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [isDesktop, router]);
 
   // iOS scrolls the document to reveal a focused field BEFORE the layout has
   // had a chance to react, and this page's own contract is that it never
@@ -106,14 +88,20 @@ export default function ChappiPageClient() {
 
   if (!CHAPPI_ENABLED) return null;
 
-  // On its way to Home: show Home's own loading shape so the move is seamless.
-  if (isDesktop) return <HomeSkeleton />;
-
   // ONE skeleton, rendered here (not as a route-segment Suspense fallback) —
   // same rationale as WorkspaceView: SSR serializes the skeleton, hydration
   // reconciles the same JSX, no remount.
   if (authLoading || isInitialLoading) {
     return <ChappiPageSkeleton />;
+  }
+
+  if (isDesktop) {
+    return (
+      <>
+        <UrgansSessionsLayout onNewRelease={() => setIsCreateModalOpen(true)} />
+        <RolloutCreateFlow open={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
+      </>
+    );
   }
 
   return (

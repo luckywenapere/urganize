@@ -22,8 +22,8 @@ describe('the top bar', () => {
     expect(nav).toContain('lg:grid-cols-[1fr_auto_1fr]');
     expect(nav).toContain('useShellAreas()');
     expect(nav).toContain('areas.map(');
-    expect(nav).toContain('leaveReleaseForCatalog()');
-    expect(nav).toContain('useHomeChatStore.getState().setListCollapsed(');
+    expect(nav).toContain("onClick={area.key === 'catalogue' ? leaveReleaseForCatalog : undefined}");
+    expect(nav).not.toContain('useHomeChatStore');
     expect(nav).toContain("aria-current={isActive ? 'page' : undefined}");
     expect(nav).toContain("data-tour={area.key === 'catalogue' ? 'nav-catalog' : `shell-${area.key}`}");
   });

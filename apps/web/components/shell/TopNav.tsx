@@ -1,18 +1,15 @@
 'use client';
 
 import { hasPullReveal, revealListSearch } from '@/components/shared/PullReveal';
-import { useRef } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Logo } from '@urganize/ui';
 import { Search } from '@/components/icons';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
-import { markNavigationBlocked } from '@/lib/nav-stall-watch';
-import { HOME_HREF, activeShellArea } from '@/lib/shell-nav';
+import { activeShellArea } from '@/lib/shell-nav';
 import { useShellAreas } from './useShellAreas';
 import { useShellStore } from '@/stores/useShellStore';
-import { useHomeChatStore } from '@/stores/useHomeChatStore';
 import { useArtistFilterSync } from './useArtistFilter';
 import { useNavTip } from './useNavTip';
 
@@ -75,11 +72,11 @@ import { useNavTip } from './useNavTip';
  * the side menu (Sidebar.tsx), and the page's name and tools into the page
  * bar above the page (PageBar.tsx).
  *
- * UrgAns pill (founder, 2026-10-15): right after Home. Pressing Home while on
- * Home folds Home's left column so the chat fills the width; that view IS
- * UrgAns, so the UrgAns pill lights instead of Home and takes keyboard focus.
- * Pressing UrgAns anywhere opens that same view (Home, chat full width);
- * pressing Home brings Home's column back.
+ * UrgAns pill (founder, 2026-10-15): right after Home. Since 2026-10-26 (founder
+ * call) the two pills are plain links between two views: Home (its column and
+ * its own chat) and UrgAns (the sessions on the left, the open session in the
+ * middle). Neither folds anything; Home's left column folds with the handle on
+ * its divider.
  *
  * The account menu left the bar (2026-10-17, founder, after Apple Music): the
  * profile icon sits at the foot of the side menu now (Sidebar.tsx), on every
@@ -94,14 +91,6 @@ export function TopNav() {
   const active = activeShellArea(areas, pathname);
   const openCommand = useShellStore((state) => state.openCommand);
   const tip = useNavTip();
-  const listCollapsed = useHomeChatStore((state) => state.listCollapsed);
-  const router = useRouter();
-  const urgansPill = useRef<HTMLAnchorElement | null>(null);
-  const onHome = pathname === HOME_HREF;
-  // Home with its column folded: the chat fills the screen, which is UrgAns.
-  const urgansOpenOnHome = onHome && listCollapsed;
-  // After the view switches, the pill that now names it takes focus.
-  const focusUrgans = () => requestAnimationFrame(() => urgansPill.current?.focus());
   useArtistFilterSync();
 
   return (
@@ -137,55 +126,14 @@ export function TopNav() {
 
         <nav aria-label="Main" className="hidden items-center gap-0.5 lg:flex xl:gap-1">
           {areas.map((area) => {
-            // With Home's left column folded away the pill reads as off, so it
-            // says the column is hidden and pressing it brings it back.
-            const isActive =
-              area.key === 'urgans'
-                ? active?.key === 'urgans' || urgansOpenOnHome
-                : active?.key === area.key && !(area.key === 'home' && listCollapsed);
+            const isActive = active?.key === area.key;
             return (
               <Link
                 key={area.key}
                 href={area.href}
-                ref={area.key === 'urgans' ? urgansPill : undefined}
                 {...tip.bind(area.key)}
-                onClick={(event) => {
-                  if (area.key === 'catalogue') leaveReleaseForCatalog();
-                  if (area.key === 'home') {
-                    if (onHome) {
-                      // On Home, the Home pill folds Home's left column away so
-                      // the chat fills the width (UrgAns, which lights and takes
-                      // focus); pressing it again brings the column back.
-                      event.preventDefault();
-                      markNavigationBlocked(event.nativeEvent);
-                      const willCollapse = !listCollapsed;
-                      useHomeChatStore.getState().setListCollapsed(willCollapse);
-                      if (willCollapse) focusUrgans();
-                    } else {
-                      // Arriving from elsewhere, Home opens as Home.
-                      useHomeChatStore.getState().setListCollapsed(false);
-                    }
-                  }
-                  if (area.key === 'urgans' && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
-                    // The UrgAns pill opens Home's chat full width.
-                    event.preventDefault();
-                    // Already on Home the address never changes, so tell the
-                    // link watchdog (lib/nav-stall-watch.ts) this click was
-                    // handled. Unmarked, it saw a link to /dashboard/urgans
-                    // that "never landed" and hard-loaded that page 7 seconds
-                    // later, which on a computer sends you back to Home with
-                    // the column open: UrgAns opened, then popped back to Home
-                    // (2026-10-17). From another page the push to Home moves
-                    // the address, so the watchdog sees it land.
-                    if (onHome) markNavigationBlocked(event.nativeEvent);
-                    useHomeChatStore.getState().setListCollapsed(true);
-                    if (!onHome) router.push(HOME_HREF);
-                    focusUrgans();
-                  }
-                }}
+                onClick={area.key === 'catalogue' ? leaveReleaseForCatalog : undefined}
                 aria-current={isActive ? 'page' : undefined}
-                aria-expanded={area.key === 'home' && pathname === area.href ? !listCollapsed : undefined}
-                aria-controls={area.key === 'home' && pathname === area.href ? 'home-list-column' : undefined}
                 data-tour={area.key === 'catalogue' ? 'nav-catalog' : `shell-${area.key}`}
                 className={`motion-focus motion-press inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-2.5 text-sm font-medium transition-[color,background-color,opacity] xl:px-3.5 ${
                   isActive

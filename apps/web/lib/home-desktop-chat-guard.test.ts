@@ -24,17 +24,26 @@ describe('Home as the chat on a computer', () => {
     expect(holders).toEqual(['HomeDesktopSplit.tsx']);
   });
 
-  it('hides the conversation behind the sessions list rather than unmounting it', () => {
+  it('mounts the conversation once on Home, with no sessions switch around it', () => {
     const split = read('components', 'home', 'HomeDesktopSplit.tsx');
     expect(split.match(new RegExp(CONVERSATION_TAG.source, 'g'))).toHaveLength(1);
-    // Not rendered inside a condition: the list toggles a class around it.
-    expect(split).not.toMatch(/\?\s*\(?\s*<ChappiConversation/);
-    expect(split).not.toMatch(/&&\s*\(?\s*<ChappiConversation/);
+    expect(split).not.toContain('ChappiHistoryList');
   });
 
-  it('sends a computer from the full chat page to Home', () => {
+  it('shows a computer the sessions layout on the full chat page, not Home', () => {
     const page = read('app', 'dashboard', 'urgans', 'ChappiPageClient.tsx');
-    expect(page).toContain('router.replace(HOME_PATH)');
+    expect(page).toContain('<UrgansSessionsLayout');
+    expect(page).not.toContain('router.replace(HOME_PATH)');
+    const layout = read('components', 'chappi', 'UrgansSessionsLayout.tsx');
+    expect(layout).toContain('<ChappiHistoryList');
+    expect(layout).toMatch(/<ChappiConversation[\s/>]/);
+  });
+
+  it('folds Home’s left column with a handle on the divider, remembered on this device', () => {
+    const split = read('components', 'home', 'HomeDesktopSplit.tsx');
+    expect(split).toContain('aria-controls="home-list-column"');
+    expect(split).toContain('writePersistedState(HOME_LIST_COLLAPSED_KEY');
+    expect(split).toContain('readPersistedState(HOME_LIST_COLLAPSED_KEY');
   });
 
   it('expands the drawer onto Home, not onto the full chat page', () => {

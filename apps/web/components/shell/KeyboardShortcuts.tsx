@@ -9,7 +9,6 @@ import { GO_SEQUENCE_MS, decideGoKey, isBareKey } from '@/lib/keyboard-shortcuts
 import { HOME_HREF } from '@/lib/shell-nav';
 import { isTypingTarget } from '@/lib/tasks';
 import { useChappiStore } from '@/stores/useChappiStore';
-import { useHomeChatStore } from '@/stores/useHomeChatStore';
 import { useShellStore } from '@/stores/useShellStore';
 import { useShellAreas } from './useShellAreas';
 
@@ -38,15 +37,6 @@ export function KeyboardShortcuts() {
     const goTo = (key: string) => {
       const area = latest.current.areas.find((item) => item.key === key);
       if (!area) return;
-      const onHome = latest.current.pathname === HOME_HREF;
-      const homeChat = useHomeChatStore.getState();
-      if (key === 'urgans') {
-        // The same view the UrgAns pill opens: Home's chat full width.
-        homeChat.setListCollapsed(true);
-        if (!onHome) router.push(HOME_HREF);
-        return;
-      }
-      if (key === 'home') homeChat.setListCollapsed(false);
       if (key === 'catalogue') leaveReleaseForCatalog();
       router.push(area.href);
     };
