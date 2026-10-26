@@ -21,9 +21,15 @@ export class AltlinkError extends Error {
   }
 }
 
-/** 422 missing_identifier means "not ready yet", never an error to show. */
+/** 422 missing_release_identifier (missing_identifier before) means "not ready yet", never an error to show. */
 export const isNotReady = (error: unknown): boolean =>
-  error instanceof AltlinkError && error.status === 422 && error.code === 'missing_identifier';
+  error instanceof AltlinkError &&
+  error.status === 422 &&
+  (error.code === 'missing_release_identifier' || error.code === 'missing_identifier');
+
+/** 404 release_not_found_on_platforms: a released link with no store listing yet. Altlink says retry later. */
+export const isNotOnStoresYet = (error: unknown): boolean =>
+  error instanceof AltlinkError && error.status === 404 && error.code === 'release_not_found_on_platforms';
 
 export const isAltlinkConfigured = (): boolean => Boolean(process.env.ALTLINK_API_KEY?.trim());
 
@@ -45,17 +51,35 @@ export function backoffMs(attempt: number, retryAfter: string | null, random = M
   return 500 * 2 ** attempt + Math.floor(random() * 250);
 }
 
+// The body of POST /v1/links, from Altlink's own docs (docs.altlink.co,
+// "Create a smart link", read 2026-10-26). Required: external_release_id,
+// title, artist (the credit line), release_type, release_date (YYYY-MM-DD,
+// past dates too: a past or today's date makes a live link, a future one a
+// pre-save) and status ("live" or "approved"; anything else is 409
+// release_not_live). Plus one of isrc / upc. Until that day this type said
+// artist_name and left release_type and status out, so every create was
+// refused with 422 invalid_request and no link was ever made.
+export type AltlinkReleaseType = 'single' | 'ep' | 'album' | 'playlist';
+
 export type CreateLinkInput = {
-  title: string;
-  artist_name: string;
   external_release_id: string;
+  title: string;
+  artist: string;
+  release_type: AltlinkReleaseType;
+  release_date: string;
+  status: 'live' | 'approved';
   upc?: string;
   isrc?: string;
-  release_date?: string;
   artwork_url?: string;
+  /** Not in Altlink's documented body; sent and tolerated since the pilot began. */
   creator_email?: string;
-  timezone: string;
+  timezone?: string;
 };
+
+/** Our release type as Altlink's. Anything that is not an EP or an album is a single. */
+export function toAltlinkReleaseType(value: string | null | undefined): AltlinkReleaseType {
+  return value === 'ep' || value === 'album' ? value : 'single';
+}
 
 export function createAltlinkClient(options: AltlinkClientOptions = {}) {
   const apiKey = (options.apiKey ?? process.env.ALTLINK_API_KEY ?? '').trim();

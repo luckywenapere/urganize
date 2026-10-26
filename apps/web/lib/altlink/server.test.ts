@@ -152,6 +152,9 @@ describe('syncSmartLink', () => {
     expect(altlink.createLink).toHaveBeenCalledTimes(1);
     expect(altlink.createLink.mock.calls[0][0]).toMatchObject({
       external_release_id: RELEASE_ID,
+      artist: 'Tems',
+      release_type: 'single',
+      status: 'approved',
       upc: '123456789012',
       release_date: '2026-11-06',
       creator_email: 'manager@example.com',
@@ -191,11 +194,11 @@ describe('syncSmartLink', () => {
     expect(tables.release_smart_links ?? []).toHaveLength(0);
   });
 
-  it('makes a smart link (no date sent) when the release day has passed', async () => {
+  it('makes a live link when the release day has passed: the date is still sent (Altlink requires it), status live', async () => {
     const { client: db } = fakeDb(seed({ date: '2026-09-01' }));
     const altlink = fakeClient();
     await syncSmartLink(db, RELEASE_ID, { client: altlink, now: NOW });
-    expect(altlink.createLink.mock.calls[0][0].release_date).toBeUndefined();
+    expect(altlink.createLink.mock.calls[0][0]).toMatchObject({ release_date: '2026-09-01', status: 'live' });
   });
 
   it('treats 422 missing_identifier as not ready: no error, no row left', async () => {

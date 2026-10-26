@@ -37,6 +37,11 @@ export async function POST(request: NextRequest, context: { params: Promise<{ ar
         return NextResponse.json({ error: 'Links are not available right now.', reason: 'unavailable' }, { status: 503 });
       case 'rate_limited':
         return NextResponse.json({ error: 'Altlink is busy. Try again in a minute.', reason: 'rate_limited' }, { status: 429 });
+      case 'not_on_stores':
+        return NextResponse.json(
+          { error: 'Streaming services do not list this release yet. Try again later.', reason: 'not_on_stores' },
+          { status: 409 }
+        );
       case 'not_found':
         return NextResponse.json({ error: 'Release not found.' }, { status: 404 });
       default:

@@ -8,7 +8,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { RELEASE_ASSETS_BUCKET, generateSignedUrl } from '@/lib/asset-helpers';
 import { readTestRelease } from '@/lib/test-release';
-import { AltlinkError, createAltlinkClient, isAltlinkConfigured, isNotReady, type AltlinkClient } from './client';
+import { AltlinkError, createAltlinkClient, isAltlinkConfigured, isNotReady, toAltlinkReleaseType, type AltlinkClient } from './client';
 import {
   ALTLINK_TIMEZONE,
   decideCreate,
@@ -255,13 +255,17 @@ export async function syncSmartLink(
   const sent = { sent_upc: facts.upc, sent_isrc: facts.isrc, sent_artwork_asset_id: facts.artworkAssetId };
   try {
     const [email, artwork] = await Promise.all([creatorEmail(admin, facts), artworkUrl(admin, facts.artworkAssetId)]);
+    const releaseDay = releaseYmd(facts.releaseDate) as string;
     const link = await client.createLink({
       title: facts.title as string,
-      artist_name: facts.artistName as string,
+      artist: facts.artistName as string,
       external_release_id: releaseId,
+      release_type: toAltlinkReleaseType(facts.releaseType),
+      // Always sent: Altlink requires it and decides pre-save or live from it.
+      release_date: releaseDay,
+      status: decision.type === 'pre_save' ? 'approved' : 'live',
       ...(facts.upc ? { upc: facts.upc } : {}),
       ...(facts.isrc ? { isrc: facts.isrc } : {}),
-      ...(decision.releaseDate ? { release_date: decision.releaseDate } : {}),
       ...(artwork ? { artwork_url: artwork } : {}),
       ...(email ? { creator_email: email } : {}),
       timezone: ALTLINK_TIMEZONE,

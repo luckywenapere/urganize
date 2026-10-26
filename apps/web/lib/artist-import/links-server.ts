@@ -1,6 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { AltlinkError, createAltlinkClient, isAltlinkConfigured, type AltlinkClient, type CreateLinkInput } from '@/lib/altlink/client';
-import { ALTLINK_TIMEZONE, isAltlinkEnabled, isReleasedOn, normalizeIsrc, normalizeUpc, releaseYmd } from '@/lib/altlink/rules';
+import {
+  AltlinkError,
+  createAltlinkClient,
+  isAltlinkConfigured,
+  isNotOnStoresYet,
+  isNotReady,
+  toAltlinkReleaseType,
+  type AltlinkClient,
+} from '@/lib/altlink/client';
+import { ALTLINK_TIMEZONE, isAltlinkEnabled, isReleasedOn, lagosYmd, normalizeIsrc, normalizeUpc, releaseYmd } from '@/lib/altlink/rules';
+
+const lagosToday = (nowMs: number) => lagosYmd(nowMs);
 import { CATALOGUE_TABLE } from './server';
 import {
   LINKS_PER_DAY_SETTING_KEY,
@@ -120,6 +130,7 @@ export type MakeLinkOutcome =
   | { kind: 'busy' }
   | { kind: 'unavailable' }
   | { kind: 'rate_limited' }
+  | { kind: 'not_on_stores' }
   | { kind: 'failed' }
   | { kind: 'not_found' };
 
@@ -130,6 +141,7 @@ type CatalogueRow = {
   title: string;
   release_date: string | null;
   cover_url: string | null;
+  kind: string | null;
   upc: string | null;
   isrc: string | null;
 };
@@ -147,7 +159,7 @@ export async function makeCatalogueLink(
   const nowMs = input.nowMs ?? Date.now();
   const rowResult = await admin
     .from(CATALOGUE_TABLE)
-    .select('id,workspace_id,artist_id,title,release_date,cover_url,upc,isrc')
+    .select('id,workspace_id,artist_id,title,release_date,cover_url,kind,upc,isrc')
     .eq('id', input.releaseRowId)
     .maybeSingle();
   const row = rowResult.data as CatalogueRow | null;
@@ -198,55 +210,23 @@ export async function makeCatalogueLink(
   try {
     const artist = await admin.from('artists').select('name').eq('id', row.artist_id).maybeSingle();
     const client = input.client ?? createAltlinkClient();
-    // The minimal request: what Altlink must have, nothing that can fail
-    // validation on its own. The id is the catalogue row's own uuid, the same
-    // shape the rollout path sends.
-    const minimal: CreateLinkInput = {
-      title: row.title,
-      artist_name: String((artist.data as { name?: string } | null)?.name ?? ''),
+    // Altlink's documented body (lib/altlink/client.ts CreateLinkInput). The
+    // date is always sent: Altlink makes a live link for a past date and a
+    // pre-save for a future one. The id is the catalogue row's own uuid.
+    const released = !row.release_date || isReleasedOn(row.release_date, nowMs);
+    const link = await client.createLink({
       external_release_id: row.id,
+      title: row.title,
+      artist: String((artist.data as { name?: string } | null)?.name ?? ''),
+      release_type: toAltlinkReleaseType(row.kind),
+      release_date: releaseYmd(row.release_date) ?? lagosToday(nowMs),
+      status: released ? 'live' : 'approved',
       ...(upc ? { upc } : {}),
       ...(isrc ? { isrc } : {}),
-      timezone: ALTLINK_TIMEZONE,
-    };
-    const full: CreateLinkInput = {
-      ...minimal,
-      // A date is sent only for a release still to come (a pre-save). Past and
-      // today's releases are plain smart links with no date (the same rule
-      // decideCreate follows, BUILD-NOTES-ALTLINK.md).
-      ...(row.release_date && !isReleasedOn(row.release_date, nowMs) ? { release_date: releaseYmd(row.release_date) as string } : {}),
       ...(row.cover_url ? { artwork_url: row.cover_url } : {}),
       ...(input.userEmail ? { creator_email: input.userEmail } : {}),
-    };
-    let link;
-    try {
-      link = await client.createLink(full);
-    } catch (firstError) {
-      // Altlink said the request body was not valid and the extras are the
-      // likely cause (cover address, creator email). Try once more with the
-      // minimum; the cover is added afterwards on a best-effort basis.
-      if (!(firstError instanceof AltlinkError) || firstError.code !== 'invalid_request' || full === minimal) throw firstError;
-      console.error('[catalogue-link] full request refused, trying the minimum', {
-        releaseRowId: row.id,
-        message: firstError.message,
-        detail: firstError.detail,
-      });
-      try {
-        link = await client.createLink(minimal);
-      } catch (secondError) {
-        if (secondError instanceof AltlinkError && !secondError.detail && firstError.detail) {
-          secondError.detail = firstError.detail;
-        }
-        throw secondError;
-      }
-      if (row.cover_url) {
-        try {
-          await client.patchLink(link.id, { artwork_url: row.cover_url });
-        } catch {
-          // The link works without its cover.
-        }
-      }
-    }
+      timezone: ALTLINK_TIMEZONE,
+    });
     if (!link.url) throw new AltlinkError(502, 'bad_response', 'Altlink sent back no link address.');
     await admin
       .from(CATALOGUE_LINKS_TABLE)
@@ -261,7 +241,13 @@ export async function makeCatalogueLink(
         ? `${error.code}: ${error.message}${error.detail ? ` ${error.detail}` : ''}`.slice(0, 500)
         : 'error';
     console.error('[catalogue-link] create failed', { releaseRowId: row.id, code, status: error instanceof AltlinkError ? error.status : 0, message: error instanceof Error ? error.message : '', detail: error instanceof AltlinkError ? error.detail : null });
-    if (error instanceof AltlinkError && error.status === 422 && error.code === 'missing_identifier') {
+    if (isNotOnStoresYet(error)) {
+      // Altlink found no store listing for a released title yet; nothing was
+      // made, so the claim goes and the attempt does not count.
+      await admin.from(CATALOGUE_LINKS_TABLE).delete().eq('id', claimId).eq('status', 'pending');
+      return { kind: 'not_on_stores' };
+    }
+    if (isNotReady(error)) {
       await admin.from(CATALOGUE_LINKS_TABLE).delete().eq('id', claimId).eq('status', 'pending');
       return { kind: 'no_code' };
     }

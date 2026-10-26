@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AltlinkError, backoffMs, createAltlinkClient, isNotReady } from './client';
+import { AltlinkError, backoffMs, createAltlinkClient, isNotOnStoresYet, isNotReady, toAltlinkReleaseType } from './client';
 
 const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', ...headers } });
@@ -20,8 +20,11 @@ const LINK = {
 
 const input = {
   title: 'Free Mind',
-  artist_name: 'Tems',
+  artist: 'Tems',
   external_release_id: 'rel-1',
+  release_type: 'single' as const,
+  release_date: '2026-11-06',
+  status: 'approved' as const,
   upc: '123456789012',
   timezone: 'Africa/Lagos',
 };
@@ -88,5 +91,31 @@ describe('createAltlinkClient', () => {
     expect(backoffMs(2, null, r)).toBe(2000);
     expect(backoffMs(0, '3', r)).toBe(3000);
     expect(backoffMs(0, '120', r)).toBe(500);
+  });
+});
+
+describe('the documented create body (docs.altlink.co, 2026-10-26)', () => {
+  it('sends artist, release_type, release_date and status, the four fields Altlink requires', async () => {
+    const fetchImpl = vi.fn(async () => json(201, LINK));
+    const client = createAltlinkClient({ apiKey: 'k', fetchImpl, sleep: async () => {} });
+    await client.createLink(input);
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body).toMatchObject({ artist: 'Tems', release_type: 'single', release_date: '2026-11-06', status: 'approved' });
+    expect(body).not.toHaveProperty('artist_name');
+  });
+
+  it('maps our release types onto Altlink’s', () => {
+    expect(toAltlinkReleaseType('ep')).toBe('ep');
+    expect(toAltlinkReleaseType('album')).toBe('album');
+    expect(toAltlinkReleaseType('single')).toBe('single');
+    expect(toAltlinkReleaseType('music_video')).toBe('single');
+    expect(toAltlinkReleaseType(null)).toBe('single');
+  });
+
+  it('reads the documented error codes', () => {
+    expect(isNotReady(new AltlinkError(422, 'missing_release_identifier', 'x'))).toBe(true);
+    expect(isNotOnStoresYet(new AltlinkError(404, 'release_not_found_on_platforms', 'x'))).toBe(true);
+    expect(isNotOnStoresYet(new AltlinkError(404, 'link_not_found', 'x'))).toBe(false);
   });
 });

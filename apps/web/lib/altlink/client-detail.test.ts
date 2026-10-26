@@ -4,7 +4,15 @@ import { AltlinkError, createAltlinkClient } from './client';
 const reply = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
-const input = { title: 'T', artist_name: 'A', external_release_id: 'x', timezone: 'Africa/Lagos' };
+const input = {
+  title: 'T',
+  artist: 'A',
+  external_release_id: 'x',
+  release_type: 'single' as const,
+  release_date: '2026-01-01',
+  status: 'live' as const,
+  timezone: 'Africa/Lagos',
+};
 
 describe('AltlinkError.detail', () => {
   it('keeps what else Altlink said about a refused request, so a failure can name the field', async () => {
