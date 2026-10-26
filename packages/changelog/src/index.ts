@@ -41,13 +41,23 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.183.0",
+    version: "1.184.0",
     title: "Bring in an artist's releases",
     tag: "App",
     date: "October 26, 2026",
     highlights: [
       "Type an artist's name when you sign up and Urganize finds them and brings in their releases.",
       "Add as many artists as you like. They show up in your catalogue, on each artist's page.",
+    ],
+  },
+  {
+    version: "1.183.0",
+    title: "Voice notes and the share sheet",
+    tag: "Rollouts",
+    date: "October 26, 2026",
+    highlights: [
+      "Record a voice note, or bring ones from WhatsApp. Urganize writes them down and sorts them like any other note.",
+      "On Android, share a chat, a voice note, a photo or some text straight to Urganize from WhatsApp. It opens ready to sort.",
     ],
   },
   {
