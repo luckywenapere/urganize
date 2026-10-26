@@ -1349,8 +1349,11 @@ export function WorkspaceView() {
   // action (the cover art, the details, invite the team) with a short
   // checklist, and it stands in for the next moves until every step is done or
   // it is hidden, so a fresh rollout offers one thing to do rather than four.
+  // While the idea card leads a new rollout (no plan yet) nothing else sits above
+  // it: the first steps and next moves would say the same thing twice (2026-10-26).
+  const ideaCardLeads = ROLLOUT_IDEAS_ENABLED && scopedReleaseIsOwn && onlyPreProductionWork(scopedTasks);
   const nextMovesBanner =
-    bodyIsMainView && scopedReleaseSlim && !scopedReleaseSlim.isTest ? (
+    bodyIsMainView && scopedReleaseSlim && !scopedReleaseSlim.isTest && !ideaCardLeads ? (
       <RolloutFirstSteps
         state={firstSteps}
         fallback={
