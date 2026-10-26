@@ -57,6 +57,8 @@ export type HomeTaskItem = {
   releaseTitle: string | null;
   artistName: string | null;
   dueDate: string | null;
+  /** Planner v2 timing for an undated plan task ("4 weeks before"); null once dated. */
+  relativeWhen?: string | null;
   status: TaskStatus;
   priority: TaskPriority;
   /** Who the task is assigned to — used by Waiting on others and, for an

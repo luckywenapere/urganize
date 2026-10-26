@@ -52,7 +52,10 @@ export type OneThingItem =
 export const ONE_THING_MAX = 3;
 
 function dueOf(task: HomeTaskItem, now: Date): { label: string; late: boolean } {
-  const due = getRelativeDueLabel({ dueDate: task.dueDate, completedAt: null, compressedRunway: false }, now);
+  const due = getRelativeDueLabel(
+    { dueDate: task.dueDate, completedAt: null, compressedRunway: false, relativeWhen: task.relativeWhen },
+    now
+  );
   return { label: due.label, late: due.isOverdue };
 }
 

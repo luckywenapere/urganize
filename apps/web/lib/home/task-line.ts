@@ -5,6 +5,7 @@ type TaskLineInput = {
   releaseTitle: string | null;
   artistName: string | null;
   dueDate: string | null;
+  relativeWhen?: string | null;
 };
 
 /**
@@ -32,7 +33,10 @@ export function describeTaskLine(
   task: TaskLineInput,
   now: Date = new Date(),
 ): { title: string; rest: string; joiner: string; text: string; isOverdue: boolean } {
-  const due = getRelativeDueLabel({ dueDate: task.dueDate, completedAt: null, compressedRunway: false }, now);
+  const due = getRelativeDueLabel(
+    { dueDate: task.dueDate, completedAt: null, compressedRunway: false, relativeWhen: task.relativeWhen },
+    now
+  );
   const dueClause = due.label.charAt(0).toLowerCase() + due.label.slice(1);
 
   // A title that already ends in punctuation would put it before our comma.

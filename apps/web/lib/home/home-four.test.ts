@@ -9,6 +9,7 @@ import {
   pickHomeLayout,
 } from './home-four';
 import type { HomeReleaseSummary, HomeTaskItem } from './types';
+import { describeTaskLine } from './task-line';
 
 const release = (over: Partial<HomeReleaseSummary>): HomeReleaseSummary => ({
   id: 'r1',
@@ -139,5 +140,14 @@ describe('golden layout B helpers', () => {
     expect(describeDone({ done: 12, total: 40 })).toEqual({ done: 12, total: 40 });
     expect(describeDone({ done: 0, total: 0 })).toBeNull();
     expect(describeDone(null)).toBeNull();
+  });
+});
+
+describe('undated planner tasks on Home', () => {
+  it('shows the planner timing instead of "No due date"', () => {
+    const task = { dueDate: null, relativeWhen: '4 weeks before' } as Parameters<typeof describeTaskLine>[0];
+    expect(describeTaskLine({ ...task, title: 'Book studio', releaseTitle: 'EP', artistName: null }).text).toBe(
+      'Book studio in EP, 4 weeks before.'
+    );
   });
 });

@@ -28,6 +28,7 @@ function toHomeTaskItem(task: Task, releaseLookup: ReadonlyMap<string, ReleaseLo
     releaseTitle: release?.title ?? null,
     artistName: release?.artistName ?? null,
     dueDate: task.dueDate,
+    relativeWhen: task.relativeWhen ?? null,
     status: task.status,
     priority: task.priority,
     assigneeName: task.assignee?.name ?? null,
