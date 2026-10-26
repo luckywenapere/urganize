@@ -253,6 +253,12 @@ type TasksPanelProps = {
    */
   bannerReplacesEmptyState?: boolean;
   /**
+   * The simple plan view (2026-10-26, declutter): a rollout with a plan but no
+   * release day yet. One flat list under "Your plan", no Group by, search or
+   * filter row and no group header with its bar; only Select stays.
+   */
+  simple?: boolean;
+  /**
    * Lets the plan tools move up into the desktop page bar. False on the
    * phone-only instance WorkspaceView keeps mounted (hidden) on a computer:
    * its portal escaped the `lg:hidden` wrapper and put a second Filter and a
@@ -296,6 +302,7 @@ export function TasksPanel({
   activitiesBanner,
   activitiesFooter,
   bannerReplacesEmptyState = false,
+  simple = false,
   pageBarTools = true,
   phoneMenu = false,
 }: TasksPanelProps) {
@@ -696,7 +703,7 @@ export function TasksPanel({
         sceneContent
       ) : (
       <div className="space-y-3">
-        {scopedRelease && tasks.length > 0 ? (
+        {scopedRelease && tasks.length > 0 && !simple ? (
           <PlanListControls
             plan={plan}
             phoneSearchOnly
@@ -711,7 +718,7 @@ export function TasksPanel({
         ) : null}
         {/* Below lg Group by keeps its own row; on a computer it is on the
             page bar line with the other plan tools (2026-10-15). */}
-        {scopedRelease && tasks.length > 0 ? (
+        {scopedRelease && tasks.length > 0 && !simple ? (
           <div className="flex items-center justify-between gap-3 lg:hidden">
             {groupByControl(false)}
             {selectControl(false)}
@@ -757,7 +764,32 @@ export function TasksPanel({
             </button>
           </div>
         ) : null}
-        {showPhases && tasks.length > 0
+        {simple && tasks.length > 0 ? (
+          <section aria-label="Your plan">
+            <div className="mb-2 flex items-baseline gap-2 px-1">
+              <h3 className="font-display text-base font-semibold text-content-primary">Your plan</h3>
+              <span className="text-sm text-content-tertiary">
+                {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
+              </span>
+              <span className="ml-auto">{selectControl(false)}</span>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
+              {sectionOrder
+                .flatMap((sectionKey) => sections[sectionKey])
+                .map((task) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    density="compact"
+                    startHere={task.id === startHereId}
+                    onClick={(t) => openTask(t.id)}
+                    selection={rowSelection(task)}
+                  />
+                ))}
+            </div>
+          </section>
+        ) : null}
+        {showPhases && !simple && tasks.length > 0
           ? phaseSummaries.map((summary) => {
               const rows = phaseRows[summary.phase];
               // A search or filter shows only the phases it matched.
@@ -798,7 +830,7 @@ export function TasksPanel({
               );
             })
           : null}
-        {showPhases ? null : sectionOrder.map((sectionKey) => {
+        {showPhases || simple ? null : sectionOrder.map((sectionKey) => {
           const sectionTasks = sections[sectionKey];
           // A search or filter opens every bucket it matched: the answer to a
           // question should not sit behind a closed drawer.
@@ -899,7 +931,7 @@ export function TasksPanel({
             </div>
           );
         })}
-        {scopedRelease && tasks.length > 0 ? <PlanShowAllToggle plan={plan} /> : null}
+        {scopedRelease && tasks.length > 0 && !simple ? <PlanShowAllToggle plan={plan} /> : null}
       </div>
       )}
 

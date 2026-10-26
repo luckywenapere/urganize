@@ -1164,6 +1164,16 @@ export function WorkspaceView() {
         artistId={scopedReleaseSlim.artistId ?? null}
       />
     ) : null;
+  // The simple plan view (2026-10-26, declutter): a plan with no release day,
+  // on Work the plan, for the owner who has the date row. One flat list; the
+  // date step and the idea move to a side column on a computer.
+  const simplePlanView = Boolean(
+    setReleaseDateBanner &&
+      !editorialPitchBanner &&
+      !testReleaseBanner &&
+      panelBody === 'activities' &&
+      scopedTasks.length > 0
+  );
   const bannerParts = [releaseReviewCard, pinnedConfirmDateCard, otherActivitiesBanner].filter(Boolean);
   const activitiesBannerNode =
     bannerParts.length > 1 ? (
@@ -1343,6 +1353,7 @@ export function WorkspaceView() {
     ROLLOUT_IDEAS_ENABLED && bodyIsMainView && scopedReleaseSlim && !scopedReleaseSlim.isTest ? (
       <RolloutIdeasCard
         key={scopedReleaseSlim.id}
+        condensed={simplePlanView}
         release={{ id: scopedReleaseSlim.id, title: scopedReleaseSlim.title }}
         hasPlan={!onlyPreProductionWork(scopedTasks)}
         canDraft={PLANNER_ENABLED && scopedReleaseIsOwn && !isPlanGenerating}
@@ -1670,6 +1681,7 @@ export function WorkspaceView() {
                   activitiesBanner={activitiesBannerNode}
                   activitiesFooter={roleGapsFooter}
                   bannerReplacesEmptyState={bannerReplacesEmptyState}
+                  simple={simplePlanView}
                 />
                 {/* The per-release files surface lives inside TasksPanel as an
                     inline collapsible segment at the top of the task area,
@@ -1720,6 +1732,14 @@ export function WorkspaceView() {
                 panelActivitiesBanner={activitiesBannerNode}
                 panelActivitiesFooter={roleGapsFooter}
                 panelBannerReplacesEmptyState={bannerReplacesEmptyState}
+                simpleSide={
+                  simplePlanView && isDesktopViewport ? (
+                    <>
+                      {setReleaseDateBanner}
+                      {ideasBanner}
+                    </>
+                  ) : undefined
+                }
               />
             ) : null}
           </div>

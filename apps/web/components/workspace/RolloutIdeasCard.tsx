@@ -54,7 +54,10 @@ export function RolloutIdeasCard({
   canDraft,
   onDraftWithAi,
   onWriteMyself,
+  condensed = false,
 }: {
+  /** The simple plan view: a short read-only summary with Edit, not the full card. */
+  condensed?: boolean;
   release: { id: string; title: string };
   /** The rollout already has its plan (more than the seeded pre-production work). */
   hasPlan: boolean;
@@ -71,6 +74,7 @@ export function RolloutIdeasCard({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [askingWho, setAskingWho] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const fromVoiceRef = useRef(false);
 
   const load = useCallback(async () => {
@@ -141,6 +145,31 @@ export function RolloutIdeasCard({
       setSaving(false);
     }
   };
+
+  if (condensed && !expanded && data.notes.length > 0 && !typing && !askingWho) {
+    return (
+      <section
+        aria-labelledby={`ideas-title-${release.id}`}
+        className="rounded-[20px] border border-stroke-default bg-bg-surface px-5 py-4"
+      >
+        <div className="flex items-center gap-3">
+          <h2 id={`ideas-title-${release.id}`} className="text-base font-semibold text-content-primary">
+            Your idea
+          </h2>
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="motion-focus ml-auto min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary underline hover:text-content-primary"
+          >
+            Edit
+          </button>
+        </div>
+        <p className="line-clamp-3 break-words text-sm text-content-secondary">
+          {data.notes.map((note) => note.content).join(' ')}
+        </p>
+      </section>
+    );
+  }
 
   const ownerFirst = (data.ownerName || '').split(/\s+/)[0] || '';
   const title = path === 'chime_in' ? COPY.chimeInTitle(ownerFirst) : COPY.title;
