@@ -2,7 +2,7 @@
 
 import { countProgress } from '@/lib/task-progress';
 import { onlyPreProductionWork } from '@/lib/pre-production';
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { SIDEBAR_SLOT_ROLLOUT, useSidebarSlot } from '@/components/shell/Sidebar';
 import { usePageBarCrumbSlot, usePageBarEndSlot } from '@/components/shell/PageBar';
@@ -124,6 +124,19 @@ export function WorkspaceDesktopFocused({
   const rolloutMenuSlot = useSidebarSlot(SIDEBAR_SLOT_ROLLOUT);
   const crumbSlot = usePageBarCrumbSlot(true);
   const endSlot = usePageBarEndSlot(true);
+  // True once the tab row has scrolled up to the top bar and is holding there.
+  const tabsSentinelRef = useRef<HTMLDivElement | null>(null);
+  const [tabsStuck, setTabsStuck] = useState(false);
+  useEffect(() => {
+    const node = tabsSentinelRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setTabsStuck(!entry.isIntersecting && entry.boundingClientRect.top < 80),
+      { rootMargin: '-72px 0px 0px 0px' }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [rolloutMenuSlot]);
   // The same derived status the Catalogue row shows, so opening a rollout
   // that read Released there does not say Draft here.
   const status = displayStatus({
@@ -206,15 +219,15 @@ export function WorkspaceDesktopFocused({
     </div>
   );
 
-  // Viewport-locked, as it has always been: the page never scrolls here; long
-  // lists scroll inside the panel so the header and tabs never leave view. The
-  // 10.5rem is the shell around it: top bar 4.5rem + section row 3.5rem + main's
-  // bottom padding 2.5rem. (Since URG-254 the section row is the page bar,
-  // PageBar's h-14, so the sum is unchanged.)
+  // The page scrolls (2026-10-26, founder: "let it move with the page so users
+  // can breathe"): the header and tabs scroll away with the list instead of
+  // staying pinned while the list scrolls inside a box. It still fills the
+  // screen when short. The 10.5rem is the shell around it: top bar 4.5rem +
+  // page bar 3.5rem + main's bottom padding 2.5rem.
   return (
     <div
       className={`workspace-mode-enter flex flex-col gap-4 ${
-        pageScroll ? '' : 'h-[calc(100dvh-10.5rem)] min-h-[30rem]'
+        pageScroll ? '' : 'min-h-[calc(100dvh-10.5rem)]'
       }`}
     >
       <div className="shrink-0">
@@ -233,23 +246,33 @@ export function WorkspaceDesktopFocused({
             {endSlot ? null : actions}
           </div>
         ) : null}
+      </div>
 
-        {/* The rollout's menu (URG-254, founder call 2026-10-14): nested
-            under Rollouts in the desktop side menu when it is on screen, and
-            a row of tabs here when the side menu is folded away. */}
-        {rolloutMenuSlot ? (
-          createPortal(
-            <RolloutTabs
-              releaseId={scopedRelease.id}
-              variant="side"
-              share={share}
-              archive={archive}
-              deleteRollout={deleteRollout}
-            />,
-            rolloutMenuSlot
-          )
-        ) : (
-          <div className="mt-4 border-b border-stroke-subtle pb-2">
+      {/* The rollout's menu (URG-254, founder call 2026-10-14): nested
+          under Rollouts in the desktop side menu when it is on screen, and
+          a row of tabs here when the side menu is folded away. The row
+          scrolls up with the page, then holds just under the top bar
+          (2026-10-26, founder), gaining a background and a soft shadow as it
+          locks. It sits outside the header block above, so it can stick for
+          the whole page and not only inside that block. */}
+      {rolloutMenuSlot ? (
+        createPortal(
+          <RolloutTabs
+            releaseId={scopedRelease.id}
+            variant="side"
+            share={share}
+            archive={archive}
+            deleteRollout={deleteRollout}
+          />,
+          rolloutMenuSlot
+        )
+      ) : (
+        <>
+          <div ref={tabsSentinelRef} aria-hidden="true" className="-mb-4 h-0" />
+          <div
+            data-stuck={tabsStuck ? '' : undefined}
+            className="sticky top-[72px] z-20 -mx-8 border-b border-stroke-subtle bg-bg-base px-8 pb-2 pt-0 transition-[padding,box-shadow] duration-200 ease-out data-[stuck]:pt-2 data-[stuck]:shadow-[0_8px_16px_-12px_rgb(0_0_0/0.6)]"
+          >
             <RolloutTabs
               releaseId={scopedRelease.id}
               share={share}
@@ -257,18 +280,18 @@ export function WorkspaceDesktopFocused({
               deleteRollout={deleteRollout}
             />
           </div>
-        )}
-      </div>
+        </>
+      )}
 
-      {/* The panel. TasksPanel owns its own scroll, so this stacks the one-time
-          banner above it and lets the panel's flex-1 fill the rest. */}
+      {/* The panel: the one-time banner above it, the panel below, all on the
+          page's own scroll. */}
       <div
         className={
           simpleSide
-            ? 'grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_20rem] items-start gap-4 overflow-hidden xl:grid-cols-[minmax(0,1fr)_24rem]'
+            ? 'grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_20rem] items-start gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]'
             : pageScroll
               ? 'flex min-w-0 flex-col gap-4'
-              : 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'
+              : 'flex min-w-0 flex-1 flex-col'
         }
       >
         {simpleSide ? null : pageScroll ? (
@@ -276,7 +299,7 @@ export function WorkspaceDesktopFocused({
         ) : (
           banner
         )}
-        <div className={pageScroll ? 'order-2 flex min-w-0 flex-col' : 'flex h-full min-h-0 min-w-0 flex-col overflow-hidden'}>
+        <div className={pageScroll ? 'order-2 flex min-w-0 flex-col' : 'flex min-w-0 flex-1 flex-col'}>
           <TasksPanel
             tasks={scopedTasks}
             scopedRelease={scopedRelease}
@@ -287,7 +310,7 @@ export function WorkspaceDesktopFocused({
             simple={Boolean(simpleSide)}
           />
         </div>
-        {simpleSide ? <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">{simpleSide}</div> : null}
+        {simpleSide ? <div className="flex flex-col gap-3">{simpleSide}</div> : null}
       </div>
     </div>
   );

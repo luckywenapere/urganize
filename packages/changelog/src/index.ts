@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.192.5",
+    tag: "Rollouts",
+    date: "October 26, 2026",
+    highlights: [
+      "On a computer, your rollout page now scrolls as one page. The tabs slide up and stay just under the top bar.",
+    ],
+  },
+  {
     version: "1.192.4",
     tag: "Rollouts",
     date: "October 26, 2026",
