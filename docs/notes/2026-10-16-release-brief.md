@@ -18,3 +18,9 @@ One page per rollout that the team reads instead of scrolling WhatsApp (Bamidele
 - **Why Draft with UrgAns failed:** the live database never had `urgans_actions` (migration `20260903100000_urgans_actions.sql` was not applied). A two-step action's run could not be logged, so the server returned an empty action id and the client rejected the draft (and Keep had no row to apply). Applied 2026-10-26 with the service_role and authenticated grants. Any two-step embedded action had the same fault.
 - **Seed from the plan:** `loadPlanSeed` reads the newest approved `release_plan_drafts` row's `doc.planner_v2` and `buildBriefPlanSeed` (pure) makes an Idea (summary, goal, constraints) and decisions (win, spend, channels). No model call, no credits. The empty brief shows it as "Written from your plan" with Keep or Edit; Decisions lists the rest as "From your plan" with Keep or Drop (drops live in localStorage per rollout). "Rewrite with UrgAns" stays, and the draft prompt now gets the plan's summary (`release-draft-brief-v2`).
 - **Dates for a plan with no release day:** `deriveBriefDates` shows `metadata.planner_v2` timing ("Now", "4 weeks before") and a "Pick a day" release row; `BriefDateRow.when` carries it, `date` is empty. The public `/brief/[token]` page reads it the same way.
+
+## New-rollout flow (2026-10-26, v1.180.0, mocks approved)
+
+- A rollout with no activities scrolls as a page on a computer and shows the plan card first (`pageScroll` in `WorkspaceDesktopFocused`), the idea and first-steps cards side by side below it. The phone order is unchanged.
+- A built plan lands as `PlanLandedCard` (count, the planner's summary, the first three open steps, "Read the brief") instead of a toast. State is `planLanded` in `WorkspaceView`, cleared on dismiss.
+- The idea card's notes lead the brief's suggested Idea (`buildBriefPlanSeed(doc, notes)`), with or without a plan.

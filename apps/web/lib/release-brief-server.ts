@@ -208,16 +208,20 @@ async function readNotes(admin: SupabaseClient, releaseId: string): Promise<Brie
  * brief to offer. Read only; any failure reads as "nothing to offer".
  */
 export async function loadPlanSeed(admin: SupabaseClient, releaseId: string): Promise<BriefPlanSeed | null> {
-  const { data, error } = await admin
-    .from('release_plan_drafts')
-    .select('doc')
-    .eq('release_id', releaseId)
-    .eq('status', 'approved')
-    .order('approved_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error || !data) return null;
-  return buildBriefPlanSeed(asRow(asRow(data).doc).planner_v2);
+  const [planRead, notes] = await Promise.all([
+    admin
+      .from('release_plan_drafts')
+      .select('doc')
+      .eq('release_id', releaseId)
+      .eq('status', 'approved')
+      .order('approved_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    readNotes(admin, releaseId),
+  ]);
+  const doc = planRead.error || !planRead.data ? null : asRow(asRow(planRead.data).doc).planner_v2;
+  // The idea card's notes (newest first) read oldest first, as they were said.
+  return buildBriefPlanSeed(doc, notes.map((note) => note.body).reverse());
 }
 
 export async function loadBriefPayload(

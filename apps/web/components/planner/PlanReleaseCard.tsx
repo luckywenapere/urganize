@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2 } from '@/components/icons';
+import { ArrowRight, Loader2 } from '@/components/icons';
 import { Button } from '@urganize/ui';
 
 /**
@@ -43,9 +43,9 @@ type PlanReleaseCardProps = {
 export function PlanReleaseCard({ state, failureMessage, onPlan, onAddActivity }: PlanReleaseCardProps) {
   const copy = {
     fresh: {
-      headline: "Let's plan this rollout.",
-      body: 'Answer a few questions and UrgAns builds the plan from the playbook, shaped to your answers. Change anything after it lands.',
-      cta: 'Plan the rollout',
+      headline: 'Plan this rollout.',
+      body: '',
+      cta: 'Build my plan',
     },
     generating: {
       headline: 'UrgAns is building your plan.',
@@ -61,6 +61,32 @@ export function PlanReleaseCard({ state, failureMessage, onPlan, onAddActivity }
     },
   }[state];
 
+  // Fresh is one line: the ask and the one button. The questions explain
+  // themselves, so no eyebrow and no paragraph stand between a new rollout and
+  // its plan (2026-10-26, founder call).
+  if (state === 'fresh') {
+    return (
+      <div className="flex flex-col gap-4 rounded-2xl border border-brand/25 bg-brand/5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div>
+          <h3 className="font-display text-xl font-semibold leading-tight text-content-primary">
+            {copy.headline}
+          </h3>
+          <p className="mt-1 text-sm text-content-secondary">Five questions. About a minute.</p>
+        </div>
+        <Button
+          type="button"
+          onClick={onPlan}
+          // Guided-tour anchor (lib/tours.ts); inert without the flag.
+          data-tour="plan-rollout"
+          className="h-12 w-full justify-center gap-2 rounded-full px-6 sm:w-auto"
+        >
+          {copy.cta}
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-xl border border-brand/30 bg-brand/5 p-5 sm:p-6">
       {state === 'generating' ? (
@@ -69,10 +95,7 @@ export function PlanReleaseCard({ state, failureMessage, onPlan, onAddActivity }
         </span>
       ) : null}
 
-      <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-brand">
-        UrgAns planner
-      </p>
-      <h3 className="mt-1 font-display text-xl font-semibold leading-tight text-content-primary">
+      <h3 className="font-display text-xl font-semibold leading-tight text-content-primary">
         {copy.headline}
       </h3>
       <p className="mt-2 max-w-prose text-sm leading-6 text-content-secondary" aria-live="polite">
@@ -80,19 +103,13 @@ export function PlanReleaseCard({ state, failureMessage, onPlan, onAddActivity }
       </p>
 
       {copy.cta ? (
-        <Button
-          type="button"
-          onClick={onPlan}
-          // Guided-tour anchor (lib/tours.ts); inert without the flag.
-          data-tour="plan-rollout"
-          className="mt-5 h-11 w-full justify-center sm:w-auto"
-        >
+        <Button type="button" onClick={onPlan} className="mt-5 h-11 w-full justify-center sm:w-auto">
           {copy.cta}
         </Button>
       ) : null}
 
-      <div className="mt-5 border-t border-brand/20 pt-4">
-        <p className="text-xs leading-5 text-content-secondary">
+      {state === 'failed' ? (
+        <p className="mt-5 border-t border-brand/20 pt-4 text-xs leading-5 text-content-secondary">
           Prefer to build it by hand?{' '}
           <button
             type="button"
@@ -100,10 +117,9 @@ export function PlanReleaseCard({ state, failureMessage, onPlan, onAddActivity }
             className="motion-focus font-medium text-content-primary underline decoration-stroke-strong underline-offset-2 transition-colors hover:decoration-brand"
           >
             Add an activity yourself
-          </button>{' '}
-          and skip the questions.
+          </button>
         </p>
-      </div>
+      ) : null}
     </div>
   );
 }

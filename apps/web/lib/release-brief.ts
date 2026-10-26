@@ -598,16 +598,18 @@ export function formatEditedAgo(value: string | null, now: Date = new Date()): s
  * document is stored JSON, so every field is checked. Null when it offers
  * nothing, so the brief shows its normal empty state.
  */
-export function buildBriefPlanSeed(planV2: unknown): BriefPlanSeed | null {
-  const root = planV2 && typeof planV2 === 'object' ? (planV2 as Record<string, unknown>) : null;
-  if (!root) return null;
+export function buildBriefPlanSeed(planV2: unknown, spokenIdeas: string[] = []): BriefPlanSeed | null {
+  const root = planV2 && typeof planV2 === 'object' ? (planV2 as Record<string, unknown>) : {};
   const builtFor = root.built_for && typeof root.built_for === 'object' ? (root.built_for as Record<string, unknown>) : {};
   const str = (value: unknown) => (typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '');
   const summary = str(builtFor.summary);
   const win = str(builtFor.win);
   const constraints = Array.isArray(builtFor.constraints) ? builtFor.constraints.map(str).filter(Boolean) : [];
 
+  // What the team said or typed on the idea card leads; the plan follows it.
+  const spoken = spokenIdeas.map((note) => note.replace(/\s+/g, ' ').trim()).filter(Boolean).join(' ');
   const idea = [
+    spoken,
     summary,
     win ? `Goal: ${win.replace(/[.]+$/, '')}.` : '',
     constraints.length > 0 ? `Keep in mind: ${constraints.slice(0, 3).join('; ').replace(/[.]+$/, '')}.` : '',
