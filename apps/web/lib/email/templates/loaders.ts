@@ -138,7 +138,7 @@ const LOADERS: LoaderMap = {
     const m = await import('./PayLinkEmail');
     return {
       element: (p) => createElement(m.PayLinkEmail, p),
-      subject: () => m.payLinkSubject(),
+      subject: (p) => m.payLinkSubject(p),
     };
   },
   pitch_notice: async () => {

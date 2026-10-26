@@ -22,6 +22,7 @@ import { errorMessage } from '@/lib/errors';
 import { isIOSApp, isNativePlatform } from '@/lib/platform';
 import { openExternalUrl } from '@/lib/external-link';
 import { checkoutPath, isCheckoutPeriod, isCheckoutPlan } from '@/lib/self-serve';
+import { BOOK_CALL_LABEL, needsOnboardingCall } from '@/lib/call-led';
 import {
   getTeamAccessClient,
   type TeamAccessClientSnapshot,
@@ -707,7 +708,9 @@ export function TeamWall() {
                     >
                       {isStartingCheckout
                         ? 'Opening secure checkout'
-                        : isUpgradeIntent
+                        : PRICING_V2 && needsOnboardingCall(effectiveTier, selectedInterval)
+                          ? BOOK_CALL_LABEL
+                          : isUpgradeIntent
                           ? 'Change your plan'
                           : isReadOnlyTeam
                             ? 'Start your plan again'

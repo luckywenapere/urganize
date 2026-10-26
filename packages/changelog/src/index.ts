@@ -41,6 +41,18 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.183.0",
+    title: "Start with a call on bigger plans",
+    tag: "Account",
+    date: "October 26, 2026",
+    listed: false,
+    highlights: [
+      "Solo and Manager monthly work as before: pick, pay and start.",
+      "Label, 6-month and yearly plans start with a short call. We email you a payment link after it.",
+      "Label is now ₦100,000 a month.",
+    ],
+  },
+  {
     version: "1.182.0",
     title: "Photos and UrgAns in Bring your notes",
     tag: "Rollouts",

@@ -4,6 +4,7 @@ import { cardIntervals } from '@/lib/billing-plans';
 import { CHECKOUT_PLANS, isCheckoutPeriod, isCheckoutPlan } from '@/lib/self-serve';
 import { isDedicatedAccountEnabled, loadOpenInvoice, loadPaymentAccount, validatePromoCode } from '@/lib/self-serve-server';
 import { getAppAccess } from '@/lib/access-gate-server';
+import { allowedCallLed } from '@/lib/call-led-server';
 
 
 // GET  /api/billing/self-serve   what the checkout page can offer this person:
@@ -66,7 +67,13 @@ export async function GET(request: NextRequest) {
       }
     : null;
 
+  const callLedAllowed = await allowedCallLed(admin, {
+    userId: auth.user.id,
+    email: auth.user.email ?? '',
+  }).catch(() => [] as string[]);
+
   return NextResponse.json({
+    callLedAllowed,
     cardPeriods,
     transferAccounts: isDedicatedAccountEnabled(),
     distributionOn: process.env.NEXT_PUBLIC_FEATURE_TRM_SEND !== 'false',

@@ -270,12 +270,12 @@ describe('matchBudgetOffer', () => {
       tier: 'solo',
       price: 5_000,
     });
-    // Manager at ₦30,000 (2026-10-22) is above Label's lowest band ceiling
-    // (₦25,000), so Solo is the dearest cheaper plan that fits.
+    // Label at ₦100,000 (2026-10-26) has a lowest band under ₦45,000, so
+    // Manager at ₦30,000 is the dearest cheaper plan that fits.
     expect(matchBudgetOffer({ tier: 'label', band: 'low', planCodes: {} })).toEqual({
       kind: 'switch_plan',
-      tier: 'solo',
-      price: 5_000,
+      tier: 'manager',
+      price: 30_000,
     });
     expect(matchBudgetOffer({ tier: 'solo', band: 'low', planCodes: {} })).toBeNull();
   });
@@ -293,7 +293,7 @@ describe('matchBudgetOffer', () => {
 
   it('hides a discounted offer whose Paystack plan is not configured', () => {
     expect(matchBudgetOffer({ tier: 'manager', band: 'mid', planCodes: {} })).toBeNull();
-    expect(matchBudgetOffer({ tier: 'label', band: 'high', planCodes: { PAYSTACK_PLAN_LABEL_RETENTION_55000: '  ' } })).toBeNull();
+    expect(matchBudgetOffer({ tier: 'label', band: 'high', planCodes: { PAYSTACK_PLAN_LABEL_RETENTION_90000: '  ' } })).toBeNull();
   });
 
   it('names the env vars the setup needs', () => {
@@ -303,8 +303,8 @@ describe('matchBudgetOffer', () => {
       'PAYSTACK_PLAN_SOLO_RETENTION_4500',
       'PAYSTACK_PLAN_MANAGER_RETENTION_20000',
       'PAYSTACK_PLAN_MANAGER_RETENTION_27000',
-      'PAYSTACK_PLAN_LABEL_RETENTION_40000',
-      'PAYSTACK_PLAN_LABEL_RETENTION_55000',
+      'PAYSTACK_PLAN_LABEL_RETENTION_70000',
+      'PAYSTACK_PLAN_LABEL_RETENTION_90000',
     ]);
   });
 

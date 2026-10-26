@@ -16,6 +16,8 @@ import {
   validatePromoCode,
 } from '@/lib/self-serve-server';
 import { afterResponse } from '@/lib/after-response';
+import { CALL_REQUIRED_ERROR } from '@/lib/call-led';
+import { mayPay } from '@/lib/call-led-server';
 
 // Pay by bank transfer (self-serve checkout, 2026-10-22).
 //
@@ -91,6 +93,9 @@ export async function POST(request: NextRequest) {
   if (!isCheckoutPeriod(body.period)) return NextResponse.json({ error: 'Pick how often to pay.' }, { status: 400 });
   const plan = body.plan;
   const period = body.period;
+  if (!(await mayPay(admin, { userId, email, plan, period }))) {
+    return NextResponse.json({ error: CALL_REQUIRED_ERROR, code: 'call_required' }, { status: 403 });
+  }
 
   let promoCode: string | null = null;
   if (body.promo !== undefined && body.promo !== null && body.promo !== '') {
