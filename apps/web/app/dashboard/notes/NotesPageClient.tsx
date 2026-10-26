@@ -59,6 +59,7 @@ export default function NotesPageClient() {
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [shareId, setShareId] = useState<string | null>(null);
   /**
    * Search is local state, deliberately NOT a URL param. Typing would push a
    * history entry per keystroke, and this page already carries `?note=` and
@@ -74,17 +75,21 @@ export default function NotesPageClient() {
 
   const releaseFilterId = searchParams.get('release');
   const wantsNewNote = searchParams.get('new') === '1';
-  const wantsImport = searchParams.get('import') === '1';
+  const importParam = searchParams.get('import');
+  const wantsImport = importParam === '1' || importParam === 'share';
+  const sharedId = importParam === 'share' ? searchParams.get('share') : null;
 
   // /dashboard/notes?import=1 opens Bring your notes (UrgAns and Home link here).
   useEffect(() => {
     if (!wantsImport || isInitialLoading) return;
     setIsImportOpen(true);
+    if (sharedId) setShareId(sharedId);
     const params = new URLSearchParams(searchParams.toString());
     params.delete('import');
+    params.delete('share');
     const query = params.toString();
     router.replace(`${pathname ?? ''}${query ? `?${query}` : ''}`, { scroll: false });
-  }, [isInitialLoading, pathname, router, searchParams, wantsImport]);
+  }, [isInitialLoading, pathname, router, searchParams, sharedId, wantsImport]);
 
   // Fire immediately rather than behind authLoading — the stores read their
   // own token from getSession() (local), so waiting on the auth store's GoTrue
@@ -432,6 +437,7 @@ export default function NotesPageClient() {
 
       <BringNotesDialog
         open={isImportOpen}
+        shareId={shareId}
         onClose={() => setIsImportOpen(false)}
         releases={releases.map((release) => ({ id: release.id, title: release.title }))}
         onMakePlan={

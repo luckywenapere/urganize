@@ -61,6 +61,49 @@ export async function readPhotoText(file: File, token: string): Promise<PhotoRea
   }
 }
 
+const VOICE_TYPES: Record<string, string> = {
+  opus: 'audio/ogg',
+  ogg: 'audio/ogg',
+  oga: 'audio/ogg',
+  m4a: 'audio/mp4',
+  mp4: 'audio/mp4',
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  webm: 'audio/webm',
+};
+
+/**
+ * WhatsApp voice notes are Opus in an .opus file, which the speech model does
+ * not list by that name. Same bytes, so it is sent as .ogg. Also fills in a
+ * missing type from the extension (some Android pickers leave it blank).
+ */
+export function normalizeVoiceFile(file: File): File {
+  const extension = (file.name.split('.').pop() || '').toLowerCase();
+  const type = VOICE_TYPES[extension] ?? (file.type.startsWith('audio/') ? file.type : '');
+  const name = extension === 'opus' ? file.name.replace(/\.opus$/i, '.ogg') : file.name;
+  if (!type || (type === file.type && name === file.name)) return file;
+  return new File([file], name, { type, lastModified: file.lastModified });
+}
+
+export async function readVoiceText(file: File, token: string): Promise<PhotoReadResult> {
+  const form = new FormData();
+  form.append('file', normalizeVoiceFile(file));
+  try {
+    const response = await fetch('/api/notes/import/voice', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+    const payload = (await response.json().catch(() => null)) as { text?: string; error?: string } | null;
+    if (!response.ok || typeof payload?.text !== 'string') {
+      return { ok: false, error: payload?.error || 'Could not read that voice note. Try another one.' };
+    }
+    return { ok: true, text: payload.text };
+  } catch {
+    return { ok: false, error: 'Could not reach Urganize. Check your connection and try again.' };
+  }
+}
+
 export type AiSortOutcome =
   | { ok: true; applied: AppliedSort; summary: string }
   | { ok: false; error: string };

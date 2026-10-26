@@ -257,3 +257,4 @@ Adding a note: create `docs/notes/YYYY-MM-DD-short-slug.md` (start it with a `# 
 - [2026-10-26 rollout team brief](2026-10-26-rollout-team-brief.md) — AI goal + moves, code-derived next up and missing, saved in release_team_briefs
 - [Bring your notes (2026-10-26, v1.181.0 and v1.182.0)](2026-10-26-bring-your-notes.md): WhatsApp chat, file, paste or photo into notes you keep, rule sort plus optional UrgAns pass, undo, hand-off to the planner.
 - [Call-led onboarding (2026-10-26, v1.183.0)](2026-10-26-call-led-onboarding.md): only monthly Solo and Manager pay without a call; Label, 6-month and yearly book a call, founder sends the payment link; Label ₦100,000.
+- [Artist import in onboarding (2026-10-26, v1.184.0, NEXT_PUBLIC_FEATURE_ARTIST_IMPORT ships on)](2026-10-26-artist-import-in-onboarding.md): type an artist's name before the account, Deezer/Apple pull their releases into artist_catalogue_releases, add another

@@ -1391,6 +1391,7 @@ export function WorkspaceView() {
         condensed={simplePlanView}
         tasks={scopedTasks}
         hasReleaseDate={Boolean(scopedReleaseSlim.releaseDate)}
+        onPlanChanged={() => void loadCommandCenter({ force: true })}
         release={{ id: scopedReleaseSlim.id, title: scopedReleaseSlim.title }}
         hasPlan={!onlyPreProductionWork(scopedTasks)}
         canDraft={PLANNER_ENABLED && scopedReleaseIsOwn && !isPlanGenerating}

@@ -467,6 +467,8 @@ describe('createShellDispatcher (the shell side)', () => {
       'push.register': async () => ({ token: 'fcm-token' }),
       shareFile: async () => ({ outcome: 'shared' }),
       shareText: async () => ({ outcome: 'shared' }),
+      'share.readFile': async () => ({ data: '', next: null }),
+      'share.done': async () => ({ ok: true }),
       appearance: async () => ({ ok: true }),
       ...overrides,
     };

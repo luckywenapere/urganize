@@ -36,6 +36,8 @@ import { createNativeBridge } from './src/bridge';
 import { INK, PAPER, OfflineScreen } from './src/OfflineScreen';
 import { getPushPermission, getPushToken, requestPushPermission, watchPush } from './src/push';
 import { shareFile, shareText } from './src/share';
+import { finishShare, readSharedChunk, registerShare } from './src/shareIntent';
+import { useShareIntent } from 'expo-share-intent';
 
 const APP_URL = 'https://app.urganize.app';
 const SHELL_VERSION = Constants.expoConfig?.version ?? 'unknown';
@@ -91,6 +93,8 @@ export default function App() {
   // so the bars above and below it match in light mode as well as dark.
   const [appearance, setAppearance] = useState<Appearance>(DEFAULT_APPEARANCE);
   const network = useNetworkState();
+  // Android's share sheet. Must be called before anything that could swallow the intent.
+  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent();
   const wasReachableRef = useRef(network.isInternetReachable);
 
   const hideSplash = useCallback(() => {
@@ -125,6 +129,11 @@ export default function App() {
           'push.register': async () => ({ token: await getPushToken() }),
           shareFile: async (payload) => ({ outcome: await shareFile(payload) }),
           shareText: async (payload) => ({ outcome: await shareText(payload) }),
+          'share.readFile': readSharedChunk,
+          'share.done': async ({ id }) => {
+            finishShare(id);
+            return { ok: true };
+          },
           appearance: async (payload) => {
             const next = parseAppearance(payload);
             if (!next) throw new Error('That is not a colour this app can use.');
@@ -144,6 +153,25 @@ export default function App() {
       }),
     [bridge]
   );
+
+  // Something was shared to Urganize. Hand it to the page (held until the page
+  // is ready, so a share that cold-starts the app is not lost), then clear it so
+  // the same share does not arrive twice.
+  useEffect(() => {
+    if (!hasShareIntent) return;
+    const shared = registerShare({
+      text: shareIntent.text ?? shareIntent.webUrl ?? null,
+      title: shareIntent.meta?.title ?? null,
+      files: (shareIntent.files ?? []).map((file) => ({
+        path: file.path,
+        fileName: file.fileName,
+        mimeType: file.mimeType,
+        size: file.size,
+      })),
+    });
+    if (shared) bridge.emit('shareReceived', shared);
+    resetShareIntent();
+  }, [bridge, hasShareIntent, resetShareIntent, shareIntent]);
 
   // Android's back button: close the settings pop-up if it is open, else go to
   // Home from any other page, else leave the app. Tabs are peers and do not

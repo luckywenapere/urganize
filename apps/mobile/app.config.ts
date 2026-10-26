@@ -115,6 +115,18 @@ const config: ExpoConfig = {
       },
     ],
     'expo-web-browser',
+    // Urganize in Android's share sheet (Bring your notes). Android only: iOS
+    // needs a separate share extension target, which is its own build to test.
+    // '*/*' because chat exports (.zip, .txt), voice notes (.opus), photos and
+    // plain text all come this way; what the app cannot use is told so, not hidden.
+    [
+      'expo-share-intent',
+      {
+        disableIOS: true,
+        androidIntentFilters: ['*/*'],
+        androidMultiIntentFilters: ['*/*'],
+      },
+    ],
     'expo-updates',
     '@react-native-firebase/app',
     [
