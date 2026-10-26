@@ -112,10 +112,12 @@ describe('visibleSettingsSegments', () => {
     );
   });
 
-  it('hides UrgAns when the team brief is off, since the brief is all it holds', () => {
-    expect(visibleSettingsSegments({ role: 'manager' }, { ...ALL_ON, teamBrief: false })).not.toContain(
-      'urgans'
-    );
+  it('keeps UrgAns for a manager with the team brief off, since WhatsApp chasing lives there (Oct 26, 2026)', () => {
+    expect(visibleSettingsSegments({ role: 'manager' }, { ...ALL_ON, teamBrief: false })).toContain('urgans');
+  });
+
+  it('hides UrgAns from a non-manager while the team brief is off', () => {
+    expect(visibleSettingsSegments({ role: 'artist' }, { ...ALL_ON, teamBrief: false })).not.toContain('urgans');
   });
 
   it('keeps Artists & brand while the roster exists; press kits alone no longer fill it (Oct 17, 2026)', () => {

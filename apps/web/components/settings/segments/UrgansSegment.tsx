@@ -2,6 +2,8 @@
 
 import { memo } from 'react';
 import { TeamBriefSection } from '../TeamBriefSection';
+import { WhatsappChasingSection } from '../WhatsappChasingSection';
+import { isTeamBriefEnabled } from '@/lib/team-brief';
 
 /**
  * What UrgAns knows about the team. Today that is the team brief; it is its own
@@ -12,7 +14,8 @@ import { TeamBriefSection } from '../TeamBriefSection';
 function UrgansSegmentView() {
   return (
     <div className="divide-y divide-stroke-subtle">
-      <TeamBriefSection />
+      {isTeamBriefEnabled() ? <TeamBriefSection /> : null}
+      <WhatsappChasingSection />
     </div>
   );
 }
