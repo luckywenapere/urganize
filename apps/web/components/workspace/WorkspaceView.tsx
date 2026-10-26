@@ -863,6 +863,8 @@ export function WorkspaceView() {
     if (!handoff) return;
     // Auto-planned (2026-10-17): the plan is building by itself; no questions.
     if (readPlannerAuto(scopedReleaseSlim.metadata)) return;
+    // The idea card leads a new rollout; the questions open from its button.
+    if (ROLLOUT_IDEAS_ENABLED) return;
     // Already planned (another tab, or a plan built some other way): the
     // marker is spent and there is nothing to ask.
     if (scopedTasks.length > 0) return;
@@ -1811,7 +1813,7 @@ export function WorkspaceView() {
               firstRelease: result?.firstRelease,
               then: () => {
                 router.push(`/dashboard?release=${releaseId}`);
-                if (plannerPending) {
+                if (plannerPending && !ROLLOUT_IDEAS_ENABLED) {
                   // Made just now for the planner: closing it early
                   // discards the empty rollout (lib/release-draft-discard.ts).
                   openIntake(
@@ -1840,6 +1842,9 @@ export function WorkspaceView() {
               // The type picked in the modal rides along as a prefill so the
               // intake's own type question isn't asked a second time.
               router.push(`/dashboard?release=${releaseId}`);
+              // With the ideas card on, the rollout asks for the idea first and the
+              // plan questions open from its Build my plan button (2026-10-26).
+              if (!ROLLOUT_IDEAS_ENABLED)
               // Made just now for the planner: closing it early discards
               // the empty rollout (lib/release-draft-discard.ts).
               openIntake(

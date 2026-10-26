@@ -12,11 +12,14 @@ import { FirstReleaseWin } from '@/components/workspace/FirstReleaseWin';
 import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
 import { useToast } from '@/components/shared/ToastProvider';
 import { isTestReleaseEnabled } from '@/lib/test-release';
+import { isRolloutIdeasEnabled } from '@/lib/rollout-ideas';
 
 const FIRST_WIN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FIRST_WIN === 'true';
 const TEAM_LOGINS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TEAM_LOGINS === 'true';
 const TYPE_FIRST_CREATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TYPE_FIRST_CREATE === 'true';
 const TEST_RELEASE_ENABLED = isTestReleaseEnabled();
+// The idea card leads a new rollout, so the plan questions do not open on create.
+const IDEAS_FIRST = isRolloutIdeasEnabled();
 
 type RolloutCreateFlowProps = {
   open: boolean;
@@ -68,6 +71,7 @@ export function RolloutCreateFlow({ open, onClose, onCreated }: RolloutCreateFlo
           onCreated?.();
           const plannerPending = result?.plannerPending === true;
           const openIntake = () =>
+            IDEAS_FIRST ||
             // Made just now for the planner: closing it early discards the
             // empty rollout instead of leaving it in the catalogue.
             usePlannerStore.getState().openIntake(

@@ -29,6 +29,7 @@ import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
 import { buildPrefetchRoutes } from '@/lib/prefetch-routes';
 import { CURATOR_HOME_PATH } from '@/lib/home-path';
 import { isSocialShareEnabled } from '@/lib/social-share-flag';
+import { isRolloutIdeasEnabled } from '@/lib/rollout-ideas';
 import { isChappiEnabled, isUrgansRealtimeEnabled } from '@/lib/chappi/config';
 
 const TALK_ENABLED = isChappiEnabled() && isUrgansRealtimeEnabled();
@@ -554,7 +555,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           // doesn't ask it again. Closing the intake early discards the
           // rollout made just now while it is still an untouched shell,
           // exactly as the Home/workspace create paths do (v1.92.1).
-          if (PLANNER_ENABLED && result?.plannerPending) {
+          if (PLANNER_ENABLED && result?.plannerPending && !isRolloutIdeasEnabled()) {
             void import('@/stores/usePlannerStore')
               .then(({ usePlannerStore }) =>
                 usePlannerStore.getState().openIntake(
@@ -566,7 +567,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 )
               )
               .catch(() => undefined);
-          } else if (TYPE_FIRST_CREATE_ENABLED) {
+          } else if (TYPE_FIRST_CREATE_ENABLED || (PLANNER_ENABLED && result?.plannerPending)) {
             // TYPE-FIRST CREATE (2026-09-01): the one create screen was the whole
             // form, so the release view — where name and date get
             // prompted — is the destination, wherever the modal was opened
