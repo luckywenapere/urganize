@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.181.3",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "The idea card holds its place while it loads, so the page no longer jumps.",
+    ],
+  },
+  {
     version: "1.181.2",
     tag: "Rollouts",
     listed: false,
