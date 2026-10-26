@@ -38,9 +38,11 @@ type PlanReleaseCardProps = {
   /** Open the planning questions — the primary action, and the retry. */
   onPlan: () => void;
   onAddActivity: () => void;
+  /** The idea card shows Build my plan itself, so the fresh state stays hidden. */
+  deferToIdeas?: boolean;
 };
 
-export function PlanReleaseCard({ state, failureMessage, onPlan, onAddActivity }: PlanReleaseCardProps) {
+export function PlanReleaseCard({ state, failureMessage, onPlan, onAddActivity, deferToIdeas = false }: PlanReleaseCardProps) {
   const copy = {
     fresh: {
       headline: 'Plan this rollout.',
@@ -65,6 +67,7 @@ export function PlanReleaseCard({ state, failureMessage, onPlan, onAddActivity }
   // themselves, so no eyebrow and no paragraph stand between a new rollout and
   // its plan (2026-10-26, founder call).
   if (state === 'fresh') {
+    if (deferToIdeas) return null;
     // Mock A (2026-10-26): the same 61.8% column as the idea card above it, so
     // the two read as one flow. The headline stays for screen readers; the idea
     // card's question is what sighted people read first.

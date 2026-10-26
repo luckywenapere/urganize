@@ -1046,6 +1046,11 @@ export function WorkspaceView() {
     PLANNER_ENABLED && scopedReleaseSlim && scopedReleaseIsOwn && onlyPreProductionWork(scopedTasks) ? (
       <PlanReleaseCard
         state={isPlanGenerating ? 'generating' : planBuildError ? 'failed' : 'fresh'}
+        // The idea card leads a new rollout and offers Build my plan itself, after
+        // the idea and invite steps (2026-10-26).
+        deferToIdeas={Boolean(
+          ROLLOUT_IDEAS_ENABLED && bodyIsMainView && !scopedReleaseSlim.isTest
+        )}
         failureMessage={planBuildError}
         onPlan={() => openPlanIntake()}
         onAddActivity={() =>
