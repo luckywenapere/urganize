@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.190.5",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "A new rollout no longer shows a second card above the idea screen.",
+    ],
+  },
+  {
     version: "1.190.4",
     tag: "Rollouts",
     listed: false,
