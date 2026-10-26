@@ -7,6 +7,7 @@ import {
   EXTRA_RELEASE_PRICE_KOBO,
   EXTRA_RELEASE_SOURCE,
   isExtraReleaseReference,
+  TRM_PER_RELEASE_KOBO,
   lagosMonth,
   needsPayment,
   type DistributionUseRow,
@@ -121,9 +122,10 @@ describe('who a release is for', () => {
 
 describe('paying for one extra release', () => {
   const meta = { source: EXTRA_RELEASE_SOURCE, release_id: 'r1', workspace_id: 'w1' };
-  it('accepts exactly ₦2,100 in naira, paid, from our own checkout', () => {
-    expect(EXTRA_RELEASE_PRICE_KOBO).toBe(210_000);
-    expect(checkExtraReleasePayment({ status: 'success', currency: 'NGN', amountKobo: 210_000, metadata: meta })).toEqual({
+  it('accepts exactly ₦2,200 in naira, paid, from our own checkout; TRM is owed ₦2,100 of it', () => {
+    expect(EXTRA_RELEASE_PRICE_KOBO).toBe(220_000);
+    expect(TRM_PER_RELEASE_KOBO).toBe(210_000);
+    expect(checkExtraReleasePayment({ status: 'success', currency: 'NGN', amountKobo: 220_000, metadata: meta })).toEqual({
       ok: true,
       releaseId: 'r1',
       workspaceId: 'w1',
@@ -131,11 +133,11 @@ describe('paying for one extra release', () => {
   });
 
   it('refuses anything else', () => {
-    expect(checkExtraReleasePayment({ status: 'abandoned', currency: 'NGN', amountKobo: 210_000, metadata: meta })).toEqual({ ok: false, reason: 'not_paid' });
-    expect(checkExtraReleasePayment({ status: 'success', currency: 'NGN', amountKobo: 200_000, metadata: meta }).ok).toBe(false);
-    expect(checkExtraReleasePayment({ status: 'success', currency: 'USD', amountKobo: 210_000, metadata: meta }).ok).toBe(false);
-    expect(checkExtraReleasePayment({ status: 'success', currency: 'NGN', amountKobo: 210_000, metadata: { ...meta, source: 'credits_purchase' } }).ok).toBe(false);
-    expect(checkExtraReleasePayment({ status: 'success', currency: 'NGN', amountKobo: 210_000, metadata: null }).ok).toBe(false);
+    expect(checkExtraReleasePayment({ status: 'abandoned', currency: 'NGN', amountKobo: 220_000, metadata: meta })).toEqual({ ok: false, reason: 'not_paid' });
+    expect(checkExtraReleasePayment({ status: 'success', currency: 'NGN', amountKobo: 210_000, metadata: meta }).ok).toBe(false);
+    expect(checkExtraReleasePayment({ status: 'success', currency: 'USD', amountKobo: 220_000, metadata: meta }).ok).toBe(false);
+    expect(checkExtraReleasePayment({ status: 'success', currency: 'NGN', amountKobo: 220_000, metadata: { ...meta, source: 'credits_purchase' } }).ok).toBe(false);
+    expect(checkExtraReleasePayment({ status: 'success', currency: 'NGN', amountKobo: 220_000, metadata: null }).ok).toBe(false);
   });
 
   it('knows its own references', () => {
@@ -146,9 +148,9 @@ describe('paying for one extra release', () => {
 
 describe('the plan cards say the same numbers', () => {
   it('Manager and Label state their allowance and the extra price; Solo says nothing', () => {
-    expect(distributionAllowanceCopy('manager')).toBe('Distribution for 1 artist, 7 releases a month');
-    expect(distributionAllowanceCopy('label')).toBe('Distribution for 5 artists, 10 releases a month');
-    expect(tierHighlights('manager')).toContain('Extra releases ₦2,100 each');
+    expect(distributionAllowanceCopy('manager')).toBe('Distribution for 1 of your artists, 7 releases a month');
+    expect(distributionAllowanceCopy('label')).toBe('Distribution for 5 of your artists, 10 releases a month');
+    expect(tierHighlights('manager')).toContain('Extra releases ₦2,200 each');
     expect(tierHighlights('solo').some((line) => /distribution|extra release/i.test(line))).toBe(false);
   });
 });

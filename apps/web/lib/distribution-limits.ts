@@ -1,4 +1,4 @@
-import { DISTRIBUTION_ALLOWANCE, EXTRA_RELEASE_PRICE_NAIRA, type PricingTierId } from '@urganize/pricing';
+import { DISTRIBUTION_ALLOWANCE, EXTRA_RELEASE_PRICE_NAIRA, TRM_PER_RELEASE_NAIRA, type PricingTierId } from '@urganize/pricing';
 
 // What a plan's "Distribution included" covers, and what a send beyond it costs
 // (founder, 2026-10-26; mocks docs/mocks/distribution-limits). Pure and
@@ -11,7 +11,8 @@ import { DISTRIBUTION_ALLOWANCE, EXTRA_RELEASE_PRICE_NAIRA, type PricingTierId }
 //             it was first sent (Manager 7, Label 10). The count starts again
 //             on the 1st.
 //   Beyond    A send for another artist, or past the month's count, is one paid
-//             release at TRM's per-release price (₦2,100), paid before it goes.
+//             release (₦2,200: TRM's ₦2,100 plus a markup that covers the
+//             Paystack fee), paid before it goes.
 //   Resends   A release that already counted, or was paid for, never counts or
 //             costs again (a resubmit after a rejection is free).
 //
@@ -19,6 +20,8 @@ import { DISTRIBUTION_ALLOWANCE, EXTRA_RELEASE_PRICE_NAIRA, type PricingTierId }
 // lapsed plans send with the artist's own TRM plan, which is not ours to count.
 
 export const EXTRA_RELEASE_PRICE_KOBO = EXTRA_RELEASE_PRICE_NAIRA * 100;
+/** What we owe TRM for that release. */
+export const TRM_PER_RELEASE_KOBO = TRM_PER_RELEASE_NAIRA * 100;
 export const EXTRA_RELEASE_REFERENCE_PREFIX = 'urgextra-';
 export const EXTRA_RELEASE_SOURCE = 'distribution_extra';
 

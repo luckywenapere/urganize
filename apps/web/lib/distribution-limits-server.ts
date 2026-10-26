@@ -9,6 +9,7 @@ import {
   EXTRA_RELEASE_REFERENCE_PREFIX,
   EXTRA_RELEASE_SOURCE,
   lagosMonth,
+  TRM_PER_RELEASE_KOBO,
   needsPayment,
   type DistributionLimitView,
   type DistributionUseRow,
@@ -242,7 +243,8 @@ export async function settleExtraRelease(admin: Admin, reference: string, via: '
       workspaceId: found.workspace_id,
       reference,
       tier: tier && tier.state === 'included' && tier.tier === 'label' ? 'label' : 'manager',
-      priceKobo: EXTRA_RELEASE_PRICE_KOBO,
+      paidKobo: EXTRA_RELEASE_PRICE_KOBO,
+      owedKobo: TRM_PER_RELEASE_KOBO,
       paidAt,
     });
     await logBillingEvent(admin, {

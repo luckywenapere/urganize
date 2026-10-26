@@ -758,14 +758,23 @@ export const DISTRIBUTION_ALLOWANCE: Partial<Record<PricingTierId, { artists: nu
   label: { artists: 5, releasesPerMonth: 10 },
 };
 
-/** One release beyond a plan's allowance, naira. TRM's per-release price. */
-export const EXTRA_RELEASE_PRICE_NAIRA = 2_100;
+/** What TRM charges us for one release, naira (its per-release price, read
+ *  from its Paystack page on 2026-10-26). */
+export const TRM_PER_RELEASE_NAIRA = 2_100;
 
-/** "Distribution for 1 artist, 7 releases a month". Numbers from the allowance. */
+/** What a team pays for one release beyond its plan's allowance, naira
+ *  (founder, 2026-10-26). TRM's ₦2,100 plus a markup, so Paystack's fee
+ *  (1.5% card, 1% transfer, about ₦22 to ₦33 here) never makes an extra release
+ *  cost us money. Kept below ₦2,500, where Paystack adds its ₦100 card fee. */
+export const EXTRA_RELEASE_PRICE_NAIRA = 2_200;
+
+/** "Distribution for 1 of your artists, 7 releases a month". Numbers from the allowance. */
 export function distributionAllowanceCopy(id: PricingTierId): string | null {
   const allowance = DISTRIBUTION_ALLOWANCE[id];
   if (!allowance) return null;
-  const artists = `${allowance.artists} ${allowance.artists === 1 ? 'artist' : 'artists'}`;
+  // "of your artists": a plan can hold more artists than it distributes for
+  // (Manager holds 3, distributes for 1), so the line says which it means.
+  const artists = allowance.artists === 1 ? '1 of your artists' : `${allowance.artists} of your artists`;
   return `Distribution for ${artists}, ${allowance.releasesPerMonth} releases a month`;
 }
 

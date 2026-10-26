@@ -201,15 +201,16 @@ export async function recordTrmFeeForSend(
 }
 
 /**
- * One extra release a team paid us ₦2,100 for (lib/distribution-limits-server.ts
- * calls this once, when the payment settles): we owe TRM its per-release price.
+ * One extra release a team paid us ₦2,200 for (lib/distribution-limits-server.ts
+ * calls this once, when the payment settles): we owe TRM its per-release price,
+ * ₦2,100.
  * An 'adjustment' row, so it never counts as a TRM plan covering later sends.
  * Keyed on the Paystack reference, so a webhook and a callback settling the
  * same payment write one row.
  */
 export async function recordTrmExtraRelease(
   admin: Admin,
-  input: { workspaceId: string; reference: string; tier: 'manager' | 'label'; priceKobo: number; paidAt: Date }
+  input: { workspaceId: string; reference: string; tier: 'manager' | 'label'; paidKobo: number; owedKobo: number; paidAt: Date }
 ): Promise<'recorded' | 'error'> {
   const reference = `extra:${input.reference}`;
   const end = new Date(input.paidAt);
@@ -226,8 +227,8 @@ export async function recordTrmExtraRelease(
       fee_annual_kobo: null,
       revenue_share_bps: null,
       service_months: 1,
-      amount_paid_kobo: input.priceKobo,
-      owed_kobo: input.priceKobo,
+      amount_paid_kobo: input.paidKobo,
+      owed_kobo: input.owedKobo,
       period_start: input.paidAt.toISOString(),
       period_end: end.toISOString(),
     },

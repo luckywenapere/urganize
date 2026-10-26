@@ -56,7 +56,7 @@ export function DistributionLimitBlock({
   const price = formatNaira(limit.extraPriceKobo);
   const artistCase = limit.verdict === 'artist';
   const title = artistCase
-    ? `Your plan covers ${limit.artistsLimit === 1 ? '1 artist' : `${limit.artistsLimit} artists`}`
+    ? `Distribution on your plan covers ${limit.artistsLimit === 1 ? '1 artist' : `${limit.artistsLimit} artists`}`
     : `You’ve used your ${limit.releasesLimit} releases this month`;
   const detail = artistCase
     ? limit.tier === 'manager'
