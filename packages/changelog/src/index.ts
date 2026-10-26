@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.181.2",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "Add a new idea to a rollout that already has a plan. UrgAns suggests activities to add and dates to move, and nothing changes until you tap Apply.",
+    ],
+  },
+  {
     version: "1.181.1",
     tag: "Rollouts",
     listed: false,
