@@ -202,7 +202,11 @@ export default function BillingMarginAdminPageClient() {
         <h2 className="font-display text-xl font-semibold">What we owe TRM</h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-content-secondary">
           {data.trm.costBasis === 'fixed' ? 'A fixed fee per team with distribution' : 'A share of what each team paid'},{' '}
-          {data.trm.billingMode === 'monthly_prorata' ? 'billed month by month' : 'a year paid upfront'}. Download a month to send
+          {data.trm.billingMode === 'trm_plan'
+            ? "on TRM's monthly plan for monthly teams and its yearly plan for 6-month and yearly teams"
+            : data.trm.billingMode === 'monthly_prorata'
+              ? 'billed month by month'
+              : 'a year paid upfront'}. Download a month to send
           with the payment. Nothing is paid automatically.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3">

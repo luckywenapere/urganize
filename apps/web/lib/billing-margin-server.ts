@@ -67,7 +67,7 @@ export function trmOwedMonthKobo(input: {
   if (input.config.costBasis === 'percent' && input.config.revenueShareBps !== null) {
     return Math.round((input.cashMonthKobo * input.config.revenueShareBps) / 10_000);
   }
-  return monthlyTrmFeeKobo(input.plan, input.config);
+  return monthlyTrmFeeKobo(input.plan, input.config, input.interval);
 }
 
 export async function loadBillingMargin(

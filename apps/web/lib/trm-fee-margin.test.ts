@@ -59,11 +59,12 @@ function functionBody(text: string, signature: string): string {
 }
 
 describe('TRM fee config', () => {
-  it('defaults to a fixed fee billed month by month, at the quoted yearly figures', () => {
+  it("defaults to TRM's own Naira plans: monthly for monthly teams, yearly for prepaid ones", () => {
     const c = readTrmFeeConfig({});
     expect(c.costBasis).toBe('fixed');
-    expect(c.billingMode).toBe('monthly_prorata');
-    expect(c.feeAnnualKobo).toEqual({ manager: 2_010_000, label: 10_100_000 });
+    expect(c.billingMode).toBe('trm_plan');
+    expect(c.feeAnnualKobo).toEqual({ manager: 2_550_000, label: 9_000_000 });
+    expect(c.feeMonthlyKobo).toEqual({ manager: 710_000, label: 2_050_000 });
     expect(c.distributionRequiresPrepay).toBe(false);
   });
 
@@ -87,7 +88,7 @@ describe('TRM fee config', () => {
   it('reads an unset or blank fee as the default, never as zero', () => {
     for (const blank of [undefined, '', '  ']) {
       const c = readTrmFeeConfig({ TRM_FEE_MANAGER_ANNUAL_KOBO: blank, TRM_FEE_LABEL_ANNUAL_KOBO: blank });
-      expect(c.feeAnnualKobo).toEqual({ manager: 2_010_000, label: 10_100_000 });
+      expect(c.feeAnnualKobo).toEqual({ manager: 2_550_000, label: 9_000_000 });
     }
   });
 
@@ -97,10 +98,16 @@ describe('TRM fee config', () => {
     expect(readRevenueShareBps('101')).toBeNull();
     expect(readRevenueShareBps('10')).toBe(1000);
   });
+
+  it('reads the older billing modes when asked, and anything else as trm_plan', () => {
+    expect(readTrmFeeConfig({ TRM_BILLING_MODE: 'monthly_prorata' }).billingMode).toBe('monthly_prorata');
+    expect(readTrmFeeConfig({ TRM_BILLING_MODE: 'nonsense' }).billingMode).toBe('trm_plan');
+    expect(readTrmFeeConfig({ TRM_FEE_MANAGER_MONTHLY_KOBO: '800000' }).feeMonthlyKobo.manager).toBe(800_000);
+  });
 });
 
 describe('who gets distribution', () => {
-  it('maps Manager to TRM Single Artist and Label to TRM Label, and nothing else', () => {
+  it('maps Manager to TRM Independent Artist and Label to TRM Mini Label, and nothing else', () => {
     expect(trmPlanFor('manager')).toBe('single_artist');
     expect(trmPlanFor('label')).toBe('label');
     for (const other of ['solo', 'enterprise', 'monthly', 'annual', 'access', 'custom', null]) {
@@ -112,7 +119,7 @@ describe('who gets distribution', () => {
     for (const interval of INTERVALS) {
       for (const requiresPrepay of [false, true]) {
         expect(isDistributionEntitled({ plan: 'solo', interval, requiresPrepay })).toBe(false);
-        for (const mode of ['monthly_prorata', 'annual_upfront'] as const) {
+        for (const mode of ['trm_plan', 'monthly_prorata', 'annual_upfront'] as const) {
           for (const costBasis of ['fixed', 'percent'] as const) {
             const entry = ledgerEntryForPayment({
               plan: 'solo',
@@ -180,8 +187,46 @@ describe('what one payment owes TRM', () => {
       upfrontCoveredUntil: covered,
     });
 
+  // The pro-rata and upfront modes, at the ₦20,100 / ₦101,000 yearly quote of
+  // 2026-10-22. trm_plan replaced them as the default on 2026-10-26.
+  const OLD_QUOTE = { manager: 2_010_000, label: 10_100_000 };
+  const prorata = (over: Partial<TrmFeeConfig> = {}) =>
+    config({ billingMode: 'monthly_prorata', feeAnnualKobo: OLD_QUOTE, ...over });
+
+  it("trm_plan: a monthly team owes TRM's monthly price, ₦7,100 Manager and ₦20,500 Label", () => {
+    const manager = pay('manager', 'monthly', config());
+    expect(manager?.owedKobo).toBe(710_000);
+    expect(manager?.entryKind).toBe('period');
+    expect(manager?.serviceMonths).toBe(1);
+    expect(manager?.billingMode).toBe('trm_plan');
+    expect(pay('label', 'monthly', config())?.owedKobo).toBe(2_050_000);
+  });
+
+  it("trm_plan: a 6-month or yearly team buys TRM's yearly plan once", () => {
+    for (const interval of ['semiannual', 'annual'] as const) {
+      const entry = pay('manager', interval, config());
+      expect(entry?.owedKobo, interval).toBe(2_550_000);
+      expect(entry?.entryKind, interval).toBe('upfront');
+      expect(entry?.serviceMonths, interval).toBe(12);
+    }
+    expect(pay('label', 'annual', config())?.owedKobo).toBe(9_000_000);
+  });
+
+  it('trm_plan: while a yearly TRM plan covers the team, nothing more is owed', () => {
+    const covered = new Date('2027-06-01T00:00:00.000Z');
+    expect(pay('manager', 'monthly', config(), covered)).toBeNull();
+    expect(pay('manager', 'semiannual', config(), covered)).toBeNull();
+    expect(pay('manager', 'monthly', config(), new Date('2026-10-01T00:00:00.000Z'))?.owedKobo).toBe(710_000);
+  });
+
+  it('trm_plan: the margin view estimates a monthly team at the monthly price', () => {
+    expect(monthlyTrmFeeKobo('manager', config(), 'monthly')).toBe(710_000);
+    expect(monthlyTrmFeeKobo('manager', config(), 'annual')).toBe(212_500);
+    expect(monthlyTrmFeeKobo('label', config())).toBe(2_050_000);
+  });
+
   it('Manager monthly, pro-rata: ₦1,675.00 a month', () => {
-    const entry = pay('manager', 'monthly', config());
+    const entry = pay('manager', 'monthly', prorata());
     expect(entry?.owedKobo).toBe(167_500);
     expect(entry?.trmPlan).toBe('single_artist');
     expect(entry?.serviceMonths).toBe(1);
@@ -189,23 +234,24 @@ describe('what one payment owes TRM', () => {
   });
 
   it('Label monthly, pro-rata: ₦8,416.67 a month', () => {
-    const entry = pay('label', 'monthly', config());
+    const entry = pay('label', 'monthly', prorata());
     expect(entry?.owedKobo).toBe(841_667);
     expect(entry?.trmPlan).toBe('label');
   });
 
   it('Manager 6 months: ₦10,050 pro-rata, ₦20,100 up front', () => {
-    expect(pay('manager', 'semiannual', config())?.owedKobo).toBe(1_005_000);
-    expect(pay('manager', 'semiannual', config())?.serviceMonths).toBe(6);
-    const upfront = pay('manager', 'semiannual', config({ billingMode: 'annual_upfront' }));
+    expect(pay('manager', 'semiannual', prorata())?.owedKobo).toBe(1_005_000);
+    expect(pay('manager', 'semiannual', prorata())?.serviceMonths).toBe(6);
+    const upfront = pay('manager', 'semiannual', prorata({ billingMode: 'annual_upfront' }));
     expect(upfront?.owedKobo).toBe(2_010_000);
     expect(upfront?.entryKind).toBe('upfront');
     expect(upfront?.serviceMonths).toBe(12);
   });
 
   it('a year pro-rata owes the whole yearly fee, and up front owes it once', () => {
-    expect(pay('manager', 'annual', config())?.owedKobo).toBe(DEFAULT_TRM_FEE_MANAGER_ANNUAL_KOBO);
-    expect(pay('label', 'annual', config())?.owedKobo).toBe(DEFAULT_TRM_FEE_LABEL_ANNUAL_KOBO);
+    const yearly = config({ billingMode: 'monthly_prorata' });
+    expect(pay('manager', 'annual', yearly)?.owedKobo).toBe(DEFAULT_TRM_FEE_MANAGER_ANNUAL_KOBO);
+    expect(pay('label', 'annual', yearly)?.owedKobo).toBe(DEFAULT_TRM_FEE_LABEL_ANNUAL_KOBO);
     const upfront = config({ billingMode: 'annual_upfront' });
     const covered = new Date('2027-06-01T00:00:00.000Z');
     // A year already paid up front covers this payment: nothing more is owed.
@@ -227,7 +273,7 @@ describe('what one payment owes TRM', () => {
   it('every combination is a whole number of kobo, never negative, and dated', () => {
     for (const plan of ['manager', 'label']) {
       for (const interval of INTERVALS) {
-        for (const billingMode of ['monthly_prorata', 'annual_upfront'] as const) {
+        for (const billingMode of ['trm_plan', 'monthly_prorata', 'annual_upfront'] as const) {
           for (const costBasis of ['fixed', 'percent'] as const) {
             for (const distributionRequiresPrepay of [false, true]) {
               const entry = pay(
@@ -345,7 +391,8 @@ describe('the monthly statement for TRM', () => {
     ]);
     expect(csv.startsWith('﻿')).toBe(true);
     expect(csv).toContain(`"'=HYPERLINK(""x"")"`);
-    expect(csv).toContain('"Single Artist"');
+    expect(csv).toContain('"Independent Artist"');
+    expect(csv).toContain('"Mini Label"');
     expect(csv).toContain('"1675.00"');
     expect(csv).toContain('"8416.67"');
     expect(csv.trim().split('\r\n').at(-1)).toContain('"10091.67"');

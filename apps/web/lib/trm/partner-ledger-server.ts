@@ -51,7 +51,7 @@ export async function recordTrmFeeForPayment(
     }
 
     let upfrontCoveredUntil: Date | null = null;
-    if (config.costBasis === 'fixed' && config.billingMode === 'annual_upfront' && workspaceId) {
+    if (config.costBasis === 'fixed' && config.billingMode !== 'monthly_prorata' && workspaceId) {
       const latest = await admin
         .from('trm_partner_ledger')
         .select('period_end')

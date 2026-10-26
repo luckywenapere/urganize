@@ -1,5 +1,8 @@
 # What we need TRM Distro to confirm
 
+> **Settled 2026-10-26 (Oyin): nothing to ask TRM.** We pay TRM's own Naira prices: Manager on Independent Artist (₦7,100 a month, or ₦25,500 a year for prepaid teams; 1 artist, 7 releases), Label on Mini Label (₦20,500 a month or ₦90,000 a year; 5 artists, 10 releases), extra releases ₦2,100 each. The fee and billing questions below are kept as history.
+
+
 Updated October 22, 2026: Manager (₦30,000 a month) and Label (₦60,000 a month) now include distribution. Solo (₦8,000) does not.
 
 Urganize now sells Manager and Label with "Distribution included". For each team on those plans we owe TRM a fee, worked out by `lib/trm/partner-fee.ts` and recorded in `trm_partner_ledger` after every successful payment. We send TRM a monthly statement (CSV from `/admin/billing`) and pay by hand. Nothing is paid automatically.

@@ -13,33 +13,44 @@ import {
 // writer of trm_partner_ledger and calls into this for every number.
 //
 // THE MODEL
-//   cost basis   fixed (default): a wholesale fee per entitled team per year,
-//                by TRM plan. Manager -> TRM Single Artist, Label -> TRM Label.
+//   cost basis   fixed (default): TRM's own Naira plan price per entitled team.
+//                Manager -> TRM Independent Artist (1 artist, 7 releases a
+//                month), Label -> TRM Mini Label (5 artists, 10 releases).
 //                percent: a share of what the team paid us, for the case TRM
 //                prefers a revenue share instead.
-//   billing mode monthly_prorata (default): we owe a twelfth of the yearly fee
-//                for each month a payment covers, so a 6-month payment owes six
-//                twelfths. annual_upfront: we owe the whole year's fee the first
-//                time a team pays in a registration year, and nothing more until
-//                that year ends.
+//   billing mode trm_plan (default, founder 2026-10-26): we buy the TRM plan
+//                that matches how the team pays us. A monthly payment owes
+//                TRM's monthly price; a 6-month or yearly payment buys TRM's
+//                yearly plan once, and nothing more is owed until that year
+//                ends. monthly_prorata: a twelfth of the yearly fee for each
+//                month a payment covers. annual_upfront: the whole year's fee
+//                the first time a team pays in a registration year.
 //   Solo is never entitled. Group (sales-led, invoiced by hand) is not in the
 //   ledger: those deals set their own TRM terms.
 //
 // Every number is kobo and every result is a whole number of kobo.
 
 export type TrmCostBasis = 'fixed' | 'percent';
-export type TrmBillingMode = 'monthly_prorata' | 'annual_upfront';
+export type TrmBillingMode = 'trm_plan' | 'monthly_prorata' | 'annual_upfront';
 export type TrmPlan = 'single_artist' | 'label';
 export type TrmLedgerPlan = 'manager' | 'label';
 
-/** The yearly fee per entitled team, kobo, when TRM_FEE_* is not set. */
-export const DEFAULT_TRM_FEE_MANAGER_ANNUAL_KOBO = 2_010_000;
-export const DEFAULT_TRM_FEE_LABEL_ANNUAL_KOBO = 10_100_000;
+/** TRM's Naira prices per entitled team, kobo, when TRM_FEE_* is not set.
+ *  Read from TRM's Paystack pay pages on 2026-10-26: Independent Artist
+ *  ₦25,500 a year or ₦7,100 a month, Mini Label ₦90,000 or ₦20,500. */
+export const DEFAULT_TRM_FEE_MANAGER_ANNUAL_KOBO = 2_550_000;
+export const DEFAULT_TRM_FEE_LABEL_ANNUAL_KOBO = 9_000_000;
+export const DEFAULT_TRM_FEE_MANAGER_MONTHLY_KOBO = 710_000;
+export const DEFAULT_TRM_FEE_LABEL_MONTHLY_KOBO = 2_050_000;
+
+const BILLING_MODES: readonly TrmBillingMode[] = ['trm_plan', 'monthly_prorata', 'annual_upfront'];
 
 export type TrmFeeConfig = {
   costBasis: TrmCostBasis;
   billingMode: TrmBillingMode;
   feeAnnualKobo: Record<TrmLedgerPlan, number>;
+  /** TRM's monthly plan price. Only read on trm_plan. */
+  feeMonthlyKobo: Record<TrmLedgerPlan, number>;
   /** Basis points (1000 = 10%). Only meaningful for percent. */
   revenueShareBps: number | null;
   /** DISTRIBUTION_REQUIRES_PREPAY: monthly teams do not get distribution. */
@@ -77,15 +88,17 @@ export function readRevenueShareBps(raw: string | undefined): number | null {
 export function readTrmFeeConfig(env: Env = process.env): TrmFeeConfig {
   const revenueShareBps = readRevenueShareBps(env.TRM_REVENUE_SHARE_PCT);
   const wantsPercent = String(env.TRM_COST_BASIS ?? '').trim().toLowerCase() === 'percent';
+  const mode = String(env.TRM_BILLING_MODE ?? '').trim().toLowerCase();
   return {
     costBasis: wantsPercent && revenueShareBps !== null ? 'percent' : 'fixed',
-    billingMode:
-      String(env.TRM_BILLING_MODE ?? '').trim().toLowerCase() === 'annual_upfront'
-        ? 'annual_upfront'
-        : 'monthly_prorata',
+    billingMode: (BILLING_MODES as readonly string[]).includes(mode) ? (mode as TrmBillingMode) : 'trm_plan',
     feeAnnualKobo: {
       manager: readKobo(env.TRM_FEE_MANAGER_ANNUAL_KOBO, DEFAULT_TRM_FEE_MANAGER_ANNUAL_KOBO),
       label: readKobo(env.TRM_FEE_LABEL_ANNUAL_KOBO, DEFAULT_TRM_FEE_LABEL_ANNUAL_KOBO),
+    },
+    feeMonthlyKobo: {
+      manager: readKobo(env.TRM_FEE_MANAGER_MONTHLY_KOBO, DEFAULT_TRM_FEE_MANAGER_MONTHLY_KOBO),
+      label: readKobo(env.TRM_FEE_LABEL_MONTHLY_KOBO, DEFAULT_TRM_FEE_LABEL_MONTHLY_KOBO),
     },
     revenueShareBps,
     distributionRequiresPrepay:
@@ -200,15 +213,36 @@ export function ledgerEntryForPayment(input: {
     };
   }
 
-  if (config.billingMode === 'annual_upfront') {
-    const covered = input.upfrontCoveredUntil ?? null;
-    if (covered && covered.getTime() > input.chargedAt.getTime()) return null;
+  const covered = input.upfrontCoveredUntil ?? null;
+  const yearStillCovers = Boolean(covered && covered.getTime() > input.chargedAt.getTime());
+
+  if (config.billingMode === 'trm_plan' && input.interval === 'monthly') {
+    if (yearStillCovers) return null;
+    const feeMonthly = config.feeMonthlyKobo[plan];
+    return {
+      entryKind: 'period',
+      plan,
+      trmPlan,
+      costBasis: 'fixed',
+      billingMode: 'trm_plan',
+      feeAnnualKobo: null,
+      revenueShareBps: null,
+      serviceMonths: 1,
+      amountPaidKobo: paid,
+      owedKobo: feeMonthly,
+      periodStart: input.chargedAt,
+      periodEnd: addMonths(input.chargedAt, 1),
+    };
+  }
+
+  if (config.billingMode === 'annual_upfront' || config.billingMode === 'trm_plan') {
+    if (yearStillCovers) return null;
     return {
       entryKind: 'upfront',
       plan,
       trmPlan,
       costBasis: 'fixed',
-      billingMode: 'annual_upfront',
+      billingMode: config.billingMode,
       feeAnnualKobo: feeAnnual,
       revenueShareBps: null,
       serviceMonths: 12,
@@ -235,12 +269,22 @@ export function ledgerEntryForPayment(input: {
   };
 }
 
-/** What a team costs us in TRM fee per month on fixed monthly_prorata, kobo.
- *  For the admin margin view's estimate when the ledger has nothing yet. */
-export function monthlyTrmFeeKobo(plan: string | null | undefined, config: TrmFeeConfig): number {
+/** What a team costs us in TRM fee per month on a fixed fee, kobo. For the
+ *  admin margin view's estimate when the ledger has nothing yet. On trm_plan a
+ *  monthly team costs TRM's monthly price; a prepaid team a twelfth of the
+ *  yearly plan. */
+export function monthlyTrmFeeKobo(
+  plan: string | null | undefined,
+  config: TrmFeeConfig,
+  interval: BillingInterval | null = 'monthly'
+): number {
   const trmPlan = trmPlanFor(plan);
   if (!trmPlan) return 0;
-  return Math.round(config.feeAnnualKobo[plan as TrmLedgerPlan] / 12);
+  const ledgerPlan = plan as TrmLedgerPlan;
+  if (config.billingMode === 'trm_plan' && (interval ?? 'monthly') === 'monthly') {
+    return config.feeMonthlyKobo[ledgerPlan];
+  }
+  return Math.round(config.feeAnnualKobo[ledgerPlan] / 12);
 }
 
 // ------------------------------------------------------------------ CSV export
@@ -264,8 +308,14 @@ export type TrmLedgerCsvRow = {
 };
 
 const TRM_PLAN_LABEL: Record<string, string> = {
-  single_artist: 'Single Artist',
-  label: 'Label',
+  single_artist: 'Independent Artist',
+  label: 'Mini Label',
+};
+
+const BILLING_MODE_LABEL: Record<string, string> = {
+  trm_plan: 'TRM plan',
+  monthly_prorata: 'Monthly pro-rata',
+  annual_upfront: 'Annual upfront',
 };
 
 function csvCell(value: string): string {
@@ -307,7 +357,7 @@ export function trmLedgerCsv(rows: readonly TrmLedgerCsvRow[]): string {
         row.plan === 'manager' ? 'Manager' : row.plan === 'label' ? 'Label' : row.plan,
         TRM_PLAN_LABEL[row.trm_plan] ?? row.trm_plan,
         row.cost_basis === 'percent' ? 'Percent' : 'Fixed',
-        row.billing_mode === 'annual_upfront' ? 'Annual upfront' : 'Monthly pro-rata',
+        BILLING_MODE_LABEL[row.billing_mode] ?? row.billing_mode,
         String(row.service_months),
         row.period_start.slice(0, 10),
         row.period_end.slice(0, 10),
