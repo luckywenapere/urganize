@@ -81,6 +81,7 @@ export function RolloutIdeasCard({
   const persona = useAuthStore((state) => (state.user?.onboarding_persona ?? null) as OnboardingPersona | null);
   const viewerName = useAuthStore((state) => String(state.user?.name || '').trim());
   const [data, setData] = useState<IdeasData | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [typing, setTyping] = useState(false);
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
@@ -99,10 +100,14 @@ export function RolloutIdeasCard({
         headers,
         cache: 'no-store',
       });
-      if (!response.ok) return;
+      if (!response.ok) {
+        setLoadFailed(true);
+        return;
+      }
       setData((await response.json()) as IdeasData);
     } catch {
       // The card simply stays away when its read fails.
+      setLoadFailed(true);
     }
   }, [release.id]);
 
@@ -163,7 +168,20 @@ export function RolloutIdeasCard({
     setTyping(true);
   }, []);
 
-  if (!ENABLED || !data) return null;
+  if (!ENABLED) return null;
+  // Hold the card's place while it loads, so the plan card below it does not jump
+  // down when the idea card arrives (2026-10-26). Only for the full card on a
+  // rollout that has no plan yet, the one case where it is always going to show.
+  if (!data) {
+    if (loadFailed || condensed || hasPlan) return null;
+    return (
+      <div
+        aria-busy="true"
+        aria-label="Loading"
+        className="min-h-[17rem] animate-pulse rounded-2xl border border-stroke-default bg-bg-surface"
+      />
+    );
+  }
   if (hasPlan && data.notes.length === 0) return null;
 
   const save = async () => {
