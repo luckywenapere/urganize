@@ -46,8 +46,14 @@ export default function ChappiPageClient() {
   const isDesktop = useIsDesktopViewport();
   // Opened by the Home box sliding down: fade the chat in to finish the move.
   const [arrivedFromHome] = useState(() => consumeArrivingFromHome());
-  // The sessions list is showing in place of the conversation.
-  const [showSessions, setShowSessions] = useState(false);
+  // The sessions list is showing in place of the conversation. A phone opens
+  // on the list (2026-10-26, founder call): tap a session to open it, Back to
+  // return. Mirrored in ChappiPageSkeleton.
+  const [showSessions, setShowSessions] = useState(() => {
+    // A question carried over from the search bar goes straight to the chat.
+    const { input, sendInputOnOpen } = useChappiStore.getState();
+    return HISTORY_ENABLED && !sendInputOnOpen && input.trim().length === 0;
+  });
   const hasConversation = useChappiStore((state) => state.messages.length > 0);
 
   // iOS scrolls the document to reveal a focused field BEFORE the layout has
@@ -133,9 +139,9 @@ export default function ChappiPageClient() {
             </button>
           ) : null}
           {/* New session lives here, in the header that never scrolls, so it is
-              one tap away however long the session gets. Shown only once there
-              is something to start over from. */}
-          {hasConversation ? (
+              one tap away however long the session gets. Shown on the list and
+              once there is something to start over from. */}
+          {hasConversation || showSessions ? (
             <button
               type="button"
               onClick={() => {
