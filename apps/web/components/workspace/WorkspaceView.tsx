@@ -7,7 +7,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { AlertCircle } from '@/components/icons';
 import { RolloutPhoneHeader } from './RolloutPhoneHeader';
-import { RolloutCoverTile } from './RolloutCoverTile';
 import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
 import { useAuthStore } from '@/lib/auth-store';
 import { isCatalogRequested, markCatalogRequested } from '@/lib/catalog-intent';
@@ -324,10 +323,6 @@ export function WorkspaceView() {
   // AI actions + toast, ported verbatim from the removed release detail page
   // (2026-08-04) — this is now the only surface a scoped release renders on.
   const [toast, setToast] = useState<ToastState | null>(null);
-  const showCoverToast = useCallback(
-    (message: string, tone: 'success' | 'error' | 'warning') => setToast({ message, tone }),
-    []
-  );
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isChangeArtistOpen, setIsChangeArtistOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -1046,6 +1041,11 @@ export function WorkspaceView() {
     PLANNER_ENABLED && scopedReleaseSlim && scopedReleaseIsOwn && onlyPreProductionWork(scopedTasks) ? (
       <PlanReleaseCard
         state={isPlanGenerating ? 'generating' : planBuildError ? 'failed' : 'fresh'}
+        // The idea card leads a new rollout and offers Build my plan itself, after
+        // the idea and invite steps (2026-10-26).
+        deferToIdeas={Boolean(
+          ROLLOUT_IDEAS_ENABLED && bodyIsMainView && !scopedReleaseSlim.isTest
+        )}
         failureMessage={planBuildError}
         onPlan={() => openPlanIntake()}
         onAddActivity={() =>
@@ -1683,17 +1683,6 @@ export function WorkspaceView() {
                   onBack={handleMobileBack}
                   showMeta={bodyIsMainView}
                   showSearch={panelBody === 'timeline' && scopedTasks.length > 0}
-                  cover={
-                    <RolloutCoverTile
-                      releaseId={scopedReleaseSlim.id}
-                      title={scopedReleaseSlim.title}
-                      coverUrl={(() => {
-                        const found = releases.find((r) => r.id === scopedReleaseSlim.id);
-                        return found?.coverThumbUrl ?? found?.coverArtUrl ?? null;
-                      })()}
-                      onToast={showCoverToast}
-                    />
-                  }
                   below={
                     <>
                       {isDesktopViewport ? null : distributionStatusStrip}
