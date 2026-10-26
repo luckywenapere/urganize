@@ -16,9 +16,13 @@ import {
   addPendingInvite,
   chimeInShareText,
   ideasPathFor,
+  ideaReviewTitle,
   ideasToExtraNotes,
   isIdeaEmailInvitesEnabled,
+  isIdeaReviewPromptEnabled,
   isRolloutIdeasEnabled,
+  notesToReview,
+  reviewBaseline,
   withInviteNext,
   type IdeaInviteRole,
   type IdeaNote,
@@ -105,6 +109,35 @@ export function RolloutIdeasCard({
   // The owner's guided first run: idea, then invite, then the plan button.
   const [stage, setStage] = useState<'idea' | 'invite' | 'plan' | 'waiting'>('idea');
   const [inviteSent, setInviteSent] = useState(false);
+  // Ideas other people added since the owner last looked (flag off by default).
+  // "Last looked" is kept on this device; the first look only sets the starting
+  // point, so an old rollout never opens with a pile of old notes.
+  const reviewEnabled = isIdeaReviewPromptEnabled();
+  const reviewKey = `urganize:idea-reviewed:${release.id}`;
+  const [reviewedAt, setReviewedAt] = useState<string | null>(null);
+  const ideasLoaded = data !== null;
+  useEffect(() => {
+    if (!reviewEnabled || !ideasLoaded) return;
+    let stored: string | null = null;
+    try {
+      stored = window.localStorage.getItem(reviewKey);
+    } catch {
+      // Storage can be blocked; the prompt then simply does not show.
+    }
+    if (stored) {
+      setReviewedAt(stored);
+      return;
+    }
+    const baseline = reviewBaseline(data?.notes ?? []);
+    try {
+      window.localStorage.setItem(reviewKey, baseline);
+    } catch {
+      // Same: no storage, no prompt.
+    }
+    setReviewedAt(baseline);
+    // The first look only; later notes arrive through `data` and are read below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviewEnabled, ideasLoaded, reviewKey]);
 
   const load = useCallback(async () => {
     const headers = await authHeaders();
@@ -270,6 +303,17 @@ export function RolloutIdeasCard({
     }
   };
 
+  const toReview = reviewEnabled && canSuggest ? notesToReview(data.notes, reviewedAt) : [];
+  const markReviewed = () => {
+    const next = reviewBaseline(data.notes);
+    try {
+      window.localStorage.setItem(reviewKey, next);
+    } catch {
+      // Not saved: the prompt may come back after a reload.
+    }
+    setReviewedAt(next);
+  };
+
   const changesPanel = suggest ? (
     <IdeaChangesPanel
       state={suggest}
@@ -278,6 +322,53 @@ export function RolloutIdeasCard({
       onDismiss={() => setSuggest(null)}
     />
   ) : null;
+
+  // Someone else added an idea to a rollout that already has a plan: say so, and
+  // offer the suggested changes. Nothing changes until the owner taps Apply.
+  if (toReview.length && !typing && !askingWho && !suggest) {
+    return (
+      <section
+        ref={sectionRef}
+        aria-labelledby={`ideas-title-${release.id}`}
+        className="rounded-[20px] border border-brand bg-bg-surface px-5 py-4"
+      >
+        <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-brand">New idea</p>
+        <h2 id={`ideas-title-${release.id}`} className="mt-1 font-display text-xl font-semibold text-content-primary">
+          {ideaReviewTitle(toReview)}
+        </h2>
+        <p className="mt-2 whitespace-pre-wrap break-words rounded-xl border border-stroke-default bg-bg-base px-3 py-2 text-sm text-content-primary">
+          {ideasToExtraNotes(toReview, 400)}
+        </p>
+        <p className="mt-2 text-sm text-content-secondary">
+          UrgAns can suggest what this changes in your plan. Nothing changes until you tap Apply.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Button
+            size="md"
+            className="min-h-11"
+            onClick={() => {
+              captureAnalyticsEvent({ name: 'idea_review_prompt', properties: { count: toReview.length, action: 'review' } });
+              const text = ideasToExtraNotes(toReview);
+              markReviewed();
+              void requestChanges(text);
+            }}
+          >
+            Review changes
+          </Button>
+          <button
+            type="button"
+            onClick={() => {
+              captureAnalyticsEvent({ name: 'idea_review_prompt', properties: { count: toReview.length, action: 'dismiss' } });
+              markReviewed();
+            }}
+            className="motion-focus min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary hover:text-content-primary"
+          >
+            Dismiss
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   // A planned rollout with no idea yet: one slim way in for the owner.
   if (hasPlan && data.notes.length === 0 && canSuggest && !typing && !suggest) {

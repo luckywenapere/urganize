@@ -61,6 +61,14 @@ export function addPendingInvite(
   return { ok: true, list: [...list, { email, role }] };
 }
 
+/**
+ * NEXT_PUBLIC_FEATURE_IDEA_REVIEW_PROMPT: on a rollout that has a plan, the
+ * owner is shown a "<Name> added an idea" prompt when someone else adds a note,
+ * with a way into the suggested changes. OFF unless exactly 'true'.
+ */
+export const isIdeaReviewPromptEnabled = (): boolean =>
+  process.env.NEXT_PUBLIC_FEATURE_IDEA_REVIEW_PROMPT === 'true';
+
 /** A note on a rollout's Ideas card, as the ideas routes return it. */
 export type IdeaNote = {
   id: string;
@@ -85,6 +93,38 @@ export const MAX_IDEA_LENGTH = 2000;
 
 /** Most people one "Ask to chime in" reaches. A typo guard, like chat's. */
 export const MAX_CHIME_IN_RECIPIENTS = 25;
+
+const timeOf = (value: unknown): number => {
+  const time = typeof value === 'string' ? Date.parse(value) : NaN;
+  return Number.isFinite(time) ? time : NaN;
+};
+
+/**
+ * Other people's notes the owner has not looked at yet: newer than the last
+ * review. No baseline (or an unreadable one) means nothing to review, so an
+ * old rollout never greets its owner with a pile of old notes.
+ */
+export function notesToReview(notes: IdeaNote[], reviewedAt: string | null): IdeaNote[] {
+  const since = timeOf(reviewedAt);
+  if (Number.isNaN(since)) return [];
+  return notes.filter((note) => {
+    if (note.isOwn) return false;
+    const created = timeOf(note.createdAt);
+    return !Number.isNaN(created) && created > since;
+  });
+}
+
+/** Where a first look starts: the newest note's time, or now when there are none. */
+export function reviewBaseline(notes: IdeaNote[], now: Date = new Date()): string {
+  const times = notes.map((note) => timeOf(note.createdAt)).filter((time) => !Number.isNaN(time));
+  return new Date(times.length ? Math.max(...times) : now.getTime()).toISOString();
+}
+
+/** "<First name> added an idea", or "<n> new ideas" when several are waiting. */
+export function ideaReviewTitle(notes: IdeaNote[]): string {
+  if (notes.length === 1) return `${firstWord(notes[0].authorName) || 'Someone'} added an idea`;
+  return `${notes.length} new ideas`;
+}
 
 export const ROLLOUT_IDEAS_COPY = {
   title: "What's the idea?",
