@@ -4,6 +4,11 @@ import {
   MAX_IDEA_INVITES,
   addPendingInvite,
   parseIdeaInviteEmail,
+  notesToReview,
+  reviewBaseline,
+  ideaReviewTitle,
+  isIdeaReviewPromptEnabled,
+  type IdeaNote,
   chimeInAskLine,
   chimeInAskRecipients,
   chimeInShareText,
@@ -229,5 +234,54 @@ describe('addPendingInvite', () => {
     expect(addPendingInvite(one, 'A@B.com', 'team-member')).toMatchObject({ ok: false, reason: 'duplicate' });
     const full = Array.from({ length: MAX_IDEA_INVITES }, (_, i) => ({ email: `p${i}@b.com`, role: 'team-member' as const }));
     expect(addPendingInvite(full, 'new@b.com', 'team-member')).toMatchObject({ ok: false, reason: 'full' });
+  });
+});
+
+describe('the review-prompt flag ships off', () => {
+  afterEach(() => vi.unstubAllEnvs());
+  it('is on only when exactly "true"', async () => {
+    vi.resetModules();
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_IDEA_REVIEW_PROMPT', '');
+    expect((await import('./rollout-ideas')).isIdeaReviewPromptEnabled()).toBe(false);
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_IDEA_REVIEW_PROMPT', 'true');
+    expect((await import('./rollout-ideas')).isIdeaReviewPromptEnabled()).toBe(true);
+  });
+});
+
+describe('ideas waiting for the owner to review', () => {
+  const note = (over: Partial<IdeaNote> & { id: string }): IdeaNote => ({
+    userId: 'u1',
+    authorName: 'Dorian Okoye',
+    authorInitials: 'DO',
+    content: 'A video on the roof',
+    createdAt: '2026-10-26T10:00:00.000Z',
+    isOwn: false,
+    ...over,
+  });
+
+  it('keeps only other people\'s notes newer than the last review', () => {
+    const notes = [
+      note({ id: 'a', createdAt: '2026-10-26T09:00:00.000Z' }),
+      note({ id: 'b', createdAt: '2026-10-26T11:00:00.000Z' }),
+      note({ id: 'c', createdAt: '2026-10-26T12:00:00.000Z', isOwn: true }),
+    ];
+    expect(notesToReview(notes, '2026-10-26T10:00:00.000Z').map((n) => n.id)).toEqual(['b']);
+  });
+
+  it('shows nothing when there is no baseline yet, and never throws on a bad date', () => {
+    expect(notesToReview([note({ id: 'a' })], null)).toEqual([]);
+    expect(notesToReview([note({ id: 'a' })], 'not a date')).toEqual([]);
+    expect(notesToReview([note({ id: 'a', createdAt: 'oops' })], '2026-10-26T10:00:00.000Z')).toEqual([]);
+  });
+
+  it('starts the baseline at the newest note, or now when there are none', () => {
+    const notes = [note({ id: 'a', createdAt: '2026-10-26T09:00:00.000Z' }), note({ id: 'b', createdAt: '2026-10-26T11:00:00.000Z' })];
+    expect(reviewBaseline(notes, new Date('2026-10-27T00:00:00.000Z'))).toBe('2026-10-26T11:00:00.000Z');
+    expect(reviewBaseline([], new Date('2026-10-27T00:00:00.000Z'))).toBe('2026-10-27T00:00:00.000Z');
+  });
+
+  it('words the prompt for one person and for several', () => {
+    expect(ideaReviewTitle([note({ id: 'a' })])).toBe('Dorian added an idea');
+    expect(ideaReviewTitle([note({ id: 'a' }), note({ id: 'b', authorName: 'Tobi A' })])).toBe('2 new ideas');
   });
 });

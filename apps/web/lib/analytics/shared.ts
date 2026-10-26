@@ -159,6 +159,8 @@ export interface AnalyticsEventPropertiesMap {
   chime_in_requested: { count: number; artist_ticked: boolean };
   /** "Ask for ideas" invited new people by email (flag NEXT_PUBLIC_FEATURE_IDEA_EMAIL_INVITES). */
   idea_invite_sent: { count: number; artist_invited: boolean };
+  /** The owner's "<Name> added an idea" prompt on a planned rollout (flag NEXT_PUBLIC_FEATURE_IDEA_REVIEW_PROMPT). */
+  idea_review_prompt: { count: number; action: 'review' | 'dismiss' };
   /** An invite link to chime in was shared from the Ideas card. */
   chime_in_link_shared: { via: 'whatsapp' | 'copy'; path: 'solo' | 'manager' };
   /** The notes were turned into a plan: 'ai' when the planner built it from
