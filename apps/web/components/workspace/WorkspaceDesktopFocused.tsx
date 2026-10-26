@@ -4,7 +4,6 @@ import { countProgress } from '@/lib/task-progress';
 import { onlyPreProductionWork } from '@/lib/pre-production';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { SIDEBAR_SLOT_ROLLOUT, useSidebarSlot } from '@/components/shell/Sidebar';
 import { usePageBarCrumbSlot, usePageBarEndSlot } from '@/components/shell/PageBar';
 import { ChevronRight, Plus, Sparkles } from '@/components/icons';
 import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
@@ -121,7 +120,6 @@ export function WorkspaceDesktopFocused({
   // A fresh rollout (no release day yet, or only the seeded pre-production
   // starters) shows no count and no New activity (2026-10-26, declutter).
   const hasPlan = Boolean(card.release.releaseDate) && !onlyPreProductionWork(scopedTasks);
-  const rolloutMenuSlot = useSidebarSlot(SIDEBAR_SLOT_ROLLOUT);
   const crumbSlot = usePageBarCrumbSlot(true);
   const endSlot = usePageBarEndSlot(true);
   // True once the tab row has scrolled up to the top bar and is holding there.
@@ -136,7 +134,7 @@ export function WorkspaceDesktopFocused({
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [rolloutMenuSlot]);
+  }, []);
   // The same derived status the Catalogue row shows, so opening a rollout
   // that read Released there does not say Draft here.
   const status = displayStatus({
@@ -248,40 +246,23 @@ export function WorkspaceDesktopFocused({
         ) : null}
       </div>
 
-      {/* The rollout's menu (URG-254, founder call 2026-10-14): nested
-          under Rollouts in the desktop side menu when it is on screen, and
-          a row of tabs here when the side menu is folded away. The row
-          scrolls up with the page, then holds just under the top bar
-          (2026-10-26, founder), gaining a background and a soft shadow as it
-          locks. It sits outside the header block above, so it can stick for
-          the whole page and not only inside that block. */}
-      {rolloutMenuSlot ? (
-        createPortal(
-          <RolloutTabs
-            releaseId={scopedRelease.id}
-            variant="side"
-            share={share}
-            archive={archive}
-            deleteRollout={deleteRollout}
-          />,
-          rolloutMenuSlot
-        )
-      ) : (
-        <>
-          <div ref={tabsSentinelRef} aria-hidden="true" className="-mb-4 h-0" />
-          <div
-            data-stuck={tabsStuck ? '' : undefined}
-            className="sticky top-[72px] z-20 -mx-8 border-b border-stroke-subtle bg-bg-base px-8 pb-2 pt-0 transition-[padding,box-shadow] duration-200 ease-out data-[stuck]:pt-2 data-[stuck]:shadow-[0_8px_16px_-12px_rgb(0_0_0/0.6)]"
-          >
-            <RolloutTabs
-              releaseId={scopedRelease.id}
-              share={share}
-              archive={archive}
-              deleteRollout={deleteRollout}
-            />
-          </div>
-        </>
-      )}
+      {/* The rollout's menu: a row of tabs (the side menu no longer opens,
+          2026-10-26). The row scrolls up with the page, then holds just under
+          the top bar (2026-10-26, founder), gaining a background and a soft
+          shadow as it locks. It sits outside the header block above, so it can
+          stick for the whole page and not only inside that block. */}
+      <div ref={tabsSentinelRef} aria-hidden="true" className="-mb-4 h-0" />
+      <div
+        data-stuck={tabsStuck ? '' : undefined}
+        className="sticky top-[72px] z-20 -mx-8 border-b border-stroke-subtle bg-bg-base px-8 pb-2 pt-0 transition-[padding,box-shadow] duration-200 ease-out data-[stuck]:pt-2 data-[stuck]:shadow-[0_8px_16px_-12px_rgb(0_0_0/0.6)]"
+      >
+        <RolloutTabs
+          releaseId={scopedRelease.id}
+          share={share}
+          archive={archive}
+          deleteRollout={deleteRollout}
+        />
+      </div>
 
       {/* The panel: the one-time banner above it, the panel below, all on the
           page's own scroll. */}

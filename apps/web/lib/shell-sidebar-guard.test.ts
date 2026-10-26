@@ -49,32 +49,22 @@ describe('the side menu', () => {
   const sidebar = read('components', 'shell', 'Sidebar.tsx');
 
   it('is desktop only and reads the pages from shell-nav', () => {
-    expect(sidebar).toMatch(/className=\{`sticky [^`]*\bhidden\b[^`]*\blg:flex\b/);
+    expect(sidebar).toMatch(/className="sticky [^"]*\bhidden\b[^"]*\blg:flex\b/);
     expect(sidebar).toContain('shellSideMenu(areas, pathname)');
   });
 
-  it('keeps the profile icon at its foot: a row when open, above the fold button when folded, a slim rail with no menu', () => {
-    expect(sidebar).toContain("const mode: 'expanded' | 'collapsed' | 'rail' = !menu ? 'rail' : collapsed ? 'collapsed' : 'expanded';");
-    expect(sidebar).toContain("placement={mode === 'expanded' ? 'row' : 'rail'}");
-    expect(sidebar).toContain("mode === 'expanded' ? 'items-center gap-1' : 'flex-col items-center gap-2'");
-    // The icon comes before the fold button, so folded it sits above it.
-    const foot = sidebar.slice(sidebar.indexOf('data-sidebar-foot'));
-    expect(foot.indexOf('<WorkspaceMenu')).toBeLessThan(foot.indexOf('<SidebarToggle />'));
-    expect(sidebar).toContain("mode === 'expanded'\n      ? 'app-sidebar w-60");
-    expect(sidebar).toContain(": 'w-16 items-center'");
-    // The account menu opens upward past the menu's content box; a clip on
-    // the aside cut off its right border (2026-10-17).
+  it('is always the thin rail: no fold button, no open state, the profile icon at its foot', () => {
+    expect(sidebar).toContain("const mode: 'collapsed' | 'rail' = menu ? 'collapsed' : 'rail';");
+    expect(sidebar).toContain('placement="rail"');
+    expect(sidebar).not.toContain('SidebarToggle');
+    expect(sidebar).not.toContain('useSidebarStore');
+    expect(sidebar).not.toContain('PanelLeftOpen');
+    // The account menu opens past the rail; a clip on the aside cut it off.
     expect(sidebar).not.toContain('overflow-x-hidden');
   });
 
-  it('glides the icon and the fold button on the user\u2019s own fold only', () => {
-    expect(sidebar).toContain('useGlide(toggleRef, toggles)');
-    expect(sidebar).toContain('glideKey={toggles}');
-    expect(read('components', 'app', 'WorkspaceMenu.tsx')).toContain('useGlide(faceRef, glideKey)');
-    const store = read('stores', 'useSidebarStore.ts');
-    expect(store).toContain('toggles: state.toggles + 1');
-    expect(store).toContain('hydrateCollapsed: (collapsed) => set({ collapsed })');
-    expect(read('lib', 'use-glide.ts')).toContain("'(prefers-reduced-motion: reduce)'");
+  it('marks Artists with a person figure', () => {
+    expect(sidebar).toContain('artists: User,');
   });
 
   it('keeps the tab behaviours: Rollouts clears the open rollout, aria-current on the page', () => {
@@ -82,16 +72,10 @@ describe('the side menu', () => {
     expect(sidebar).toContain("aria-current={page.active ? 'page' : undefined}");
   });
 
-  it('offers a slot under Rollouts for an open rollout\u2019s menu', () => {
-    expect(sidebar).toContain('id={SIDEBAR_SLOT_ROLLOUT}');
+  it('shows an open rollout’s menu as tabs under its header', () => {
     const focused = read('components', 'workspace', 'WorkspaceDesktopFocused.tsx');
-    expect(focused).toContain('useSidebarSlot(SIDEBAR_SLOT_ROLLOUT)');
-    expect(focused).toContain('variant="side"');
-  });
-
-  it('folds away, remembered on this device', () => {
-    expect(sidebar).toContain('useSidebarStore');
-    expect(sidebar).toContain('readPersistedState(SIDEBAR_COLLAPSED_KEY');
+    expect(focused).not.toContain('useSidebarSlot');
+    expect(focused).toContain('<RolloutTabs');
   });
 
   it('hides the tab row from lg up', () => {
