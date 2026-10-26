@@ -143,7 +143,9 @@ export function visibleSettingsSegments(
     team: isManager,
     // Press kits left this segment Oct 17, 2026, so the roster alone fills it.
     artists: isManager && flags.workspace,
-    urgans: flags.teamBrief,
+    // WhatsApp chasing lives here too (2026-10-26), and it is the manager's, so
+    // the segment no longer waits on the team brief flag.
+    urgans: isManager || flags.teamBrief,
     directory: flags.directory,
     billing: ownsPlan,
     connections: flags.mcpConnect || flags.dataExport,
