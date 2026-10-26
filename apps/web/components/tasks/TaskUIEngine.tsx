@@ -59,6 +59,7 @@ const loadTaskDetailView = () => import('@/components/tasks/TaskDetailView');
 const loadTaskQuickCreateModal = () => import('@/components/tasks/TaskQuickCreateModal');
 const loadTaskOutcomeSheet = () => import('@/components/tasks/TaskOutcomeSheet');
 const loadCoverArtPromptSheet = () => import('@/components/tasks/CoverArtPromptSheet');
+const loadVouchSheet = () => import('@/components/tasks/VouchSheet');
 
 const TaskDetailView = dynamic(() => loadTaskDetailView().then((m) => m.TaskDetailView), {
   ssr: false,
@@ -75,6 +76,7 @@ const CoverArtPromptSheet = dynamic(
   () => loadCoverArtPromptSheet().then((m) => m.CoverArtPromptSheet),
   { ssr: false }
 );
+const VouchSheet = dynamic(() => loadVouchSheet().then((m) => m.VouchSheet), { ssr: false });
 
 /** Fetch the task surfaces' chunks ahead of the first tap. Idempotent: the
  * bundler caches each import() promise. */
@@ -107,6 +109,11 @@ function TaskOutcomeSheetGate() {
 function CoverArtPromptSheetGate() {
   const active = useTaskStore((state) => Boolean(state.coverArtPrompt));
   return active ? <CoverArtPromptSheet /> : null;
+}
+
+function VouchSheetGate() {
+  const active = useTaskStore((state) => Boolean(state.vouchPrompt));
+  return active ? <VouchSheet /> : null;
 }
 
 type TaskDetailPayload = {
@@ -993,6 +1000,11 @@ export function TaskUIEngine({ bridge }: { bridge: TaskUIEngineBridge }) {
           tier and same either/or: the store picks exactly one bottom surface
           per completion, and this one outranks both of the above. */}
       <CoverArtPromptSheetGate />
+
+      {/* "How was {first name} on this?", after ONE activity with a person
+          from My People on it is marked done (Vouch, slice 1). Same tier, same
+          either/or: below cover art, above the check-in and the toast. */}
+      <VouchSheetGate />
     </TaskDetailRenderContext.Provider>
   );
 }

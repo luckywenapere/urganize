@@ -1,11 +1,11 @@
 /**
  * "This user has no releases yet" — the trigger condition for the deferred
  * first-release prompt (originally URG-217's inescapable auto-open; softened
- * 2026-08-28, founder call — see lib/first-release-prompt.ts).
+ * 2026-08-28; since 2026-10-24 only Home's quiet card, lib/rollout-offer.ts).
  *
  * A user with zero releases has little to do in the product — every surface
  * (activities, files, calendar, press kit, metadata) hangs off a release. So
- * useFirstReleasePrompt offers the create modal a little while in, and
+ * Home offers one quiet card (RolloutOfferCard), and
  * CreateReleaseModal reads this for its warmer first-release copy. This
  * predicate is the single condition for both.
  *

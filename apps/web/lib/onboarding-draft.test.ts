@@ -3,6 +3,7 @@ import {
   EMPTY_ONBOARDING_DRAFT,
   MAX_ONBOARDING_ARTIST_NAME_LENGTH,
   clearOnboardingDraft,
+  hasWorkingOnAnswer,
   loadOnboardingDraft,
   saveOnboardingDraft,
   type OnboardingDraft,
@@ -34,7 +35,28 @@ const full: OnboardingDraft = {
   releaseDate: '2026-12-04',
   artistName: 'Tems',
   planningPreference: 'ai_recommendations',
+  nothingPlanned: false,
+  heardFrom: 'instagram',
 };
+
+describe('"Nothing planned yet" (2026-10-24)', () => {
+  it('starts off, survives a reload, and never sits beside a release type', () => {
+    expect(EMPTY_ONBOARDING_DRAFT.nothingPlanned).toBe(false);
+    install();
+    saveOnboardingDraft({ ...EMPTY_ONBOARDING_DRAFT, nothingPlanned: true });
+    expect(loadOnboardingDraft().nothingPlanned).toBe(true);
+    saveOnboardingDraft({ ...full, nothingPlanned: true });
+    expect(loadOnboardingDraft().nothingPlanned).toBe(false);
+  });
+
+  it('answers step 0 on its own', () => {
+    const available = (type: OnboardingDraft['releaseType']) => type === 'single';
+    expect(hasWorkingOnAnswer({ releaseType: null, nothingPlanned: true }, available)).toBe(true);
+    expect(hasWorkingOnAnswer({ releaseType: null, nothingPlanned: false }, available)).toBe(false);
+    expect(hasWorkingOnAnswer({ releaseType: 'single', nothingPlanned: false }, available)).toBe(true);
+    expect(hasWorkingOnAnswer({ releaseType: 'music_video', nothingPlanned: false }, available)).toBe(false);
+  });
+});
 
 describe('the onboarding draft', () => {
   it('starts with no artist name', () => {

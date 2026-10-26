@@ -65,6 +65,7 @@ export const MCP_TOOL_NAMES_ALLOWED: readonly ChappiToolName[] = [
   // create_note left with the Notes cut (Oct 16, 2026, URG-319).
   'update_task',
   'complete_task',
+  'complete_tasks',
   'reopen_task',
   'generate_status_update',
 ] as const;

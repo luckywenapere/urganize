@@ -32,6 +32,8 @@ export type AdminAttention = {
   reports: number | null;
   /** Pitch payments, payouts or refunds that need a person; null when unread. */
   pitchPayments: number | null;
+  /** Playlist owners' applications still waiting for an answer; null or unset when unread. */
+  curatorApplications?: number | null;
 };
 
 export type AdminOverview = {
@@ -116,6 +118,14 @@ export function attentionRows(attention: AdminAttention): Array<{ key: string; l
       label: 'Pitch payments',
       href: '/admin/pitch-payments',
       count: attention.pitchPayments,
+    });
+  }
+  if (attention.curatorApplications && attention.curatorApplications > 0) {
+    rows.push({
+      key: 'curator-applications',
+      label: 'Applications',
+      href: '/admin/curator-applications',
+      count: attention.curatorApplications,
     });
   }
   return rows;

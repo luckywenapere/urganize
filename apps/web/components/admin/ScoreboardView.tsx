@@ -135,6 +135,17 @@ export function ScoreboardView({
               : 'No sign-up in the last 30 days has finished its first 3 days.'
           }
         />
+        {/* Rollouts by why they were made (2026-10-24, lib/rollout-origin.ts).
+            A board cached before then has no rolloutOrigins. */}
+        <StatCard
+          label="Rollouts by choice"
+          value={board.rolloutOrigins ? number.format(board.rolloutOrigins.byChoice) : 'Not tracked'}
+          detail={
+            board.rolloutOrigins
+              ? `${board.rolloutOrigins.byChoice} made by choice, ${board.rolloutOrigins.fromHint} from an offer, ${board.rolloutOrigins.fromOnboarding} at sign-up, ${board.rolloutOrigins.unknown} older and not tagged. Of ${board.rolloutOrigins.total} real rollouts. Sign-up rollouts from before Oct 24, 2026 are mixed: sign-up required one then.`
+              : 'Not counted on this saved board yet.'
+          }
+        />
         <StatCard
           label="Referred signups, last 30 days"
           value={

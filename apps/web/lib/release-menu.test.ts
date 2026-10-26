@@ -37,6 +37,7 @@ describe('RELEASE_MENU_ORDER', () => {
       'capture',
       'change-artist',
       'archive',
+      'delete',
     ]);
   });
 

@@ -1,5 +1,7 @@
 # First-rollout focus (2026-10-10, always on, no flag)
 
+> **Removed 2026-10-24 (v1.174.0).** The lock, nav dimming, bar and auto-opening dialog are deleted; the plan choice lives on in `components/releases/PlanChoiceDialog.tsx`. See `2026-10-24-lighter-rollouts.md`. Kept below as history.
+
 > Moved out of CLAUDE.md on 2026-10-22 (verbatim). "This file", "above", "below" and "the X section" in here refer to the old single CLAUDE.md: find the named section in docs/notes/README.md.
 
 Founder ask: after the guided tour, a new team should be pushed to make a

@@ -136,9 +136,9 @@ describe('MCP tool surface', () => {
   // until it is named — so the count no longer guards against accidental
   // exposure. It is kept because it still catches the opposite mistake: an
   // intended tool silently dropping out of the surface after a rename.
-  it('exposes exactly the thirteen allow-listed tools (create_note left with the Notes cut, URG-319)', () => {
+  it('exposes exactly the fourteen allow-listed tools (create_note left with the Notes cut, URG-319; complete_tasks added v1.170.0)', () => {
     const names = getMcpToolDescriptors().map((tool) => tool.name);
-    expect(names).toHaveLength(13);
+    expect(names).toHaveLength(14);
     expect(names).not.toContain('navigate');
     expect(names).not.toContain('get_team_workload');
     expect(names).toEqual(
@@ -154,6 +154,7 @@ describe('MCP tool surface', () => {
         'create_task',
         'update_task',
         'complete_task',
+        'complete_tasks',
         'reopen_task',
         'generate_status_update',
       ])

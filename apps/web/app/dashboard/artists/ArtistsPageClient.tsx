@@ -177,6 +177,9 @@ function SwipeArtists({
 
   return (
     <div className="pb-6">
+      {/* The switch comes first, where the Rollouts page draws it, so it stays
+          still when you move between the two (switch jump fix, Oct 24, 2026). */}
+      <ArtistsRolloutsSwitch current="artists" />
       <div className="mt-3 flex items-end justify-between">
         <h1 className="font-display text-[40px] leading-[1.1] tracking-[-0.3px] text-content-primary">Artists</h1>
         <Link
@@ -187,7 +190,6 @@ function SwipeArtists({
           <Plus className="h-[18px] w-[18px]" aria-hidden="true" />
         </Link>
       </div>
-      <ArtistsRolloutsSwitch current="artists" />
       {loading ? (
         <ul className="mt-[18px]" aria-busy="true">
           {[0, 1, 2].map((key) => (

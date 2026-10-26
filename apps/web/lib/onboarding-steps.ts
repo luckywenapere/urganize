@@ -70,18 +70,30 @@ export type OnboardingStepOptions = {
   previewEnabled: boolean;
   /** The opt-in screen. */
   optInEnabled: boolean;
+  /**
+   * "Nothing planned yet" on step 0 (2026-10-24): no rollout is made, so the
+   * steps about THIS rollout (what's done, title and date, first move, the
+   * plan preview) are skipped. "Where does a rollout usually fall apart?" stays:
+   * it is about how they work, not this rollout, and it leads the paywall.
+   * Optional so older callers read as false.
+   */
+  nothingPlanned?: boolean;
 };
 
 /** Every step this person walks, in order. */
 export function onboardingStepSequence(options: OnboardingStepOptions): OnboardingStepIndex[] {
-  const steps: OnboardingStepIndex[] = [
-    ONBOARDING_STEP.workingOn,
-    ONBOARDING_STEP.fallsApart,
-    ONBOARDING_STEP.alreadyDone,
-    ONBOARDING_STEP.rollout,
-    ONBOARDING_STEP.firstMove,
-  ];
-  if (options.previewEnabled && !options.startFromScratch) steps.push(ONBOARDING_STEP.preview);
+  const steps: OnboardingStepIndex[] = options.nothingPlanned
+    ? [ONBOARDING_STEP.workingOn, ONBOARDING_STEP.fallsApart]
+    : [
+        ONBOARDING_STEP.workingOn,
+        ONBOARDING_STEP.fallsApart,
+        ONBOARDING_STEP.alreadyDone,
+        ONBOARDING_STEP.rollout,
+        ONBOARDING_STEP.firstMove,
+      ];
+  if (options.previewEnabled && !options.startFromScratch && !options.nothingPlanned) {
+    steps.push(ONBOARDING_STEP.preview);
+  }
   if (options.optInEnabled) steps.push(ONBOARDING_STEP.optIn);
   if (!options.authedSetup) steps.push(ONBOARDING_STEP.account);
   if (options.paywallEnabled) steps.push(ONBOARDING_STEP.paywall);

@@ -3175,14 +3175,6 @@ html.urgans-leaving .home-scene-container > :not([data-urgans-source]) {
   to { opacity: 1; }
 }
 
-/* First-rollout focus (lib/first-release-focus.ts): while it is on, the
-   in-app areas that are locked read as locked. The click catch in
-   FirstReleaseFocus.tsx does the actual blocking; this is only the look.
-   Home and Settings stay at full strength. */
-html[data-release-focus='on'] nav a[href^='/dashboard']:not([href^='/dashboard/home']) {
-  opacity: 0.5;
-}
-
 /* Top bar while a tapped link is still loading (components/app/NavPendingBar.tsx,
    2026-10-14). Creeps toward 85% and never claims to finish; it simply goes
    away when the page lands. */
@@ -3496,6 +3488,22 @@ html[data-release-focus='on'] nav a[href^='/dashboard']:not([href^='/dashboard/h
 :root[data-swipe-nav='page'] .mobile-nav-raise,
 :root[data-swipe-nav='page'] .mobile-nav-raise-card {
   bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* The UrgAns box on every other phone screen (.page-dock, Oct 24, 2026):
+   the page clears it, toasts sit above it, and it steps aside while another
+   field on the page has the keyboard. */
+@media (max-width: 1023px) {
+  :root[data-swipe-nav='page'][data-home-dock] .swipe-page-main {
+    padding-bottom: calc(var(--home-dock-height, 3.5rem) + 2.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  :root[data-swipe-nav='page'][data-home-dock] .mobile-nav-raise,
+  :root[data-swipe-nav='page'][data-home-dock] .mobile-nav-raise-card {
+    bottom: calc(1.75rem + var(--home-dock-height, 3.5rem) + env(safe-area-inset-bottom, 0px));
+  }
+  :root[data-swipe-nav='page'][data-keyboard-open='true'] .page-dock:not(:focus-within) {
+    display: none;
+  }
 }
 
 /* The Home card landing in Main: hidden while its copy flies (~330ms), then a

@@ -241,7 +241,7 @@ export function installLinkStallWatchdog(): () => void {
         return;
       }
       const path = target.split(/[?#]/)[0] || '/';
-      // Later capture listeners (FirstReleaseFocus) may still cancel this click
+      // Later capture listeners (none since the first-rollout lock went, 2026-10-24) may still cancel this click
       // on purpose; decide once the event has finished dispatching.
       window.setTimeout(() => {
         if (blockedClicks.has(event)) return;

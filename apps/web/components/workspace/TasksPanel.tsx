@@ -21,7 +21,9 @@ import { MORPH_EXIT_MS, prefersReducedMotion } from '@/lib/morph';
 import { usePresence } from '@/components/motion/usePresence';
 import type { Release } from '@/types/releases';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
-import { TaskRow } from '@/components/tasks/TaskRow';
+import { TaskRow, type TaskRowSelection } from '@/components/tasks/TaskRow';
+import { BulkSelectBar, SelectToggleButton, isSelectableTask } from '@/components/tasks/BulkSelect';
+import { TASKS_CHANGED_EVENT } from '@/components/tasks/TaskUIProvider';
 import { orderForThumb } from '@/lib/release-menu';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
@@ -205,6 +207,8 @@ type TasksPanelProps = {
    */
   archiveAction?: TaskPanelAction | null;
   shareAction?: TaskPanelAction | null;
+  /** Delete rollout (to Trash), owner-only. Drawn in red, apart from the rest. */
+  deleteAction?: TaskPanelAction | null;
   /**
    * When set, replaces the activity buckets with this content. The rollout menu
    * (the card in the right-hand column on a desktop, the hamburger on a phone)
@@ -287,6 +291,7 @@ export function TasksPanel({
   id,
   archiveAction,
   shareAction,
+  deleteAction,
   sceneContent,
   activitiesBanner,
   activitiesFooter,
@@ -419,6 +424,86 @@ export function TasksPanel({
     writePersistedState(EXPANDED_STORAGE_KEY, EXPANDED_STORAGE_VERSION, next);
   };
 
+  // ---- Select mode: bulk mark as done (STMZ feedback, 2026-10-22) ----------
+  // "Select" turns the list into a picker; the floating bar marks every
+  // picked row done in one go, with one "N done · Undo" toast and no
+  // "How did it go?" sheet per task (that sheet was the one-by-one confirm).
+  // The Timeline has its own Select mode with the same bar (v1.170.0).
+  const [selecting, setSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [isMarkingDone, setIsMarkingDone] = useState(false);
+  const completeTasks = useTaskStore((state) => state.completeTasks);
+  const exitSelecting = () => {
+    setSelecting(false);
+    setSelectedIds(new Set());
+  };
+  // Every row the list can show that can be marked done right now.
+  const selectableIds = useMemo(
+    () =>
+      listTasks
+        .filter((task) => isSelectableTask(task))
+        .map((task) => task.id),
+    [listTasks]
+  );
+  // A different release, or rows that left the list (done elsewhere), drop
+  // out of the selection rather than lingering as invisible picks.
+  const scopedReleaseId = scopedRelease?.id ?? null;
+  const [selectionScope, setSelectionScope] = useState(scopedReleaseId);
+  if (selectionScope !== scopedReleaseId) {
+    setSelectionScope(scopedReleaseId);
+    setSelecting(false);
+    setSelectedIds(new Set());
+  }
+  useEffect(() => {
+    if (!selecting) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelecting(false);
+        setSelectedIds(new Set());
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selecting]);
+  const pickedIds = selectableIds.filter((taskId) => selectedIds.has(taskId));
+  const allPicked = selectableIds.length > 0 && pickedIds.length === selectableIds.length;
+  const toggleSelected = (taskId: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  };
+  const rowSelection = (task: Task): TaskRowSelection | undefined =>
+    selecting
+      ? {
+          selected: selectedIds.has(task.id),
+          selectable: isSelectableTask(task),
+          onToggle: () => toggleSelected(task.id),
+        }
+      : undefined;
+  const markPickedDone = async () => {
+    if (isMarkingDone || pickedIds.length === 0) return;
+    setIsMarkingDone(true);
+    try {
+      await completeTasks(pickedIds);
+      // List views that read straight from the API refetch, as after a tick.
+      window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
+      exitSelecting();
+    } finally {
+      setIsMarkingDone(false);
+    }
+  };
+  const selectControl = (bar: boolean) =>
+    selectableIds.length > 0 || selecting ? (
+      <SelectToggleButton
+        selecting={selecting}
+        bar={bar}
+        onToggle={() => (selecting ? exitSelecting() : setSelecting(true))}
+      />
+    ) : null;
+
   // The mobile dock's two panels (2026-08-16 redesign, split 2026-08-31 —
   // see the base-dock block below). Both collapsed by default, so neither is
   // reserved in the skeleton beyond its trigger button (data this component
@@ -468,6 +553,7 @@ export function TasksPanel({
     variant: 'phone',
     share: shareAction,
     archive: archiveAction,
+    deleteRollout: deleteAction,
   });
 
   // The dock renders only when the menu has actions to list. Search is not here
@@ -611,11 +697,30 @@ export function TasksPanel({
       ) : (
       <div className="space-y-3">
         {scopedRelease && tasks.length > 0 ? (
-          <PlanListControls plan={plan} phoneSearchOnly inPageBar={pageBarTools} extra={groupByControl(true)} />
+          <PlanListControls
+            plan={plan}
+            phoneSearchOnly
+            inPageBar={pageBarTools}
+            extra={
+              <>
+                {groupByControl(true)}
+                <span className="hidden lg:contents">{selectControl(true)}</span>
+              </>
+            }
+          />
         ) : null}
         {/* Below lg Group by keeps its own row; on a computer it is on the
             page bar line with the other plan tools (2026-10-15). */}
-        {scopedRelease && tasks.length > 0 ? <div className="lg:hidden">{groupByControl(false)}</div> : null}
+        {scopedRelease && tasks.length > 0 ? (
+          <div className="flex items-center justify-between gap-3 lg:hidden">
+            {groupByControl(false)}
+            {selectControl(false)}
+          </div>
+        ) : null}
+        {/* Every rollout at once has no plan tools row, so Select gets its own. */}
+        {!scopedRelease && tasks.length > 0 ? (
+          <div className="flex justify-end">{selectControl(false)}</div>
+        ) : null}
         {/* Every bucket empty: the buckets below have all suppressed
             themselves, so this stands in for the whole list.
             Actionable rather than a muted line (URG-233) — an empty panel
@@ -682,6 +787,7 @@ export function TasksPanel({
                         density="compact"
                         startHere={task.id === startHereId}
                         onClick={(t) => openTask(t.id)}
+                        selection={rowSelection(task)}
                       />
                     ))
                   )}
@@ -783,6 +889,7 @@ export function TasksPanel({
                           task={task}
                           density="compact"
                           onClick={(t) => openTask(t.id)}
+                          selection={rowSelection(task)}
                         />
                       </div>
                     );
@@ -890,6 +997,18 @@ export function TasksPanel({
         />
       ) : null}
       {scopedRelease ? <PlanSuggestionToast /> : null}
+      {/* Select mode's bar: fixed at the bottom, where a thumb reaches. Inside
+          the aside, so the desktop's hidden phone mount (and vice versa)
+          never shows a second one. */}
+      {selecting ? (
+        <BulkSelectBar
+          count={pickedIds.length}
+          allPicked={allPicked}
+          busy={isMarkingDone}
+          onToggleAll={() => setSelectedIds(allPicked ? new Set() : new Set(selectableIds))}
+          onMarkDone={markPickedDone}
+        />
+      ) : null}
     </aside>
   );
 }
@@ -947,8 +1066,17 @@ function RolloutMenuSheet({
           </button>
         </div>
         <ul id={id} ref={listRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2">
-          {actions.map((action) => (
-            <li key={action.key}>
+          {actions.map((action, index) => (
+            <li
+              key={action.key}
+              // The phone draws the list upside down (orderForThumb), so Delete
+              // sits at the top, far from the thumb, with a line under it.
+              className={
+                action.destructive && index < actions.length - 1
+                  ? 'mb-1 border-b border-stroke-subtle pb-1'
+                  : undefined
+              }
+            >
               <button
                 type="button"
                 onClick={() => onSelect(action)}
@@ -957,13 +1085,17 @@ function RolloutMenuSheet({
                 // entirely rather than announcing them as unpressed toggles.
                 aria-pressed={action.isActive}
                 className={`motion-focus flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-left text-base transition-colors disabled:opacity-60 ${
-                  action.isActive
-                    ? 'bg-brand/10 font-semibold text-content-primary'
-                    : 'text-content-primary hover:bg-bg-hover'
+                  action.destructive
+                    ? 'text-status-error hover:bg-status-error/10'
+                    : action.isActive
+                      ? 'bg-brand/10 font-semibold text-content-primary'
+                      : 'text-content-primary hover:bg-bg-hover'
                 }`}
               >
                 <action.icon
-                  className={`h-5 w-5 shrink-0 ${action.isActive ? 'text-brand' : 'text-content-tertiary'}`}
+                  className={`h-5 w-5 shrink-0 ${
+                    action.destructive ? 'text-status-error' : action.isActive ? 'text-brand' : 'text-content-tertiary'
+                  }`}
                   aria-hidden="true"
                 />
                 {action.label}

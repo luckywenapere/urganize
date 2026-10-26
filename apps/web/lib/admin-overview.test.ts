@@ -156,6 +156,9 @@ describe('Reports and Pitch payments on the Overview', () => {
     expect(attentionRows({ reports: null, pitchPayments: null })).toEqual([]);
     expect(attentionRows({ reports: 2, pitchPayments: 0 }).map((row) => row.label)).toEqual(['Reports']);
     expect(attentionRows({ reports: 0, pitchPayments: 1 }).map((row) => row.href)).toEqual(['/admin/pitch-payments']);
+    expect(attentionRows({ reports: 0, pitchPayments: 0, curatorApplications: 3 })).toEqual([
+      { key: 'curator-applications', label: 'Applications', href: '/admin/curator-applications', count: 3 },
+    ]);
   });
 });
 

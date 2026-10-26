@@ -8,6 +8,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import type { ExecutionRelease } from '@/lib/execution-types';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { ThumbImage } from '@/components/shared/ThumbImage';
+import { NeedsRolloutEmpty } from '@/components/releases/NeedsRolloutEmpty';
 
 /**
  * Distribute, a Catalogue tab (founder call, 2026-10-14: it took Press kits'
@@ -93,11 +94,11 @@ export default function DistributePageClient() {
           ))}
         </div>
       ) : rows.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-stroke-default p-8 text-center">
-          <Send className="mx-auto h-6 w-6 text-content-tertiary" aria-hidden />
-          <p className="mt-3 text-sm font-semibold text-content-primary">No rollouts yet</p>
-          <p className="mt-1 text-sm text-content-secondary">Start one in Rollouts and it shows up here.</p>
-        </div>
+        <NeedsRolloutEmpty
+          icon={<Send className="h-6 w-6" aria-hidden />}
+          title="No rollouts yet"
+          body="Sending to stores needs a rollout. Plan one and it shows up here."
+        />
       ) : (
         <ul className="divide-y divide-stroke-subtle overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
           {rows.map((release) => {

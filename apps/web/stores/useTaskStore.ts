@@ -18,6 +18,8 @@ import { type TaskPriority, type TaskStatus } from '@/lib/tasks';
 // Read straight off the auth store's persisted blob rather than importing
 // useAuthStore — see lib/task-outcome-prompt.ts's header for why.
 import { readAskAfterTasks } from '@/lib/task-outcome-prompt';
+import { isVouchesEnabled } from '@/lib/vouches';
+import { useRelationshipsStore } from '@/stores/useRelationshipsStore';
 
 type TaskCreateInput = {
   title: string;
@@ -43,6 +45,29 @@ export type CompletionToastState = {
   taskId: string;
   title: string;
   tick: number;
+  /**
+   * Set only by a bulk completion (completeTasks, STMZ feedback 2026-10-22):
+   * every id the one toast covers, so its Undo reopens them all. `taskId` is
+   * the first of them, which keeps the per-id timer and dismiss logic as is.
+   */
+  taskIds?: string[];
+};
+
+/** What a bulk completion did: how many went through, how many were refused
+ * (a blocker, a failed save, or a row that is not open). */
+export type BulkCompletionResult = {
+  done: number;
+  skipped: number;
+};
+
+type CompleteTaskOptions = {
+  /**
+   * No bottom surface at all: no undo toast, no "How did it go?", no cover
+   * art ask. Used by completeTasks, which shows ONE toast for the whole batch
+   * instead of a sheet per task (that sheet was the one-by-one confirm STMZ
+   * hit, 2026-10-22).
+   */
+  quiet?: boolean;
 };
 
 /**
@@ -81,6 +106,23 @@ export type CoverArtPromptState = {
   tick: number;
 };
 
+/**
+ * The vouch prompt ("How was {first name} on this?", Vouch slice 1), rendered
+ * by VouchSheet when ONE activity with a person from My People on it
+ * ("Who's doing it") is marked done. Never during a bulk Mark done. Written
+ * in the same synchronous set() as the done flip, like the two above.
+ *
+ * Priority: after the cover art ask, before the check-in and the undo toast.
+ * One bottom surface at a time.
+ */
+export type VouchPromptState = {
+  taskId: string;
+  personId: string;
+  title: string;
+  taskType: string | null;
+  tick: number;
+};
+
 type TaskStore = {
   tasks: ExecutionTask[];
   selectedTaskId: string | null;
@@ -105,11 +147,20 @@ type TaskStore = {
   outcomePrompt: OutcomePromptState | null;
   /** Open cover art upload prompt, or null. See CoverArtPromptState. */
   coverArtPrompt: CoverArtPromptState | null;
+  /** Open vouch prompt, or null. See VouchPromptState. */
+  vouchPrompt: VouchPromptState | null;
   setTasks: (tasks: ExecutionTask[]) => void;
   selectTask: (taskId: string | null) => void;
   createTask: (input: TaskCreateInput) => Promise<ExecutionTask | null>;
   updateRequirement: (taskId: string, requirement: TaskRequirement | null) => Promise<void>;
-  completeTask: (taskId: string) => Promise<ExecutionTask | null>;
+  completeTask: (taskId: string, options?: CompleteTaskOptions) => Promise<ExecutionTask | null>;
+  /**
+   * Marks several open tasks done in one go. Each runs through completeTask
+   * (blocker check, optimistic flip, PATCH, cascade unlock) in quiet mode, then
+   * one "N done · Undo" toast covers the batch. Done, cancelled and locked
+   * rows are skipped, never reopened.
+   */
+  completeTasks: (taskIds: string[]) => Promise<BulkCompletionResult>;
   /**
    * Reverses the most recent completion of `taskId` by patching it back to
    * `todo`, clearing any pending in-place beat, and dismissing the undo toast
@@ -125,6 +176,8 @@ type TaskStore = {
    * to do it later.
    */
   dismissCoverArtPrompt: () => void;
+  /** Closes the vouch prompt. Records nothing and never touches the task. */
+  dismissVouchPrompt: () => void;
   tasksForRelease: (releaseId: string) => ExecutionTask[];
   /**
    * True while this task's complete/reopen PATCH is still in the air. Read-
@@ -161,9 +214,11 @@ const TOAST_DURATION_MS = 5000;
 let completionToastTick = 0;
 let outcomePromptTick = 0;
 let coverArtPromptTick = 0;
+let vouchPromptTick = 0;
 
 const TASK_OUTCOMES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TASK_OUTCOMES === 'true';
 const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
+const VOUCHES_ENABLED = isVouchesEnabled();
 
 const getAccessToken = async () => {
   const {
@@ -180,7 +235,14 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   completionToast: null,
   outcomePrompt: null,
   coverArtPrompt: null,
-  setTasks: (tasks) => set({ tasks, error: '' }),
+  vouchPrompt: null,
+  setTasks: (tasks) => {
+    set({ tasks, error: '' });
+    // Which activities have a person on them, so ticking one can ask for a
+    // vouch on that frame. One small read, coalesced and kept fresh by the
+    // relationships store.
+    if (VOUCHES_ENABLED && tasks.length > 0) void useRelationshipsStore.getState().loadAssignments();
+  },
   selectTask: (taskId) => set({ selectedTaskId: taskId }),
   tasksForRelease: (releaseId) => get().tasks.filter((task) => task.releaseId === releaseId),
   hasInFlightCompletion: (taskId) => inFlightCompletionIds.has(taskId),
@@ -255,7 +317,8 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       error: '',
     }));
   },
-  completeTask: async (taskId) => {
+  completeTask: async (taskId, options) => {
+    const quiet = options?.quiet === true;
     // Ignore clicks while a previous complete/reopen for this task is still
     // running. Clear the error first so callers' `!result` blocker checks
     // read an empty message and treat the ignored click as a no-op rather
@@ -337,6 +400,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         // longer done.
         const nextCoverArtPrompt =
           state.coverArtPrompt?.taskId === taskId ? null : state.coverArtPrompt;
+        // And the vouch: the work it asks about is no longer done.
+        const nextVouchPrompt =
+          state.vouchPrompt?.taskId === taskId ? null : state.vouchPrompt;
         return {
           tasks: state.tasks.map((candidate) =>
             candidate.id === taskId ? optimisticReopened : candidate
@@ -345,6 +411,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
           completionToast: nextToast,
           outcomePrompt: nextOutcomePrompt,
           coverArtPrompt: nextCoverArtPrompt,
+          vouchPrompt: nextVouchPrompt,
           error: '',
         };
       });
@@ -458,17 +525,28 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     // step is the moment the manager has the file open, and asking a minute
     // later means asking after they have moved on.
     const shouldPromptCoverArt =
+      !quiet &&
       COVER_ART_ENABLED &&
       Boolean(optimisticDone.releaseId) &&
       shouldPromptCoverArtUpload(optimisticDone);
 
+    // The vouch comes next: one activity, with a person from My People on it.
+    // Never in quiet mode, so a bulk Mark done asks nothing.
+    const vouchPersonId =
+      !quiet && !shouldPromptCoverArt && VOUCHES_ENABLED
+        ? useRelationshipsStore.getState().assignments[taskId] ?? null
+        : null;
+    const shouldPromptVouch = Boolean(vouchPersonId);
+
     const shouldPromptOutcome =
+      !quiet &&
       !shouldPromptCoverArt &&
+      !shouldPromptVouch &&
       TASK_OUTCOMES_ENABLED &&
       Boolean(optimisticDone.releaseId) &&
       readAskAfterTasks();
 
-    const shouldShowToast = !shouldPromptCoverArt && !shouldPromptOutcome;
+    const shouldShowToast = !quiet && !shouldPromptCoverArt && !shouldPromptVouch && !shouldPromptOutcome;
 
     // Mirror the same single-active-timer rule for the toast — the toast
     // lifetime (TOAST_DURATION_MS) is independent of the in-place beat so
@@ -493,6 +571,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     let toastSnapshot: CompletionToastState | null = null;
     let outcomeSnapshot: OutcomePromptState | null = null;
     let coverArtSnapshot: CoverArtPromptState | null = null;
+    let vouchSnapshot: VouchPromptState | null = null;
     if (shouldPromptCoverArt) {
       coverArtPromptTick += 1;
       coverArtSnapshot = {
@@ -500,6 +579,15 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         releaseId: optimisticDone.releaseId as string,
         title: optimisticDone.title,
         tick: coverArtPromptTick,
+      };
+    } else if (shouldPromptVouch && vouchPersonId) {
+      vouchPromptTick += 1;
+      vouchSnapshot = {
+        taskId,
+        personId: vouchPersonId,
+        title: optimisticDone.title,
+        taskType: optimisticDone.taskType ?? null,
+        tick: vouchPromptTick,
       };
     } else if (shouldPromptOutcome) {
       outcomePromptTick += 1;
@@ -509,7 +597,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         title: optimisticDone.title,
         tick: outcomePromptTick,
       };
-    } else {
+    } else if (shouldShowToast) {
       completionToastTick += 1;
       toastSnapshot = {
         taskId,
@@ -531,6 +619,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       completionToast: toastSnapshot ?? state.completionToast,
       outcomePrompt: outcomeSnapshot ?? state.outcomePrompt,
       coverArtPrompt: coverArtSnapshot ?? state.coverArtPrompt,
+      vouchPrompt: vouchSnapshot ?? state.vouchPrompt,
       error: '',
     }));
 
@@ -564,6 +653,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
           // not the task, so it still lands.
           coverArtPrompt:
             state.coverArtPrompt?.taskId === taskId ? null : state.coverArtPrompt,
+          // Nothing was done, so there is nothing to vouch for.
+          vouchPrompt:
+            state.vouchPrompt?.taskId === taskId ? null : state.vouchPrompt,
           error: message,
         };
       });
@@ -663,6 +755,50 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       inFlightCompletionIds.delete(taskId);
     }
   },
+  completeTasks: async (taskIds) => {
+    const unique = Array.from(new Set(taskIds));
+    const open = unique.filter((id) => {
+      const task = get().tasks.find((candidate) => candidate.id === id);
+      // Only open rows. A done row through completeTask would REOPEN it, and
+      // a locked one is refused anyway.
+      return (
+        !task ||
+        (task.status !== TASK_DONE_STATUS &&
+          task.status !== TASK_LOCKED_STATUS &&
+          task.status !== 'cancelled')
+      );
+    });
+    // In parallel: each call's optimistic flip is synchronous after its token
+    // read, so a dependent of two picked tasks still unlocks once (the second
+    // call sees the first one's done row).
+    const results = await Promise.all(open.map((id) => get().completeTask(id, { quiet: true })));
+    const doneIds = open.filter((_, index) => Boolean(results[index]));
+    const skipped = unique.length - doneIds.length;
+
+    if (doneIds.length > 0) {
+      const firstId = doneIds[0];
+      const existing = completionToastTimers.get(firstId);
+      if (existing) clearTimeout(existing);
+      const toastTimer = setTimeout(() => {
+        completionToastTimers.delete(firstId);
+        set((state) => (state.completionToast?.taskId === firstId ? { completionToast: null } : state));
+      }, TOAST_DURATION_MS);
+      completionToastTimers.set(firstId, toastTimer);
+      completionToastTick += 1;
+      const firstTitle = get().tasks.find((candidate) => candidate.id === firstId)?.title ?? '';
+      set({
+        completionToast: {
+          taskId: firstId,
+          title: doneIds.length === 1 ? firstTitle : `${doneIds.length} done`,
+          tick: completionToastTick,
+          taskIds: doneIds,
+        },
+        error: skipped > 0 ? `${skipped} couldn't be marked done yet.` : '',
+      });
+    }
+
+    return { done: doneIds.length, skipped };
+  },
   undoCompletion: async (taskId) => {
     const beatTimer = pendingBeatTimers.get(taskId);
     if (beatTimer) {
@@ -743,6 +879,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   dismissOutcomePrompt: () => {
     set((state) => (state.outcomePrompt ? { outcomePrompt: null } : state));
   },
+  dismissVouchPrompt: () => {
+    set((state) => (state.vouchPrompt ? { vouchPrompt: null } : state));
+  },
 }));
 
 /**
@@ -772,6 +911,7 @@ export function resetTaskStore(): void {
     completionToast: null,
     outcomePrompt: null,
     coverArtPrompt: null,
+    vouchPrompt: null,
   });
 }
 
@@ -782,5 +922,5 @@ registerSignOutReset('tasks', resetTaskStore);
 // /settings), ask TaskUIProvider for it the moment a completion wants one of
 // them; see lib/task-ui-demand.ts.
 useTaskStore.subscribe((state) => {
-  if (state.completionToast || state.outcomePrompt || state.coverArtPrompt) requestTaskUiEngine();
+  if (state.completionToast || state.outcomePrompt || state.coverArtPrompt || state.vouchPrompt) requestTaskUiEngine();
 });

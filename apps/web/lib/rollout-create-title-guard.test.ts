@@ -8,8 +8,8 @@ import { describe, expect, it } from 'vitest';
  * The type-first create screen used to make the rollout the moment Single, EP
  * or Album was tapped: no way to name it (every one was "Untitled rollout"),
  * and the cards locked as soon as one was tapped. Now the screen carries an
- * optional title, the cards are a changeable choice, and "Create rollout" is
- * the submit. The planner's abandoned-shell discard is told the created title
+ * optional title, the cards are a changeable choice, and the footer button is
+ * the submit ("Create" since 2026-10-24). The planner's abandoned-shell discard is told the created title
  * so a rollout that was only named is still cleaned up.
  *
  * Components are not rendered in this repo's tests, so these hold the wiring
@@ -49,14 +49,35 @@ describe('type-first create screen', () => {
     expect(typeFirst).toContain('typeWasPicked: true');
   });
 
-  it('the type-first block renders a title field and radio cards', () => {
-    const start = modal.indexOf('{TYPE_FIRST_CREATE_ENABLED ? (\n            <div className="space-y-5');
+  it('the one form body renders a title field and the Format radios', () => {
+    const start = modal.indexOf('{TYPE_FIRST_CREATE_ENABLED || plan ? (');
     expect(start).toBeGreaterThanOrEqual(0);
-    const block = modal.slice(start, modal.indexOf('{/* Step 1', start));
+    const block = modal.slice(start, modal.indexOf('{submitError ? (', start));
     expect(block).toContain('ref={titleInputRef}');
     expect(block).toContain('maxLength={140}');
     expect(block).toContain('role="radio"');
     expect(block).toContain('aria-checked={isSelected}');
+  });
+
+  // 2026-10-24: the first-rollout focus passes an initialPlan, and the modal
+  // used to render the type-first body AND the plan body together (every
+  // field twice). One body, one title input, one Format group, no date.
+  it('renders exactly one body: one title input, one Format group, no date field', () => {
+    expect(modal.split('ref={titleInputRef}').length - 1).toBe(1);
+    expect(modal.split('aria-label="Format"').length - 1).toBe(1);
+    expect(modal).not.toContain('type="date"');
+    expect(modal).not.toContain('releaseDate: input.releaseDate');
+  });
+
+  it('the type-first submit sends the picked artist', () => {
+    const body = functionBody(modal, 'const handleSubmit');
+    const typeFirst = body.slice(body.indexOf('if (TYPE_FIRST_CREATE_ENABLED)'));
+    expect(typeFirst.slice(0, typeFirst.indexOf('return;'))).toContain('artistId: pickedArtistId');
+  });
+
+  it('the primary button says exactly Create', () => {
+    expect(modal).toMatch(/>\s*Create\s*<\/Button>/);
+    expect(modal).not.toMatch(/>\s*Create rollout\s*<\/Button>/);
   });
 
   it('reports the saved title so the planner can vouch for it', () => {

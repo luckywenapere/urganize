@@ -8,13 +8,16 @@
 // The route stays because links into it are already out in the world: curator
 // public pages (?curator=), Paystack's cancel link (?payment=cancelled),
 // notification emails and Home's "See pitches". It forwards them to a
-// rollout's Pitch tab, carrying those params, and to the catalogue when the
-// team has no rollout yet.
+// rollout's Pitch tab, carrying those params. With no rollout yet it shows its
+// own "Plan a rollout" empty state (2026-10-24; it used to send people to the
+// catalogue, behind the old first-rollout lock).
 //
 // NEVER useSearchParams (the static-page trap recorded for /auth and
 // MobileNavBar): the params are read imperatively, once.
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Send } from '@/components/icons';
+import { NeedsRolloutEmpty } from '@/components/releases/NeedsRolloutEmpty';
 import { useRouter } from 'next/navigation';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { CATALOGUE_HREF } from '@/lib/shell-nav';
@@ -26,6 +29,7 @@ const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 export default function PitchingPageClient() {
   const router = useRouter();
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
+  const [noRollout, setNoRollout] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,7 +61,9 @@ export default function PitchingPageClient() {
           ? pending
           : forArtist || releases[0]?.id || '';
       if (!releaseId) {
-        router.replace(CATALOGUE_HREF);
+        // A failed load is not "no rollouts": keep the old way out for it.
+        if (useReleaseStore.getState().error) router.replace(CATALOGUE_HREF);
+        else setNoRollout(true);
         return;
       }
       router.replace(
@@ -72,6 +78,18 @@ export default function PitchingPageClient() {
       cancelled = true;
     };
   }, [loadCommandCenter, router]);
+
+  if (noRollout) {
+    return (
+      <div className="mx-auto w-full max-w-3xl pt-5 sm:pt-6">
+        <NeedsRolloutEmpty
+          icon={<Send className="h-6 w-6" aria-hidden />}
+          title="Pitching needs a rollout"
+          body="Songs are pitched from a rollout. Plan one and pitch it from there."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-3" aria-busy="true">

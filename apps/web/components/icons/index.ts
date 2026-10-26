@@ -102,4 +102,7 @@ export {
   // lucide's under its own name; the house mark keeps its name elsewhere.
   CircleHelp, DoorOpen, Settings,
   Handshake as HandshakeLine,
+  // Curator applications (2026-10-24): the playlist link field, the contact
+  // field, and the "In review" pill.
+  Clock, LinkIcon, MessageSquare,
 } from 'lucide-react';

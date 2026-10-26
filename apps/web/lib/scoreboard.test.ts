@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  rolloutOriginSummary,
   activationSummary,
   activeMembersSince,
   buildScoreboard,
@@ -68,6 +69,20 @@ function release(over: Partial<ScoreboardRelease> & { id: string; workspaceId: s
     ...over,
   };
 }
+
+describe('rolloutOriginSummary (2026-10-24)', () => {
+  it('counts real rollouts by why they were made, untagged ones as unknown', () => {
+    const summary = rolloutOriginSummary([
+      release({ id: 'a', workspaceId: 'w', origin: 'choice' }),
+      release({ id: 'b', workspaceId: 'w', origin: 'choice' }),
+      release({ id: 'c', workspaceId: 'w', origin: 'hint' }),
+      release({ id: 'd', workspaceId: 'w', origin: 'onboarding' }),
+      release({ id: 'e', workspaceId: 'w' }),
+      release({ id: 'f', workspaceId: 'w', origin: 'choice', isTest: true }),
+    ]);
+    expect(summary).toEqual({ total: 5, byChoice: 2, fromHint: 1, fromOnboarding: 1, unknown: 1 });
+  });
+});
 
 describe('weekStartUtc', () => {
   it('returns the Monday at 00:00 UTC of the week', () => {

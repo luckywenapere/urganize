@@ -41,6 +41,106 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.175.0",
+    title: "Tell us how you found Urganize",
+    tag: "Account",
+    date: "October 25, 2026",
+    highlights: [
+      "Signing up now asks how you heard about Urganize. It's optional and never holds you up.",
+    ],
+  },
+  {
+    version: "1.174.0",
+    title: "Look around before you plan a rollout",
+    tag: "Rollouts",
+    date: "October 24, 2026",
+    highlights: [
+      "Nothing planned yet? Pick that when you sign up. You land on Home and can plan a rollout later.",
+      "Every part of Urganize is open from day one. No more locked links.",
+      "Home shows one small card, \"Got a release coming?\". Tap Not now and it goes away.",
+      "Tell UrgAns about a release on the way and it offers to plan it for you.",
+    ],
+  },
+  {
+    version: "1.173.0",
+    title: "A simpler way to start a rollout",
+    tag: "Rollouts",
+    date: "October 24, 2026",
+    highlights: [
+      "Starting a rollout is one short form now: artist, format and an optional title. No more fields showing twice.",
+      "Single is picked for you. Tap EP or Album to change it, then Create.",
+      "No date needed up front. \"Set your release date\" is the first activity in your rollout. Pick date there and the rest of your plan follows.",
+    ],
+  },
+  {
+    version: "1.172.0",
+    title: "Apply to curate for Urganize",
+    tag: "Pitching",
+    date: "October 24, 2026",
+    highlights: [
+      "Own a playlist? You can now apply to curate for Urganize, no invite needed.",
+      "Share your playlist link, followers and genre. We reply by email or WhatsApp within a week.",
+    ],
+  },
+  {
+    version: "1.171.0",
+    title: "Vouch for the people you work with",
+    tag: "Team",
+    date: "October 24, 2026",
+    highlights: [
+      "Open an activity and pick who's doing it from My People.",
+      "Each person's page shows the work you've done together.",
+      "Mark their activity done and vouch for them in one tap. Only your team sees it for now.",
+    ],
+  },
+  {
+    version: "1.170.0",
+    title: "Mark many done on the Timeline, or ask UrgAns",
+    tag: "Rollouts",
+    date: "October 24, 2026",
+    highlights: [
+      "The Timeline has Select too. Pick the activities you've finished and tap Mark done.",
+      "You can ask UrgAns to mark several activities done in one go, like \"mark this week's done\".",
+    ],
+  },
+  {
+    version: "1.169.1",
+    tag: "Rollouts",
+    date: "October 24, 2026",
+    highlights: [
+      "Delete rollout is now in each rollout's own menu, last and in red, not only in Settings.",
+      "It asks you to type the rollout's name or DELETE, then moves it to Trash, where you can restore it for 30 days.",
+    ],
+  },
+  {
+    version: "1.169.0",
+    title: "Mark many activities done at once",
+    tag: "Rollouts",
+    date: "October 24, 2026",
+    highlights: [
+      "Tap Select in your activity list, pick the ones you've finished, then tap Mark done.",
+      "You get one Undo for the lot, with no check-in after each one.",
+    ],
+  },
+  {
+    version: "1.168.0",
+    title: "UrgAns on every phone screen",
+    tag: "App",
+    date: "October 24, 2026",
+    highlights: [
+      "On your phone, the Message UrgAns box now sits at the bottom of every screen, including rollouts and the timeline.",
+      "Ask from inside a rollout and UrgAns already knows which rollout you mean.",
+    ],
+  },
+  {
+    version: "1.167.1",
+    tag: "App",
+    date: "October 24, 2026",
+    highlights: [
+      "On your phone, the Artists and Rollouts switch now stays in the same spot when you move between them.",
+    ],
+  },
+  {
     version: "1.167.0",
     title: "Deleted rollouts go to Trash",
     tag: "Rollouts",

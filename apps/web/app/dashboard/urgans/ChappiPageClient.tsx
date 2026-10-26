@@ -14,7 +14,6 @@ import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
 import { ChappiPageSkeleton } from '@/components/loading/ChappiPageSkeleton';
 import { HomeSkeleton } from '@/components/loading/HomeSkeleton';
 import { RolloutCreateFlow } from '@/components/releases/RolloutCreateFlow';
-import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { ChappiHistoryList } from '@/components/chappi/ChappiHistoryList';
 import { isChappiHistoryEnabled } from '@/lib/chappi/history-flag';
@@ -104,11 +103,6 @@ export default function ChappiPageClient() {
     void loadCommandCenter();
   }, [authLoading, loadCommandCenter, router, user]);
 
-  // The deferred first-release prompt — same hook as Home. A zero-release user
-  // can still arrive here from the bottom bar or an installed app, and the
-  // prompt has to arm wherever they land (lib/first-release-prompt.ts is what
-  // makes the two surfaces one prompt).
-  useFirstReleasePrompt(() => setIsCreateModalOpen(true));
 
   if (!CHAPPI_ENABLED) return null;
 

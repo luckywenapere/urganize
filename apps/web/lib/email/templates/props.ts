@@ -27,6 +27,7 @@ import type { DirectoryInviteEmailProps } from './DirectoryInviteEmail';
 import type { SelfServeNudgeEmailProps } from './SelfServeNudgeEmail';
 import type { RenewalReminderEmailProps } from './RenewalReminderEmail';
 import type { HelpRequestEmailProps } from './HelpRequestEmail';
+import type { CuratorApplicationApprovedEmailProps } from './CuratorApplicationApprovedEmail';
 
 export type EmailTemplateProps = {
   welcome: WelcomeEmailProps;
@@ -56,6 +57,7 @@ export type EmailTemplateProps = {
   self_serve_nudge: SelfServeNudgeEmailProps;
   renewal_reminder: RenewalReminderEmailProps;
   help_request: HelpRequestEmailProps;
+  curator_application_approved: CuratorApplicationApprovedEmailProps;
 };
 
 export type EmailTemplateId = keyof EmailTemplateProps;

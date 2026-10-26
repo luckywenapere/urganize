@@ -117,6 +117,20 @@ describe('metadata draft', () => {
     });
   });
 
+  it('round-trips "Nothing planned yet" with no rollout answers', () => {
+    const packed = toMetadataDraft(
+      { ...draft, releaseType: null, title: '', releaseDate: '', nothingPlanned: true },
+      'artist-manager'
+    );
+    expect(packed.np).toBe(1);
+    const back = fromMetadataDraft(JSON.parse(JSON.stringify(packed)));
+    expect(back?.draft.nothingPlanned).toBe(true);
+    expect(back?.draft.releaseType).toBeNull();
+    // A normal draft carries no flag, and reads back false.
+    expect(toMetadataDraft(draft, 'artist').np).toBeUndefined();
+    expect(fromMetadataDraft(JSON.parse(JSON.stringify(toMetadataDraft(draft, 'artist'))))?.draft.nothingPlanned).toBe(false);
+  });
+
   it('refuses an incomplete or consumed copy', () => {
     expect(fromMetadataDraft(null)).toBeNull();
     expect(fromMetadataDraft({ v: 1, t: 'Honest', d: 'soon', rt: 'single' })).toBeNull();

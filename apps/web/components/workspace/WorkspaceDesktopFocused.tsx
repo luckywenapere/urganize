@@ -38,6 +38,8 @@ type WorkspaceDesktopFocusedProps = {
    * offered only in the distribution issue list now. */
   share?: RolloutMenuDialogInput | null;
   archive?: RolloutMenuDialogInput | null;
+  /** Delete rollout (to Trash), owner-only. */
+  deleteRollout?: RolloutMenuDialogInput | null;
   /** Rendered above the TasksPanel inside the centre column: the one-time
    * NewReleaseGuide after a template creation. */
   banner?: ReactNode;
@@ -89,6 +91,7 @@ export function WorkspaceDesktopFocused({
   onNewActivity,
   share,
   archive,
+  deleteRollout,
   banner,
   panelSceneContent,
   panelActivitiesBanner,
@@ -204,6 +207,7 @@ export function WorkspaceDesktopFocused({
               variant="side"
               share={share}
               archive={archive}
+              deleteRollout={deleteRollout}
             />,
             rolloutMenuSlot
           )
@@ -213,6 +217,7 @@ export function WorkspaceDesktopFocused({
               releaseId={scopedRelease.id}
               share={share}
               archive={archive}
+              deleteRollout={deleteRollout}
             />
           </div>
         )}

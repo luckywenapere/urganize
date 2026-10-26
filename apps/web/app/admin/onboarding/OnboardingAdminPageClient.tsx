@@ -17,6 +17,7 @@ import { supabase } from '@/lib/supabase/client';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 import { CockpitSlot } from '@/components/admin/CockpitSlot';
 import { PersonaSplitPanel } from '@/components/admin/PersonaSplitPanel';
+import { HEARD_FROM_LABELS } from '@/lib/heard-from';
 
 type Tally = { label: string; count: number };
 
@@ -31,6 +32,7 @@ type OnboardingRow = {
   planningPreference: string | null;
   whereStuck: string[] | null;
   stage: string | null;
+  heardFrom: string | null;
   persona: string | null;
   releaseProcess: string | null;
   biggestHeadache: string | null;
@@ -45,6 +47,7 @@ type OnboardingAdminResponse = {
     planningPreference: Tally[];
     whereStuck: Tally[];
     stage: Tally[];
+    heardFrom: Tally[];
     legacyPersona: Tally[];
     legacyReleaseProcess: Tally[];
     legacyBiggestHeadache: Tally[];
@@ -187,7 +190,7 @@ export default function OnboardingAdminPageClient() {
         descriptionLines={2}
         statCards={{ count: 3, gridClassName: 'grid-cols-1 sm:grid-cols-3' }}
         tallyRows={[4, 5, 4, 6, 4]}
-        table={{ columns: 8, rows: 6 }}
+        table={{ columns: 9, rows: 6 }}
       />
     );
   }
@@ -246,6 +249,7 @@ export default function OnboardingAdminPageClient() {
           <TallyRow title="How they want rollouts planned" tallies={breakdowns.planningPreference} emptyLabel="Not answered yet." />
           <TallyRow title="Where a rollout usually falls apart" tallies={breakdowns.whereStuck} emptyLabel="Not answered yet." />
           <TallyRow title="Where this rollout is in its lifecycle" tallies={breakdowns.stage} emptyLabel="Not answered yet." />
+          <TallyRow title="How they heard about Urganize" tallies={breakdowns.heardFrom ?? []} emptyLabel="Not answered yet." />
         </div>
 
         {hasLegacyData ? (
@@ -261,7 +265,7 @@ export default function OnboardingAdminPageClient() {
         ) : null}
 
         <div className="mt-8 overflow-x-auto rounded-lg border border-stroke-default">
-          <table className="w-full min-w-[900px] text-left text-sm">
+          <table className="w-full min-w-[1000px] text-left text-sm">
             <thead>
               <tr className="border-b border-stroke-default bg-bg-surface font-mono text-[11px] uppercase tracking-[0.1em] text-content-tertiary">
                 <th className="px-4 py-3">Person</th>
@@ -271,6 +275,7 @@ export default function OnboardingAdminPageClient() {
                 <th className="px-4 py-3">Planning</th>
                 <th className="px-4 py-3">Stage</th>
                 <th className="px-4 py-3">Where stuck</th>
+                <th className="px-4 py-3">Heard from</th>
                 <th className="px-4 py-3">Completed</th>
               </tr>
             </thead>
@@ -295,6 +300,9 @@ export default function OnboardingAdminPageClient() {
                       row.whereStuck.join(', ')
                     )}
                   </td>
+                  <td className="px-4 py-3 text-content-secondary">
+                    {row.heardFrom ? HEARD_FROM_LABELS.get(row.heardFrom) || row.heardFrom : '—'}
+                  </td>
                   <td className="px-4 py-3">
                     {row.completed ? (
                       <span className="text-brand">Yes</span>
@@ -306,7 +314,7 @@ export default function OnboardingAdminPageClient() {
               ))}
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-content-tertiary">
+                  <td colSpan={9} className="px-4 py-10 text-center text-content-tertiary">
                     No signups yet.
                   </td>
                 </tr>

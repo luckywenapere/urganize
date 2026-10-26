@@ -6,8 +6,8 @@ import { isFirstReleaseRequired } from '@/lib/first-release-required';
 
 /**
  * Live reading of `isFirstReleaseRequired` against the auth + release stores.
- * Read by useFirstReleasePrompt (the deferred, once-per-session nudge that
- * offers the create modal — see lib/first-release-prompt.ts) and by
+ * Read by RolloutOfferCard (Home's quiet "Got a release coming?", see
+ * lib/rollout-offer.ts; the timed prompt and the lock are gone) and by
  * CreateReleaseModal (for its warmer first-release copy only; the modal is
  * always dismissible since 2026-08-28).
  *

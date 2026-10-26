@@ -16,8 +16,11 @@ import { formatRolloutCreatedLabel } from '@/lib/settings-rollout-row';
 
 /**
  * Deleting a rollout moves it to Trash (30 days, then removed; see
- * lib/rollout-trash.ts) and is only available here (URG-163) — the workspace's
- * per-release trash icons were removed. ONE sanctioned exception since
+ * lib/rollout-trash.ts). Since v1.169.1 the owner can also delete from the
+ * rollout menu (Delete rollout, last row, in red), after the STMZ user
+ * interview (Oct 22, 2026) found the Settings-only delete hard to find. This
+ * list stays as the one place to see and clear every rollout at once. Before
+ * that it was only available here (URG-163). ONE sanctioned exception since
  * 2026-09-01 (founder call): a TEST release's standing banner in the
  * workspace (TestReleaseBanner, behind NEXT_PUBLIC_FEATURE_TEST_RELEASE)
  * carries its own "Delete test release" button, because the founder asked

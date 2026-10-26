@@ -167,6 +167,10 @@ export const RELEASE_MENU_ORDER = [
   'change-artist',
   // Terminal.
   'archive',
+  // Delete (moves the rollout to Trash, 30 days to restore). Last of all, under
+  // the line with the corrections (STMZ user interview, Oct 22, 2026: the only
+  // delete was buried in Settings). Owner-only; same typed confirm as Settings.
+  'delete',
 ] as const;
 
 /**
@@ -253,6 +257,7 @@ const GROUP_BY_KEY: Record<ReleaseMenuKey, RolloutMenuGroupKey> = {
   capture: 'promote',
   'change-artist': 'manage',
   archive: 'manage',
+  delete: 'manage',
 };
 
 /** Split menu entries into the groups above, empty groups dropped. */

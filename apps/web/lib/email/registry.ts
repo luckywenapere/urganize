@@ -313,6 +313,17 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     fromAddress: 'billing@urganize.app',
     replyTo: 'support@urganize.app',
   },
+  curator_application_approved: {
+    id: 'curator_application_approved',
+    category: 'transactional',
+    name: 'Curator application approved',
+    description:
+      'Sent when an admin approves a playlist owner who applied at /curator/apply with an email address. Carries the single-use /curator/join link.',
+    placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: 'support@urganize.app',
+  },
   help_request: {
     id: 'help_request',
     category: 'internal',

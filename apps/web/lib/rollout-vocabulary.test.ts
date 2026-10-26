@@ -34,8 +34,10 @@ const APP_ROOT = process.cwd();
 
 const GUARDED_FILES = [
   'components/releases/CreateReleaseModal.tsx',
-  'components/releases/FirstReleaseFocus.tsx',
-  'lib/first-release-focus.ts',
+  'components/releases/PlanChoiceDialog.tsx',
+  'components/releases/NeedsRolloutEmpty.tsx',
+  'components/home/RolloutOfferCard.tsx',
+  'lib/rollout-offer.ts',
   'components/workspace/WorkspaceView.tsx',
   'components/workspace/TasksPanel.tsx',
   // The rollout menu (2026-09-30). Its row labels, the "On <title>" header and
@@ -176,6 +178,11 @@ const ALLOWED = [
   // and UrgAns's prompt.
   /every release, on plan/i,
   /plan every release/i,
+  // The founder-approved mock lighter-rollout-v1 (2026-10-24) asks about the
+  // music itself, before any rollout exists: Home's "Got a release coming?",
+  // and UrgAns listening for an upcoming release to offer a rollout for.
+  /got a release coming/i,
+  /an upcoming release/i,
 ];
 
 const OBJECT_WORD = /(?<![\w\-/?&.${])release(s|'s)?(?![\w\-=_}?]|\.\w)/gi;

@@ -111,7 +111,7 @@ These are the principles that govern v1 build decisions. When in doubt, return t
 
 8. **Visible state changes.** The user always knows what state their release is in, what's blocking it, what's next. No silent operations. No "did it save?" moments. Trust is built through visibility.
 
-9. **Schema is changed only through migration files.** `supabase/migrations/` is the source of truth for schema. Never alter schema through the Supabase dashboard, never with ad-hoc SQL in production. If a migration is needed urgently, write it, commit it, then apply it. No exceptions. Migrations are the source of truth for schema.
+9. **Schema is changed only through migration files.** `supabase/migrations/` is the source of truth for schema. Never alter schema through the Supabase dashboard, never with ad-hoc SQL in production. If a migration is needed urgently, write it, commit it, then apply it. No exceptions. Migrations are the source of truth for schema. **Every new table grants explicitly (Supabase stopped auto-granting new `public` tables on 30 Oct 2026).** In the same migration as the `create table`: `enable row level security`, its policies, then `grant select, insert, update, delete on public.<table> to authenticated, service_role;` (add `anon` only if logged-out visitors need it), and `grant usage, select on sequence ...` for any serial. `20261024120000_explicit_table_grants.sql` restores the old default privileges as a safety net, but don't rely on it.
 
 ---
 

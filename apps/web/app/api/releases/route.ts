@@ -69,6 +69,7 @@ import {
 } from '@/lib/posthog';
 import { checkActiveReleaseAllowance } from '@/lib/release-cap-server';
 import { recordLimitHit } from '@/lib/seats-server';
+import { resolveRolloutOrigin } from '@/lib/rollout-origin';
 
 const trimString = (value: unknown): string => String(value || '').trim();
 
@@ -101,6 +102,10 @@ type CreateReleaseBody = {
   releaseType?: unknown;
   coverArtUrl?: unknown;
   source?: unknown;
+  /** Why it was made (lib/rollout-origin.ts): 'hint' from an offer the app
+   * showed; anything else is 'choice', and the sign-up wizard is always
+   * 'onboarding'. Stored as metadata.origin. */
+  origin?: unknown;
   /** 'template' (default) instantiates the rollout plan; 'blank' creates an
    * empty release the user builds up themself (founder call, 2026-07-23). */
   plan?: unknown;
@@ -387,6 +392,7 @@ export async function POST(request: NextRequest) {
     }
     const coverArtUrl = trimString(body?.coverArtUrl);
     const releaseSource = normalizeReleaseCreatedSource(body?.source);
+    const rolloutOrigin = resolveRolloutOrigin({ source: releaseSource, origin: body?.origin });
     const isTest = body?.isTest === true;
     if (isTest && !isTestReleaseEnabled()) {
       // Loud refusal rather than silently ignoring the field: dropping it
@@ -688,6 +694,8 @@ export async function POST(request: NextRequest) {
           ...(plannerPending ? writePlannerPending(null, true) : {}),
           ...(isTest ? writeTestRelease(null, true) : {}),
           created_source: releaseSource,
+          // Why it was made (2026-10-24): choice, hint or onboarding.
+          origin: rolloutOrigin,
         },
         updated_at: now,
       })

@@ -29,6 +29,7 @@ const EXPECTED: Record<EmailTemplateId, { from: string; replyTo: string | null }
   work_request: NOTIFY,
   work_request_answer: NOTIFY,
   directory_invite: NOTIFY,
+  curator_application_approved: NOTIFY,
   notify_admin: NOTIFY,
   pitch_notice: NOTIFY,
   front_desk_digest: { from: 'UrgAns at Urganize <notifications@urganize.app>', replyTo: 'support@urganize.app' },

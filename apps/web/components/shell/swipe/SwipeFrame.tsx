@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import HomePageClient from '@/app/dashboard/home/HomePageClient';
 import ArtistsPageClient from '@/app/dashboard/artists/ArtistsPageClient';
 import { Sidebar } from '@/components/shell/Sidebar';
@@ -132,7 +132,7 @@ export function SwipeFrame({
               <main
                 id="main-content"
                 tabIndex={-1}
-                className="min-w-0 flex-1 px-4 pb-10 focus:outline-none sm:px-5 lg:px-8"
+                className="swipe-page-main min-w-0 flex-1 px-4 pb-10 focus:outline-none sm:px-5 lg:px-8"
               >
                 <PageBar />
                 <WorkspacePageErrorBoundary>
@@ -145,6 +145,11 @@ export function SwipeFrame({
           </div>
         </div>
       )}
+      {!onTab && CHAPPI_ENABLED ? (
+        <Suspense fallback={null}>
+          <PageComposer />
+        </Suspense>
+      ) : null}
       {!onTab && showHelp && CHAPPI_ENABLED ? (
         <ErrorBoundary name="urgans-launcher" onError={reportBoundaryError}>
           <FloatingUrgAns />
@@ -192,6 +197,37 @@ function SwipeComposer({ onUrgAns }: { onUrgAns: boolean }) {
           store.setSendInputOnOpen(true);
         });
         useSwipeNavStore.getState().go?.('urgans');
+      }}
+    />
+  );
+}
+
+/**
+ * The same "Message UrgAns…" box on every other phone screen (Oct 24, 2026,
+ * founder call: "UrgAns should be available at the bottom of mobile for all
+ * screens"). Phone only; desktops keep FloatingUrgAns. Send posts to Main like
+ * Home does, scoped to the rollout on screen when there is one, then opens the
+ * UrgAns tab, where the conversation sends it.
+ */
+function PageComposer() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const releaseId = searchParams.get('release');
+  return (
+    <HomeAskBar
+      variant="page"
+      onSend={() => {
+        const held = useChappiStore.getState();
+        const text = held.input;
+        const files = held.pendingAttachments;
+        if (releaseId) held.setScopedReleaseId(releaseId);
+        void showMain().then(() => {
+          const store = useChappiStore.getState();
+          store.setInput(text);
+          store.setPendingAttachments(files);
+          store.setSendInputOnOpen(true);
+          router.push('/dashboard/urgans');
+        });
       }}
     />
   );

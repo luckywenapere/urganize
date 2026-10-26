@@ -19,6 +19,7 @@ import {
   NotebookPen,
   Radio,
   Share2,
+  Trash2,
   Users,
   Wallet2,
   type LucideProps,
@@ -68,6 +69,7 @@ const ICONS: Record<ReleaseMenuKey, ComponentType<LucideProps>> = {
   capture: Link2,
   'change-artist': Users,
   archive: Archive,
+  delete: Trash2,
 };
 
 /**
@@ -96,6 +98,8 @@ export type RolloutMenuAction = {
    *  from it, so middle-click and "open in a new tab" work; the phone menu just
    *  calls `onClick`. */
   href?: string;
+  /** Set on Delete rollout only: surfaces draw it in red, under a line. */
+  destructive?: boolean;
 };
 
 type UseRolloutMenuActionsInput = {
@@ -106,6 +110,7 @@ type UseRolloutMenuActionsInput = {
   share?: RolloutMenuDialogInput | null;
   changeArtist?: RolloutMenuDialogInput | null;
   archive?: RolloutMenuDialogInput | null;
+  deleteRollout?: RolloutMenuDialogInput | null;
 };
 
 /**
@@ -129,6 +134,7 @@ export function useRolloutMenuActions({
   share,
   changeArtist,
   archive,
+  deleteRollout,
 }: UseRolloutMenuActionsInput): RolloutMenuAction[] {
   const router = useRouter();
   // Asked once per rollout and shared by every surface that draws the menu. The
@@ -164,10 +170,11 @@ export function useRolloutMenuActions({
     share,
     changeArtist,
     archive,
+    deleteRollout,
   });
 
   const dialogFor = (key: ReleaseMenuKey): RolloutMenuDialogInput | null | undefined =>
-    key === 'share' ? share : key === 'change-artist' ? changeArtist : key === 'archive' ? archive : null;
+    key === 'share' ? share : key === 'change-artist' ? changeArtist : key === 'archive' ? archive : key === 'delete' ? deleteRollout : null;
 
   return entries.map((entry): RolloutMenuAction => {
     const base = { key: entry.key, label: entry.label, icon: ICONS[entry.key] };
@@ -184,6 +191,7 @@ export function useRolloutMenuActions({
     return {
       ...base,
       disabled: entry.disabled,
+      ...(entry.key === 'delete' ? { destructive: true } : {}),
       onClick: () => dialog?.onClick(),
     };
   });
