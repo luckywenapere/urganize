@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.185.1",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "The activity pop-up now uses the full height of your screen, so you rarely need to scroll. The chat folds away when you don’t need it.",
+    ],
+  },
+  {
     version: "1.185.0",
     title: "Share to Urganize from the Android app",
     tag: "App",
