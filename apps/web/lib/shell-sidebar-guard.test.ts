@@ -63,8 +63,8 @@ describe('the side menu', () => {
     expect(sidebar).not.toContain('overflow-x-hidden');
   });
 
-  it('marks Artists with a person figure', () => {
-    expect(sidebar).toContain('artists: User,');
+  it('marks Artists with the mic', () => {
+    expect(sidebar).toContain('artists: Mic,');
   });
 
   it('keeps the tab behaviours: Rollouts clears the open rollout, aria-current on the page', () => {

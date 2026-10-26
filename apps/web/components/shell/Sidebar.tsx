@@ -6,8 +6,8 @@ import type { ComponentType } from 'react';
 import {
   Building2,
   Disc3,
+  Mic,
   NotebookPen,
-  User,
   Users,
   type LucideProps,
 } from '@/components/icons';
@@ -45,8 +45,7 @@ import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
  *  these things: Disc3 is a rollout everywhere (bottom bar, command bar). */
 const PAGE_ICON: Record<string, ComponentType<LucideProps>> = {
   releases: Disc3,
-  // A person figure (2026-10-26, founder), not the mic.
-  artists: User,
+  artists: Mic,
   notes: NotebookPen,
   directory: Building2,
   people: Users,

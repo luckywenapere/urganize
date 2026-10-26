@@ -92,7 +92,7 @@ export {
   Plug, Rocket, Send, Share,
   Share2, ShieldCheck, Slash, SlidersHorizontal, Smartphone,
   Smile, Square, ThumbsDown, ThumbsUp, TrendingUp,
-  Undo2, User, UserPlus,
+  Undo2, UserPlus,
   // Read-aloud on UrgAns replies.
   Volume2,
   // Talk to UrgAns (2026-10-11): the Talk button, mute, hang up, captions.
