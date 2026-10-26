@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isPricingCurrency } from '@urganize/pricing';
+import { isBillingInterval, isPricingCurrency, isPricingTierId, type BillingInterval } from '@urganize/pricing';
+import { CALL_REQUIRED_ERROR } from '@/lib/call-led';
+import { mayPay } from '@/lib/call-led-server';
 import { getAuthenticatedUser, createAdminClient } from '@/app/api/releases/_shared';
 import { resolveCheckoutPurchase } from '@/lib/billing-plans';
 import { isPricingV2Enabled } from '@/lib/entitlements';
@@ -154,6 +156,21 @@ export async function POST(request: NextRequest) {
       { error: 'Server environment is not configured.' },
       { status: 500 }
     );
+  }
+
+  // Onboarding rules (2026-10-26): Label and every 6-month or yearly plan are
+  // paid for only after the onboarding call, through the founder's link. A tier
+  // purchase with no matching clearance is refused here, whatever the page showed.
+  if (isPricingTierId(body.plan) && isBillingInterval(selectedInterval)) {
+    const allowed = await mayPay(admin, {
+      userId,
+      email: userEmail,
+      plan: body.plan,
+      period: selectedInterval as BillingInterval,
+    });
+    if (!allowed) {
+      return NextResponse.json({ error: CALL_REQUIRED_ERROR, code: 'call_required' }, { status: 403 });
+    }
   }
 
   // Team checkout (NEXT_PUBLIC_FEATURE_HARD_PAYWALL). The wall sends the team's

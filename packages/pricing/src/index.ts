@@ -524,11 +524,14 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // until 2026-09-11, then "For a team running a roster." while labels were
     // out of the audience.
     audience: 'For small labels and management teams.',
-    // ₦60,000 since 2026-10-17 (founder approved the reprice that day; it was
+    // ₦100,000 since 2026-10-26 (founder, with the call-led onboarding rules;
+    // Paystack Plans at
+    // ₦100,000 / ₦500,000 / ₦1,000,000 are still to be minted.
+    // ₦60,000 from 2026-10-17 (founder approved the reprice that day; it was
     // ₦50,000 from 2026-09-10). Monthly only — the yearly price is ten months
     // of this. New ₦60,000 / ₦600,000 Paystack Plans were minted and the vars
     // repointed before this shipped.
-    monthlyPrice: tierPrice(60_000),
+    monthlyPrice: tierPrice(100_000),
     includesDistribution: true,
     urgansMonthlyCredits: 1500,
     limits: { artists: null, seats: null, activeReleases: null, urgansMonthlyActions: null },
@@ -755,6 +758,15 @@ export function isPricingTierId(value: unknown): value is PricingTierId {
     value === 'manager' ||
     value === 'label'
   );
+}
+
+/** Onboarding rules (founder, 2026-10-26). Only Solo and Manager on the monthly
+ *  plan are paid for without a call. Label, and every 6-month or yearly plan,
+ *  start with an onboarding call, and the founder sends the payment link
+ *  afterwards. One definition, read by the pricing page, the wall, the checkout
+ *  page and the payment routes. */
+export function isSelfServePurchase(tier: PricingTierId, interval: BillingInterval): boolean {
+  return (tier === 'solo' || tier === 'manager') && interval === 'monthly';
 }
 
 export function isBillingInterval(value: unknown): value is BillingInterval {

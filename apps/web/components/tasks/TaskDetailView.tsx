@@ -71,6 +71,8 @@ const TASK_ATTACHMENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TASK_ATTACHMENT
 // renders the Outcome section (the read path returns null too).
 const TASK_OUTCOMES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TASK_OUTCOMES === 'true';
 
+const CHAT_OPEN_STORAGE_KEY = 'urganize.task-chat-open';
+
 // 2026-07-23 (founder calls): the Priority selector, the Tag row, and the
 // Activity feed were all removed from this view. Priority is gone as a
 // feature (no selector anywhere; rows no longer color by it); tags are gone
@@ -203,8 +205,31 @@ export function TaskDetailView({
   // The invite form is collapsed behind a link in the assignee menu's footer,
   // so the resting menu is a clean list of people.
   const [inviteOpen, setInviteOpen] = useState(false);
-  // Notes stay collapsed until they have content or the user asks for them.
-  const [notesOpen, setNotesOpen] = useState(false);
+  // The chat folds to a single line. The choice is remembered per browser, so
+  // someone who keeps it shut is not asked to shut it on every activity.
+  //
+  // With no saved choice it follows the thread: open when there are messages to
+  // read, folded when it is empty, so an empty chat does not take a third of the
+  // card from the fields people actually came to edit.
+  const [savedChatOpen, setSavedChatOpen] = useState<boolean | null>(null);
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(CHAT_OPEN_STORAGE_KEY);
+      if (saved === 'true' || saved === 'false') setSavedChatOpen(saved === 'true');
+    } catch {
+      // Storage can be blocked; the chat just follows the thread.
+    }
+  }, []);
+  const chatOpen = savedChatOpen ?? (task ? task.comments.length > 0 : false);
+  const toggleChat = () => {
+    const next = !chatOpen;
+    setSavedChatOpen(next);
+    try {
+      window.localStorage.setItem(CHAT_OPEN_STORAGE_KEY, String(next));
+    } catch {
+      // Not saved; still toggles for this view.
+    }
+  };
 
   // The release this activity belongs to, for the header. The fetched detail
   // carries `task.release`; the optimistic store-seeded task may not, so fall
@@ -281,10 +306,9 @@ export function TaskDetailView({
     setInviteMessage('');
     setInviteError('');
     setInviteUrl(null);
-    // Collapse both disclosures too, or the next activity opens with the
-    // previous one's invite form expanded and its notes field already open.
+    // Collapse the invite form too, or the next activity opens with the
+    // previous one's still expanded.
     setInviteOpen(false);
-    setNotesOpen(false);
   }, [task?.id]);
 
   // Escape closes the pop-up. Typing-target guard prevents Escape from
@@ -435,7 +459,7 @@ export function TaskDetailView({
   );
 
   return (
-    <section aria-label="Activity detail" className="min-w-0">
+    <section aria-label="Activity detail" className="flex min-w-0 flex-1 flex-col">
       {/* Icon-only action bar (2026-09-05, founder call: emulate Google
           Calendar's event pop-up). Delete moved up here from a full-width red
           button at the bottom — it keeps its confirm, it just stopped being
@@ -505,7 +529,12 @@ export function TaskDetailView({
           {error}
         </div>
       ) : task ? (
-        <div className="space-y-6">
+        <div className="flex min-h-0 flex-1 flex-col gap-6">
+          {/* The golden split: the fields take 1.618 parts of the height and
+              the chat 1 (flex-basis 0, so the ratio is of the whole card, not
+              of the leftover). The fields never go below their content, so a
+              tall activity pushes the chat down rather than overlapping it. */}
+          <div className="flex flex-[1.618_1_0%] flex-col gap-6">
           {/* Mutation failures (comment save/edit/delete, attachment
               upload/delete, patch refetch) land in the same `error` channel —
               without this in-body banner they were invisible whenever a task
@@ -591,7 +620,7 @@ export function TaskDetailView({
             ) : null}
           </div>
 
-          <div className="space-y-0.5">
+          <div className="space-y-1.5">
             <label className={DETAIL_ROW_CLASS}>
               <CircleDot className={DETAIL_ICON_CLASS} aria-hidden="true" />
               <span className="sr-only">Status</span>
@@ -728,33 +757,24 @@ export function TaskDetailView({
               matches. autoFocus is keyed on notesOpen so it fires only when the
               user asked for the field, never on an activity that already has
               notes. */}
-          {notesOpen || description ? (
-            <label className="flex gap-3">
-              <AlignLeft className={`${DETAIL_ICON_CLASS} mt-2.5`} aria-hidden="true" />
-              <span className="sr-only">Notes</span>
-              <textarea
-                autoFocus={notesOpen}
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                onBlur={() => {
-                  if ((task.description || '') !== description) {
-                    void onSavePatch({ description: description || null });
-                  }
-                }}
-                className="motion-focus min-h-[76px] w-full resize-y rounded-lg border border-transparent bg-transparent px-2 py-2 text-sm leading-relaxed text-content-primary transition-colors placeholder:text-content-tertiary [@media(hover:hover)]:hover:border-stroke-default focus:border-brand focus:bg-bg-elevated"
-                placeholder="Add notes, context, links, or markdown-style bullets."
-              />
-            </label>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setNotesOpen(true)}
-              className="motion-focus flex w-full items-center gap-3 rounded-lg py-1.5 text-left text-sm text-content-tertiary transition-colors [@media(hover:hover)]:hover:text-content-primary"
-            >
-              <AlignLeft className={DETAIL_ICON_CLASS} aria-hidden="true" />
-              Add notes
-            </button>
-          )}
+          {/* 2026-10-26: the notes field is always on screen and soaks up the
+              spare height in the fields half, instead of hiding behind "Add
+              notes" and leaving a gap. */}
+          <label className="flex min-h-[76px] flex-1 gap-3">
+            <AlignLeft className={`${DETAIL_ICON_CLASS} mt-2.5`} aria-hidden="true" />
+            <span className="sr-only">Notes</span>
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              onBlur={() => {
+                if ((task.description || '') !== description) {
+                  void onSavePatch({ description: description || null });
+                }
+              }}
+              className="motion-focus h-full min-h-[76px] w-full resize-none rounded-lg border border-transparent bg-transparent px-2 py-2 text-sm leading-relaxed text-content-primary transition-colors placeholder:text-content-tertiary [@media(hover:hover)]:hover:border-stroke-default focus:border-brand focus:bg-bg-elevated"
+              placeholder="Add notes, context, links, or markdown-style bullets."
+            />
+          </label>
 
           {/* The task's chat thread (Release & Task Chat, Phase 1). Scoped to
               the assignee, the creator, and workspace owners/admins by
@@ -765,38 +785,69 @@ export function TaskDetailView({
               sees no composer here (comments always arrive empty for them
               too, so the section still renders, just with nothing to post
               into). */}
-          <section className="rounded-[24px] border border-stroke-default bg-bg-elevated/50 p-4">
-            <h3 className="text-sm font-semibold text-content-primary">Chat</h3>
-            <div className="mt-3">
-              <ThreadMessageList
-                messages={task.comments.map(
-                  (comment): ThreadMessage => ({
-                    id: comment.id,
-                    userId: comment.userId,
-                    content: comment.content,
-                    createdAt: comment.createdAt,
-                    editedAt: comment.editedAt,
-                    authorName: comment.authorName,
-                    authorEmail: comment.authorEmail,
-                    authorInitials: comment.authorInitials,
-                    isOwnMessage: comment.isOwnComment,
-                  })
-                )}
-                isLoading={false}
-                loadError=""
-                onRetry={() => {}}
-                onEdit={onEditComment}
-                onDelete={onDeleteComment}
-                emptyTitle="No messages yet."
-                emptyBody={
-                  task.canComment
-                    ? 'Coordinate on this activity right here.'
-                    : 'Only the assignee and your team’s managers can post here.'
-                }
+          </div>
+
+          {/* Collapsible: folded, it is one line and the fields get the whole
+              card; open, it is the lower 1 part of the 1.618 : 1 split and only
+              its message list scrolls. */}
+          <section
+            className={`flex min-h-0 flex-col rounded-[24px] border border-stroke-default bg-bg-elevated/50 ${
+              chatOpen ? 'flex-[1_1_0%] p-4' : 'shrink-0 px-4 py-1'
+            }`}
+          >
+            <button
+              type="button"
+              onClick={toggleChat}
+              aria-expanded={chatOpen}
+              className="motion-focus flex min-h-11 w-full shrink-0 items-center justify-between gap-2 text-left"
+            >
+              <h3 className="text-sm font-semibold text-content-primary">
+                Chat
+                {task.comments.length > 0 ? (
+                  <span className="ml-2 font-normal text-content-tertiary">{task.comments.length}</span>
+                ) : null}
+              </h3>
+              <ChevronDown
+                className={`h-4 w-4 text-content-tertiary transition-transform ${chatOpen ? '' : '-rotate-90'}`}
+                aria-hidden="true"
               />
-            </div>
-            {task.canComment ? (
-              <ThreadComposer onSend={onSendComment} placeholder="Message about this activity…" />
+            </button>
+            {chatOpen ? (
+              <>
+                <div className="mt-2 min-h-[5rem] flex-1 overflow-y-auto overscroll-contain">
+                  <ThreadMessageList
+                    messages={task.comments.map(
+                      (comment): ThreadMessage => ({
+                        id: comment.id,
+                        userId: comment.userId,
+                        content: comment.content,
+                        createdAt: comment.createdAt,
+                        editedAt: comment.editedAt,
+                        authorName: comment.authorName,
+                        authorEmail: comment.authorEmail,
+                        authorInitials: comment.authorInitials,
+                        isOwnMessage: comment.isOwnComment,
+                      })
+                    )}
+                    isLoading={false}
+                    loadError=""
+                    onRetry={() => {}}
+                    onEdit={onEditComment}
+                    onDelete={onDeleteComment}
+                    emptyTitle="No messages yet."
+                    emptyBody={
+                      task.canComment
+                        ? 'Coordinate on this activity right here.'
+                        : 'Only the assignee and your team’s managers can post here.'
+                    }
+                  />
+                </div>
+                {task.canComment ? (
+                  <div className="shrink-0">
+                    <ThreadComposer onSend={onSendComment} placeholder="Message about this activity…" />
+                  </div>
+                ) : null}
+              </>
             ) : null}
           </section>
 

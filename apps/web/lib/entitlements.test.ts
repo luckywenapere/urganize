@@ -232,7 +232,7 @@ describe('tier prices and the sales-led tier', () => {
     expect(getTierPrice('manager', 'annual')?.amount).toBe(300_000);
     expect(getTierPrice('solo', 'semiannual')?.amount).toBe(25_000);
     expect(getTierPrice('manager', 'semiannual')?.amount).toBe(150_000);
-    expect(getTierPrice('label', 'annual')?.amount).toBe(600_000);
+    expect(getTierPrice('label', 'annual')?.amount).toBe(1_000_000);
   });
 
   it('labels each price by its interval, spelled out', () => {
@@ -242,10 +242,10 @@ describe('tier prices and the sales-led tier', () => {
     expect(formatTierPrice('solo')).toBe('₦5,000/month');
     expect(formatTierPrice('manager')).toBe('₦30,000/month');
     expect(formatTierPrice('manager', 'semiannual')).toBe('₦150,000 for 6 months');
-    expect(formatTierPrice('label')).toBe('₦60,000/month');
+    expect(formatTierPrice('label')).toBe('₦100,000/month');
     expect(formatTierPrice('solo', 'annual')).toBe('₦50,000/year');
     expect(formatTierPrice('manager', 'annual')).toBe('₦300,000/year');
-    expect(formatTierPrice('label', 'annual')).toBe('₦600,000/year');
+    expect(formatTierPrice('label', 'annual')).toBe('₦1,000,000/year');
   });
 
   it('phrases the yearly saving in months and never as a percentage', () => {

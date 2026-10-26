@@ -8,6 +8,11 @@ import {
   type CohortTeam,
 } from '@/lib/admin-self-serve-cohort';
 import { recordDirectTransfer } from '@/lib/self-serve-server';
+import { parseSendPaymentLink } from '@/lib/call-led';
+import { grantClearance } from '@/lib/call-led-server';
+import { checkoutPath, formatNaira, periodAmount, periodLabel, planName } from '@/lib/self-serve';
+import { sendEmail } from '@/lib/email';
+import { resolveAppBaseUrl } from '@/lib/tasks-server';
 import { logBillingEvent } from '@/lib/billing-events-server';
 import { invalidateTeamAccess } from '@/lib/team-billing-server';
 import { invalidateSubscriptionSnapshot } from '@/lib/subscription-access';
@@ -168,6 +173,28 @@ export async function POST(request: NextRequest) {
       metadata: { minutes: parsed.minutes },
     }).catch(() => undefined);
     return NextResponse.json({ ok: true, minutes: parsed.minutes });
+  }
+
+  // Onboarding rules (2026-10-26): after the call, the founder sends the link.
+  // It lets this email pay for this plan and period, once, and emails the link.
+  if (action === 'send_payment_link') {
+    const parsed = parseSendPaymentLink(body);
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    const { email, plan, period } = parsed.value;
+    const granted = await grantClearance(admin, { email, plan, period, clearedBy: gate.userId });
+    if (!granted) return NextResponse.json({ error: 'Could not save the link. Try again.' }, { status: 500 });
+    const name = planName(plan);
+    const amount = periodAmount(plan, period);
+    const planLine = `${name}, ${periodLabel(period).toLowerCase()}${amount ? `, ${formatNaira(amount)}` : ''}`;
+    const payUrl = `${resolveAppBaseUrl()}${checkoutPath({ plan, period })}&cleared=1`;
+    const sent = await sendEmail(admin, {
+      templateId: 'pay_link',
+      to: email,
+      props: { firstName: null, payUrl, planLine },
+      trigger: 'call_payment_link',
+      actorUserId: gate.userId,
+    }).catch(() => ({ ok: false }) as { ok: boolean; skipped?: boolean });
+    return NextResponse.json({ ok: true, emailed: Boolean(sent.ok), planLine, payUrl });
   }
 
   if (action === 'record_transfer') {

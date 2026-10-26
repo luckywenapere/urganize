@@ -27,6 +27,7 @@ import {
   type BriefTask,
   type RolloutBrief,
 } from '@/lib/rollout-brief';
+import { IDEA_CHANGES_COPY, isEmptyChanges, type IdeaChangeView } from '@/lib/rollout-idea-changes';
 import { copyText } from '@/lib/share-file';
 import { supabase } from '@/lib/supabase/client';
 import type { OnboardingPersona } from '@/lib/onboarding';
@@ -64,7 +65,10 @@ export function RolloutIdeasCard({
   condensed = false,
   tasks = [],
   hasReleaseDate = false,
+  onPlanChanged,
 }: {
+  /** Called after the owner applies suggested changes, so the page reloads the plan. */
+  onPlanChanged?: () => void;
   /** The simple plan view: the team brief with Edit idea, not the full card. */
   condensed?: boolean;
   /** The rollout's plan, for the brief's Next up and Missing. */
@@ -91,6 +95,8 @@ export function RolloutIdeasCard({
   const fromVoiceRef = useRef(false);
   const sectionRef = useRef<HTMLElement | null>(null);
   const [brief, setBrief] = useState<RolloutBrief | null>(null);
+  const [suggest, setSuggest] = useState<SuggestState>(null);
+  const [applying, setApplying] = useState(false);
 
   const load = useCallback(async () => {
     const headers = await authHeaders();
@@ -182,7 +188,104 @@ export function RolloutIdeasCard({
       />
     );
   }
-  if (hasPlan && data.notes.length === 0) return null;
+  // The owner can update a plan that exists by adding ideas to it.
+  const canSuggest = hasPlan && data.isOwner && canDraft;
+  if (hasPlan && data.notes.length === 0 && !canSuggest) return null;
+
+  const requestChanges = async (idea: string) => {
+    setSuggest({ status: 'loading' });
+    try {
+      const headers = await authHeaders();
+      if (!headers) throw new Error('Sign in again.');
+      const response = await fetch(`/api/releases/${encodeURIComponent(release.id)}/ideas/changes`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'suggest', idea }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { view?: IdeaChangeView; error?: string };
+      if (!response.ok || !payload.view) throw new Error(payload.error || 'Could not read the plan just now.');
+      captureAnalyticsEvent({
+        name: 'idea_changes_suggested',
+        properties: { adds: payload.view.adds.length, moves: payload.view.moves.length },
+      });
+      setSuggest({ status: 'ready', view: payload.view });
+    } catch (suggestError) {
+      setSuggest({
+        status: 'error',
+        message: suggestError instanceof Error ? suggestError.message : 'Could not read the plan just now.',
+      });
+    }
+  };
+
+  const applyChanges = async () => {
+    if (suggest?.status !== 'ready' || applying) return;
+    const { view } = suggest;
+    setApplying(true);
+    try {
+      const headers = await authHeaders();
+      if (!headers) throw new Error('Sign in again.');
+      const response = await fetch(`/api/releases/${encodeURIComponent(release.id)}/ideas/changes`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'apply',
+          adds: view.adds.map(({ title, why, offsetDays, now }) => ({ title, why, offsetDays, now })),
+          moves: view.moves.map(({ taskId, offsetDays }) => ({ taskId, offsetDays })),
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { added?: number; moved?: number; error?: string };
+      if (!response.ok) throw new Error(payload.error || 'Could not update the plan.');
+      captureAnalyticsEvent({
+        name: 'idea_changes_applied',
+        properties: { added: payload.added ?? 0, moved: payload.moved ?? 0 },
+      });
+      setSuggest({ status: 'applied', text: IDEA_CHANGES_COPY.applied(payload.added ?? 0, payload.moved ?? 0) });
+      onPlanChanged?.();
+    } catch (applyError) {
+      setSuggest({
+        status: 'error',
+        message: applyError instanceof Error ? applyError.message : 'Could not update the plan.',
+      });
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const changesPanel = suggest ? (
+    <IdeaChangesPanel
+      state={suggest}
+      applying={applying}
+      onApply={() => void applyChanges()}
+      onDismiss={() => setSuggest(null)}
+    />
+  ) : null;
+
+  // A planned rollout with no idea yet: one slim way in for the owner.
+  if (hasPlan && data.notes.length === 0 && canSuggest && !typing && !suggest) {
+    return (
+      <section
+        ref={sectionRef}
+        aria-labelledby={`ideas-title-${release.id}`}
+        className="rounded-[20px] border border-stroke-default bg-bg-surface px-5 py-4"
+      >
+        <div className="flex items-center gap-3">
+          <div className="min-w-0">
+            <h2 id={`ideas-title-${release.id}`} className="text-base font-semibold text-content-primary">
+              New idea for this plan?
+            </h2>
+            <p className="text-sm text-content-secondary">UrgAns suggests how your plan should change.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setTyping(true)}
+            className="motion-focus ml-auto min-h-11 shrink-0 rounded-full px-3 text-sm font-medium text-content-secondary underline hover:text-content-primary"
+          >
+            {IDEA_CHANGES_COPY.addIdea}
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   const save = async () => {
     const content = draft.trim();
@@ -210,6 +313,8 @@ export function RolloutIdeasCard({
       setDraft('');
       setTyping(false);
       window.dispatchEvent(new Event(IDEAS_CHANGED_EVENT));
+      // On a plan that exists, the owner's new idea gets suggested changes.
+      if (canSuggest) void requestChanges(content);
       // A manager is asked who should chime in after their note.
       if (path === 'manager') setAskingWho(true);
     } catch (saveError) {
@@ -231,10 +336,22 @@ export function RolloutIdeasCard({
           <h2 id={`ideas-title-${release.id}`} className="text-base font-semibold text-content-primary">
             {brief ? 'Rollout brief' : 'Your idea'}
           </h2>
+          {canSuggest ? (
+            <button
+              type="button"
+              onClick={() => {
+                setError('');
+                setTyping(true);
+              }}
+              className="motion-focus ml-auto min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary underline hover:text-content-primary"
+            >
+              {IDEA_CHANGES_COPY.addIdea}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => setExpanded(true)}
-            className="motion-focus ml-auto min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary underline hover:text-content-primary"
+            className={`motion-focus ${canSuggest ? '' : 'ml-auto '}min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary underline hover:text-content-primary`}
           >
             Edit idea
           </button>
@@ -259,6 +376,7 @@ export function RolloutIdeasCard({
             {data.notes.map((note) => note.content).join(' ')}
           </p>
         )}
+        {changesPanel}
       </section>
     );
   }
@@ -376,6 +494,8 @@ export function RolloutIdeasCard({
         </p>
       ) : null}
 
+      {changesPanel}
+
       {showPlanActions ? (
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-stroke-default pt-4">
           <Button
@@ -411,6 +531,124 @@ export function RolloutIdeasCard({
         </div>
       ) : null}
     </section>
+  );
+}
+
+type SuggestState =
+  | null
+  | { status: 'loading' }
+  | { status: 'ready'; view: IdeaChangeView }
+  | { status: 'applied'; text: string }
+  | { status: 'error'; message: string };
+
+/** The suggested plan changes for the owner to review. Nothing is saved until Apply. */
+function IdeaChangesPanel({
+  state,
+  applying,
+  onApply,
+  onDismiss,
+}: {
+  state: NonNullable<SuggestState>;
+  applying: boolean;
+  onApply: () => void;
+  onDismiss: () => void;
+}) {
+  const box = 'mt-4 rounded-2xl bg-bg-base px-4 py-3';
+  if (state.status === 'loading') {
+    return (
+      <div className={`${box} flex items-center gap-2 text-sm text-content-secondary`} aria-live="polite">
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+        {IDEA_CHANGES_COPY.thinking}
+      </div>
+    );
+  }
+  if (state.status === 'error') {
+    return (
+      <div className={box}>
+        <p role="alert" className="text-sm text-status-error">
+          {state.message}
+        </p>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="motion-focus mt-1 min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary hover:text-content-primary"
+        >
+          Close
+        </button>
+      </div>
+    );
+  }
+  if (state.status === 'applied') {
+    return (
+      <div className={`${box} flex items-center gap-2 text-sm font-medium text-brand`} aria-live="polite">
+        <Check className="h-4 w-4" aria-hidden="true" />
+        {state.text}
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="motion-focus ml-auto min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary hover:text-content-primary"
+        >
+          Done
+        </button>
+      </div>
+    );
+  }
+  const { view } = state;
+  if (isEmptyChanges(view)) {
+    return (
+      <div className={box}>
+        <p className="text-sm text-content-secondary">{IDEA_CHANGES_COPY.none}</p>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="motion-focus mt-1 min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary hover:text-content-primary"
+        >
+          Close
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className={box}>
+      <div className="flex items-baseline gap-2">
+        <h3 className="text-sm font-semibold text-content-primary">{IDEA_CHANGES_COPY.heading}</h3>
+        <span className="ml-auto text-xs text-content-tertiary">{IDEA_CHANGES_COPY.unsaved}</span>
+      </div>
+      <ul className="mt-2 space-y-1.5 text-sm">
+        {view.adds.map((add) => (
+          <li key={`a-${add.title}`} className="flex items-baseline gap-2 text-content-primary">
+            <span aria-hidden="true" className="w-3 shrink-0 text-brand">
+              +
+            </span>
+            <span className="min-w-0 break-words">{add.title}</span>
+            <span className="ml-auto shrink-0 pl-2 text-xs text-content-tertiary">{add.when}</span>
+          </li>
+        ))}
+        {view.moves.map((move) => (
+          <li key={`m-${move.taskId}`} className="flex items-baseline gap-2 text-content-primary">
+            <span aria-hidden="true" className="w-3 shrink-0 text-content-tertiary">
+              ~
+            </span>
+            <span className="min-w-0 break-words">{move.title}</span>
+            <span className="ml-auto shrink-0 pl-2 text-xs text-content-tertiary">
+              {move.fromWhen} to {move.when}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Button size="md" className="min-h-11" onClick={onApply} isLoading={applying}>
+          {IDEA_CHANGES_COPY.apply}
+        </Button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="motion-focus min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary hover:text-content-primary"
+        >
+          {IDEA_CHANGES_COPY.notNow}
+        </button>
+      </div>
+    </div>
   );
 }
 

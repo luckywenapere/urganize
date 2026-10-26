@@ -41,6 +41,45 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.186.0",
+    title: "Start with a call on bigger plans",
+    tag: "Account",
+    date: "October 26, 2026",
+    listed: false,
+    highlights: [
+      "Solo and Manager monthly work as before: pick, pay and start.",
+      "Label, 6-month and yearly plans start with a short call. We email you a payment link after it.",
+      "Label is now ₦100,000 a month.",
+    ],
+  },
+  {
+    version: "1.185.1",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "The activity pop-up now uses the full height of your screen, so you rarely need to scroll. The chat folds away when you don’t need it.",
+    ],
+  },
+  {
+    version: "1.185.0",
+    title: "Share to Urganize from the Android app",
+    tag: "App",
+    date: "October 26, 2026",
+    highlights: [
+      "In the Android app, share a WhatsApp chat, a voice note, a photo or some text to Urganize. It opens ready to sort. This needs the new app build.",
+    ],
+  },
+  {
+    version: "1.184.1",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "Add a new idea to a rollout that already has a plan. UrgAns suggests activities to add and dates to move, and nothing changes until you tap Apply.",
+    ],
+  },
+  {
     version: "1.184.0",
     title: "Bring in an artist's releases",
     tag: "App",

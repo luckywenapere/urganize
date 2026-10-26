@@ -8,7 +8,8 @@
 // admin recording it. A partial transfer never opens a team.
 
 import type { SupabaseClient, User } from '@supabase/supabase-js';
-import { PRICE_LIST_VERSION, getTierPrice, type BillingInterval } from '@urganize/pricing';
+import { PRICE_LIST_VERSION, getTierPrice, isBillingInterval, isPricingTierId, isSelfServePurchase, type BillingInterval } from '@urganize/pricing';
+import { consumeClearance } from '@/lib/call-led-server';
 import { isMissingColumnError } from '@/lib/billing-schema';
 import { approveUser } from '@/lib/access-gate-server';
 import { advancePeriodEnd, type RecurringPlanId } from '@/lib/billing-plans';
@@ -133,11 +134,15 @@ export async function completePaidSignup(
   }
 ): Promise<{ workspaceId: string | null; approvedNow: boolean }> {
   let approvedNow = false;
+  // A plan that starts with a call (Label, 6 months, yearly) counts as concierge,
+  // like money the founder recorded: the founder let them in.
+  const callLed =
+    isPricingTierId(input.plan) && isBillingInterval(input.period) && !isSelfServePurchase(input.plan, input.period);
   try {
     if (await wasHeld(admin, input.userId)) {
       // Money the founder recorded by hand means the founder let them in, which
       // the cohort counts as concierge; a payment through checkout is self-serve.
-      approvedNow = await approveUser(admin, input.userId, input.method === 'direct_transfer' ? 'admin' : 'paid_self_serve');
+      approvedNow = await approveUser(admin, input.userId, input.method === 'direct_transfer' || callLed ? 'admin' : 'paid_self_serve');
     }
   } catch (error) {
     console.warn('[self-serve] approval failed', { userId: input.userId, error: String(error) });
@@ -147,6 +152,9 @@ export async function completePaidSignup(
   try {
     const user = await loadUser(admin, input.userId);
     if (user) {
+      if (callLed && user.email && input.period) {
+        await consumeClearance(admin, { email: user.email, plan: input.plan, period: input.period });
+      }
       const workspace = await ensureOwnedWorkspace(admin, user);
       workspaceId = workspace.id;
     }
@@ -177,7 +185,7 @@ export async function completePaidSignup(
       .eq('onboarding_completed', false)
       .then(() => undefined, () => undefined);
     await trackSelfServe(input.userId, 'access_auto_approved', {
-      path: input.method === 'direct_transfer' ? 'concierge' : 'self_serve',
+      path: input.method === 'direct_transfer' || callLed ? 'concierge' : 'self_serve',
       plan: input.plan,
       period: input.period ?? null,
       method: input.method,

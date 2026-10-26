@@ -159,6 +159,8 @@ export interface AnalyticsEventPropertiesMap {
   /** The notes were turned into a plan: 'ai' when the planner built it from
    * the Ideas card, 'manual' when Write it myself was tapped. */
   ideas_plan_drafted: { via: 'ai' | 'manual'; note_count?: number };
+  idea_changes_suggested: { adds: number; moves: number };
+  idea_changes_applied: { added: number; moved: number };
   onboarding_completion_screen_shown: {
     release_created: boolean;
     task_created: boolean;

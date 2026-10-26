@@ -9,6 +9,7 @@ import {
   annualSavingCopy,
   formatTierPrice,
   getTier,
+  isSelfServePurchase,
   tierHighlights,
   type BillingInterval,
   type PricingTierId,
@@ -144,7 +145,12 @@ export function PricingTierCards() {
             const tier = getTier(tierId);
             const price = formatTierPrice(tierId, interval);
             const highlights = tierHighlights(tierId);
-            const selfServe = isSelfServe(tierId);
+            const priced = isSelfServe(tierId);
+            // Onboarding rules (2026-10-26): only monthly Solo and Manager are
+            // paid for without a call. Label and every 6-month or yearly plan
+            // lead to booking one; the payment link comes after it.
+            const selfServe = priced && isSelfServePurchase(tierId, interval);
+            const callLed = priced && !selfServe;
             return (
               <div
                 key={tierId}
@@ -198,17 +204,17 @@ export function PricingTierCards() {
                     to checkout for that plan and period. Paying skips the
                     waitlist; the app's sign-up comes first when needed. */}
                 <a
-                  href={selfServe ? `${APP_ORIGIN}/checkout?plan=${tierId}&period=${interval}` : salesMailto(tier.label)}
-                  data-track={selfServe ? "pricing_plan_clicked" : undefined}
-                  data-plan={selfServe ? tierId : undefined}
-                  data-period={selfServe ? interval : undefined}
+                  href={priced ? `${APP_ORIGIN}/checkout?plan=${tierId}&period=${interval}` : salesMailto(tier.label)}
+                  data-track={priced ? "pricing_plan_clicked" : undefined}
+                  data-plan={priced ? tierId : undefined}
+                  data-period={priced ? interval : undefined}
                   className="mt-6 inline-flex items-center justify-center rounded-full bg-[var(--marketing-primary)] px-5 py-3 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] transition-colors hover:bg-[var(--marketing-primary-hover)]"
                 >
                   {/* Two outcomes, not three. "Book a demo" used to sit on a
                       priced tier that was not self-serve; since 2026-09-08 the
                       two conditions are exact complements, so that branch was
                       unreachable and is gone rather than left to rot. */}
-                  {selfServe ? `Get ${tier.label}` : "Let's talk"}
+                  {selfServe ? `Get ${tier.label}` : callLed ? "Book a call" : "Let's talk"}
                 </a>
 
                 <ul className="mt-6 flex flex-1 flex-col gap-2.5">
