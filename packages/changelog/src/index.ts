@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.190.1",
+    tag: "App",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "Smart links and Get link now make links. They were being turned down before.",
+    ],
+  },
+  {
     version: "1.190.0",
     title: "Ask for ideas by email",
     tag: "Rollouts",
