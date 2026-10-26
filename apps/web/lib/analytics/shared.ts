@@ -110,6 +110,12 @@ export interface AnalyticsEventPropertiesMap {
   onboarding_invite_sent_during_flow: EmptyAnalyticsProperties;
   /** URG-251 funnel (2026-10-14). The read-only week-by-week preview was shown. */
   onboarding_preview_viewed: { release_type: string; weeks: number; activities: number };
+  /** Artist import step (2026-10-26): shown, an artist picked, their releases found, skipped, "plan the next release" tapped. */
+  onboarding_artist_import_viewed: EmptyAnalyticsProperties;
+  onboarding_artist_picked: { provider: string };
+  onboarding_artist_imported: { provider: string; releases: number };
+  onboarding_artist_import_skipped: EmptyAnalyticsProperties;
+  onboarding_artist_plan_next: EmptyAnalyticsProperties;
   /** The opt-in step was shown (both toggles start off). */
   onboarding_optin_viewed: EmptyAnalyticsProperties;
   /** A toggle was tapped. `result` is what the device allowed for push. */
@@ -150,6 +156,8 @@ export interface AnalyticsEventPropertiesMap {
   /** The notes were turned into a plan: 'ai' when the planner built it from
    * the Ideas card, 'manual' when Write it myself was tapped. */
   ideas_plan_drafted: { via: 'ai' | 'manual'; note_count?: number };
+  idea_changes_suggested: { adds: number; moves: number };
+  idea_changes_applied: { added: number; moved: number };
   onboarding_completion_screen_shown: {
     release_created: boolean;
     task_created: boolean;

@@ -23,9 +23,11 @@
  *   8  Paywall: Start my free trial (no skip, no close)
  *   9  Welcome to Urganize (once)
  *  10  Bring your team in (workspace flag; always skippable, URG-274)
+ *  11  Who is the artist? Import their releases (2026-10-26; sits right after
+ *      step 0, before the account, so the aha comes first; always skippable)
  */
 
-export type OnboardingStepIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+export type OnboardingStepIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
 
 export const ONBOARDING_STEP = {
   workingOn: 0,
@@ -39,6 +41,7 @@ export const ONBOARDING_STEP = {
   paywall: 8,
   welcome: 9,
   invite: 10,
+  artistImport: 11,
 } as const satisfies Record<string, OnboardingStepIndex>;
 
 export const ONBOARDING_STEP_TITLES: Record<OnboardingStepIndex, string> = {
@@ -53,6 +56,7 @@ export const ONBOARDING_STEP_TITLES: Record<OnboardingStepIndex, string> = {
   8: 'Start your free trial',
   9: 'Welcome to Urganize',
   10: 'Bring your team in',
+  11: 'Who is the artist?',
 };
 
 export type OnboardingStepOptions = {
@@ -78,6 +82,11 @@ export type OnboardingStepOptions = {
    * Optional so older callers read as false.
    */
   nothingPlanned?: boolean;
+  /**
+   * The artist import step (2026-10-26), right after "What are you working
+   * on?". Optional so older callers read as false.
+   */
+  artistImport?: boolean;
 };
 
 /** Every step this person walks, in order. */
@@ -91,6 +100,7 @@ export function onboardingStepSequence(options: OnboardingStepOptions): Onboardi
         ONBOARDING_STEP.rollout,
         ONBOARDING_STEP.firstMove,
       ];
+  if (options.artistImport) steps.splice(1, 0, ONBOARDING_STEP.artistImport);
   if (options.previewEnabled && !options.startFromScratch && !options.nothingPlanned) {
     steps.push(ONBOARDING_STEP.preview);
   }
@@ -138,13 +148,15 @@ export function firstStepAfterAccount(sequence: readonly OnboardingStepIndex[]):
 
 /** The last step that is answered before the account exists (authed setup's "Create my rollout"). */
 export function lastQuestionStep(sequence: readonly OnboardingStepIndex[]): OnboardingStepIndex {
-  const questions = sequence.filter((step) => step < ONBOARDING_STEP.account);
+  const questions = sequence.filter((step) => !isPostAccountStep(step) && step !== ONBOARDING_STEP.account);
   return questions[questions.length - 1] ?? ONBOARDING_STEP.firstMove;
 }
 
 /** True for the steps that come after the account exists, where Back is gone. */
 export function isPostAccountStep(step: OnboardingStepIndex): boolean {
-  return step > ONBOARDING_STEP.account;
+  return (
+    step === ONBOARDING_STEP.paywall || step === ONBOARDING_STEP.welcome || step === ONBOARDING_STEP.invite
+  );
 }
 
 /**
@@ -167,3 +179,9 @@ export function onboardingStepKicker(
  * them on"), the invite gate's kill-switch pattern.
  */
 export const isOnboardingV2Enabled = (): boolean => process.env.NEXT_PUBLIC_FEATURE_ONBOARDING_V2 !== 'false';
+
+/**
+ * The artist import step (2026-10-26). ON unless set to 'false', the same
+ * kill-switch pattern as onboarding v2.
+ */
+export const isArtistImportEnabled = (): boolean => process.env.NEXT_PUBLIC_FEATURE_ARTIST_IMPORT !== 'false';
