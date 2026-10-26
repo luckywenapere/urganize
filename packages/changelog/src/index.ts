@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.190.4",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "Skip the invite and you can add activities yourself. UrgAns only helps when you ask.",
+    ],
+  },
+  {
     version: "1.190.3",
     tag: "Rollouts",
     listed: false,
