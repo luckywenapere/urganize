@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   MAX_CHIME_IN_RECIPIENTS,
+  MAX_IDEA_INVITES,
+  addPendingInvite,
+  parseIdeaInviteEmail,
   chimeInAskLine,
   chimeInAskRecipients,
   chimeInShareText,
@@ -186,5 +189,45 @@ describe('isRolloutArtist', () => {
     expect(isRolloutArtist({ role: 'manager', artistName: 'Dorian' }, 'Dorian')).toBe(false);
     expect(isRolloutArtist({ role: 'artist', artistName: 'Someone' }, 'Dorian')).toBe(false);
     expect(isRolloutArtist({ role: 'artist', artistName: '' }, '')).toBe(false);
+  });
+});
+
+describe('the email-invite flag ships off', () => {
+  afterEach(() => vi.unstubAllEnvs());
+  it('is on only when exactly "true"', async () => {
+    vi.resetModules();
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_IDEA_EMAIL_INVITES', '');
+    expect((await import('./rollout-ideas')).isIdeaEmailInvitesEnabled()).toBe(false);
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_IDEA_EMAIL_INVITES', 'false');
+    expect((await import('./rollout-ideas')).isIdeaEmailInvitesEnabled()).toBe(false);
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_IDEA_EMAIL_INVITES', 'true');
+    expect((await import('./rollout-ideas')).isIdeaEmailInvitesEnabled()).toBe(true);
+  });
+});
+
+describe('parseIdeaInviteEmail', () => {
+  it('lowercases and trims a real address', () => {
+    expect(parseIdeaInviteEmail('  Dorian@Example.COM ')).toBe('dorian@example.com');
+  });
+  it('refuses anything that is not an address', () => {
+    expect(parseIdeaInviteEmail('Dorian')).toBeNull();
+    expect(parseIdeaInviteEmail('a@b')).toBeNull();
+    expect(parseIdeaInviteEmail('a b@c.com')).toBeNull();
+    expect(parseIdeaInviteEmail(undefined)).toBeNull();
+    expect(parseIdeaInviteEmail('x'.repeat(250) + '@c.com')).toBeNull();
+  });
+});
+
+describe('addPendingInvite', () => {
+  it('adds a new address with its role', () => {
+    const result = addPendingInvite([], 'a@b.com', 'artist');
+    expect(result).toEqual({ ok: true, list: [{ email: 'a@b.com', role: 'artist' }] });
+  });
+  it('refuses a bad address, a repeat and a full list', () => {
+    expect(addPendingInvite([], 'nope', 'artist')).toMatchObject({ ok: false, reason: 'invalid' });
+    const one = [{ email: 'a@b.com', role: 'artist' as const }];
+    expect(addPendingInvite(one, 'A@B.com', 'team-member')).toMatchObject({ ok: false, reason: 'duplicate' });
+    const full = Array.from({ length: MAX_IDEA_INVITES }, (_, i) => ({ email: `p${i}@b.com`, role: 'team-member' as const }));
+    expect(addPendingInvite(full, 'new@b.com', 'team-member')).toMatchObject({ ok: false, reason: 'full' });
   });
 });

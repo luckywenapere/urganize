@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Button } from '@urganize/ui';
 import { ADD_IDEA_EVENT, IDEAS_CHANGED_EVENT } from './RolloutFirstSteps';
-import { Check, Copy, Loader2, MessageCircle, Mic, Sparkles, UserPlus } from '@/components/icons';
+import { Check, Copy, Loader2, MessageCircle, Mic, Sparkles, UserPlus, X } from '@/components/icons';
+import { useOpenSettings } from '@/components/settings/useOpenSettings';
 import { useVoiceInput } from '@/components/chappi/useVoiceInput';
 import { buildWhatsAppShareUrl } from '@/lib/access-gate';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
@@ -12,14 +13,18 @@ import { formatRelativeTime } from '@/lib/relative-time';
 import {
   MAX_IDEA_LENGTH,
   ROLLOUT_IDEAS_COPY as COPY,
+  addPendingInvite,
   chimeInShareText,
   ideasPathFor,
   ideasToExtraNotes,
+  isIdeaEmailInvitesEnabled,
   isRolloutIdeasEnabled,
   withInviteNext,
+  type IdeaInviteRole,
   type IdeaNote,
   type IdeasPath,
   type IdeasPerson,
+  type PendingIdeaInvite,
 } from '@/lib/rollout-ideas';
 import {
   missingItems,
@@ -839,6 +844,16 @@ function WhoShouldChimeIn({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [sent, setSent] = useState<number | null>(null);
+  // Ask for ideas by email (flag-off by default): people not on Urganize are
+  // queued here and invited, then the ticked teammates are asked, on one tap.
+  const emailInvites = canInvite && isIdeaEmailInvitesEnabled();
+  const openSettings = useOpenSettings();
+  const [pending, setPending] = useState<PendingIdeaInvite[]>([]);
+  const [emailText, setEmailText] = useState('');
+  const [inviteRole, setInviteRole] = useState<IdeaInviteRole>('artist');
+  const [addError, setAddError] = useState('');
+  const [seatMessage, setSeatMessage] = useState('');
+  const requestCount = picked.size + pending.length;
 
   const toggle = (userId: string) =>
     setPicked((current) => {
@@ -848,28 +863,85 @@ function WhoShouldChimeIn({
       return next;
     });
 
+  const addByEmail = () => {
+    const result = addPendingInvite(pending, emailText, inviteRole);
+    if (!result.ok) {
+      setAddError(
+        result.reason === 'invalid'
+          ? 'Type a full email address.'
+          : result.reason === 'duplicate'
+            ? 'That address is already on the list.'
+            : 'That is the most people one ask can invite.'
+      );
+      return;
+    }
+    setAddError('');
+    setPending(result.list);
+    setEmailText('');
+  };
+
+  // Invites each queued address (a full team invite, so a seat each). Stops at
+  // the first refusal, keeps what is left queued, and returns how many went out.
+  const sendInvites = async (headers: Record<string, string>): Promise<number> => {
+    let invited = 0;
+    let remaining = pending;
+    for (const invite of pending) {
+      const response = await fetch('/api/workspace/members/invite', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: invite.email, role: invite.role, releaseId }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (response.status === 409) {
+        setSeatMessage(payload.error || 'Your plan has no free seat for this invite.');
+        break;
+      }
+      if (!response.ok) {
+        setError(payload.error || `Could not invite ${invite.email}.`);
+        break;
+      }
+      invited += 1;
+      remaining = remaining.filter((item) => item.email !== invite.email);
+    }
+    setPending(remaining);
+    if (invited) {
+      captureAnalyticsEvent({
+        name: 'idea_invite_sent',
+        properties: { count: invited, artist_invited: pending.some((item) => item.role === 'artist') },
+      });
+    }
+    return invited;
+  };
+
   const ask = async () => {
-    if (!picked.size || sending) return;
+    if (!requestCount || sending) return;
     setSending(true);
     setError('');
+    setSeatMessage('');
     try {
       const headers = await authHeaders();
       if (!headers) throw new Error('Sign in again.');
-      const response = await fetch(`/api/releases/${encodeURIComponent(releaseId)}/ideas/ask`, {
-        method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userIds: Array.from(picked) }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as { asked?: number; error?: string };
-      if (!response.ok) throw new Error(payload.error || 'Could not ask them.');
-      captureAnalyticsEvent({
-        name: 'chime_in_requested',
-        properties: {
-          count: payload.asked ?? picked.size,
-          artist_ticked: people.some((person) => person.isArtist && picked.has(person.userId)),
-        },
-      });
-      setSent(payload.asked ?? picked.size);
+      const invited = pending.length ? await sendInvites(headers) : 0;
+      if (pending.length && invited < pending.length) return;
+      let asked = 0;
+      if (picked.size) {
+        const response = await fetch(`/api/releases/${encodeURIComponent(releaseId)}/ideas/ask`, {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userIds: Array.from(picked) }),
+        });
+        const payload = (await response.json().catch(() => ({}))) as { asked?: number; error?: string };
+        if (!response.ok) throw new Error(payload.error || 'Could not ask them.');
+        asked = payload.asked ?? picked.size;
+        captureAnalyticsEvent({
+          name: 'chime_in_requested',
+          properties: {
+            count: asked,
+            artist_ticked: people.some((person) => person.isArtist && picked.has(person.userId)),
+          },
+        });
+      }
+      setSent(asked + invited);
       window.setTimeout(onDone, 1200);
     } catch (askError) {
       setError(askError instanceof Error ? askError.message : 'Could not ask them.');
@@ -912,7 +984,93 @@ function WhoShouldChimeIn({
         <p className="mt-1 text-sm text-content-secondary">{COPY.empty}</p>
       )}
 
-      {canInvite ? (
+      {emailInvites ? (
+        <div className="mt-3">
+          {pending.length ? (
+            <ul className="divide-y divide-stroke-default">
+              {pending.map((invite) => (
+                <li key={invite.email} className="flex min-h-12 items-center gap-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-content-primary">
+                      {invite.email}
+                      <span className="text-content-tertiary">{invite.role === 'artist' ? ' · Artist' : ' · Team member'}</span>
+                    </p>
+                    <p className="text-xs text-content-secondary">Not on Urganize? They get an invite by email. It uses 1 seat.</p>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${invite.email}`}
+                    onClick={() => setPending((current) => current.filter((item) => item.email !== invite.email))}
+                    className="motion-focus grid h-11 w-11 shrink-0 place-items-center rounded-full text-content-tertiary hover:text-content-primary"
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <label htmlFor="idea-invite-email" className="mt-2 block text-xs text-content-secondary">
+            Add someone by email
+          </label>
+          <div className="mt-1 flex items-center gap-2">
+            <input
+              id="idea-invite-email"
+              type="email"
+              inputMode="email"
+              autoComplete="off"
+              value={emailText}
+              onChange={(event) => setEmailText(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  addByEmail();
+                }
+              }}
+              placeholder="name@email.com"
+              className="min-h-11 min-w-0 flex-1 rounded-xl border border-stroke-strong bg-bg-base px-3 text-base text-content-primary placeholder:text-content-tertiary"
+            />
+            <Button size="md" variant="secondary" className="min-h-11" onClick={addByEmail} disabled={!emailText.trim()}>
+              Add
+            </Button>
+          </div>
+          <div role="radiogroup" aria-label="Their role" className="mt-2 flex gap-2">
+            {(['artist', 'team-member'] as const).map((role) => (
+              <button
+                key={role}
+                type="button"
+                role="radio"
+                aria-checked={inviteRole === role}
+                onClick={() => setInviteRole(role)}
+                className={`motion-focus min-h-11 rounded-full border px-4 text-sm font-medium ${
+                  inviteRole === role
+                    ? 'border-brand bg-brand/10 text-content-primary'
+                    : 'border-stroke-strong text-content-secondary'
+                }`}
+              >
+                {role === 'artist' ? 'Artist' : 'Team member'}
+              </button>
+            ))}
+          </div>
+          {addError ? (
+            <p role="alert" className="mt-2 text-sm text-status-error">
+              {addError}
+            </p>
+          ) : null}
+          {adding ? (
+            <div className="mt-2">
+              <InviteLinkActions releaseId={releaseId} releaseTitle={releaseTitle} senderName={senderName} path="manager" autoStart />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="motion-focus mt-1 min-h-11 text-sm font-medium text-content-secondary hover:text-content-primary"
+            >
+              Or share a link instead
+            </button>
+          )}
+        </div>
+      ) : canInvite ? (
         adding ? (
           <div className="mt-2">
             <InviteLinkActions releaseId={releaseId} releaseTitle={releaseTitle} senderName={senderName} path="manager" autoStart />
@@ -929,6 +1087,27 @@ function WhoShouldChimeIn({
         )
       ) : null}
 
+      {seatMessage ? (
+        <div role="alert" className="mt-3 rounded-2xl border border-status-warning/40 bg-status-warning/10 p-3">
+          <p className="text-sm font-semibold text-content-primary">{seatMessage}</p>
+          <p className="mt-1 text-sm text-content-secondary">
+            Your rollout is not blocked. Keep planning, and add the idea yourself for now.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Button size="md" className="min-h-11" onClick={() => openSettings({ segment: 'billing' })}>
+              See plans
+            </Button>
+            <button
+              type="button"
+              onClick={onDone}
+              className="motion-focus min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary hover:text-content-primary"
+            >
+              I&apos;ll type the idea myself
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {error ? (
         <p role="alert" className="mt-2 text-sm text-status-error">
           {error}
@@ -943,9 +1122,9 @@ function WhoShouldChimeIn({
           </p>
         ) : (
           <>
-            {people.length ? (
-              <Button size="md" className="min-h-11" onClick={() => void ask()} isLoading={sending} disabled={!picked.size}>
-                {COPY.ask}
+            {people.length || emailInvites ? (
+              <Button size="md" className="min-h-11" onClick={() => void ask()} isLoading={sending} disabled={!requestCount}>
+                {emailInvites && requestCount ? `Send ${requestCount} ${requestCount === 1 ? 'request' : 'requests'}` : COPY.ask}
               </Button>
             ) : null}
             <button
@@ -953,7 +1132,7 @@ function WhoShouldChimeIn({
               onClick={onDone}
               className="motion-focus min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary hover:text-content-primary"
             >
-              {people.length || !adding ? COPY.skip : 'Done'}
+              {people.length || emailInvites || !adding ? COPY.skip : 'Done'}
             </button>
           </>
         )}

@@ -21,6 +21,46 @@ import { MAX_EXTRA_NOTES_LENGTH } from './release-planning';
 export const isRolloutIdeasEnabled = (): boolean =>
   process.env.NEXT_PUBLIC_FEATURE_ROLLOUT_IDEAS !== 'false';
 
+/**
+ * NEXT_PUBLIC_FEATURE_IDEA_EMAIL_INVITES: "Ask for ideas" can invite someone
+ * who is not on Urganize by email (a full team invite, so it uses a seat).
+ * OFF unless exactly 'true'.
+ */
+export const isIdeaEmailInvitesEnabled = (): boolean =>
+  process.env.NEXT_PUBLIC_FEATURE_IDEA_EMAIL_INVITES === 'true';
+
+/** The two roles "Ask for ideas" offers a new person. Both map to the invite route's roles. */
+export type IdeaInviteRole = 'artist' | 'team-member';
+export type PendingIdeaInvite = { email: string; role: IdeaInviteRole };
+
+/** Most new people one ask can invite. A typo guard, like MAX_CHIME_IN_RECIPIENTS. */
+export const MAX_IDEA_INVITES = 10;
+
+/** A trimmed, lowercased email, or null when the text is not one. */
+export function parseIdeaInviteEmail(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const email = value.trim().toLowerCase();
+  if (!email || email.length > 254) return null;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
+}
+
+export type AddPendingInviteResult =
+  | { ok: true; list: PendingIdeaInvite[] }
+  | { ok: false; reason: 'invalid' | 'duplicate' | 'full' };
+
+/** Queues one more address to be invited when the owner taps Send. Nothing is sent here. */
+export function addPendingInvite(
+  list: PendingIdeaInvite[],
+  rawEmail: unknown,
+  role: IdeaInviteRole
+): AddPendingInviteResult {
+  const email = parseIdeaInviteEmail(rawEmail);
+  if (!email) return { ok: false, reason: 'invalid' };
+  if (list.some((item) => item.email === email)) return { ok: false, reason: 'duplicate' };
+  if (list.length >= MAX_IDEA_INVITES) return { ok: false, reason: 'full' };
+  return { ok: true, list: [...list, { email, role }] };
+}
+
 /** A note on a rollout's Ideas card, as the ideas routes return it. */
 export type IdeaNote = {
   id: string;

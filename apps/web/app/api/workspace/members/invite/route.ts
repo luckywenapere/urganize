@@ -11,6 +11,8 @@ import {
 import { type WorkspaceMemberRole } from '@/lib/tasks';
 import { isEmailConfigured, sendEmail } from '@/lib/email';
 import { checkSeatAllowance, recordLimitHit } from '@/lib/seats-server';
+import { ensureReleaseTeamWriteAccess } from '@/lib/release-access-server';
+import { isIdeaEmailInvitesEnabled, withInviteNext } from '@/lib/rollout-ideas';
 import { captureActivationIfReached } from '@/lib/activation-server';
 import {
   captureServerAnalyticsEvent,
@@ -25,6 +27,10 @@ type InviteWorkspaceMemberBody = {
   /** Artist-scope for ARTIST invites (founder decision, 2026-07-23): the
    * invitee only sees releases whose artist_id matches. */
   artistId?: unknown;
+  /** "Ask for ideas" (flag NEXT_PUBLIC_FEATURE_IDEA_EMAIL_INVITES): the rollout
+   * the invite is for. The invitee lands on it after joining, and an ARTIST
+   * invite is scoped to this rollout's artist. Ignored while the flag is off. */
+  releaseId?: unknown;
 };
 
 const WORKSPACE_ROLE_OPTIONS: WorkspaceMemberRole[] = ['owner', 'admin', 'member', 'guest'];
@@ -93,11 +99,28 @@ export async function POST(request: NextRequest) {
     const body = (await request.json().catch(() => ({}))) as InviteWorkspaceMemberBody;
     const email = normalizeEmail(body.email);
     const role = normalizeRole(body.role);
-    const artistScopeId = readString(body.artistId).slice(0, 100) || null;
+    const artistScopeRequested = readString(body.artistId).slice(0, 100) || null;
 
     if (!isValidEmail(email)) {
       return NextResponse.json({ error: 'A valid email is required.' }, { status: 400 });
     }
+
+    // Ask for ideas: the same team-aware gate every release route uses, so an
+    // invite can only point at a rollout this person may already write to.
+    let ideaReleaseId: string | null = null;
+    let artistScopeFromRelease: string | null = null;
+    const requestedReleaseId = readString(body.releaseId).slice(0, 100);
+    if (requestedReleaseId && isIdeaEmailInvitesEnabled()) {
+      const releaseAccess = await ensureReleaseTeamWriteAccess(adminClient, requestedReleaseId, auth.user);
+      if ('error' in releaseAccess) return releaseAccess.error;
+      ideaReleaseId = releaseAccess.release.id;
+      artistScopeFromRelease = readString(releaseAccess.release.artistId) || null;
+    }
+    // An artist invited from a rollout sees that artist's releases, like any
+    // other ARTIST invite; an explicit artistId from the caller still wins.
+    const artistScopeId =
+      artistScopeRequested ||
+      (ideaReleaseId && readString(body.role).toLowerCase() === 'artist' ? artistScopeFromRelease : null);
 
     const existingResult = await adminClient
       .from(WORKSPACE_MEMBERS_TABLE)
@@ -222,7 +245,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const inviteUrl = activeToken ? buildInviteUrl(activeToken) : null;
+    const baseInviteUrl = activeToken ? buildInviteUrl(activeToken) : null;
+    // Ask for ideas: after joining, the invitee lands on the rollout.
+    const inviteUrl = baseInviteUrl && ideaReleaseId ? withInviteNext(baseInviteUrl, ideaReleaseId) : baseInviteUrl;
 
     // Deliver the invite. The row and its token are already committed, so a
     // failed send is a degraded outcome and never an error: the response
@@ -271,6 +296,7 @@ export async function POST(request: NextRequest) {
       auth.user.id,
       createPostHogEvent('team_member_invited', {
         role,
+        ...(ideaReleaseId ? { source: 'ask_for_ideas' } : {}),
       })
     );
 
