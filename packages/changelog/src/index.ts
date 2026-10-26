@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.192.3",
+    tag: "Team",
+    date: "October 26, 2026",
+    listed: false,
+    highlights: [
+      "The chat inside an activity is gone, so the activity is just its details.",
+    ],
+  },
+  {
     version: "1.192.2",
     tag: "App",
     date: "October 26, 2026",

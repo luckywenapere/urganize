@@ -72,6 +72,9 @@ const TASK_ATTACHMENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TASK_ATTACHMENT
 const TASK_OUTCOMES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TASK_OUTCOMES === 'true';
 
 const CHAT_OPEN_STORAGE_KEY = 'urganize.task-chat-open';
+// The activity chat is hidden (founder, 2026-10-26: nobody used it). Data and
+// routes stay; set true to bring the section back.
+const TASK_CHAT_ENABLED = false;
 
 // 2026-07-23 (founder calls): the Priority selector, the Tag row, and the
 // Activity feed were all removed from this view. Priority is gone as a
@@ -790,6 +793,7 @@ export function TaskDetailView({
           {/* Collapsible: folded, it is one line and the fields get the whole
               card; open, it is the lower 1 part of the 1.618 : 1 split and only
               its message list scrolls. */}
+          {TASK_CHAT_ENABLED ? (
           <section
             className={`flex min-h-0 flex-col rounded-[24px] border border-stroke-default bg-bg-elevated/50 ${
               chatOpen ? 'flex-[1_1_0%] p-4' : 'shrink-0 px-4 py-1'
@@ -850,6 +854,7 @@ export function TaskDetailView({
               </>
             ) : null}
           </section>
+          ) : null}
 
           {/* How the last completion went, captured by the check-in sheet.
               Read-only and kept even after a reopen: it is the record of
