@@ -21,6 +21,7 @@ import {
   canManageBriefShare,
   deriveBriefDates,
   deriveBriefPeople,
+  buildBriefPlanSeed,
   firstName,
   generateShareToken,
   initialsFor,
@@ -32,6 +33,7 @@ import {
   type BriefBlock,
   type BriefDecision,
   type BriefNote,
+  type BriefPlanSeed,
   type BriefPayload,
   type BriefProfile,
   type BriefReference,
@@ -201,12 +203,29 @@ async function readNotes(admin: SupabaseClient, releaseId: string): Promise<Brie
     .filter((note) => note.body.length > 0);
 }
 
+/**
+ * What the rollout's approved plan (planner v2) already says, for an empty
+ * brief to offer. Read only; any failure reads as "nothing to offer".
+ */
+export async function loadPlanSeed(admin: SupabaseClient, releaseId: string): Promise<BriefPlanSeed | null> {
+  const { data, error } = await admin
+    .from('release_plan_drafts')
+    .select('doc')
+    .eq('release_id', releaseId)
+    .eq('status', 'approved')
+    .order('approved_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  return buildBriefPlanSeed(asRow(asRow(data).doc).planner_v2);
+}
+
 export async function loadBriefPayload(
   admin: SupabaseClient,
   input: { releaseId: string; releaseOwnerId: string; releaseDate: string | null; user: User }
 ): Promise<BriefResult<BriefPayload>> {
   const { releaseId } = input;
-  const [briefRead, referencesRead, decisionsRead, revisionsRead, tasks, notes, canManageShare] =
+  const [briefRead, referencesRead, decisionsRead, revisionsRead, tasks, notes, canManageShare, planSeed] =
     await Promise.all([
       readBriefRow(admin, releaseId),
       readReferences(admin, releaseId),
@@ -225,6 +244,7 @@ export async function loadBriefPayload(
       readTasks(admin, releaseId),
       readNotes(admin, releaseId),
       canUserManageBriefShare(admin, input.releaseOwnerId, input.user),
+      loadPlanSeed(admin, releaseId),
     ]);
 
   if (!briefRead.ok) return briefRead;
@@ -289,6 +309,7 @@ export async function loadBriefPayload(
       people: deriveBriefPeople({ tasks, profiles }),
       notes,
       revisions,
+      planSeed,
       share: { enabled: brief?.shareEnabled ?? false, token: brief?.shareEnabled ? brief.shareToken : null },
       viewer: { id: input.user.id, canEdit: true, canManageShare },
     },

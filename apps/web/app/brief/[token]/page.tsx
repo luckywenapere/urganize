@@ -110,7 +110,7 @@ export default async function BriefViewPage({ params }: PageProps) {
               <li key={row.id} className={`flex min-h-11 items-center justify-between gap-3 px-3.5 text-sm ${DIVIDER}`}>
                 <span className={`min-w-0 truncate ${row.done ? 'line-through opacity-55' : ''}`}>{row.title}</span>
                 <span className={`shrink-0 font-mono text-[12px] ${row.isRelease ? 'text-[#7fd99a]' : 'text-[#929291]'}`}>
-                  {formatBriefDay(row.date)}
+                  {row.when ?? formatBriefDay(row.date)}
                 </span>
               </li>
             ))}
