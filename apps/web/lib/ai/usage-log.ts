@@ -28,7 +28,7 @@ export type { FailedCall };
 
 // 'voice' (2026-10-11): an UrgAns turn asked for by a voice call's urgans_do
 // tool (app/api/urgans/voice/tool), recorded apart from typed chat.
-export const AI_USAGE_FEATURES = ['chat', 'plan', 'press_kit', 'pitch_kit', 'spotify_pitch', 'status', 'outcome', 'voice', 'notes_import'] as const;
+export const AI_USAGE_FEATURES = ['chat', 'plan', 'press_kit', 'pitch_kit', 'spotify_pitch', 'status', 'outcome', 'voice', 'notes_import', 'whatsapp_reply'] as const;
 export type AiUsageFeature = (typeof AI_USAGE_FEATURES)[number];
 
 /** Who a request belongs to. Every id is optional in the log and checked before it is written. */

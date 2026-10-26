@@ -72,7 +72,7 @@ const TYPE_FIRST_CREATE_ENABLED =
 // translucent fill. Built on the stroke token (not white/10) so the same
 // classes read in the light theme too.
 const FIELD_CLASS =
-  'h-11 w-full rounded-lg border border-stroke-strong bg-[rgb(var(--color-stroke)/0.04)] px-3.5 text-sm text-content-primary outline-none transition-colors placeholder:text-content-tertiary hover:border-[rgb(var(--color-stroke)/0.16)] focus:border-brand/60 focus:ring-2 focus:ring-brand/20 disabled:opacity-60';
+  'h-11 w-full rounded-lg border border-stroke-control bg-[rgb(var(--color-stroke)/0.04)] px-3.5 text-sm text-content-primary outline-none transition-colors placeholder:text-content-tertiary hover:border-[rgb(var(--color-stroke)/0.16)] focus:border-brand/60 focus:ring-2 focus:ring-brand/20 disabled:opacity-60';
 
 export type ReleasePlanChoice = 'template' | 'blank';
 

@@ -257,7 +257,7 @@ export function ArtistCatalogueCard({ artistId, artistName }: { artistId: string
           initialQuery={artistName}
           className="motion-focus motion-press inline-flex min-h-9 items-center rounded-full border border-stroke-default px-3.5 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
         >
-          Import releases
+          Import past rollouts
         </ImportReleasesButton>
       </div>
       {rows.length === 0 ? (

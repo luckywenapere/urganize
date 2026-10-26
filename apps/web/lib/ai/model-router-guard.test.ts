@@ -161,8 +161,10 @@ describe('the env vars that name a model are read in one place', () => {
   });
 });
 
-describe('the chat-completions endpoint is spoken to by two files', () => {
-  it('finds it in the provider and the UrgAns runner only', () => {
-    expect(offenders(/chat\/completions/, ['lib/ai/provider.ts', 'lib/chappi/runner.ts'])).toEqual([]);
+describe('the chat-completions endpoint is spoken to by three files', () => {
+  it('finds it in the provider, the UrgAns runner and the own-key WhatsApp caller only', () => {
+    // WhatsApp's bring-your-own-AI calls the team's own provider with the team's
+    // key (2026-10-26). That is the team's model, not ours, so it never routes.
+    expect(offenders(/chat\/completions/, ['lib/ai/provider.ts', 'lib/chappi/runner.ts', 'lib/whatsapp/byo-ai.ts'])).toEqual([]);
   });
 });

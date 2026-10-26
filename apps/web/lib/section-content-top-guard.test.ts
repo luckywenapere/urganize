@@ -20,7 +20,8 @@ const SPACER = '<div className="pt-5 sm:pt-6" />';
 describe('one content top for the Artists section', () => {
   it('Artists and Rollouts open with the same spacer', () => {
     expect(artists).toContain(SPACER);
-    expect(catalogue).toContain(SPACER);
+    // Rollouts' first row is the phone Add rollout row, which carries the spacer.
+    expect(catalogue).toContain('<div data-mobile-add-rollout className="flex justify-end pt-5 sm:pt-6 lg:hidden">');
     expect(skeleton).toContain(SPACER);
   });
 

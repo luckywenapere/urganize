@@ -17,7 +17,8 @@ describe('the editorial overview', () => {
     expect(server).toMatch(/if \(error\) return null/);
     expect(server).toMatch(/if \(taskError\) return null/);
   });
-  it('is mounted on the Pitching page', () => {
-    expect(read('app/dashboard/pitching/PitchingPageClient.tsx')).toContain('<EditorialPitchSection />');
+  // Pitching moved inside each rollout (2026-10-15): the Pitch tab mounts it.
+  it('is mounted in the rollout Pitch tab', () => {
+    expect(read('components/pitching/PitchScene.tsx')).toContain('<EditorialPitchSection releaseId={release.id}');
   });
 });

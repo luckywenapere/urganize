@@ -64,7 +64,9 @@ describe('task pop-up sheet', () => {
   const css = read('app/globals.css');
 
   it('is a fixed-height sheet on a phone so late content cannot resize it', () => {
-    expect(engine).toMatch(/task-sheet-panel[^"]*\bh-\[92dvh\][^"]*\bsm:h-auto\b/);
+    // Full height on a computer too since v1.185.1, still fixed, never auto.
+    expect(engine).toMatch(/task-sheet-panel[^"]*\bh-\[92dvh\][^"]*\bsm:h-\[min\(88dvh,56rem\)\]/);
+    expect(engine).not.toMatch(/task-sheet-panel[^"]*\bsm:h-auto\b/);
   });
 
   it('seeds canComment instead of a flat false', () => {

@@ -1287,7 +1287,7 @@ function WhoShouldChimeIn({
                 }
               }}
               placeholder="name@email.com"
-              className="min-h-11 min-w-0 flex-1 rounded-xl border border-stroke-strong bg-bg-base px-3 text-base text-content-primary placeholder:text-content-tertiary"
+              className="min-h-11 min-w-0 flex-1 rounded-xl border border-stroke-control bg-bg-base px-3 text-base text-content-primary placeholder:text-content-tertiary"
             />
             <Button size="md" variant="secondary" className="min-h-11" onClick={addByEmail} disabled={!emailText.trim()}>
               Add

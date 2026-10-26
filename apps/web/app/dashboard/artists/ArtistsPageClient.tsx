@@ -145,7 +145,7 @@ export default function ArtistsPageClient({ swipe = false }: { swipe?: boolean }
           from="artists"
           className="motion-focus motion-press inline-flex min-h-10 items-center rounded-full border border-stroke-default bg-bg-surface px-4 text-sm font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
         >
-          Import releases
+          Import past rollouts
         </ImportReleasesButton>
       </div>
     </div>
@@ -199,7 +199,7 @@ function SwipeArtists({
             from="artists"
             className="hit-44 relative motion-focus motion-press inline-flex h-9 items-center rounded-full border border-content-primary/[0.14] px-3.5 text-[13px] font-medium text-content-primary/70 hover:text-content-primary"
           >
-            Import releases
+            Import past rollouts
           </ImportReleasesButton>
           <Link
             href={ADD_ARTIST_HREF}

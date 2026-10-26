@@ -729,8 +729,8 @@ export function tierHighlights(
   );
   lines.push(
     limits.activeReleases === null
-      ? 'Unlimited releases at a time'
-      : `${limits.activeReleases} ${limits.activeReleases === 1 ? 'release' : 'releases'} at a time`
+      ? 'Unlimited rollouts at a time'
+      : `${limits.activeReleases} ${limits.activeReleases === 1 ? 'rollout' : 'rollouts'} at a time`
   );
   // Credits, the unit the app actually meters (lib/credits/allowance.ts reads
   // the same field). Group's amount is agreed per deal, so it names no number.

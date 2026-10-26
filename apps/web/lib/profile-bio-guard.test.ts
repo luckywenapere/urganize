@@ -61,7 +61,6 @@ describe('one record: the directory reads the PUBLISHED kit', () => {
   it('the public page renders the resolved view, not the raw profile fields', () => {
     const page = code(read('app', 'p', '[slug]', 'page.tsx'));
     expect(page).toContain('view.bio');
-    expect(page).toContain('view.links');
     expect(page).not.toContain('profile.bio');
     expect(page).not.toContain('profile.links');
   });

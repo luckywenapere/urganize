@@ -11,8 +11,13 @@
 // Nothing is ever sent to a number that has not replied YES, and a chase is one
 // per task, kind and day: the claim is a unique index, taken before the send.
 
+import { randomUUID } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { generatePlainTextAiOutput, isAiConfigured } from '@/lib/ai/provider';
+import { isAiConfigured } from '@/lib/ai/provider';
+import { legacyModelFor } from '@/lib/ai/model-router';
+import { generateRoutedPlainText } from '@/lib/ai/routed';
+import { recordRequestUsage } from '@/lib/ai/usage-log-server';
+import { createUsageCollector } from '@/lib/credits/embedded';
 import { dropRowsOfDeletedReleases } from '@/lib/rollout-trash-server';
 import { sendPushToUsers } from '@/lib/push-server';
 import { loadProfilesByIds, logTaskActivity } from '@/lib/tasks-server';
@@ -565,12 +570,37 @@ async function aiReply(admin: SupabaseClient, contact: WhatsappContact, task: Ta
     console.warn('[whatsapp] own AI failed, falling back to Urganize AI:', result.error);
   }
   if (!isAiConfigured()) return null;
+  // Our model, so it routes and its usage is logged, failed attempts too (a
+  // failed call may still have been billed).
+  const collector = createUsageCollector(legacyModelFor('whatsapp_reply') ?? null);
+  let reply: string | null = null;
   try {
-    const out = await generatePlainTextAiOutput({ messages, timeoutMs: 20_000, maxRetries: 1 });
-    return out.slice(0, 500);
+    const out = await generateRoutedPlainText({
+      surface: 'whatsapp_reply',
+      messages,
+      timeoutMs: 20_000,
+      maxRetries: 1,
+      onUsage: collector.onUsage,
+      onFailure: collector.onFailure,
+    });
+    reply = out.slice(0, 500);
   } catch {
-    return null;
+    reply = null;
   }
+  await recordRequestUsage(admin, {
+    context: {
+      requestId: `whatsapp_reply:${randomUUID()}`,
+      feature: 'whatsapp_reply',
+      workspaceId: contact.workspaceId,
+      ownerUserId: null,
+      actorUserId: contact.userId,
+      releaseId: task?.release_id ?? null,
+    },
+    calls: collector.calls,
+    failures: collector.failures,
+    creditsCharged: 0,
+  });
+  return reply;
 }
 
 /** Tests the key a team typed, without storing it. */

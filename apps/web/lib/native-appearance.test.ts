@@ -61,7 +61,10 @@ describe('boot frame (2026-10-18, double load screen)', () => {
   });
 
   it('draws the mark at the launch screen size: 544 / 1400 of the 200pt splash image', () => {
-    expect(read('apps/mobile/app.config.ts')).toMatch(/image: '\.\/assets\/icon-foreground\.png',\s*imageWidth: 200,/);
+    // Light and dark launch screens since the splash follows the phone's setting.
+    const config = read('apps/mobile/app.config.ts');
+    expect(config).toMatch(/image: '\.\/assets\/icon-foreground-dark\.png',\s*imageWidth: 200,/);
+    expect(config).toMatch(/dark: \{\s*image: '\.\/assets\/icon-foreground\.png',/);
     expect(read('packages/ui/src/LoadingScreen.tsx')).toContain('BOOT_MARK_WIDTH = 77.7;');
   });
 

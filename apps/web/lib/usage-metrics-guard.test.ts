@@ -78,7 +78,8 @@ describe('who may touch the presence table', () => {
       'app/api/nps/route.ts',
       // Home's "Your team" card (URG-250, 2026-10-15): teammates' newest ping
       // time only, scoped to members of the viewer's own team. lib/home/team-presence.ts.
-      'app/api/home/team/route.ts',
+      // The same read, moved into a helper shared with the Home payload (URG-320).
+      'lib/home/team-presence-server.ts',
     ]);
     const touching = walk(ROOT)
       .map((file) => posix(relative(ROOT, file)))

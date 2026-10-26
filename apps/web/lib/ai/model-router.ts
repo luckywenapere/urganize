@@ -54,7 +54,9 @@ export type RouteSurface =
   | 'outcome'
   | 'press_kit'
   /** Bring your notes: UrgAns labels the cards of an import (2026-10-26). */
-  | 'notes_import';
+  | 'notes_import'
+  /** UrgAns's WhatsApp answer to a task owner, when the team has no own key (2026-10-26). */
+  | 'whatsapp_reply';
 
 // ── Switches ─────────────────────────────────────────────────────────────────
 
@@ -119,6 +121,8 @@ const SURFACE_FLOOR: Record<RouteSurface, ModelTier> = {
   press_kit: 'standard',
   // Labelling short cards against a fixed list of kinds. The smallest rung is enough.
   notes_import: 'quick',
+  // A short text reply about one task.
+  whatsapp_reply: 'quick',
 };
 
 /** How many times one request may change model. */
@@ -133,6 +137,7 @@ const SURFACE_MAX_HOPS: Record<RouteSurface, number> = {
   outcome: 0,
   press_kit: 2,
   notes_import: 1,
+  whatsapp_reply: 1,
 };
 
 /**

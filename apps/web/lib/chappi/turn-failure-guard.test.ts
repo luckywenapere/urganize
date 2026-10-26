@@ -21,7 +21,7 @@ function submitPromptBody(): string {
 describe('submitPrompt failure wiring', () => {
   it('marks the request as reached right after fetch resolves', () => {
     const body = submitPromptBody();
-    expect(body).toMatch(/sent = true;\s*const response = await fetch\('\/api\/urgans'/);
+    expect(body).toMatch(/sent = true;\s*(?:telemetry\.sent\([^\n]*\);\s*)?const response = await fetch\('\/api\/urgans'/);
     expect(body).toMatch(/cache: 'no-store',\s*\}\);\s*reachedServer = true;/);
   });
 
@@ -34,7 +34,7 @@ describe('submitPrompt failure wiring', () => {
 
   it('the catch-all and unexpected shapes use handleFailedTurn', () => {
     const body = submitPromptBody();
-    expect(body).toMatch(/\} catch \{\s*handleFailedTurn\(\);/);
+    expect(body).toMatch(/\} catch (?:\(error\) )?\{\s*(?:telemetry\.failed\([^\n]*\);\s*)?handleFailedTurn\(\);/);
     // The only direct router calls left: inside handleFailedTurn, the missing
     // token (nothing sent), and the server's own deterministic answer.
     expect(body.match(/fallBackToRouter\(\);/g)?.length).toBe(3);

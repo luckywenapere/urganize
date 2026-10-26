@@ -193,10 +193,10 @@ export function ImportReleasesDialog({
         {phase === 'search' ? (
           <>
             <h2 id="import-releases-title" className="font-display text-xl font-semibold text-content-primary">
-              Import releases
+              Import past rollouts
             </h2>
             <p className="mt-1.5 text-sm leading-6 text-content-secondary">
-              Type an artist name. We find their profile and bring in their releases.
+              Type an artist name. We find their profile and bring in what they have put out.
             </p>
             <input
               type="text"
