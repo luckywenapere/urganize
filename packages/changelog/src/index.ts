@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.179.4",
+    tag: "Rollouts",
+    listed: false,
+    date: "October 26, 2026",
+    highlights: [
+      "The plan card on a new rollout is one line and one button.",
+    ],
+  },
+  {
     version: "1.179.3",
     tag: "Rollouts",
     listed: false,
