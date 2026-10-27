@@ -20,6 +20,7 @@ import { getRelativeDueLabel } from '@/lib/tasks';
 import type { NextMove } from '@/lib/next-moves';
 import type { HomeReleaseSummary, HomeStateKey, HomeTaskItem, HomeYourTasks } from './types';
 import { pickFocusTask } from './focus';
+import type { RecordAsk } from './record-ask';
 
 export type HomeLayout = 'new' | 'release' | 'between';
 
@@ -47,7 +48,8 @@ export function pickHeaderRelease(releases: readonly HomeReleaseSummary[]): Home
 
 export type OneThingItem =
   | { kind: 'task'; key: string; task: HomeTaskItem; due: { label: string; late: boolean } }
-  | { kind: 'move'; key: string; move: NextMove };
+  | { kind: 'move'; key: string; move: NextMove }
+  | { kind: 'ask'; key: string; ask: RecordAsk };
 
 export const ONE_THING_MAX = 3;
 
@@ -70,6 +72,8 @@ export function buildOneThing(
   input: {
     yourTasks: HomeYourTasks;
     moves: readonly NextMove[];
+    /** The next-record ask (lib/home/record-ask.ts): after late work, before moves. */
+    ask?: RecordAsk | null;
   },
   now: Date = new Date(),
   max: number = ONE_THING_MAX
@@ -88,6 +92,7 @@ export function buildOneThing(
   };
 
   pushTasks(input.yourTasks.late);
+  if (input.ask && items.length < max) items.push({ kind: 'ask', key: askKey(input.ask), ask: input.ask });
   for (const move of input.moves) {
     if (items.length >= max) break;
     // A move that points at a task already on the list says the same thing twice.
@@ -96,6 +101,10 @@ export function buildOneThing(
   }
   pushTasks(input.yourTasks.today.filter((t) => !used.has(t.id)));
   return items;
+}
+
+function askKey(ask: RecordAsk): string {
+  return ask.kind === 'whats_next' ? `ask-whats_next-${ask.artistId}` : `ask-session_check-${ask.session.id}`;
 }
 
 /**

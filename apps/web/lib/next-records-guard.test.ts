@@ -26,7 +26,7 @@ describe('next record routes', () => {
   const files = ROUTES.flatMap(routeFiles);
 
   it('finds the routes', () => {
-    expect(files.length).toBe(6);
+    expect(files.length).toBe(7);
   });
 
   it.each(files)('%s resolves the team through the one gate, once per handler', (file) => {

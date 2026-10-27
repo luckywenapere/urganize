@@ -18,6 +18,9 @@
 
 import { loadTeamPresenceMembers } from '@/lib/home/team-presence-server';
 import { loadHomeOpportunities } from '@/lib/home/opportunities-server';
+import { canSeeRecordAsks, type AskRelease, type RecordAsk } from '@/lib/home/record-ask';
+import { loadHomeRecordAsk } from '@/lib/next-records-server';
+import { releaseLiveAt } from '@/lib/scoreboard';
 import type { Timings } from '@/lib/server-timing';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
@@ -227,12 +230,20 @@ export async function loadHomeData(
   );
 
   const roleFactsPromise = step('home_role', () => loadRoleFacts(adminClient, user, access));
-  const [commandCenter, roleFacts, pitches, team, opportunities] = await Promise.all([
+  // The next-record ask (2026-10-27): needs the releases and the team owner,
+  // so it starts when both land and runs beside pitches. Never fails Home.
+  const recordAskPromise = step('home_record_ask', () =>
+    Promise.all([commandCenterPromise, roleFactsPromise]).then(([data, facts]) =>
+      loadRecordAsk(adminClient, access, data, facts.primaryOwnerId, now)
+    )
+  );
+  const [commandCenter, roleFacts, pitches, team, opportunities, recordAsk] = await Promise.all([
     commandCenterPromise,
     roleFactsPromise,
     step('home_pitches', () => loadTeamPitches(adminClient, user, access, releasesPromise)),
     teamPromise,
     opportunitiesPromise,
+    recordAskPromise,
   ]);
   const { releases, tasks } = commandCenter;
 
@@ -333,8 +344,76 @@ export async function loadHomeData(
       placements,
       team,
       opportunities,
+      recordAsk,
     },
   };
+}
+
+/**
+ * What Home asks about the next record. Check-ins go to the manager only
+ * (owners and admins of the primary team). A release's live moment is the
+ * scoreboard's releaseLiveAt, the recap-eligibility rule answering WHEN.
+ */
+async function loadRecordAsk(
+  adminClient: SupabaseClient,
+  access: Awaited<ReturnType<typeof loadWorkspaceAccessContext>>,
+  data: CommandCenterData,
+  primaryOwnerId: string,
+  now: Date
+): Promise<RecordAsk | null> {
+  const workspaceId = access.primaryWorkspaceId;
+  if (!workspaceId) return null;
+  const membership = access.memberships.find((member) => member.workspaceId === workspaceId);
+  if (!canSeeRecordAsks(membership?.role)) return null;
+
+  type Totals = { count: number; done: number; lastDoneAt: string | null };
+  const totals = new Map<string, Totals>();
+  for (const task of data.tasks) {
+    if (!task.releaseId || task.status === 'cancelled') continue;
+    const entry = totals.get(task.releaseId) ?? { count: 0, done: 0, lastDoneAt: null };
+    entry.count += 1;
+    if (task.status === 'done') {
+      entry.done += 1;
+      if (task.completedAt && (!entry.lastDoneAt || task.completedAt > entry.lastDoneAt)) entry.lastDoneAt = task.completedAt;
+    }
+    totals.set(task.releaseId, entry);
+  }
+
+  const releases: AskRelease[] = data.releases
+    .filter((release) => release.ownerUserId === primaryOwnerId && release.artistId)
+    .map((release) => {
+      const entry = totals.get(release.id);
+      const liveAt = releaseLiveAt(
+        {
+          id: release.id,
+          workspaceId,
+          createdAt: release.createdAt ?? null,
+          updatedAt: release.updatedAt ?? null,
+          releaseDate: release.releaseDate,
+          status: release.status,
+          isTest: false,
+          taskCount: entry?.count ?? 0,
+          allTasksDone: Boolean(entry && entry.count > 0 && entry.done === entry.count),
+          lastTaskDoneAt: entry?.lastDoneAt ?? null,
+        },
+        now
+      );
+      return {
+        id: release.id,
+        title: release.title,
+        artistId: release.artistId,
+        artistName: release.artistName,
+        liveAt,
+        upcoming: liveAt === null && release.releaseDate !== null && release.status !== 'archived',
+      };
+    });
+
+  return loadHomeRecordAsk(adminClient, {
+    workspaceId,
+    scopeArtistId: access.artistScopeByWorkspaceId[workspaceId] ?? null,
+    releases,
+    now,
+  });
 }
 
 function resolveHomeStateForRole(

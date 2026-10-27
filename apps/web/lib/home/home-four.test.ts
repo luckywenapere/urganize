@@ -109,6 +109,23 @@ describe('buildOneThing', () => {
     );
     expect(items).toHaveLength(1);
   });
+  it('the next-record ask sits after late work and before moves and today', () => {
+    const ask = { kind: 'whats_next' as const, artistId: 'a1', artistName: 'Kemi Ade', releaseTitle: 'Gold Dust', daysOut: 7 };
+    const items = buildOneThing(
+      {
+        yourTasks: { late: [task('l1', '2026-10-10')], today: [task('t1', '2026-10-16')], week: [] },
+        moves: [],
+        ask,
+      },
+      now
+    );
+    expect(items.map((i) => i.key)).toEqual(['task-l1', 'ask-whats_next-a1', 'task-t1']);
+  });
+  it('the ask still shows when nothing else is due', () => {
+    const ask = { kind: 'whats_next' as const, artistId: 'a1', artistName: 'Kemi Ade', releaseTitle: 'Gold Dust', daysOut: 7 };
+    const items = buildOneThing({ yourTasks: { late: [], today: [], week: [] }, moves: [], ask }, now);
+    expect(items).toEqual([{ kind: 'ask', key: 'ask-whats_next-a1', ask }]);
+  });
   it('this week alone is not a next move', () => {
     expect(buildOneThing({ yourTasks: { late: [], today: [], week: [task('w', '2026-10-19')] }, moves: [] }, now)).toEqual([]);
   });

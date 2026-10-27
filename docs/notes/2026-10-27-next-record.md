@@ -1,6 +1,6 @@
 # The next record (2026-10-27, mocks approved, step 1 built as v1.197.0)
 
-Mocks: `docs/mocks/next-record/mock.html`, approved as drawn by Oyin on 27 Oct 2026. Step 1 is built; steps 2 to 5 are not.
+Mocks: `docs/mocks/next-record/mock.html`, approved as drawn by Oyin on 27 Oct 2026. Steps 1 to 3 are built; steps 4 and 5 are not.
 
 ## Why
 
@@ -69,3 +69,20 @@ Weekly active teams with no rollout in progress (the "between releases" number o
 - **Card:** the confirmation card now keeps line breaks in `detail` (`whitespace-pre-line`), so the adds read one per line like the mock. No "Fix something" button: Cancel, then say what to change.
 - **Tests:** `lib/next-records-capture.test.ts` (pure), `lib/chappi/tool-families/records.test.ts` (the real runner and tool, server layer mocked: the mock screen 4 message makes a card and writes nothing; the Add writes through the server functions only; several records ask; guests refused; scoped names stay plain).
 - **Checked in production, read-only:** UrgAns answered on 27 Oct (credit spends with real gpt-4o-mini token counts), so the RodiumAi wallet was not empty that day. **Not checked live:** the tool against a real model and database.
+
+## Step 3, as built (Home asks, 27 Oct 2026)
+
+- **Where it shows:** Home's One Thing, never a card of its own on top. With a rollout in flight the ask is one slide of the One Thing, after late work and before the plan's next moves and today's work (`buildOneThing`'s `ask`). With nothing in flight it takes the place of "Start the next one early", which asks the same question. So the top slot still holds one card, and the 19 Oct rule stands. Brand-new teams (no releases) never see it.
+- **Who:** check-ins go to the manager only (settled question 2), read as owners and admins of the primary team. Members and guests are never asked. A teammate scoped to one artist is only asked about that artist.
+- **Rules** in `lib/home/record-ask.ts` (pure, tested in `record-ask.test.ts`): one ask at a time, a session check before "What's next" because it is once and dated.
+  - **What's next for <artist>?** From 7 to 90 days after the artist's latest release went live. "Went live" is `releaseLiveAt` in `lib/scoreboard.ts`, which is the `lib/recap-eligibility.ts` rule answering WHEN (date passed, else all tasks done, else released or archived). No third definition. Not asked when the artist has a record with status `making`, or a release dated ahead (the next one is already planned), or a snooze that has not ended. The most recently live artist goes first. Copy says "out a week", "2 weeks", "a month".
+  - **Did it happen?** A planned session with a real date before today (Lagos), up to 14 days back, most recent first. Words-only sessions are never asked. Answering changes its status or its day, so each session is asked once.
+- **Answers, all through the routes that already exist:**
+  - The line starts a record (`POST /api/workspace/artists/[artistId]/records` with `idea`) and opens the record page.
+  - Happened and Didn't happen are a `PUT .../sessions/[sessionId]` with the whole session sent back (the PUT replaces people and songs too) and only the status changed.
+  - **Moved keeps the session `planned` on its new day or words**, rather than setting status `moved`. Why: a `moved` session drops out of "Next" and is never asked about again, so the session would be lost. One PUT, no second write that could half-fail. The cost: the record page does not show that it moved.
+- **Snooze: a column on `artists`, `next_record_snooze_until`** (migration `20261027200000_artist_record_ask_snooze.sql`). Why not `next_records.snooze_until`: the ask comes before any record row exists, and making a placeholder row would put a fake record in the making on the artist page. The snooze is per artist, for the whole team. Written only by `POST /api/workspace/artists/[artistId]/records/snooze`, behind the same records gate. `next_records.snooze_until` stays unused.
+- **Data:** the ask rides in `/api/home` as `recordAsk` (`loadHomeRecordAsk` in `lib/next-records-server.ts`, a separate section at the end). It never fails Home: any read error means no ask.
+- **Analytics:** `record_started` with `source: 'home_ask'`, and `record_ask_answered` (kind and answer only).
+- **Migration applied** to production on 27 Oct through the Management API: backup `artists_backup_20261027` (67 rows, RLS on, no grants to anon or authenticated), column verified as nullable `timestamptz`.
+- **Checked:** both cards at phone width in a throwaway page with faked calls (deleted). **Not checked live:** no signed-in local session, so the real Home against the real database was not exercised in a browser.

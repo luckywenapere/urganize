@@ -10,6 +10,7 @@ import { HOME_FOUR_COPY, describeTaskLabel, describeTaskWhere, type OneThingItem
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { useSwipeNav } from '@/stores/useSwipeNavStore';
 import { carryCardToUrgAns } from '@/components/shell/swipe/handoff';
+import { RecordAskCard } from '../RecordAskCard';
 
 const CARD = 'relative rounded-[20px] border border-stroke-default bg-bg-surface';
 /**
@@ -61,6 +62,9 @@ function Slide({
   const swipe = useSwipeNav();
   const track = () =>
     captureAnalyticsEvent({ name: 'home_one_thing_clicked', properties: { kind: item.kind, position } });
+
+  // The next-record ask (2026-10-27): its own card, answered right here.
+  if (item.kind === 'ask') return <RecordAskCard ask={item.ask} />;
 
   if (item.kind === 'task') {
     // No Open task button (Oyin, Oct 17, 2026): the whole card opens the task.

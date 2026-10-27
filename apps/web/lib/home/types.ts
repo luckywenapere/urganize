@@ -13,6 +13,7 @@ import type { TaskPriority, TaskStatus } from '@/types/tasks';
 import type { PitchState } from '@/types/pitching';
 import type { TeamPresenceMember } from './team-presence';
 import type { HomeOpportunityItem } from './opportunities-card';
+import type { RecordAsk } from './record-ask';
 
 export type HomeRole = 'manager' | 'artist' | 'label';
 
@@ -166,4 +167,8 @@ export type HomePayload = {
   /** Up to three opportunities (URG-266), or null when the viewer may not see
    * team opportunities or the read failed. */
   opportunities?: HomeOpportunityItem[] | null;
+  /** The next-record ask for the One Thing (lib/home/record-ask.ts): owners
+   * and admins only, null when there is nothing to ask. Optional so older
+   * cached payloads still parse. */
+  recordAsk?: RecordAsk | null;
 };

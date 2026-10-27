@@ -466,7 +466,12 @@ export interface AnalyticsEventPropertiesMap {
    */
   record_started: {
     artist_id: string;
-    source: 'artist_page';
+    source: 'artist_page' | 'home_ask';
+  };
+  /** Home's next-record asks (step 3): which answer was given. */
+  record_ask_answered: {
+    kind: 'whats_next' | 'session_check';
+    answer: 'started' | 'snoozed' | 'happened' | 'moved' | 'cancelled';
   };
   record_edited: {
     record_id: string;
@@ -594,7 +599,7 @@ export interface AnalyticsEventPropertiesMap {
    * show coming up); `position` its place in the swipe (1 is the top move).
    */
   home_one_thing_clicked: {
-    kind: 'task' | 'move' | 'show';
+    kind: 'task' | 'move' | 'show' | 'ask';
     position: number;
   };
   /** Post-release review (URG-253): seen, answered. No titles or answers. */

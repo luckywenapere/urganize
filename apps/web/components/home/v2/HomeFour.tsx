@@ -19,6 +19,7 @@ import { ManagerNewView } from '../ManagerNewView';
 import { OpportunitiesCard } from '../OpportunitiesCard';
 import { HomeBell } from './HomeBell';
 import { OneThing } from './OneThing';
+import { RecordAskCard } from '../RecordAskCard';
 import { ReleaseReviewCard } from '@/components/between-releases/BetweenReleaseCards';
 import { StartNextSheet } from '@/components/between-releases/StartNextSheet';
 
@@ -37,7 +38,7 @@ function ReleaseHome({ home, viewerId }: { home: HomePayload; viewerId: string }
   const nextMoves = useHomeNextMoves({ releases, viewerId, placements });
   const release = pickHeaderRelease(releases);
   if (!release) return null;
-  const items = buildOneThing({ yourTasks, moves: nextMoves.moves });
+  const items = buildOneThing({ yourTasks, moves: nextMoves.moves, ask: home.recordAsk ?? null });
   const nextUp = items.length === 0 ? describeNextUp(yourTasks.week) : null;
 
   // Golden layout B (2026-10-18, founder approved): greeting, then the One
@@ -125,9 +126,17 @@ function BetweenHome({ home }: { home: HomePayload; onNewRollout: () => void }) 
         </div>
       </Fenced>
       <div className="mt-6">
-        <Fenced name="start-next">
-          <StartNextCard />
-        </Fenced>
+        {/* The next-record ask (2026-10-27) asks the same question as Start
+            the next one, so it takes that card's place: one card at a time. */}
+        {home.recordAsk ? (
+          <Fenced name="record-ask">
+            <RecordAskCard ask={home.recordAsk} />
+          </Fenced>
+        ) : (
+          <Fenced name="start-next">
+            <StartNextCard />
+          </Fenced>
+        )}
       </div>
       <div className="mt-5">
         <Fenced name="opportunities">

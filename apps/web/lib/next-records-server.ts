@@ -15,6 +15,14 @@ import {
   type SessionStatus,
   type SongStage,
 } from '@/lib/next-records';
+import {
+  pickRecordAsk,
+  pickSessionToCheck,
+  pickWhatsNext,
+  type AskRelease,
+  type RecordAsk,
+  type SessionCheckAsk,
+} from '@/lib/home/record-ask';
 
 // Reads and writes for the next record (2026-10-27). Every function takes the
 // team's workspace id from the route's gate (app/api/records/_shared.ts), never
@@ -480,4 +488,113 @@ export async function isReadOnlyOnTeam(admin: SupabaseClient, workspaceId: strin
     .limit(1);
   const role = (data as Row[] | null)?.[0]?.role;
   return !role || role === 'guest';
+}
+
+// ---------------------------------------------------------------- Home asks
+// Step 3 (2026-10-27): what Home's One Thing asks about the next record. The
+// rules are pure in lib/home/record-ask.ts; this only reads. Never fails Home:
+// any read error means no ask.
+
+const ARTISTS_TABLE = 'artists';
+
+export async function loadHomeRecordAsk(
+  admin: SupabaseClient,
+  input: { workspaceId: string; scopeArtistId: string | null; releases: readonly AskRelease[]; now: Date }
+): Promise<RecordAsk | null> {
+  try {
+    const { workspaceId, scopeArtistId, now } = input;
+    const today = lagosToday(now);
+
+    let making = admin
+      .from(RECORDS_TABLE)
+      .select('id,title,artist_id')
+      .eq('workspace_id', workspaceId)
+      .eq('status', 'making');
+    if (scopeArtistId) making = making.eq('artist_id', scopeArtistId);
+    const { data: recordRows, error: recordError } = await making;
+    if (recordError) return null;
+    const records = (recordRows ?? []) as Row[];
+
+    let sessionCheck: SessionCheckAsk | null = null;
+    if (records.length) {
+      const { data: sessionRows, error: sessionError } = await admin
+        .from(RECORD_SESSIONS_TABLE)
+        .select('id,record_id,session_date,status')
+        .eq('workspace_id', workspaceId)
+        .eq('status', 'planned')
+        .lt('session_date', today)
+        .in('record_id', records.map((row) => text(row.id)));
+      if (sessionError) return null;
+      const due = pickSessionToCheck(
+        ((sessionRows ?? []) as Row[]).map((row) => ({
+          id: text(row.id),
+          recordId: text(row.record_id),
+          date: text(row.session_date).slice(0, 10) || null,
+          status: text(row.status) as SessionStatus,
+        })),
+        today
+      );
+      if (due) {
+        const record = await readRecord(admin, workspaceId, due.recordId);
+        const session = record.ok ? record.value.sessions.find((s) => s.id === due.id) : undefined;
+        const { data: artist } = record.ok
+          ? await admin
+              .from(ARTISTS_TABLE)
+              .select('name')
+              .eq('id', record.value.artistId)
+              .eq('workspace_id', workspaceId)
+              .maybeSingle()
+          : { data: null };
+        if (record.ok && session) {
+          sessionCheck = {
+            kind: 'session_check',
+            recordId: record.value.id,
+            recordTitle: record.value.title,
+            artistId: record.value.artistId,
+            artistName: text((artist as Row | null)?.name),
+            session,
+          };
+        }
+      }
+    }
+    if (sessionCheck) return sessionCheck;
+
+    const { data: snoozeRows, error: snoozeError } = await admin
+      .from(ARTISTS_TABLE)
+      .select('id,next_record_snooze_until')
+      .eq('workspace_id', workspaceId)
+      .gt('next_record_snooze_until', now.toISOString());
+    if (snoozeError) return null;
+    const snoozedUntil = new Map(
+      ((snoozeRows ?? []) as Row[]).map((row) => [text(row.id), text(row.next_record_snooze_until)] as const)
+    );
+    const whatsNext = pickWhatsNext(
+      {
+        releases: input.releases,
+        artistsMaking: new Set(records.map((row) => text(row.artist_id))),
+        snoozedUntil,
+        scopeArtistId,
+      },
+      now
+    );
+    return pickRecordAsk({ whatsNext, sessionCheck });
+  } catch {
+    return null;
+  }
+}
+
+/** "Nothing yet, ask me in 2 weeks": the artist must already be the team's (the gate checked). */
+export async function snoozeRecordAsk(
+  admin: SupabaseClient,
+  workspaceId: string,
+  artistId: string,
+  until: string
+): Promise<RecordsResult<{ snoozedUntil: string }>> {
+  const { error } = await admin
+    .from(ARTISTS_TABLE)
+    .update({ next_record_snooze_until: until })
+    .eq('id', artistId)
+    .eq('workspace_id', workspaceId);
+  if (error) return fail(500, 'Could not save that.');
+  return { ok: true, value: { snoozedUntil: until } };
 }
