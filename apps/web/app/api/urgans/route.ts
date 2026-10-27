@@ -23,6 +23,8 @@ import {
   type UrgansStreamEvent,
 } from '@/lib/chappi/stream-protocol';
 import { getChappiTool } from '@/lib/chappi/tools';
+import { parseRecordScope } from '@/lib/chappi/record-scope';
+import { recordScopePrompt } from '@/lib/chappi/tool-families/records';
 import type {
   ChappiConfirmedAction,
   ChappiMessage,
@@ -163,8 +165,13 @@ export async function POST(request: NextRequest) {
     // header (app/api/urgans/voice/tool); everything else is a typed turn.
     if (request.headers.get('x-urgans-surface') === 'voice') ctx.audit = { source: 'voice' };
     const releaseScope = parseReleaseScope(body);
+    // The UrgAns box on a record page files into that record (next record v2).
+    // The id is advice from the page's address; recordScopePrompt checks it.
+    const recordScopeId = parseRecordScope(body);
+    const recordLine = recordScopeId ? await recordScopePrompt(ctx, recordScopeId).catch(() => null) : null;
     const built = await buildChappiSystemPrompt(ctx);
     let system = built.prompt;
+    if (recordLine) system += `\n\n${recordLine}`;
     if (releaseScope) {
       system += `\n\nThe user has scoped this conversation to the rollout "${releaseScope.title}" (rollout id: ${releaseScope.id}). Unless they clearly name a different rollout, interpret questions and actions as being about this rollout and pass its id to tools. If the id doesn't resolve, say so instead of guessing.`;
     }

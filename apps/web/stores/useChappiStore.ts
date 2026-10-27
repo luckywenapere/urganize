@@ -69,6 +69,13 @@ type ChappiStore = {
    * prompt box; null = all releases. Survives `reset` deliberately — picking
    * a release is a working-context choice, not part of one conversation. */
   scopedReleaseId: string | null;
+  /** The record in the making the box was on when this chat was sent from it
+   * (lib/chappi/record-scope.ts). On a phone the box on a record page hands the
+   * message to the UrgAns tab, so the id rides here. Unlike the release scope
+   * it belongs to one conversation: anything that replaces the transcript
+   * clears it. */
+  scopedRecordId: string | null;
+  setScopedRecordId: (recordId: string | null) => void;
   /** Whether the UrgAns chat card in the right-hand column (RightRail, mounted
    * by AppShell on every chrome page at lg+; the rollout menu shares that
    * column and stays whether or not this is open) is open. Survives navigation
@@ -153,6 +160,8 @@ export const useChappiStore = create<ChappiStore>((set) => ({
   nextChatId: null,
   setNextChatId: (id) => set({ nextChatId: id }),
   scopedReleaseId: null,
+  scopedRecordId: null,
+  setScopedRecordId: (recordId) => set({ scopedRecordId: recordId }),
   railOpen: false,
   railWidth: DEFAULT_RAIL_WIDTH,
   pendingConfirmation: null,
@@ -196,6 +205,7 @@ export const useChappiStore = create<ChappiStore>((set) => ({
       nextChatId: null,
       reply: null,
       pendingConfirmation: null,
+      scopedRecordId: null,
       epoch: current.epoch + 1,
     })),
   rekeyConversation: (id) => set({ conversationId: id }),
@@ -232,6 +242,7 @@ export const useChappiStore = create<ChappiStore>((set) => ({
       restoredCount: 0,
       nextChatId: null,
       pendingConfirmation: null,
+      scopedRecordId: null,
       epoch: current.epoch + 1,
     })),
   resetForSignOut: () =>
@@ -244,6 +255,7 @@ export const useChappiStore = create<ChappiStore>((set) => ({
       nextChatId: null,
       pendingConfirmation: null,
       scopedReleaseId: null,
+      scopedRecordId: null,
       epoch: current.epoch + 1,
     })),
 }));

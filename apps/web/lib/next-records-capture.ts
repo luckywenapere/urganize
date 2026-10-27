@@ -321,7 +321,7 @@ const personLabel = (person: PlannedPerson) => (person.isNew ? `${person.name} (
 export function describeCaptureCard(
   plan: CapturePlan,
   target: { recordTitle: string; artistName: string; isNewRecord: boolean }
-): { title: string; detail: string; confirmLabel: string } {
+): { title: string; detail: string; confirmLabel: string; cancelLabel: string } {
   const lines: string[] = [];
   if (target.isNewRecord) lines.push(`New record: ${target.recordTitle}`);
   for (const session of plan.sessions) {
@@ -341,5 +341,6 @@ export function describeCaptureCard(
     title: `Here's what I'll add to ${target.recordTitle} (${target.artistName}):`,
     detail: lines.join('\n'),
     confirmLabel: 'Add',
+    cancelLabel: 'Fix something',
   };
 }

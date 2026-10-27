@@ -86,3 +86,11 @@ Weekly active teams with no rollout in progress (the "between releases" number o
 - **Analytics:** `record_started` with `source: 'home_ask'`, and `record_ask_answered` (kind and answer only).
 - **Migration applied** to production on 27 Oct through the Management API: backup `artists_backup_20261027` (67 rows, RLS on, no grants to anon or authenticated), column verified as nullable `timestamptz`.
 - **Checked:** both cards at phone width in a throwaway page with faked calls (deleted). **Not checked live:** no signed-in local session, so the real Home against the real database was not exercised in a browser.
+
+### Step 2, v2 change (27 Oct 2026, decision 6)
+
+- **No second box.** The app's own UrgAns box knows the record: `lib/chappi/record-scope.ts` reads the record id from the address (`/dashboard/artists/<id>/records/<recordId>`). On a record the placeholder is "Tell UrgAns what happened…" (desktop panel in `ChappiConversation`, phone box via `HomeAskBar`'s new `placeholder`). The request carries `recordScope: { id }`; `/api/urgans` checks it with `recordScopePrompt` (the caller's record, still in the making) before adding one line telling UrgAns to pass that recordId to add_to_record.
+- **Phone hand-over:** the phone box on a record page sends into the UrgAns tab, so the id rides in `useChappiStore.scopedRecordId`, set after `showMain()`. It belongs to one conversation: reset, loadConversation and sign-out clear it, and the Home/Artists box sets it to null.
+- **Last song Done:** `doneLine` adds "That's N of N songs done. The Plan the rollout button is ready at the top of the record." to the Add's result, only on the change that finishes the record; UrgAns's instructions say to end the reply with it.
+- **Fix something:** a confirm builder may now return `cancelLabel`; add_to_record's card says Add / Fix something. Fix something cancels (nothing ran), says "Nothing was added yet. Tell me what to change." and puts the cursor in the box. Other cards still say Cancel.
+- **Not checked live:** no signed-in local session, so the placeholder and the hand-over were not seen in a browser.

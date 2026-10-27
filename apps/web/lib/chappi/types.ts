@@ -350,6 +350,8 @@ export type ChappiPendingConfirmation = {
   detail?: string;
   /** Confirm button label, e.g. `Delete release`. */
   confirmLabel: string;
+  /** The other button, when not "Cancel" (add_to_record: "Fix something"). */
+  cancelLabel?: string;
   /** Present on deletes that need the typed double confirmation (rollouts): the
    * card shows a text box and the button stays off until the user types this
    * phrase or DELETE. What they typed travels as args.confirmation, and the

@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState, type FormEvent, type ReactNode, type RefObject } from 'react';
 import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Chappi, CHAPPI_MIN_SIZE } from '@urganize/ui';
 import {
   ArrowDown,
@@ -39,6 +39,7 @@ import {
 import { describeTranscriptAnnouncement } from '@/lib/chappi/transcript-announcement';
 import { createTextBatcher, isStreamContentType, URGANS_STREAM_HEADER } from '@/lib/chappi/stream-protocol';
 import { CONNECTION_DROPPED_NOTE, readStreamedTurn } from '@/lib/chappi/stream-client';
+import { RECORD_CAPTURE_PLACEHOLDER, recordIdFromPath } from '@/lib/chappi/record-scope';
 import { startUrgansTelemetry } from '@/lib/chappi/urgans-telemetry';
 import { TURN_DROPPED_NOTE, failedTurnOutcome, isDeviceOnline } from '@/lib/chappi/turn-failure';
 import { ChappiConfirmationCard } from '@/components/chappi/ChappiConfirmationCard';
@@ -301,6 +302,7 @@ export function ChappiConversation({
     truncateFromMessage,
     scopedReleaseId,
     setScopedReleaseId,
+    scopedRecordId,
     pendingConfirmation,
     setPendingConfirmation,
     epoch,
@@ -318,6 +320,10 @@ export function ChappiConversation({
   const scopedRelease = scopedReleaseId
     ? releases.find((release) => release.id === scopedReleaseId) ?? null
     : null;
+  // The record in the making on screen, or the one a phone's box handed this
+  // chat over from (lib/chappi/record-scope.ts). UrgAns files into it.
+  const pageRecordId = recordIdFromPath(usePathname());
+  const recordScope = pageRecordId ?? scopedRecordId;
   const { openQuickCreate, openTask } = useTaskUI();
   // Which transcript a request is thinking FOR, as the store epoch it started
   // under — not a plain boolean. "New chat" (or sign-out) mid-reply bumps the
@@ -1163,6 +1169,7 @@ export function ChappiConversation({
           releaseScope: scopedRelease
             ? { id: scopedRelease.id, title: scopedRelease.title }
             : undefined,
+          recordScope: recordScope ? { id: recordScope } : undefined,
         }),
         cache: 'no-store',
       });
@@ -1316,6 +1323,7 @@ export function ChappiConversation({
           releaseScope: scopedRelease
             ? { id: scopedRelease.id, title: scopedRelease.title }
             : undefined,
+          recordScope: recordScope ? { id: recordScope } : undefined,
           confirmedAction: { toolName: approved.toolName, args: approved.args },
         }),
         cache: 'no-store',
@@ -1356,6 +1364,13 @@ export function ChappiConversation({
       properties: { action: 'cancelled', tool: pendingConfirmation.toolName },
     });
     setPendingConfirmation(null);
+    if (pendingConfirmation.cancelLabel) {
+      // "Fix something": nothing ran, and the box is ready for the fix.
+      appendMessage({ id: nextMessageId('u'), role: 'user', content: `${pendingConfirmation.cancelLabel}.` });
+      appendAssistantReply('Nothing was added yet. Tell me what to change.');
+      inputRef.current?.focus();
+      return;
+    }
     appendMessage({ id: nextMessageId('u'), role: 'user', content: 'Cancel that.' });
     appendAssistantReply('Cancelled. Nothing was changed.');
   };
@@ -1493,7 +1508,13 @@ export function ChappiConversation({
               event.preventDefault();
               void attach.addFiles(pictures);
             }}
-            placeholder={isTranscribing ? 'Turning your voice into text…' : placeholder ?? 'Ask UrgAns…'}
+            placeholder={
+              isTranscribing
+                ? 'Turning your voice into text…'
+                : pageRecordId
+                  ? RECORD_CAPTURE_PLACEHOLDER
+                  : placeholder ?? 'Ask UrgAns…'
+            }
             aria-label="Message UrgAns"
             disabled={isThinking || isTranscribing}
             // 16px below sm is deliberate: anything smaller makes iOS zoom the

@@ -14,7 +14,7 @@
  */
 
 import { isRelationshipsEnabled } from '@/app/api/relationships/_shared';
-import { DEFAULT_RECORD_TITLE, SONG_STAGES, lagosToday, type NextRecord } from '@/lib/next-records';
+import { DEFAULT_RECORD_TITLE, SONG_STAGES, isRecordDone, lagosToday, type NextRecord } from '@/lib/next-records';
 import {
   describeCaptureCard,
   isEmptyPlan,
@@ -34,6 +34,7 @@ import {
   updateSong,
 } from '@/lib/next-records-server';
 import { listRelationships } from '@/lib/relationships-server';
+import { recordScopeLine } from '../record-scope';
 import { argString, fail, type ChappiTool, type ChappiToolContext } from './shared';
 
 type Target = {
@@ -126,6 +127,31 @@ async function prepare(ctx: ChappiToolContext, args: Record<string, unknown>): P
   if (!planned.ok) return planned;
   if (isEmptyPlan(planned.plan)) return { ok: false, error: 'All of that is already on the record. Nothing to add.' };
   return { ok: true, target, plan: planned.plan };
+}
+
+/**
+ * When this Add made the last song Done, the reply points to the rollout
+ * button at the top of the record (v2 decision 6). Only on the change that
+ * finishes it, so it is said once.
+ */
+export function doneLine(before: NextRecord | null, after: NextRecord): string {
+  if ((before && isRecordDone(before)) || !isRecordDone(after)) return '';
+  const count = after.songs.length;
+  return ` That's ${count} of ${count} songs done. The Plan the rollout button is ready at the top of the record.`;
+}
+
+/**
+ * The line UrgAns reads when the box is on a record, or null when the record
+ * is not one the caller can reach (or no longer in the making). The client's
+ * record id is advice; this is the check.
+ */
+export async function recordScopePrompt(ctx: ChappiToolContext, recordId: string): Promise<string | null> {
+  const records = await listRecordsInMaking(ctx.adminClient, {
+    workspaceIds: ctx.workspaceIds,
+    artistScopeByWorkspaceId: ctx.artistScopeByWorkspaceId,
+  });
+  const record = records?.find((r) => r.id === recordId);
+  return record ? recordScopeLine(record) : null;
 }
 
 export const RECORD_TOOLS: ChappiTool[] = [
@@ -223,6 +249,7 @@ export const RECORD_TOOLS: ChappiTool[] = [
         if (!songId) continue;
         const moved = await updateSong(admin, workspaceId, recordId, songId, { stage: change.to });
         if (!moved.ok) return fail(moved.error);
+        record = moved.value;
       }
 
       const writeCtx = { workspaceId, userId: ctx.user.id, canUseContacts: target.canUseContacts };
@@ -236,6 +263,7 @@ export const RECORD_TOOLS: ChappiTool[] = [
           songIds: session.songs.map(idOf).filter((id): id is string => Boolean(id)),
         });
         if (!saved.ok) return fail(saved.error);
+        record = saved.value;
       }
 
       const parts = [
@@ -245,7 +273,7 @@ export const RECORD_TOOLS: ChappiTool[] = [
       ].filter(Boolean);
       return {
         ok: true,
-        summary: `Added to ${record.title} (${target.artistName}): ${parts.join(', ')}. It is on the record page under ${target.artistName} in Catalogue.`,
+        summary: `Added to ${record.title} (${target.artistName}): ${parts.join(', ')}. It is on the record page under ${target.artistName} in Catalogue.${doneLine(target.record, record)}`,
         data: { recordId, artistId: target.artistId, sessions: plan.sessions.length, newSongs: plan.newSongs.length, stageChanges: plan.stageChanges.length },
       };
     },

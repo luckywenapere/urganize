@@ -21,6 +21,7 @@ import { RootShellSkeleton } from '@/components/loading/RootShellSkeleton';
 import { HomeAskBar } from '@/components/home/HomeAskBar';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { swipeTabForPath } from '@/lib/swipe-nav';
+import { RECORD_CAPTURE_PLACEHOLDER, recordIdFromPath } from '@/lib/chappi/record-scope';
 import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
 import { useNeedsYouStore } from '@/stores/useNeedsYouStore';
 import { useChappiStore } from '@/stores/useChappiStore';
@@ -194,6 +195,7 @@ function SwipeComposer({ onUrgAns }: { onUrgAns: boolean }) {
           const store = useChappiStore.getState();
           store.setInput(text);
           store.setPendingAttachments(files);
+          store.setScopedRecordId(null);
           store.setSendInputOnOpen(true);
         });
         useSwipeNavStore.getState().go?.('urgans');
@@ -213,9 +215,13 @@ function PageComposer() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const releaseId = searchParams.get('release');
+  // On a record page the box files into that record (next record v2): the id
+  // travels with the message to the UrgAns tab.
+  const recordId = recordIdFromPath(usePathname());
   return (
     <HomeAskBar
       variant="page"
+      placeholder={recordId ? RECORD_CAPTURE_PLACEHOLDER : undefined}
       onSend={() => {
         const held = useChappiStore.getState();
         const text = held.input;
@@ -225,6 +231,7 @@ function PageComposer() {
           const store = useChappiStore.getState();
           store.setInput(text);
           store.setPendingAttachments(files);
+          store.setScopedRecordId(recordId);
           store.setSendInputOnOpen(true);
           router.push('/dashboard/urgans');
         });

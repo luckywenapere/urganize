@@ -77,6 +77,8 @@ export type ChappiConfirmOutcome =
       title: string;
       detail?: string;
       confirmLabel: string;
+      /** The card's second button, when "Cancel" is the wrong word ("Fix something"). */
+      cancelLabel?: string;
       /** The card makes the user type this phrase (or DELETE) before the button
        * works, and sends what they typed as args.confirmation. */
       typedConfirmation?: { phrase: string };

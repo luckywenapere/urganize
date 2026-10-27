@@ -88,7 +88,7 @@ export function ChappiConfirmationCard({
 
       <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button type="button" variant="secondary" onClick={onCancel} disabled={isBusy}>
-          Cancel
+          {pending.cancelLabel ?? 'Cancel'}
         </Button>
         <Button
           type="button"

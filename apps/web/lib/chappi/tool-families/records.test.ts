@@ -36,6 +36,7 @@ vi.mock('@/lib/relationships-server', () => ({ listRelationships }));
 
 import { runChappiAgent } from '../runner';
 import { getChappiTool, type ChappiToolContext } from '../tools';
+import { doneLine, recordScopePrompt } from './records';
 import type { NextRecord } from '@/lib/next-records';
 
 const ctx = {
@@ -149,6 +150,7 @@ describe('add_to_record through the runner', () => {
     }
     expect(result.pendingConfirmation?.toolName).toBe('add_to_record');
     expect(result.pendingConfirmation?.confirmLabel).toBe('Add');
+    expect(result.pendingConfirmation?.cancelLabel).toBe('Fix something');
     expect(result.pendingConfirmation?.title).toBe("Here's what I'll add to Untitled EP (Kemi Ade):");
     expect(result.pendingConfirmation?.detail?.split('\n')).toEqual([
       'Session: Fri 30 Oct · Tolu Bello',
@@ -236,5 +238,48 @@ describe('add_to_record, the approved Add', () => {
     server.listRecordsInMaking.mockResolvedValue([]);
     const outcome = await tool.confirm!(ctx, ARGS);
     expect(outcome.ok === false && outcome.summary).toMatch(/Ask which artist/);
+  });
+});
+
+describe('the last song to Done points to the rollout button', () => {
+  const allDone = (record: NextRecord): NextRecord => ({
+    ...record,
+    songs: record.songs.map((song) => ({ ...song, stage: 'done' as const })),
+  });
+
+  it('says it once, on the change that finishes the record', () => {
+    expect(doneLine(RECORD, allDone(RECORD))).toBe(
+      " That's 3 of 3 songs done. The Plan the rollout button is ready at the top of the record."
+    );
+    expect(doneLine(allDone(RECORD), allDone(RECORD))).toBe('');
+    expect(doneLine(RECORD, RECORD)).toBe('');
+    expect(doneLine(null, { ...RECORD, songs: [] })).toBe('');
+  });
+
+  it("ends the Add's summary with it when the last song moves to Done", async () => {
+    const twoLeft: NextRecord = {
+      ...RECORD,
+      songs: [
+        { id: 's1', title: 'Wahala Free', stage: 'done', position: 0 },
+        { id: 's2', title: 'Pressure', stage: 'mixing', position: 1 },
+      ],
+    };
+    server.readRecord.mockResolvedValue({ ok: true, value: twoLeft });
+    server.updateSong.mockResolvedValue({ ok: true, value: allDone(twoLeft) });
+    server.saveSession.mockResolvedValue({ ok: true, value: allDone(twoLeft) });
+    const result = await getChappiTool('add_to_record')!.execute(ctx, {
+      recordId: 'rec-1',
+      sessions: [{ when: 'today', people: [{ name: 'dami' }], songs: ['pressure'], happened: true }],
+      songs: [{ title: 'pressure', stage: 'done' }],
+    });
+    expect(result.ok).toBe(true);
+    expect(result.summary).toMatch(/That's 2 of 2 songs done\. The Plan the rollout button is ready at the top of the record\.$/);
+  });
+});
+
+describe('recordScopePrompt', () => {
+  it("names the record only when it is the caller's and still being made", async () => {
+    expect(await recordScopePrompt(ctx, 'rec-1')).toContain('recordId: rec-1');
+    expect(await recordScopePrompt(ctx, 'rec-other')).toBeNull();
   });
 });

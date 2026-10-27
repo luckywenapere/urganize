@@ -68,6 +68,7 @@ export function HomeAskBar({
   variant = 'home',
   onSend,
   replying = false,
+  placeholder = 'Message UrgAns...',
 }: {
   /** 'swipe' (URG-380): the swipe navigation's one box under Home and Artists,
    *  on phones and desktops, centred to the page column. 'page' (Oct 24,
@@ -77,6 +78,8 @@ export function HomeAskBar({
   /** Replaces opening the chat page: the swipe navigation hands the message to
    *  Main and glides the pager to UrgAns instead. */
   onSend?: () => void;
+  /** The box's hint; on a record page it asks what happened (next record v2). */
+  placeholder?: string;
   /** The conversation it feeds is writing a reply (the swipe navigation's
    *  UrgAns tab): the box holds still, field and send disabled, a spinner in
    *  send. Same shape and size either way. */
@@ -240,7 +243,7 @@ export function HomeAskBar({
                 event.preventDefault();
                 void attach.addFiles(pictures);
               }}
-              placeholder={isTranscribing ? 'Turning your voice into text...' : 'Message UrgAns...'}
+              placeholder={isTranscribing ? 'Turning your voice into text...' : placeholder}
               aria-label="Message UrgAns"
               enterKeyHint="send"
               disabled={isTranscribing || replying}
