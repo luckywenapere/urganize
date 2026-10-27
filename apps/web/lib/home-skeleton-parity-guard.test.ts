@@ -51,7 +51,11 @@ describe('Home skeleton matches the live Home (layout B)', () => {
     const order = ['greeting', 'one-thing'].map((name) => column.indexOf(`data-skeleton="${name}"`));
     expect(order.every((at) => at > -1)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
-    expect(homeFour).toMatch(/<HomeGreeting home=\{home\} \/>\s*<div className="mt-6">\s*<Fenced name="one-thing">/);
+    // The Distribute card (2026-10-27) may sit between them: it draws nothing
+    // until the team's plan is known, so the skeleton leaves it out.
+    expect(homeFour).toMatch(
+      /<HomeGreeting home=\{home\} \/>\s*(?:<Fenced name="distribute">[\s\S]*?<\/Fenced>\s*)?<div className="mt-6">\s*<Fenced name="one-thing">/
+    );
     expect(column).toContain('className="mt-6" data-skeleton="one-thing"');
   });
 
