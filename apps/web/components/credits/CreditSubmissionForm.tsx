@@ -3,7 +3,6 @@
 import { useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { Loader2 } from '@/components/icons';
-import { validateSubmissionSplits } from '@/lib/credit-submissions';
 import {
   applyCreditPrefill,
   describeCreditPrefill,
@@ -55,6 +54,12 @@ import {
 // anyone holding the share link. Roles, both splits, "what you did" and the
 // accuracy tick are deliberately never remembered; that list is the important
 // part of the feature.
+//
+// 2026-10-27 (founder call): cut to what distribution and publishing need.
+// Name, stage name, roles and email for everyone; PRO, IPI and publisher only
+// for writers. Splits, phone, country, "what you did", socials and bio are off
+// the form and are not sent, so the route leaves any earlier answers to them
+// alone on a resubmit. The columns and the owner's views are unchanged.
 
 const SURFACE = 'var(--credits-surface)';
 const STROKE = 'var(--credits-border)';
@@ -161,78 +166,6 @@ function TextField({
   );
 }
 
-function SplitField({
-  label,
-  value,
-  onChange,
-  required,
-  hint,
-}: {
-  label: string;
-  value: number | null;
-  onChange: (value: number | null) => void;
-  required?: boolean;
-  hint?: string;
-}) {
-  return (
-    <label className="block text-sm">
-      <span className="font-mono text-[11px] uppercase tracking-[0.1em]" style={labelStyle()}>
-        {label}
-        {required ? ' *' : ''}
-      </span>
-      <input
-        type="number"
-        min={0}
-        max={100}
-        // One decimal place, matching what the route accepts and what the
-        // owner's totals display. The browser's own message names the two
-        // nearest valid values, which is a clearer nudge than our own copy.
-        step="0.1"
-        value={value === null ? '' : value}
-        onChange={(event) => {
-          const raw = event.target.value;
-          onChange(raw === '' ? null : Number(raw));
-        }}
-        placeholder="0 to 100"
-        className="mt-1.5 w-full rounded-xl border px-3 py-2 text-lg outline-none"
-        style={inputStyle()}
-      />
-      {hint ? <Hint>{hint}</Hint> : null}
-    </label>
-  );
-}
-
-function TextAreaField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  hint,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  hint?: string;
-}) {
-  return (
-    <label className="block text-sm">
-      <span className="font-mono text-[11px] uppercase tracking-[0.1em]" style={labelStyle()}>
-        {label}
-      </span>
-      <textarea
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        rows={3}
-        className="mt-1.5 w-full resize-none rounded-xl border px-3 py-2 text-lg outline-none"
-        style={inputStyle()}
-      />
-      {hint ? <Hint>{hint}</Hint> : null}
-    </label>
-  );
-}
-
 type CreditSubmissionFormProps = {
   token: string;
   releaseTitle: string;
@@ -287,19 +220,10 @@ export function CreditSubmissionForm({
     }));
   };
 
-  const splitRules = validateSubmissionSplits({
-    roles: input.roles,
-    songwriterSplit: input.songwriterSplit,
-    masterSplit: input.masterSplit,
-  });
-  // Marks the section labels while they are typing; the blocking check happens
-  // on submit so a half-filled form is never scolded mid-thought.
-  const splitsRequired = {
-    songwriter: input.roles.some((role) =>
-      role === 'songwriter' || role === 'composer' || role === 'lyricist'
-    ),
-    master: input.roles.includes('producer'),
-  };
+  // The publishing questions only make sense for a writing credit.
+  const isWriter = input.roles.some(
+    (role) => role === 'songwriter' || role === 'composer' || role === 'lyricist'
+  );
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -309,8 +233,6 @@ export function CreditSubmissionForm({
     if (!input.legalName.trim()) return setError('Add your legal name at the top.');
     if (input.roles.length === 0) return setError('Tick at least one thing you did on this song.');
     if (!input.email.trim()) return setError('Add your email so the team can reach you.');
-    // Same rule the route enforces, same words — see lib/credit-submissions.ts.
-    if (!splitRules.ok) return setError(splitRules.error);
     if (!input.confirmedAccurate) {
       return setError('Tick the box at the bottom to confirm your details are correct.');
     }
@@ -321,7 +243,19 @@ export function CreditSubmissionForm({
       const res = await fetch(`/api/credits/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input),
+        // Only the fields on the form. Anything left out is kept as it was
+        // on an earlier answer from the same email (see the route).
+        body: JSON.stringify({
+          legalName: input.legalName,
+          stageName: input.stageName,
+          roles: input.roles,
+          email: input.email,
+          proAffiliation: input.proAffiliation,
+          ipiNumber: input.ipiNumber,
+          publisherName: input.publisherName,
+          publisherIpi: input.publisherIpi,
+          confirmedAccurate: input.confirmedAccurate,
+        }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; updated?: boolean };
       if (!res.ok) {
@@ -440,132 +374,54 @@ export function CreditSubmissionForm({
           </div>
         </div>
 
-        <TextAreaField
-          label="Tell them what you did"
-          hint="A sentence is plenty."
-          placeholder="e.g. Wrote the hook and second verse, produced the beat…"
-          value={input.contribution || ''}
-          onChange={(v) => setInput((c) => ({ ...c, contribution: v }))}
-        />
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <TextField
-            label="Email"
-            autoComplete="email"
-            type="email"
-            required
-            // Says the resubmission rule out loud, which also guards the
-            // footgun in "Fill it in for someone else": reusing your own email
-            // there replaces your first answer instead of adding a second one.
-            hint="So the team can reach you. Sending this form again with the same email replaces your earlier answer."
-            value={input.email}
-            onChange={(v) => setInput((c) => ({ ...c, email: v }))}
-          />
-          <TextField
-            label="Phone"
-            autoComplete="tel"
-            type="tel"
-            hint="Optional."
-            value={input.phone || ''}
-            onChange={(v) => setInput((c) => ({ ...c, phone: v }))}
-          />
-          <TextField
-            label="Country"
-            autoComplete="country-name"
-            hint="Where you live."
-            value={input.country || ''}
-            onChange={(v) => setInput((c) => ({ ...c, country: v }))}
-          />
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <SectionHeading>2 · Your share of the writing</SectionHeading>
-        <SectionNote>
-          {splitsRequired.songwriter
-            ? 'You picked a writing role, so the team needs your share. Give your best number. They can sort out the exact split with you later.'
-            : 'Skip this whole part if you did not help write the song.'}
-        </SectionNote>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <SplitField
-            label="Your writing share (%)"
-            required={splitsRequired.songwriter}
-            hint="How much of the writing is yours. Everyone's shares should add up to 100."
-            value={input.songwriterSplit ?? null}
-            onChange={(v) => setInput((c) => ({ ...c, songwriterSplit: v }))}
-          />
-          <TextField
-            label="Royalty society (PRO)"
-            hint="Who collects your songwriting royalties. Leave blank if you have not signed up with one."
-            placeholder="ASCAP, BMI, PRS, MCSN…"
-            value={input.proAffiliation || ''}
-            onChange={(v) => setInput((c) => ({ ...c, proAffiliation: v }))}
-          />
-          <TextField
-            label="Your society ID (IPI / CAE)"
-            hint="The number that society gave you. It is on your account page there."
-            value={input.ipiNumber || ''}
-            onChange={(v) => setInput((c) => ({ ...c, ipiNumber: v }))}
-          />
-          <TextField
-            label="Publisher name"
-            hint="The company that looks after your songwriting. Write SELF if that is you."
-            placeholder="Or write SELF if self-published"
-            value={input.publisherName || ''}
-            onChange={(v) => setInput((c) => ({ ...c, publisherName: v }))}
-          />
-          <TextField
-            label="Publisher ID (IPI)"
-            hint="Your publisher's number, if you know it."
-            value={input.publisherIpi || ''}
-            onChange={(v) => setInput((c) => ({ ...c, publisherIpi: v }))}
-          />
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <SectionHeading>3 · Your share of the recording</SectionHeading>
-        <SectionNote>
-          {splitsRequired.master
-            ? 'You picked producer, so the team needs your share of the recording.'
-            : 'This is usually for producers. Skip it if it does not apply to you.'}
-        </SectionNote>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <SplitField
-            label="Your recording share (%)"
-            required={splitsRequired.master}
-            hint="How much of the finished recording is yours. Also called the master share."
-            value={input.masterSplit ?? null}
-            onChange={(v) => setInput((c) => ({ ...c, masterSplit: v }))}
-          />
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <SectionHeading>4 · Extras, all optional</SectionHeading>
-        <SectionNote>
-          Handy if the team writes a press kit or tags you in a post. Skip the whole thing if you
-          would rather.
-        </SectionNote>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <TextField
-            label="Instagram handle"
-            value={input.instagramHandle || ''}
-            onChange={(v) => setInput((c) => ({ ...c, instagramHandle: v }))}
-          />
-          <TextField
-            label="X handle"
-            value={input.xHandle || ''}
-            onChange={(v) => setInput((c) => ({ ...c, xHandle: v }))}
-          />
-        </div>
-        <TextAreaField
-          label="Short bio"
-          hint="A line or two about you, written the way you want to be introduced."
-          value={input.bio || ''}
-          onChange={(v) => setInput((c) => ({ ...c, bio: v }))}
+        <TextField
+          label="Email"
+          autoComplete="email"
+          type="email"
+          required
+          // Says the resubmission rule out loud, which also guards the
+          // footgun in "Fill it in for someone else": reusing your own email
+          // there replaces your first answer instead of adding a second one.
+          hint="So the team can reach you. Sending this form again with the same email replaces your earlier answer."
+          value={input.email}
+          onChange={(v) => setInput((c) => ({ ...c, email: v }))}
         />
       </section>
+
+      {isWriter ? (
+        <section className="space-y-4">
+          <SectionHeading>2 · For your songwriting royalties</SectionHeading>
+          <SectionNote>Leave blank anything you do not have.</SectionNote>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <TextField
+              label="Royalty society (PRO)"
+              hint="Who collects your songwriting royalties. Leave blank if you have not signed up with one."
+              placeholder="MCSN, PRS, ASCAP, BMI…"
+              value={input.proAffiliation || ''}
+              onChange={(v) => setInput((c) => ({ ...c, proAffiliation: v }))}
+            />
+            <TextField
+              label="Your society ID (IPI / CAE)"
+              hint="The number that society gave you. It is on your account page there."
+              value={input.ipiNumber || ''}
+              onChange={(v) => setInput((c) => ({ ...c, ipiNumber: v }))}
+            />
+            <TextField
+              label="Publisher name"
+              hint="The company that looks after your songwriting. Write SELF if that is you."
+              placeholder="Or write SELF if self-published"
+              value={input.publisherName || ''}
+              onChange={(v) => setInput((c) => ({ ...c, publisherName: v }))}
+            />
+            <TextField
+              label="Publisher ID (IPI)"
+              hint="Your publisher's number, if you know it."
+              value={input.publisherIpi || ''}
+              onChange={(v) => setInput((c) => ({ ...c, publisherIpi: v }))}
+            />
+          </div>
+        </section>
+      ) : null}
 
       <section className="space-y-4 border-t pt-6" style={{ borderColor: STROKE }}>
         <label className="flex items-start gap-2 text-sm" style={{ color: CREAM }}>

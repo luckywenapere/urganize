@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   SPLIT_PRECISION_MESSAGE,
-  SPLIT_REQUIRED_MESSAGES,
   checkSplitValue,
   findSubmissionIdByEmail,
   normalizeEmailKey,
@@ -149,16 +148,16 @@ describe('validateSubmissionSplits', () => {
     ).toEqual({ ok: true, songwriterSplit: 50, masterSplit: null });
   });
 
-  it('refuses a writer who left the writing share blank', () => {
+  it('lets a writer through with the writing share blank', () => {
     expect(
       validateSubmissionSplits({ roles: ['lyricist'], songwriterSplit: '', masterSplit: null })
-    ).toEqual({ ok: false, error: SPLIT_REQUIRED_MESSAGES.songwriter });
+    ).toEqual({ ok: true, songwriterSplit: null, masterSplit: null });
   });
 
-  it('refuses a producer who left the recording share blank', () => {
+  it('lets a producer through with the recording share blank', () => {
     expect(
       validateSubmissionSplits({ roles: ['producer'], songwriterSplit: null, masterSplit: null })
-    ).toEqual({ ok: false, error: SPLIT_REQUIRED_MESSAGES.master });
+    ).toEqual({ ok: true, songwriterSplit: null, masterSplit: null });
   });
 
   it('lets an engineer through with no numbers at all', () => {
@@ -167,8 +166,7 @@ describe('validateSubmissionSplits', () => {
     ).toEqual({ ok: true, songwriterSplit: null, masterSplit: null });
   });
 
-  it('reports a malformed number before a missing one', () => {
-    // A value that is present but wrong is the more specific problem.
+  it('still refuses a malformed number', () => {
     const result = validateSubmissionSplits({
       roles: ['producer'],
       songwriterSplit: 101,

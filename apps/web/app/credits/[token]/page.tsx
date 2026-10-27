@@ -110,7 +110,7 @@ export default async function PublicCreditsPage({ params }: PageProps) {
                 it. */}
             <p className="mt-6 max-w-[52ch] text-sm leading-relaxed" style={{ color: MUTED }}>
               Did you work on this song? Add your details below so you get credited, and paid,
-              correctly. It takes about two minutes, and only the team behind this release sees
+              correctly. It takes about a minute, and only the team behind this release sees
               your answers.
             </p>
             <p className="mt-3 max-w-[52ch] text-sm leading-relaxed" style={{ color: MUTED }}>

@@ -75,16 +75,6 @@ export function requiredSplits(roles: readonly ReleaseCreditRole[]): RequiredSpl
   };
 }
 
-/** Plain instructions, not diagnostics — the same words the client shows and
- * the server returns, so a person never sees two different explanations of one
- * problem depending on which layer caught it. */
-export const SPLIT_REQUIRED_MESSAGES = {
-  songwriter:
-    'Add your share of the writing. You picked a writing role, so the team needs that number.',
-  master:
-    'Add your share of the recording. You picked producer, so the team needs that number.',
-} as const;
-
 /** Splits are money, so the format is fixed rather than rounded silently on
  * the user's behalf: one decimal place, matching what the form's number input
  * allows and what the owner's totals display. */
@@ -114,9 +104,11 @@ export function checkSplitValue(value: unknown): SplitCheck {
 }
 
 /**
- * The whole submission's split answer, in the order a person reads the form:
- * a malformed number is reported before a missing one, since a value that is
- * present but wrong is the more specific problem.
+ * The whole submission's split answer. Since 2026-10-27 (founder call) the
+ * public form no longer asks for splits and nobody is required to give one, so
+ * this only checks the format of a number that was sent anyway (an older open
+ * tab still posts them). requiredSplits stays: the distribution rules use it to
+ * tell which roles are writing credits.
  */
 export function validateSubmissionSplits(input: {
   roles: readonly ReleaseCreditRole[];
@@ -127,14 +119,6 @@ export function validateSubmissionSplits(input: {
   if (songwriter.error) return { ok: false, error: songwriter.error };
   const master = checkSplitValue(input.masterSplit);
   if (master.error) return { ok: false, error: master.error };
-
-  const required = requiredSplits(input.roles);
-  if (required.songwriter && songwriter.value === null) {
-    return { ok: false, error: SPLIT_REQUIRED_MESSAGES.songwriter };
-  }
-  if (required.master && master.value === null) {
-    return { ok: false, error: SPLIT_REQUIRED_MESSAGES.master };
-  }
 
   return { ok: true, songwriterSplit: songwriter.value, masterSplit: master.value };
 }

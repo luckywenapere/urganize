@@ -107,9 +107,8 @@ export async function POST(
     );
   }
 
-  // Splits are required for writers and producers and capped at one decimal
-  // place — both rules live in lib/credit-submissions.ts so the form and this
-  // route can never disagree about them.
+  // Splits are optional (2026-10-27) and capped at one decimal place; the rule
+  // lives in lib/credit-submissions.ts.
   const splits = validateSubmissionSplits({
     roles,
     songwriterSplit: body.songwriterSplit,
@@ -177,13 +176,32 @@ export async function POST(
     );
   };
 
+  // The form was cut to distribution and publishing essentials on 2026-10-27,
+  // so it no longer sends these. A correction must not blank what the same
+  // person gave on the longer form before, so a column whose field is missing
+  // from the body is left as it is on update.
+  const updateRow: Record<string, unknown> = { ...row };
+  const OPTIONAL_FIELDS: [keyof CreditSubmissionInput, string][] = [
+    ['contribution', 'contribution'],
+    ['phone', 'phone'],
+    ['country', 'country'],
+    ['songwriterSplit', 'songwriter_split'],
+    ['masterSplit', 'master_split'],
+    ['instagramHandle', 'instagram_handle'],
+    ['xHandle', 'x_handle'],
+    ['bio', 'bio'],
+  ];
+  for (const [field, column] of OPTIONAL_FIELDS) {
+    if (body[field] === undefined) delete updateRow[column];
+  }
+
   const updateExisting = async (submissionId: string): Promise<boolean> => {
     // created_at is deliberately untouched (their place in the owner's list is
     // when they FIRST answered) and updated_at is bumped by the table's own
     // set_updated_at trigger.
     const { data, error } = await client
       .from(RELEASE_CREDIT_SUBMISSIONS_TABLE)
-      .update(row)
+      .update(updateRow)
       .eq('id', submissionId)
       .eq('release_id', releaseId)
       .select('id')
