@@ -41,6 +41,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.201.0",
+    title: "A calmer Home, with Distribute up front",
+    tag: "App",
+    date: "October 27, 2026",
+    highlights: [
+      "On a computer, Home is now one clear page. UrgAns has its own page in the top bar.",
+      "Home has a Distribute card to get your music to Spotify, Apple Music, Audiomack and more.",
+      "The Chappi character is gone from the app.",
+    ],
+  },
+  {
     version: "1.200.1",
     tag: "App",
     date: "October 27, 2026",
