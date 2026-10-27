@@ -59,6 +59,8 @@ import type { PlanV2Mode } from './prompt';
 import { validatePlanV2, type PlanV2Context } from './validate';
 import { planV2Surface, writePlanV2, type PlanV2Source, type WrittenPlanV2 } from './write-plan';
 import { relativeWhenLabel } from './when';
+import { formatArtistFactsForPlanner } from '../artist-facts';
+import { listArtistFacts } from '../artist-facts-server';
 
 export const PLAN_V2_TIMEOUT_MS = 38_000;
 export const PLAN_V2_DEADLINE_MS = 52_000;
@@ -105,7 +107,8 @@ export async function previewPlanV2(
 ): Promise<PreviewPlanV2Result> {
   const { release, actor, answers, mode, todayYmd, startedAt } = params;
   const { releaseDate } = resolvePlanV2ReleaseDate(release.release_date, answers, todayYmd);
-  const ctx: PlanV2Context = { answers, releaseDate, todayYmd };
+  const artistFacts = await loadPlannerArtistFacts(admin, release.id);
+  const ctx: PlanV2Context = { answers, releaseDate, todayYmd, artistFacts };
   const { template } = getPlannerTemplate(answers.release_type);
 
   const ownerTeam = await getTeamAccessForUser(actor.id, actor.email);
@@ -485,4 +488,17 @@ export async function insertUndatedPlan(
   const { data, error } = await admin.from('tasks').insert(undated).select('id');
   if (error) throw new Error(`Failed to insert the undated plan: ${error.message}`);
   return { tasksCreated: (data ?? []).length };
+}
+
+/** The rollout's artist's saved facts as one prompt line, so a plan for an
+ *  artist who said no playlist pitching has none. Never throws. */
+async function loadPlannerArtistFacts(admin: SupabaseClient, releaseId: string): Promise<string> {
+  try {
+    const { data } = await admin.from('releases').select('artist_id').eq('id', releaseId).maybeSingle();
+    const artistId = (data as { artist_id?: string | null } | null)?.artist_id;
+    if (!artistId) return '';
+    return formatArtistFactsForPlanner(await listArtistFacts(admin, artistId));
+  } catch {
+    return '';
+  }
 }

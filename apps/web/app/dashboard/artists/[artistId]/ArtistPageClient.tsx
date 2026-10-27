@@ -17,6 +17,7 @@ import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { ThumbImage } from '@/components/shared/ThumbImage';
 import { ArtistCatalogueCard } from '@/components/artists/ArtistCatalogueCard';
+import { ArtistFactsCard } from '@/components/artists/ArtistFactsCard';
 import { displayReleaseTitle } from '@/types/releases';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
@@ -202,6 +203,8 @@ export default function ArtistPageClient() {
           </h1>
         </div>
       </header>
+
+      <ArtistFactsCard artistId={artist.id} artistName={artist.name} />
 
       {/* The Press kit bar left Oct 17, 2026 (founder approved "cuts-3"):
           the artist's bio and contact are edited in a rollout's Pitch this!. */}

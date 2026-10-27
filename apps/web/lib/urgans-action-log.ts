@@ -48,6 +48,7 @@ const OBJECT_KEYS: Array<[key: string, type: string]> = [
   ['postId', 'content_post'],
   ['calendarId', 'content_calendar'],
   ['noteId', 'note'],
+  ['factId', 'artist_fact'],
   ['kitId', 'press_kit'],
   ['requestId', 'work_request'],
   ['memberId', 'workspace_member'],

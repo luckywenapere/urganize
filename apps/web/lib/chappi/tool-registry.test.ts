@@ -60,6 +60,17 @@ describe('Chappi tool registry', () => {
     }
   });
 
+  it('never saves or forgets an artist fact without a card (2026-10-27)', () => {
+    expect(getChappiTool('list_artist_facts')?.level).toBe('read');
+    for (const name of ['save_artist_fact', 'forget_artist_fact'] as const) {
+      const tool = getChappiTool(name);
+      expect(tool, `${name} is registered`).toBeDefined();
+      expect(isConfirmationGated(name), `${name} must be gated`).toBe(true);
+      expect(tool?.level).toBe('confirm');
+      expect(isMcpToolName(name)).toBe(false);
+    }
+  });
+
   it('reports gated tools through isConfirmationGated', () => {
     expect(isConfirmationGated('delete_release')).toBe(true);
     expect(isConfirmationGated('list_releases')).toBe(false);

@@ -224,6 +224,10 @@ export type ChappiToolName =
   | 'rename_artist'
   | 'remove_artist'
   | 'move_release_to_artist'
+  // what UrgAns remembers about each artist (2026-10-27)
+  | 'list_artist_facts'
+  | 'save_artist_fact'
+  | 'forget_artist_fact'
   // cover art and what else is attached to a release (2026-09-07)
   | 'get_cover_art'
   | 'upload_cover_art'

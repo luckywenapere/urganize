@@ -41,6 +41,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.194.0",
+    title: "UrgAns remembers what you decide about each artist",
+    tag: "AI",
+    date: "October 27, 2026",
+    highlights: [
+      "Tell UrgAns something like \"Kemi doesn't want playlist pitching\" and it asks once if it should remember it.",
+      "It follows what it remembers in every chat and every plan for that artist.",
+      "See, change or remove what UrgAns remembers on the artist's page.",
+    ],
+  },
+  {
     version: "1.193.0",
     title: "Ideas first, then the brief, then the plan",
     tag: "Rollouts",

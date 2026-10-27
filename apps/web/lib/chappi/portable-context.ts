@@ -33,6 +33,8 @@ import {
   type TeamBriefSection,
 } from '@/lib/team-brief';
 import { loadTeamBriefEntries } from '@/lib/team-brief-server';
+import { formatArtistFactsForPrompt } from '@/lib/artist-facts';
+import { listFactsInScope } from '@/lib/artist-facts-server';
 import { listVisibleReleases } from './release-scope';
 import { buildWorkspaceSummary } from './workspace-summary';
 import type { ChappiToolContext } from './tool-families/shared';
@@ -69,16 +71,44 @@ export async function buildPortableWorkspaceContext(
   }
 
   const brief = await loadTeamBriefBlock(ctx);
+  const artistFacts = await loadArtistFactsBlock(ctx);
 
   return {
-    // The brief sits ABOVE the snapshot, which is the precedence the brief's
-    // own opening lines restate to the model: standing background first, live
-    // data second, and where they disagree the live data wins.
-    text: [brief.block, snapshot, `Today is ${today}.`]
-      .filter((part) => Boolean(part && part.trim()))
-      .join('\n\n'),
+    text: composePortableText({ brief: brief.block, artistFacts, snapshot, today }),
     briefSections: brief.sections,
   };
+}
+
+/**
+ * The order the parts go in. PURE, so the order is tested. The brief and the
+ * artist facts sit ABOVE the snapshot, which is the precedence the brief's own
+ * opening lines restate to the model: standing background first, live data
+ * second, and where they disagree the live data wins. Empty parts leave no gap.
+ */
+export function composePortableText(parts: {
+  brief: string;
+  artistFacts: string;
+  snapshot: string;
+  today: string;
+}): string {
+  return [parts.brief, parts.artistFacts, parts.snapshot, `Today is ${parts.today}.`]
+    .filter((part) => Boolean(part && part.trim()))
+    .join('\n\n');
+}
+
+/** What the team told UrgAns to remember about its artists (lib/artist-facts.ts).
+ *  Never throws: a failed read contributes nothing. */
+export async function loadArtistFactsBlock(ctx: ChappiToolContext): Promise<string> {
+  try {
+    const groups = await listFactsInScope(ctx.adminClient, {
+      workspaceIds: ctx.workspaceIds,
+      artistScopeByWorkspaceId: ctx.artistScopeByWorkspaceId,
+    });
+    return formatArtistFactsForPrompt(groups);
+  } catch (error) {
+    console.error('[chappi] artist facts load failed:', error);
+    return '';
+  }
 }
 
 /** Never throws, and returns '' whenever the feature is off, the caller has no

@@ -26,7 +26,8 @@ const secondaryButton =
 const smallButton =
   'motion-focus motion-press inline-flex min-h-9 items-center rounded-full border border-stroke-default px-3.5 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-50';
 
-function Modal({ titleId, children, onClose }: { titleId: string; children: React.ReactNode; onClose: () => void }) {
+/** Shared with ArtistFactsCard, the other card on the artist page. */
+export function Modal({ titleId, children, onClose }: { titleId: string; children: React.ReactNode; onClose: () => void }) {
   useEffect(() => lockBodyScroll(), []);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

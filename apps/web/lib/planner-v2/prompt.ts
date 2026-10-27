@@ -82,6 +82,7 @@ export function buildPlanV2Messages(params: {
     `Who does the work: ${teamLabel(answers.team)}. Tasks: ${range.min} to ${range.max}. At most ${TEAM_PACE[answers.team].perWeek} tasks start in any 7-day block (2 extra in release week).`,
     `Window: day ${window.min} to day ${window.max}.`,
     answers.notes ? `Notes from the manager: "${answers.notes}"` : '',
+    ctx.artistFacts || '',
   ].filter(Boolean);
 
   const parts = [facts.join('\n'), `Menu of moves (id | title | channel | owner | usual day | rough cost):\n${menu.map(moveLine).join('\n')}`];

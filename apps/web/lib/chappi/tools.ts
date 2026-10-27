@@ -27,6 +27,7 @@
 //    confirmation UI — tool-registry.test.ts asserts that structurally.
 
 import { ARTIST_TOOLS } from './tool-families/artists';
+import { ARTIST_FACT_TOOLS } from './tool-families/artist-facts';
 import { CALENDAR_TOOLS } from './tool-families/calendar';
 import { CAPTURE_TOOLS } from './tool-families/capture';
 import { CONTEXT_TOOLS } from './tool-families/context';
@@ -71,6 +72,7 @@ export const CHAPPI_TOOLS: ChappiTool[] = [
   ...PROMO_TOOLS,
   ...PRESS_KIT_TOOLS,
   ...ARTIST_TOOLS,
+  ...ARTIST_FACT_TOOLS,
   ...FILE_TOOLS,
   ...DIRECTORY_TOOLS,
 ];

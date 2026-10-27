@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Artist memory mocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Space+Mono:wght@400;700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web light theme (same as docs/mocks/distribution-limits). */
+  :root {
+    --a-bg:#f3efe6; --a-card:#f8f4ec; --a-el:#fbf8f2; --a-text:#1a1611; --a-sec:#5c544a; --a-ter:#6d6459;
+    --a-line:#e6dfd2; --a-line2:#d8d0c2; --a-brand:#14643a; --a-brand-sub:rgba(20,100,58,.06);
+    --a-err:#a3322a;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:#e9e3d7; }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--a-text); padding:32px 16px 64px; }
+  p { margin:0; }
+  .intro { max-width:820px; margin:0 auto 28px; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:26px; margin:0 0 6px; }
+  .intro p { color:var(--a-sec); }
+  .board { display:flex; flex-wrap:wrap; gap:28px; justify-content:center; }
+  .col { width:390px; max-width:100%; }
+  .tag { font-family:'Space Mono', monospace; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--a-sec); margin-bottom:6px; }
+  .why { font-size:13px; color:var(--a-ter); margin-bottom:12px; min-height:40px; }
+  .phone { background:var(--a-bg); border:1px solid var(--a-line2); border-radius:28px; padding:22px 16px 28px; min-height:640px; position:relative; overflow:hidden; }
+  .mono { font-family:'Space Mono', monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--a-sec); }
+  .h { font-family:'Young Serif', serif; font-size:28px; line-height:1.15; margin:0; }
+  .sub { color:var(--a-sec); font-size:14px; }
+  .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+  .chip { font-family:'Space Mono', monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; border:1px solid var(--a-line2); padding:3px 7px; color:var(--a-sec); }
+
+  /* chat */
+  .me { margin-left:auto; max-width:80%; background:var(--a-text); color:#f8f4ec; padding:10px 14px; border-radius:16px 16px 4px 16px; font-size:14px; margin-top:12px; width:fit-content; }
+  .ai { max-width:92%; font-size:14px; margin-top:14px; }
+  .ai p + p { margin-top:8px; }
+  .ai .who { font-family:'Space Mono', monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--a-brand); margin-bottom:4px; }
+  .card { border:1px solid var(--a-line2); background:var(--a-el); padding:14px 16px; margin-top:12px; }
+  .card .t { font-family:'Young Serif', serif; font-size:15px; }
+  .card .s { font-size:14px; color:var(--a-sec); margin-top:6px; }
+  .kv { margin-top:10px; border-top:1px solid var(--a-line); }
+  .kv div { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--a-line); font-size:14px; }
+  .kv span { color:var(--a-sec); }
+  .kv b { font-weight:600; text-align:right; }
+  .kv s { color:var(--a-ter); font-weight:400; }
+  .btns { display:flex; gap:8px; margin-top:12px; }
+  .btn { flex:1; display:flex; align-items:center; justify-content:center; height:44px; font-weight:600; font-size:14px; }
+  .green { background:var(--a-brand); color:#fff; }
+  .outline { border:1px solid var(--a-line2); color:var(--a-text); }
+  .done { display:flex; gap:8px; align-items:center; border:1px solid var(--a-line); background:var(--a-brand-sub); padding:10px 12px; margin-top:12px; font-size:13px; }
+  .done i { width:14px; height:8px; border-left:2px solid var(--a-brand); border-bottom:2px solid var(--a-brand); transform:rotate(-45deg) translateY(-2px); display:inline-block; }
+  .done a { color:var(--a-brand); margin-left:auto; text-decoration:underline; text-underline-offset:3px; }
+  .used { font-size:12px; color:var(--a-ter); margin-top:10px; padding-left:10px; border-left:2px solid var(--a-brand); }
+  .input { position:absolute; left:16px; right:16px; bottom:22px; border:1px solid var(--a-line2); background:var(--a-card); height:46px; padding:0 14px; display:flex; align-items:center; color:var(--a-ter); font-size:14px; }
+
+  /* artist page */
+  .head { display:grid; grid-template-columns:96px 1fr; gap:16px; align-items:start; margin-bottom:16px; }
+  .photo { width:96px; height:96px; background:#d9cfbe; display:grid; place-items:center; font-family:'Young Serif', serif; font-size:30px; color:var(--a-sec); }
+  .sec { border:1px solid var(--a-line2); background:var(--a-card); border-radius:12px; padding:16px; margin-top:12px; }
+  .sec-h { display:flex; justify-content:space-between; align-items:center; }
+  .sec-h h2 { font-family:'Young Serif', serif; font-weight:400; font-size:17px; margin:0; }
+  .add { font-size:13px; font-weight:600; border:1px solid var(--a-line2); padding:5px 10px; border-radius:999px; }
+  .fact { padding:12px 0; border-top:1px solid var(--a-line); display:grid; grid-template-columns:1fr auto; gap:2px 10px; }
+  .fact:first-of-type { border-top:0; }
+  .fact .k { font-family:'Space Mono', monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--a-sec); }
+  .fact .v { font-size:15px; font-weight:600; grid-column:1; }
+  .fact .src { font-size:12px; color:var(--a-ter); grid-column:1; }
+  .fact .dots { grid-row:1 / span 3; grid-column:2; align-self:center; color:var(--a-ter); font-size:18px; letter-spacing:1px; }
+  .empty { color:var(--a-ter); font-size:14px; margin-top:8px; }
+  .rows .r { display:flex; justify-content:space-between; padding:10px 0; border-top:1px solid var(--a-line); font-size:14px; }
+  .rows .r:first-child { border-top:0; }
+  .muted { opacity:.45; }
+
+  /* sheet */
+  .scrim { position:absolute; inset:0; background:rgba(26,22,17,.28); }
+  .sheet { position:absolute; left:0; right:0; bottom:0; background:var(--a-card); border-top:1px solid var(--a-line2); border-radius:20px 20px 0 0; padding:20px 16px 26px; box-shadow:0 -10px 30px rgba(0,0,0,.08); }
+  .grab { width:40px; height:4px; background:var(--a-line2); border-radius:4px; margin:0 auto 14px; }
+  .lab { font-size:13px; color:var(--a-sec); margin:14px 0 6px; }
+  .topics { display:flex; flex-wrap:wrap; gap:8px; }
+  .topics span { border:1px solid var(--a-line2); padding:7px 12px; border-radius:999px; font-size:13px; }
+  .topics span.on { border-color:var(--a-brand); background:var(--a-brand-sub); color:var(--a-brand); font-weight:600; }
+  .field { border:1px solid var(--a-line2); background:var(--a-bg); min-height:46px; padding:12px 14px; font-size:15px; }
+  .del { color:var(--a-err); font-size:14px; font-weight:600; margin-top:16px; display:inline-block; }
+
+  .rules { max-width:820px; margin:36px auto 0; background:var(--a-card); border:1px solid var(--a-line2); padding:20px 22px; }
+  .rules h2 { font-family:'Young Serif', serif; font-weight:400; font-size:20px; margin:0 0 10px; }
+  .rules li { margin:6px 0; color:var(--a-sec); }
+  .rules b { color:var(--a-text); }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>UrgAns remembers each artist</h1>
+  <p>Small and structured: one fact per line, each tied to an artist, with where it came from. UrgAns asks before it saves anything, reads the facts before it answers, and the artist page is where you check, change or remove them.</p>
+</div>
+
+<div class="board">
+
+  <!-- 1. You say a decision -->
+  <div class="col">
+    <p class="tag">1 · You say a decision, UrgAns asks once</p>
+    <p class="why">A clear decision about an artist gets one card. Nothing is saved until you tap Save. Chit-chat and one-off asks get no card.</p>
+    <div class="phone">
+      <div class="topbar"><span class="mono">UrgAns</span><span class="chip">Chat</span></div>
+      <div class="me">Kemi doesn't want playlist pitching. She thinks it's a waste.</div>
+      <div class="ai">
+        <p class="who">UrgAns</p>
+        <p>Noted. I'll leave pitching out of anything I suggest for Kemi. Want me to remember it?</p>
+      </div>
+      <div class="card">
+        <p class="t">Remember this about Kemi?</p>
+        <div class="kv">
+          <div><span>Topic</span><b>Playlist pitching</b></div>
+          <div><span>What</span><b>Don't pitch</b></div>
+          <div><span>From</span><b>You, in this chat</b></div>
+        </div>
+        <div class="btns"><div class="btn outline">Not now</div><div class="btn green">Save</div></div>
+      </div>
+      <div class="input">Ask UrgAns</div>
+    </div>
+  </div>
+
+  <!-- 2. Saved -->
+  <div class="col">
+    <p class="tag">2 · Saved</p>
+    <p class="why">The card becomes one line with a link to where the fact lives. The save also goes in the UrgAns action log.</p>
+    <div class="phone">
+      <div class="topbar"><span class="mono">UrgAns</span><span class="chip">Chat</span></div>
+      <div class="me">Kemi doesn't want playlist pitching. She thinks it's a waste.</div>
+      <div class="ai">
+        <p class="who">UrgAns</p>
+        <p>Noted. I'll leave pitching out of anything I suggest for Kemi. Want me to remember it?</p>
+      </div>
+      <div class="done"><i></i><span>Saved to Kemi: don't pitch to playlists</span><a>See</a></div>
+      <div class="ai">
+        <p class="who">UrgAns</p>
+        <p>Saved. Next time we plan for Kemi, I'll put that effort into press and her own channels instead.</p>
+      </div>
+      <div class="input">Ask UrgAns</div>
+    </div>
+  </div>
+
+  <!-- 3. UrgAns follows it -->
+  <div class="col">
+    <p class="tag">3 · UrgAns follows it, and says so</p>
+    <p class="why">Weeks later, in a new chat. UrgAns reads Kemi's facts first, skips pitching, and shows which fact shaped the answer.</p>
+    <div class="phone">
+      <div class="topbar"><span class="mono">UrgAns</span><span class="chip">New chat</span></div>
+      <div class="me">How do we push Kemi's single "Oya" in the last two weeks?</div>
+      <div class="ai">
+        <p class="who">UrgAns</p>
+        <p>Two weeks is enough if we stop spreading thin. Three moves:</p>
+        <p>- Send the press note to the two blogs that covered her last single, this Friday.<br>- A 15 second clip every second day on her Instagram. That's where she gets replies.<br>- A WhatsApp status countdown from day 5.</p>
+        <p>No playlist pitching, as you asked.</p>
+        <p class="used">Using what you saved about Kemi: don't pitch to playlists · prefers Instagram</p>
+      </div>
+      <div class="input">Ask UrgAns</div>
+    </div>
+  </div>
+
+  <!-- 4. Artist page -->
+  <div class="col">
+    <p class="tag">4 · On the artist page</p>
+    <p class="why">One section, under the photo. Each line says what it is about, what it says, and who said it where. Tap a line to change or remove it.</p>
+    <div class="phone">
+      <div class="head">
+        <div class="photo">K</div>
+        <p class="h" style="padding-top:28px">Kemi</p>
+      </div>
+      <div class="sec">
+        <div class="sec-h"><h2>What UrgAns remembers</h2><span class="add">+ Add</span></div>
+        <div class="fact"><span class="k">Playlist pitching</span><span class="v">Don't pitch</span><span class="src">You said it in chat · Oct 27</span><span class="dots">···</span></div>
+        <div class="fact"><span class="k">Preferred channel</span><span class="v">Instagram</span><span class="src">Tobi set it · Oct 20</span><span class="dots">···</span></div>
+        <div class="fact"><span class="k">Budget</span><span class="v">Under ₦100k a single</span><span class="src">You said it in chat · Oct 14</span><span class="dots">···</span></div>
+        <div class="fact"><span class="k">Who to contact</span><span class="v">Ada (her sister), for bookings</span><span class="src">You set it · Oct 9</span><span class="dots">···</span></div>
+      </div>
+      <div class="sec muted">
+        <div class="sec-h"><h2>Rollouts</h2><span class="add">+ New rollout</span></div>
+        <div class="rows" style="margin-top:8px">
+          <div class="r"><span>Oya</span><span>Nov 14</span></div>
+          <div class="r"><span>Ginger</span><span>Aug 2</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Edit -->
+  <div class="col">
+    <p class="tag">5 · Change or remove a fact</p>
+    <p class="why">Same sheet for Add. Pick a topic, write what it is. Removing asks nothing extra: you can add it again in a tap.</p>
+    <div class="phone">
+      <div class="head">
+        <div class="photo">K</div>
+        <p class="h" style="padding-top:28px">Kemi</p>
+      </div>
+      <div class="sec"><div class="sec-h"><h2>What UrgAns remembers</h2></div></div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <p class="mono">Kemi</p>
+        <p class="lab">About</p>
+        <div class="topics">
+          <span class="on">Playlist pitching</span><span>Preferred channel</span><span>Budget</span><span>Who to contact</span><span>Something else</span>
+        </div>
+        <p class="lab">What UrgAns should know</p>
+        <div class="field">Don't pitch</div>
+        <p class="sub" style="font-size:12px;margin-top:8px">You said it in chat · Oct 27</p>
+        <div class="btns"><div class="btn green">Save</div></div>
+        <span class="del">Remove</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Changing your mind -->
+  <div class="col">
+    <p class="tag">6 · You change your mind</p>
+    <p class="why">One fact per topic, so a new decision replaces the old one. The card shows both so nothing changes by surprise.</p>
+    <div class="phone">
+      <div class="topbar"><span class="mono">UrgAns</span><span class="chip">Chat</span></div>
+      <div class="me">Kemi's come round. Let's pitch "Oya" to playlists after all.</div>
+      <div class="ai">
+        <p class="who">UrgAns</p>
+        <p>Good call, it suits the song. I'll update what I remember about her.</p>
+      </div>
+      <div class="card">
+        <p class="t">Change what UrgAns remembers about Kemi?</p>
+        <div class="kv">
+          <div><span>Topic</span><b>Playlist pitching</b></div>
+          <div><span>Was</span><b><s>Don't pitch</s></b></div>
+          <div><span>Now</span><b>Pitch to playlists</b></div>
+        </div>
+        <div class="btns"><div class="btn outline">Keep the old one</div><div class="btn green">Update</div></div>
+      </div>
+      <div class="input">Ask UrgAns</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="rules">
+  <h2>The rules behind it</h2>
+  <ul>
+    <li><b>One fact, one line.</b> Artist, topic, what it says, where it came from (said in chat or set by hand), who, and when.</li>
+    <li><b>Five topics.</b> Playlist pitching, preferred channel, budget, who to contact, and something else. One line per topic per artist, except "something else", which can have up to 10.</li>
+    <li><b>Short.</b> A fact is up to 200 characters. Longer thoughts belong in a note.</li>
+    <li><b>UrgAns never saves on its own.</b> Every save or change from chat is a card you approve. You can edit or remove any fact on the artist page.</li>
+    <li><b>The whole team shares it.</b> Anyone on the team who can see the artist sees and follows the same facts.</li>
+    <li><b>Logged.</b> Every fact UrgAns saves, changes or removes goes in the UrgAns action log.</li>
+    <li><b>Not a memory of everything.</b> Only facts about artists for now. No chat transcripts, no guesses about people.</li>
+  </ul>
+</div>
+
+</body>
+</html>

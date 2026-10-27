@@ -379,6 +379,17 @@ describe('models and prompts', () => {
     expect(user).toContain('cheaper, no TikTok');
   });
 
+  it("puts the artist's saved facts in the prompt, and nothing when there are none", () => {
+    const facts = "What the team has decided about this artist (follow it): Playlist pitching: Don't pitch.";
+    const ctx = { ...d1Ctx(), artistFacts: facts };
+    const menu = buildMoveMenu(single, ctx.answers.channels);
+    const mode = { kind: 'generate' } as const;
+    expect(buildPlanV2Messages({ ctx, title: 'Midnight', menu, mode })[1].content).toContain(facts);
+    expect(buildPlanV2Messages({ ctx: d1Ctx(), title: 'Midnight', menu, mode })[1].content).not.toContain(
+      'What the team has decided'
+    );
+  });
+
   it('parses fenced JSON and refuses junk', () => {
     expect(parsePlanV2('```json\n' + JSON.stringify(goodModelPlan()) + '\n```')).not.toBeNull();
     expect(parsePlanV2('not json')).toBeNull();

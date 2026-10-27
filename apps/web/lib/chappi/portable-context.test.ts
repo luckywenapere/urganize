@@ -8,7 +8,7 @@
 // a date and a sense of urgency.
 
 import { describe, expect, it } from 'vitest';
-import { formatReleaseContext } from './portable-context';
+import { composePortableText, formatReleaseContext } from './portable-context';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/types/tasks';
 
@@ -186,5 +186,26 @@ describe('formatReleaseContext', () => {
     });
     expect(text).toContain('Artist: not set');
     expect(text).toContain('Type: single');
+  });
+});
+
+describe('composePortableText (artist facts, 2026-10-27)', () => {
+  it('puts the artist facts after the brief and before the live snapshot', () => {
+    const text = composePortableText({ brief: 'BRIEF', artistFacts: 'FACTS', snapshot: 'SNAPSHOT', today: TODAY });
+    expect(text).toBe(`BRIEF
+
+FACTS
+
+SNAPSHOT
+
+Today is ${TODAY}.`);
+  });
+
+  it('leaves no gap when there are no facts or no brief', () => {
+    expect(composePortableText({ brief: '', artistFacts: '', snapshot: 'SNAPSHOT', today: TODAY })).toBe(
+      `SNAPSHOT
+
+Today is ${TODAY}.`
+    );
   });
 });

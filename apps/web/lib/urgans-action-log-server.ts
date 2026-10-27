@@ -17,6 +17,7 @@ const SNAPSHOT_TABLES: Record<string, string> = {
   task: 'tasks',
   release: 'releases',
   artist: 'artists',
+  artist_fact: 'artist_facts',
   note: 'notes',
   press_kit: 'press_kits',
 };

@@ -38,6 +38,9 @@ export type PlanV2Context = {
    *  then relative to release day and dated once the date is set. */
   releaseDate: string | null;
   todayYmd: string;
+  /** What the team saved about this artist (lib/artist-facts.ts), as one
+   *  line for the prompt. Empty or absent when nothing is saved. */
+  artistFacts?: string;
 };
 
 /** How far before release day an undated plan reaches (8 weeks). */
