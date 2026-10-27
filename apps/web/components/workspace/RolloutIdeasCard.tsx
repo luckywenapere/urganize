@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Button } from '@urganize/ui';
 import { ADD_IDEA_EVENT, IDEAS_CHANGED_EVENT } from './RolloutFirstSteps';
-import { Check, Copy, Loader2, MessageCircle, Mic, Sparkles, UserPlus, X } from '@/components/icons';
+import { Check, Copy, Loader2, Lock, MessageCircle, Mic, Sparkles, UserPlus, X } from '@/components/icons';
+import { VoicePill } from './VoicePill';
+import { useSceneOverlay } from './useSceneOverlay';
+import { IDEA_ROUND_COPY as ROUND_COPY, isIdeaRoundEnabled } from '@/lib/idea-round';
+import { runBriefFromIdeas } from '@/lib/urgans-actions/client';
 import { useOpenSettings } from '@/components/settings/useOpenSettings';
 import { useVoiceInput } from '@/components/chappi/useVoiceInput';
 import { buildWhatsAppShareUrl } from '@/lib/access-gate';
@@ -42,6 +46,7 @@ import { supabase } from '@/lib/supabase/client';
 import type { OnboardingPersona } from '@/lib/onboarding';
 
 const ENABLED = isRolloutIdeasEnabled();
+const ROUND_ENABLED = isIdeaRoundEnabled();
 
 type IdeasData = {
   notes: IdeaNote[];
@@ -49,6 +54,14 @@ type IdeasData = {
   ownerName: string | null;
   isOwner: boolean;
   voice: boolean;
+  /** The idea round (2026-10-27); null with the flag off. */
+  round?: {
+    state: 'open' | 'closed' | 'approved';
+    canRun: boolean;
+    askedCount: number;
+    inCount: number;
+    ideaCount: number;
+  } | null;
 };
 
 async function authHeaders(): Promise<Record<string, string> | null> {
@@ -102,6 +115,10 @@ export function RolloutIdeasCard({
   const [askingWho, setAskingWho] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const fromVoiceRef = useRef(false);
+  // The kept recording of the idea being written (2026-10-27).
+  const clipRef = useRef<{ audioPath: string; seconds: number | null } | null>(null);
+  const [closing, setClosing] = useState(false);
+  const { openScene } = useSceneOverlay();
   const sectionRef = useRef<HTMLElement | null>(null);
   const [brief, setBrief] = useState<RolloutBrief | null>(null);
   const [suggest, setSuggest] = useState<SuggestState>(null);
@@ -213,8 +230,9 @@ export function RolloutIdeasCard({
     teammateCount: data?.people.length ?? 0,
   });
 
-  const onTranscript = useCallback((text: string) => {
+  const onTranscript = useCallback((text: string, clip?: { audioPath: string; seconds: number | null }) => {
     fromVoiceRef.current = true;
+    if (clip) clipRef.current = clip;
     setDraft((current) => (current.trim() ? `${current.trim()} ${text}` : text).slice(0, MAX_IDEA_LENGTH));
     setTyping(true);
   }, []);
@@ -390,10 +408,14 @@ export function RolloutIdeasCard({
       const response = await fetch(`/api/releases/${encodeURIComponent(release.id)}/ideas`, {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({
+          content,
+          ...(clipRef.current ? { audioPath: clipRef.current.audioPath, audioSeconds: clipRef.current.seconds } : {}),
+        }),
       });
       const payload = (await response.json().catch(() => ({}))) as { notes?: IdeaNote[] | null; error?: string };
       if (!response.ok) throw new Error(payload.error || 'Could not save the note.');
+      clipRef.current = null;
       const notes = payload.notes ?? [...data.notes];
       captureAnalyticsEvent({
         name: 'idea_added',
@@ -413,6 +435,45 @@ export function RolloutIdeasCard({
       setError(saveError instanceof Error ? saveError.message : 'Could not save the note.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // The idea round (2026-10-27): only before a plan exists. Ideas are private
+  // until the owner closes the round; closing writes the brief from them, and
+  // the plan is built from the brief once it is approved.
+  const round = ROUND_ENABLED && !hasPlan ? data.round ?? null : null;
+  const roundOpen = round?.state === 'open';
+  const runner = Boolean(round?.canRun);
+
+  const openBrief = () => openScene('brief', release.id);
+
+  const closeAndWrite = async () => {
+    if (closing) return;
+    setClosing(true);
+    setError('');
+    try {
+      const headers = await authHeaders();
+      if (!headers) throw new Error('Sign in again.');
+      const response = await fetch(`/api/releases/${encodeURIComponent(release.id)}/ideas/round`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'close' }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) throw new Error(payload.error || 'Could not close the round.');
+      captureAnalyticsEvent({ name: 'idea_round_closed', properties: { idea_count: data.notes.length } });
+      // With ideas, UrgAns writes the brief. Without (or if it cannot), the brief page opens to write it by hand.
+      if (data.notes.length) {
+        const written = await runBriefFromIdeas({ releaseId: release.id });
+        if (!written.ok) setError(written.error);
+      }
+      window.dispatchEvent(new Event(IDEAS_CHANGED_EVENT));
+      await load();
+      openBrief();
+    } catch (closeError) {
+      setError(closeError instanceof Error ? closeError.message : 'Could not close the round.');
+    } finally {
+      setClosing(false);
     }
   };
 
@@ -474,9 +535,28 @@ export function RolloutIdeasCard({
   }
 
   const ownerFirst = (data.ownerName || '').split(/\s+/)[0] || '';
-  const title = path === 'chime_in' ? COPY.chimeInTitle(ownerFirst) : COPY.title;
+  const viewerFirst = viewerName.split(/\s+/)[0] || '';
   const hasNotes = data.notes.length > 0;
-  const showPlanActions = canDraft && hasNotes && !hasPlan && !askingWho && !typing;
+  const hasOwnNote = data.notes.some((note) => note.isOwn);
+  // Round titles: a teammate is asked, then thanked; the owner sees the count; anyone sees "closed".
+  const title = round
+    ? !roundOpen
+      ? ROUND_COPY.closedTitle
+      : runner && hasNotes
+        ? ROUND_COPY.inCount(data.notes.length)
+        : path === 'chime_in'
+          ? hasOwnNote
+            ? ROUND_COPY.thanksTitle(viewerFirst)
+            : ROUND_COPY.teammateTitle(ownerFirst, release.title)
+          : COPY.title
+    : path === 'chime_in'
+      ? COPY.chimeInTitle(ownerFirst)
+      : COPY.title;
+  // With the round on, the plan is not built from here: the owner closes the round instead.
+  const showPlanActions = !round && canDraft && hasNotes && !hasPlan && !askingWho && !typing;
+  const showRoundActions = Boolean(round) && !askingWho && !typing;
+  // A closed round takes no more ideas from a teammate.
+  const canAddIdea = !round || roundOpen || runner;
 
   const typeButton = (label: string) => (
     <button
@@ -504,7 +584,7 @@ export function RolloutIdeasCard({
         <h2 id={`ideas-title-${release.id}`} className={FRESH_HEADING}>
           {COPY.inviteTitle}
         </h2>
-        <p className="mt-2 text-sm text-content-secondary">{COPY.inviteBody}</p>
+        <p className="mt-2 text-sm text-content-secondary">{round ? ROUND_COPY.ownerPrivateHint : COPY.inviteBody}</p>
         <div className="text-left">
           <WhoShouldChimeIn
             bare
@@ -529,7 +609,9 @@ export function RolloutIdeasCard({
       <PlanStage
         mode={stage === 'manual' ? 'manual' : stage === 'waiting' ? 'waiting' : 'ready'}
         sent={inviteSent}
-        onBuild={() => onDraftWithAi('')}
+        onBuild={round && runner ? () => void closeAndWrite() : () => onDraftWithAi('')}
+        buildLabel={round && runner ? ROUND_COPY.close : undefined}
+        busy={closing}
         onWait={() => setStage('waiting')}
         onAddMyself={onWriteMyself}
       />
@@ -558,6 +640,12 @@ export function RolloutIdeasCard({
       </h2>
       {fresh && path !== 'chime_in' ? (
         <p className="mt-2 text-sm text-content-secondary">{COPY.freshBody}</p>
+      ) : round && path === 'chime_in' && roundOpen ? (
+        <p className="mt-2 text-sm text-content-secondary">
+          {hasOwnNote ? ROUND_COPY.thanksBody(ownerFirst) : ROUND_COPY.teammateBody}
+        </p>
+      ) : round && !roundOpen ? (
+        <p className="mt-2 text-sm text-content-secondary">{ROUND_COPY.closedBody}</p>
       ) : null}
 
       {hasNotes ? (
@@ -577,6 +665,7 @@ export function RolloutIdeasCard({
                   {formatRelativeTime(note.createdAt)}
                 </p>
                 <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-content-primary">{note.content}</p>
+                {note.audioUrl ? <VoicePill url={note.audioUrl} seconds={note.audioSeconds} /> : null}
               </div>
             </li>
           ))}
@@ -615,6 +704,7 @@ export function RolloutIdeasCard({
                 setDraft('');
                 setError('');
                 fromVoiceRef.current = false;
+                clipRef.current = null;
               }}
               className="motion-focus min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary hover:text-content-primary"
             >
@@ -622,7 +712,7 @@ export function RolloutIdeasCard({
             </button>
           </div>
         </div>
-      ) : (
+      ) : !canAddIdea ? null : (
         <div className={hasNotes ? 'mt-3 flex flex-wrap items-center gap-2' : fresh ? 'mt-6 flex flex-col items-center gap-1' : 'mt-4 flex flex-col items-center gap-1'}>
           {data.voice ? (
             <IdeaMic
@@ -655,7 +745,59 @@ export function RolloutIdeasCard({
         </p>
       ) : null}
 
+      {round && roundOpen && !runner && !typing ? (
+        <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-content-tertiary">
+          <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+          {ROUND_COPY.privateHint(ownerFirst)}
+        </p>
+      ) : null}
+
       {changesPanel}
+
+      {showRoundActions && roundOpen && runner && hasNotes ? (
+        <div className="mt-4 border-t border-stroke-default pt-4">
+          {data.round && data.round.askedCount > 0 ? (
+            <div className="mb-3 flex items-center gap-3">
+              <div className="h-1 flex-1 overflow-hidden rounded-full bg-stroke-strong">
+                <div
+                  className="h-full bg-brand"
+                  style={{ width: `${Math.round((data.round.inCount / data.round.askedCount) * 100)}%` }}
+                />
+              </div>
+              <span className="shrink-0 text-xs text-content-secondary">
+                {data.round.inCount} of {data.round.askedCount} asked
+              </span>
+            </div>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="md"
+              className="min-h-11"
+              leftIcon={<Sparkles className="h-4 w-4" aria-hidden="true" />}
+              onClick={() => void closeAndWrite()}
+              isLoading={closing}
+            >
+              {closing ? ROUND_COPY.closing : ROUND_COPY.close}
+            </Button>
+            <button
+              type="button"
+              onClick={() => setAskingWho(true)}
+              className="motion-focus min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary hover:text-content-primary"
+            >
+              {COPY.addSomeone}
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-content-tertiary">Writing the brief uses UrgAns credits.</p>
+        </div>
+      ) : null}
+
+      {showRoundActions && !roundOpen ? (
+        <div className="mt-4 border-t border-stroke-default pt-4">
+          <Button size="md" className="min-h-11" onClick={openBrief}>
+            {ROUND_COPY.readBrief}
+          </Button>
+        </div>
+      ) : null}
 
       {showPlanActions ? (
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-stroke-default pt-4">
@@ -705,12 +847,17 @@ function PlanStage({
   onBuild,
   onWait,
   onAddMyself,
+  buildLabel = COPY.buildPlan,
+  busy = false,
 }: {
   mode: 'ready' | 'waiting' | 'manual';
   sent: boolean;
   onBuild: () => void;
   onWait: () => void;
   onAddMyself: () => void;
+  /** "Close and write the brief" when the idea round is on (2026-10-27). */
+  buildLabel?: string;
+  busy?: boolean;
 }) {
   const waiting = mode === 'waiting';
   if (mode === 'manual') {
@@ -757,17 +904,18 @@ function PlanStage({
           onClick={onBuild}
           className="motion-focus mt-4 min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary underline hover:text-content-primary"
         >
-          {COPY.buildPlan}
+          {buildLabel}
         </button>
       ) : (
         <div className="mt-6 flex flex-col items-center gap-2">
           <Button
             type="button"
             onClick={onBuild}
+            isLoading={busy}
             data-tour="plan-rollout"
             className="h-12 w-full max-w-[16rem] justify-center rounded-full px-8"
           >
-            {COPY.buildPlan}
+            {buildLabel}
           </Button>
           {sent ? (
             <button
@@ -778,7 +926,9 @@ function PlanStage({
               {COPY.waitForIdeas}
             </button>
           ) : null}
-          <p className="mt-1 text-xs text-content-tertiary">{COPY.fiveQuestions}</p>
+          <p className="mt-1 text-xs text-content-tertiary">
+            {buildLabel === COPY.buildPlan ? COPY.fiveQuestions : 'Writing the brief uses UrgAns credits.'}
+          </p>
           <button
             type="button"
             onClick={onAddMyself}
@@ -949,7 +1099,7 @@ function IdeaMic({
   /** Small pill instead of the big mic, once a note is saved. */
   compact?: boolean;
   releaseId: string;
-  onTranscript: (text: string) => void;
+  onTranscript: (text: string, clip?: { audioPath: string; seconds: number | null }) => void;
   onError: (message: string) => void;
   typeLink: ReactNode;
   fallback: ReactNode;

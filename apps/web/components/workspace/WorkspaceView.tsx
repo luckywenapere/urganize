@@ -1351,6 +1351,18 @@ export function WorkspaceView() {
         onOpenDetails={scopedReleaseIsOwn ? () => setIsDetailsOpen(true) : undefined}
         onChangeArtist={changeArtistAction ? changeArtistAction.onClick : undefined}
         briefIdeaScreen={panelBody === 'brief' ? ideasCard() : null}
+        // Approving the brief opens the planner with the brief as its notes
+        // (the server uses the approved brief either way). Owner only, like the planner.
+        onBuildPlanFromBrief={
+          PLANNER_ENABLED && scopedReleaseIsOwn && !isPlanGenerating
+            ? (notes) =>
+                openIntake({
+                  source: 'ideas',
+                  releaseId: scopedReleaseSlim.id,
+                  prefill: { ...scopedRolloutIntakePrefill(scopedReleaseSlim), extraNotes: notes },
+                })
+            : undefined
+        }
       />
     ) : undefined;
 

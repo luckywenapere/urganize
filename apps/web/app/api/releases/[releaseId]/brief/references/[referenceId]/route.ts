@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, requireActiveAuthenticatedUser } from '@/app/api/_shared/auth';
 import { ensureReleaseTeamWriteAccess } from '@/lib/release-access-server';
+import { briefLockedFailure } from '@/lib/idea-round-server';
 import { deleteBriefReference } from '@/lib/release-brief-server';
 import { briefDisabled, briefFailure, missingReleaseId, notConfigured } from '../../_shared';
 
@@ -23,6 +24,10 @@ export async function DELETE(
 
   const access = await ensureReleaseTeamWriteAccess(admin, releaseId, auth.user);
   if ('error' in access) return access.error;
+
+  // An approved brief is locked until someone makes a new version (2026-10-27).
+  const locked = await briefLockedFailure(admin, releaseId);
+  if (locked) return briefFailure(locked);
 
   const deleted = await deleteBriefReference(admin, {
     releaseId,

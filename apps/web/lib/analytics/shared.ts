@@ -161,6 +161,10 @@ export interface AnalyticsEventPropertiesMap {
   idea_invite_sent: { count: number; artist_invited: boolean };
   /** The owner's "<Name> added an idea" prompt on a planned rollout (flag NEXT_PUBLIC_FEATURE_IDEA_REVIEW_PROMPT). */
   idea_review_prompt: { count: number; action: 'review' | 'dismiss' };
+  /** The owner closed a rollout's idea round to write the brief (2026-10-27). */
+  idea_round_closed: { idea_count: number };
+  /** The brief was approved and the plan is built from it next (2026-10-27). */
+  brief_approved: { version: number; open_questions: number };
   /** An invite link to chime in was shared from the Ideas card. */
   chime_in_link_shared: { via: 'whatsapp' | 'copy'; path: 'solo' | 'manager' };
   /** The notes were turned into a plan: 'ai' when the planner built it from

@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { afterResponse } from '@/lib/after-response';
 import { chimeInAskRecipients } from '@/lib/rollout-ideas';
 import { loadIdeasPeople, notifyChimeInAsk } from '@/lib/rollout-ideas-server';
+import { isIdeaRoundEnabled } from '@/lib/idea-round';
+import { recordIdeasAsked } from '@/lib/idea-round-server';
 import {
   createAdminClient,
   ensureReleaseTeamWriteAccess,
@@ -46,6 +48,9 @@ export async function POST(
     askerId: auth.user.id,
   });
   if (!userIds.length) return NextResponse.json({ error: 'Pick someone to ask.' }, { status: 400 });
+
+  // The round closes by itself once everyone asked has added an idea.
+  if (isIdeaRoundEnabled()) await recordIdeasAsked(adminClient, releaseId, userIds);
 
   const askId = randomUUID();
   afterResponse('rollout chime in ask', () =>

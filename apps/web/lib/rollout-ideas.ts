@@ -79,6 +79,9 @@ export type IdeaNote = {
   content: string;
   createdAt: string;
   isOwn: boolean;
+  /** A signed link to the kept voice clip, when the idea was spoken (2026-10-27). */
+  audioUrl?: string | null;
+  audioSeconds?: number | null;
 };
 
 /** Someone else on the rollout, for "Who should chime in?". */
@@ -300,10 +303,12 @@ export function ideaNoteRecipients(input: {
   peopleIds: string[];
   ownerId: string;
   authorId: string;
+  /** While an idea round is open the idea is private: only the owner hears of it. */
+  ownerOnly?: boolean;
 }): { pushIds: string[]; emailOwner: boolean } {
   const seen = new Set<string>();
   const pushIds: string[] = [];
-  for (const id of [input.ownerId, ...input.peopleIds]) {
+  for (const id of input.ownerOnly ? [input.ownerId] : [input.ownerId, ...input.peopleIds]) {
     if (!id || id === input.authorId || seen.has(id)) continue;
     seen.add(id);
     pushIds.push(id);

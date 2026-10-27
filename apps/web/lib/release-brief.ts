@@ -90,6 +90,8 @@ export type BriefDecision = {
   createdBy: string | null;
   authorName: string;
   createdAt: string;
+  /** Where an UrgAns-written decision came from ("Kemi"); null when a person typed it. */
+  source?: string | null;
 };
 
 export type BriefDateRow = {
@@ -144,6 +146,29 @@ export type BriefPayload = {
   planSeed: BriefPlanSeed | null;
   share: { enabled: boolean; token: string | null };
   viewer: { id: string; canEdit: boolean; canManageShare: boolean };
+  /** The idea round and approval (2026-10-27); absent with the flag off. */
+  round?: BriefRound | null;
+  /** Everyone's ideas, once the round is closed (or all of them for the owner). */
+  ideas?: BriefIdea[];
+};
+
+export type BriefRound = {
+  state: 'open' | 'closed' | 'approved';
+  toSettle: { id: string; question: string; options: { text: string; by: string[] }[] }[];
+  approvedAt: string | null;
+  approvedByName: string | null;
+  version: number;
+  /** The viewer may settle, approve and start a new version. */
+  canRun: boolean;
+};
+
+export type BriefIdea = {
+  id: string;
+  authorName: string;
+  initials: string;
+  content: string;
+  audioUrl: string | null;
+  audioSeconds: number | null;
 };
 
 /** What the public view link shows: no decisions, people or notes. */

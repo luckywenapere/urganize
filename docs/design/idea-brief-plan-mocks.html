@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Idea to brief to plan: mocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Space+Mono:wght@700&family=Young+Serif&display=swap" rel="stylesheet">
+<style>
+:root{
+  --base:#0d120e;--rail:#121713;--surface:#181d19;--elev:#1a1f1b;--hover:#1c211d;
+  --brand:#7fd99a;--brand15:rgba(127,217,154,.15);--brand8:rgba(127,217,154,.08);
+  --t1:#f5f0e6;--t2:#a1a098;--t3:#878881;--t4:#454742;
+  --s-sub:rgba(245,240,230,.04);--s-def:rgba(245,240,230,.06);--s-strong:rgba(245,240,230,.1);--s-ctl:#6e6f69;
+  --warn:#f0b95c;
+  --sans:'Instrument Sans',-apple-system,'Segoe UI',Roboto,sans-serif;
+  --display:'Young Serif',Georgia,serif;--mono:'Space Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#070a08;color:var(--t1);font:15px/1.5 var(--sans);padding:24px 16px 80px;-webkit-font-smoothing:antialiased}
+svg{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between;max-width:1200px;margin-bottom:8px}
+h1{font:600 20px var(--display);margin:0}
+.seg{display:inline-flex;border:1px solid var(--s-strong);border-radius:999px;padding:3px;position:sticky;top:8px}
+.seg button{font:600 13px var(--sans);color:var(--t2);background:none;border:0;border-radius:999px;padding:6px 14px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--t1);color:var(--base)}
+.cap{max-width:1200px;margin:34px 0 10px;display:flex;gap:10px;align-items:baseline}
+.cap b{font:700 11px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--brand);white-space:nowrap}
+.cap span{font-size:13px;color:var(--t2)}
+
+/* app frame */
+.app{max-width:1200px;height:auto;min-height:560px;background:var(--base);border:1px solid var(--s-strong);border-radius:14px;overflow:hidden;display:grid;grid-template-columns:56px 1fr}
+.rail{background:var(--rail);border-right:1px solid var(--s-def);display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0}
+.rail i{width:36px;height:36px;border-radius:8px;display:grid;place-items:center;color:var(--t3)}
+.rail i.on{background:var(--hover);color:var(--t1)}
+.rail .logo{width:26px;height:26px;border-radius:7px;background:var(--t1);margin-bottom:10px}
+.main{min-width:0;padding:22px 32px 0;display:flex;flex-direction:column}
+.rh{display:flex;align-items:center;gap:13px}
+.cover{width:52px;height:52px;border-radius:8px;background:var(--elev);border:1px solid var(--s-def);display:grid;place-items:center;font:600 16px var(--display);color:var(--t3)}
+.eyebrow{font:700 11px var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--t3);margin:0}
+.title{font:600 28px/34px var(--display);margin:0}
+.meta{font-size:13px;color:var(--t2);margin:6px 0 0}
+.tabs{display:flex;gap:4px;margin:16px -8px 0;border-bottom:1px solid var(--s-def);overflow-x:auto;scrollbar-width:none}
+.tabs a{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;font-size:14px;font-weight:500;color:var(--t2);padding:10px 10px 12px;border-bottom:2px solid transparent;text-decoration:none}
+.tabs a.on{color:var(--t1);border-color:var(--brand)}
+.tabs a svg{color:var(--t3)} .tabs a.on svg{color:var(--brand)}
+.phead{display:none}
+.body{flex:1;padding:0 0 40px}
+
+/* shared pieces */
+.col{margin:0 auto;width:61.8%;min-width:22rem;max-width:26rem;padding-top:56px;text-align:center}
+.wide{margin:0 auto;max-width:40rem;padding-top:32px}
+.h{font:600 28px/1.2 var(--display);margin:0}
+.sub{font-size:14px;color:var(--t2);margin:8px 0 0}
+.left{text-align:left}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 18px;border-radius:999px;font:600 14px var(--sans);letter-spacing:-.01em;border:1px solid transparent;cursor:pointer;white-space:nowrap}
+.pri{background:var(--brand);color:var(--base);border-color:rgba(127,217,154,.2);box-shadow:0 16px 34px -24px rgba(62,207,142,.52)}
+.sec{background:rgba(255,255,255,.03);border-color:var(--s-def);color:var(--t1)}
+.ghost{background:none;color:var(--t2)}
+.u{text-decoration:underline;text-underline-offset:3px}
+.block{width:100%}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.av{width:28px;height:28px;flex:none;border-radius:50%;background:var(--brand15);color:var(--brand);display:grid;place-items:center;font-size:11px;font-weight:600}
+.note{display:flex;gap:12px;text-align:left;padding:12px 0}
+.note+.note{border-top:1px solid var(--s-def)}
+.note .who{font-size:12px;color:var(--t3);margin:0}
+.note .who b{font-weight:500;color:var(--t2)}
+.note p.x{margin:2px 0 0;font-size:14px}
+.voice{display:inline-flex;align-items:center;gap:8px;margin-top:6px;height:28px;padding:0 10px 0 4px;border-radius:999px;background:var(--elev);border:1px solid var(--s-def);font-size:12px;color:var(--t2)}
+.voice .pl{width:20px;height:20px;border-radius:50%;background:var(--brand);color:var(--base);display:grid;place-items:center}
+.voice .pl svg{width:10px;height:10px;fill:currentColor;stroke:none}
+.bars{display:inline-block;width:64px;height:12px;background:repeating-linear-gradient(90deg,var(--t3) 0 2px,transparent 2px 4px);opacity:.45;border-radius:2px}
+.mic{width:64px;height:64px;border-radius:50%;background:var(--brand);color:var(--base);display:grid;place-items:center;margin:28px auto 4px}
+.mic svg{width:24px;height:24px}
+.tiny{font-size:12px;color:var(--t3);margin:4px 0 0}
+.hint{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--t3);margin-top:14px}
+.hint svg{width:13px;height:13px}
+.list{margin-top:20px;text-align:left}
+.pick{display:flex;align-items:center;gap:12px;min-height:52px;border-bottom:1px solid var(--s-def)}
+.pick:first-child{border-top:1px solid var(--s-def)}
+.pick .n{flex:1;min-width:0;font-size:14px}
+.pick .r{font-size:12px;color:var(--t3)}
+.box{width:20px;height:20px;border-radius:6px;border:1px solid var(--s-ctl);display:grid;place-items:center}
+.box.on{background:var(--brand);border-color:var(--brand);color:var(--base)}
+.box svg{width:13px;height:13px;stroke-width:3}
+.input{flex:1;min-width:0;height:44px;border-radius:999px;border:1px solid var(--s-ctl);background:var(--base);padding:0 16px;display:flex;align-items:center;font-size:14px;color:var(--t3)}
+.progress{display:flex;align-items:center;gap:10px;margin:22px 0 4px;text-align:left}
+.progress .track{flex:1;height:4px;border-radius:4px;background:var(--s-strong);overflow:hidden}
+.progress .fill{height:100%;background:var(--brand)}
+.progress span{font-size:12px;color:var(--t2);white-space:nowrap}
+.card{background:var(--surface);border:1px solid var(--s-def);border-radius:20px;padding:20px 22px}
+.pill{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:500;background:var(--brand15);color:var(--brand)}
+.pill.warn{background:rgba(240,185,92,.12);color:var(--warn)}
+.pill.mute{background:var(--elev);color:var(--t2)}
+.pill svg{width:12px;height:12px}
+.sec-t{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t3);margin:20px 0 6px}
+.ed{font-size:15px;line-height:1.55;margin:0;padding:6px 10px;margin-left:-10px;margin-right:-10px;border-radius:10px;border:1px solid transparent}
+.ed.focus{border-color:var(--brand);background:var(--base)}
+.ed ul{margin:0;padding-left:18px}.ed li{margin:2px 0}
+.src{font-size:12px;color:var(--t3)}
+.split{border-radius:16px;background:rgba(240,185,92,.06);border:1px solid rgba(240,185,92,.22);padding:14px 16px;margin-top:10px}
+.split .q{font-weight:600;font-size:14px;margin:0 0 8px}
+.opt{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border-radius:12px;border:1px solid var(--s-def);background:var(--base);font-size:14px;margin-top:6px;cursor:pointer}
+.opt .av{width:22px;height:22px;font-size:10px}
+.opt .rad{margin-left:auto;width:18px;height:18px;border-radius:50%;border:1px solid var(--s-ctl)}
+.opt.on{border-color:var(--brand)} .opt.on .rad{border:5px solid var(--brand)}
+.dock{position:sticky;bottom:0;margin-top:20px;padding:14px 0 16px;background:linear-gradient(to top,var(--base) 70%,transparent);display:flex;align-items:center;gap:12px}
+.dock .tiny{margin:0}
+.landed{display:flex;gap:16px;align-items:flex-start}
+.landed .ic{width:40px;height:40px;border-radius:50%;background:var(--brand15);color:var(--brand);display:grid;place-items:center;flex:none}
+.steps{margin:10px 0 0;padding:0;list-style:none}
+.steps li{display:flex;gap:10px;align-items:center;font-size:14px;padding:6px 0;color:var(--t1)}
+.steps li span:last-child{margin-left:auto;font-size:12px;color:var(--t3)}
+.dot{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--s-ctl);flex:none}
+.ver{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.gap{height:16px}
+.foot{max-width:1200px;margin-top:28px;font-size:13px;color:var(--t2)}
+
+/* today's brief scene */
+.bf{max-width:860px;padding-top:24px}
+.bt{font:400 36px/1.15 var(--display);margin:0}
+.bm{font:400 11px var(--mono);color:var(--t3);margin:8px 0 0}
+.drafted{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:22px;border-radius:16px;border:1px solid rgba(127,217,154,.3);background:rgba(127,217,154,.05);padding:14px 16px}
+.drafted.ok{border-color:var(--s-def);background:var(--surface)}
+.two{display:flex;gap:28px}.two .l{flex:1.4;min-width:0}.two .r{flex:1;min-width:0}
+.bl{display:flex;align-items:center;font-size:12px;font-weight:600;color:var(--t2);margin:26px 0 10px}
+.idea{font-size:16px;line-height:1.55;margin:0}
+.caret{}
+@media (max-width:900px){.two{flex-direction:column;gap:0}}
+.lst{overflow:hidden;border-radius:16px;border:1px solid var(--s-def);background:var(--surface)}
+.li{padding:12px 14px;border-top:1px solid var(--s-def)}.li:first-child{border-top:0}
+.li .d{margin:0;font-size:14px}
+.mono{font:400 11px var(--mono);color:var(--t3);margin:3px 0 0}
+.mono.br{color:var(--brand)}
+.li.add{min-height:44px;display:flex;align-items:center;padding:0 14px;font-size:14px;color:var(--t3)}
+.li .q{margin:0 0 8px;font-size:14px;font-weight:600}
+.ch{display:flex;flex-wrap:wrap;gap:8px}
+.c{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 14px 0 6px;border-radius:999px;border:1px solid var(--s-strong);font-size:13px;color:var(--t2)}
+.c.on{border-color:var(--brand);color:var(--t1);background:var(--brand8)}
+.ava{width:26px;height:26px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:9.5px;font-weight:700;color:#0c0c0d}
+.ref{display:flex;gap:12px;align-items:center}
+.thumb{width:44px;height:44px;border-radius:8px;flex:none;background:#2a2f2b}
+.idr{display:flex;gap:10px;align-items:center}
+.pl2{width:28px;height:28px;border-radius:50%;border:1px solid var(--s-strong);display:grid;place-items:center;color:var(--brand)}
+.pl2 svg{width:10px;height:10px;fill:currentColor;stroke:none}
+.row2{display:flex;justify-content:space-between;align-items:center;min-height:44px;padding:0 14px;font-size:14px}
+.row2 .mono{margin:0;font-size:12px}
+.row3{display:flex;gap:12px;align-items:center;min-height:44px;padding:0 14px;font-size:14px}
+.row3 .nm{width:56px}.row3 .nx{flex:1;min-width:0;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.row3 .mono{margin:0;font-size:12px}
+.share{width:40px;height:40px;border-radius:50%;border:1px solid var(--s-strong);display:grid;place-items:center}
+body.m .bt{font-size:30px}
+body.m .two{flex-direction:column;gap:0}
+body.m .drafted .btn{width:100%}
+
+/* phone */
+body.m .app{max-width:390px;grid-template-columns:1fr;border-radius:28px;min-height:760px}
+body.m .rail,body.m .rh,body.m .tabs-d{display:none}
+body.m .main{padding:8px 16px 0}
+body.m .phead{display:block}
+.pbar{display:flex;justify-content:space-between;align-items:center;margin:0 -8px 10px;color:var(--t2)}
+.pbar .ic{width:44px;height:44px;display:grid;place-items:center}
+.pbar .ic svg{width:20px;height:20px}
+body.m .title{font-size:24px;line-height:30px}
+body.m .tabs{margin:12px -16px 0;padding:0 8px}
+body.m .col{width:100%;min-width:0;padding-top:36px}
+body.m .wide{padding-top:20px}
+body.m .h{font-size:24px}
+body.m .card{padding:16px;border-radius:18px}
+body.m .dock{flex-direction:column;align-items:stretch}
+body.m .dock .btn{width:100%}
+body.m .landed .ic{display:none}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Idea to brief to plan</h1>
+  <div class="seg"><button id="bd" aria-pressed="true">Computer</button><button id="bm" aria-pressed="false">Phone</button></div>
+</div>
+
+<svg style="display:none"><defs>
+  <symbol id="mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4"/></symbol>
+  <symbol id="lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></symbol>
+  <symbol id="spark" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></symbol>
+  <symbol id="bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></symbol>
+  <symbol id="list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+  <symbol id="doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></symbol>
+  <symbol id="cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="home" viewBox="0 0 24 24"><path d="M3 10l9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="disc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="arrow" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></symbol>
+  <symbol id="back" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+  <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+  <symbol id="menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+</defs></svg>
+
+<template id="chrome">
+  <aside class="rail"><span class="logo"></span><i><svg><use href="#home"/></svg></i><i class="on"><svg><use href="#disc"/></svg></i><i><svg><use href="#user"/></svg></i><i><svg><use href="#spark"/></svg></i></aside>
+  <div class="main">
+    <div class="phead">
+      <div class="pbar"><span class="ic"><svg><use href="#back"/></svg></span><span style="display:flex"><span class="ic"><svg><use href="#search"/></svg></span><span class="ic"><svg><use href="#menu"/></svg></span></span></div>
+      <p class="eyebrow">Ada Rae · Single</p><h2 class="title">Midnight Run</h2><p class="meta">No release day yet</p>
+    </div>
+    <div class="rh"><span class="cover">M</span><div><p class="eyebrow">Ada Rae · Single</p><h2 class="title">Midnight Run</h2></div></div>
+    <nav class="tabs"><a data-t="ideas"><svg><use href="#bulb"/></svg>Ideas</a><a data-t="brief"><svg><use href="#doc"/></svg>Read the brief</a><a data-t="plan"><svg><use href="#list"/></svg>Work the plan</a><a data-t="cal"><svg><use href="#cal"/></svg>Calendar</a></nav>
+    <div class="body"></div>
+  </div>
+</template>
+
+<!-- 1 -->
+<div class="cap"><b>1 · Owner</b><span>Ask for ideas. Your own idea is saved with its recording.</span></div>
+<div class="app" data-tab="ideas"><div data-body>
+  <div class="col">
+    <h3 class="h">Who should help shape it?</h3>
+    <p class="sub">They each add an idea. Only you see them all until you close.</p>
+    <div class="note" style="margin-top:18px;border-top:1px solid var(--s-def)"><span class="av">O</span><div><p class="who"><b>You</b> · just now</p><p class="x">Lead with the dance clip. Two weeks of teasers, then radio in Lagos and Abuja. Under ₦300k.</p><span class="voice"><span class="pl"><svg><use href="#play"/></svg></span><span class="bars"></span>0:48</span></div></div>
+    <div class="list">
+      <div class="pick"><span class="box on"><svg><use href="#check"/></svg></span><span class="av">AR</span><span class="n">Ada Rae</span><span class="r">Artist</span></div>
+      <div class="pick"><span class="box on"><svg><use href="#check"/></svg></span><span class="av">KO</span><span class="n">Kemi Okafor</span><span class="r">PR</span></div>
+      <div class="pick"><span class="box"></span><span class="av">DA</span><span class="n">Dayo Adeyemi</span><span class="r">A&amp;R</span></div>
+      <div class="pick"><span class="box on"><svg><use href="#check"/></svg></span><span class="av">T</span><span class="n">tunde@sevenstar.ng</span><span class="r">Invite · 1 seat</span></div>
+    </div>
+    <div class="row" style="margin-top:12px"><span class="input">Add by email</span><button class="btn sec">Add</button></div>
+    <div style="margin-top:22px"><button class="btn pri block">Send 3 requests</button><button class="btn ghost u" style="margin-top:4px">Skip, write the brief now</button></div>
+  </div>
+</div></div>
+
+<!-- 1b -->
+<div class="cap"><b>1b · Owner, no team yet</b><span>Nobody else is on Urganize with you. Invite by email or send a link.</span></div>
+<div class="app" data-tab="ideas"><div data-body>
+  <div class="col">
+    <h3 class="h">Who should help shape it?</h3>
+    <p class="sub">Nobody else is here yet. Invite your artist or team to add their idea.</p>
+    <div class="note" style="margin-top:18px;border-top:1px solid var(--s-def);border-bottom:1px solid var(--s-def)"><span class="av">O</span><div><p class="who"><b>You</b> · just now</p><p class="x">Lead with the dance clip. Two weeks of teasers, then radio in Lagos and Abuja. Under ₦300k.</p><span class="voice"><span class="pl"><svg><use href="#play"/></svg></span><span class="bars"></span>0:48</span></div></div>
+    <div class="list">
+      <div class="pick"><span class="box on"><svg><use href="#check"/></svg></span><span class="av">A</span><span class="n">ada@adarae.com</span><span class="r">Artist</span></div>
+    </div>
+    <div class="row" style="margin-top:12px"><span class="input">Their email</span></div>
+    <div class="row" style="margin-top:8px;justify-content:center"><span class="seg" style="position:static"><button aria-pressed="true">Artist</button><button aria-pressed="false">Team member</button></span><button class="btn sec">Add</button></div>
+    <p class="tiny" style="margin-top:10px">Each invite uses 1 seat. You have 1 free.</p>
+    <div style="margin-top:18px"><button class="btn pri block">Send 1 invite</button></div>
+    <div class="row" style="justify-content:center;margin-top:6px"><button class="btn ghost">Share on WhatsApp</button><button class="btn ghost">Copy link</button></div>
+    <button class="btn ghost u">Skip, write the brief now</button>
+  </div>
+</div></div>
+
+<!-- 1c -->
+<div class="cap"><b>1c · Owner, no free seat</b><span>Every seat is taken (Solo has 2: you and one more). The rollout is never blocked.</span></div>
+<div class="app" data-tab="ideas"><div data-body>
+  <div class="col">
+    <h3 class="h">Who should help shape it?</h3>
+    <p class="sub">Invite someone to add their idea.</p>
+    <div class="row" style="margin-top:22px"><span class="input">kemi@email.com</span><button class="btn sec">Add</button></div>
+    <div class="card left" style="margin-top:12px">
+      <p style="margin:0;font-weight:600;font-size:14px">Your plan has no free seat for this invite.</p>
+      <p class="sub" style="margin-top:4px">Move to Manager to bring in up to 5 people. Or go on with your own idea.</p>
+      <div class="row" style="margin-top:14px"><button class="btn pri">See plans</button><button class="btn ghost">Write the brief from my idea</button></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 2 -->
+<div class="cap"><b>2 · Teammate</b><span>Kemi opens the request. Talk or type. Nobody else sees it yet.</span></div>
+<div class="app" data-tab="ideas"><div data-body>
+  <div class="col">
+    <h3 class="h">Oyin wants your idea for Midnight Run</h3>
+    <p class="sub">The moment, the money, who to reach. Anything.</p>
+    <div class="mic"><svg><use href="#mic"/></svg></div>
+    <p class="tiny">Hold to talk</p>
+    <button class="btn ghost u">or type it</button>
+    <div><span class="hint"><svg><use href="#lock"/></svg>Only you and Oyin see this until the round closes.</span></div>
+  </div>
+</div></div>
+
+<div class="cap"><b>2 · Teammate, saved</b><span>She can fix the words or talk again until Oyin closes.</span></div>
+<div class="app" data-tab="ideas"><div data-body>
+  <div class="col">
+    <h3 class="h">Thanks, Kemi</h3>
+    <p class="sub">Oyin will close the round and share the brief.</p>
+    <div class="note" style="margin-top:18px;border-top:1px solid var(--s-def);border-bottom:1px solid var(--s-def)"><span class="av">KO</span><div><p class="who"><b>You</b> · just now</p><p class="x">Skip radio. Five mid-size creators and one playlist pitch. Drop on a Friday.</p><span class="voice"><span class="pl"><svg><use href="#play"/></svg></span><span class="bars"></span>0:31</span></div></div>
+    <div class="row" style="justify-content:center;margin-top:12px"><button class="btn sec">Edit</button><button class="btn ghost">Talk again</button></div>
+    <div><span class="hint"><svg><use href="#lock"/></svg>2 of 4 ideas are in. You'll see the rest after Oyin closes.</span></div>
+  </div>
+</div></div>
+
+<!-- 3 -->
+<div class="cap"><b>3 · Owner</b><span>Every idea with who said it. Closes on tap, or once everyone asked has added one.</span></div>
+<div class="app" data-tab="ideas"><div data-body>
+  <div class="col">
+    <h3 class="h">3 ideas are in</h3>
+    <div class="progress"><div class="track"><div class="fill" style="width:75%"></div></div><span>3 of 4</span></div>
+    <div class="note"><span class="av">O</span><div><p class="who"><b>You</b> · 2h ago</p><p class="x">Lead with the dance clip. Teasers, then radio in Lagos and Abuja. Under ₦300k.</p></div></div>
+    <div class="note"><span class="av">KO</span><div><p class="who"><b>Kemi Okafor</b> · 1h ago</p><p class="x">Skip radio. Five creators and one playlist pitch. Drop on a Friday.</p></div></div>
+    <div class="note"><span class="av">AR</span><div><p class="who"><b>Ada Rae</b> · 20m ago</p><p class="x">I want a live session video, not just the dance clip.</p></div></div>
+    <div class="note" style="color:var(--t3)"><span class="av" style="background:var(--elev);color:var(--t3)">T</span><div style="flex:1"><p class="who">tunde@sevenstar.ng</p><p class="x" style="color:var(--t3)">Hasn't joined yet</p></div><button class="btn ghost" style="height:32px;padding:0 8px;font-size:13px">Remind</button></div>
+    <div style="margin-top:20px"><button class="btn pri block"><svg><use href="#spark"/></svg>Close and write the brief</button><p class="tiny">Uses UrgAns credits.</p></div>
+  </div>
+</div></div>
+
+<!-- 4 -->
+<div class="cap"><b>4 · Manager</b><span>Today's brief page, filled from the ideas. Edit anything, settle the splits, then approve. Nothing is built before that.</span></div>
+<div class="app" data-tab="brief"><div data-body>
+  <div class="bf">
+    <p class="bt">Brief</p>
+    <p class="bm">UrgAns wrote this from 3 ideas · not approved</p>
+    <div class="drafted">
+      <div style="flex:1;min-width:0"><p style="margin:0;font-weight:600;font-size:14px">Check it, then approve.</p><p class="tiny" style="margin-top:2px">The plan is built from this page only.</p></div>
+      <button class="btn pri">Approve and build the plan</button>
+    </div>
+    <div class="two">
+      <div class="l">
+        <p class="bl">Idea</p>
+        <p class="idea"><span class="caret">Make Midnight Run Ada's biggest single in Lagos.</span> Lead with a live session and a dance moment, then five creators and one playlist pitch carry it.</p>
+        <p class="bl">To settle <span class="pill warn" style="margin-left:6px">2</span></p>
+        <div class="lst">
+          <div class="li"><p class="q">Radio or no radio?</p><div class="ch"><span class="c"><span class="ava" style="background:#f0b95c">O</span>Radio in Lagos, Abuja</span><span class="c on"><span class="ava" style="background:#78a9ff">KO</span>Skip, pay creators</span></div></div>
+          <div class="li"><p class="q">Which video leads?</p><div class="ch"><span class="c"><span class="ava" style="background:#f0b95c">O</span>Dance clip</span><span class="c"><span class="ava" style="background:#e58fd0">AR</span>Live session</span></div></div>
+        </div>
+        <p class="bl">Decisions</p>
+        <div class="lst">
+          <div class="li"><p class="d">Spend stays under ₦300,000.</p><p class="mono">From Oyin's idea</p></div>
+          <div class="li"><p class="d">Release on a Friday.</p><p class="mono">From Kemi's idea</p></div>
+          <div class="li add">Add a decision</div>
+        </div>
+        <p class="bl">References</p>
+        <div class="lst">
+          <div class="li ref"><span class="thumb"></span><div style="min-width:0"><p class="d">Studio session look</p><p class="mono">YouTube · from Ada's idea</p></div></div>
+          <div class="li add">Add a link</div>
+        </div>
+      </div>
+      <div class="r">
+        <p class="bl">Ideas <span class="mono" style="margin-left:6px">closed</span></p>
+        <div class="lst">
+          <div class="li idr"><span class="ava" style="background:#f0b95c">O</span><div style="min-width:0;flex:1"><p class="d">Dance clip, teasers, radio, under ₦300k.</p><p class="mono">Oyin · 0:48</p></div><span class="pl2"><svg><use href="#play"/></svg></span></div>
+          <div class="li idr"><span class="ava" style="background:#78a9ff">KO</span><div style="min-width:0;flex:1"><p class="d">Skip radio. Creators and a playlist. Friday.</p><p class="mono">Kemi · 0:31</p></div><span class="pl2"><svg><use href="#play"/></svg></span></div>
+          <div class="li idr"><span class="ava" style="background:#e58fd0">AR</span><div style="min-width:0;flex:1"><p class="d">A live session video, not just the dance clip.</p><p class="mono">Ada · typed</p></div></div>
+        </div>
+        <p class="bl">Dates</p>
+        <div class="lst">
+          <div class="li row2"><span>Release day</span><span class="mono br">Pick a day</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 5 -->
+<div class="cap"><b>5 · Approved</b><span>Same page, locked. Dates and Who's on what fill in from the plan. The team reads it too.</span></div>
+<div class="app" data-tab="brief"><div data-body>
+  <div class="bf">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><p class="bt">Brief</p><span class="share"><svg><use href="#arrow"/></svg></span></div>
+    <p class="bm"><svg style="width:11px;height:11px;vertical-align:-1px"><use href="#lock"/></svg> Approved by Oyin · Oct 27 · <u style="color:var(--t1)">History</u></p>
+    <div class="drafted ok">
+      <div style="flex:1;min-width:0"><p style="margin:0;font-weight:600;font-size:14px">34 activities built from this brief</p><p class="tiny" style="margin-top:2px">First up: shoot the live session.</p></div>
+      <button class="btn pri">Work the plan</button>
+    </div>
+    <div class="two">
+      <div class="l">
+        <p class="bl">Idea</p>
+        <p class="idea">Make Midnight Run Ada's biggest single in Lagos. Lead with a live session, dance teasers follow, then five creators and one playlist pitch carry it.</p>
+        <p class="bl">Decisions</p>
+        <div class="lst">
+          <div class="li"><p class="d">Live session leads.</p><p class="mono">Settled by Oyin</p></div>
+          <div class="li"><p class="d">No radio. Pay creators instead.</p><p class="mono">Settled by Oyin</p></div>
+          <div class="li"><p class="d">Spend stays under ₦300,000.</p><p class="mono">From Oyin's idea</p></div>
+          <div class="li"><p class="d">Release on a Friday.</p><p class="mono">From Kemi's idea</p></div>
+        </div>
+        <p class="bl">References</p>
+        <div class="lst"><div class="li ref"><span class="thumb"></span><div style="min-width:0"><p class="d">Studio session look</p><p class="mono">YouTube · from Ada's idea</p></div></div></div>
+      </div>
+      <div class="r">
+        <p class="bl">Dates</p>
+        <div class="lst">
+          <div class="li row2"><span>Live session shoot</span><span class="mono">Nov 7</span></div>
+          <div class="li row2"><span>Teasers start</span><span class="mono">Nov 14</span></div>
+          <div class="li row2"><span>Release day</span><span class="mono br">Fri Nov 28</span></div>
+        </div>
+        <p class="bl">Who's on what</p>
+        <div class="lst">
+          <div class="li row3"><span class="ava" style="background:#78a9ff">KO</span><span class="nm">Kemi</span><span class="nx">Pick 5 creators</span><span class="mono">9</span></div>
+          <div class="li row3"><span class="ava" style="background:#e58fd0">AR</span><span class="nm">Ada</span><span class="nx">Live session shoot</span><span class="mono">4</span></div>
+          <div class="li row3"><span class="ava" style="background:#f0b95c">O</span><span class="nm">Oyin</span><span class="nx">Book the studio</span><span class="mono">12</span></div>
+        </div>
+        <p class="bl">Ideas</p>
+        <div class="lst"><div class="li add" style="color:var(--t2)">3 ideas · see them</div></div>
+        <button class="btn sec" style="margin-top:18px;width:100%">New version</button>
+        <p class="tiny" style="text-align:center">Won't change activities you already have.</p>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<p class="foot">Not shown: Opportunities and Relationships, notifications beyond the invite, and the loading state between Approve and the plan (today's plan loading card).</p>
+
+<script>
+const tpl=document.getElementById('chrome');
+document.querySelectorAll('.app').forEach(app=>{
+  const content=app.querySelector('[data-body]');
+  const frag=tpl.content.cloneNode(true);
+  frag.querySelector('.body').append(...content.childNodes);
+  content.remove();app.append(frag);
+  app.querySelectorAll('.tabs a').forEach(a=>a.classList.toggle('on',a.dataset.t===app.dataset.tab));
+});
+const bd=document.getElementById('bd'),bm=document.getElementById('bm');
+function set(m){document.body.classList.toggle('m',m);bm.setAttribute('aria-pressed',m);bd.setAttribute('aria-pressed',!m)}
+bd.onclick=()=>set(false);bm.onclick=()=>set(true);
+</script>
+</body>
+</html>

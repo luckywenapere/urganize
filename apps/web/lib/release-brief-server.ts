@@ -235,7 +235,7 @@ export async function loadBriefPayload(
       readReferences(admin, releaseId),
       admin
         .from(BRIEF_DECISIONS_TABLE)
-        .select('id,body,created_by,created_at')
+        .select('id,body,created_by,created_at,source')
         .eq('release_id', releaseId)
         .order('created_at', { ascending: false })
         .limit(100),
@@ -278,6 +278,7 @@ export async function loadBriefPayload(
     createdBy: textOrNull(row.created_by),
     authorName: nameOf(textOrNull(row.created_by)),
     createdAt: text(row.created_at),
+    source: textOrNull(row.source),
   }));
 
   const revisions: BriefRevision[] = revisionRows

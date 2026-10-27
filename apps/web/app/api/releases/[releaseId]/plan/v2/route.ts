@@ -17,6 +17,8 @@ import { finishPlannerAuto, isAutoBuildInFlight } from '@/lib/planner-auto-serve
 import { canRunEmbeddedAction, isUrgansActionsEnabled } from '@/lib/urgans-actions/server';
 import { minimumTierWith } from '@/lib/entitlements';
 import { PRICING_TIERS } from '@urganize/pricing';
+import { IDEA_ROUND_COPY } from '@/lib/idea-round';
+import { planInputFor } from '@/lib/idea-round-server';
 
 /**
  * Plan with UrgAns v2 (2026-10-26, founder approved): UrgAns writes the whole
@@ -55,7 +57,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
 
   const parsed = parsePlannerV2Answers(body.answers);
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
-  const answers = parsed.answers;
+  let answers = parsed.answers;
 
   const action = body.action === 'apply' ? 'apply' : body.action === 'preview' ? 'preview' : null;
   if (!action) return NextResponse.json({ error: 'action must be preview or apply.' }, { status: 400 });
@@ -95,6 +97,15 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
       { status: 403 }
     );
   }
+
+  // Idea round (2026-10-27): a rollout with ideas is planned only from its
+  // approved brief, which replaces whatever notes the browser sent. The raw
+  // ideas never reach the planner. A rollout with no ideas plans as before.
+  const planInput = await planInputFor(adminClient, releaseId);
+  if (planInput.gate === 'needs_approval') {
+    return NextResponse.json({ error: IDEA_ROUND_COPY.notApproved, code: 'brief_not_approved' }, { status: 409 });
+  }
+  if (planInput.gate === 'from_brief') answers = { ...answers, notes: planInput.notes };
 
   if (isAutoBuildInFlight(release.metadata)) {
     return NextResponse.json({ error: 'This plan is already being created.', code: 'plan_in_progress' }, { status: 409 });

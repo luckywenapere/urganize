@@ -47,16 +47,23 @@ export async function loadIdeaNotes(
   admin: SupabaseClient,
   releaseId: string,
   currentUserId: string
-): Promise<IdeaNote[]> {
+): Promise<Array<IdeaNote & { audioPath: string | null }>> {
   const result = await admin
     .from(IDEAS_TABLE)
-    .select('id,user_id,content,created_at')
+    .select('id,user_id,content,created_at,audio_path,audio_seconds')
     .eq('release_id', releaseId)
     .order('created_at', { ascending: true })
     .limit(200);
   if (result.error) throw result.error;
 
-  const rows = (result.data || []) as Array<{ id: string; user_id: string; content: string; created_at: string }>;
+  const rows = (result.data || []) as Array<{
+    id: string;
+    user_id: string;
+    content: string;
+    created_at: string;
+    audio_path?: string | null;
+    audio_seconds?: number | null;
+  }>;
   const profiles = await loadProfilesByIds(
     admin,
     rows.map((row) => row.user_id)
@@ -71,6 +78,9 @@ export async function loadIdeaNotes(
       content: row.content,
       createdAt: row.created_at,
       isOwn: row.user_id === currentUserId,
+      // Server only: the routes swap it for a signed audioUrl before answering.
+      audioPath: row.audio_path || null,
+      audioSeconds: typeof row.audio_seconds === 'number' ? row.audio_seconds : null,
     };
   });
 }
@@ -128,7 +138,7 @@ async function authorLabelFor(admin: SupabaseClient, userId: string): Promise<st
  */
 export async function notifyIdeaAdded(
   admin: SupabaseClient,
-  input: { release: IdeasRelease; noteId: string; authorId: string; content: string }
+  input: { release: IdeasRelease; noteId: string; authorId: string; content: string; ownerOnly?: boolean }
 ): Promise<void> {
   try {
     const people = await loadIdeasPeople(admin, input.release);
@@ -136,6 +146,7 @@ export async function notifyIdeaAdded(
       peopleIds: people.map((person) => person.userId),
       ownerId: input.release.ownerUserId,
       authorId: input.authorId,
+      ownerOnly: input.ownerOnly,
     });
     if (!pushIds.length) return;
     const author = await authorLabelFor(admin, input.authorId);

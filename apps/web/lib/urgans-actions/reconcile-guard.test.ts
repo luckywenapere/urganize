@@ -79,6 +79,13 @@ const CHAT_COUNTERPARTS: Record<string, ChatCounterpart> = {
       'a button job in the brief scene with Keep or Discard. The chat has no tool that reads or ' +
       'writes the brief; in conversation the same words can be written in the transcript and pasted.',
   },
+  'release.brief_from_ideas': {
+    tools: null,
+    because:
+      'It merges a closed idea round into the rollout brief (2026-10-27), a button job on the ' +
+      'Ideas card that the owner runs once. The chat has no tool that reads the private idea round ' +
+      'or writes the brief.',
+  },
 };
 
 /** The helper every chat tool logs through. Only recordChatActionRun exists

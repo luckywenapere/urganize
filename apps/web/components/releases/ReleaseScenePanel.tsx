@@ -122,6 +122,8 @@ type ReleaseScenePanelProps = {
   /** The rollout's idea card, shown in the Brief's place until the rollout
    *  has a plan or a recorded idea (BriefIdeaGate). */
   briefIdeaScreen?: ReactNode;
+  /** Open the planner from an approved brief (2026-10-27). Owner only. */
+  onBuildPlanFromBrief?: (notes: string) => void;
 };
 
 export function ReleaseScenePanel({
@@ -135,6 +137,7 @@ export function ReleaseScenePanel({
   onOpenDetails,
   onChangeArtist,
   briefIdeaScreen,
+  onBuildPlanFromBrief,
 }: ReleaseScenePanelProps) {
   // The input a Fix button sent the person to (`?field=`). Read here and passed
   // down, with the section KEYED on it, so a different field is a fresh arrival:
@@ -283,7 +286,12 @@ export function ReleaseScenePanel({
           hasPlan={!onlyPreProductionWork(tasks)}
           ideaScreen={briefIdeaScreen}
         >
-          <ReleaseBriefScene releaseId={release.id} onToast={onToast} />
+          <ReleaseBriefScene
+            releaseId={release.id}
+            onToast={onToast}
+            hasPlan={!onlyPreProductionWork(tasks)}
+            onBuildPlan={onBuildPlanFromBrief}
+          />
         </BriefIdeaGate>
       ) : null}
       {scene === 'timeline' ? (

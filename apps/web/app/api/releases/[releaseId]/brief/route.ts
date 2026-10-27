@@ -6,6 +6,7 @@ import {
 } from '@/lib/release-access-server';
 import { parseIdea } from '@/lib/release-brief';
 import { loadBriefPayload, saveBriefIdea } from '@/lib/release-brief-server';
+import { briefLockedFailure, loadBriefRoundExtras } from '@/lib/idea-round-server';
 import { badRequest, briefDisabled, briefFailure, missingReleaseId, notConfigured } from './_shared';
 
 /**
@@ -50,7 +51,12 @@ export async function GET(
     user: auth.user,
   });
   if (!loaded.ok) return briefFailure(loaded);
-  return NextResponse.json({ brief: loaded.value });
+  const extras = await loadBriefRoundExtras(admin, {
+    releaseId,
+    releaseOwnerId: access.release.ownerUserId,
+    user: auth.user,
+  });
+  return NextResponse.json({ brief: { ...loaded.value, ...extras } });
 }
 
 export async function PATCH(
@@ -74,6 +80,9 @@ export async function PATCH(
 
   const parsed = parseIdea(await request.json().catch(() => null));
   if (!parsed.ok) return badRequest(parsed.error);
+
+  const locked = await briefLockedFailure(admin, releaseId);
+  if (locked) return briefFailure(locked);
 
   const saved = await saveBriefIdea(admin, { releaseId, idea: parsed.value, actorId: auth.user.id });
   if (!saved.ok) return briefFailure(saved);

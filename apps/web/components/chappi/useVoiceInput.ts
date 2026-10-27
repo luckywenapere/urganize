@@ -43,7 +43,8 @@ async function getAccessToken(): Promise<string> {
  */
 export function useVoiceInput(options: {
   enabled: boolean;
-  onTranscript: (text: string) => void;
+  /** `clip` is set when the route kept the recording (the rollout ideas mic). */
+  onTranscript: (text: string, clip?: { audioPath: string; seconds: number | null }) => void;
   getHints?: () => Hints;
   /** Where the clip goes. UrgAns's own route unless a caller has its own
    *  (the rollout ideas mic posts to /api/releases/[id]/ideas/transcribe). */
@@ -72,6 +73,9 @@ export function useVoiceInput(options: {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
+  // How long the last clip ran, for a kept recording's length.
+  const startedAtRef = useRef(0);
+  const clipSecondsRef = useRef<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Callbacks read through refs so the recorder's onstop closure never goes
@@ -129,7 +133,7 @@ export function useVoiceInput(options: {
         body: form,
       });
       const data = (await response.json().catch(() => null)) as
-        | { text?: string; error?: string }
+        | { text?: string; error?: string; audioPath?: string | null; seconds?: number | null }
         | null;
 
       if (!response.ok) {
@@ -141,7 +145,15 @@ export function useVoiceInput(options: {
 
       const text = parseTranscription(data);
       if (text) {
-        onTranscriptRef.current(text);
+        onTranscriptRef.current(
+          text,
+          typeof data?.audioPath === 'string' && data.audioPath
+            ? {
+                audioPath: data.audioPath,
+                seconds: typeof data.seconds === 'number' ? data.seconds : clipSecondsRef.current,
+              }
+            : undefined
+        );
         captureAnalyticsEvent({ name: 'urgans_voice_used', properties: { outcome: 'ok' } });
       } else {
         setError("Didn't catch that. Try again.");
@@ -207,6 +219,7 @@ export function useVoiceInput(options: {
     recorder.onstop = () => {
       const chunks = chunksRef.current;
       chunksRef.current = [];
+      clipSecondsRef.current = Math.round((Date.now() - startedAtRef.current) / 1000);
       releaseMic();
       const blob = new Blob(chunks, { type: mimeType });
       if (blob.size === 0) {
@@ -222,6 +235,7 @@ export function useVoiceInput(options: {
     };
 
     recorder.start();
+    startedAtRef.current = Date.now();
     setState('recording');
     setElapsed(0);
     timerRef.current = setInterval(() => setElapsed((value) => value + 1), 1000);

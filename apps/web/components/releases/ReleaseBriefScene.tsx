@@ -3,7 +3,10 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowUpRight, Loader2, X } from '@/components/icons';
+import { ArrowUpRight, Check, Loader2, Lock, X } from '@/components/icons';
+import { VoicePill } from '@/components/workspace/VoicePill';
+import { captureAnalyticsEvent } from '@/lib/analytics/client';
+import { briefToPlanNotes, ideaSourceLabel } from '@/lib/idea-round';
 import { DialogPanel } from '@/components/shared/DialogPanel';
 import { UrgansLockedSheet } from '@/components/urgans-actions/UrgansLockedSheet';
 import { useCreditBalance } from '@/components/urgans-actions/useCreditBalance';
@@ -12,7 +15,7 @@ import { embeddedCostLine } from '@/lib/credits/copy';
 import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { supabase } from '@/lib/supabase/client';
-import { applyRunAction, discardRunAction, runDraftBrief } from '@/lib/urgans-actions/client';
+import { applyRunAction, discardRunAction, runBriefFromIdeas, runDraftBrief } from '@/lib/urgans-actions/client';
 import {
   BRIEF_BLOCK_LABELS,
   BRIEF_COPY,
@@ -40,11 +43,21 @@ import {
  * Fetches for itself and is never cached (lib/scene-cache.ts): the Idea is
  * edited in place under an autosave, and a cached copy painted over a live
  * edit would lose it.
+ *
+ * The idea round (2026-10-27, founder approved mocks): after the round closes
+ * UrgAns fills this page from the ideas. The owner or a team admin settles
+ * where the ideas disagree (To settle), edits anything, then taps Approve and
+ * build the plan. Approved, the page is locked (no edits) until New version,
+ * and the plan is built from it alone. The ideas list takes the right column.
  */
 
 type Props = {
   releaseId: string;
   onToast: (message: string, tone: 'success' | 'error' | 'warning') => void;
+  /** The rollout already has its plan. */
+  hasPlan?: boolean;
+  /** Open the planner with the approved brief as its notes. Owner only. */
+  onBuildPlan?: (notes: string) => void;
 };
 
 type LoadState =
@@ -357,7 +370,7 @@ function ReferencesBlock({
   const images = brief.references.filter((reference) => reference.kind === 'image');
   const links = brief.references.filter((reference) => reference.kind === 'link');
   const mayRemove = (reference: BriefReference) =>
-    reference.createdBy === brief.viewer.id || brief.viewer.canManageShare;
+    brief.viewer.canEdit && (reference.createdBy === brief.viewer.id || brief.viewer.canManageShare);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -591,15 +604,17 @@ function DecisionsBlock({
             <div className="min-w-0 flex-1">
               <p className="text-sm text-content-primary">{decision.body}</p>
               <p className="mt-[3px] font-mono text-[11px] text-content-tertiary">
-                {decision.authorName} · {formatShortDay(decision.createdAt)}
+                {decision.source
+                  ? `From ${ideaSourceLabel(decision.source)}`
+                  : `${decision.authorName} · ${formatShortDay(decision.createdAt)}`}
               </p>
             </div>
-            {decision.createdBy === brief.viewer.id || brief.viewer.canManageShare ? (
+            {brief.viewer.canEdit && (decision.createdBy === brief.viewer.id || brief.viewer.canManageShare) ? (
               <RemoveButton label="Delete decision" onClick={() => remove(decision)} />
             ) : null}
           </div>
         ))}
-        {suggestions.map((text) => (
+        {(brief.viewer.canEdit ? suggestions : []).map((text) => (
           <div key={text} className={`flex items-center gap-2 px-3.5 py-3 ${ROW_DIVIDER}`}>
             <p className="min-w-0 flex-1 text-sm text-content-secondary">
               {text}
@@ -621,24 +636,93 @@ function DecisionsBlock({
             </button>
           </div>
         ))}
-        <form onSubmit={add} className={`flex min-h-11 items-center gap-2 px-3.5 ${ROW_DIVIDER}`}>
-          <input
-            type="text"
-            value={value}
-            maxLength={MAX_DECISION_LENGTH}
-            onChange={(event) => setValue(event.target.value)}
-            placeholder={BRIEF_COPY.addDecision}
-            aria-label={BRIEF_COPY.addDecision}
-            enterKeyHint="done"
-            className="h-11 min-w-0 flex-1 bg-transparent text-[16px] text-content-primary placeholder:text-content-tertiary focus:outline-none lg:text-sm"
-          />
-          {value.trim() ? (
-            <button type="submit" disabled={saving} className="shrink-0 text-sm font-semibold text-brand">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : 'Add'}
-            </button>
-          ) : null}
-        </form>
+        {brief.viewer.canEdit ? (
+          <form onSubmit={add} className={`flex min-h-11 items-center gap-2 px-3.5 ${ROW_DIVIDER}`}>
+            <input
+              type="text"
+              value={value}
+              maxLength={MAX_DECISION_LENGTH}
+              onChange={(event) => setValue(event.target.value)}
+              placeholder={BRIEF_COPY.addDecision}
+              aria-label={BRIEF_COPY.addDecision}
+              enterKeyHint="done"
+              className="h-11 min-w-0 flex-1 bg-transparent text-[16px] text-content-primary placeholder:text-content-tertiary focus:outline-none lg:text-sm"
+            />
+            {value.trim() ? (
+              <button type="submit" disabled={saving} className="shrink-0 text-sm font-semibold text-brand">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : 'Add'}
+              </button>
+            ) : null}
+          </form>
+        ) : null}
       </div>
+    </section>
+  );
+}
+
+/** Where the ideas disagree (2026-10-27). The owner or an admin taps a side; it becomes a decision. */
+function ToSettleBlock({
+  brief,
+  onSettle,
+  settlingId,
+}: {
+  brief: BriefPayload;
+  onSettle: (itemId: string, option: number) => void;
+  settlingId: string | null;
+}) {
+  const round = brief.round;
+  if (!round || round.toSettle.length === 0) return null;
+  const canPick = round.canRun && round.state !== 'approved';
+  return (
+    <section>
+      <BlockLabel>{round.state === 'approved' ? 'Still open' : `To settle · ${round.toSettle.length}`}</BlockLabel>
+      <div className={LIST}>
+        {round.toSettle.map((item) => (
+          <div key={item.id} className={`px-3.5 py-3 ${ROW_DIVIDER}`}>
+            <p className="text-sm font-semibold text-content-primary">{item.question}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {item.options.map((option, index) => (
+                <button
+                  key={`${item.id}-${index}`}
+                  type="button"
+                  disabled={!canPick || settlingId !== null}
+                  onClick={() => onSettle(item.id, index)}
+                  className="motion-focus inline-flex min-h-10 items-center gap-2 rounded-full border border-stroke-strong px-3.5 text-[13px] text-content-primary transition-colors enabled:hover:border-brand enabled:hover:bg-brand/5 disabled:cursor-default"
+                >
+                  {settlingId === item.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : null}
+                  <span>{option.text}</span>
+                  {option.by.length ? (
+                    <span className="font-mono text-[11px] text-content-tertiary">{option.by.join(', ')}</span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Everyone's ideas, with who said them and the recording (2026-10-27). */
+function IdeasBlock({ brief }: { brief: BriefPayload }) {
+  const ideas = brief.ideas ?? [];
+  if (!brief.round || ideas.length === 0) return null;
+  return (
+    <section>
+      <BlockLabel>Ideas</BlockLabel>
+      <ul className={LIST}>
+        {ideas.map((idea) => (
+          <li key={idea.id} className={`flex gap-3 px-3.5 py-3 ${ROW_DIVIDER}`}>
+            <Avatar label={idea.initials} colorKey={idea.authorName} />
+            <div className="min-w-0 flex-1">
+              <p className="font-mono text-[11px] text-content-tertiary">{idea.authorName}</p>
+              <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-content-primary">{idea.content}</p>
+              {idea.audioUrl ? <VoicePill url={idea.audioUrl} seconds={idea.audioSeconds} /> : null}
+            </div>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -648,11 +732,14 @@ function IdeaBlock({
   onChange,
   onBlur,
   textareaRef,
+  readOnly = false,
 }: {
   idea: string;
   onChange: (value: string) => void;
   onBlur: () => void;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  /** An approved brief is locked (2026-10-27). */
+  readOnly?: boolean;
 }) {
   // Grow with the text, so the idea reads as a paragraph rather than a box.
   useEffect(() => {
@@ -672,6 +759,7 @@ function IdeaBlock({
         maxLength={MAX_IDEA_LENGTH}
         onChange={(event) => onChange(event.target.value)}
         onBlur={onBlur}
+        readOnly={readOnly}
         placeholder="The story, the sound, the look and the feel."
         aria-label="Idea"
         className="block w-full resize-none overflow-hidden bg-transparent text-[16px] leading-[1.55] text-content-primary placeholder:text-content-tertiary focus:outline-none"
@@ -698,7 +786,9 @@ function Skeleton() {
 
 // ── The scene ───────────────────────────────────────────────────────────────
 
-export function ReleaseBriefScene({ releaseId, onToast }: Props) {
+export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuildPlan }: Props) {
+  const [roundBusy, setRoundBusy] = useState<'approve' | 'new_version' | 'write' | null>(null);
+  const [settlingId, setSettlingId] = useState<string | null>(null);
   const isDesktop = useIsDesktopViewport();
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [idea, setIdea] = useState('');
@@ -844,6 +934,75 @@ export function ReleaseBriefScene({ releaseId, onToast }: Props) {
     void discardRunAction(current.actionId, await accessToken());
   };
 
+  // ── The idea round's review step (2026-10-27) ──
+  const roundCall = (body: Record<string, unknown>) =>
+    call<{ state?: string; version?: number }>(`/api/releases/${encodeURIComponent(releaseId)}/brief/round`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+
+  const settle = async (itemId: string, option: number) => {
+    if (settlingId) return;
+    setSettlingId(itemId);
+    const result = await roundCall({ action: 'settle', itemId, option });
+    setSettlingId(null);
+    if (!result.ok) {
+      onToast(result.error, 'error');
+      return;
+    }
+    await refresh();
+  };
+
+  const approve = async () => {
+    if (roundBusy || state.status !== 'ready') return;
+    await flushIdea();
+    setRoundBusy('approve');
+    const result = await roundCall({ action: 'approve' });
+    setRoundBusy(null);
+    if (!result.ok) {
+      onToast(result.error, 'error');
+      return;
+    }
+    const current = state.brief;
+    captureAnalyticsEvent({
+      name: 'brief_approved',
+      properties: { version: result.data.version ?? 1, open_questions: current.round?.toSettle.length ?? 0 },
+    });
+    await refresh();
+    if (!hasPlan && onBuildPlan) {
+      onBuildPlan(
+        briefToPlanNotes({ idea: savedIdea.current, decisions: current.decisions, toSettle: current.round?.toSettle ?? [] })
+      );
+    }
+  };
+
+  const newVersion = async () => {
+    if (roundBusy) return;
+    setRoundBusy('new_version');
+    const result = await roundCall({ action: 'new_version' });
+    setRoundBusy(null);
+    if (!result.ok) {
+      onToast(result.error, 'error');
+      return;
+    }
+    onToast('New version started. Your activities stay as they are.', 'success');
+    await refresh();
+  };
+
+  const writeFromIdeas = async () => {
+    if (roundBusy) return;
+    setRoundBusy('write');
+    const result = await runBriefFromIdeas({ releaseId });
+    setRoundBusy(null);
+    void refreshBalance();
+    if (!result.ok) {
+      if (result.planRequired) setLocked(result.error);
+      else onToast(result.error, 'error');
+      return;
+    }
+    await load();
+  };
+
   const patch = (update: (brief: BriefPayload) => BriefPayload) => {
     setState((prev) => (prev.status === 'ready' ? { status: 'ready', brief: update(prev.brief) } : prev));
   };
@@ -876,10 +1035,75 @@ export function ReleaseBriefScene({ releaseId, onToast }: Props) {
     );
   }
 
-  const brief = state.brief;
+  const round = state.brief.round ?? null;
+  // Approved: locked for everyone until New version (the server refuses edits too).
+  const lockedBrief = round?.state === 'approved';
+  const brief = lockedBrief ? { ...state.brief, viewer: { ...state.brief.viewer, canEdit: false } } : state.brief;
   const empty = isBriefEmpty({ ...brief, idea }) && !writing;
   const showChrome = !empty && !draft;
   const editedAgo = formatEditedAgo(brief.updatedAt);
+  const ideaCount = brief.ideas?.length ?? 0;
+
+  // The review card under the header: approve, or what comes after approval.
+  const roundCard =
+    !round || !showChrome ? null : round.state === 'closed' && round.canRun ? (
+      <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-brand/30 bg-brand/5 p-4 lg:max-w-[860px]">
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] font-semibold text-content-primary">Check it, then approve.</p>
+          <p className="mt-0.5 text-[13px] text-content-secondary">
+            {hasPlan ? 'Approving locks the brief.' : 'The plan is built from this page only.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void approve()}
+          disabled={roundBusy !== null}
+          className={`${PRIMARY} h-11 w-full gap-2 text-sm sm:w-auto`}
+        >
+          {roundBusy === 'approve' ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Check className="h-4 w-4" aria-hidden="true" />
+          )}
+          {hasPlan || !onBuildPlan ? 'Approve' : 'Approve and build the plan'}
+        </button>
+      </div>
+    ) : round.state === 'approved' && !hasPlan ? (
+      <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-stroke-default bg-bg-surface p-4 lg:max-w-[860px]">
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] font-semibold text-content-primary">Approved. The plan comes next.</p>
+          <p className="mt-0.5 text-[13px] text-content-secondary">
+            {onBuildPlan ? 'It is built from this brief alone.' : 'The owner builds it from this brief.'}
+          </p>
+        </div>
+        {onBuildPlan ? (
+          <button
+            type="button"
+            onClick={() =>
+              onBuildPlan(briefToPlanNotes({ idea: brief.idea, decisions: brief.decisions, toSettle: round.toSettle }))
+            }
+            className={`${PRIMARY} h-11 w-full text-sm sm:w-auto`}
+          >
+            Build the plan
+          </button>
+        ) : null}
+      </div>
+    ) : null;
+
+  const newVersionButton =
+    lockedBrief && round?.canRun ? (
+      <div className="mt-6">
+        <button
+          type="button"
+          onClick={() => void newVersion()}
+          disabled={roundBusy !== null}
+          className={`${SECONDARY} sm:w-auto`}
+        >
+          {roundBusy === 'new_version' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : 'New version'}
+        </button>
+        <p className="mt-1.5 text-[12px] text-content-tertiary">A new version never changes activities you already have.</p>
+      </div>
+    ) : null;
 
   const header = (
     <div>
@@ -896,7 +1120,31 @@ export function ReleaseBriefScene({ releaseId, onToast }: Props) {
           </button>
         ) : null}
       </div>
-      {showChrome && brief.updatedByName && editedAgo ? (
+      {showChrome && lockedBrief && round ? (
+        <p className="mt-2 flex flex-wrap items-center gap-1 font-mono text-[11px] text-content-tertiary">
+          <Lock className="h-3 w-3" aria-hidden="true" />
+          Approved{round.approvedByName ? ` by ${round.approvedByName}` : ''} · {formatShortDay(round.approvedAt)}
+          {round.version > 1 ? ` · Version ${round.version}` : ''} ·{' '}
+          <button
+            type="button"
+            onClick={() => setSheet('history')}
+            className="motion-focus text-content-primary underline underline-offset-[3px]"
+          >
+            History
+          </button>
+        </p>
+      ) : showChrome && round?.state === 'closed' && ideaCount > 0 ? (
+        <p className="mt-2 font-mono text-[11px] text-content-tertiary">
+          From {ideaCount === 1 ? '1 idea' : `${ideaCount} ideas`} · not approved ·{' '}
+          <button
+            type="button"
+            onClick={() => setSheet('history')}
+            className="motion-focus text-content-primary underline underline-offset-[3px]"
+          >
+            History
+          </button>
+        </p>
+      ) : showChrome && brief.updatedByName && editedAgo ? (
         <p className="mt-2 font-mono text-[11px] text-content-tertiary">
           Edited by {brief.updatedByName} · {editedAgo} ·{' '}
           <button
@@ -940,8 +1188,17 @@ export function ReleaseBriefScene({ releaseId, onToast }: Props) {
     />
   );
   const ideaBlock = (
-    <IdeaBlock idea={idea} onChange={changeIdea} onBlur={() => void flushIdea()} textareaRef={ideaRef} />
+    <IdeaBlock
+      idea={idea}
+      onChange={changeIdea}
+      onBlur={() => void flushIdea()}
+      textareaRef={ideaRef}
+      readOnly={lockedBrief}
+    />
   );
+  const toSettle = <ToSettleBlock brief={brief} onSettle={(id, option) => void settle(id, option)} settlingId={settlingId} />;
+  // A closed round with ideas and no brief yet: UrgAns writes it from the ideas.
+  const canWriteFromIdeas = Boolean(round && round.state === 'closed' && round.canRun && ideaCount > 0);
 
   let body: ReactNode;
   if (draft) {
@@ -983,6 +1240,30 @@ export function ReleaseBriefScene({ releaseId, onToast }: Props) {
               </div>
             </div>
           ) : null}
+          {canWriteFromIdeas ? (
+            <>
+              <button
+                type="button"
+                onClick={() => void writeFromIdeas()}
+                disabled={roundBusy !== null}
+                className={`${PRIMARY} mt-[18px]`}
+              >
+                {roundBusy === 'write' ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    UrgAns is writing…
+                  </>
+                ) : (
+                  `Write it from the ${ideaCount === 1 ? 'idea' : `${ideaCount} ideas`}`
+                )}
+              </button>
+              {isCreditsEnabled() ? (
+                <p className="mt-2 text-center text-[13px] text-content-primary/55">
+                  {embeddedCostLine('release.brief_from_ideas', balance)}
+                </p>
+              ) : null}
+            </>
+          ) : (
           <button
             type="button"
             onClick={startDraft}
@@ -1000,7 +1281,8 @@ export function ReleaseBriefScene({ releaseId, onToast }: Props) {
               BRIEF_COPY.draft
             )}
           </button>
-          {isCreditsEnabled() ? (
+          )}
+          {isCreditsEnabled() && !canWriteFromIdeas ? (
             <p className="mt-2 text-center text-[13px] text-content-primary/55">{embeddedCostLine('release.draft_brief', balance)}</p>
           ) : null}
           <button
@@ -1011,19 +1293,25 @@ export function ReleaseBriefScene({ releaseId, onToast }: Props) {
             {BRIEF_COPY.writeYourself}
           </button>
         </div>
+        <IdeasBlock brief={brief} />
         <DatesBlock brief={brief} />
         <PeopleBlock brief={brief} />
       </div>
     );
   } else if (isDesktop) {
+    // Idea round order (2026-10-27): what to read and settle on the left, the
+    // ideas it came from and the derived blocks on the right.
     body = (
       <div className="flex gap-7">
         <div className="min-w-0 flex-[1.4]">
           {ideaBlock}
-          {references}
+          {toSettle}
           {decisions}
+          {references}
+          {newVersionButton}
         </div>
         <div className="min-w-0 flex-1">
+          <IdeasBlock brief={brief} />
           <DatesBlock brief={brief} />
           <PeopleBlock brief={brief} />
           <NotesBlock brief={brief} />
@@ -1034,11 +1322,14 @@ export function ReleaseBriefScene({ releaseId, onToast }: Props) {
     body = (
       <>
         {ideaBlock}
+        {toSettle}
+        {decisions}
         {references}
+        <IdeasBlock brief={brief} />
         <DatesBlock brief={brief} />
         <PeopleBlock brief={brief} />
-        {decisions}
         <NotesBlock brief={brief} />
+        {newVersionButton}
       </>
     );
   }
@@ -1046,6 +1337,7 @@ export function ReleaseBriefScene({ releaseId, onToast }: Props) {
   return (
     <div className="pb-10 lg:max-w-[860px]">
       {header}
+      {roundCard}
       {body}
       {sheet === 'history' ? <HistorySheet brief={brief} onClose={() => setSheet(null)} /> : null}
       {sheet === 'share' ? (

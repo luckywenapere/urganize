@@ -1,5 +1,8 @@
+import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getTranscriptionConfig } from '@/lib/chappi/config';
+import { ideaAudioPrefix, isIdeaRoundEnabled } from '@/lib/idea-round';
+import { storeIdeaAudio } from '@/lib/idea-round-server';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
 import { countBillingEventsSince, logBillingEvent } from '@/lib/billing-events-server';
 import {
@@ -22,7 +25,9 @@ import {
 // write access to the rollout instead. Same speech call
 // (lib/voice-transcribe-server.ts), same per-team daily cap and the same
 // billing event, so dictation here and in UrgAns share one abuse cap. Never
-// charged in credits. The audio is streamed through and NEVER stored.
+// charged in credits. Since the idea round (2026-10-27) the clip is KEPT in the
+// private release-assets bucket under ideas/<release>/<user>/ and its path is
+// returned for the note to claim; a failed store still returns the words.
 
 const TRANSCRIBE_TIMEOUT_MS = 30_000;
 export const maxDuration = 60;
@@ -84,6 +89,17 @@ export async function POST(
   });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
 
+  const seconds = parseTranscriptionSeconds(result.rawBody);
+  let audioPath: string | null = null;
+  if (isIdeaRoundEnabled()) {
+    const base = (file.type || '').split(';')[0];
+    const extension = base.includes('mp4') ? 'mp4' : base.includes('ogg') ? 'ogg' : 'webm';
+    audioPath = await storeIdeaAudio(adminClient, {
+      path: `${ideaAudioPrefix(releaseId, auth.user.id)}${randomUUID()}.${extension}`,
+      file,
+    });
+  }
+
   if (team.primaryWorkspaceId) {
     await logBillingEvent(adminClient, {
       workspaceId: team.primaryWorkspaceId,
@@ -95,12 +111,12 @@ export async function POST(
           model: config.model,
           bytes: file.size,
           mimeType: file.type || '',
-          seconds: parseTranscriptionSeconds(result.rawBody),
+          seconds,
         }),
         source: 'rollout_ideas',
       },
     });
   }
 
-  return NextResponse.json({ text: result.text });
+  return NextResponse.json({ text: result.text, audioPath, seconds });
 }

@@ -433,6 +433,39 @@ export async function runDraftBrief(params: { releaseId: string }): Promise<Brie
   }
 }
 
+export type BriefFromIdeasResult =
+  | { ok: true }
+  | { ok: false; status: number; error: string; planRequired?: boolean };
+
+/**
+ * Write the brief from a closed idea round (2026-10-27). One shot: the brief
+ * is saved by the run itself, and the brief page is where it is reviewed.
+ */
+export async function runBriefFromIdeas(params: { releaseId: string }): Promise<BriefFromIdeasResult> {
+  const token = await getAccessToken();
+  if (!token) return { ok: false, status: 401, error: 'Your session expired. Sign in again.' };
+  try {
+    const response = await postJson('/api/urgans/actions', token, {
+      actionType: 'release.brief_from_ideas',
+      objectId: params.releaseId,
+      input: {},
+    });
+    if (response.ok) return { ok: true };
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    return {
+      ok: false,
+      status: response.status,
+      error: typeof payload.error === 'string' ? payload.error : 'UrgAns could not write the brief just now. Try again.',
+      planRequired: payload.reason === 'plan_required',
+    };
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      return { ok: false, status: 504, error: 'That took too long. Try again.' };
+    }
+    return { ok: false, status: 0, error: 'Could not reach UrgAns. Try again.' };
+  }
+}
+
 export type RunActionApplyResult =
   | { ok: true; result: unknown }
   | { ok: false; status: number; error: string };

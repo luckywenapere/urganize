@@ -22,6 +22,8 @@ const FEATURE_BY_ACTION: Readonly<Record<string, AiUsageFeature>> = {
   // the same job (a short paragraph about one rollout from its own facts), on
   // the same model surface, so no new feature label is needed.
   'release.draft_brief': 'status',
+  // The brief merged from the team's ideas (2026-10-27): the same job and surface.
+  'release.brief_from_ideas': 'status',
 };
 
 export function usageFeatureForAction(actionId: string): AiUsageFeature | null {

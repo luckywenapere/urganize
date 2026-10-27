@@ -9,7 +9,8 @@ import { IDEAS_CHANGED_EVENT } from '@/components/workspace/RolloutFirstSteps';
  * The Brief opens only once the rollout has a plan or a recorded idea
  * (2026-10-26, founder). Before that, the Brief tab shows the idea screen
  * ("What's the idea for ...?") in its place. A new idea flips it to the brief
- * straight away (IDEAS_CHANGED_EVENT).
+ * straight away (IDEAS_CHANGED_EVENT). With the idea round on (2026-10-27) the
+ * flip is the round closing instead, so the brief is written before the plan.
  */
 export function BriefIdeaGate({
   releaseId,
@@ -44,8 +45,10 @@ export function BriefIdeaGate({
         setHasIdea(true);
         return;
       }
-      const payload = (await response.json()) as { notes?: unknown[] };
-      setHasIdea((payload.notes?.length ?? 0) > 0);
+      const payload = (await response.json()) as { notes?: unknown[]; round?: { state?: string } | null };
+      // With the idea round on (2026-10-27) the brief opens once the round is
+      // closed; until then this tab is where ideas are collected.
+      setHasIdea(payload.round ? payload.round.state !== 'open' : (payload.notes?.length ?? 0) > 0);
     } catch {
       setHasIdea(true);
     }

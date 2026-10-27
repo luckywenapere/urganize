@@ -105,4 +105,6 @@ export {
   // Curator applications (2026-10-24): the playlist link field, the contact
   // field, and the "In review" pill.
   Clock, LinkIcon, MessageSquare,
+  // Idea round (2026-10-27): play a kept voice idea.
+  Pause, Play,
 } from 'lucide-react';
