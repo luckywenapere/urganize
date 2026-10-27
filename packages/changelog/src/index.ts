@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.197.4",
+    tag: "Team",
+    date: "October 27, 2026",
+    highlights: [
+      "The credits form background is plain now, with no pattern behind it.",
+    ],
+  },
+  {
     version: "1.197.3",
     tag: "Team",
     date: "October 27, 2026",

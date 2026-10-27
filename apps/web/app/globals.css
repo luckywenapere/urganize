@@ -2323,11 +2323,13 @@ html select.field-native {
       so a background-image on the class composites over it cleanly — and
       ::before/::after stay free for the page components.
 
+   The credits page is left out since 2026-10-27: it moved to the app's plain
+   near-black ground, which has no texture.
+
    The first layer is a woven header band: a broad gold wash across the top,
    the brocade selvedge a bolt of cloth carries. The rest is the same
    warp/weft/twill grain the app ground uses. */
 .urg-textile .epk-island,
-.urg-textile .credits-island,
 .urg-textile .capture-island,
 .urg-textile .kit-island {
   background-image:
@@ -2372,7 +2374,6 @@ html select.field-native {
    kit is the one page in this product designed to be printed. */
 @media print {
   .urg-textile .epk-island,
-  .urg-textile .credits-island,
   .urg-textile .capture-island,
   .urg-textile .kit-island {
     background-image: none;
