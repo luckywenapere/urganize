@@ -35,6 +35,7 @@ describe('RELEASE_MENU_ORDER', () => {
       'note',
       'share',
       'capture',
+      'urgans',
       'change-artist',
       'archive',
       'delete',

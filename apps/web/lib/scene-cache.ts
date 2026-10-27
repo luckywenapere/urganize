@@ -55,7 +55,11 @@ export type SceneName =
   // on what and decisions on one page. Fetches for itself and is not cached: the
   // Idea autosaves in place, and a cached copy painted over a live edit is the
   // failure the pitch kit stays out of the cache for.
-  | 'brief';
+  | 'brief'
+  // What UrgAns did (2026-10-27): the action log for this rollout. Fetches for
+  // itself and is never cached: it is a record of changes, and a stale copy
+  // would hide the newest one.
+  | 'urgans';
 
 export const SCENE_NAMES: readonly SceneName[] = [
   'activities',
@@ -72,6 +76,7 @@ export const SCENE_NAMES: readonly SceneName[] = [
   'spend',
   'promo',
   'brief',
+  'urgans',
 ];
 
 // Inlined at build time, same read every UI gate uses. Both consumers below
@@ -284,7 +289,7 @@ export const SCENE_HARD_EXPIRY_MS: Partial<Record<SceneName, number>> = {
  */
 export type CacheableSceneName = Exclude<
   SceneName,
-  'timeline' | 'activities' | 'pitchkit' | 'distribute' | 'spend' | 'promo' | 'brief'
+  'timeline' | 'activities' | 'pitchkit' | 'distribute' | 'spend' | 'promo' | 'brief' | 'urgans'
 >;
 
 export const isCacheableScene = (scene: SceneName): scene is CacheableSceneName =>
@@ -294,7 +299,8 @@ export const isCacheableScene = (scene: SceneName): scene is CacheableSceneName 
   scene !== 'distribute' &&
   scene !== 'spend' &&
   scene !== 'promo' &&
-  scene !== 'brief';
+  scene !== 'brief' &&
+  scene !== 'urgans';
 
 /**
  * Which scenes may touch localStorage.
@@ -336,6 +342,7 @@ export const SCENE_PERSISTED: Record<SceneName, boolean> = {
   // Fetches for itself and is not cached (see SceneName).
   promo: false,
   brief: false,
+  urgans: false,
 };
 
 /** How many releases' scenes to keep on disk. A manager works a couple of

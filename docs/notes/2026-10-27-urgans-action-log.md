@@ -1,6 +1,6 @@
-# UrgAns action log and tool levels (2026-10-27, backend only)
+# UrgAns action log and tool levels (2026-10-27, v1.196.0)
 
-Founder asked for it on 27 Oct 2026: as UrgAns starts acting on its own (WhatsApp replies, check-ins, background work), every action must be traceable or teams will not trust it. This is the backend. No screen shows it yet: a "What UrgAns did" list in the rollout and in Settings was mocked and waits for the founder's yes.
+Founder asked for it on 27 Oct 2026: as UrgAns starts acting on its own (WhatsApp replies, check-ins, background work), every action must be traceable or teams will not trust it. The backend shipped first; the "What UrgAns did" list followed in v1.196.0 after the founder approved the mock the same day.
 
 ## What it is
 
@@ -36,8 +36,16 @@ Pure half: `lib/urgans-action-log.ts` (levels, sources, `resolveLogObject`, `cap
 - **`workspace_id`** comes from the snapshot row when it has one, else the caller's first workspace. Treat it as a filter hint, not proof of ownership.
 - **Known gap: the typed "mark X done" command** (`lib/chappi/task-status-command.ts`) runs in the browser through the normal task routes, so it is not logged. Closing it needs a header on those routes or moving the command server-side.
 
+## What UrgAns did (the list, v1.196.0)
+
+- **Where:** a rollout scene `urgans` (menu row "What UrgAns did", Manage group, History icon) and a section in Settings > UrgAns (`components/settings/UrgansActivitySection.tsx`, with a filter by person). One component: `components/urgans-activity/UrgansActivityList.tsx`.
+- **Route:** `GET /api/urgans/activity` behind `requireUrgansAccess` (the credits guard requires it on every `/api/urgans` route). With `?releaseId=` it checks rollout read access and returns that rollout's rows. Without, it returns rows on every rollout the caller can see plus rows the caller asked for. A teammate's row with no rollout (an invite, an artist rename) is NOT shown, on purpose: the log's workspace_id is not proof of visibility. Last 30 days, 100 rows.
+- **Words:** `lib/urgans-activity.ts` (`describeActivity`, `diffSnapshots`), tested. Times are Lagos time. Unknown tools fall back to the first sentence of the tool's summary.
+- **No Undo.** The mock showed one on a WhatsApp row. It was left out: an undo is a write of its own and needs its own rules. Details shows the changed fields instead.
+- **Settings only shows for people who see the UrgAns segment** (managers, or anyone while the team brief is on). Everyone sees the rollout scene.
+- **Not seen signed in.** Checked locally only signed out (route 401, pages compile, no server errors); the log was empty in production when it shipped.
+
 ## Not done
 
-- The user-facing "What UrgAns did" list (mocked 27 Oct, waits for a yes).
-- No changelog entry or version bump: nothing a user can see changed.
+- The typed "mark X done" command is not logged (see Traps).
 - No Linear issue (free plan refuses new issues).

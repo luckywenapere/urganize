@@ -85,6 +85,7 @@ const SCENE_ROWS: ReleaseMenuKey[] = [
   'coverart',
   'files',
   'capture',
+  'urgans',
 ];
 
 
@@ -136,6 +137,7 @@ describe('buildRolloutMenu', () => {
       'distribute',
       'promo',
       'share',
+      'urgans',
       'change-artist',
       'archive',
       'delete',
