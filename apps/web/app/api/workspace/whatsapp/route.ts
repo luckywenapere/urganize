@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-const BOOLEAN_FIELDS = ['enabled', 'chaseDayBefore', 'chaseDueDay', 'chaseOverdue', 'tellOwnerOnDelay'] as const;
+const BOOLEAN_FIELDS = ['enabled', 'chaseDayBefore', 'chaseDueDay', 'chaseOverdue', 'tellOwnerOnDelay', 'remindPosts'] as const;
 
 export async function PATCH(request: NextRequest) {
   const auth = await requireAuthenticatedAdmin(request);

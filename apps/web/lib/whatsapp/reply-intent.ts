@@ -12,6 +12,7 @@ export type ReplyIntent =
   | { type: 'done' }
   | { type: 'need_time'; date: string | null }
   | { type: 'not_mine' }
+  | { type: 'skip' }
   | { type: 'date'; date: string }
   | { type: 'text' };
 
@@ -102,6 +103,7 @@ export function parseReply(text: string, now: Date, awaitingDate = false): Reply
   if (NOT_MINE.test(t)) return { type: 'not_mine' };
   if (/^(yes|y|yep|yeah|ok|okay|sure|allow)$/.test(t)) return { type: 'yes' };
   if (DONE.test(t)) return { type: 'done' };
+  if (/^(skip|skipped|skip it|skip today|not today)\b/.test(t)) return { type: 'skip' };
   if (NEED_TIME.test(t)) return { type: 'need_time', date: parseReplyDate(text, now) };
   return { type: 'text' };
 }

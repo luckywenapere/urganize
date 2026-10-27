@@ -210,6 +210,8 @@ export type ChappiToolName =
   | 'create_content_post'
   | 'update_content_post'
   | 'delete_content_post'
+  | 'list_artist_posts'
+  | 'plan_posts'
   // the standing per-artist press kit (2026-09-07)
   | 'list_press_kits'
   | 'get_press_kit'

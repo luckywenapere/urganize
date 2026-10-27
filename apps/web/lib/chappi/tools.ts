@@ -38,6 +38,7 @@ import { INSIGHTS_TOOLS } from './tool-families/insights';
 import { METADATA_TOOLS } from './tool-families/metadata';
 import { NOTE_TOOLS } from './tool-families/notes';
 import { PLANNER_TOOLS } from './tool-families/planner';
+import { POSTING_PLAN_TOOLS } from './tool-families/posting-plan';
 import { PRESS_KIT_TOOLS } from './tool-families/press-kits';
 import { PROMO_TOOLS } from './tool-families/promo';
 import { RELEASE_TOOLS } from './tool-families/releases';
@@ -73,6 +74,7 @@ export const CHAPPI_TOOLS: ChappiTool[] = [
   ...PRESS_KIT_TOOLS,
   ...ARTIST_TOOLS,
   ...ARTIST_FACT_TOOLS,
+  ...POSTING_PLAN_TOOLS,
   ...FILE_TOOLS,
   ...DIRECTORY_TOOLS,
 ];

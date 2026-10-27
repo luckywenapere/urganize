@@ -160,3 +160,11 @@ describe('twilio signature', () => {
     expect(verifyTwilioSignature(url, params, null, 'token')).toBe(false);
   });
 });
+
+describe('parseReply for a post nudge (posting plan)', () => {
+  it('reads Skip, and keeps Done as done', () => {
+    expect(parseReply('Skip', NOW)).toEqual({ type: 'skip' });
+    expect(parseReply('not today', NOW)).toEqual({ type: 'skip' });
+    expect(parseReply('Done', NOW)).toEqual({ type: 'done' });
+  });
+});

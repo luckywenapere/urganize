@@ -36,6 +36,8 @@ import { parseReply, type ReplyIntent } from './reply-intent';
 import { decryptSecret } from './secret';
 import { isWhatsappConfigured, sendWhatsapp } from './transport';
 import { logUrgansAction } from '@/lib/urgans-action-log-server';
+import { buildPostNudgeText, isPostPlatform, nextDayWords, nextPlannedPost, type ArtistPost } from '@/lib/posting-plan';
+import { ARTIST_POSTS_TABLE, setPostStatusAsOwner, toArtistPost } from '@/lib/posting-plan-server';
 
 const SETTINGS_TABLE = 'whatsapp_settings';
 const CONTACTS_TABLE = 'whatsapp_contacts';
@@ -50,6 +52,8 @@ export type WhatsappSettings = {
   chaseOverdue: boolean;
   overdueEveryDays: number;
   tellOwnerOnDelay: boolean;
+  /** Posting plan (2026-10-27): nudge the person posting on the day. */
+  remindPosts: boolean;
   aiMode: 'urganize' | 'own';
   aiProvider: ByoProvider | null;
   aiBaseUrl: string | null;
@@ -66,6 +70,7 @@ type SettingsRow = {
   chase_overdue: boolean | null;
   overdue_every_days: number | null;
   tell_owner_on_delay: boolean | null;
+  remind_posts?: boolean | null;
   ai_mode: string | null;
   ai_provider: string | null;
   ai_base_url: string | null;
@@ -80,6 +85,7 @@ export const DEFAULT_SETTINGS: WhatsappSettings = {
   chaseOverdue: true,
   overdueEveryDays: 2,
   tellOwnerOnDelay: true,
+  remindPosts: true,
   aiMode: 'urganize',
   aiProvider: null,
   aiBaseUrl: null,
@@ -96,6 +102,7 @@ function toSettings(row: SettingsRow | null): WhatsappSettings {
     chaseOverdue: row.chase_overdue !== false,
     overdueEveryDays: row.overdue_every_days ?? 2,
     tellOwnerOnDelay: row.tell_owner_on_delay !== false,
+    remindPosts: row.remind_posts !== false,
     aiMode: row.ai_mode === 'own' ? 'own' : 'urganize',
     aiProvider: isByoProvider(row.ai_provider) ? row.ai_provider : null,
     aiBaseUrl: row.ai_base_url,
@@ -116,6 +123,7 @@ export type SettingsPatch = Partial<{
   chaseOverdue: boolean;
   overdueEveryDays: number;
   tellOwnerOnDelay: boolean;
+  remindPosts: boolean;
   aiMode: 'urganize' | 'own';
   aiProvider: ByoProvider | null;
   aiBaseUrl: string | null;
@@ -137,6 +145,7 @@ export async function saveSettings(
   if (patch.chaseOverdue !== undefined) row.chase_overdue = patch.chaseOverdue;
   if (patch.overdueEveryDays !== undefined) row.overdue_every_days = patch.overdueEveryDays;
   if (patch.tellOwnerOnDelay !== undefined) row.tell_owner_on_delay = patch.tellOwnerOnDelay;
+  if (patch.remindPosts !== undefined) row.remind_posts = patch.remindPosts;
   if (patch.aiMode !== undefined) row.ai_mode = patch.aiMode;
   if (patch.aiProvider !== undefined) row.ai_provider = patch.aiProvider;
   if (patch.aiBaseUrl !== undefined) row.ai_base_url = patch.aiBaseUrl;
@@ -174,6 +183,8 @@ export type WhatsappContact = {
   phone: string;
   status: ContactStatus;
   lastTaskId: string | null;
+  /** The post the last nudge was about, so Done or Skip has something to mean. */
+  lastPostId: string | null;
   awaiting: 'date' | null;
 };
 
@@ -184,6 +195,7 @@ type ContactRow = {
   phone: string;
   status: ContactStatus;
   last_task_id: string | null;
+  last_post_id?: string | null;
   awaiting: 'date' | null;
 };
 
@@ -195,6 +207,7 @@ function toContact(row: ContactRow): WhatsappContact {
     phone: row.phone,
     status: row.status,
     lastTaskId: row.last_task_id,
+    lastPostId: row.last_post_id ?? null,
     awaiting: row.awaiting,
   };
 }
@@ -210,6 +223,7 @@ async function logMessage(
     workspaceId: string | null;
     userId: string | null;
     taskId?: string | null;
+    postId?: string | null;
     direction: 'in' | 'out';
     kind: string;
     body: string;
@@ -225,6 +239,7 @@ async function logMessage(
       workspace_id: input.workspaceId,
       user_id: input.userId,
       task_id: input.taskId ?? null,
+      post_id: input.postId ?? null,
       direction: input.direction,
       kind: input.kind,
       body: input.body,
@@ -396,7 +411,9 @@ export async function runWhatsappChaseSweep(admin: SupabaseClient, now: Date = n
       const contacts = ((contactRows as ContactRow[] | null) ?? []).map(toContact);
 
       for (const contact of contacts) {
-        const outcome = await chaseOneContact(admin, contact, rules, today, now);
+        let outcome = await chaseOneContact(admin, contact, rules, today, now);
+        // Tasks first. A day with no task to chase can carry today's post.
+        if (outcome === 'none' && settings.remindPosts) outcome = await nudgeOnePost(admin, contact, today);
         if (outcome === 'sent') sent += 1;
         else if (outcome === 'failed') failed += 1;
         else if (outcome === 'already') skippedAlreadyChased += 1;
@@ -519,8 +536,127 @@ async function chaseOneContact(
   });
   if (!result.ok) return 'failed';
 
-  await admin.from(CONTACTS_TABLE).update({ last_task_id: pick.task.id, awaiting: null }).eq('id', contact.id);
+  await admin.from(CONTACTS_TABLE).update({ last_task_id: pick.task.id, last_post_id: null, awaiting: null }).eq('id', contact.id);
   return 'sent';
+}
+
+// ---- posting plan nudges (2026-10-27) ---------------------------------------
+
+/**
+ * "Post the studio clip today?" for a person's first planned post of the day.
+ * Same slot as a task chase: one message per person per day, claimed first.
+ */
+async function nudgeOnePost(
+  admin: SupabaseClient,
+  contact: WhatsappContact,
+  today: string
+): Promise<'sent' | 'failed' | 'already' | 'none'> {
+  const { data: postRows } = await admin
+    .from(ARTIST_POSTS_TABLE)
+    .select('id,artist_id,release_id,post_day,what,platform,owner_user_id,status,done_at')
+    .eq('workspace_id', contact.workspaceId)
+    .eq('owner_user_id', contact.userId)
+    .eq('post_day', today)
+    .eq('status', 'planned')
+    .order('created_at', { ascending: true })
+    .limit(1);
+  const row = ((postRows as Parameters<typeof toArtistPost>[0][] | null) ?? [])[0];
+  if (!row) return 'none';
+  const post = toArtistPost(row);
+
+  const [profiles, artistRow] = await Promise.all([
+    loadProfilesByIds(admin, [contact.userId]),
+    admin.from('artists').select('name').eq('id', post.artistId).maybeSingle(),
+  ]);
+  const name = firstName(profiles.get(contact.userId)?.name);
+  const artistName = ((artistRow.data as { name?: string } | null)?.name || '').trim() || 'your artist';
+  const text = buildPostNudgeText(name, post.what, artistName, post.platform);
+
+  const claim = await logMessage(admin, {
+    workspaceId: contact.workspaceId,
+    userId: contact.userId,
+    postId: post.id,
+    direction: 'out',
+    kind: 'post_day',
+    body: text,
+    status: 'sending',
+    chaseDay: today,
+  });
+  if (!claim) return 'failed';
+  if ('conflict' in claim) return 'already';
+
+  const where = isPostPlatform(post.platform) && post.platform !== 'other' ? ` on ${post.platform}` : '';
+  const result = await sendWhatsapp({
+    to: contact.phone,
+    body: text,
+    contentSid: process.env.WHATSAPP_POST_CONTENT_SID?.trim() || null,
+    contentVariables: { '1': name, '2': post.what, '3': `${artistName}${where}` },
+  });
+  await admin
+    .from(MESSAGES_TABLE)
+    .update({
+      status: result.ok ? 'sent' : 'failed',
+      provider_message_id: result.ok ? result.sid : null,
+      error: result.ok ? null : result.error,
+    })
+    .eq('id', claim.id);
+  if (!result.ok) return 'failed';
+
+  await admin.from(CONTACTS_TABLE).update({ last_post_id: post.id, last_task_id: null, awaiting: null }).eq('id', contact.id);
+  return 'sent';
+}
+
+/** Done or Skip on the post the last nudge was about. */
+async function actOnPostReply(
+  admin: SupabaseClient,
+  contact: WhatsappContact,
+  postId: string,
+  status: 'done' | 'skipped',
+  rawText: string,
+  now: Date
+) {
+  const updated = await setPostStatusAsOwner(admin, postId, contact.userId, status);
+  await logUrgansAction(admin, {
+    source: 'whatsapp',
+    trigger: 'whatsapp_reply',
+    tool: status === 'done' ? 'whatsapp.post_done' : 'whatsapp.post_skip',
+    level: 'auto',
+    actorUserId: contact.userId,
+    workspaceId: contact.workspaceId,
+    releaseId: updated?.post.releaseId ?? null,
+    objectType: 'artist_post',
+    objectId: postId,
+    args: { reply: rawText.slice(0, 200) },
+    before: null,
+    after: updated ? { status } : null,
+    ok: Boolean(updated),
+    summary: `${status === 'done' ? 'Marked' : 'Skipped'} "${updated?.post.what ?? 'a post'}" from a WhatsApp reply`,
+    error: updated ? null : 'post not found or not theirs',
+  });
+  await admin.from(CONTACTS_TABLE).update({ last_post_id: null, awaiting: null }).eq('id', contact.id);
+  if (!updated) {
+    await replyTo(admin, contact, "I couldn't find that post. Please tick it in Urganize.");
+    return;
+  }
+
+  // "Next for Tems: lyric snippet on Thursday."
+  const today = lagosDay(now);
+  const { data: ahead } = await admin
+    .from(ARTIST_POSTS_TABLE)
+    .select('id,artist_id,release_id,post_day,what,platform,owner_user_id,status,done_at')
+    .eq('artist_id', updated.post.artistId)
+    .eq('status', 'planned')
+    .gt('post_day', today)
+    .order('post_day', { ascending: true })
+    .limit(5);
+  const next: ArtistPost | null = nextPlannedPost(
+    ((ahead as Parameters<typeof toArtistPost>[0][] | null) ?? []).map(toArtistPost),
+    today
+  );
+  const { data: artistRow } = await admin.from('artists').select('name').eq('id', updated.post.artistId).maybeSingle();
+  const artistName = ((artistRow as { name?: string } | null)?.name || '').trim();
+  const nextLine = next && artistName ? ` Next for ${artistName}: ${next.what}, ${nextDayWords(next.postDay, today)}.` : '';
+  await replyTo(admin, contact, `${status === 'done' ? 'Nice one. Marked done.' : 'Skipped.'}${nextLine}`);
 }
 
 // ---- replies ---------------------------------------------------------------
@@ -671,10 +807,16 @@ async function actOnReply(admin: SupabaseClient, contact: WhatsappContact, inten
         .from(CONTACTS_TABLE)
         .update({ status: 'opted_in', opted_in_at: now.toISOString(), stopped_at: null })
         .eq('id', contact.id);
-      await replyTo(admin, contact, "Thanks. You'll hear from me only about your tasks.");
+      await replyTo(admin, contact, "Thanks. You'll hear from me only about your tasks and posts.");
     } else if (contact.status === 'pending') {
       await replyTo(admin, contact, 'Reply YES to let Urganize message you here, or STOP.');
     }
+    return;
+  }
+
+  // A Done or Skip after a post nudge is about the post (posting plan, 2026-10-27).
+  if (contact.lastPostId && (intent.type === 'done' || intent.type === 'skip')) {
+    await actOnPostReply(admin, contact, contact.lastPostId, intent.type === 'done' ? 'done' : 'skipped', rawText, now);
     return;
   }
 
@@ -770,6 +912,8 @@ async function actOnReply(admin: SupabaseClient, contact: WhatsappContact, inten
       return;
     }
 
+    // Skip with no post nudge behind it is just words.
+    case 'skip':
     case 'text': {
       const answer = await aiReply(admin, contact, task, rawText);
       if (answer) {

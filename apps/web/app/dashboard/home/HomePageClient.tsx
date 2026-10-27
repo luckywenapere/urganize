@@ -9,6 +9,7 @@ import { selectHomeMovesSettled, useNextMovesStore } from '@/stores/useNextMoves
 import { HomeSkeleton } from '@/components/loading/HomeSkeleton';
 import { RolloutCreateFlow } from '@/components/releases/RolloutCreateFlow';
 import { RolloutOfferCard } from '@/components/home/RolloutOfferCard';
+import { TodayPostCard } from '@/components/home/TodayPostCard';
 import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { FirstDaysCard } from '@/components/home/FirstDaysCard';
 import { HomeFour, HomeLoadError } from '@/components/home/v2/HomeFour';
@@ -101,6 +102,10 @@ export default function HomePageClient({ swipe = false }: { swipe?: boolean } = 
       {/* "Got a release coming?": zero-rollout teams only, until Not now. */}
       <ErrorBoundary name="home-block-rollout-offer" onError={reportBoundaryError}>
         <RolloutOfferCard />
+      </ErrorBoundary>
+      {/* Today's post (posting plan, 2026-10-27): only when a post is planned. */}
+      <ErrorBoundary name="home-block-today-post" onError={reportBoundaryError}>
+        <TodayPostCard />
       </ErrorBoundary>
       {stateView}
       {/* Your first 14 days (self-serve checkout, 2026-10-22): only for a

@@ -41,6 +41,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.195.0",
+    title: "A posting plan for each artist",
+    tag: "Rollouts",
+    date: "October 27, 2026",
+    highlights: [
+      "Each artist has a posting plan: what to post, which day, where, and who posts it. It works with no release coming.",
+      "Tell UrgAns your week, like \"studio clip Tuesday, lyric snippet Thursday\", and it lays out the posts for you to approve.",
+      "Today's post shows on Home. Tap Done or Skip.",
+    ],
+  },
+  {
     version: "1.194.0",
     title: "UrgAns remembers what you decide about each artist",
     tag: "AI",

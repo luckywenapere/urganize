@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Posting plan mocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Space+Mono:wght@400;700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web light theme (same as docs/mocks/distribution-limits). */
+  :root {
+    --a-bg:#f3efe6; --a-card:#f8f4ec; --a-text:#1a1611; --a-sec:#5c544a; --a-ter:#6d6459;
+    --a-line:#e6dfd2; --a-line2:#d8d0c2; --a-brand:#14643a; --a-brand-sub:rgba(20,100,58,.06);
+    --m-accent:#2f6b4a;
+    --wa-bg:#efe7dd; --wa-in:#ffffff; --wa-out:#d9fdd3; --wa-head:#075e54;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:#e9e3d7; }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--a-text); padding:32px 16px 64px; }
+  p { margin:0; }
+  .intro { max-width:820px; margin:0 auto 28px; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; margin:0 0 8px; }
+  .intro p { color:var(--a-sec); margin-top:6px; }
+  .intro ul { color:var(--a-sec); margin:8px 0 0; padding-left:18px; }
+  .board { display:flex; flex-wrap:wrap; gap:28px; justify-content:center; }
+  .col { width:390px; max-width:100%; }
+  .tag { font-family:'Space Mono', monospace; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--a-sec); margin-bottom:6px; }
+  .why { font-size:13px; color:var(--a-ter); margin-bottom:12px; min-height:40px; }
+  .phone { background:var(--a-bg); border:1px solid var(--a-line2); border-radius:28px; padding:22px 16px 28px; min-height:640px; position:relative; overflow:hidden; }
+  .mono { font-family:'Space Mono', monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--a-sec); }
+  .h { font-family:'Young Serif', serif; font-size:24px; line-height:1.15; margin:6px 0 4px; }
+  .sub { color:var(--a-sec); font-size:14px; }
+  .box { border:1px solid var(--a-line); background:var(--a-card); padding:14px 16px; margin-top:16px; }
+  .box .t { font-size:15px; font-weight:600; }
+  .box .s { font-size:14px; color:var(--a-sec); margin-top:4px; }
+  .row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px 0; border-top:1px solid var(--a-line); font-size:14px; }
+  .row:first-child { border-top:0; }
+  .row b { font-weight:600; }
+  .btn { display:flex; align-items:center; justify-content:center; height:46px; font-weight:600; font-size:14px; margin-top:12px; }
+  .green { background:var(--a-brand); color:#fff; }
+  .outline { border:1px solid var(--a-line2); color:var(--a-text); background:transparent; }
+  .quiet { color:var(--a-sec); text-decoration:underline; text-underline-offset:3px; font-size:14px; margin-top:14px; display:inline-block; }
+  .muted { opacity:.45; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; background:var(--a-card); border-top:1px solid var(--a-line2); border-radius:20px 20px 0 0; padding:20px 16px 26px; box-shadow:0 -10px 30px rgba(0,0,0,.08); }
+  .scrim { position:absolute; inset:0; background:rgba(26,22,17,.28); }
+  .grab { width:40px; height:4px; background:var(--a-line2); border-radius:4px; margin:0 auto 14px; }
+  .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+  .chip { font-family:'Space Mono', monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; border:1px solid var(--a-line2); padding:3px 7px; color:var(--a-sec); white-space:nowrap; }
+  .chip.brand { border-color:var(--a-brand); color:var(--a-brand); }
+  .note { font-size:12px; color:var(--a-ter); margin-top:10px; }
+
+  /* Posting plan rows */
+  .tabs { display:flex; gap:18px; border-bottom:1px solid var(--a-line); margin-top:14px; }
+  .tabs span { padding:8px 0; font-size:14px; color:var(--a-sec); }
+  .tabs span.on { color:var(--a-text); font-weight:600; border-bottom:2px solid var(--a-text); }
+  .post { display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-top:1px solid var(--a-line); }
+  .post:first-child { border-top:0; }
+  .day { width:42px; flex:none; text-align:center; }
+  .day .d { font-family:'Space Mono', monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--a-sec); }
+  .day .n { font-size:18px; font-weight:700; line-height:1.1; }
+  .post .body { flex:1; min-width:0; }
+  .post .what { font-size:15px; font-weight:600; }
+  .post .meta { font-size:13px; color:var(--a-sec); margin-top:2px; }
+  .mark { width:24px; height:24px; flex:none; border:1.5px solid var(--a-line2); border-radius:50%; margin-top:2px; }
+  .mark.done { background:var(--a-brand); border-color:var(--a-brand); position:relative; }
+  .mark.done:after { content:''; position:absolute; left:7px; top:6px; width:8px; height:5px; border-left:2px solid #fff; border-bottom:2px solid #fff; transform:rotate(-45deg); }
+  .mark.skip { border-style:dashed; }
+  .today { background:var(--a-brand-sub); margin:0 -16px; padding:12px 16px; border-top:1px solid var(--a-line); }
+  .s-done { text-decoration:line-through; color:var(--a-ter); }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; }
+  .pair .btn { margin-top:0; height:40px; }
+
+  /* Form */
+  .field { margin-top:14px; }
+  .field label { display:block; font-size:13px; font-weight:600; margin-bottom:6px; }
+  .input { border:1px solid var(--a-line2); background:#fff; padding:11px 12px; font-size:15px; }
+  .input.ph { color:var(--a-ter); }
+  .pills { display:flex; flex-wrap:wrap; gap:8px; }
+  .pills span { border:1px solid var(--a-line2); padding:7px 11px; font-size:13px; }
+  .pills span.on { border-color:var(--a-brand); background:var(--a-brand-sub); color:var(--a-brand); font-weight:600; }
+
+  /* UrgAns chat */
+  .bubble { padding:10px 12px; font-size:14px; max-width:86%; margin-top:10px; }
+  .me { background:var(--a-text); color:#fff; margin-left:auto; border-radius:14px 14px 4px 14px; }
+  .ai { background:var(--a-card); border:1px solid var(--a-line); border-radius:14px 14px 14px 4px; }
+  .composer { position:absolute; left:16px; right:16px; bottom:22px; border:1px solid var(--a-line2); background:#fff; padding:12px; font-size:14px; color:var(--a-ter); border-radius:14px; }
+
+  /* WhatsApp */
+  .wa { background:var(--wa-bg); padding:0; }
+  .wa-head { background:var(--wa-head); color:#fff; padding:18px 16px 12px; font-weight:600; font-size:15px; }
+  .wa-head small { display:block; font-weight:400; opacity:.8; font-size:12px; }
+  .wa-body { padding:12px 14px; }
+  .wa-msg { background:var(--wa-in); border-radius:8px; padding:8px 10px; font-size:14px; max-width:84%; margin-top:10px; box-shadow:0 1px 1px rgba(0,0,0,.08); }
+  .wa-msg.out { background:var(--wa-out); margin-left:auto; }
+  .wa-time { font-size:10px; color:#8a8a8a; text-align:right; margin-top:2px; }
+  .wa-btns { max-width:84%; display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:4px; }
+  .wa-btns span { background:var(--wa-in); border-radius:8px; text-align:center; padding:8px; color:#027eb5; font-weight:600; font-size:14px; box-shadow:0 1px 1px rgba(0,0,0,.08); }
+  .wa-day { text-align:center; font-size:11px; color:#5c5c5c; background:#e1f2fb; width:max-content; margin:6px auto 0; padding:3px 9px; border-radius:6px; }
+  .switch { width:40px; height:24px; background:var(--a-brand); border-radius:12px; position:relative; flex:none; }
+  .switch:after { content:''; position:absolute; right:3px; top:3px; width:18px; height:18px; background:#fff; border-radius:50%; }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Posting plan, on the artist</h1>
+  <p>The content calendar, back in a lighter form. It lives on the artist, so it works between releases, and UrgAns nudges the person posting on WhatsApp on the day.</p>
+  <ul>
+    <li>Four fields: what, day, where (optional), who posts.</li>
+    <li>No calendars to set up first, no month grid, no caption, format, pillar or link.</li>
+    <li>A post can belong to a release, but doesn't have to.</li>
+  </ul>
+</div>
+
+<div class="board">
+
+  <!-- 1. Home, between releases -->
+  <div class="col">
+    <p class="tag">1 · Home, no release coming</p>
+    <p class="why">A reason to open the app between releases. Today's post sits where the release card would be.</p>
+    <div class="phone">
+      <p class="mono">Tuesday, Oct 27</p>
+      <p class="h">Good morning, Oyin</p>
+      <p class="sub">No release on the way. Keep Tems in people's feeds.</p>
+      <div class="box">
+        <p class="mono">Today · Tems</p>
+        <p class="t" style="margin-top:6px">Post the studio clip</p>
+        <p class="s">Instagram · Ada posts</p>
+        <div class="pair"><div class="btn green">Done</div><div class="btn outline">Skip</div></div>
+      </div>
+      <div class="box">
+        <div class="row"><span>This week</span><b>1 of 3 posted</b></div>
+        <div class="row"><span>Next</span><b>Thu · Lyric snippet</b></div>
+      </div>
+      <span class="quiet">Open Tems's posting plan</span>
+    </div>
+  </div>
+
+  <!-- 2. Artist page, posting plan -->
+  <div class="col">
+    <p class="tag">2 · The artist's posting plan</p>
+    <p class="why">One list per artist, this week first. Tap the circle to mark done. A post tied to a release shows its name.</p>
+    <div class="phone">
+      <div class="topbar"><span class="mono">Catalogue · Tems</span><span class="chip">Artist</span></div>
+      <p class="h">Posting plan</p>
+      <p class="sub">3 posts a week. 1 of 3 done.</p>
+      <div class="tabs"><span class="on">This week</span><span>Next week</span><span>Past</span></div>
+      <div class="box" style="padding-top:2px; padding-bottom:2px">
+        <div class="post">
+          <div class="day"><p class="d">Mon</p><p class="n">26</p></div>
+          <div class="body"><p class="what s-done">Fan reply video</p><p class="meta">TikTok · Ada</p></div>
+          <div class="mark done"></div>
+        </div>
+        <div class="post today">
+          <div class="day"><p class="d">Today</p><p class="n">27</p></div>
+          <div class="body"><p class="what">Studio clip</p><p class="meta">Instagram · Ada</p></div>
+          <div class="mark"></div>
+        </div>
+        <div class="post">
+          <div class="day"><p class="d">Thu</p><p class="n">29</p></div>
+          <div class="body"><p class="what">Lyric snippet</p><p class="meta">TikTok · Tems · <span class="chip">Lagos Rain</span></p></div>
+          <div class="mark"></div>
+        </div>
+      </div>
+      <div class="btn green">Plan posts with UrgAns</div>
+      <div class="btn outline">Add a post</div>
+    </div>
+  </div>
+
+  <!-- 3. Fill it from one message -->
+  <div class="col">
+    <p class="tag">3 · Fill it from one message</p>
+    <p class="why">Say it the way you would in a group chat. UrgAns lays out the week and waits for your yes before adding anything.</p>
+    <div class="phone">
+      <p class="mono">UrgAns</p>
+      <div class="bubble me">3 posts a week for Tems. Studio clip Tuesday, lyric snippet Thursday, fan Q&amp;A Saturday. Ada posts.</div>
+      <div class="bubble ai">
+        <p>Here's Tems's week. Add it, and repeat it every week?</p>
+        <div class="box" style="margin-top:10px; padding:4px 12px">
+          <div class="row"><span>Tue · Studio clip</span><b>Ada</b></div>
+          <div class="row"><span>Thu · Lyric snippet</span><b>Ada</b></div>
+          <div class="row"><span>Sat · Fan Q&amp;A</span><b>Ada</b></div>
+        </div>
+        <div class="pair"><div class="btn green">Add this week</div><div class="btn outline">Every week</div></div>
+      </div>
+      <div class="composer">Ask UrgAns…</div>
+    </div>
+  </div>
+
+  <!-- 4. Add a post by hand -->
+  <div class="col">
+    <p class="tag">4 · Add a post by hand</p>
+    <p class="why">Four fields, one screen. Only "what" and "day" are needed. Who posts is you unless you change it.</p>
+    <div class="phone">
+      <div class="topbar"><span class="mono">Catalogue · Tems</span><span class="chip">Artist</span></div>
+      <p class="h">Posting plan</p>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <p class="mono">New post</p>
+        <div class="field"><label>What</label><div class="input">Behind the scenes from the shoot</div></div>
+        <div class="field"><label>Day</label><div class="input">Fri, Oct 30</div></div>
+        <div class="field"><label>Where <span style="font-weight:400; color:var(--a-ter)">(optional)</span></label>
+          <div class="pills"><span class="on">Instagram</span><span>TikTok</span><span>X</span><span>YouTube</span><span>Other</span></div></div>
+        <div class="field"><label>Who posts</label><div class="input">Ada (social media)</div></div>
+        <div class="btn green">Add post</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. WhatsApp nudge -->
+  <div class="col">
+    <p class="tag">5 · WhatsApp nudge on the day</p>
+    <p class="why">The person posting gets one nudge that morning, folded into the same daily message as task chasing. Done or Skip updates the plan.</p>
+    <div class="phone wa">
+      <div class="wa-head">Urganize<small>business account</small></div>
+      <div class="wa-body">
+        <p class="wa-day">Today</p>
+        <div class="wa-msg">Morning Ada. Post the studio clip for Tems on Instagram today?<p class="wa-time">08:00</p></div>
+        <div class="wa-btns"><span>Done</span><span>Skip</span></div>
+        <div class="wa-msg out">Done<p class="wa-time">13:42 ✓✓</p></div>
+        <div class="wa-msg">Nice one. Marked done. Next for Tems: lyric snippet on Thursday.<p class="wa-time">13:42</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Settings -->
+  <div class="col">
+    <p class="tag">6 · Settings, same opt-in</p>
+    <p class="why">One more switch under WhatsApp. Same YES opt-in, same quiet hours (21:00 to 08:00), still one message a day per person.</p>
+    <div class="phone">
+      <p class="mono">Settings · UrgAns</p>
+      <p class="h">WhatsApp</p>
+      <p class="sub">UrgAns messages people on your team about their work.</p>
+      <div class="box" style="padding-top:4px; padding-bottom:4px">
+        <div class="row"><span>Chase tasks that are due</span><div class="switch"></div></div>
+        <div class="row"><span><b>Remind people to post</b><br><span style="color:var(--a-sec); font-size:13px">On the day, for posts they own</span></span><div class="switch"></div></div>
+      </div>
+      <div class="box">
+        <div class="row"><span>Ada</span><b>Allowed</b></div>
+        <div class="row"><span>Tems</span><b>Waiting for YES</b></div>
+      </div>
+      <p class="note">Nothing sends until WhatsApp is connected. Until then, the Home card and the artist page still show today's post.</p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

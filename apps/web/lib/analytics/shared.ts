@@ -448,6 +448,18 @@ export interface AnalyticsEventPropertiesMap {
     action: 'open_epk' | 'open_release' | 'new_rollout';
   };
   /**
+   * The posting plan (2026-10-27): posts per artist, between releases. Added
+   * against marked done is the whole question. Ids and counts only, never the
+   * post text.
+   */
+  posting_plan_post_added: { artist_id: string; source: 'sheet'; has_platform: boolean };
+  posting_plan_post_status: {
+    artist_id: string;
+    status: 'planned' | 'done' | 'skipped';
+    source: 'artist_page' | 'home';
+  };
+  posting_plan_ask_urgans: { artist_id: string };
+  /**
    * The shell's coming-soon screens (design overhaul, 2026-10-04). `viewed`
    * against `interest` is how the next area to build gets chosen: how many
    * people opened it, and how many asked to be told. Area key only.

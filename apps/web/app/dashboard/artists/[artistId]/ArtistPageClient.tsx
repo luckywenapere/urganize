@@ -18,6 +18,7 @@ import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { ThumbImage } from '@/components/shared/ThumbImage';
 import { ArtistCatalogueCard } from '@/components/artists/ArtistCatalogueCard';
 import { ArtistFactsCard } from '@/components/artists/ArtistFactsCard';
+import { PostingPlanCard } from '@/components/artists/PostingPlanCard';
 import { displayReleaseTitle } from '@/types/releases';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
@@ -230,6 +231,9 @@ export default function ArtistPageClient() {
           </>
         )}
       </SectionCard>
+
+      {/* Posting plan (2026-10-27): what to post between releases. */}
+      <PostingPlanCard artistId={artist.id} artistName={artist.name} />
 
       <ArtistCatalogueCard artistId={artist.id} artistName={artist.name} />
     </div>

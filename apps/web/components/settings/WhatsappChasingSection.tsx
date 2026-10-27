@@ -29,6 +29,7 @@ type Settings = {
   chaseOverdue: boolean;
   overdueEveryDays: number;
   tellOwnerOnDelay: boolean;
+  remindPosts: boolean;
   aiMode: 'urganize' | 'own';
   aiProvider: 'openai' | 'anthropic' | 'openrouter' | 'custom' | null;
   aiBaseUrl: string | null;
@@ -299,6 +300,8 @@ export function WhatsappChasingSection() {
           </label>
         ) : null}
         {toggle('Tell me when someone moves a date or says it is not theirs', 'tellOwnerOnDelay')}
+        {/* Posting plan (2026-10-27): on the day, for posts they own. */}
+        {toggle('Remind people to post, on the day', 'remindPosts')}
       </div>
       <p className="mt-2 text-xs text-content-tertiary">
         Messages go out around 08:00 Lagos time. Nothing sends between 21:00 and 08:00, and nobody gets more than one chase a day.
