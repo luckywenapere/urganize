@@ -22,6 +22,7 @@ async function loadPages(env: Record<string, string | undefined> = {}) {
   vi.stubEnv('NEXT_PUBLIC_FEATURE_HOME', env.NEXT_PUBLIC_FEATURE_HOME ?? '');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_ARTIST_PAGE', env.NEXT_PUBLIC_FEATURE_ARTIST_PAGE ?? '');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_WORKSPACE', env.NEXT_PUBLIC_FEATURE_WORKSPACE ?? '');
+  vi.stubEnv('NEXT_PUBLIC_FEATURE_OPPORTUNITIES', env.NEXT_PUBLIC_FEATURE_OPPORTUNITIES ?? '');
   return (await import('./app-pages')) as PagesModule;
 }
 
@@ -44,13 +45,19 @@ describe('buildAppPages — always present', () => {
   it('offers Home, the catalog, the assistant and settings with every flag off', async () => {
     const { buildAppPages } = await loadPages();
     const keys = buildAppPages({ hasCuratorProfile: false }).map((page) => page.key);
+    expect(keys).toEqual(['home', 'catalog', 'urgans', 'settings']);
+  });
+
+  it('offers Opportunities only when it is unpaused (paused Oct 27, 2026)', async () => {
+    const { buildAppPages } = await loadPages({ NEXT_PUBLIC_FEATURE_OPPORTUNITIES: 'true' });
+    const keys = buildAppPages({ hasCuratorProfile: false }).map((page) => page.key);
     expect(keys).toEqual(['home', 'catalog', 'urgans', 'opportunities', 'settings']);
   });
 
   it('offers Home first, ahead of the catalog, when its flag is on', async () => {
     const { buildAppPages } = await loadPages({ NEXT_PUBLIC_FEATURE_HOME: 'true' });
     const keys = buildAppPages({ hasCuratorProfile: false }).map((page) => page.key);
-    expect(keys).toEqual(['home', 'catalog', 'urgans', 'opportunities', 'settings']);
+    expect(keys).toEqual(['home', 'catalog', 'urgans', 'settings']);
   });
 
   it('keeps Home as its own page, not a Catalog keyword', async () => {
@@ -208,7 +215,7 @@ describe('appPageHaystack + the shared matcher', () => {
   });
 
   it('finds Opportunities by "gig"', async () => {
-    const { buildAppPages, appPageHaystack } = await loadPages();
+    const { buildAppPages, appPageHaystack } = await loadPages({ NEXT_PUBLIC_FEATURE_OPPORTUNITIES: 'true' });
     const opps = buildAppPages({ hasCuratorProfile: false }).find((page) => page.key === 'opportunities');
     expect(matchesSearchTerms(appPageHaystack(opps!), parseSearchTerms('gig'))).toBe(true);
   });

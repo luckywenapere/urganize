@@ -6,9 +6,18 @@ import {
   loadWorkspaceAccessContext,
   requireAuthenticatedAdmin,
 } from '@/lib/tasks-server';
+import { isOpportunitiesEnabled } from '@/lib/paused-features';
 
-// Shared gate for the Opportunities routes. Not behind a feature flag: the
-// area is on for everyone. Auth and the paywall run first, then the team rules.
+// Shared gate for the Opportunities routes. Paused Oct 27, 2026
+// (lib/paused-features.ts): with the feature off every route answers 404
+// 'Not found.' BEFORE auth, the same as the Relationships routes, so it is
+// indistinguishable from a route that does not exist (and UrgAns's
+// isFlagGateOff reads it as "the feature is off"). Then auth and the paywall,
+// then the team rules.
+
+export const isOpportunitiesRouteEnabled = (): boolean => isOpportunitiesEnabled();
+
+export const notFoundResponse = () => NextResponse.json({ error: 'Not found.' }, { status: 404 });
 
 const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const isUuid = (value: string): boolean => UUID_SHAPE.test(value);
@@ -30,6 +39,8 @@ export async function resolveOpportunitiesContext(
   request: NextRequest,
   options: { write: boolean }
 ): Promise<{ error: NextResponse } | { context: OpportunitiesContext }> {
+  if (!isOpportunitiesRouteEnabled()) return { error: notFoundResponse() };
+
   const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) return { error: auth.error ?? NextResponse.json({ error: 'Unauthorized.' }, { status: 401 }) };
 

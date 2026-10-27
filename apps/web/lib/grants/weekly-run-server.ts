@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getWorkspaceAccess } from '@/lib/team-billing-server';
 import type { GrantProfileRow } from './grant-profile';
 import { grantSuggestionsEnabled } from './grant-suggestions-flag';
+import { isOpportunitiesEnabled } from '@/lib/paused-features';
 import { GRANT_PUSH_KIND, GRANT_PUSH_URL, grantPushCopy, programmeFromRow, type GrantProgrammeRow } from './weekly-run';
 import { runGrantSuggestionsWith, type GrantRunResult, type GrantRunStore } from './weekly-run-core';
 
@@ -114,7 +115,8 @@ export async function runWeeklyGrantSuggestions(
   admin: SupabaseClient,
   options: { now?: Date; timeBudgetMs: number }
 ): Promise<GrantRunResult | { skipped: 'flag_off' } | { error: string }> {
-  if (!grantSuggestionsEnabled()) return { skipped: 'flag_off' };
+  // Opportunities is paused (Oct 27, 2026): no matching, no push into it.
+  if (!grantSuggestionsEnabled() || !isOpportunitiesEnabled()) return { skipped: 'flag_off' };
   try {
     return await runGrantSuggestionsWith(storeFor(admin), {
       now: options.now ?? new Date(),

@@ -13,6 +13,7 @@ import { AttentionStack } from './AttentionStack';
 import { ChappiSpeaksCard } from './ChappiSpeaksCard';
 import { HomeStack } from './HomeStack';
 import { OpportunitiesCard } from './OpportunitiesCard';
+import { OPPORTUNITIES_ENABLED } from '@/lib/paused-features';
 import { OnboardingBar } from './OnboardingBar';
 import { PlacementsStack } from './PlacementsStack';
 import { RolloutsStack } from './RolloutsStack';
@@ -130,9 +131,12 @@ export function HomeBlocks({
           deals that fit the team, ahead of every other group. It reads its own
           data, so it sits outside orderHomeBlocks, and unlike the groups below
           it shows an empty state. */}
-      <ErrorBoundary name="home-block-opportunities" onError={reportBoundaryError}>
-        <OpportunitiesCard />
-      </ErrorBoundary>
+      {/* Paused Oct 27, 2026 (lib/paused-features.ts). */}
+      {OPPORTUNITIES_ENABLED ? (
+        <ErrorBoundary name="home-block-opportunities" onError={reportBoundaryError}>
+          <OpportunitiesCard />
+        </ErrorBoundary>
+      ) : null}
       {blocks.map((key) => (
         <ErrorBoundary key={key} name={`home-block-${key}`} onError={reportBoundaryError}>
           {render(key)}

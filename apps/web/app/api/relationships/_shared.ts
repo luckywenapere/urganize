@@ -6,6 +6,7 @@ import {
   loadWorkspaceAccessContext,
   requireAuthenticatedAdmin,
 } from '@/lib/tasks-server';
+import { isRelationshipsFlagOn } from '@/lib/paused-features';
 
 // Shared gate for the Relationships routes (Phase 2).
 //
@@ -19,7 +20,7 @@ import {
 // 404 body would be mistaken for an ownership miss.
 
 export const isRelationshipsEnabled = (): boolean =>
-  process.env.NEXT_PUBLIC_FEATURE_RELATIONSHIPS === 'true';
+  isRelationshipsFlagOn();
 
 export const notFoundResponse = () => NextResponse.json({ error: 'Not found.' }, { status: 404 });
 

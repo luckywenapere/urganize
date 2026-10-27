@@ -20,6 +20,7 @@
  * flag off these pages bounce or 404, so offering one as a search result would
  * be a dead end. */
 import { settingsDeepLink } from '@/lib/settings-nav';
+import { isOpportunitiesEnabled, isRelationshipsFlagOn } from '@/lib/paused-features';
 
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
@@ -28,8 +29,10 @@ const ARTIST_PAGE_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_ARTIST_PAGE === 'true' &&
   process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 const RELATIONSHIPS_ENABLED =
-  process.env.NEXT_PUBLIC_FEATURE_RELATIONSHIPS === 'true' &&
+  isRelationshipsFlagOn() &&
   process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
+// Paused Oct 27, 2026 (lib/paused-features.ts).
+const OPPORTUNITIES_ENABLED = isOpportunitiesEnabled();
 const HOME_ENABLED = true;
 
 export type AppPage = {
@@ -131,13 +134,15 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
     });
   }
 
-  pages.push({
-    key: 'opportunities',
-    label: 'Opportunities',
-    href: '/dashboard/opportunities',
-    // Open gig calls sit here since Shows left Relationships (URG-303).
-    keywords: ['deal', 'grant', 'sync', 'brand', 'partnership', 'sponsor', 'licensing', 'offer', 'gig', 'gigs', 'show', 'shows'],
-  });
+  if (OPPORTUNITIES_ENABLED) {
+    pages.push({
+      key: 'opportunities',
+      label: 'Opportunities',
+      href: '/dashboard/opportunities',
+      // Open gig calls sit here since Shows left Relationships (URG-303).
+      keywords: ['deal', 'grant', 'sync', 'brand', 'partnership', 'sponsor', 'licensing', 'offer', 'gig', 'gigs', 'show', 'shows'],
+    });
+  }
 
   if (NOTES_ENABLED) {
     pages.push({

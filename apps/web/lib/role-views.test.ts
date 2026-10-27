@@ -20,6 +20,7 @@ const ALL_ON: ShellFlags = {
   artistPage: true,
   relationships: true,
   pressKits: true,
+  opportunities: true,
 };
 
 const areas = () => buildShellAreas(ALL_ON);

@@ -1,3 +1,4 @@
+import { isRelationshipsFlagOn } from '@/lib/paused-features';
 // Vouch, slice 1 (2026-10-24, founder approved the mock).
 //
 // Three things a team gets on top of My People:
@@ -21,7 +22,7 @@ export const isVouchesFlagOn = (): boolean => process.env.NEXT_PUBLIC_FEATURE_VO
 
 export const isVouchesEnabled = (): boolean =>
   isVouchesFlagOn() &&
-  process.env.NEXT_PUBLIC_FEATURE_RELATIONSHIPS === 'true' &&
+  isRelationshipsFlagOn() &&
   process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
 export const MAX_VOUCH_NOTE = 140;

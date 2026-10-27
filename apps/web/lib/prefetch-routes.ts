@@ -1,3 +1,4 @@
+import { isOpportunitiesEnabled, isRelationshipsFlagOn } from '@/lib/paused-features';
 // Which route chunks to warm in the background so a tap is instant.
 //
 // These pages are thin server wrappers over big client components, so what a
@@ -37,8 +38,10 @@ const ARTIST_PAGE_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 const RELATIONSHIPS_ENABLED =
-  process.env.NEXT_PUBLIC_FEATURE_RELATIONSHIPS === 'true' &&
+  isRelationshipsFlagOn() &&
   process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
+// Paused Oct 27, 2026 (lib/paused-features.ts).
+const OPPORTUNITIES_ENABLED = isOpportunitiesEnabled();
 const HOME_ENABLED = true;
 
 /** The two destinations every signed-in team account has. Settings left this
@@ -78,7 +81,7 @@ export function buildPrefetchRoutes({ hasCuratorProfile }: PrefetchAudience): st
   // rollout, so /dashboard/pitching (now a bridge) is no longer prefetched.
   if (DIRECTORY_ENABLED) routes.push('/dashboard/directory');
   if (RELATIONSHIPS_ENABLED) routes.push('/dashboard/relationships');
-  routes.push('/dashboard/opportunities');
+  if (OPPORTUNITIES_ENABLED) routes.push('/dashboard/opportunities');
   // Both halves required: the feature has to be on AND this account has to
   // actually be a playlist owner. Everyone else has no such nav entry.
   if (PITCHING_ENABLED && hasCuratorProfile === true) routes.push('/curator');

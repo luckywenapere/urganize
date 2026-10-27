@@ -11,6 +11,7 @@
 // only place that reads them.
 
 import { buildSettingsUrl } from './settings-nav';
+import { isOpportunitiesEnabled, isRelationshipsFlagOn } from './paused-features';
 
 export type ShellAreaKey =
   | 'home'
@@ -30,6 +31,8 @@ export type ShellFlags = {
   artistPage: boolean;
   relationships: boolean;
   pressKits: boolean;
+  /** Paused Oct 27, 2026 (lib/paused-features.ts): off unless its env var is set. */
+  opportunities: boolean;
 };
 
 /** A tab's one action, drawn at the right end of the phone tab row (tab jump
@@ -79,9 +82,10 @@ export function readShellFlags(): ShellFlags {
       process.env.NEXT_PUBLIC_FEATURE_ARTIST_PAGE === 'true' &&
       process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true',
     relationships:
-      process.env.NEXT_PUBLIC_FEATURE_RELATIONSHIPS === 'true' &&
+      isRelationshipsFlagOn() &&
       process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true',
     pressKits: process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true',
+    opportunities: isOpportunitiesEnabled(),
   };
 }
 
@@ -207,14 +211,19 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       isActive: (p) =>
         startsWithPath(p, '/dashboard/relationships') || startsWithPath(p, '/dashboard/directory'),
     },
-    {
-      key: 'opportunities',
-      label: 'Opportunities',
-      href: '/dashboard/opportunities',
-      live: true,
-      subTabs: [],
-      isActive: (p) => startsWithPath(p, '/dashboard/opportunities'),
-    },
+    // Opportunities is paused (Oct 27, 2026): no pill, no More row, no G O.
+    ...(flags.opportunities
+      ? [
+          {
+            key: 'opportunities' as const,
+            label: 'Opportunities',
+            href: '/dashboard/opportunities',
+            live: true,
+            subTabs: [],
+            isActive: (p: string) => startsWithPath(p, '/dashboard/opportunities'),
+          },
+        ]
+      : []),
     // Audience left the nav (Oct 16, 2026 cuts, URG-319): a top-bar pill that
     // only said "Coming soon". It comes back when it exists. /dashboard/audience
     // forwards to Home.

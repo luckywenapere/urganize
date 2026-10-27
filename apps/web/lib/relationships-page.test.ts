@@ -18,8 +18,12 @@ const NOW = new Date('2026-10-03T12:00:00Z');
 describe('isRelationshipsPageEnabled', () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it('needs both flags', () => {
+  it('needs both flags, and the unpause flag while Relationships is paused', () => {
+    vi.stubEnv('NEXT_PUBLIC_RELATIONSHIPS_UNPAUSED', '');
     vi.stubEnv('NEXT_PUBLIC_FEATURE_RELATIONSHIPS', 'true');
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_WORKSPACE', 'true');
+    expect(isRelationshipsPageEnabled()).toBe(false);
+    vi.stubEnv('NEXT_PUBLIC_RELATIONSHIPS_UNPAUSED', 'true');
     vi.stubEnv('NEXT_PUBLIC_FEATURE_WORKSPACE', '');
     expect(isRelationshipsPageEnabled()).toBe(false);
     vi.stubEnv('NEXT_PUBLIC_FEATURE_WORKSPACE', 'true');

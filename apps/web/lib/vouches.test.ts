@@ -140,7 +140,16 @@ describe('the flag', () => {
 
   const loadFlags = async () => import('./vouches');
 
+  it('is off while Relationships is paused', async () => {
+    vi.stubEnv('NEXT_PUBLIC_RELATIONSHIPS_UNPAUSED', '');
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_RELATIONSHIPS', 'true');
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_WORKSPACE', 'true');
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_VOUCHES', '');
+    expect((await loadFlags()).isVouchesEnabled()).toBe(false);
+  });
+
   it('ships on, needs relationships and workspace, and only "false" turns it off', async () => {
+    vi.stubEnv('NEXT_PUBLIC_RELATIONSHIPS_UNPAUSED', 'true');
     vi.stubEnv('NEXT_PUBLIC_FEATURE_RELATIONSHIPS', 'true');
     vi.stubEnv('NEXT_PUBLIC_FEATURE_WORKSPACE', 'true');
     vi.stubEnv('NEXT_PUBLIC_FEATURE_VOUCHES', '');

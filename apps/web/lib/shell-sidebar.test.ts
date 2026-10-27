@@ -8,6 +8,7 @@ const ALL_ON: ShellFlags = {
   artistPage: true,
   relationships: true,
   pressKits: true,
+  opportunities: true,
 };
 const ALL_OFF: ShellFlags = {
   notes: false,
@@ -16,6 +17,7 @@ const ALL_OFF: ShellFlags = {
   artistPage: false,
   relationships: false,
   pressKits: false,
+  opportunities: false,
 };
 
 const labels = (path: string, flags: ShellFlags = ALL_ON) =>

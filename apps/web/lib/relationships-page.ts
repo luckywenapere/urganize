@@ -1,10 +1,11 @@
+import { isRelationshipsFlagOn } from '@/lib/paused-features';
 // Small pure helpers for the Relationships pages, kept out of the components so
 // they can be tested. Filtering lives in lib/relationships-filter.ts.
 
 /** The pages need both flags, the way the artist pages do: the team is resolved
  *  through the workspace, so without that flag there is no team to read. */
 export const isRelationshipsPageEnabled = (): boolean =>
-  process.env.NEXT_PUBLIC_FEATURE_RELATIONSHIPS === 'true' &&
+  isRelationshipsFlagOn() &&
   process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
 export const RELATIONSHIPS_HREF = '/dashboard/relationships';

@@ -17,6 +17,7 @@ import { useHomeFocusData } from '../useHomeFocusData';
 import { useHomeNextMoves } from '../useHomeNextMoves';
 import { ManagerNewView } from '../ManagerNewView';
 import { OpportunitiesCard } from '../OpportunitiesCard';
+import { OPPORTUNITIES_ENABLED } from '@/lib/paused-features';
 import { HomeBell } from './HomeBell';
 import { OneThing } from './OneThing';
 import { RecordAskCard } from '../RecordAskCard';
@@ -138,11 +139,14 @@ function BetweenHome({ home }: { home: HomePayload; onNewRollout: () => void }) 
           </Fenced>
         )}
       </div>
-      <div className="mt-5">
-        <Fenced name="opportunities">
-          <OpportunitiesCard items={home.opportunities} />
-        </Fenced>
-      </div>
+      {/* Paused Oct 27, 2026 (lib/paused-features.ts). */}
+      {OPPORTUNITIES_ENABLED ? (
+        <div className="mt-5">
+          <Fenced name="opportunities">
+            <OpportunitiesCard items={home.opportunities} />
+          </Fenced>
+        </div>
+      ) : null}
     </div>
   );
 }

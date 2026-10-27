@@ -3,6 +3,7 @@ import { listOpportunities } from '@/lib/opportunities-server';
 import { listGrantSuggestions } from '@/lib/grants/suggestions-server';
 import { grantSuggestionsEnabled } from '@/lib/grants/grant-suggestions-flag';
 import { todayKey } from '@/lib/opportunities';
+import { isOpportunitiesEnabled } from '@/lib/paused-features';
 import { pickHomeOpportunities, type HomeOpportunityItem } from './opportunities-card';
 
 /**
@@ -19,7 +20,8 @@ export async function loadHomeOpportunities(
   artistScoped: boolean,
   now: Date = new Date()
 ): Promise<HomeOpportunityItem[] | null> {
-  if (!workspaceId || artistScoped) return null;
+  // Paused Oct 27, 2026 (lib/paused-features.ts): Home reads nothing.
+  if (!isOpportunitiesEnabled() || !workspaceId || artistScoped) return null;
   try {
     const [saved, suggested] = await Promise.all([
       listOpportunities(adminClient, workspaceId),

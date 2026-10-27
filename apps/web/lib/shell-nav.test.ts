@@ -18,6 +18,7 @@ const ALL_ON: ShellFlags = {
   artistPage: true,
   relationships: true,
   pressKits: true,
+  opportunities: true,
 };
 const ALL_OFF: ShellFlags = {
   notes: false,
@@ -26,19 +27,23 @@ const ALL_OFF: ShellFlags = {
   artistPage: false,
   relationships: false,
   pressKits: false,
+  opportunities: false,
 };
 
 describe('shell nav', () => {
-  it('always offers the five areas in the strategy order (UrgAns after Home; Pitching lives inside each rollout; Audience cut Oct 16, 2026)', () => {
-    for (const flags of [ALL_ON, ALL_OFF]) {
-      expect(buildShellAreas(flags).map((a) => a.key)).toEqual([
-        'home',
-        'urgans',
-        'catalogue',
-        'relationships',
-        'opportunities',
-      ]);
-    }
+  it('offers the five areas in the strategy order (UrgAns after Home; Pitching lives inside each rollout; Audience cut Oct 16, 2026)', () => {
+    expect(buildShellAreas(ALL_ON).map((a) => a.key)).toEqual([
+      'home',
+      'urgans',
+      'catalogue',
+      'relationships',
+      'opportunities',
+    ]);
+  });
+
+  it('drops Opportunities while it is paused (Oct 27, 2026)', () => {
+    expect(buildShellAreas(ALL_OFF).map((a) => a.key)).toEqual(['home', 'urgans', 'catalogue', 'relationships']);
+    expect(buildMoreItems(buildShellAreas(ALL_OFF)).map((i) => i.key)).toEqual(['relationships']);
   });
 
   it('marks areas with nothing built as not live, so their page says coming soon', () => {
@@ -49,11 +54,10 @@ describe('shell nav', () => {
       urgans: true,
       catalogue: true,
       relationships: false,
-      opportunities: true,
     });
   });
 
-  it('opportunities is always live, and Audience is off the nav (URG-319)', () => {
+  it('opportunities is live when on, and Audience is off the nav (URG-319)', () => {
     const areas = buildShellAreas(ALL_ON);
     expect(areas.find((a) => a.key === 'opportunities')?.live).toBe(true);
     expect(areas.find((a) => a.key === 'audience')).toBeUndefined();

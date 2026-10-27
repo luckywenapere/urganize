@@ -10,15 +10,17 @@ async function loadRoutes(options: {
   notes: boolean;
   pitching: boolean;
   home?: boolean;
+  opportunities?: boolean;
 }) {
   vi.resetModules();
   vi.stubEnv('NEXT_PUBLIC_FEATURE_NOTES', options.notes ? 'true' : 'false');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_PITCHING', options.pitching ? 'true' : 'false');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_HOME', options.home ? 'true' : 'false');
+  vi.stubEnv('NEXT_PUBLIC_FEATURE_OPPORTUNITIES', options.opportunities ? 'true' : 'false');
   return import('./prefetch-routes');
 }
 
-const ALL_ON = { notes: true, pitching: true, home: true };
+const ALL_ON = { notes: true, pitching: true, home: true, opportunities: true };
 const ALL_OFF = { notes: false, pitching: false, home: false };
 
 afterEach(() => {
@@ -32,7 +34,6 @@ describe('buildPrefetchRoutes', () => {
       '/dashboard',
       '/dashboard/urgans',
       '/dashboard/home',
-      '/dashboard/opportunities',
     ]);
   });
 
