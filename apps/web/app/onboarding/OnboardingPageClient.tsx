@@ -89,7 +89,6 @@ import {
   readOnboardingHistoryStep,
 } from '@/lib/onboarding-history';
 import { useRouter } from 'next/navigation';
-import { Chappi } from '@urganize/ui';
 import { useAuthStore } from '@/lib/auth-store';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { HOME_PATH } from '@/lib/home-path';
@@ -1905,18 +1904,9 @@ export default function OnboardingPage() {
           !personaOpen && step === ONBOARDING_STEP.paywall ? 'lg:max-w-5xl' : ''
         }`}
       >
-        {/* Brand / title. Chappi introduces himself here and nowhere else in
-            the flow (mascot brief, 2026-08-30) — he sits beside the greeting
-            on the first screen and does not follow the user through the
-            questions.
-
-            The signup line no longer says "workspace". The model sheet bans
-            the word outright ("that word stays out of anything a customer
-            reads"), and the rule binds every string rendered next to him, so
-            putting him here forced the fix. Both branches now say the same
-            true thing; the authed-setup branch already did. */}
-        <div className="mb-6 flex items-start gap-4 sm:mb-8">
-          {personaOpen || step === 0 ? <Chappi pose="idle" size={96} className="-mt-2" /> : null}
+        {/* Brand / title. The signup line does not say "workspace"; that
+            word stays out of anything a customer reads. */}
+        <div className="mb-6 sm:mb-8">
           <div className="min-w-0">
             <p className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-brand">
               Urganize
