@@ -167,7 +167,7 @@ export function ArtistFactsCard({ artistId, artistName }: { artistId: string; ar
       </div>
       {data.facts.length === 0 ? (
         <p className="mt-2 text-sm text-content-tertiary">
-          Nothing yet. Tell UrgAns in chat, like &quot;{artistName} doesn&apos;t want playlist pitching&quot;, or add it here.
+          {`Nothing yet. Tell UrgAns in chat, like "${artistName} doesn't want playlist pitching", or add it here.`}
         </p>
       ) : (
         <ul className="mt-2 divide-y divide-stroke-subtle">

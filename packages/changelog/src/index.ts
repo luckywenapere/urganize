@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.197.1",
+    tag: "AI",
+    date: "October 27, 2026",
+    highlights: [
+      "The hint under What UrgAns remembers no longer runs the artist's name into the next word.",
+    ],
+  },
+  {
     version: "1.197.0",
     title: "Keep track of the next record",
     tag: "Rollouts",
