@@ -41,6 +41,18 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.193.0",
+    title: "Ideas first, then the brief, then the plan",
+    tag: "Rollouts",
+    date: "October 27, 2026",
+    highlights: [
+      "Ask your team for ideas on a rollout. Each person sees only their own until you close the round.",
+      "When you close it, UrgAns writes the brief from everyone's ideas. Where people disagree, you pick.",
+      "Approve the brief and your plan is built from it. The brief stays locked until you make a new version.",
+      "Spoken ideas keep their recording, so you can play them back.",
+    ],
+  },
+  {
     version: "1.192.12",
     tag: "App",
     date: "October 27, 2026",
