@@ -11,12 +11,12 @@ import type { ChappiSpeaksLine } from '@/lib/home/chappi-speaks';
 export function ChappiSpeaksCard({ line }: { line: ChappiSpeaksLine }) {
   return (
     <section
-      aria-label="Chappi speaks"
+      aria-label="For today"
       className="rounded-2xl border border-stroke-default bg-bg-surface p-4"
     >
       <div className="min-w-0">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-          Chappi speaks
+          For today
         </p>
         <p className="mt-1.5 font-display text-base font-semibold leading-snug text-content-primary sm:text-lg">
           {line.text}
