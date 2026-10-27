@@ -109,6 +109,23 @@ describe('describeActivity', () => {
   });
 });
 
+describe('artist facts', () => {
+  it('names what UrgAns remembered or forgot', () => {
+    expect(
+      describeActivity(row({ tool: 'save_artist_fact', objectType: 'artist_fact', args: { value: 'Prefers Afrobeats' }, after: { value: 'Prefers Afrobeats' } }), ME, names, NOW).title
+    ).toBe('Remembered "Prefers Afrobeats"');
+    expect(
+      describeActivity(row({ tool: 'memory.forget_fact', source: 'memory', trigger: 'artist_page', before: { value: 'Based in Lagos' } }), ME, names, NOW).title
+    ).toBe('Forgot "Based in Lagos"');
+  });
+
+  it('says a hand edit happened on the artist page', () => {
+    expect(
+      describeActivity(row({ tool: 'memory.save_fact', source: 'memory', trigger: 'artist_page', after: { value: 'x' } }), ME, names, NOW).meta
+    ).toBe('You edited it on the artist page · Today, 9:14');
+  });
+});
+
 describe('diffSnapshots', () => {
   it('lists the fields that changed, in plain names', () => {
     expect(

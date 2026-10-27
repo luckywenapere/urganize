@@ -176,6 +176,16 @@ function titleFor(row: UrgansActivityRow): string {
       return 'Removed a teammate';
     case 'update_my_directory_profile':
       return 'Updated a directory profile';
+    case 'save_artist_fact':
+    case 'memory.save_fact': {
+      const value = text(after?.value) || text(args.value);
+      return value ? `Remembered "${value.slice(0, 80)}"` : 'Remembered a fact about an artist';
+    }
+    case 'forget_artist_fact':
+    case 'memory.forget_fact': {
+      const value = text(before?.value);
+      return value ? `Forgot "${value.slice(0, 80)}"` : 'Forgot a fact about an artist';
+    }
     case 'send_work_request':
       return 'Sent a work request';
     case 'answer_work_request':
@@ -227,7 +237,7 @@ export function describeActivity(
       door = `${who} used an UrgAns button`;
       break;
     case 'memory':
-      door = `${who} told UrgAns`;
+      door = row.trigger === 'artist_page' ? `${who} edited it on the artist page` : `${who} told UrgAns`;
       break;
     case 'cron':
     default:
