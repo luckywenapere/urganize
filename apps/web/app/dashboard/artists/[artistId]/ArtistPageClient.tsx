@@ -19,6 +19,7 @@ import { ThumbImage } from '@/components/shared/ThumbImage';
 import { ArtistCatalogueCard } from '@/components/artists/ArtistCatalogueCard';
 import { ArtistFactsCard } from '@/components/artists/ArtistFactsCard';
 import { PostingPlanCard } from '@/components/artists/PostingPlanCard';
+import { ArtistRecordsCard } from '@/components/artists/ArtistRecordsCard';
 import { displayReleaseTitle } from '@/types/releases';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
@@ -205,6 +206,9 @@ export default function ArtistPageClient() {
         </div>
       </header>
 
+      {/* The next record (2026-10-27): what is being made sits above what is
+          planned and released, so the weeks between releases have a place. */}
+      <ArtistRecordsCard artistId={artist.id} />
       <ArtistFactsCard artistId={artist.id} artistName={artist.name} />
 
       {/* The Press kit bar left Oct 17, 2026 (founder approved "cuts-3"):

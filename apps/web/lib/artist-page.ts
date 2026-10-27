@@ -15,6 +15,10 @@ export const releaseHref = (releaseId: string): string =>
 export const artistHref = (artistId: string): string =>
   `/dashboard/artists/${encodeURIComponent(artistId)}`;
 
+/** A record in the making, under its artist in Catalogue (2026-10-27). */
+export const recordHref = (artistId: string, recordId: string): string =>
+  `${artistHref(artistId)}/records/${encodeURIComponent(recordId)}`;
+
 /** "Oct 2, 2026" from a date-only string, or null for none or junk. Parsed as a
  *  LOCAL date so a release dated the 2nd never shows as the 1st west of UTC. */
 export function formatCalendarDate(value: string | null | undefined): string | null {

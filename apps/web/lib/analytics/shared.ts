@@ -460,6 +460,21 @@ export interface AnalyticsEventPropertiesMap {
   };
   posting_plan_ask_urgans: { artist_id: string };
   /**
+   * The next record (2026-10-27): a record still being made. These say whether
+   * teams use Urganize between releases, which is why it exists. Ids, counts
+   * and stage keys only; no titles, names or notes.
+   */
+  record_started: {
+    artist_id: string;
+    source: 'artist_page';
+  };
+  record_edited: {
+    record_id: string;
+    action: 'song_added' | 'song_stage' | 'song_removed' | 'session_added' | 'session_edited' | 'session_removed' | 'details' | 'dropped';
+    stage?: 'idea' | 'recording' | 'mixing' | 'done';
+    songs?: number;
+  };
+  /**
    * The shell's coming-soon screens (design overhaul, 2026-10-04). `viewed`
    * against `interest` is how the next area to build gets chosen: how many
    * people opened it, and how many asked to be told. Area key only.

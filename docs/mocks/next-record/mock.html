@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Next record mocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Space+Mono:wght@400;700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web light theme (same as docs/mocks/distribution-limits). */
+  :root {
+    --a-bg:#f3efe6; --a-card:#f8f4ec; --a-text:#1a1611; --a-sec:#5c544a; --a-ter:#6d6459;
+    --a-line:#e6dfd2; --a-line2:#d8d0c2; --a-brand:#14643a; --a-brand-sub:rgba(20,100,58,.07);
+    --a-amber:#9a5b00; --wa-bg:#efe7dd; --wa-in:#ffffff; --wa-out:#d9fdd3; --wa-head:#075e54;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:#e9e3d7; }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--a-text); padding:32px 16px 64px; }
+  p { margin:0; }
+  .intro { max-width:820px; margin:0 auto 28px; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; margin:0 0 6px; }
+  .intro p { color:var(--a-sec); }
+  .board { display:flex; flex-wrap:wrap; gap:28px; justify-content:center; }
+  .col { width:360px; max-width:100%; }
+  .tag { font-family:'Space Mono', monospace; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--a-sec); margin-bottom:6px; }
+  .why { font-size:13px; color:var(--a-ter); margin-bottom:12px; min-height:58px; }
+  .phone { background:var(--a-bg); border:1px solid var(--a-line2); border-radius:28px; padding:22px 16px 28px; min-height:660px; position:relative; overflow:hidden; }
+  .mono { font-family:'Space Mono', monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--a-sec); }
+  .h { font-family:'Young Serif', serif; font-size:24px; line-height:1.15; margin:6px 0 4px; }
+  .h2 { font-size:15px; font-weight:600; margin:20px 0 8px; display:flex; justify-content:space-between; align-items:baseline; }
+  .h2 span { font-weight:400; font-size:13px; color:var(--a-sec); }
+  .sub { color:var(--a-sec); font-size:14px; }
+  .box { border:1px solid var(--a-line); background:var(--a-card); padding:14px 16px; margin-top:14px; }
+  .box .t { font-size:15px; font-weight:600; }
+  .box .s { font-size:14px; color:var(--a-sec); margin-top:4px; }
+  .box.ai { border-color:var(--a-brand); background:var(--a-brand-sub); }
+  .row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:11px 0; border-top:1px solid var(--a-line); font-size:14px; }
+  .row:first-child { border-top:0; }
+  .row b { font-weight:600; }
+  .row .s { color:var(--a-sec); font-size:13px; }
+  .btn { display:flex; align-items:center; justify-content:center; height:44px; font-weight:600; font-size:14px; margin-top:12px; }
+  .green { background:var(--a-brand); color:#fff; }
+  .outline { border:1px solid var(--a-line2); color:var(--a-text); }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .two .btn { margin-top:12px; }
+  .quiet { color:var(--a-sec); text-decoration:underline; text-underline-offset:3px; font-size:13px; margin-top:12px; display:inline-block; }
+  .chip { font-family:'Space Mono', monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border:1px solid var(--a-line2); padding:2px 7px; color:var(--a-sec); white-space:nowrap; }
+  .chip.on { border-color:var(--a-brand); color:var(--a-brand); }
+  .chip.amber { border-color:var(--a-amber); color:var(--a-amber); }
+  .face { width:36px; height:36px; border-radius:50%; background:#d9d0c0; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; color:var(--a-sec); flex:none; }
+  .cover { width:44px; height:44px; background:#d9d0c0; display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--a-sec); flex:none; }
+  .cover.dash { background:transparent; border:1px dashed var(--a-line2); }
+  .lr { display:flex; gap:12px; align-items:center; }
+  .bar { height:6px; background:var(--a-line); margin-top:10px; }
+  .bar i { display:block; height:6px; background:var(--a-brand); }
+  .crumb { font-size:13px; color:var(--a-sec); margin-bottom:10px; }
+  .input { border:1px solid var(--a-line2); background:#fff; padding:12px 14px; font-size:14px; color:var(--a-ter); margin-top:14px; display:flex; justify-content:space-between; }
+  .bubble { padding:10px 12px; font-size:14px; margin-top:10px; max-width:88%; }
+  .me { background:var(--a-text); color:#fff; margin-left:auto; }
+  .bot { background:var(--a-card); border:1px solid var(--a-line); }
+  .who { font-size:12px; color:var(--a-sec); margin-top:12px; }
+  .add { font-size:13px; padding:6px 0; border-top:1px solid var(--a-line); display:flex; justify-content:space-between; }
+  .add:first-of-type { border-top:0; }
+  .add b { font-weight:600; }
+  /* WhatsApp */
+  .wa { background:var(--wa-bg); padding:0; }
+  .wa-head { background:var(--wa-head); color:#fff; padding:16px; display:flex; gap:10px; align-items:center; }
+  .wa-head .face { background:#fff; color:var(--a-brand); }
+  .wa-head .n { font-weight:600; }
+  .wa-head .st { font-size:12px; opacity:.8; }
+  .wa-body { padding:14px 12px; }
+  .wa-msg { background:var(--wa-in); border-radius:8px; padding:8px 10px; font-size:14px; max-width:86%; margin-top:8px; box-shadow:0 1px 1px rgba(0,0,0,.08); }
+  .wa-msg.out { background:var(--wa-out); margin-left:auto; }
+  .wa-time { font-size:11px; color:#8a8a8a; text-align:right; margin-top:2px; }
+  .wa-btns { display:flex; flex-direction:column; gap:4px; margin-top:4px; max-width:86%; }
+  .wa-btns div { background:var(--wa-in); border-radius:8px; text-align:center; padding:8px; color:#0b7cba; font-size:14px; font-weight:500; }
+  .wa-day { text-align:center; font-size:11px; color:#666; background:#e1f2fb; border-radius:6px; padding:3px 8px; width:max-content; margin:4px auto 8px; }
+  .open { max-width:820px; margin:36px auto 0; }
+  .open h2 { font-family:'Young Serif', serif; font-weight:400; font-size:20px; margin:0 0 8px; }
+  .open ol { margin:0; padding-left:20px; color:var(--a-sec); }
+  .open li { margin-bottom:6px; }
+  .open li b { color:var(--a-text); }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <p class="tag">Mocks · 27 Oct 2026 · for your yes</p>
+  <h1>The next record</h1>
+  <p>A release that is still being made lives under the artist in Catalogue. UrgAns starts it when a release goes live, fills it from quick messages, checks in on WhatsApp, and turns it into the rollout when the music is done. Names are made up.</p>
+</div>
+
+<div class="board">
+
+  <!-- 1. The prompt after a release goes live -->
+  <div class="col">
+    <p class="tag">1 · Home, a week after release</p>
+    <p class="why">The moment people usually leave. UrgAns asks one question instead of going quiet. It sits in Home's top slot, where the suggestion card already goes.</p>
+    <div class="phone">
+      <p class="mono">Home</p>
+      <p class="h">Good evening, Oyin</p>
+      <div class="box ai">
+        <p class="mono" style="color:var(--a-brand)">UrgAns</p>
+        <p class="t" style="margin-top:6px">"Gold Dust" has been out a week. What's next for Kemi Ade?</p>
+        <p class="s">Tell me in a line. I'll keep track of the songs and sessions so nothing lives in your head.</p>
+        <div class="input" style="margin-top:12px"><span>e.g. new EP, 4 songs, recording in Dec</span><span>↑</span></div>
+        <a class="quiet">Nothing yet, ask me in 2 weeks</a>
+      </div>
+      <p class="h2">This week <span>Gold Dust</span></p>
+      <div class="box" style="margin-top:0">
+        <div class="row"><b>Send the recap to the team</b><span class="chip">Today</span></div>
+        <div class="row"><b>Thank the curators who added it</b><span class="chip">Thu</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Artist page in Catalogue -->
+  <div class="col">
+    <p class="tag">2 · Catalogue › Kemi Ade</p>
+    <p class="why">"In the making" sits above the released music. It is the same kind of release, just not out yet, so nothing gets typed twice later.</p>
+    <div class="phone">
+      <p class="crumb">Catalogue › Kemi Ade</p>
+      <div class="lr"><div class="face" style="width:52px;height:52px;font-size:16px">KA</div><div><p class="h" style="margin:0">Kemi Ade</p><p class="sub">Afro-pop · 3 releases</p></div></div>
+      <p class="h2">In the making</p>
+      <div class="box" style="margin-top:0">
+        <div class="lr"><div class="cover dash">?</div>
+          <div style="flex:1"><p class="t">Untitled EP</p><p class="s">4 songs · 1 done · next session Fri</p></div></div>
+        <div class="bar"><i style="width:30%"></i></div>
+      </div>
+      <p class="h2">Released</p>
+      <div class="box" style="margin-top:0">
+        <div class="row"><div class="lr"><div class="cover">GD</div><div><b>Gold Dust</b><p class="s">Single · 20 Oct</p></div></div><span class="chip on">Live</span></div>
+        <div class="row"><div class="lr"><div class="cover">LO</div><div><b>Lagos Overtime</b><p class="s">Single · 2 Jul</p></div></div><span class="chip">Out</span></div>
+        <div class="row"><div class="lr"><div class="cover">SR</div><div><b>Slow Rain</b><p class="s">EP · 14 Mar</p></div></div><span class="chip">Out</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. The record in the making -->
+  <div class="col">
+    <p class="tag">3 · The record</p>
+    <p class="why">Just songs, sessions and people. Four song stages, no forms. People link to Relationships, so Tolu is the same Tolu on every record.</p>
+    <div class="phone">
+      <p class="crumb">Catalogue › Kemi Ade › Untitled EP</p>
+      <p class="h" style="margin-top:0">Untitled EP</p>
+      <p class="sub">In the making · no release date yet</p>
+      <p class="h2">Songs <span>1 of 4 done</span></p>
+      <div class="box" style="margin-top:0">
+        <div class="row"><b>Sunday Light</b><span class="chip on">Done</span></div>
+        <div class="row"><b>Pressure</b><span class="chip">Mixing</span></div>
+        <div class="row"><b>Wahala Free</b><span class="chip">Recording</span></div>
+        <div class="row"><b>Untitled 4</b><span class="chip">Idea</span></div>
+      </div>
+      <p class="h2">Sessions</p>
+      <div class="box" style="margin-top:0">
+        <div class="row"><div class="lr"><div class="face">TO</div><div><b>Fri 31 Oct · Tolu</b><p class="s">Producer · Wahala Free, Untitled 4</p></div></div><span class="chip amber">Next</span></div>
+        <div class="row"><div class="lr"><div class="face">DA</div><div><b>Mon 20 Oct · Dami</b><p class="s">Engineer · Pressure mix</p></div></div><span class="chip">Done</span></div>
+      </div>
+      <div class="input"><span>Tell UrgAns what happened…</span><span>🎙</span></div>
+    </div>
+  </div>
+
+  <!-- 4. Quick capture -->
+  <div class="col">
+    <p class="tag">4 · One line in, filed</p>
+    <p class="why">Quicker than a line in Notes. UrgAns reads the message, shows what it will add, and you tap once. It never adds people or dates you didn't say.</p>
+    <div class="phone">
+      <p class="mono">UrgAns · Untitled EP</p>
+      <div class="bubble me">session with tolu friday, doing wahala free and the new one. dami doing the final mix on pressure next week</div>
+      <div class="bubble bot">
+        <p>Here's what I'll add:</p>
+        <div style="margin-top:8px">
+          <div class="add"><span>Session</span><b>Fri 31 Oct · Tolu</b></div>
+          <div class="add"><span>Songs in it</span><b>Wahala Free, Untitled 4</b></div>
+          <div class="add"><span>Session</span><b>Next week · Dami</b></div>
+          <div class="add"><span>Songs in it</span><b>Pressure (final mix)</b></div>
+        </div>
+        <div class="two"><div class="btn green">Add</div><div class="btn outline">Fix something</div></div>
+      </div>
+      <p class="who">"Next week" stays a week, not a made-up date, until you say the day.</p>
+    </div>
+  </div>
+
+  <!-- 5. WhatsApp check-in -->
+  <div class="col">
+    <p class="tag">5 · The check-in, on WhatsApp</p>
+    <p class="why">The app comes to them. One message the morning after a session, three taps to answer, and the record updates. Same opt-in and quiet hours as task chasing.</p>
+    <div class="phone wa">
+      <div class="wa-head"><div class="face">U</div><div><p class="n">Urganize</p><p class="st">business account</p></div></div>
+      <div class="wa-body">
+        <p class="wa-day">Saturday</p>
+        <div class="wa-msg">Morning Oyin. Did yesterday's session with Tolu happen? (Kemi Ade, Untitled EP)<p class="wa-time">8:00</p></div>
+        <div class="wa-btns"><div>Yes, it happened</div><div>It moved</div><div>Didn't happen</div></div>
+        <div class="wa-msg out">Yes, it happened<p class="wa-time">8:14 ✓✓</p></div>
+        <div class="wa-msg">Nice. Which songs got recorded?<p class="wa-time">8:14</p></div>
+        <div class="wa-msg out">wahala free. the new one needs another day<p class="wa-time">8:16 ✓✓</p></div>
+        <div class="wa-msg">Got it. Wahala Free moves to Mixing. Untitled 4 stays in Recording. When is the next day with Tolu?<p class="wa-time">8:16</p></div>
+        <div class="wa-btns"><div>Pick a day</div><div>Not booked yet</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Ready to roll out -->
+  <div class="col">
+    <p class="tag">6 · Music done, start the rollout</p>
+    <p class="why">When every song is Done, the same release becomes the rollout. The planner already knows the songs, the people and the idea, so the questions are short.</p>
+    <div class="phone">
+      <p class="crumb">Catalogue › Kemi Ade › Untitled EP</p>
+      <p class="h" style="margin-top:0">Untitled EP</p>
+      <p class="sub">4 of 4 songs done</p>
+      <div class="bar"><i style="width:100%"></i></div>
+      <div class="box ai">
+        <p class="mono" style="color:var(--a-brand)">UrgAns</p>
+        <p class="t" style="margin-top:6px">The music is done. Ready to plan the rollout?</p>
+        <p class="s">I'll use the 4 songs, the credits from your sessions and the idea you gave me. You pick the date later.</p>
+        <div class="btn green">Plan the rollout</div>
+        <a class="quiet">Not yet, still choosing the songs</a>
+      </div>
+      <p class="h2">Credits from sessions <span>ready for metadata</span></p>
+      <div class="box" style="margin-top:0">
+        <div class="row"><div class="lr"><div class="face">TO</div><b>Tolu</b></div><span class="s">Producer · 3 songs</span></div>
+        <div class="row"><div class="lr"><div class="face">DA</div><b>Dami</b></div><span class="s">Mix engineer · 4 songs</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="open">
+  <h2>Settled (27 Oct, approved as drawn)</h2>
+  <ol>
+    <li><b>Song stages:</b> Idea, Recording, Mixing, Done. Done means mastered. No fifth stage until a manager asks for it.</li>
+    <li><b>Who gets the check-in:</b> the manager only.</li>
+    <li><b>Messaging people outside the team:</b> not in the first version. UrgAns asks the manager for the new day instead.</li>
+  </ol>
+</div>
+
+</body>
+</html>
