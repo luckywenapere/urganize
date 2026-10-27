@@ -84,8 +84,10 @@ describe('the faint tier on the dark-locked public pages', () => {
   const cream: Rgb = [245, 240, 230];
 
   it('every island faint token is at least 4.5:1 on ink', () => {
-    const tokens = [...css.matchAll(/--(epk|credits|capture|kit)-text-faint:\s*rgba\(245, 240, 230, ([\d.]+)\);/g)];
-    expect(tokens.length).toBe(4);
+    // The credits page moved to the app's near-black palette on 2026-10-27
+    // and is checked on its own below.
+    const tokens = [...css.matchAll(/--(epk|capture|kit)-text-faint:\s*rgba\(245, 240, 230, ([\d.]+)\);/g)];
+    expect(tokens.length).toBe(3);
     for (const [, , alpha] of tokens) {
       expect(contrast(blend(cream, ink, Number(alpha)), ink)).toBeGreaterThanOrEqual(4.5);
     }
@@ -179,7 +181,7 @@ describe('field borders on the dark-locked pages and the calendar', () => {
   const cream: Rgb = [245, 240, 230];
   const inkText: Rgb = [26, 22, 17];
 
-  for (const name of ['credits', 'capture']) {
+  for (const name of ['capture']) {
     it(`--${name}-field-border is 3:1 on the ground and on the field fill`, () => {
       const match = css.match(new RegExp(`--${name}-field-border:\\s*rgba\\(245, 240, 230, ([\\d.]+)\\);`));
       expect(match).not.toBeNull();
@@ -211,4 +213,28 @@ describe('green palette accent (URG-256)', () => {
       expect(contrast(token(scope, 'color-text-inverse'), brand)).toBeGreaterThanOrEqual(4.5);
     });
   }
+});
+
+// The credits page wears the app's current near-black palette (2026-10-27),
+// written as plain hex rather than the ink islands' cream-over-ink alphas.
+describe('the credits page palette', () => {
+  const island = css.match(/\.credits-island \{([^}]*)\}/);
+  const hex = (name: string): Rgb => {
+    const value = new RegExp(`--credits-${name}:\\s*#([0-9a-f]{6});`).exec(island?.[1] || '');
+    expect(value).not.toBeNull();
+    const h = value![1];
+    return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)) as Rgb;
+  };
+
+  it('muted and faint text are 4.5:1 on the ground and on a field', () => {
+    for (const name of ['text-muted', 'text-faint']) {
+      expect(contrast(hex(name), hex('ground'))).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(hex(name), hex('surface'))).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('the field border is 3:1 on the ground and on the field fill', () => {
+    expect(contrast(hex('field-border'), hex('ground'))).toBeGreaterThanOrEqual(3);
+    expect(contrast(hex('field-border'), hex('surface'))).toBeGreaterThanOrEqual(3);
+  });
 });

@@ -611,21 +611,28 @@ html[data-theme='light'] .cc-island {
 /* Public credit-submission island (URG-108). Same single-source-of-truth
    pattern as .epk-island directly above, and deliberately duplicated rather
    than shared: this is a distinct public surface (a form collaborators fill
-   in, not a kit they read) that happens to want the identical dark-locked
-   Bible screen-mode treatment. Ink ground, cream text, spring accent — every
-   collaborator sees the same branded form regardless of viewer theme state. */
+   in, not a kit they read). Since 2026-10-27 it wears the app's current dark
+   palette (plain near-black, neutral greys, spring accent) rather than the
+   older ink and cream. Still dark-locked: every collaborator sees the same
+   form whatever their theme. */
 .credits-island {
   color-scheme: dark;
-  --credits-ground: #0d120e;
-  --credits-surface: #181d19;
+  --credits-ground: #0c0c0d;
+  --credits-surface: #171719;
   --credits-fill: #14643a;
   --credits-accent: #7fd99a;
-  --credits-text: #f5f0e6;
-  --credits-text-muted: rgba(245, 240, 230, 0.64);
-  --credits-text-faint: rgba(245, 240, 230, 0.55);
-  --credits-border: rgba(245, 240, 230, 0.12);
-  /* Form fields only; the line above stays a divider. 3:1 on the ink ground. */
-  --credits-field-border: rgba(245, 240, 230, 0.42);
+  --credits-text: #f2f2f0;
+  --credits-text-muted: #929291;
+  --credits-text-faint: #8a8a89;
+  --credits-border: rgba(242, 242, 240, 0.07);
+  /* Form fields only; the line above stays a divider. 3:1 on the ground. */
+  --credits-field-border: #6a6a6c;
+}
+
+/* The wordmark is white. The app inverts it for light themes, but this page
+   stays dark, so the invert is cancelled here. */
+html[data-theme='light'] .credits-island .app-wordmark {
+  filter: none;
 }
 
 /* Public fan-capture island (2026-08-14). Third instance of the pattern above,

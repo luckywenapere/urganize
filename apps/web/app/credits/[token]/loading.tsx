@@ -3,56 +3,47 @@
 // this file, that wait rendered nothing at all (default Next.js behavior: a
 // blank tab). `CreditSubmissionForm` itself has no async loading state of
 // its own (it's a static form, no fetch-before-render), so this only needs
-// to bridge the token-resolution delay, not reserve per-field shape. Mirrors
-// the real page's header shape and the dark-locked `.credits-island` Brand
-// Bible palette so there is no color flash when the form swaps in.
+// to bridge the token-resolution delay. Mirrors the real page's shape (the
+// 2026-10-27 sleek layout: wordmark row, title, three fields, chips, button)
+// on the dark-locked `.credits-island` palette so there is no flash when the
+// form swaps in.
 export default function PublicCreditsLoading() {
+  const block = { backgroundColor: 'var(--credits-surface)' };
   return (
     <main
       className="credits-island min-h-screen"
       style={{ backgroundColor: 'var(--credits-ground)' }}
       aria-hidden="true"
     >
-      <div className="mx-auto max-w-[720px] px-5 pb-16 pt-12 sm:px-8 sm:pt-16">
-        <div
-          className="skeleton-shimmer h-2.5 w-40"
-          style={{ backgroundColor: 'var(--credits-surface)' }}
-        />
-
-        <div className="mt-8 space-y-3">
-          <div
-            className="skeleton-shimmer h-3 w-40"
-            style={{ backgroundColor: 'var(--credits-surface)' }}
-          />
-          <div
-            className="skeleton-shimmer h-10 w-3/4"
-            style={{ backgroundColor: 'var(--credits-surface)' }}
-          />
-          <div
-            className="skeleton-shimmer h-3 w-32"
-            style={{ backgroundColor: 'var(--credits-surface)' }}
-          />
+      <div className="mx-auto max-w-[460px] px-5 pb-16 pt-8 sm:pt-12">
+        <div className="flex items-center justify-between">
+          <div className="skeleton-shimmer h-5 w-20 rounded" style={block} />
+          <div className="skeleton-shimmer h-3 w-12 rounded" style={block} />
         </div>
 
-        <div className="mt-6 max-w-[52ch] space-y-2">
-          <div
-            className="skeleton-shimmer h-3.5 w-full"
-            style={{ backgroundColor: 'var(--credits-surface)' }}
-          />
-          <div
-            className="skeleton-shimmer h-3.5 w-2/3"
-            style={{ backgroundColor: 'var(--credits-surface)' }}
-          />
+        <div className="mt-12 space-y-2">
+          <div className="skeleton-shimmer h-3.5 w-40 rounded" style={block} />
+          <div className="skeleton-shimmer h-10 w-2/3 rounded" style={block} />
+          <div className="skeleton-shimmer mt-3 h-3.5 w-4/5 rounded" style={block} />
         </div>
 
-        {/* The form itself renders all at once with no internal loading gate
-            — a single reserved block stands in for it rather than
-            enumerating its ~15 fields, which would only need to match if the
-            form had its own async state. */}
-        <div
-          className="skeleton-shimmer mt-8 h-96 w-full"
-          style={{ backgroundColor: 'var(--credits-surface)' }}
-        />
+        <div className="mt-8 grid gap-2.5">
+          <div className="skeleton-shimmer h-12 w-full rounded-xl" style={block} />
+          <div className="skeleton-shimmer h-12 w-full rounded-xl" style={block} />
+          <div className="skeleton-shimmer h-12 w-full rounded-xl" style={block} />
+        </div>
+
+        <div className="mt-8 flex flex-wrap gap-1.5">
+          {[24, 20, 18, 28, 20].map((width, index) => (
+            <div
+              key={index}
+              className="skeleton-shimmer h-9 rounded-full"
+              style={{ ...block, width: `${width * 4}px` }}
+            />
+          ))}
+        </div>
+
+        <div className="skeleton-shimmer mt-10 h-12 w-full rounded-xl" style={block} />
       </div>
     </main>
   );

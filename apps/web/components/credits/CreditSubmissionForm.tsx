@@ -60,6 +60,11 @@ import {
 // for writers. Splits, phone, country, "what you did", socials and bio are off
 // the form and are not sent, so the route leaves any earlier answers to them
 // alone on a resubmit. The columns and the owner's views are unchanged.
+//
+// Same day, restyled to the founder's "sleek" mock: the field name lives in
+// the placeholder (and in aria-label, since a placeholder is not a label),
+// roles are chips, and the send button is full width. Fields keep a 3:1
+// border (lib/field-border-guard.test.ts), so they can still be found.
 
 const SURFACE = 'var(--credits-surface)';
 const STROKE = 'var(--credits-border)';
@@ -68,6 +73,8 @@ const CREAM = 'var(--credits-text)';
 const MUTED = 'var(--credits-text-muted)';
 const FAINT = 'var(--credits-text-faint)';
 const BRAND = 'var(--credits-accent)';
+/** Text on the green fill. */
+const INK_TEXT = 'var(--credits-ground)';
 
 const EMPTY_INPUT: CreditSubmissionInput = {
   legalName: '',
@@ -89,37 +96,14 @@ const EMPTY_INPUT: CreditSubmissionInput = {
   confirmedAccurate: false,
 };
 
-function labelStyle(): CSSProperties {
-  return { color: FAINT };
-}
-
 function inputStyle(): CSSProperties {
   return { backgroundColor: SURFACE, borderColor: FIELD_STROKE, color: CREAM };
 }
 
-function SectionHeading({ children }: { children: ReactNode }) {
+/** Quiet grey line above a group of fields. */
+function GroupLabel({ children }: { children: ReactNode }) {
   return (
-    <h2 className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: FAINT }}>
-      {children}
-    </h2>
-  );
-}
-
-/** One-line explanation under a field. The people filling this form in are
- * producers and writers, not distribution admins, so every industry term
- * (PRO, IPI, split) gets said again in ordinary words. */
-function Hint({ children }: { children: ReactNode }) {
-  return (
-    <span className="mt-1.5 block text-xs leading-snug" style={{ color: MUTED }}>
-      {children}
-    </span>
-  );
-}
-
-/** "Optional" said out loud, so silence never reads as "required". */
-function SectionNote({ children }: { children: ReactNode }) {
-  return (
-    <p className="text-sm leading-relaxed" style={{ color: MUTED }}>
+    <p className="text-sm" style={{ color: FAINT }}>
       {children}
     </p>
   );
@@ -129,42 +113,36 @@ function TextField({
   label,
   value,
   onChange,
-  placeholder,
   type = 'text',
   required,
-  hint,
   autoComplete,
 }: {
+  /** Shown as the placeholder and read out as the field's name. */
   label: string;
   value: string;
   onChange: (value: string) => void;
-  placeholder?: string;
   type?: string;
   required?: boolean;
-  hint?: string;
   /** What the browser may fill in. Left off for fields it has no name for. */
   autoComplete?: string;
 }) {
   return (
-    <label className="block text-sm">
-      <span className="font-mono text-[11px] uppercase tracking-[0.1em]" style={labelStyle()}>
-        {label}
-        {required ? ' *' : ''}
-      </span>
-      <input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        required={required}
-        autoComplete={autoComplete}
-        className="mt-1.5 w-full rounded-xl border px-3 py-2 text-lg outline-none"
-        style={inputStyle()}
-      />
-      {hint ? <Hint>{hint}</Hint> : null}
-    </label>
+    <input
+      type={type}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={label}
+      aria-label={label}
+      required={required}
+      autoComplete={autoComplete}
+      className="h-12 w-full min-w-0 rounded-xl border px-3.5 text-lg outline-none"
+      style={inputStyle()}
+    />
   );
 }
+
+/** Roles shown before "More". The rest are rarer on a credit form. */
+const FIRST_ROLES: ReleaseCreditRole[] = ['songwriter', 'producer', 'vocalist', 'featured_artist', 'engineer'];
 
 type CreditSubmissionFormProps = {
   token: string;
@@ -188,6 +166,7 @@ export function CreditSubmissionForm({
    * name is unsettling if nothing says why, and on a shared studio machine the
    * person reading it may not be the person it remembers. */
   const [prefilledFor, setPrefilledFor] = useState('');
+  const [showAllRoles, setShowAllRoles] = useState(false);
 
   // Pre-paint, once. This page is SERVER-RENDERED, so the empty form is on
   // screen the moment the HTML lands, and the server cannot know what is in the
@@ -224,17 +203,22 @@ export function CreditSubmissionForm({
   const isWriter = input.roles.some(
     (role) => role === 'songwriter' || role === 'composer' || role === 'lyricist'
   );
+  const shownRoles = showAllRoles
+    ? RELEASE_CREDIT_ROLE_OPTIONS
+    : RELEASE_CREDIT_ROLE_OPTIONS.filter(
+        (role) => FIRST_ROLES.includes(role) || input.roles.includes(role)
+      );
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (isSubmitting) return;
 
     // Plain instructions, not field-name diagnostics: each one says what to do.
-    if (!input.legalName.trim()) return setError('Add your legal name at the top.');
-    if (input.roles.length === 0) return setError('Tick at least one thing you did on this song.');
+    if (!input.legalName.trim()) return setError('Add your legal name.');
+    if (input.roles.length === 0) return setError('Pick at least one thing you did on this song.');
     if (!input.email.trim()) return setError('Add your email so the team can reach you.');
     if (!input.confirmedAccurate) {
-      return setError('Tick the box at the bottom to confirm your details are correct.');
+      return setError('Tick the box to confirm your details are correct.');
     }
 
     setError('');
@@ -277,11 +261,11 @@ export function CreditSubmissionForm({
   if (submitted) {
     const recipient = artistName?.trim() || releaseTitle?.trim() || 'the team';
     return (
-      <div className="mt-10 rounded-2xl border py-10 text-center" style={{ borderColor: STROKE }}>
+      <div className="mt-10">
         <p className="text-lg" style={{ color: CREAM }}>
           Done. Your details have been sent to <span style={{ color: BRAND }}>{recipient}</span>.
         </p>
-        <p className="mt-2 text-sm" style={{ color: MUTED }}>
+        <p className="mt-2 text-sm leading-relaxed" style={{ color: MUTED }}>
           {replacedEarlier
             ? 'You had sent your details before, so we replaced your earlier answer with this one.'
             : 'Nothing else to do. They will get in touch if anything is missing.'}
@@ -299,8 +283,8 @@ export function CreditSubmissionForm({
             setSubmitted(false);
             setReplacedEarlier(false);
           }}
-          className="mt-6 rounded-full border px-5 py-2.5 text-sm"
-          style={{ borderColor: STROKE, color: CREAM }}
+          className="mt-6 h-11 rounded-xl border px-5 text-sm"
+          style={{ borderColor: FIELD_STROKE, color: CREAM }}
         >
           Fill it in for someone else
         </button>
@@ -309,147 +293,139 @@ export function CreditSubmissionForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-10 space-y-10">
+    <form onSubmit={handleSubmit} className="mt-8">
       {/* Said out loud, and undoable. Two reasons this is not optional polish:
           arriving at a PUBLIC form that already knows your legal name is
           unsettling if nothing explains it, and on a shared studio or cafe
           machine the person reading it may not be the person it remembers. */}
       {prefilledFor ? (
-        <div
-          className="flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between"
-          style={{ borderColor: STROKE }}
-        >
-          <p className="text-sm leading-relaxed" style={{ color: MUTED }}>
-            Filled in from the last time you used this form on this device, for{' '}
-            <span style={{ color: CREAM }}>{prefilledFor}</span>. Change anything that has
-            moved on.
-          </p>
+        <p className="mb-4 text-sm leading-relaxed" style={{ color: MUTED }}>
+          Filled in from last time on this device, for{' '}
+          <span style={{ color: CREAM }}>{prefilledFor}</span>.{' '}
           <button
             type="button"
             onClick={handleForgetPrefill}
-            className="shrink-0 rounded-full border px-4 py-2 text-sm"
-            style={{ borderColor: STROKE, color: CREAM }}
+            className="underline underline-offset-2"
+            style={{ color: CREAM }}
           >
             Not you? Start fresh
           </button>
-        </div>
+        </p>
       ) : null}
 
-      <section className="space-y-4">
-        <SectionHeading>1 · About you</SectionHeading>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <TextField
-            label="Legal name"
-            autoComplete="name"
-            required
-            hint="Your real name, the way it appears on your ID. This is what goes on the paperwork."
-            value={input.legalName}
-            onChange={(v) => setInput((c) => ({ ...c, legalName: v }))}
-          />
-          <TextField
-            label="Stage / professional name"
-            hint="The name you are known by, if you have one."
-            value={input.stageName || ''}
-            onChange={(v) => setInput((c) => ({ ...c, stageName: v }))}
-          />
-        </div>
-
-        <div>
-          <span className="font-mono text-[11px] uppercase tracking-[0.1em]" style={labelStyle()}>
-            What did you do on this song? *
-          </span>
-          <Hint>Tick everything that applies.</Hint>
-          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {RELEASE_CREDIT_ROLE_OPTIONS.map((role) => (
-              <label key={role} className="flex items-center gap-2 text-sm" style={{ color: CREAM }}>
-                <input
-                  type="checkbox"
-                  checked={input.roles.includes(role)}
-                  onChange={() => toggleRole(role)}
-                  className="h-4 w-4 rounded"
-                />
-                {RELEASE_CREDIT_ROLE_LABELS[role]}
-              </label>
-            ))}
-          </div>
-        </div>
-
+      <div className="grid gap-2.5">
+        <TextField
+          label="Legal name"
+          autoComplete="name"
+          required
+          value={input.legalName}
+          onChange={(v) => setInput((c) => ({ ...c, legalName: v }))}
+        />
+        <TextField
+          label="Stage name (optional)"
+          value={input.stageName || ''}
+          onChange={(v) => setInput((c) => ({ ...c, stageName: v }))}
+        />
         <TextField
           label="Email"
           autoComplete="email"
           type="email"
           required
-          // Says the resubmission rule out loud, which also guards the
-          // footgun in "Fill it in for someone else": reusing your own email
-          // there replaces your first answer instead of adding a second one.
-          hint="So the team can reach you. Sending this form again with the same email replaces your earlier answer."
           value={input.email}
           onChange={(v) => setInput((c) => ({ ...c, email: v }))}
         />
-      </section>
+      </div>
+
+      <fieldset className="mt-8">
+        <legend>
+          <GroupLabel>What did you do?</GroupLabel>
+        </legend>
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {shownRoles.map((role) => {
+            const on = input.roles.includes(role);
+            return (
+              <button
+                key={role}
+                type="button"
+                aria-pressed={on}
+                onClick={() => toggleRole(role)}
+                className="min-h-9 rounded-full border px-3.5 text-sm"
+                style={
+                  on
+                    ? { backgroundColor: BRAND, borderColor: BRAND, color: INK_TEXT }
+                    : { backgroundColor: SURFACE, borderColor: FIELD_STROKE, color: CREAM }
+                }
+              >
+                {RELEASE_CREDIT_ROLE_LABELS[role]}
+              </button>
+            );
+          })}
+          {!showAllRoles ? (
+            <button
+              type="button"
+              onClick={() => setShowAllRoles(true)}
+              className="min-h-9 rounded-full border px-3.5 text-sm"
+              style={{ borderColor: STROKE, color: FAINT }}
+            >
+              More
+            </button>
+          ) : null}
+        </div>
+      </fieldset>
 
       {isWriter ? (
-        <section className="space-y-4">
-          <SectionHeading>2 · For your songwriting royalties</SectionHeading>
-          <SectionNote>Leave blank anything you do not have.</SectionNote>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="mt-8">
+          <GroupLabel>Publishing, all optional</GroupLabel>
+          <div className="mt-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
             <TextField
-              label="Royalty society (PRO)"
-              hint="Who collects your songwriting royalties. Leave blank if you have not signed up with one."
-              placeholder="MCSN, PRS, ASCAP, BMI…"
+              label="PRO (MCSN, PRS…)"
               value={input.proAffiliation || ''}
               onChange={(v) => setInput((c) => ({ ...c, proAffiliation: v }))}
             />
             <TextField
-              label="Your society ID (IPI / CAE)"
-              hint="The number that society gave you. It is on your account page there."
+              label="Your IPI"
               value={input.ipiNumber || ''}
               onChange={(v) => setInput((c) => ({ ...c, ipiNumber: v }))}
             />
             <TextField
-              label="Publisher name"
-              hint="The company that looks after your songwriting. Write SELF if that is you."
-              placeholder="Or write SELF if self-published"
+              label="Publisher or SELF"
               value={input.publisherName || ''}
               onChange={(v) => setInput((c) => ({ ...c, publisherName: v }))}
             />
             <TextField
-              label="Publisher ID (IPI)"
-              hint="Your publisher's number, if you know it."
+              label="Publisher IPI"
               value={input.publisherIpi || ''}
               onChange={(v) => setInput((c) => ({ ...c, publisherIpi: v }))}
             />
           </div>
-        </section>
+        </div>
       ) : null}
 
-      <section className="space-y-4 border-t pt-6" style={{ borderColor: STROKE }}>
-        <label className="flex items-start gap-2 text-sm" style={{ color: CREAM }}>
-          <input
-            type="checkbox"
-            checked={input.confirmedAccurate}
-            onChange={(event) => setInput((c) => ({ ...c, confirmedAccurate: event.target.checked }))}
-            className="mt-0.5 h-4 w-4"
-          />
-          Everything I entered above is true and correct.
-        </label>
+      <label className="mt-8 flex items-center gap-2.5 text-sm" style={{ color: MUTED }}>
+        <input
+          type="checkbox"
+          checked={input.confirmedAccurate}
+          onChange={(event) => setInput((c) => ({ ...c, confirmedAccurate: event.target.checked }))}
+          className="h-4 w-4"
+        />
+        These details are correct
+      </label>
 
-        {error ? (
-          <p className="text-sm" style={{ color: '#f0847a' }}>
-            {error}
-          </p>
-        ) : null}
+      {error ? (
+        <p className="mt-4 text-sm" style={{ color: '#f0847a' }}>
+          {error}
+        </p>
+      ) : null}
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="inline-flex min-h-11 items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
-          style={{ backgroundColor: BRAND, color: '#06321f' }}
-        >
-          {isSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-          {isSubmitting ? 'Sending…' : 'Send my credits'}
-        </button>
-      </section>
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl text-base font-medium disabled:cursor-not-allowed disabled:opacity-60"
+        style={{ backgroundColor: BRAND, color: INK_TEXT }}
+      >
+        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+        {isSubmitting ? 'Sending…' : 'Send my credits'}
+      </button>
     </form>
   );
 }
