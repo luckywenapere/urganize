@@ -2,6 +2,9 @@
 
 import { Button } from '@urganize/ui';
 import { HomeHeaderRow } from './HomeHeaderRow';
+import { HomeDistributeCard } from './HomeDistributeCard';
+import { ErrorBoundary } from '@/components/app/ErrorBoundary';
+import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { useStartTestRelease } from '@/components/releases/useStartTestRelease';
 import { isTestReleaseEnabled } from '@/lib/test-release';
 import {
@@ -29,6 +32,10 @@ export function ManagerNewView({
   return (
     <div className="space-y-8">
       <HomeHeaderRow header={home.header} />
+      {/* Distribute (2026-10-27): after the greeting, before getting started. */}
+      <ErrorBoundary name="home-block-distribute" onError={reportBoundaryError}>
+        <HomeDistributeCard />
+      </ErrorBoundary>
       <section
         aria-label="Get started"
         className="mx-auto flex max-w-xl flex-col items-center gap-5 py-6 text-center sm:py-10"
