@@ -27,6 +27,7 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'list_releases',
     kind: 'read',
+    level: 'read',
     description: "List all of the user's rollouts with status and date.",
     inputSchema: { type: 'object', properties: {} },
     execute: async (ctx) => {
@@ -45,6 +46,7 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'get_release',
     kind: 'read',
+    level: 'read',
     description: 'Get one rollout and its tasks by rollout id.',
     inputSchema: {
       type: 'object',
@@ -83,6 +85,7 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'list_tasks',
     kind: 'read',
+    level: 'read',
     description: 'List tasks, optionally filtered by rollout, status, or priority.',
     inputSchema: {
       type: 'object',
@@ -108,6 +111,7 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'get_dashboard',
     kind: 'read',
+    level: 'read',
     description:
       "Get a high-level snapshot: rollout count, task counts by state, and today's suggested focus task.",
     inputSchema: { type: 'object', properties: {} },
@@ -136,6 +140,7 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'create_release',
     kind: 'mutate',
+    level: 'auto',
     description:
       "Create a new rollout. Depending on the environment this either generates the rollout task plan from the template straight away, or leaves the rollout ready to be planned. Call this AT MOST ONCE per user request — it is not idempotent.",
     inputSchema: {
@@ -209,6 +214,7 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'create_task',
     kind: 'mutate',
+    level: 'auto',
     description: 'Create a task on a rollout.',
     inputSchema: {
       type: 'object',
@@ -251,6 +257,7 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'create_note',
     kind: 'mutate',
+    level: 'auto',
     description: "Create a private note for the user. Optionally attach it to a rollout.",
     inputSchema: {
       type: 'object',
@@ -302,6 +309,7 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'update_task',
     kind: 'mutate',
+    level: 'auto',
     description:
       'Update a task: title, description, due date, priority, or assignee. This is also how you assign or reassign a task — pass assigneeId. Only include the fields you are changing.',
     inputSchema: {
@@ -338,6 +346,7 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'complete_task',
     kind: 'mutate',
+    level: 'auto',
     description:
       'Mark a task done. Enforces the dependency gate — a task blocked by unfinished dependencies cannot be completed.',
     inputSchema: {
@@ -367,6 +376,7 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'complete_tasks',
     kind: 'mutate',
+    level: 'auto',
     description:
       'Mark several tasks done in one step (up to 50). Use this instead of calling complete_task again and again when the user asks to finish more than one ("mark all of this week\'s done"). Resolve the ids with list_tasks first; never guess. Each task gets the same dependency gate as complete_task; blocked or missing ones are skipped and reported.',
     inputSchema: {
@@ -416,6 +426,7 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'reopen_task',
     kind: 'mutate',
+    level: 'auto',
     description: 'Reopen a completed task (set it back to todo).',
     inputSchema: {
       type: 'object',
@@ -433,6 +444,7 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'generate_status_update',
     kind: 'mutate',
+    level: 'auto',
     description: 'Generate a one-paragraph status update for a rollout.',
     inputSchema: {
       type: 'object',
@@ -476,6 +488,7 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'navigate',
     kind: 'mutate',
+    level: 'suggest',
     description: 'Take the user to a page: the dashboard, settings, or a specific rollout.',
     inputSchema: {
       type: 'object',

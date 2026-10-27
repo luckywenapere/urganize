@@ -159,6 +159,9 @@ export async function POST(request: NextRequest) {
       // tool calls through the paywall (lib/urgans-pass.ts). Nobody else gets one.
       ...(auth.creditsOnly?.funded ? { urgansPass: mintPassForUser(auth.user.id) } : {}),
     });
+    // For the action log: a voice call reaches this route in-process with this
+    // header (app/api/urgans/voice/tool); everything else is a typed turn.
+    if (request.headers.get('x-urgans-surface') === 'voice') ctx.audit = { source: 'voice' };
     const releaseScope = parseReleaseScope(body);
     const built = await buildChappiSystemPrompt(ctx);
     let system = built.prompt;
@@ -170,7 +173,9 @@ export async function POST(request: NextRequest) {
       // The user clicked Approve. Run exactly this one tool — full per-tool
       // validation (ownership, flags, dependency gates) still applies inside
       // executeToolCall — then let the model write the closing line.
-      const result = await executeToolCall(ctx, confirmedAction.toolName, confirmedAction.args);
+      const result = await executeToolCall(ctx, confirmedAction.toolName, confirmedAction.args, {
+        confirmed: true,
+      });
       const closing = await closeConfirmedAction({
         system,
         messages: messages.slice(-MAX_MESSAGES),

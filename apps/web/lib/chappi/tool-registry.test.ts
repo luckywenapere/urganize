@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { CHAPPI_TOOLS, getChappiTool, isConfirmationGated } from './tools';
+import { CHAPPI_TOOLS, CUT_CHAPPI_TOOLS, getChappiTool, isConfirmationGated } from './tools';
+import { URGANS_TOOL_LEVELS } from '@/lib/urgans-action-log';
 import { MCP_TOOLS, MCP_TOOL_NAMES_ALLOWED, isMcpToolName } from '@/lib/mcp/tools';
 
 /**
@@ -63,6 +64,23 @@ describe('Chappi tool registry', () => {
     expect(isConfirmationGated('delete_release')).toBe(true);
     expect(isConfirmationGated('list_releases')).toBe(false);
     expect(isConfirmationGated('nonexistent_tool')).toBe(false);
+  });
+
+  /**
+   * Every tool carries a permission level (action log, 2026-10-27), and the
+   * level agrees with the two mechanisms that actually enforce behaviour:
+   * read tools are kind 'read', and 'confirm' is exactly the tools with a
+   * confirm builder. A new tool with no level, or a level that lies about its
+   * gate, fails here. Cut tools are checked too: they stay resolvable.
+   */
+  it('gives every tool a level that matches its kind and its gate', () => {
+    for (const tool of [...CHAPPI_TOOLS, ...CUT_CHAPPI_TOOLS]) {
+      expect(URGANS_TOOL_LEVELS, `${tool.name} needs a level`).toContain(tool.level);
+      expect(tool.level === 'read', `${tool.name}: level read iff kind read`).toBe(tool.kind === 'read');
+      expect(tool.level === 'confirm', `${tool.name}: level confirm iff it has a confirm card`).toBe(
+        Boolean(tool.confirm)
+      );
+    }
   });
 
   it('gates every delete tool', () => {

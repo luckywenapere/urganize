@@ -145,6 +145,7 @@ export const PLANNER_TOOLS: ChappiTool[] = [
   {
     name: 'get_release_plan',
     kind: 'read',
+    level: 'read',
     description:
       'Check whether a rollout has a plan yet, and how many activities landed in each phase. Returns a summary, not the full plan.',
     inputSchema: {
@@ -183,6 +184,7 @@ export const PLANNER_TOOLS: ChappiTool[] = [
   {
     name: 'preview_release_plan',
     kind: 'read',
+    level: 'read',
     description:
       "What the preview UrgAns reads its read-back from. Call this with whatever of the intake answers are collected so far, right before saying \"Here's what I'll build\" — it returns the REAL activity count, the resolved release date (fixed, or the deterministic suggestion when none was given yet), how many activities would already be dated before today, and, for an EP or album, the derived date(s) of the staggered single(s). Read these numbers back rather than guessing them; the model's own tailoring runs later and can only remove further, never add, so this is already the floor the manager can trust. Does not create anything.",
     inputSchema: {
@@ -268,6 +270,7 @@ export const PLANNER_TOOLS: ChappiTool[] = [
   {
     name: 'generate_release_plan',
     kind: 'mutate',
+    level: 'auto',
     description:
       "Build the rollout's plan from the hand-crafted playbook straight into its activities, tailored to the intake answers. Collect the answers in conversation first, call preview_release_plan to get the real numbers, and read those back before calling this. Recognize \"quiet rollout\"/\"low-key\"/\"soft launch\"/\"no noise\" as the quiet preset, and a release day under 7 days away as the surprise preset, BEFORE running the full interview — either one only needs the artist, the date, and what is ready; skip the goal and budget questions and set goal to \"catalog\", budget to \"none\". Omit releaseId to create the rollout and build its plan in one call — the usual case for a brand-new rollout. This creates the activities immediately; there is no draft to approve afterward, so only call it once the answers are settled.",
     inputSchema: {

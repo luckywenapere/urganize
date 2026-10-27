@@ -51,6 +51,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
   {
     name: 'update_release',
     kind: 'mutate',
+    level: 'auto',
     description:
       "Edit a rollout's title, description, or status. Pass only the fields you are changing — anything you omit is left exactly as it is, including the release date. To change the release DATE use schedule_release instead, which also moves the rollout's activities so they stay lined up with the new day.",
     inputSchema: {
@@ -107,6 +108,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
   {
     name: 'schedule_release',
     kind: 'mutate',
+    level: 'auto',
     description:
       "Set or change a rollout's date. If the rollout was waiting on a date to build its rollout activities, this also creates them.",
     inputSchema: {
@@ -152,6 +154,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
   {
     name: 'delete_release',
     kind: 'mutate',
+    level: 'confirm',
     description:
       'Move a rollout to Trash, where the user can restore it for 30 days. Requires the user to approve a confirmation card and type the rollout name or DELETE themselves — calling this only proposes the deletion, it does not perform it, and you can never supply that confirmation.',
     inputSchema: {
@@ -209,6 +212,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
   {
     name: 'delete_task',
     kind: 'mutate',
+    level: 'confirm',
     description:
       'Permanently delete a task. Requires the user to approve a confirmation card — calling this only proposes the deletion, it does not perform it.',
     inputSchema: {
@@ -243,6 +247,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
   {
     name: 'add_task_comment',
     kind: 'mutate',
+    level: 'auto',
     description: 'Add a comment to a task.',
     inputSchema: {
       type: 'object',
@@ -273,6 +278,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
     // destructive.
     name: 'archive_release',
     kind: 'mutate',
+    level: 'auto',
     description:
       "Archive a finished rollout, or bring one back. Archiving hides it from the working catalogue and frees a slot against the plan's active-rollout limit; nothing is deleted. Pass archived: false to restore it, which returns it to draft.",
     inputSchema: {

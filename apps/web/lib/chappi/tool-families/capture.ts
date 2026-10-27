@@ -62,6 +62,7 @@ export const CAPTURE_TOOLS: ChappiTool[] = [
   {
     name: 'get_capture_page',
     kind: 'read',
+    level: 'read',
     description:
       "A rollout's fan capture page: what it says, whether it is live, how many emails it has collected, and what the conversion playbook says is still wrong with it.",
     inputSchema: {
@@ -121,6 +122,7 @@ export const CAPTURE_TOOLS: ChappiTool[] = [
   {
     name: 'create_capture_page',
     kind: 'mutate',
+    level: 'auto',
     description:
       "Start a fan capture page for a rollout. Safe to call twice — a rollout that already has one gets it back. It starts paused and needs a destination link before it can do anything.",
     inputSchema: {
@@ -150,6 +152,7 @@ export const CAPTURE_TOOLS: ChappiTool[] = [
   {
     name: 'update_capture_page',
     kind: 'mutate',
+    level: 'auto',
     description:
       "Change what the capture page says, or pause and unpause it. Send only what is changing. The destination link is what fans get the moment they submit — without it the page takes an address and pays nothing back.",
     inputSchema: {
@@ -228,6 +231,7 @@ export const CAPTURE_TOOLS: ChappiTool[] = [
   {
     name: 'list_capture_leads',
     kind: 'read',
+    level: 'read',
     description:
       'How many emails a capture page has collected, and the most recent few. Nothing in Urganize sends email — this is for exporting.',
     inputSchema: {

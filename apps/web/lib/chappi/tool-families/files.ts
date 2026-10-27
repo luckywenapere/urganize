@@ -39,6 +39,7 @@ export const FILE_TOOLS: ChappiTool[] = [
   {
     name: 'get_cover_art',
     kind: 'read',
+    level: 'read',
     description:
       "Whether a rollout has cover art, what file it is, and whether it meets what music stores require. Says nothing about the rollout card's fallback image — this is the real artwork or nothing.",
     inputSchema: {
@@ -86,6 +87,7 @@ export const FILE_TOOLS: ChappiTool[] = [
   {
     name: 'upload_cover_art',
     kind: 'mutate',
+    level: 'suggest',
     description:
       "Start attaching cover art to a rollout. You cannot be sent a file and cannot upload one yourself — this puts a file picker in the conversation for the user to choose with. Uploading REPLACES whatever artwork is there now. Say the picker is ready and ask them to pick; never claim it is done until they say so.",
     inputSchema: {
@@ -125,6 +127,7 @@ export const FILE_TOOLS: ChappiTool[] = [
   {
     name: 'list_release_files',
     kind: 'read',
+    level: 'read',
     description:
       "What is attached to a rollout — artwork, masters, contracts, split sheets — by category. Read only: you cannot attach a file yourself, and only the cover art has a picker.",
     inputSchema: {

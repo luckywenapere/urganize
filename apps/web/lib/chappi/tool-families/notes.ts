@@ -24,6 +24,7 @@ export const NOTE_TOOLS: ChappiTool[] = [
   {
     name: 'list_notes',
     kind: 'read',
+    level: 'read',
     description:
       "List the user's notes (most recent first, pinned first). Returns each note's id, title line, and whether it is linked to a rollout — not the full text.",
     inputSchema: {
@@ -62,6 +63,7 @@ export const NOTE_TOOLS: ChappiTool[] = [
   {
     name: 'update_note',
     kind: 'mutate',
+    level: 'auto',
     description:
       "Edit a note's text, pin or unpin it, or link it to a rollout. Pass only what is changing. To unlink a note from its rollout, pass releaseId as an empty string.",
     inputSchema: {
@@ -104,6 +106,7 @@ export const NOTE_TOOLS: ChappiTool[] = [
   {
     name: 'delete_note',
     kind: 'mutate',
+    level: 'confirm',
     description:
       'Permanently delete a note. Requires the user to approve a confirmation card — calling this only proposes the deletion, it does not perform it.',
     inputSchema: {

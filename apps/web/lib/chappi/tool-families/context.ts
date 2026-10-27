@@ -21,6 +21,7 @@ export const CONTEXT_TOOLS: ChappiTool[] = [
   {
     name: 'get_workspace_context',
     kind: 'read',
+    level: 'read',
     description:
       'Get the full working context for this team as one block of text: how the team works, every current rollout with its progress, what is overdue, who is carrying what, and who is on the team. Call this first when you need to understand the whole picture rather than one rollout.',
     inputSchema: { type: 'object', properties: {} },
@@ -39,6 +40,7 @@ export const CONTEXT_TOOLS: ChappiTool[] = [
   {
     name: 'get_release_context',
     kind: 'read',
+    level: 'read',
     description:
       'Get one rollout in full as a block of text: its date and how far off it is, its progress, what is overdue, what is blocked, what is still to do, and its dated moments. Use this when the question is about a specific rollout.',
     inputSchema: {

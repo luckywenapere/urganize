@@ -310,6 +310,7 @@ export async function POST(request: NextRequest) {
         // founder key this is that key; for a customer it is their token.
         authToken: actor.authToken,
       });
+      ctx.audit = { source: 'mcp', trigger: 'mcp_call' };
       const result = await executeToolCall(ctx, name, params.arguments);
 
       // Visibility only, never a ceiling. See the comment on 'mcp_tool_call'

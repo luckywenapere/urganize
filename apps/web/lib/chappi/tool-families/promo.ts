@@ -35,6 +35,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
   {
     name: 'list_pitch_playlists',
     kind: 'read',
+    level: 'read',
     description:
       'Browse curator playlists a song can be pitched to, optionally filtered by platform or genre.',
     inputSchema: {
@@ -83,6 +84,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
   {
     name: 'list_pitches',
     kind: 'read',
+    level: 'read',
     description:
       'See the pitches already sent and how curators answered. Pass a releaseId for one rollout, or leave it out for every rollout this team has pitched.',
     inputSchema: {
@@ -132,6 +134,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
   {
     name: 'pitch_song',
     kind: 'mutate',
+    level: 'confirm',
     description:
       "Pitch a song from a rollout to a curator's playlist. Requires the user to approve a confirmation card — calling this only proposes it, and nothing reaches the curator until they approve.",
     inputSchema: {
@@ -216,6 +219,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
   {
     name: 'get_recap',
     kind: 'read',
+    level: 'read',
     description: "Check whether a finished rollout has a recap card, and the numbers behind it.",
     inputSchema: {
       type: 'object',
@@ -240,6 +244,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
   {
     name: 'generate_recap',
     kind: 'mutate',
+    level: 'auto',
     description:
       "Build the shareable recap card for a finished rollout. Only works once the release date has passed or every activity is done. Ask for the highlight in conversation first — it's optional.",
     inputSchema: {
@@ -278,6 +283,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
   {
     name: 'delete_recap',
     kind: 'mutate',
+    level: 'confirm',
     description:
       'Delete a rollout recap card. Requires the user to approve a confirmation card — calling this only proposes it.',
     inputSchema: {
@@ -316,6 +322,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
   {
     name: 'share_release',
     kind: 'read',
+    level: 'read',
     description:
       "Open the share sheet for a rollout. It turns the rollout into posts for Instagram, WhatsApp status, X and Snapchat, and a message the user can DM to anybody. The sheet asks four quick questions first (who is posting, whether the date can be public, a link for fans, one extra line), then the user posts from their own phone. You post nothing and cannot: this only opens the sheet. Say it is open and let them take it from there.",
     inputSchema: {

@@ -138,6 +138,7 @@ export const INSIGHTS_TOOLS: ChappiTool[] = [
   {
     name: 'compare_releases',
     kind: 'read',
+    level: 'read',
     description:
       "Compare the user's most recent rollouts side by side: date, status, task completion, and how far off (or how long ago) each one is. Use this for questions about trends, what worked before, or what to change based on past rollouts.",
     inputSchema: {
@@ -188,6 +189,7 @@ export const INSIGHTS_TOOLS: ChappiTool[] = [
   {
     name: 'get_team_workload',
     kind: 'read',
+    level: 'read',
     description:
       "See how open work is spread across the team right now: each teammate's open and overdue task count, plus how much is unassigned. Use this before suggesting who should take on a piece of work, or to explain why a rollout is stalled.",
     inputSchema: { type: 'object', properties: {} },

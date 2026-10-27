@@ -73,6 +73,7 @@ export const PRESS_KIT_TOOLS: ChappiTool[] = [
   {
     name: 'list_press_kits',
     kind: 'read',
+    level: 'read',
     description:
       "List every artist on the roster and their press kit, if they have started one. Use this to find a kit id, or to see who still has no kit.",
     inputSchema: { type: 'object', properties: {} },
@@ -105,6 +106,7 @@ export const PRESS_KIT_TOOLS: ChappiTool[] = [
   {
     name: 'get_press_kit',
     kind: 'read',
+    level: 'read',
     description:
       "Get one press kit: every section, whether each is empty, a draft or ready, and whether the kit is live. Read this before writing a section, because it is what a section's current content comes from.",
     inputSchema: {
@@ -145,6 +147,7 @@ export const PRESS_KIT_TOOLS: ChappiTool[] = [
   {
     name: 'create_press_kit',
     kind: 'mutate',
+    level: 'auto',
     description:
       "Start a press kit for an artist. Safe to call twice: an artist who already has one gets theirs back, since there is only ever one per artist.",
     inputSchema: {
@@ -174,6 +177,7 @@ export const PRESS_KIT_TOOLS: ChappiTool[] = [
   {
     name: 'update_press_kit',
     kind: 'mutate',
+    level: 'auto',
     description:
       "Change a kit's settings: its web address (slug), who can see it, an embargo date, or whether the artist is available for interview. Not the content, which is write_press_kit_section's job.",
     inputSchema: {
@@ -212,6 +216,7 @@ export const PRESS_KIT_TOOLS: ChappiTool[] = [
   {
     name: 'write_press_kit_section',
     kind: 'mutate',
+    level: 'auto',
     description:
       'Save writing into a press kit section. Only the three prose sections can be written this way: "header" (a one-line descriptor), "bios" (short, medium and long) and "latest_release" (a hook). Everything else (numbers, press quotes, contacts, links) is the manager\'s to enter, because those are facts. Draft the words in the conversation first and save once the user agrees.',
     inputSchema: {
@@ -301,6 +306,7 @@ export const PRESS_KIT_TOOLS: ChappiTool[] = [
   {
     name: 'publish_press_kit',
     kind: 'mutate',
+    level: 'confirm',
     description:
       "Put the press kit on the web at its public link. Publishing takes a snapshot of what is written now, and later edits stay drafts until it is published again.",
     inputSchema: {
@@ -351,6 +357,7 @@ export const PRESS_KIT_TOOLS: ChappiTool[] = [
   {
     name: 'unpublish_press_kit',
     kind: 'mutate',
+    level: 'auto',
     description:
       'Take the press kit back off the web. The writing is kept, and only the public link stops working.',
     inputSchema: {

@@ -43,6 +43,7 @@ export const METADATA_TOOLS: ChappiTool[] = [
   {
     name: 'get_release_metadata',
     kind: 'read',
+    level: 'read',
     description:
       "Read a rollout's distribution details: ISRC, UPC, ISWC, genre, subgenre, language, explicit flag, label name, featured artists, and the (P)/(C) lines.",
     inputSchema: {
@@ -75,6 +76,7 @@ export const METADATA_TOOLS: ChappiTool[] = [
   {
     name: 'update_release_metadata',
     kind: 'mutate',
+    level: 'auto',
     description:
       "Set a rollout's distribution details. Pass only the fields being changed — the rest are preserved. To clear a field, pass it as an empty string.",
     inputSchema: {
@@ -150,6 +152,7 @@ export const METADATA_TOOLS: ChappiTool[] = [
   {
     name: 'get_release_credits',
     kind: 'read',
+    level: 'read',
     description:
       "The collaborator credits link for a rollout, and what has come back through it: legal names, roles, songwriter and master splits, PRO and publisher details. This is what a distributor handoff needs.",
     inputSchema: {
@@ -193,6 +196,7 @@ export const METADATA_TOOLS: ChappiTool[] = [
   {
     name: 'create_credits_link',
     kind: 'mutate',
+    level: 'auto',
     description:
       "Create the shareable, no-login link collaborators use to submit their own credits and splits. Safe to call twice — a rollout that already has one gets it back rather than a second link.",
     inputSchema: {
@@ -226,6 +230,7 @@ export const METADATA_TOOLS: ChappiTool[] = [
     // revoke — rotating the token is a separate, deliberate act on the page.
     name: 'close_credits_link',
     kind: 'mutate',
+    level: 'auto',
     description:
       'Stop or restart a credits link taking answers. Closing keeps the link and everything already submitted; it just stops accepting more. Pass open: true to reopen it.',
     inputSchema: {

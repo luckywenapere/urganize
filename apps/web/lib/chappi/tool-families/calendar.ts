@@ -28,6 +28,7 @@ export const CALENDAR_TOOLS: ChappiTool[] = [
   {
     name: 'list_content_calendars',
     kind: 'read',
+    level: 'read',
     description:
       "List a rollout's content calendars — one per platform account, with how many posts each holds.",
     inputSchema: {
@@ -59,6 +60,7 @@ export const CALENDAR_TOOLS: ChappiTool[] = [
   {
     name: 'create_content_calendar',
     kind: 'mutate',
+    level: 'auto',
     description:
       'Add a content calendar to a rollout for one platform account. A rollout can have several per platform — use the name to tell them apart.',
     inputSchema: {
@@ -94,6 +96,7 @@ export const CALENDAR_TOOLS: ChappiTool[] = [
   {
     name: 'delete_content_calendar',
     kind: 'mutate',
+    level: 'confirm',
     description:
       'Delete a content calendar and every post planned on it. Requires the user to approve a confirmation card — calling this only proposes it.',
     inputSchema: {
@@ -149,6 +152,7 @@ export const CALENDAR_TOOLS: ChappiTool[] = [
   {
     name: 'list_content_posts',
     kind: 'read',
+    level: 'read',
     description: 'List the posts planned on one calendar for one month.',
     inputSchema: {
       type: 'object',
@@ -193,6 +197,7 @@ export const CALENDAR_TOOLS: ChappiTool[] = [
   {
     name: 'create_content_post',
     kind: 'mutate',
+    level: 'auto',
     description: 'Plan a post on a content calendar for a specific day.',
     inputSchema: {
       type: 'object',
@@ -241,6 +246,7 @@ export const CALENDAR_TOOLS: ChappiTool[] = [
   {
     name: 'update_content_post',
     kind: 'mutate',
+    level: 'auto',
     description: 'Change a planned post. Pass only the fields being changed.',
     inputSchema: {
       type: 'object',
@@ -287,6 +293,7 @@ export const CALENDAR_TOOLS: ChappiTool[] = [
   {
     name: 'delete_content_post',
     kind: 'mutate',
+    level: 'confirm',
     description:
       'Delete a planned post. Requires the user to approve a confirmation card — calling this only proposes it.',
     inputSchema: {

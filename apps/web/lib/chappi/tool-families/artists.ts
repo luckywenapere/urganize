@@ -30,6 +30,7 @@ export const ARTIST_TOOLS: ChappiTool[] = [
   {
     name: 'list_artists',
     kind: 'read',
+    level: 'read',
     description:
       "List the artists on the team's roster. Call this first for anything about a show or a press kit — both belong to an artist, and both need an artist id.",
     inputSchema: { type: 'object', properties: {} },
@@ -58,6 +59,7 @@ export const ARTIST_TOOLS: ChappiTool[] = [
   {
     name: 'create_artist',
     kind: 'mutate',
+    level: 'auto',
     description: "Add an artist to the team's roster.",
     inputSchema: {
       type: 'object',
@@ -85,6 +87,7 @@ export const ARTIST_TOOLS: ChappiTool[] = [
   {
     name: 'rename_artist',
     kind: 'mutate',
+    level: 'auto',
     description:
       'Rename an artist. The new name follows through to every rollout of theirs, so this is how a name is corrected — never by editing rollouts one at a time.',
     inputSchema: {
@@ -119,6 +122,7 @@ export const ARTIST_TOOLS: ChappiTool[] = [
     // refusals are the thing that carries the weight.
     name: 'remove_artist',
     kind: 'mutate',
+    level: 'auto',
     description:
       'Remove an artist from the roster. Only works if nothing is attached to them — it refuses, and says why, if they have rollouts, a teammate scoped to them, or are the last artist left.',
     inputSchema: {
@@ -146,6 +150,7 @@ export const ARTIST_TOOLS: ChappiTool[] = [
   {
     name: 'move_release_to_artist',
     kind: 'mutate',
+    level: 'auto',
     description:
       'File a rollout under a different artist on the roster. Use this when a rollout was created against the wrong one. It changes who can see it: a teammate scoped to one artist sees only that artist’s rollouts.',
     inputSchema: {

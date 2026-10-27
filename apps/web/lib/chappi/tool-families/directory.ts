@@ -45,6 +45,7 @@ export const DIRECTORY_TOOLS: ChappiTool[] = [
   {
     name: 'search_directory',
     kind: 'read',
+    level: 'read',
     description:
       'Find people to hire: producers, engineers, designers, PR, photographers, tour managers. Narrow by role, city or whether they are taking work. Use this before send_work_request, which needs the person id.',
     inputSchema: {
@@ -100,6 +101,7 @@ export const DIRECTORY_TOOLS: ChappiTool[] = [
   {
     name: 'get_my_directory_profile',
     kind: 'read',
+    level: 'read',
     description:
       "The user's own directory listing, which is how other teams see them. Returns nothing if they have not made one.",
     inputSchema: { type: 'object', properties: {} },
@@ -127,6 +129,7 @@ export const DIRECTORY_TOOLS: ChappiTool[] = [
   {
     name: 'update_my_directory_profile',
     kind: 'mutate',
+    level: 'auto',
     description:
       "Change the user's own directory listing. Send only what is changing. This is how they appear to other teams, so write it in their words rather than yours: draft it in the conversation and save once they agree.",
     inputSchema: {
@@ -176,6 +179,7 @@ export const DIRECTORY_TOOLS: ChappiTool[] = [
   {
     name: 'list_work_requests',
     kind: 'read',
+    level: 'read',
     description:
       'Work requests, either the ones sent to the user (received) or the ones they sent out (sent), with any answers.',
     inputSchema: {
@@ -212,6 +216,7 @@ export const DIRECTORY_TOOLS: ChappiTool[] = [
   {
     name: 'send_work_request',
     kind: 'mutate',
+    level: 'confirm',
     description:
       'Ask somebody in the directory to do a job. Say what the work is in their language, in a few sentences.',
     inputSchema: {
@@ -282,6 +287,7 @@ export const DIRECTORY_TOOLS: ChappiTool[] = [
   {
     name: 'answer_work_request',
     kind: 'mutate',
+    level: 'auto',
     description:
       'Answer a request somebody sent the user: interested, or passed, with an optional one-line reply. Each request can only be answered once.',
     inputSchema: {

@@ -35,6 +35,7 @@ import { normalizePhone, stripWhatsappPrefix } from './phone';
 import { parseReply, type ReplyIntent } from './reply-intent';
 import { decryptSecret } from './secret';
 import { isWhatsappConfigured, sendWhatsapp } from './transport';
+import { logUrgansAction } from '@/lib/urgans-action-log-server';
 
 const SETTINGS_TABLE = 'whatsapp_settings';
 const CONTACTS_TABLE = 'whatsapp_contacts';
@@ -500,6 +501,22 @@ async function chaseOneContact(
       error: result.ok ? null : result.error,
     })
     .eq('id', claim.id);
+  await logUrgansAction(admin, {
+    source: 'cron',
+    trigger: 'daily_sweep',
+    tool: 'whatsapp.chase',
+    level: 'auto',
+    actorUserId: contact.userId,
+    workspaceId: contact.workspaceId,
+    releaseId: pick.task.release_id,
+    objectType: 'task',
+    objectId: pick.task.id,
+    args: { kind: pick.kind },
+    after: { message: text },
+    ok: result.ok,
+    summary: `Chased ${name} about "${title}" on WhatsApp`,
+    error: result.ok ? null : result.error,
+  });
   if (!result.ok) return 'failed';
 
   await admin.from(CONTACTS_TABLE).update({ last_task_id: pick.task.id, awaiting: null }).eq('id', contact.id);
@@ -684,6 +701,23 @@ async function actOnReply(admin: SupabaseClient, contact: WhatsappContact, inten
         .update({ status: 'done', completed_at: now.toISOString() })
         .eq('id', task.id)
         .eq('assigned_to_user_id', contact.userId);
+      await logUrgansAction(admin, {
+        source: 'whatsapp',
+        trigger: 'whatsapp_reply',
+        tool: 'whatsapp.mark_done',
+        level: 'auto',
+        actorUserId: contact.userId,
+        workspaceId: contact.workspaceId,
+        releaseId: task.release_id,
+        objectType: 'task',
+        objectId: task.id,
+        args: { reply: rawText.slice(0, 200) },
+        before: { status: task.status },
+        after: error ? null : { status: 'done', completed_at: now.toISOString() },
+        ok: !error,
+        summary: `Marked "${task.title ?? 'a task'}" done from a WhatsApp reply`,
+        error: error?.message ?? null,
+      });
       if (error) {
         console.error('[whatsapp] mark done failed:', error.message);
         await replyTo(admin, contact, "I couldn't mark that done. Please tick it in Urganize.", task.id);
@@ -766,6 +800,23 @@ async function moveDueDate(
     .update({ due_date: `${chosen}T11:00:00Z` })
     .eq('id', task.id)
     .eq('assigned_to_user_id', contact.userId);
+  await logUrgansAction(admin, {
+    source: 'whatsapp',
+    trigger: 'whatsapp_reply',
+    tool: 'whatsapp.move_due_date',
+    level: 'auto',
+    actorUserId: contact.userId,
+    workspaceId: contact.workspaceId,
+    releaseId: task.release_id,
+    objectType: 'task',
+    objectId: task.id,
+    args: { askedFor: day },
+    before: { due_date: task.due_date },
+    after: error ? null : { due_date: `${chosen}T11:00:00Z` },
+    ok: !error,
+    summary: `Moved "${task.title ?? 'a task'}" to ${chosen} from a WhatsApp reply`,
+    error: error?.message ?? null,
+  });
   if (error) {
     console.error('[whatsapp] move due date failed:', error.message);
     await replyTo(admin, contact, "I couldn't change the date. Please change it in Urganize.", task.id);

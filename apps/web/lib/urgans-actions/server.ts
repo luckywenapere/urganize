@@ -27,6 +27,7 @@ import { PRICING_TIERS } from '@urganize/pricing';
 import { getEntitlement, minimumTierWith } from '../entitlements';
 import { getWorkspaceTier } from '../team-billing-server';
 import { logBillingEvent } from '../billing-events-server';
+import { logUrgansAction } from '../urgans-action-log-server';
 import { isReleasePlannerEnabled } from '../release-planning';
 import {
   ensureReleaseTeamReadAccess,
@@ -427,6 +428,25 @@ export async function runUrgansAction(
     .select('id')
     .single();
 
+  // A one-shot run writes product data in this call, so it is an action
+  // UrgAns took. A two-step run only drafts; its write is logged at Apply.
+  if (oneShot) {
+    await logUrgansAction(admin, {
+      source: 'embedded',
+      trigger: 'button',
+      tool: `embedded.${action.id}`,
+      level: 'auto',
+      actorUserId: params.actor.id,
+      workspaceId: scope.workspaceId,
+      releaseId: scope.objectType === 'release' ? params.objectId : null,
+      objectType: scope.objectType,
+      objectId: params.objectId,
+      after: (outcome as { output: unknown }).output,
+      ok: true,
+      summary: `Ran ${action.id}`,
+    });
+  }
+
   // The ids the usage log and the credit charge share for this run.
   const usageWorkspaceId = ownerTeam.primaryWorkspaceId ?? scope.workspaceId;
   const usageFeature = usageFeatureForAction(action.id);
@@ -645,6 +665,26 @@ export async function applyUrgansAction(
     ownerUserId: scope.ownerUserId,
     workspaceId: scope.workspaceId,
     output: row.output,
+  });
+
+  // Apply is the person accepting a draft UrgAns made: a confirmed write.
+  await logUrgansAction(admin, {
+    source: 'embedded',
+    trigger: 'apply',
+    tool: `embedded.${row.action_type}`,
+    level: 'confirm',
+    actorUserId: params.actor.id,
+    workspaceId: scope.workspaceId,
+    releaseId: row.object_type === 'release' ? row.object_id : null,
+    objectType: row.object_type,
+    objectId: row.object_id,
+    args: { actionId: row.id },
+    before: null,
+    after: applyOutcome.ok ? applyOutcome.result : null,
+    confirmed: true,
+    ok: applyOutcome.ok,
+    summary: `Applied ${row.action_type}`,
+    error: applyOutcome.ok ? null : applyOutcome.error,
   });
 
   if (!applyOutcome.ok) {

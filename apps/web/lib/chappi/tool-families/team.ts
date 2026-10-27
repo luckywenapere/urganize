@@ -15,6 +15,7 @@ export const TEAM_TOOLS: ChappiTool[] = [
   {
     name: 'list_workspace_members',
     kind: 'read',
+    level: 'read',
     description:
       'List the teammates on your team with their user ids. Use this to resolve a person\'s name to the assigneeId that create_task and update_task need.',
     inputSchema: { type: 'object', properties: {} },
@@ -45,6 +46,7 @@ export const TEAM_TOOLS: ChappiTool[] = [
   {
     name: 'invite_teammate',
     kind: 'mutate',
+    level: 'confirm',
     description:
       'Invite someone to your team by email. Requires the user to approve a confirmation card — calling this only proposes it, and the invite email is not sent until they approve.',
     inputSchema: {
@@ -110,6 +112,7 @@ export const TEAM_TOOLS: ChappiTool[] = [
   {
     name: 'remove_teammate',
     kind: 'mutate',
+    level: 'confirm',
     description:
       'Remove someone from your team. Requires the user to approve a confirmation card — calling this only proposes it. The team owner cannot be removed.',
     inputSchema: {

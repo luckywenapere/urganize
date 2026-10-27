@@ -6,6 +6,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { URGANS_PASS_HEADER } from '@/lib/urgans-pass-header';
+import type { UrgansActionSource, UrgansToolLevel } from '@/lib/urgans-action-log';
 import type {
   ChappiToolKind,
   ChappiToolName,
@@ -51,6 +52,12 @@ export type ChappiToolContext = {
    * whose requests are gated exactly as before.
    */
   urgansPass?: string;
+  /**
+   * Where this call came from, for the action log (lib/urgans-action-log.ts).
+   * Absent means a typed chat turn. Set by the route that builds the context:
+   * voice for a voice call, mcp for MCP.
+   */
+  audit?: { source: UrgansActionSource; trigger?: string };
 };
 
 export type ToolInputSchema = {
@@ -79,6 +86,10 @@ export type ChappiConfirmOutcome =
 export type ChappiTool = {
   name: ChappiToolName;
   kind: ChappiToolKind;
+  /** Permission level: read, suggest, confirm or auto. Required on every tool;
+   *  tool-registry.test.ts holds it to `kind` and to `confirm`. Writes (confirm
+   *  and auto) are logged by dispatch.ts. */
+  level: UrgansToolLevel;
   description: string;
   inputSchema: ToolInputSchema;
   execute: (ctx: ChappiToolContext, args: Record<string, unknown>) => Promise<ChappiToolResult>;
