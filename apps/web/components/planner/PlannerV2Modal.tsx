@@ -261,6 +261,7 @@ export function PlannerV2Modal() {
   const prefill = intakePayload?.prefill;
   const knownArtistName = prefill?.artistName?.trim() || identityArtist || profile?.artist_name || '';
   const typePrefilled = Boolean(prefill?.releaseType);
+  const stageKnown = Boolean(prefill?.musicStage);
 
   useDialogFocus(open, panelRef, { initialFocus: 'none' });
 
@@ -279,8 +280,8 @@ export function PlannerV2Modal() {
   const rowDateRef = useRef(rowDate);
   rowDateRef.current = rowDate;
   const steps = useMemo(
-    () => visibleV2Steps({ stage: answers.stage, prefilledDate: knownDate, todayYmd: todayYmd() }),
-    [answers.stage, knownDate]
+    () => visibleV2Steps({ stage: answers.stage, prefilledDate: knownDate, todayYmd: todayYmd(), stageKnown }),
+    [answers.stage, knownDate, stageKnown]
   );
   const position = Math.max(0, steps.indexOf(step));
   const isLast = position === steps.length - 1;
@@ -307,12 +308,14 @@ export function PlannerV2Modal() {
       ...base,
       artist_name: p.artistName?.trim() || base.artist_name || knownArtistName,
       ...(p.releaseType ? { release_type: p.releaseType } : {}),
+      ...(p.musicStage ? { stage: p.musicStage, single_first: null } : {}),
       ...(p.releaseDate || rowDateRef.current
         ? { release_date: p.releaseDate || rowDateRef.current, date_mode: 'fixed' as const }
         : {}),
     });
     setReleaseId(target);
-    setStep('music');
+    // A record already said where the music is: start on the win.
+    setStep(p.musicStage ? 'win' : 'music');
     setView('steps');
     setError(null);
     setWritten(null);
@@ -1008,6 +1011,9 @@ export function PlannerV2Modal() {
 
             <div className="mt-7">
               {view === 'steps' ? body : null}
+              {view === 'steps' && position === 0 && prefill?.fromRecord ? (
+                <p className="mt-5 text-sm text-brand">From your record: {prefill.fromRecord}</p>
+              ) : null}
               {view === 'preview' ? previewBody : null}
               {view === 'tweak' ? tweakBody : null}
               {busy ? (

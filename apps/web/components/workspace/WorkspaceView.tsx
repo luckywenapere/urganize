@@ -82,6 +82,7 @@ import { isReviewDue } from '@/lib/release-review';
 import { ReleaseReview } from '@/components/between-releases/ReleaseReview';
 import { findRoleGaps } from '@/lib/role-gaps';
 import { RoleGapsPanel } from '@/components/directory/RoleGapsPanel';
+import { MadeFromRecordCard } from '@/components/records/MadeFromRecordCard';
 import { SentRequestsList } from '@/components/directory/SentRequestsList';
 import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
 import { useShellStore } from '@/stores/useShellStore';
@@ -1116,9 +1117,13 @@ export function WorkspaceView() {
   //
   // The role gaps wait while first steps is up (Oct 17, 2026): a people ask
   // beside step "Invite your team" is the same ask twice. Back next visit.
+  //
+  // "Made from your record" (next record v2, 2026-10-27) sits below the
+  // activities too; it renders nothing for a rollout no record became.
   const roleGapsFooter =
-    scopedReleaseSlim && ((roleGaps.length > 0 && !firstStepsUp) || DIRECTORY_REQUESTS_ENABLED) ? (
+    scopedReleaseSlim ? (
       <div className="space-y-3">
+        <MadeFromRecordCard releaseId={scopedReleaseSlim.id} />
         {roleGaps.length > 0 && !firstStepsUp ? (
           <RoleGapsPanel releaseId={scopedReleaseSlim.id} gaps={roleGaps} />
         ) : null}

@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Plus } from '@/components/icons';
+import { ChevronRight, Plus } from '@/components/icons';
+import { CoverTile, DoneBars } from '@/components/records/RecordParts';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { recordHref } from '@/lib/artist-page';
 import { recordKindLabel, sessionWhen, type RecordSummary } from '@/lib/next-records';
@@ -12,6 +13,8 @@ import { fetchArtistRecords, startRecord } from '@/lib/next-records-client';
 // "In the making" on the artist page (2026-10-27, mock screen 2): the records
 // still being made, above the released music. The plus starts an untitled one
 // and opens it, so a manager is one tap from writing the first song down.
+// v2 (mock screen 1 of next-record-v2): each record is a small cover in its
+// colour, with one bar per song, lit when it is done.
 
 export function ArtistRecordsCard({ artistId }: { artistId: string }) {
   const router = useRouter();
@@ -77,38 +80,34 @@ export function ArtistRecordsCard({ artistId }: { artistId: string }) {
             </span>
           </button>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-1">
             {records.map((record) => {
-              const progress = record.songCount ? Math.round((record.doneCount / record.songCount) * 100) : 0;
               const parts = [
-                record.songCount === 1 ? '1 song' : `${record.songCount} songs`,
-                record.songCount ? `${record.doneCount} done` : null,
-                record.nextSession ? `next session ${sessionWhen(record.nextSession)}` : null,
+                record.songCount
+                  ? `${record.doneCount} of ${record.songCount === 1 ? '1 song' : `${record.songCount} songs`} done`
+                  : 'No songs yet',
+                record.nextSession ? `next ${sessionWhen(record.nextSession)}` : null,
               ].filter(Boolean);
               return (
                 <li key={record.id}>
                   <Link
                     href={recordHref(artistId, record.id)}
-                    className="motion-focus block rounded-lg border border-stroke-default p-2.5 transition-colors hover:border-stroke-strong"
+                    className="motion-focus -mx-1 flex items-center gap-3 rounded-lg px-1 py-1 transition-colors hover:bg-bg-hover"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-dashed border-stroke-strong text-sm font-semibold text-content-tertiary">
-                        ?
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-content-primary">
-                          {record.title}
-                          {record.kind ? <span className="font-normal text-content-secondary"> · {recordKindLabel(record.kind)}</span> : null}
-                        </p>
-                        <p className="truncate text-xs text-content-secondary">{parts.join(' · ')}</p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 shrink-0 text-content-tertiary" aria-hidden />
+                    <CoverTile color={record.coverColor} url={record.coverUrl} size={56} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-content-primary">
+                        {record.title}
+                        {record.kind ? <span className="font-normal text-content-secondary"> · {recordKindLabel(record.kind)}</span> : null}
+                      </p>
+                      <p className="truncate text-[13px] text-content-secondary">{parts.join(' · ')}</p>
+                      {record.songCount ? (
+                        <div className="mt-1.5">
+                          <DoneBars total={record.songCount} done={record.doneCount} />
+                        </div>
+                      ) : null}
                     </div>
-                    {record.songCount ? (
-                      <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-bg-elevated" aria-hidden>
-                        <div className="h-full rounded-full bg-content-primary" style={{ width: `${progress}%` }} />
-                      </div>
-                    ) : null}
+                    <ChevronRight className="h-4 w-4 shrink-0 text-content-tertiary" aria-hidden />
                   </Link>
                 </li>
               );

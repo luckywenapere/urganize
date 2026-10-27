@@ -253,7 +253,7 @@ export interface AnalyticsEventPropertiesMap {
   // model got to tailor the rest. (Until 2026-09-15 the intake produced a
   // draft to review and approve; the scene, approve and discard events went
   // with that step.)
-  planner_intake_opened: { source: 'empty_state' | 'note' | 'chip' | 'onboarding' | 'ideas'; has_release: boolean };
+  planner_intake_opened: { source: 'empty_state' | 'note' | 'chip' | 'onboarding' | 'ideas' | 'record'; has_release: boolean };
   planner_intake_step: { step: number };
   planner_intake_dismissed: { step: number };
   planner_intake_skipped: { step: number };
@@ -265,7 +265,7 @@ export interface AnalyticsEventPropertiesMap {
   plan_auto_failed: { release_id: string; code: string };
   plan_auto_retry: { release_id: string };
   planner_plan_created: {
-    source: 'empty_state' | 'note' | 'chip' | 'onboarding' | 'ideas';
+    source: 'empty_state' | 'note' | 'chip' | 'onboarding' | 'ideas' | 'record';
     release_type: 'single' | 'ep' | 'album';
     task_count: number;
     tasks_removed: number;
@@ -475,9 +475,25 @@ export interface AnalyticsEventPropertiesMap {
   };
   record_edited: {
     record_id: string;
-    action: 'song_added' | 'song_stage' | 'song_removed' | 'session_added' | 'session_edited' | 'session_removed' | 'details' | 'dropped';
+    action:
+      | 'song_added'
+      | 'song_stage'
+      | 'song_removed'
+      | 'session_added'
+      | 'session_edited'
+      | 'session_removed'
+      | 'details'
+      | 'cover'
+      | 'dropped';
     stage?: 'idea' | 'recording' | 'mixing' | 'done';
     songs?: number;
+  };
+  /** Plan the rollout on a record (step 4, 2026-10-27): the sheet opened, then Continue. */
+  record_rollout: {
+    record_id: string;
+    step: 'sheet_opened' | 'continued';
+    songs: number;
+    songs_not_done: number;
   };
   /**
    * The shell's coming-soon screens (design overhaul, 2026-10-04). `viewed`

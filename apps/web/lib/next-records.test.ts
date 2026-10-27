@@ -135,10 +135,19 @@ describe('pickNextSession', () => {
 describe('summaries', () => {
   it('counts done songs', () => {
     const summary = summarizeRecord(
-      { id: ID, title: 'Untitled EP', kind: 'ep', songs: [song({ stage: 'done' }), song(), song()], sessions: [] },
+      {
+        id: ID,
+        artistId: ID2,
+        title: 'Untitled EP',
+        kind: 'ep',
+        coverColor: '#24453a',
+        coverUrl: null,
+        songs: [song({ stage: 'done' }), song(), song()],
+        sessions: [],
+      },
       '2026-10-27'
     );
-    expect(summary).toMatchObject({ songCount: 3, doneCount: 1, nextSession: null });
+    expect(summary).toMatchObject({ songCount: 3, doneCount: 1, nextSession: null, coverColor: '#24453a' });
   });
   it('a record is done only with songs, all done', () => {
     expect(isRecordDone({ songs: [] })).toBe(false);

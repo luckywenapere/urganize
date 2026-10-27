@@ -58,6 +58,8 @@ const RECORD: NextRecord = {
   idea: '',
   status: 'making',
   releaseId: null,
+  coverColor: null,
+  coverUrl: null,
   createdAt: '2026-10-20T10:00:00Z',
   songs: [
     { id: 's1', title: 'Wahala Free', stage: 'recording', position: 0 },

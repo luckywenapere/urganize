@@ -19,6 +19,8 @@ import { minimumTierWith } from '@/lib/entitlements';
 import { PRICING_TIERS } from '@urganize/pricing';
 import { IDEA_ROUND_COPY } from '@/lib/idea-round';
 import { planInputFor } from '@/lib/idea-round-server';
+import { recordLeadTasks, withoutRecordTasks } from '@/lib/next-records-rollout';
+import { completeRecordRollout, findPlanningRecord } from '@/lib/next-records-rollout-server';
 
 /**
  * Plan with UrgAns v2 (2026-10-26, founder approved): UrgAns writes the whole
@@ -65,7 +67,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
   let mode: PlanV2Mode = { kind: 'generate' };
   let plan = null as ReturnType<typeof coercePlanV2>;
   if (action === 'preview' && (body.mode === 'reroll' || body.mode === 'tweak')) {
-    const previous = coercePlanV2(body.previous);
+    // A record's "Finish ..." tasks are added here, never written by UrgAns.
+    const sent = coercePlanV2(body.previous);
+    const previous = sent ? withoutRecordTasks(sent) : null;
     if (!previous) return NextResponse.json({ error: 'previous plan is required.' }, { status: 400 });
     if (body.mode === 'tweak') {
       const ask = typeof body.request === 'string' ? body.request.trim().slice(0, MAX_TWEAK_LENGTH) : '';
@@ -76,8 +80,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
     }
   }
   if (action === 'apply') {
-    plan = coercePlanV2(body.plan);
-    if (!plan) return NextResponse.json({ error: 'plan is required.' }, { status: 400 });
+    const sent = coercePlanV2(body.plan);
+    if (!sent) return NextResponse.json({ error: 'plan is required.' }, { status: 400 });
+    plan = withoutRecordTasks(sent);
   }
 
   const adminClient = createAdminClient(auth.supabaseUrl);
@@ -111,6 +116,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
     return NextResponse.json({ error: 'This plan is already being created.', code: 'plan_in_progress' }, { status: 409 });
   }
 
+  // Planned from a record in the making (step 4, 2026-10-27): each song not
+  // yet done leads the plan as a "Finish ..." task, never a blocker.
+  const record = await findPlanningRecord(adminClient, releaseId);
+
   if (action === 'preview') {
     const result = await previewPlanV2(adminClient, {
       release,
@@ -124,8 +133,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
       return NextResponse.json({ error: result.error, ...(result.code ? { code: result.code } : {}) }, { status: result.status });
     }
     const { written, releaseDate } = result;
+    const leadTasks = record ? recordLeadTasks(record.songs, written.plan) : [];
     return NextResponse.json({
-      plan: written.plan,
+      plan: leadTasks.length ? { ...written.plan, tasks: [...leadTasks, ...written.plan.tasks] } : written.plan,
       source: written.source,
       notice: written.notice,
       fallbackReason: written.fallbackReason,
@@ -142,10 +152,12 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
     source,
     todayYmd: todayYmd(),
     loadTeam: () => loadPlannerTeam(adminClient, releaseId, auth.user),
+    leadTasks: record ? recordLeadTasks(record.songs, plan!) : [],
   });
   if (!result.ok) {
     return NextResponse.json({ error: result.error, ...(result.code ? { code: result.code } : {}) }, { status: result.status });
   }
   await finishPlannerAuto(adminClient, releaseId, { state: 'done' });
+  if (record) await completeRecordRollout(adminClient, { record, releaseId, ownerUserId: auth.user.id });
   return NextResponse.json({ tasksCreated: result.tasksCreated, releaseDate: result.releaseDate }, { status: 201 });
 }

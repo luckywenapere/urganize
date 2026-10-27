@@ -60,6 +60,10 @@ export type NextRecord = {
   idea: string;
   status: RecordStatus;
   releaseId: string | null;
+  /** The colour the team picked, or null for the artist's own (recordCoverColor). */
+  coverColor: string | null;
+  /** A signed URL for the cover picture, or null. */
+  coverUrl: string | null;
   createdAt: string;
   songs: RecordSong[];
   sessions: RecordSession[];
@@ -70,6 +74,9 @@ export type RecordSummary = {
   id: string;
   title: string;
   kind: RecordKind | null;
+  /** Resolved: the picked colour, else the artist's. */
+  coverColor: string;
+  coverUrl: string | null;
   songCount: number;
   doneCount: number;
   nextSession: { date: string | null; dateHint: string } | null;
@@ -227,7 +234,7 @@ export function parseSessionInput(body: unknown): Parsed<SessionInput> {
 
 /** "1 of 4 done" and the next planned session, for the artist page row. */
 export function summarizeRecord(
-  record: Pick<NextRecord, 'id' | 'title' | 'kind' | 'songs' | 'sessions'>,
+  record: Pick<NextRecord, 'id' | 'artistId' | 'title' | 'kind' | 'coverColor' | 'coverUrl' | 'songs' | 'sessions'>,
   today: string
 ): RecordSummary {
   const doneCount = record.songs.filter((song) => song.stage === 'done').length;
@@ -235,6 +242,8 @@ export function summarizeRecord(
     id: record.id,
     title: record.title,
     kind: record.kind,
+    coverColor: recordCoverColor(record),
+    coverUrl: record.coverUrl,
     songCount: record.songs.length,
     doneCount,
     nextSession: (() => {
@@ -293,3 +302,40 @@ export function sessionWhen(session: Pick<RecordSession, 'date' | 'dateHint'>): 
 export function lagosToday(now: Date = new Date()): string {
   return new Date(now.getTime() + 60 * 60 * 1000).toISOString().slice(0, 10);
 }
+
+// The cover (v2, 2026-10-27). Until there is art the cover is a flat colour
+// (no gradients: the no-gradient-placeholders rule). Each artist gets one from
+// this palette, so a new record needs nothing typed; the team can pick another
+// from the same set.
+
+export const RECORD_COVER_COLORS = [
+  '#3b2a52',
+  '#24453a',
+  '#4a2f2a',
+  '#253a52',
+  '#4d3f1f',
+  '#3f2440',
+  '#1f4248',
+  '#43302a',
+] as const;
+
+/** The artist's own colour: the same every time for the same artist. */
+export function artistCoverColor(artistId: string): string {
+  let hash = 0;
+  for (let i = 0; i < artistId.length; i += 1) hash = (hash * 31 + artistId.charCodeAt(i)) >>> 0;
+  return RECORD_COVER_COLORS[hash % RECORD_COVER_COLORS.length];
+}
+
+export function recordCoverColor(record: Pick<NextRecord, 'artistId' | 'coverColor'>): string {
+  return record.coverColor ?? artistCoverColor(record.artistId);
+}
+
+/** A colour from the palette, or null to go back to the artist's. */
+export function parseCoverColor(value: unknown): Parsed<string | null> {
+  if (value === null) return { value: null };
+  const colour = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (!(RECORD_COVER_COLORS as readonly string[]).includes(colour)) return { error: 'Pick one of the colours.' };
+  return { value: colour };
+}
+
+export const recordCoverPathPrefix = (recordId: string): string => `record/${recordId}/cover/`;

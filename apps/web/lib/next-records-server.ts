@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { seedRelationship } from '@/lib/relationships-server';
+import { removePhotoObject, signPhotoPath } from '@/lib/profile-photo-server';
 import {
   lagosToday,
   orderSessions,
@@ -117,7 +118,7 @@ async function loadRecords(admin: SupabaseClient, workspaceId: string, ids: stri
   const [records, songs, sessions] = await Promise.all([
     admin
       .from(RECORDS_TABLE)
-      .select('id,artist_id,title,kind,idea,status,release_id,created_at')
+      .select('id,artist_id,title,kind,idea,status,release_id,cover_path,cover_color,created_at')
       .eq('workspace_id', workspaceId)
       .in('id', ids),
     admin
@@ -162,6 +163,16 @@ async function loadRecords(admin: SupabaseClient, workspaceId: string, ids: stri
     songsBySession.set(text(row.session_id), list);
   }
 
+  const coverUrls = new Map<string, string>();
+  await Promise.all(
+    ((records.data ?? []) as Row[])
+      .filter((row) => row.cover_path)
+      .map(async (row) => {
+        const url = await signPhotoPath(admin, row.cover_path);
+        if (url) coverUrls.set(text(row.id), url);
+      })
+  );
+
   const today = lagosToday();
   const byId = new Map(
     ((records.data ?? []) as Row[]).map((row) => {
@@ -193,6 +204,8 @@ async function loadRecords(admin: SupabaseClient, workspaceId: string, ids: stri
         idea: text(row.idea),
         status: text(row.status) as RecordStatus,
         releaseId: row.release_id ? text(row.release_id) : null,
+        coverColor: row.cover_color ? text(row.cover_color) : null,
+        coverUrl: coverUrls.get(id) ?? null,
         createdAt: text(row.created_at),
         songs: recordSongs,
         sessions: orderSessions(recordSessions, today),
@@ -226,6 +239,34 @@ export async function updateRecord(
 ): Promise<RecordsResult<NextRecord>> {
   const { error } = await admin.from(RECORDS_TABLE).update(patch).eq('id', recordId).eq('workspace_id', workspaceId);
   if (error) return fail(500, 'Could not save the record.');
+  return readRecord(admin, workspaceId, recordId);
+}
+
+/**
+ * The cover: a picture (a path under record/<id>/cover/, already checked by
+ * the route), a picked colour, or both cleared back to the artist's colour.
+ * A replaced picture is removed from storage, best effort.
+ */
+export async function updateRecordCover(
+  admin: SupabaseClient,
+  workspaceId: string,
+  recordId: string,
+  patch: Partial<{ coverPath: string | null; coverColor: string | null }>
+): Promise<RecordsResult<NextRecord>> {
+  const fields: Row = {};
+  if (patch.coverPath !== undefined) fields.cover_path = patch.coverPath;
+  if (patch.coverColor !== undefined) fields.cover_color = patch.coverColor;
+  if (Object.keys(fields).length === 0) return fail(400, 'Nothing to change.');
+  const { data: before } = await admin
+    .from(RECORDS_TABLE)
+    .select('cover_path')
+    .eq('id', recordId)
+    .eq('workspace_id', workspaceId)
+    .maybeSingle();
+  const { error } = await admin.from(RECORDS_TABLE).update(fields).eq('id', recordId).eq('workspace_id', workspaceId);
+  if (error) return fail(500, 'Could not save the cover.');
+  const previous = (before as Row | null)?.cover_path;
+  if (patch.coverPath !== undefined && previous && previous !== patch.coverPath) await removePhotoObject(admin, previous);
   return readRecord(admin, workspaceId, recordId);
 }
 

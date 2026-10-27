@@ -78,3 +78,54 @@ export async function fetchContactOptions(): Promise<ContactOption[]> {
     return [];
   }
 }
+
+// ── v2 (2026-10-27): the cover, and planning the rollout ─────────────────────
+
+export const recordCoverSignUrl = (recordId: string) => `/api/records/${recordId}/cover`;
+
+export const saveRecordCover = (
+  recordId: string,
+  patch: Partial<{ photoPath: string | null; coverColor: string | null }>
+) => recordCall(`/api/records/${recordId}/cover`, 'PATCH', patch);
+
+/**
+ * Plan the rollout: make the rollout through the ordinary create route (plan
+ * limits and the paywall apply as anywhere), then point the record at it.
+ * Reuses the rollout a record is already linked to.
+ */
+export async function startRecordRollout(
+  record: Pick<NextRecord, 'id' | 'artistId' | 'title' | 'releaseId'>,
+  releaseType: string
+): Promise<{ ok: true; releaseId: string; record: NextRecord | null } | { ok: false; error: string }> {
+  if (record.releaseId) return { ok: true, releaseId: record.releaseId, record: null };
+  try {
+    const created = await call('/api/releases', 'POST', {
+      title: record.title,
+      artistId: record.artistId,
+      releaseType,
+      plan: 'blank',
+      source: 'planner',
+    });
+    const payload = (await created.json().catch(() => ({}))) as { releaseId?: string; error?: string };
+    if (!created.ok || !payload.releaseId) return { ok: false, error: payload.error || 'Could not make the rollout. Try again.' };
+    const linked = await recordCall(`/api/records/${record.id}/rollout`, 'POST', { releaseId: payload.releaseId });
+    if (!linked.ok) return linked;
+    return { ok: true, releaseId: payload.releaseId, record: linked.record };
+  } catch {
+    return { ok: false, error: 'Could not reach Urganize. Check your connection.' };
+  }
+}
+
+export type ReleaseRecordLink = { recordId: string; artistId: string; line: string };
+
+/** The record a rollout was made from, or null. */
+export async function fetchReleaseRecord(releaseId: string): Promise<ReleaseRecordLink | null> {
+  try {
+    const response = await call(`/api/records?releaseId=${encodeURIComponent(releaseId)}`, 'GET');
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { record?: ReleaseRecordLink | null };
+    return payload.record ?? null;
+  } catch {
+    return null;
+  }
+}

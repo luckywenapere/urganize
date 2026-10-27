@@ -1,6 +1,6 @@
 # The next record (2026-10-27, mocks approved, step 1 built as v1.197.0)
 
-Mocks: `docs/mocks/next-record/mock.html`, approved as drawn by Oyin on 27 Oct 2026. Steps 1 to 3 are built; steps 4 and 5 are not.
+Mocks: `docs/mocks/next-record/mock.html`, approved as drawn by Oyin on 27 Oct 2026. Steps 1 to 4 are built (step 4 and the v2 page in v1.200.0, mocks `docs/mocks/next-record-v2/mock.html`); step 5 is not.
 
 ## Why
 
@@ -33,7 +33,7 @@ Each step is useful on its own. No flags (founder rule). Live at deploy.
 1. **The record in Catalogue.** "In the making" on the artist page above released music, the record page (songs, sessions, people), and add or edit by hand. Mock screens 2 and 3.
 2. **One line in, filed.** A new UrgAns tool, `add_to_record`, that reads a message and returns the adds as a preview card. Nothing is saved until the user taps Add, through the existing confirmation gate. People match Relationships first (dedupe rules from Phase 2: email, phone, exact name plus role, never name alone), else a new unclaimed profile. Dates are never invented. Mock screen 4.
 3. **Home asks.** Seven days after a release counts as live (`lib/recap-eligibility.ts` rule), Home's top slot asks "What's next for <artist>?". "Ask me in 2 weeks" sets `snooze_until`. The day after a planned session, Home asks whether it happened, which is the in-app check-in that works before WhatsApp. Mock screen 1.
-4. **Plan the rollout.** When every song is Done, the record offers "Plan the rollout". That creates the `releases` row through the planner v2 path, seeded with the idea, kind and songs, sets `next_records.release_id` and status `planned`, and carries session people as credits. Mock screen 6.
+4. **Plan the rollout.** (Changed 27 Oct, see "v2 decisions" below: the button shows from day one, not only when every song is Done.) When every song is Done, the record offers "Plan the rollout". That creates the `releases` row through the planner v2 path, seeded with the idea, kind and songs, sets `next_records.release_id` and status `planned`, and carries session people as credits. Mock screen 6.
 5. **WhatsApp check-in.** This rides on WhatsApp chasing (`lib/whatsapp/`), same opt-in, quiet hours and one message per person per day. It needs the chasing migration applied, Twilio connected, and a new Meta template for the session question. Mock screen 5.
 
 ## Blockers and costs (need Oyin)
@@ -87,6 +87,18 @@ Weekly active teams with no rollout in progress (the "between releases" number o
 - **Migration applied** to production on 27 Oct through the Management API: backup `artists_backup_20261027` (67 rows, RLS on, no grants to anon or authenticated), column verified as nullable `timestamptz`.
 - **Checked:** both cards at phone width in a throwaway page with faked calls (deleted). **Not checked live:** no signed-in local session, so the real Home against the real database was not exercised in a browser.
 
+## v2 decisions (27 Oct 2026, Oyin, mocks approved)
+
+Mocks: `docs/mocks/next-record-v2/mock.html`, approved as drawn. His feedback on v1.197.0 was: going from a record to a release didn't work, the button at the bottom was "weird and obscure", and the page looked bland. These replace mock screens 3 and 6 of the first set.
+
+1. **The rollout button is at the top from day one**, right under the cover, not only when every song is Done. The hint line under it follows the songs ("You can plan while Pressure is still mixing", "Plan now, or add the songs first").
+2. **Pressing it** opens one "Here's what I'll use" sheet (kind, songs, credits from sessions, the idea, the cover colour), then planner v2 with the music-state and kind questions skipped: 4 questions. A song not yet Done becomes a "Finish ..." task, never a blocker. Planner v2's "Where's the music" answer comes from the record (all Done = finished, else still making it).
+3. **After planning** the record becomes the rollout: `release_id` set, status `planned`, it leaves In the making. The rollout shows "Made from your record" (songs, sessions, credits), and session people land as credits in metadata.
+4. **The top of the page is a cover and a tracklist.** A big cover tile (mood colour until there's art) with artist, kind and title on it; songs as a numbered tracklist with four stage bars (Idea, Recording, Mixing, Done), tapped to move the stage; sessions with a small date block. Oyin's rule: **nothing is required.** The colour comes from the artist, the title starts "Untitled", and cover, name and kind can be set or changed any time. (Needs a cover image or colour on `next_records`: a small migration.)
+5. **Rare actions go in a ⋯ menu on the cover:** Rename, Change cover or colour, Single, EP or album, then Drop this record last in red. Drop asks once in a sheet ("Drop it" / "Keep it"). Nothing sits at the bottom of the page.
+6. **Mock screens 1 (Home asks), 4 (one line in) and 5 (WhatsApp) stay.** One change to 4: no separate "Tell UrgAns what happened" box on the record page. The app's own UrgAns box does the capture there (placeholder changes on a record), and when a change makes the last song Done, the reply points to the rollout button. The record-capture session was told on 27 Oct.
+7. **The artist page** shows each record as a small cover in its colour with the stage bars.
+
 ### Step 2, v2 change (27 Oct 2026, decision 6)
 
 - **No second box.** The app's own UrgAns box knows the record: `lib/chappi/record-scope.ts` reads the record id from the address (`/dashboard/artists/<id>/records/<recordId>`). On a record the placeholder is "Tell UrgAns what happened…" (desktop panel in `ChappiConversation`, phone box via `HomeAskBar`'s new `placeholder`). The request carries `recordScope: { id }`; `/api/urgans` checks it with `recordScopePrompt` (the caller's record, still in the making) before adding one line telling UrgAns to pass that recordId to add_to_record.
@@ -94,3 +106,27 @@ Weekly active teams with no rollout in progress (the "between releases" number o
 - **Last song Done:** `doneLine` adds "That's N of N songs done. The Plan the rollout button is ready at the top of the record." to the Add's result, only on the change that finishes the record; UrgAns's instructions say to end the reply with it.
 - **Fix something:** a confirm builder may now return `cancelLabel`; add_to_record's card says Add / Fix something. Fix something cancels (nothing ran), says "Nothing was added yet. Tell me what to change." and puts the cursor in the box. Other cards still say Cancel.
 - **Not checked live:** no signed-in local session, so the placeholder and the hand-over were not seen in a browser.
+
+## The v2 page and step 4, as built (v1.200.0, 27 Oct 2026)
+
+Built against `docs/mocks/next-record-v2/mock.html`, screen by screen:
+
+- **Screen 1 (artist page):** `ArtistRecordsCard` shows each record as a 56px cover in its colour (or picture), "3 of 4 songs done · next Sat 31 Oct", and one bar per song, lit when done (`DoneBars`, capped at 12).
+- **Screens 2 and 3 (the record):** `RecordPageClient` is rewritten. Cover tile (190px, flat colour or picture, a scrim only over a real picture), status line with the next session in amber, the green Plan the rollout button with its hint (`planHint`), the numbered tracklist with four stage bars (`StageBars`: each bar is a 44px-tall button that sets that stage), sessions with a date block (`DateBlock`; words-only sessions show "When ?"). Nothing is required: an empty record shows "No songs yet" and the two dashed Add cards. Tapping a song opens a small sheet to rename it or take it off the record (the old X buttons are gone; this keeps removal possible).
+- **Screen 4 (⋯ menu):** Rename, Change cover or colour, Single, EP or album, Drop this record (red). Each opens a bottom sheet (`Sheet` in `components/records/RecordParts.tsx`, StartNextSheet's chrome). Drop asks once: "Drop it" / "Keep it". Nothing sits at the bottom of the page.
+- **Screen 6 (Here's what I'll use):** kind, songs, credits (session people), the idea (only when one is set), cover, and the line about songs not done (`recordUseNote`). Continue / Not yet.
+- **Screen 7 (the planner, 4 questions):** planner v2 opens with `prefill.musicStage` (every song done = finished, else still making it) and `releaseType`, so "Where's the music" and the Single/EP/Album row are skipped (`visibleV2Steps({ stageKnown })`) and it starts on the win. "From your record: EP · 4 songs · 2 credits" shows on question 1 (`prefill.fromRecord`). A cover picture counts as cover art ready; the idea rides in as the notes.
+- **Screen 8 (the rollout):** `MadeFromRecordCard` sits under the activities (in `WorkspaceView`'s activities footer) and links back to the record. It renders nothing for a rollout no record became. The record page of a planned record shows "Open the rollout" instead of Plan.
+- **Screen 5** was built by the record-capture session (v1.199.1, above).
+
+How step 4 works:
+
+- **Continue** makes the rollout through the ordinary `POST /api/releases` (title, artist, kind; plan limits and the paywall apply as anywhere), then `POST /api/records/[id]/rollout` points the record at it (`linkRecordRelease`: the rollout must be the caller's own, for the record's artist). The record stays In the making while the planner is open. The planner opens with `discardIfAbandoned`, so closing it discards the empty rollout and the foreign key (`on delete set null`) unlinks the record by itself. A record already linked (planner skipped earlier) reuses its rollout.
+- **"Finish ..." tasks:** the plan/v2 route finds the record (`findPlanningRecord`: by rollout id, team from the rollout's artist). On preview it puts one task per song not done in front of UrgAns's plan (`recordLeadTasks`: first up, now, free, owner artist, at the plan's earliest day, keys `rec_N`). On apply it strips any `rec_` task the browser sent back (`withoutRecordTasks`), checks UrgAns's plan as before, then passes the record tasks as `leadTasks` to `applyPlanV2`, which adds them after the check, so they never count against pace or size. Titles: "Finish the X mix", "Finish recording X", "Finish writing X".
+- **After the plan saves:** `completeRecordRollout` sets status `planned` (only from `making`) and inserts each session person (sessions not cancelled, once each) into `release_credit_submissions` with roles mapped from the typed role (`creditRolesFor`; unknown is `other`), `confirmed_accurate` false, skipping names already credited. Best effort: a failure is logged and never undoes the plan.
+- **Cover:** migration `20261027220000_next_record_cover.sql` adds `cover_path` and `cover_color` to `next_records`. Applied to production on 27 Oct through the Management API: backup `next_records_backup_20261027` (3 rows, RLS on, no grants to anon or authenticated), both columns and both checks verified. No colour stored means the artist's colour (`artistCoverColor`, a hash of the artist id into an 8-colour palette, `RECORD_COVER_COLORS`); picking the artist's own colour stores null. Pictures use the artist photo flow (sign, PUT, save) under `record/<id>/cover/`, square crop, signed URLs per read. Route `POST/PATCH /api/records/[id]/cover`.
+- **Routes added:** `GET /api/records?releaseId=` (the rollout's record), `POST .../rollout`, `POST/PATCH .../cover`. All through `resolveRecordsContext` (new target `{ releaseId }`); the guard now expects 10 routes and also reads `lib/next-records-rollout-server.ts`.
+- **Analytics:** `record_rollout` (`sheet_opened`, `continued`, song counts), `record_edited` gains `cover`, planner source `record`.
+- **Tests:** `lib/next-records-rollout.test.ts` (hint, status line, kind, music stage, credits, roles, lines, finish tasks, stripping, the planner skipping Q1), cover colour tests, guard updated.
+- **Checked:** every screen at phone width (375px) in a throwaway page with a faked API (deleted): stage tap moves the hint, ⋯ menu, Drop sheet, Here's what I'll use, Continue creating and linking a rollout and opening the planner on "Question 1 of 4" with the From your record line, empty record, cover colour pick, the artist card and Made from your record. No horizontal scroll. **Not checked live:** no signed-in local session, so the real routes, the planner's preview and apply with the record tasks, and the credits insert were not run against the real database.
+- **Left out on purpose (the mocks don't show it):** the idea is no longer edited on the record page (it still shows on the sheet when set, and UrgAns or Home can set it). Ask Oyin if he wants it back, for example in the ⋯ menu.

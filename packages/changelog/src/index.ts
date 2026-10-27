@@ -41,6 +41,18 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.200.0",
+    title: "Your record has a cover, and a way to its rollout",
+    tag: "Rollouts",
+    date: "October 27, 2026",
+    highlights: [
+      "Each record now has a cover in its own colour. Add a picture or pick a colour any time.",
+      "Songs show as a tracklist. Tap a song's bars to move it from idea to done.",
+      "Plan the rollout sits right under the cover. Songs still being made become tasks in the plan, so you can plan early.",
+      "Rename, change the kind or drop a record from the menu on its cover.",
+    ],
+  },
+  {
     version: "1.199.1",
     tag: "AI",
     date: "October 27, 2026",

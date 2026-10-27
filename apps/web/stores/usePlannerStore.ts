@@ -27,7 +27,8 @@ import type { CreatedPlan, PlanBudget, PlanReleaseType, ReadyItem } from '@/lib/
 
 /** 'onboarding' (2026-10-11): the first plan, opened straight after signup. */
 /** 'ideas' (2026-10-26): Draft with AI on a rollout's Ideas card; the notes ride in as extraNotes. */
-export type PlannerIntakeSource = 'empty_state' | 'note' | 'chip' | 'onboarding' | 'ideas';
+/** 'record' (2026-10-27): Plan the rollout on a record in the making. */
+export type PlannerIntakeSource = 'empty_state' | 'note' | 'chip' | 'onboarding' | 'ideas' | 'record';
 
 export type PlannerIntakePrefill = {
   releaseType?: PlanReleaseType;
@@ -49,6 +50,14 @@ export type PlannerIntakePrefill = {
   budget?: PlanBudget;
   /** Free text for the last question. A note's body arrives here. */
   extraNotes?: string;
+  /**
+   * Where the music is, when the caller knows (a record, 2026-10-27: every
+   * song done is finished, else still making it). Present means planner v2
+   * skips "Where's the music right now?".
+   */
+  musicStage?: 'making' | 'finished';
+  /** "EP · 4 songs · 2 credits", shown on the first question. */
+  fromRecord?: string;
 };
 
 export type PlannerIntakePayload = {

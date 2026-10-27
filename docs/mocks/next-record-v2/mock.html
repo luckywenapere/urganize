@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Next record v2 mocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web dark theme, read from app.urganize.app on 27 Oct 2026. */
+  :root {
+    --bg:#0c0c0d; --card:#171719; --elev:#1b1b1e; --line:rgba(242,242,240,.07); --line2:#2e2e32;
+    --text:#f2f2f0; --sec:#929291; --ter:#6a6a69; --brand:#7fd99a; --warn:#f0b95c; --err:#fa8a8a;
+    --board:#e9e3d7; --board-text:#1a1611; --board-sec:#5c544a;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--board-text); padding:32px 16px 64px; }
+  p { margin:0; }
+  .intro { max-width:860px; margin:0 auto 28px; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; margin:0 0 6px; }
+  .intro p { color:var(--board-sec); }
+  .board { display:flex; flex-wrap:wrap; gap:28px; justify-content:center; }
+  .col { width:360px; max-width:100%; }
+  .tag { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin-bottom:6px; }
+  .why { font-size:13px; color:var(--board-sec); margin-bottom:12px; min-height:58px; }
+  .phone { background:var(--bg); color:var(--text); border-radius:28px; padding:18px 16px 16px; min-height:700px; position:relative; overflow:hidden; display:flex; flex-direction:column; }
+  .ser { font-family:'Young Serif', serif; font-weight:400; }
+  .mu { color:var(--sec); }
+  .crumb { font-size:13px; color:var(--sec); margin-bottom:12px; display:flex; align-items:center; gap:10px; }
+  .back { width:34px; height:34px; border-radius:50%; border:1px solid var(--line2); display:grid; place-items:center; color:var(--sec); flex:none; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-top:12px; }
+  .h2 { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+  .h2 b { font-family:'Young Serif', serif; font-weight:400; font-size:16px; }
+  .h2 span { font-size:13px; color:var(--sec); }
+  .row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:9px 0; border-top:1px solid var(--line); }
+  .row:first-of-type { border-top:0; }
+  .n { color:var(--ter); width:18px; display:inline-block; font-variant-numeric:tabular-nums; }
+  .bars { display:flex; gap:3px; }
+  .bars i { width:16px; height:6px; border-radius:3px; background:#2e2e32; }
+  .bars i.on { background:var(--brand); }
+  .cover { border-radius:16px; height:190px; display:flex; flex-direction:column; justify-content:space-between; padding:12px 14px; }
+  .pill { background:rgba(0,0,0,.35); border-radius:999px; padding:5px 11px; font-size:12px; color:#fff; }
+  .dots { width:32px; height:32px; border-radius:50%; background:rgba(0,0,0,.35); display:grid; place-items:center; color:#fff; font-weight:700; letter-spacing:1px; }
+  .btn { display:flex; align-items:center; justify-content:center; min-height:44px; border-radius:999px; font-weight:600; font-size:14px; margin-top:12px; }
+  .green { background:var(--brand); color:var(--bg); }
+  .outline { border:1px solid var(--line2); color:var(--text); }
+  .hint { font-size:12px; color:var(--sec); text-align:center; margin-top:6px; }
+  .date { width:42px; flex:none; border-radius:10px; background:var(--elev); text-align:center; padding:4px 0; }
+  .date b { display:block; font-family:'Young Serif', serif; font-weight:400; font-size:17px; line-height:1.1; }
+  .date small { font-size:10px; color:var(--sec); text-transform:uppercase; letter-spacing:.06em; }
+  .date.soon { background:rgba(240,185,92,.12); }
+  .date.soon small { color:var(--warn); }
+  .lr { display:flex; gap:12px; align-items:center; min-width:0; }
+  .face { width:32px; height:32px; border-radius:50%; background:#2a2a2e; display:grid; place-items:center; font-size:11px; font-weight:700; color:#cfcfcd; flex:none; }
+  .faces { display:flex; } .faces .face { margin-left:-8px; border:2px solid var(--card); } .faces .face:first-child { margin-left:0; }
+  .chip { font-size:11px; font-weight:600; border:1px solid var(--line2); border-radius:999px; padding:3px 9px; color:var(--sec); white-space:nowrap; }
+  .chip.warn { border-color:rgba(240,185,92,.5); color:var(--warn); }
+  .chip.sel { background:var(--text); color:var(--bg); border-color:var(--text); }
+  .spacer { flex:1; }
+  .ubox { border:1px solid #3a3a3d; border-radius:999px; padding:12px 16px; display:flex; justify-content:space-between; color:var(--sec); margin-top:14px; }
+  .bubble { border-radius:14px; padding:10px 12px; font-size:14px; margin-top:10px; max-width:88%; }
+  .me { background:var(--text); color:var(--bg); margin-left:auto; }
+  .bot { background:var(--card); border:1px solid var(--line2); }
+  .menu { position:absolute; right:26px; top:120px; width:210px; background:var(--elev); border:1px solid var(--line2); border-radius:14px; padding:4px 0; box-shadow:0 12px 32px rgba(0,0,0,.5); }
+  .menu div { padding:11px 14px; font-size:14px; }
+  .menu .sep { border-top:1px solid var(--line2); }
+  .scrim { position:absolute; inset:0; background:rgba(0,0,0,.45); }
+  .dash { border:1px dashed #3a3a3d; border-radius:14px; padding:12px 14px; margin-top:12px; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; background:var(--elev); border-radius:22px 22px 0 0; padding:10px 16px 18px; border-top:1px solid var(--line2); }
+  .grab { width:40px; height:4px; border-radius:2px; background:#3a3a3d; margin:0 auto 14px; }
+  .kv { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-top:1px solid var(--line); font-size:14px; }
+  .kv:first-of-type { border-top:0; }
+  .kv span:first-child { color:var(--sec); }
+  .kv span:last-child { text-align:right; }
+  .q { font-size:12px; color:var(--sec); }
+  .opt { border:1px solid var(--line2); border-radius:14px; padding:12px 14px; margin-top:8px; }
+  .opt.sel { border-color:var(--brand); background:rgba(127,217,154,.08); }
+  .from { font-size:12px; color:var(--brand); margin-top:12px; }
+  .open { max-width:860px; margin:40px auto 0; }
+  .open h2 { font-family:'Young Serif', serif; font-weight:400; font-size:20px; margin:0 0 8px; }
+  .open ol { margin:0 0 20px; padding-left:20px; color:var(--board-sec); }
+  .open li { margin-bottom:6px; }
+  .open li b { color:var(--board-text); }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <p class="tag">Mocks v2 · 27 Oct 2026 · for your yes</p>
+  <h1>The next record, take two</h1>
+  <p>The record now looks like a record: a cover, a tracklist and one clear way to its rollout. Built from your answers today. Names are made up. Drawn in the app's dark look.</p>
+</div>
+
+<div class="board">
+
+  <!-- 1. Artist page -->
+  <div class="col">
+    <p class="tag">1 · Artist page, In the making</p>
+    <p class="why">The record shows as a small cover, the same colour you'll see inside. One glance says how far the music is.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">←</span>Artists</div>
+      <div class="lr"><div class="face" style="width:56px;height:56px;border-radius:14px;font-size:16px">KA</div><p class="ser" style="font-size:26px">Kemi Ade</p></div>
+      <div class="card">
+        <div class="h2"><b>In the making</b><span>+</span></div>
+        <div class="lr" style="padding:4px 0">
+          <div style="width:56px;height:56px;border-radius:10px;background:#3b2a52;flex:none"></div>
+          <div style="min-width:0;flex:1"><p style="font-weight:600">Untitled EP</p><p class="mu" style="font-size:13px">3 of 4 songs done · next Fri</p>
+            <div class="bars" style="margin-top:6px"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div></div>
+          <span class="mu">›</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="h2"><b>Rollouts</b><span>+</span></div>
+        <div class="row"><div class="lr"><div style="width:40px;height:40px;border-radius:8px;background:#2a2a2e"></div><div><p style="font-weight:600">Gold Dust</p><p class="mu" style="font-size:13px">Single · out 20 Oct</p></div></div><span class="chip">Out</span></div>
+      </div>
+      <div class="spacer"></div>
+      <div class="ubox"><span>Message UrgAns…</span><span>↑</span></div>
+    </div>
+  </div>
+
+  <!-- 2. A new record, nothing required -->
+  <div class="col">
+    <p class="tag">2 · A new record, nothing required</p>
+    <p class="why">Opens ready. The colour comes from the artist, the title is "Untitled". Add a cover, a name or the kind whenever you know them.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">←</span>Kemi Ade</div>
+      <div class="cover" style="background:#24453a">
+        <div style="display:flex;justify-content:space-between"><span class="pill">Add cover</span><span class="dots">···</span></div>
+        <div><p style="color:#cfe3d8;font-size:13px">Kemi Ade</p><p class="ser" style="font-size:28px;line-height:1.1">Untitled</p></div>
+      </div>
+      <p class="mu" style="margin-top:12px">No songs yet</p>
+      <div class="btn green">Plan the rollout</div>
+      <p class="hint">Plan now, or add the songs first</p>
+      <div class="dash"><p style="font-weight:600">Add a song</p><p class="mu" style="font-size:13px">A working title is fine. Rename it later.</p></div>
+      <div class="dash"><p style="font-weight:600">Add a session</p><p class="mu" style="font-size:13px">A day, or words like "next week".</p></div>
+      <div class="spacer"></div>
+      <div class="ubox"><span>Tell UrgAns what happened…</span><span>↑</span></div>
+    </div>
+  </div>
+
+  <!-- 3. The record, in progress -->
+  <div class="col">
+    <p class="tag">3 · The record</p>
+    <p class="why">Cover on top, the rollout button right under it, songs as a numbered tracklist. Tap a song's bars to move its stage. Sessions get a little date block.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">←</span>Kemi Ade</div>
+      <div class="cover" style="background:#3b2a52">
+        <div style="display:flex;justify-content:space-between"><span class="pill">Change cover</span><span class="dots">···</span></div>
+        <div><p style="color:#d9cfe8;font-size:13px">Kemi Ade · EP</p><p class="ser" style="font-size:28px;line-height:1.1">Untitled EP</p></div>
+      </div>
+      <p style="margin-top:12px">3 of 4 songs done · <span style="color:var(--warn)">next session Fri with Tolu</span></p>
+      <div class="btn green">Plan the rollout</div>
+      <p class="hint">You can plan while Pressure is still mixing</p>
+      <div class="card">
+        <div class="h2"><b>Tracklist</b><span>Idea · Rec · Mix · Done</span></div>
+        <div class="row"><span><span class="n">1</span>Sunday Light</span><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span></div>
+        <div class="row"><span><span class="n">2</span>Pressure</span><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span></div>
+        <div class="row"><span><span class="n">3</span>Wahala Free</span><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span></div>
+        <div class="row"><span><span class="n">4</span>Untitled 4</span><span class="bars"><i class="on"></i><i></i><i></i><i></i></span></div>
+        <p class="mu" style="font-size:13px;padding-top:8px;border-top:1px solid var(--line)">+ Add a song</p>
+      </div>
+      <div class="card">
+        <div class="h2"><b>Sessions</b><span class="faces"><span class="face">TO</span><span class="face">DA</span></span></div>
+        <div class="row"><div class="lr"><div class="date soon"><small>Fri</small><b>31</b></div><div><p style="font-weight:600">Tolu · producer</p><p class="mu" style="font-size:13px">Untitled 4</p></div></div><span class="chip warn">Next</span></div>
+        <div class="row"><div class="lr"><div class="date"><small>Mon</small><b>20</b></div><div><p style="font-weight:600">Dami · engineer</p><p class="mu" style="font-size:13px">Pressure mix</p></div></div><span class="chip">Done</span></div>
+      </div>
+      <div class="spacer"></div>
+      <div class="ubox"><span>Tell UrgAns what happened…</span><span>↑</span></div>
+    </div>
+  </div>
+
+  <!-- 4. The ⋯ menu -->
+  <div class="col">
+    <p class="tag">4 · Rare things, in the ⋯ menu</p>
+    <p class="why">Rename, cover and kind live on the cover's ⋯. Drop is last, in red, and asks once. Nothing sits loose at the bottom of the page any more.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">←</span>Kemi Ade</div>
+      <div class="cover" style="background:#3b2a52">
+        <div style="display:flex;justify-content:space-between"><span class="pill">Change cover</span><span class="dots" style="background:var(--text);color:var(--bg)">···</span></div>
+        <div><p style="color:#d9cfe8;font-size:13px">Kemi Ade · EP</p><p class="ser" style="font-size:28px;line-height:1.1">Untitled EP</p></div>
+      </div>
+      <p style="margin-top:12px">3 of 4 songs done</p>
+      <div class="btn green">Plan the rollout</div>
+      <div class="scrim"></div>
+      <div class="menu">
+        <div>Rename</div>
+        <div>Change cover or colour</div>
+        <div>Single, EP or album</div>
+        <div class="sep" style="color:var(--err)">Drop this record</div>
+      </div>
+      <div class="sheet" style="z-index:2">
+        <div class="grab"></div>
+        <p class="ser" style="font-size:20px">Drop Untitled EP?</p>
+        <p class="mu" style="margin-top:6px">It leaves In the making. The people stay in Relationships. Nothing else changes.</p>
+        <div class="btn" style="background:var(--err);color:var(--bg)">Drop it</div>
+        <div class="btn outline">Keep it</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. One line in, the app's own box -->
+  <div class="col">
+    <p class="tag">5 · One line in, the app's own box</p>
+    <p class="why">No second box. The UrgAns box every page has knows you're on this record. It shows what it will change, you tap Add. When the last song is done, it points you to the button.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">←</span>Untitled EP</div>
+      <div class="bubble me">dami finished the pressure mix today</div>
+      <div class="bubble bot">
+        <p>Here's what I'll change:</p>
+        <div class="kv" style="margin-top:6px"><span>Pressure</span><span>Mixing → Done</span></div>
+        <div class="kv"><span>Session</span><span>Today · Dami</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="btn green">Add</div><div class="btn outline">Fix something</div></div>
+      </div>
+      <div class="bubble bot">That's 4 of 4 songs done. The rollout button is ready at the top of the record.</div>
+      <div class="spacer"></div>
+      <div class="ubox"><span>Tell UrgAns what happened…</span><span>↑</span></div>
+    </div>
+  </div>
+
+  <!-- 6. Here's what I'll use -->
+  <div class="col">
+    <p class="tag">6 · Press Plan the rollout</p>
+    <p class="why">One sheet shows what carries over before anything is made. A song still mixing becomes a task, not a blocker.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">←</span>Kemi Ade</div>
+      <div class="cover" style="background:#3b2a52;height:150px">
+        <div></div>
+        <div><p style="color:#d9cfe8;font-size:13px">Kemi Ade · EP</p><p class="ser" style="font-size:24px;line-height:1.1">Untitled EP</p></div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <p class="mu" style="font-size:13px">UrgAns</p>
+        <p class="ser" style="font-size:22px;margin-top:2px">Here's what I'll use</p>
+        <div style="margin-top:10px">
+          <div class="kv"><span>Kind</span><span>EP</span></div>
+          <div class="kv"><span>Songs</span><span>Sunday Light, Pressure, Wahala Free, Untitled 4</span></div>
+          <div class="kv"><span>Credits</span><span>Tolu (producer), Dami (engineer)</span></div>
+          <div class="kv"><span>The idea</span><span>Lagos love songs, slow and warm</span></div>
+          <div class="kv"><span>Cover</span><span>Your mood colour, until there's art</span></div>
+        </div>
+        <p class="mu" style="font-size:13px;margin-top:8px">Pressure is still mixing. I'll add "Finish the Pressure mix" as the first task.</p>
+        <div class="btn green">Continue</div>
+        <div class="btn outline">Not yet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. The short planner -->
+  <div class="col">
+    <p class="tag">7 · The planner, 4 questions</p>
+    <p class="why">The record already answered "where's the music" and "single, EP or album", so those are skipped. Question 1 is the win.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">←</span>Plan Untitled EP</div>
+      <p class="q">Question 1 of 4</p>
+      <p class="ser" style="font-size:24px;line-height:1.2;margin-top:6px">What would make this a win?</p>
+      <div class="opt sel">More streams</div>
+      <div class="opt">Radio and DJs</div>
+      <div class="opt">Shows</div>
+      <div class="opt">Fans on socials</div>
+      <div class="opt mu">Say it your way</div>
+      <p class="from">From your record: EP · 4 songs · 2 credits</p>
+      <div class="spacer"></div>
+      <div class="btn green">Next</div>
+    </div>
+  </div>
+
+  <!-- 8. Landed on the rollout -->
+  <div class="col">
+    <p class="tag">8 · The record is now the rollout</p>
+    <p class="why">It leaves In the making and becomes this rollout, cover and all. How it was made stays one tap away. Credits are already in metadata.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">←</span>Rollouts</div>
+      <div class="lr"><div style="width:64px;height:64px;border-radius:12px;background:#3b2a52;flex:none"></div>
+        <div><p class="ser" style="font-size:24px;line-height:1.1">Untitled EP</p><p class="mu" style="font-size:13px">Kemi Ade · plan ready</p></div></div>
+      <div class="card" style="border-color:rgba(240,185,92,.4)"><p style="font-weight:600">Set your release date</p><p class="mu" style="font-size:13px">Dated tasks come with it.</p></div>
+      <div class="card">
+        <div class="h2"><b>Now</b><span>3 tasks</span></div>
+        <div class="row"><span>Finish the Pressure mix</span><span class="chip">Now</span></div>
+        <div class="row"><span>Upload to your distributor</span><span class="chip">Now</span></div>
+        <div class="row"><span>Cover art</span><span class="chip">Now</span></div>
+      </div>
+      <div class="card">
+        <div class="lr" style="justify-content:space-between"><div><p style="font-weight:600">Made from your record</p><p class="mu" style="font-size:13px">4 songs · 2 sessions · 2 credits</p></div><span class="mu">›</span></div>
+      </div>
+      <div class="spacer"></div>
+      <div class="ubox"><span>Message UrgAns…</span><span>↑</span></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="open">
+  <h2>Decided today (27 Oct)</h2>
+  <ol>
+    <li><b>The rollout button</b> sits at the top of the record from day one, under the cover. The words under it follow the songs. You can plan before every song is done.</li>
+    <li><b>Pressing it</b> shows one "Here's what I'll use" sheet, then the planner with 4 questions. Unfinished songs become tasks.</li>
+    <li><b>After planning</b> the record becomes the rollout and leaves In the making. Its songs, sessions and people stay readable from the rollout.</li>
+    <li><b>The top of the page</b> is a cover and a tracklist. Nothing is required: the colour comes from the artist, the title starts as "Untitled", and cover, name and kind can be changed any time.</li>
+    <li><b>Rare actions</b> (rename, cover, kind, drop) go in a ⋯ menu on the cover. Drop is last, in red, and asks once.</li>
+    <li><b>Screens 1, 4 and 5 stay.</b> One change to 4: no separate box on the record. The app's own UrgAns box does the capture there.</li>
+  </ol>
+</div>
+
+</body>
+</html>

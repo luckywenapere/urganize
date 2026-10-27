@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 const API = join(__dirname, '..', 'app', 'api');
 const ROUTES = [join(API, 'records'), join(API, 'workspace', 'artists', '[artistId]', 'records')];
-const SERVER = join(__dirname, 'next-records-server.ts');
+const SERVERS = [join(__dirname, 'next-records-server.ts'), join(__dirname, 'next-records-rollout-server.ts')];
 
 function routeFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -26,7 +26,7 @@ describe('next record routes', () => {
   const files = ROUTES.flatMap(routeFiles);
 
   it('finds the routes', () => {
-    expect(files.length).toBe(7);
+    expect(files.length).toBe(10);
   });
 
   it.each(files)('%s resolves the team through the one gate, once per handler', (file) => {
@@ -53,8 +53,8 @@ describe('next record routes', () => {
   });
 });
 
-describe('next record server', () => {
-  const source = stripComments(readFileSync(SERVER, 'utf8'));
+describe.each(SERVERS)('next record server %s', (file) => {
+  const source = stripComments(readFileSync(file, 'utf8'));
 
   it('filters every record, song and session query on the team', () => {
     const queries = source.split(/\.from\(/).slice(1);
@@ -63,6 +63,9 @@ describe('next record server', () => {
       // Links and people are read by session ids that were themselves read on
       // the team; contacts filter on workspace_id; artists likewise.
       if (/RECORD_SESSION_(PEOPLE|SONGS)_TABLE/.test(table) && /\.(select|insert)\(/.test(query.slice(0, 200))) continue;
+      // Step 4: a rollout and its artist are read by id to FIND the team, and
+      // its credits are keyed on the rollout itself.
+      if (file.endsWith('rollout-server.ts') && /RELEASES_TABLE|ARTISTS_TABLE|CREDIT_SUBMISSIONS_TABLE/.test(table)) continue;
       expect(query.slice(0, 400), table).toMatch(/workspace_id/);
     }
   });

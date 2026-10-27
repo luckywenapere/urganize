@@ -1,47 +1,70 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, X } from '@/components/icons';
+import { ArrowLeft, Check, MoreHorizontal, Plus, X } from '@/components/icons';
+import { CoverTile, DateBlock, Sheet, StageBars } from '@/components/records/RecordParts';
+import { PhotoCropDialog } from '@/components/shared/PhotoCropDialog';
 import { useAuthStore } from '@/lib/auth-store';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import type { AnalyticsEventPropertiesMap } from '@/lib/analytics/shared';
 import { artistHref, isArtistPageEnabled } from '@/lib/artist-page';
+import { prepareAvatarImage } from '@/lib/downscale-image';
+import { uploadThumb } from '@/lib/image-thumb-client';
+import { supabase } from '@/lib/supabase/client';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
+import { usePlannerStore } from '@/stores/usePlannerStore';
 import {
+  RECORD_COVER_COLORS,
   RECORD_KINDS,
   SESSION_STATUSES,
   SESSION_STATUS_LABELS,
-  SONG_STAGES,
-  SONG_STAGE_LABELS,
-  isRecordDone,
+  artistCoverColor,
   lagosToday,
   pickNextSession,
+  recordCoverColor,
   recordKindLabel,
   sessionWhen,
   type NextRecord,
+  type RecordKind,
   type RecordSession,
+  type RecordSong,
   type SessionInput,
   type SessionStatus,
   type SongStage,
 } from '@/lib/next-records';
+import {
+  fromRecordLine,
+  planHint,
+  recordCredits,
+  recordMusicStage,
+  recordReleaseType,
+  recordStatusLine,
+  recordUseNote,
+} from '@/lib/next-records-rollout';
 import {
   addRecordSong,
   fetchContactOptions,
   fetchRecord,
   patchRecord,
   patchRecordSong,
+  recordCoverSignUrl,
   removeRecordSession,
   removeRecordSong,
+  saveRecordCover,
   saveRecordSession,
+  startRecordRollout,
   type ContactOption,
   type RecordCall,
 } from '@/lib/next-records-client';
 
-// A record in the making (2026-10-27, mock screen 3): songs, sessions and the
-// people in them, nothing else. Every write answers with the whole record, so
-// the page swaps it in. See docs/notes/2026-10-27-next-record.md.
+// A record in the making, v2 (mocks approved 27 Oct 2026,
+// docs/mocks/next-record-v2/mock.html): a cover with the rollout button right
+// under it, the songs as a numbered tracklist, sessions with a date block, and
+// rare actions in the cover's ⋯ menu. Nothing is required. Every write answers
+// with the whole record, so the page swaps it in. See
+// docs/notes/2026-10-27-next-record.md.
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
 
@@ -49,29 +72,39 @@ const primaryButton =
   'motion-press inline-flex min-h-11 items-center justify-center rounded-full bg-content-primary px-5 text-sm font-semibold text-content-inverse transition-opacity duration-fast ease-standard hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
 const secondaryButton =
   'motion-press inline-flex min-h-11 items-center justify-center rounded-full border border-stroke-default bg-bg-surface px-5 text-sm font-medium text-content-secondary transition-colors duration-fast ease-standard hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-50';
+const greenButton =
+  'motion-press flex min-h-11 w-full items-center justify-center rounded-full bg-brand px-5 text-sm font-semibold text-content-inverse transition-opacity duration-fast ease-standard hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
+const outlineButton =
+  'motion-press flex min-h-11 w-full items-center justify-center rounded-full border border-stroke-strong px-5 text-sm font-semibold text-content-primary transition-colors duration-fast ease-standard hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-50';
 const fieldClass =
   'min-h-11 w-full rounded-lg border border-stroke-control bg-bg-surface px-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-content-primary focus:outline-none';
-const chipSelect =
-  // Phones get form fields at 16px (no zoom on focus), so the stage reads in
-  // normal case at a fixed width rather than as a small uppercase chip.
-  'motion-focus h-9 w-28 shrink-0 cursor-pointer appearance-none rounded-full border px-3 text-center text-sm font-medium focus:outline-none';
 const iconButton =
   'motion-focus motion-press grid h-11 w-11 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary';
-
-const stageTone = (stage: SongStage) =>
-  stage === 'done'
-    ? 'border-status-success text-status-success bg-bg-surface'
-    : 'border-stroke-control text-content-secondary bg-bg-surface';
+const coverChip = 'motion-focus motion-press rounded-full bg-black/35 text-white transition-colors hover:bg-black/50';
 
 function Card({ title, aside, children }: { title: string; aside?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-stroke-default bg-bg-surface p-4">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-display text-base font-semibold text-content-primary">{title}</h2>
-        {aside ? <span className="text-sm text-content-secondary">{aside}</span> : null}
+    <section className="rounded-[14px] border border-stroke-default bg-bg-surface px-3.5 py-3">
+      <div className="mb-1.5 flex items-baseline justify-between gap-3">
+        <h2 className="font-display text-base text-content-primary">{title}</h2>
+        {aside ? <span className="text-[13px] text-content-secondary">{aside}</span> : null}
       </div>
-      <div className="mt-3">{children}</div>
+      {children}
     </section>
+  );
+}
+
+/** The dashed "add the first one" card (mock screen 2). */
+function AddCard({ title, hint, onClick }: { title: string; hint: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="motion-focus block w-full rounded-[14px] border border-dashed border-stroke-control px-3.5 py-3 text-left transition-colors hover:bg-bg-hover"
+    >
+      <span className="block text-sm font-semibold text-content-primary">{title}</span>
+      <span className="mt-0.5 block text-[13px] text-content-secondary">{hint}</span>
+    </button>
   );
 }
 
@@ -79,6 +112,18 @@ function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
 }
+
+/** One row of the "Here's what I'll use" sheet. */
+function UseRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-3 border-t border-stroke-default py-2.5 text-sm first:border-t-0">
+      <span className="shrink-0 text-content-secondary">{label}</span>
+      <span className="text-right text-content-primary">{value}</span>
+    </div>
+  );
+}
+
+type SheetName = 'menu' | 'rename' | 'cover' | 'kind' | 'drop' | 'plan' | null;
 
 type Draft = {
   id: string | null;
@@ -329,23 +374,26 @@ export default function RecordPageClient() {
   const authLoading = useAuthStore((state) => state.isLoading);
   const artists = useArtistRosterStore((state) => state.artists);
   const loadRoster = useArtistRosterStore((state) => state.load);
+  const openIntake = usePlannerStore((state) => state.openIntake);
 
   const [record, setRecord] = useState<NextRecord | null>(null);
   const [missing, setMissing] = useState(false);
   const [contacts, setContacts] = useState<ContactOption[]>([]);
-  const [title, setTitle] = useState('');
-  const [idea, setIdea] = useState('');
   const [newSong, setNewSong] = useState('');
+  const [addingSong, setAddingSong] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [formError, setFormError] = useState('');
+  const [sheet, setSheet] = useState<SheetName>(null);
+  const [sheetError, setSheetError] = useState('');
+  const [renameTo, setRenameTo] = useState('');
+  const [editingSong, setEditingSong] = useState<RecordSong | null>(null);
+  const [songName, setSongName] = useState('');
+  const [cropping, setCropping] = useState<File | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const adopt = useCallback((next: NextRecord) => {
-    setRecord(next);
-    setTitle(next.title);
-    setIdea(next.idea);
-  }, []);
+  const adopt = useCallback((next: NextRecord) => setRecord(next), []);
 
   useEffect(() => {
     if (!ARTIST_PAGE_ENABLED) {
@@ -370,10 +418,12 @@ export default function RecordPageClient() {
   ): Promise<boolean> => {
     setBusy(true);
     setError('');
+    setSheetError('');
     const result = await work();
     setBusy(false);
     if (!result.ok) {
-      setError(result.error);
+      if (sheet) setSheetError(result.error);
+      else setError(result.error);
       return false;
     }
     adopt(result.record);
@@ -384,45 +434,42 @@ export default function RecordPageClient() {
   if (!ARTIST_PAGE_ENABLED) return null;
 
   const back = (
-    <Link
-      href={artistHref(artistId)}
-      aria-label={artist ? artist.name : 'Artist'}
-      title={artist ? artist.name : 'Artist'}
-      className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
-    >
-      <ArrowLeft className="h-4 w-4" aria-hidden />
-    </Link>
+    <div className="mb-3 flex items-center gap-2.5">
+      <Link
+        href={artistHref(artistId)}
+        aria-label={artist ? artist.name : 'Artist'}
+        className="motion-focus motion-press grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full border border-stroke-control text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden />
+      </Link>
+      <span className="min-w-0 truncate text-[13px] text-content-secondary">{artist?.name ?? 'Artist'}</span>
+    </div>
   );
 
   if (!record) {
     return (
-      <div className="mx-auto w-full max-w-3xl">
+      <div className="mx-auto w-full max-w-xl">
         {back}
         {missing ? (
-          <p className="mt-6 text-sm text-content-secondary">We could not find that record on your team.</p>
+          <p className="text-sm text-content-secondary">We could not find that record on your team.</p>
         ) : (
-          <div className="mt-6 h-40 animate-pulse rounded-xl border border-stroke-default bg-bg-surface" aria-busy="true" />
+          <div className="h-[190px] animate-pulse rounded-2xl bg-bg-surface" aria-busy="true" />
         )}
       </div>
     );
   }
 
-  const doneCount = record.songs.filter((song) => song.stage === 'done').length;
   const songTitle = (id: string) => record.songs.find((song) => song.id === id)?.title;
   const nextId = pickNextSession(record.sessions, today)?.id ?? null;
-
-  const saveTitle = () => {
-    const next = title.trim();
-    if (!next || next === record.title) {
-      setTitle(record.title);
-      return;
-    }
-    void run(() => patchRecord(record.id, { title: next }), { record_id: record.id, action: 'details' });
-  };
-
-  const saveIdea = () => {
-    if (idea.trim() === record.idea) return;
-    void run(() => patchRecord(record.id, { idea: idea.trim() }), { record_id: record.id, action: 'details' });
+  const status = recordStatusLine(record, today);
+  const coverColor = recordCoverColor(record);
+  const artistName = artist?.name ?? '';
+  const planned = record.status === 'planned' && record.releaseId;
+  const sessionPeople = recordCredits(record);
+  const closeSheet = () => {
+    if (busy) return;
+    setSheet(null);
+    setSheetError('');
   };
 
   const addSong = async () => {
@@ -434,6 +481,11 @@ export default function RecordPageClient() {
       songs: record.songs.length + 1,
     });
     if (ok) setNewSong('');
+  };
+
+  const moveStage = (song: RecordSong, stage: SongStage) => {
+    if (stage === song.stage) return;
+    void run(() => patchRecordSong(record.id, song.id, { stage }), { record_id: record.id, action: 'song_stage', stage });
   };
 
   const saveDraft = async () => {
@@ -480,69 +532,228 @@ export default function RecordPageClient() {
     setDraft(null);
   };
 
-  const drop = async () => {
-    if (!window.confirm('Drop this record? It leaves "In the making". Nothing else changes.')) return;
-    const ok = await run(() => patchRecord(record.id, { status: 'dropped' }), { record_id: record.id, action: 'dropped' });
-    if (ok) router.push(artistHref(artistId));
+  const startSession = () => {
+    setFormError('');
+    setDraft(emptyDraft());
   };
 
-  return (
-    <div className="mx-auto w-full max-w-3xl space-y-4 pb-10">
-      <div className="flex items-center gap-3">
-        {back}
-        <p className="min-w-0 truncate text-sm text-content-secondary">
-          <Link href="/dashboard/artists" className="hover:text-content-primary">
-            Catalogue
-          </Link>
-          {' › '}
-          <Link href={artistHref(artistId)} className="hover:text-content-primary">
-            {artist?.name ?? 'Artist'}
-          </Link>
-        </p>
-      </div>
+  // ── the cover picture: sign, PUT the bytes, save the path (the artist photo flow)
+  const chooseCover = async (file: File) => {
+    setSheetError('');
+    setBusy(true);
+    try {
+      const prepared = await prepareAvatarImage(file, 2048);
+      if (!prepared) {
+        setSheetError('Could not read that image. Try a JPEG.');
+        return;
+      }
+      setCropping(prepared.file);
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
 
-      <header>
-        <label className="block">
-          <span className="sr-only">Record name</span>
-          <input
-            value={title}
-            maxLength={120}
-            onChange={(event) => setTitle(event.target.value)}
-            onBlur={saveTitle}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') (event.target as HTMLInputElement).blur();
-            }}
-            className="w-full rounded-lg border border-transparent bg-transparent px-1 -mx-1 font-display text-3xl font-semibold leading-tight text-content-primary hover:border-stroke-control focus:border-content-primary focus:outline-none"
-          />
-        </label>
-        <p className="mt-1 text-sm text-content-secondary">In the making · no release date yet</p>
-        <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="What kind of record">
-          {RECORD_KINDS.map((kind) => {
-            const on = record.kind === kind;
-            return (
-              <button
-                key={kind}
-                type="button"
-                aria-pressed={on}
-                disabled={busy}
-                onClick={() =>
-                  void run(() => patchRecord(record.id, { kind: on ? null : kind }), {
-                    record_id: record.id,
-                    action: 'details',
-                  })
-                }
-                className={`motion-focus min-h-9 rounded-full border px-3.5 text-sm transition-colors ${
-                  on
-                    ? 'border-content-primary bg-content-primary text-content-inverse'
-                    : 'border-stroke-default text-content-secondary hover:bg-bg-hover'
-                }`}
+  const uploadCover = async (body: File) => {
+    setCropping(null);
+    setBusy(true);
+    setSheetError('');
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Sign in again to change the cover.');
+      const signed = await fetch(recordCoverSignUrl(record.id), {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file_name: body.name, mime_type: body.type, file_size: body.size }),
+      });
+      const target = (await signed.json().catch(() => null)) as {
+        upload_url?: string;
+        storage_path?: string;
+        thumb_upload_url?: string | null;
+        error?: string;
+      } | null;
+      if (!signed.ok || !target?.upload_url || !target.storage_path) throw new Error(target?.error || 'Could not start the upload.');
+      const thumbDone = uploadThumb(target.thumb_upload_url, body);
+      const put = await fetch(target.upload_url, { method: 'PUT', headers: { 'Content-Type': body.type }, body });
+      if (!put.ok) throw new Error('The upload did not finish.');
+      await thumbDone;
+      setBusy(false);
+      const ok = await run(() => saveRecordCover(record.id, { photoPath: target.storage_path as string }), {
+        record_id: record.id,
+        action: 'cover',
+      });
+      if (ok) setSheet(null);
+    } catch (uploadError) {
+      setSheetError(uploadError instanceof Error ? uploadError.message : 'Could not save the cover.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // ── Plan the rollout (step 4): make the rollout, link it, open planner v2
+  const openPlanSheet = () => {
+    setSheetError('');
+    setSheet('plan');
+    captureAnalyticsEvent({
+      name: 'record_rollout',
+      properties: {
+        record_id: record.id,
+        step: 'sheet_opened',
+        songs: record.songs.length,
+        songs_not_done: record.songs.filter((song) => song.stage !== 'done').length,
+      },
+    });
+  };
+
+  const continueToPlanner = async () => {
+    const releaseType = recordReleaseType(record);
+    setBusy(true);
+    setSheetError('');
+    const started = await startRecordRollout(record, releaseType);
+    setBusy(false);
+    if (!started.ok) {
+      setSheetError(started.error);
+      return;
+    }
+    if (started.record) adopt(started.record);
+    captureAnalyticsEvent({
+      name: 'record_rollout',
+      properties: {
+        record_id: record.id,
+        step: 'continued',
+        songs: record.songs.length,
+        songs_not_done: record.songs.filter((song) => song.stage !== 'done').length,
+      },
+    });
+    setSheet(null);
+    openIntake({
+      source: 'record',
+      releaseId: started.releaseId,
+      discardIfAbandoned: true,
+      createdTitle: record.title,
+      prefill: {
+        releaseType,
+        ...(artistName ? { artistName } : {}),
+        musicStage: recordMusicStage(record),
+        fromRecord: fromRecordLine(record),
+        ...(record.coverUrl ? { readyToday: ['artwork' as const] } : {}),
+        ...(record.idea ? { extraNotes: record.idea } : {}),
+      },
+    });
+  };
+
+  const useNote = recordUseNote(record.songs);
+
+  return (
+    <div className="mx-auto w-full max-w-xl space-y-3 pb-10">
+      {back}
+
+      {/* The cover (mock screens 2 and 3) */}
+      <section
+        className="relative flex h-[190px] flex-col justify-between rounded-2xl bg-cover bg-center px-3.5 py-3"
+        style={{ backgroundColor: coverColor, backgroundImage: record.coverUrl ? `url("${record.coverUrl}")` : undefined }}
+        aria-label={`${record.title} cover`}
+      >
+        {/* A scrim only over a real picture, so the words stay readable. */}
+        {record.coverUrl ? <div aria-hidden className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/60 via-black/10 to-black/30" /> : null}
+        <div className="relative flex items-start justify-between">
+          <button type="button" onClick={() => setSheet('cover')} className={`${coverChip} min-h-8 px-3 text-xs`}>
+            {record.coverUrl ? 'Change cover' : 'Add cover'}
+          </button>
+          {sheet === 'menu' ? (
+            <button type="button" aria-hidden tabIndex={-1} className="fixed inset-0 z-[200] cursor-default bg-black/45" onClick={() => setSheet(null)} />
+          ) : null}
+          <div className={`relative ${sheet === 'menu' ? 'z-[210]' : ''}`}>
+            <button
+              type="button"
+              aria-label="More for this record"
+              aria-haspopup="menu"
+              aria-expanded={sheet === 'menu'}
+              onClick={() => setSheet(sheet === 'menu' ? null : 'menu')}
+              className={`${coverChip} -mr-1.5 -mt-1.5 grid h-11 w-11 place-items-center`}
+            >
+              <span
+                className={`grid h-8 w-8 place-items-center rounded-full ${sheet === 'menu' ? 'bg-content-primary text-content-inverse' : ''}`}
               >
-                {recordKindLabel(kind)}
-              </button>
-            );
-          })}
+                <MoreHorizontal className="h-4 w-4" aria-hidden />
+              </span>
+            </button>
+              {sheet === 'menu' ? (
+                <div
+                  role="menu"
+                  aria-label="More for this record"
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape') setSheet(null);
+                  }}
+                  className="absolute right-0 top-full mt-1 w-[220px] overflow-hidden rounded-[14px] border border-stroke-strong bg-bg-elevated py-1 shadow-[0_12px_32px_rgba(0,0,0,0.5)]"
+                >
+                  {[
+                    {
+                      label: 'Rename',
+                      open: () => {
+                        setRenameTo(record.title);
+                        setSheet('rename');
+                      },
+                    },
+                    { label: 'Change cover or colour', open: () => setSheet('cover') },
+                    { label: 'Single, EP or album', open: () => setSheet('kind') },
+                  ].map((item) => (
+                    <button
+                      key={item.label}
+                      type="button"
+                      role="menuitem"
+                      onClick={item.open}
+                      className="motion-focus block min-h-11 w-full px-3.5 text-left text-sm text-content-primary hover:bg-bg-hover"
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => setSheet('drop')}
+                    className="motion-focus block min-h-11 w-full border-t border-stroke-strong px-3.5 text-left text-sm text-status-error hover:bg-bg-hover"
+                  >
+                    Drop this record
+                  </button>
+                </div>
+              ) : null}
+          </div>
         </div>
-      </header>
+        <div className="relative min-w-0">
+          <p className="truncate text-[13px] text-white/80">
+            {[artistName, record.kind ? recordKindLabel(record.kind) : null].filter(Boolean).join(' · ')}
+          </p>
+          <h1 className="line-clamp-2 font-display text-[28px] font-normal leading-[1.1] text-white">{record.title}</h1>
+        </div>
+      </section>
+
+      <p className="pt-1 text-sm text-content-primary">
+        {status.main}
+        {status.next ? (
+          <>
+            {' · '}
+            <span className="text-status-warning">{status.next}</span>
+          </>
+        ) : null}
+      </p>
+
+      {planned ? (
+        <div>
+          <Link href={`/dashboard?release=${record.releaseId}`} className={greenButton}>
+            Open the rollout
+          </Link>
+          <p className="mt-1.5 text-center text-xs text-content-secondary">This record is now its rollout</p>
+        </div>
+      ) : (
+        <div>
+          <button type="button" onClick={openPlanSheet} disabled={busy} className={greenButton}>
+            Plan the rollout
+          </button>
+          <p className="mt-1.5 text-center text-xs text-content-secondary">{planHint(record.songs)}</p>
+        </div>
+      )}
 
       {error ? (
         <p role="alert" className="text-sm text-status-error">
@@ -550,70 +761,64 @@ export default function RecordPageClient() {
         </p>
       ) : null}
 
-      <Card title="The idea">
-        <textarea
-          value={idea}
-          maxLength={2000}
-          rows={2}
-          placeholder="What is this record about? A line is enough."
-          onChange={(event) => setIdea(event.target.value)}
-          onBlur={saveIdea}
-          className={`${fieldClass} py-2.5`}
-        />
-      </Card>
-
-      <Card title="Songs" aside={record.songs.length ? `${doneCount} of ${record.songs.length} done` : undefined}>
-        {record.songs.length ? (
-          <ul className="divide-y divide-stroke-default">
-            {record.songs.map((song) => (
-              <li key={song.id} className="flex items-center gap-2 py-1.5">
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-content-primary">{song.title}</span>
-                <label className="shrink-0">
-                  <span className="sr-only">Stage for {song.title}</span>
-                  <select
-                    value={song.stage}
-                    disabled={busy}
-                    onChange={(event) => {
-                      const stage = event.target.value as SongStage;
-                      void run(() => patchRecordSong(record.id, song.id, { stage }), {
-                        record_id: record.id,
-                        action: 'song_stage',
-                        stage,
-                      });
-                    }}
-                    className={`${chipSelect} ${stageTone(song.stage)}`}
-                  >
-                    {SONG_STAGES.map((stage) => (
-                      <option key={stage} value={stage}>
-                        {SONG_STAGE_LABELS[stage]}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+      {/* Songs: a numbered tracklist with four stage bars (mock screen 3) */}
+      {record.songs.length ? (
+        <Card title="Tracklist" aside="Idea · Rec · Mix · Done">
+          <ol>
+            {record.songs.map((song, index) => (
+              <li key={song.id} className="flex items-center justify-between gap-2 border-t border-stroke-default py-1 first:border-t-0">
                 <button
                   type="button"
-                  aria-label={`Remove ${song.title}`}
-                  disabled={busy}
-                  className={iconButton}
                   onClick={() => {
-                    if (!window.confirm(`Take "${song.title}" off this record?`)) return;
-                    void run(() => removeRecordSong(record.id, song.id), {
-                      record_id: record.id,
-                      action: 'song_removed',
-                      songs: record.songs.length - 1,
-                    });
+                    setSongName(song.title);
+                    setSheetError('');
+                    setEditingSong(song);
                   }}
+                  className="motion-focus flex min-h-11 min-w-0 flex-1 items-center text-left text-sm text-content-primary"
                 >
-                  <X className="h-4 w-4" aria-hidden />
+                  <span className="w-[18px] shrink-0 tabular-nums text-content-tertiary">{index + 1}</span>
+                  <span className="truncate">{song.title}</span>
                 </button>
+                <StageBars title={song.title} stage={song.stage} disabled={busy} onPick={(stage) => moveStage(song, stage)} />
               </li>
             ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-content-tertiary">No songs yet. Add the first one, even with a working title.</p>
-        )}
+          </ol>
+          {addingSong ? (
+            <form
+              className="flex gap-2 border-t border-stroke-default pt-2.5"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void addSong();
+              }}
+            >
+              <label className="min-w-0 flex-1">
+                <span className="sr-only">Song name</span>
+                <input
+                  autoFocus
+                  value={newSong}
+                  maxLength={120}
+                  placeholder="A working title is fine"
+                  onChange={(event) => setNewSong(event.target.value)}
+                  className={fieldClass}
+                />
+              </label>
+              <button type="submit" disabled={busy || !newSong.trim()} className={secondaryButton}>
+                Add
+              </button>
+            </form>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAddingSong(true)}
+              className="motion-focus flex min-h-11 w-full items-center gap-1.5 border-t border-stroke-default text-[13px] text-content-secondary hover:text-content-primary"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden /> Add a song
+            </button>
+          )}
+        </Card>
+      ) : addingSong ? (
         <form
-          className="mt-3 flex gap-2"
+          className="flex gap-2 rounded-[14px] border border-dashed border-stroke-control p-3"
           onSubmit={(event) => {
             event.preventDefault();
             void addSong();
@@ -622,9 +827,10 @@ export default function RecordPageClient() {
           <label className="min-w-0 flex-1">
             <span className="sr-only">Song name</span>
             <input
+              autoFocus
               value={newSong}
               maxLength={120}
-              placeholder="Add a song"
+              placeholder="A working title is fine"
               onChange={(event) => setNewSong(event.target.value)}
               className={fieldClass}
             />
@@ -633,14 +839,33 @@ export default function RecordPageClient() {
             Add
           </button>
         </form>
-      </Card>
+      ) : (
+        <AddCard title="Add a song" hint="A working title is fine. Rename it later." onClick={() => setAddingSong(true)} />
+      )}
 
-      <Card title="Sessions">
-        {record.sessions.length ? (
-          <ul className="divide-y divide-stroke-default">
+      {/* Sessions with a little date block (mock screen 3) */}
+      {record.sessions.length || (draft && draft.id === null) ? (
+        <Card
+          title="Sessions"
+          aside={
+            sessionPeople.length ? (
+              <span className="flex" aria-label={sessionPeople.map((person) => person.name).join(', ')}>
+                {sessionPeople.slice(0, 3).map((person, index) => (
+                  <span
+                    key={`${person.name}-${index}`}
+                    className={`grid h-8 w-8 place-items-center rounded-full border-2 border-bg-surface bg-bg-elevated text-[11px] font-bold text-content-secondary ${index ? '-ml-2' : ''}`}
+                  >
+                    {initials(person.name)}
+                  </span>
+                ))}
+              </span>
+            ) : undefined
+          }
+        >
+          <ul>
             {record.sessions.map((session) =>
               draft?.id === session.id ? (
-                <li key={session.id} className="py-2">
+                <li key={session.id} className="border-t border-stroke-default py-2 first:border-t-0">
                   <SessionForm
                     record={record}
                     draft={draft}
@@ -654,7 +879,7 @@ export default function RecordPageClient() {
                   />
                 </li>
               ) : (
-                <li key={session.id}>
+                <li key={session.id} className="border-t border-stroke-default first:border-t-0">
                   <button
                     type="button"
                     onClick={() => {
@@ -663,86 +888,345 @@ export default function RecordPageClient() {
                     }}
                     className="motion-focus flex w-full items-center gap-3 py-2.5 text-left"
                   >
-                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-bg-elevated text-xs font-semibold text-content-secondary">
-                      {initials(session.people[0]?.name ?? '?')}
-                    </div>
+                    <DateBlock date={session.date} soon={session.id === nextId} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-content-primary">
-                        {sessionWhen(session)}
-                        {session.people.length ? ` · ${session.people.map((p) => p.name).join(', ')}` : ''}
-                      </p>
-                      <p className="truncate text-xs text-content-secondary">
                         {[
-                          session.people[0]?.role,
-                          session.songIds.map(songTitle).filter(Boolean).join(', '),
+                          session.people[0]
+                            ? [session.people[0].name, session.people[0].role].filter(Boolean).join(' · ')
+                            : sessionWhen(session),
+                          session.people.length > 1 ? `+${session.people.length - 1}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
+                      </p>
+                      <p className="truncate text-[13px] text-content-secondary">
+                        {[
+                          session.date ? null : session.people[0] ? session.dateHint : null,
+                          session.songIds.map(songTitle).filter(Boolean).join(', ') || session.note,
                         ]
                           .filter(Boolean)
                           .join(' · ') || 'Tap to add who and which songs'}
                       </p>
                     </div>
                     <span
-                      className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] ${
+                      className={`shrink-0 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
                         session.id === nextId
-                          ? 'border-status-warning text-status-warning'
-                          : 'border-stroke-default text-content-secondary'
+                          ? 'border-status-warning/50 text-status-warning'
+                          : 'border-stroke-control text-content-secondary'
                       }`}
                     >
                       {session.id === nextId
                         ? 'Next'
                         : session.status === 'planned' && session.date !== null && session.date < today
                           ? 'Did it happen?'
-                          : SESSION_STATUS_LABELS[session.status]}
+                          : session.status === 'happened'
+                            ? 'Done'
+                            : SESSION_STATUS_LABELS[session.status]}
                     </span>
                   </button>
                 </li>
               )
             )}
           </ul>
-        ) : draft?.id === null ? null : (
-          <p className="text-sm text-content-tertiary">No sessions yet. Add the next one, even if the day is not set.</p>
-        )}
-        {draft && draft.id === null ? (
-          <div className="mt-3">
-            <SessionForm
-              record={record}
-              draft={draft}
-              contacts={contacts}
-              busy={busy}
-              error={formError}
-              onChange={setDraft}
-              onSave={() => void saveDraft()}
-              onCancel={() => setDraft(null)}
-              onRemove={null}
-            />
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              setFormError('');
-              setDraft(emptyDraft());
-            }}
-            className={`${secondaryButton} mt-3 gap-1.5`}
-          >
-            <Plus className="h-4 w-4" aria-hidden /> Add a session
-          </button>
-        )}
-      </Card>
+          {draft && draft.id === null ? (
+            <div className="mt-2">
+              <SessionForm
+                record={record}
+                draft={draft}
+                contacts={contacts}
+                busy={busy}
+                error={formError}
+                onChange={setDraft}
+                onSave={() => void saveDraft()}
+                onCancel={() => setDraft(null)}
+                onRemove={null}
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={startSession}
+              className="motion-focus flex min-h-11 w-full items-center gap-1.5 border-t border-stroke-default text-[13px] text-content-secondary hover:text-content-primary"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden /> Add a session
+            </button>
+          )}
+        </Card>
+      ) : (
+        <AddCard title="Add a session" hint={'A day, or words like "next week".'} onClick={startSession} />
+      )}
 
-      {isRecordDone(record) ? (
-        <p className="rounded-xl border border-stroke-default bg-bg-surface p-4 text-sm text-content-secondary">
-          Every song is done. When you are ready, start its rollout from the artist page.
-        </p>
+      {/* ── Sheets ─────────────────────────────────────────────────────────── */}
+
+      {sheet === 'plan' ? (
+        <Sheet label="Here's what I'll use" onClose={closeSheet}>
+          <p className="text-[13px] text-content-secondary">UrgAns</p>
+          <h2 className="mt-0.5 font-display text-[22px] text-content-primary">Here&apos;s what I&apos;ll use</h2>
+          <div className="mt-2.5">
+            <UseRow label="Kind" value={recordKindLabel(recordReleaseType(record))} />
+            <UseRow label="Songs" value={record.songs.map((song) => song.title).join(', ') || 'None yet'} />
+            <UseRow
+              label="Credits"
+              value={
+                sessionPeople.map((person) => (person.role ? `${person.name} (${person.role})` : person.name)).join(', ') ||
+                'None yet'
+              }
+            />
+            {record.idea ? <UseRow label="The idea" value={record.idea} /> : null}
+            <UseRow label="Cover" value={record.coverUrl ? 'Your cover' : 'Your mood colour, until there\'s art'} />
+          </div>
+          {useNote ? <p className="mt-2 text-[13px] text-content-secondary">{useNote}</p> : null}
+          {sheetError ? (
+            <p role="alert" className="mt-2 text-sm text-status-error">
+              {sheetError}
+            </p>
+          ) : null}
+          <div className="mt-3 space-y-2">
+            <button type="button" onClick={() => void continueToPlanner()} disabled={busy} className={greenButton}>
+              {busy ? 'One moment…' : 'Continue'}
+            </button>
+            <button type="button" onClick={closeSheet} disabled={busy} className={outlineButton}>
+              Not yet
+            </button>
+          </div>
+        </Sheet>
       ) : null}
 
-      <button
-        type="button"
-        onClick={() => void drop()}
-        disabled={busy}
-        className="motion-focus min-h-11 text-sm text-content-tertiary underline underline-offset-4 hover:text-content-primary"
-      >
-        Drop this record
-      </button>
+      {sheet === 'rename' ? (
+        <Sheet label="Rename" onClose={closeSheet}>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const next = renameTo.trim();
+              if (!next || next === record.title) {
+                closeSheet();
+                return;
+              }
+              void run(() => patchRecord(record.id, { title: next }), { record_id: record.id, action: 'details' }).then((ok) => {
+                if (ok) setSheet(null);
+              });
+            }}
+          >
+            <h2 className="font-display text-xl text-content-primary">Rename</h2>
+            <label className="mt-3 block">
+              <span className="sr-only">Record name</span>
+              <input autoFocus value={renameTo} maxLength={120} onChange={(event) => setRenameTo(event.target.value)} className={fieldClass} />
+            </label>
+            {sheetError ? (
+              <p role="alert" className="mt-2 text-sm text-status-error">
+                {sheetError}
+              </p>
+            ) : null}
+            <div className="mt-3 space-y-2">
+              <button type="submit" disabled={busy || !renameTo.trim()} className={greenButton}>
+                Save
+              </button>
+              <button type="button" onClick={closeSheet} disabled={busy} className={outlineButton}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Sheet>
+      ) : null}
+
+      {sheet === 'kind' ? (
+        <Sheet label="Single, EP or album" onClose={closeSheet}>
+          <h2 className="font-display text-xl text-content-primary">Single, EP or album</h2>
+          <div className="mt-2" role="radiogroup" aria-label="What kind of record">
+            {[...RECORD_KINDS, null].map((kind: RecordKind | null) => {
+              const on = record.kind === kind;
+              return (
+                <button
+                  key={kind ?? 'unsure'}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  disabled={busy}
+                  onClick={() =>
+                    void run(() => patchRecord(record.id, { kind }), { record_id: record.id, action: 'details' }).then((ok) => {
+                      if (ok) setSheet(null);
+                    })
+                  }
+                  className={`motion-focus mt-2 flex min-h-12 w-full items-center justify-between rounded-[14px] border px-3.5 text-left text-sm transition-colors ${
+                    on ? 'border-brand bg-brand/10 text-content-primary' : 'border-stroke-control text-content-primary hover:bg-bg-hover'
+                  }`}
+                >
+                  {kind ? recordKindLabel(kind) : 'Not sure yet'}
+                  {on ? <Check className="h-4 w-4 text-brand" aria-hidden /> : null}
+                </button>
+              );
+            })}
+          </div>
+          {sheetError ? (
+            <p role="alert" className="mt-2 text-sm text-status-error">
+              {sheetError}
+            </p>
+          ) : null}
+        </Sheet>
+      ) : null}
+
+      {sheet === 'cover' ? (
+        <Sheet label="Change cover or colour" onClose={closeSheet}>
+          <h2 className="font-display text-xl text-content-primary">Cover</h2>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            tabIndex={-1}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void chooseCover(file);
+            }}
+          />
+          <div className="mt-3 flex items-center gap-3">
+            <CoverTile color={coverColor} url={record.coverUrl} size={64} className="rounded-xl" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} className={outlineButton}>
+                {busy ? 'Saving…' : record.coverUrl ? 'Change picture' : 'Add a picture'}
+              </button>
+            </div>
+          </div>
+          {record.coverUrl ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                void run(() => saveRecordCover(record.id, { photoPath: null }), { record_id: record.id, action: 'cover' })
+              }
+              className="motion-focus mt-1 min-h-11 text-sm text-content-secondary underline underline-offset-4 hover:text-content-primary"
+            >
+              Remove the picture
+            </button>
+          ) : null}
+          <p className="mt-3 text-[13px] text-content-secondary">Colour{record.coverUrl ? ', behind the picture' : ''}</p>
+          <div className="mt-2 grid grid-cols-8 gap-2" role="radiogroup" aria-label="Cover colour">
+            {RECORD_COVER_COLORS.map((colour) => {
+              const on = coverColor === colour;
+              const isArtist = colour === artistCoverColor(record.artistId);
+              return (
+                <button
+                  key={colour}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  aria-label={isArtist ? 'The artist colour' : `Colour ${colour}`}
+                  disabled={busy}
+                  onClick={() =>
+                    void run(() => saveRecordCover(record.id, { coverColor: isArtist ? null : colour }), {
+                      record_id: record.id,
+                      action: 'cover',
+                    })
+                  }
+                  className={`motion-focus grid aspect-square place-items-center rounded-full ${on ? 'ring-2 ring-content-primary ring-offset-2 ring-offset-bg-elevated' : ''}`}
+                  style={{ backgroundColor: colour }}
+                >
+                  {on ? <Check className="h-3.5 w-3.5 text-white" aria-hidden /> : null}
+                </button>
+              );
+            })}
+          </div>
+          {sheetError ? (
+            <p role="alert" className="mt-2 text-sm text-status-error">
+              {sheetError}
+            </p>
+          ) : null}
+          <button type="button" onClick={closeSheet} disabled={busy} className={`${outlineButton} mt-4`}>
+            Done
+          </button>
+        </Sheet>
+      ) : null}
+
+      {cropping ? (
+        <PhotoCropDialog file={cropping} name={record.title} onCancel={() => setCropping(null)} onConfirm={(file) => void uploadCover(file)} />
+      ) : null}
+
+      {sheet === 'drop' ? (
+        <Sheet label={`Drop ${record.title}?`} onClose={closeSheet}>
+          <h2 className="font-display text-xl text-content-primary">Drop {record.title}?</h2>
+          <p className="mt-1.5 text-sm text-content-secondary">
+            It leaves In the making. The people stay in Relationships. Nothing else changes.
+          </p>
+          {sheetError ? (
+            <p role="alert" className="mt-2 text-sm text-status-error">
+              {sheetError}
+            </p>
+          ) : null}
+          <div className="mt-3 space-y-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                void run(() => patchRecord(record.id, { status: 'dropped' }), { record_id: record.id, action: 'dropped' }).then(
+                  (ok) => {
+                    if (ok) router.push(artistHref(artistId));
+                  }
+                )
+              }
+              className="motion-press flex min-h-11 w-full items-center justify-center rounded-full bg-status-error px-5 text-sm font-semibold text-content-inverse transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              Drop it
+            </button>
+            <button type="button" onClick={closeSheet} disabled={busy} className={outlineButton}>
+              Keep it
+            </button>
+          </div>
+        </Sheet>
+      ) : null}
+
+      {editingSong ? (
+        <Sheet label={editingSong.title} onClose={() => !busy && setEditingSong(null)}>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const name = songName.trim();
+              if (!name || name === editingSong.title) {
+                setEditingSong(null);
+                return;
+              }
+              void run(() => patchRecordSong(record.id, editingSong.id, { title: name }), {
+                record_id: record.id,
+                action: 'details',
+              }).then((ok) => {
+                if (ok) setEditingSong(null);
+              });
+            }}
+          >
+            <h2 className="font-display text-xl text-content-primary">Song</h2>
+            <label className="mt-3 block">
+              <span className="sr-only">Song name</span>
+              <input autoFocus value={songName} maxLength={120} onChange={(event) => setSongName(event.target.value)} className={fieldClass} />
+            </label>
+            {error ? (
+              <p role="alert" className="mt-2 text-sm text-status-error">
+                {error}
+              </p>
+            ) : null}
+            <div className="mt-3 space-y-2">
+              <button type="submit" disabled={busy || !songName.trim()} className={greenButton}>
+                Save
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() =>
+                  void run(() => removeRecordSong(record.id, editingSong.id), {
+                    record_id: record.id,
+                    action: 'song_removed',
+                    songs: record.songs.length - 1,
+                  }).then((ok) => {
+                    if (ok) setEditingSong(null);
+                  })
+                }
+                className="motion-focus flex min-h-11 w-full items-center justify-center text-sm text-status-error"
+              >
+                Take it off the record
+              </button>
+            </div>
+          </form>
+        </Sheet>
+      ) : null}
     </div>
   );
 }

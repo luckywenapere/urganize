@@ -31,11 +31,13 @@ export function visibleV2Steps(input: {
   stage: PlannerV2Answers['stage'];
   prefilledDate: string | null | undefined;
   todayYmd: string;
+  /** The caller already knows where the music is (a record, 2026-10-27): skip Q1. */
+  stageKnown?: boolean;
 }): V2Step[] {
   const date = input.prefilledDate ?? '';
   const known = /^\d{4}-\d{2}-\d{2}$/.test(date) && daysBetween(date, input.todayYmd) >= 0;
   const ask = input.stage === 'out' && !known;
-  return V2_STEPS.filter((step) => step !== 'date' || ask);
+  return V2_STEPS.filter((step) => (step !== 'date' || ask) && (step !== 'music' || !input.stageKnown));
 }
 
 /** What the step still needs, as the short line under Continue, or null when ready. */
