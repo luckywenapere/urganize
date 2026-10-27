@@ -20,6 +20,7 @@ const SNAPSHOT_TABLES: Record<string, string> = {
   artist_fact: 'artist_facts',
   note: 'notes',
   press_kit: 'press_kits',
+  next_record: 'next_records',
 };
 
 /** At most this many rows in one snapshot (complete_tasks takes a list). */

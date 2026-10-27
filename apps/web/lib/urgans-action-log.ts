@@ -50,6 +50,7 @@ const OBJECT_KEYS: Array<[key: string, type: string]> = [
   ['noteId', 'note'],
   ['factId', 'artist_fact'],
   ['kitId', 'press_kit'],
+  ['recordId', 'next_record'],
   ['requestId', 'work_request'],
   ['memberId', 'workspace_member'],
   ['releaseId', 'release'],

@@ -230,6 +230,8 @@ export type ChappiToolName =
   | 'list_artist_facts'
   | 'save_artist_fact'
   | 'forget_artist_fact'
+  // the next record, one line in (2026-10-27)
+  | 'add_to_record'
   // cover art and what else is attached to a release (2026-09-07)
   | 'get_cover_art'
   | 'upload_cover_art'

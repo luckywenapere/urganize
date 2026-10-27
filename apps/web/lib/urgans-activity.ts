@@ -186,6 +186,8 @@ function titleFor(row: UrgansActivityRow): string {
       const value = text(before?.value);
       return value ? `Forgot "${value.slice(0, 80)}"` : 'Forgot a fact about an artist';
     }
+    case 'add_to_record':
+      return 'Added to the next record';
     case 'send_work_request':
       return 'Sent a work request';
     case 'answer_work_request':

@@ -27,6 +27,7 @@ export const RECORD_SESSIONS_TABLE = 'record_sessions';
 export const RECORD_SESSION_PEOPLE_TABLE = 'record_session_people';
 export const RECORD_SESSION_SONGS_TABLE = 'record_session_songs';
 const TEAM_RELATIONSHIPS_TABLE = 'team_relationships';
+const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
 
 type Row = Record<string, unknown>;
 const text = (value: unknown) => (typeof value === 'string' ? value : '');
@@ -421,4 +422,62 @@ export async function deleteSession(
     .eq('workspace_id', workspaceId);
   if (error) return fail(500, 'Could not remove the session.');
   return readRecord(admin, workspaceId, recordId);
+}
+
+// ── For UrgAns's add_to_record (step 2, lib/chappi/tool-families/records.ts) ──
+
+export type RecordInScope = { id: string; title: string; artistId: string; artistName: string; workspaceId: string };
+
+/**
+ * Every record still being made across the caller's teams, newest first. A
+ * teammate scoped to one artist sees only that artist's records, as on the
+ * routes. Null when the read fails.
+ */
+export async function listRecordsInMaking(
+  admin: SupabaseClient,
+  scope: { workspaceIds: string[]; artistScopeByWorkspaceId: Record<string, string> }
+): Promise<RecordInScope[] | null> {
+  if (scope.workspaceIds.length === 0) return [];
+  const { data, error } = await admin
+    .from(RECORDS_TABLE)
+    .select('id,title,artist_id,workspace_id')
+    .in('workspace_id', scope.workspaceIds)
+    .eq('status', 'making')
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error) return null;
+  const rows = ((data ?? []) as Row[]).filter((row) => {
+    const scoped = scope.artistScopeByWorkspaceId[text(row.workspace_id)];
+    return !scoped || scoped === text(row.artist_id);
+  });
+  const artistIds = [...new Set(rows.map((row) => text(row.artist_id)))];
+  const names = new Map<string, string>();
+  if (artistIds.length) {
+    const artists = await admin
+      .from('artists')
+      .select('id,name')
+      .in('workspace_id', scope.workspaceIds)
+      .in('id', artistIds);
+    for (const row of (artists.data ?? []) as Row[]) names.set(text(row.id), text(row.name));
+  }
+  return rows.map((row) => ({
+    id: text(row.id),
+    title: text(row.title),
+    artistId: text(row.artist_id),
+    artistName: names.get(text(row.artist_id)) ?? '',
+    workspaceId: text(row.workspace_id),
+  }));
+}
+
+/** Guests are read-only, and so is anyone with no live membership, as on the routes. */
+export async function isReadOnlyOnTeam(admin: SupabaseClient, workspaceId: string, userId: string): Promise<boolean> {
+  const { data } = await admin
+    .from(WORKSPACE_MEMBERS_TABLE)
+    .select('role')
+    .eq('workspace_id', workspaceId)
+    .eq('user_id', userId)
+    .neq('status', 'removed')
+    .limit(1);
+  const role = (data as Row[] | null)?.[0]?.role;
+  return !role || role === 'guest';
 }

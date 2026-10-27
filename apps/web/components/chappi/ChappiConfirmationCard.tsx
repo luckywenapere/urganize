@@ -57,7 +57,7 @@ export function ChappiConfirmationCard({
             {pending.title}
           </p>
           {pending.detail ? (
-            <p className="mt-1.5 text-sm leading-6 text-content-secondary">{pending.detail}</p>
+            <p className="mt-1.5 whitespace-pre-line text-sm leading-6 text-content-secondary">{pending.detail}</p>
           ) : null}
           {typed ? (
             <div className="mt-3">
