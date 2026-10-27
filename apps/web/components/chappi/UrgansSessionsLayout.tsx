@@ -13,15 +13,16 @@ import { useChappiStore } from '@/stores/useChappiStore';
 
 /**
  * The UrgAns view on a computer (2026-10-26, founder call, from the Hark
- * reference): the sessions down the left, the open session in the middle. The
- * Home and UrgAns pills in the top bar move between this and Home, so there is
- * no Chat | Sessions switch.
+ * reference): the sessions down the left, the open session in the middle. Since
+ * 2026-10-27 this is the only place a computer shows the chat: Home there has
+ * none, and the UrgAns pill in the top bar, "Ask UrgAns" on Home and the
+ * drawer's expand all lead here.
  *
  * Landing here with no session open puts the most recent one on screen. Home's
- * own chat is never a session, so arriving from Home (where it is on screen)
- * swaps it for the latest session, or a blank one when there are none. Done
+ * own chat (the phone's Home box) is never a session, so if it is on screen it
+ * is swapped for the latest session, or a blank one when there are none. Done
  * once per visit: starting a new session afterwards is the person's own move.
- * Sized like Home's split (.home-split-height), which has the same chrome.
+ * Sized by .home-split-height, which leaves room for the top bar.
  */
 export function UrgansSessionsLayout({ onNewRelease }: { onNewRelease: () => void }) {
   const summaries = useChappiHistoryStore((state) => state.summaries);
@@ -47,7 +48,12 @@ export function UrgansSessionsLayout({ onNewRelease }: { onNewRelease: () => voi
     if (!onHomeChat && !idle) return;
     const latest = withoutHomeChat(summaries, homeChatId)[0];
     if (latest) void open(latest.id);
-    else if (onHomeChat) chappi.reset();
+    else if (onHomeChat) {
+      // Keep a question carried here from "Ask UrgAns" (lib/ask-urgans.ts).
+      const carried = chappi.input;
+      chappi.reset();
+      if (carried) useChappiStore.getState().setInput(carried);
+    }
   }, [listStatus, summaries, homeChatId, open]);
 
   const startNew = () => useChappiStore.getState().reset();

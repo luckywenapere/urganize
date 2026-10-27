@@ -2842,11 +2842,13 @@ body:focus-within .keyboard-hint,
     padding-bottom: 2.5rem;
   }
 
-  /* Desktop Home is the chat (components/home/HomeDesktopSplit.tsx): the Home
-     column and the conversation side by side, locked to the screen so the
-     page never scrolls. Each column scrolls on its own and the composer stays
-     at the bottom. The top bar is 72px and <main> keeps 2.5rem of padding
-     below, so the split gets the rest. Shared with HomeSkeleton. */
+  /* The desktop UrgAns page (components/chappi/UrgansSessionsLayout.tsx): the
+     sessions list and the conversation side by side, locked to the screen so
+     the page never scrolls. Each column scrolls on its own and the composer
+     stays at the bottom. The top bar is 72px and <main> keeps 2.5rem of
+     padding below, so the split gets the rest. Shared with ChappiPageSkeleton.
+     (Home used it too until 2026-10-27, when Home on a computer stopped
+     showing the chat and became an ordinary scrolling page.) */
   .home-split-height {
     height: calc(100dvh - 72px - 2.5rem);
     min-height: 24rem;

@@ -14,26 +14,24 @@ import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewpor
 import { FirstDaysCard } from '@/components/home/FirstDaysCard';
 import { HomeFour, HomeLoadError } from '@/components/home/v2/HomeFour';
 import { HomeAskBar } from '@/components/home/HomeAskBar';
-import { HomeDesktopSplit } from '@/components/home/HomeDesktopSplit';
+import { Plus } from '@/components/icons';
 import { NpsPrompt } from '@/components/home/NpsPrompt';
 import { PersonaAskCard } from '@/components/home/PersonaAskCard';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
-
-const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
 /**
  * The Home tab's page. Fires the data load immediately (the store reads its own
  * token from getSession()), bounces on a resolved "no session", and renders ONE
  * skeleton until both auth and Home's own data are ready.
  *
- * Two layouts since 2026-10-07 (founder call):
- *  - On a computer (lg and up, with UrgAns on) Home is the chat: Home's column
- *    on the left, the conversation on the right (HomeDesktopSplit).
+ * Two layouts (useIsDesktopViewport, the WorkspaceView precedent):
+ *  - On a computer (lg and up) Home is one page, centred, that scrolls like any
+ *    other (2026-10-27, founder call). It carries no chat: UrgAns has its own
+ *    page, reached from the UrgAns pill in the top bar. From 2026-10-07 to then
+ *    Home on a computer was split, Home's column beside the live conversation.
  *  - On a phone it is one column with the UrgAns box pinned to the bottom of
  *    the screen (HomeAskBar). Send opens the full chat page.
- * The two are mounted one at a time (useIsDesktopViewport, the WorkspaceView
- * precedent), so the conversation is never in the page twice.
  *
  * Making a rollout goes through RolloutCreateFlow, the same flow the chat page
  * uses, so the conversation's "New rollout" behaves the same in both places.
@@ -94,8 +92,8 @@ export default function HomePageClient({ swipe = false }: { swipe?: boolean } = 
   // Four blocks, two states (URG-320, 2026-10-16): a rollout in flight, or
   // nothing in flight. A brand-new account keeps its one-line welcome.
   const stateView = <HomeFour home={home} viewerId={viewerId} onNewRollout={openCreate} />;
-  // Fenced (2026-10-09): if Home's own column cannot draw, the page keeps its
-  // chat and a way to the catalogue instead of the full-page crash screen.
+  // Fenced (2026-10-09): if Home's own column cannot draw, the page keeps a
+  // way to the catalogue instead of the full-page crash screen.
   // Each block inside is fenced too (HomeBlocks), so this is the outer net.
   const view = (
     <ErrorBoundary name="home-view" onError={reportBoundaryError} fallback={<HomeViewFallback />}>
@@ -122,8 +120,20 @@ export default function HomePageClient({ swipe = false }: { swipe?: boolean } = 
         // The swipe navigation (URG-380): Home is one column on every width;
         // the conversation lives on the UrgAns tab and the frame owns the box.
         <div className="home-scene-container swipe-home pb-6 pt-1">{view}</div>
-      ) : isDesktop && CHAPPI_ENABLED ? (
-        <HomeDesktopSplit onNewRelease={openCreate}>{view}</HomeDesktopSplit>
+      ) : isDesktop ? (
+        <div className="home-scene-container mx-auto w-full max-w-[920px] pb-6" data-home-layout="desktop">
+          {view}
+          {/* New rollout used to come from the chat beside Home; with the chat
+              gone from Home on a computer it sits after the last block. */}
+          <button
+            type="button"
+            onClick={openCreate}
+            className="motion-focus motion-press mt-4 inline-flex min-h-10 items-center gap-2 rounded-full px-3.5 text-sm font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            New rollout
+          </button>
+        </div>
       ) : (
         <>
           <div className="home-scene-container">{view}</div>

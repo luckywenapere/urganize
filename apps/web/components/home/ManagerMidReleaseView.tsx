@@ -11,8 +11,8 @@ import type { HomePayload } from "@/lib/home/types";
  * tall until it is opened. Artist and label accounts use this layout too.
  *
  * The UrgAns box is not in here: on a phone it is pinned to the bottom of the
- * screen (HomeAskBar), and on a desktop the conversation sits beside this
- * column (HomeDesktopSplit). See app/dashboard/home/HomePageClient.tsx.
+ * screen (HomeAskBar), and on a desktop Home has no chat (2026-10-27); UrgAns
+ * is its own page. See app/dashboard/home/HomePageClient.tsx.
  */
 export function ManagerMidReleaseView({
   home,
