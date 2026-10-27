@@ -89,7 +89,7 @@ export function HeroSection() {
               <ResponsiveProductShot
                 desktop={PRODUCT_SHOTS.catalog}
                 phone={PRODUCT_SHOTS.catalogPhone}
-                alt="The Urganize catalog for a manager running several artists: release cards with cover art, the release date and a progress bar counting finished tasks against each plan."
+                alt="The Urganize catalog for a team running several artists: release cards with cover art, the release date and a progress bar counting finished tasks against each plan."
                 sizes={HERO_SHOT_SIZES}
                 className="h-full w-full object-cover object-top sm:h-auto sm:object-contain"
               />
@@ -98,7 +98,7 @@ export function HeroSection() {
               <ResponsiveProductShot
                 desktop={PRODUCT_SHOTS.artistsRoster}
                 phone={PRODUCT_SHOTS.artistsPhone}
-                alt="The Urganize artists roster: every artist the manager runs, with how many releases each has in plan."
+                alt="The Urganize artists roster: every artist the team works with, with how many releases each has in plan."
                 sizes={HERO_SHOT_SIZES}
                 fetchPriority="low"
                 className="absolute inset-0 h-full w-full object-cover object-top"

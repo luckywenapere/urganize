@@ -186,7 +186,7 @@ export default function ForManagersPage() {
         <ScrollReveal>
           <SectionShell containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10">
             <div className="text-center">
-              <h2 className={PERSONA_HEADLINE_CLASS}>Stop being the reminder app for your whole roster.</h2>
+              <h2 className={PERSONA_HEADLINE_CLASS}>Stop chasing your whole roster.</h2>
               <p className="mx-auto mt-6 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
                 Join the waitlist, and we set up every team
                 personally. See{" "}

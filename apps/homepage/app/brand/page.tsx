@@ -171,9 +171,9 @@ export default function BrandPage() {
               <div>
                 <h3 className="text-sm text-[var(--marketing-text)]">Who it’s for</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  Artist managers first, then labels. One release is a lot of moving parts; a roster is
+                  Artists and their teams, from the artist to the manager to the designer. One release is a lot of moving parts; a roster is
                   many calendars, many releases at once and a pile of chats holding it
-                  together. Urganize is what runs that. Teams with a bigger roster get the
+                  together. Urganize is what runs that. Labels and teams with a bigger roster get the
                   Label plan, with the founders working alongside them.
                 </p>
               </div>
