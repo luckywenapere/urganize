@@ -60,7 +60,7 @@ const SPRING = '#7FD99A';
 // line.
 const MAIN_LINE = 'Every release, on plan.';
 const ACCENT = 'on plan.';
-const SUB_LINE = 'Everyone knows their job till drop day. You stop being the reminder app.';
+const SUB_LINE = 'Everyone knows their job till drop day. Nobody has to chase anybody.';
 
 const font = (file) => readFileSync(join(WEB, 'assets', 'fonts', file));
 const logo = readFileSync(join(HOMEPAGE, 'public', 'images', 'urganize-logo.png'));

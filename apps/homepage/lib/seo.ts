@@ -58,7 +58,7 @@ export const LANDING_DESCRIPTION = CANONICAL_DESCRIPTION;
 // Bump this string every time public/opengraph-image.png changes so the
 // URL is new to every platform and the very next fetch pulls fresh bytes,
 // instead of depending on a manual re-scrape request or an unknown TTL.
-const SHARE_IMAGE_VERSION = "2026-10-19-reminder-app";
+const SHARE_IMAGE_VERSION = "2026-10-27-artists-and-teams";
 
 const SHARE_IMAGE = {
   url: `${SITE_URL}/opengraph-image.png?v=${SHARE_IMAGE_VERSION}`,

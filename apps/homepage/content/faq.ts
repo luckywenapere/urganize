@@ -37,7 +37,7 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   {
     question: "What if I don’t have a release right now?",
     answer:
-      "Start the next one early. Plan it now and find opportunities that fit your artists.",
+      "Start the next one early. Plan it now and find opportunities that fit your music.",
   },
   {
     question: "Is it for one artist or a roster?",

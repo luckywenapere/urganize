@@ -53,7 +53,7 @@ const ROWS = [
   },
   {
     title: "Don’t let the hype die after drop day.",
-    body: "Opportunities that fit your artists, so the next move is ready before the buzz fades.",
+    body: "Opportunities that fit your music, so the next move is ready before the buzz fades.",
   },
 ] as const;
 

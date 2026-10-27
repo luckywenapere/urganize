@@ -34,7 +34,7 @@ export const CORE_LINE = `Urganize is ${CORE_CLAUSE}.`;
 
 export const SHORT_LINE = 'Every release, on plan.';
 
-export const PROMISE_LINE = 'Everyone knows their job till drop day. You stop being the reminder app.';
+export const PROMISE_LINE = 'Everyone knows their job till drop day. Nobody has to chase anybody.';
 
 export const AUDIENCE = ['artists', 'managers', 'labels'] as const;
 
@@ -48,6 +48,6 @@ export const SHORT_DESCRIPTION = CORE_LINE;
 
 export const CANONICAL_DESCRIPTION =
   'Every release, on plan. Add a release and everyone knows their job till drop day, ' +
-  'so you stop being the team\u2019s reminder app. Built for artist managers.';
+  'so nobody has to chase anybody. Built for artists and their teams.';
 
 export const URGANS_LINE = 'personal AI for music professionals';

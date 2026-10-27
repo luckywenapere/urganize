@@ -78,7 +78,7 @@ export const SHORT_LINE = 'Every release, on plan.';
  * as A, B and C. The share card's second line and the homepage subhead.
  * Founder-approved with the homepage v2 hero on 2026-10-17 (URG-334).
  */
-export const PROMISE_LINE = 'Everyone knows their job till drop day. You stop being the reminder app.';
+export const PROMISE_LINE = 'Everyone knows their job till drop day. Nobody has to chase anybody.';
 
 /**
  * Who it is for, in the fixed order artists, managers, labels.
@@ -123,7 +123,7 @@ export const SHORT_DESCRIPTION = CORE_LINE;
  */
 export const CANONICAL_DESCRIPTION =
   'Every release, on plan. Add a release and everyone knows their job till drop day, ' +
-  'so you stop being the team\u2019s reminder app. Built for artist managers.';
+  'so nobody has to chase anybody. Built for artists and their teams.';
 
 /**
  * UrgAns is NOT the product, and this line is the whole of the distinction.

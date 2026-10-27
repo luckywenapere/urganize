@@ -105,7 +105,7 @@ export function AffiliationsSection() {
             aria-hidden="true"
             className="mx-14 hidden h-16 w-px self-center bg-[var(--marketing-border-strong)] sm:block"
           />
-          <LogoGroup label="Shaped with managers from" logos={AFFILIATIONS} />
+          <LogoGroup label="Shaped with artists and managers from" logos={AFFILIATIONS} />
         </div>
       </div>
     </section>

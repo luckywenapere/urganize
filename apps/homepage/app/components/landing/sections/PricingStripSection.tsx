@@ -66,7 +66,7 @@ export function PricingStripSection() {
           <h2 className={centeredHeadlineClass}>Cheaper than one missed deadline.</h2>
           {tiers[0]?.price ? (
             <p className="mx-auto mt-5 max-w-[36rem] text-[1.05rem] leading-8 text-[var(--marketing-text-muted)] sm:text-[1.15rem]">
-              From {tiers[0].price}. Pick the plan that fits your roster.
+              From {tiers[0].price}. Pick the plan that fits your team.
             </p>
           ) : null}
         </div>

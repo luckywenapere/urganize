@@ -45,15 +45,15 @@ export function HeroSection() {
       >
         <HeroCards />
         <p className="hero-fade-in hero-delay-1 mono-label text-[var(--marketing-accent)]">
-          For artist managers
+          For artists and their teams
         </p>
         <h1 className="hero-fade-in hero-delay-1 mt-6 text-balance text-[2.6rem] leading-[1.05] text-[var(--marketing-text)] sm:text-[3.8rem] lg:text-[4.6rem]">
           Every release, <span className="text-[var(--marketing-accent)]">on plan.</span>
         </h1>
         <p className="hero-fade-in hero-delay-2 mx-auto mt-6 max-w-[40rem] text-[1.05rem] leading-8 text-[var(--marketing-text-muted)] sm:text-[1.25rem] sm:leading-9">
-          Add a release and everyone knows their job till drop day.
+          From the artist to the designer, everyone knows their job till drop day.
           <br />
-          You stop being the team’s reminder app.
+          Nobody has to chase anybody.
         </p>
 
         {/* z-[60] keeps the form above the hero-fade-in transform stack and
