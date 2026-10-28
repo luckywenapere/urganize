@@ -17,8 +17,11 @@ const CARD = 'relative rounded-[20px] border border-stroke-default bg-bg-surface
  * The card is a golden rectangle (2026-10-18, layout B, founder approved): its
  * width over its height is phi at the full column width. aspect-ratio keeps
  * min-height:auto, so a long title grows the card instead of clipping it.
+ * On a computer (lg+) Home is one 920px column (2026-10-28), where phi would
+ * make the card about 570px tall, so there it keeps the height it had in the
+ * old 26rem column instead (260px floor, still grows with a long title).
  */
-const GOLDEN = 'aspect-[1.618/1]';
+const GOLDEN = 'aspect-[1.618/1] lg:aspect-auto lg:min-h-[260px]';
 const PRIMARY =
   'motion-focus motion-press mt-5 flex h-12 w-full items-center justify-center rounded-full bg-brand text-[15px] font-semibold text-content-inverse hover:bg-brand-hover';
 

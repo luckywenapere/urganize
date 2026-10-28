@@ -65,6 +65,11 @@ describe('Home skeleton matches the live Home (layout B)', () => {
     expect(column).toMatch(/aspect-\[1\.618\/1\][^"']*rounded-\[20px\]/);
   });
 
+  it('caps the card at the same height on a computer', () => {
+    expect(oneThing).toContain('lg:aspect-auto lg:min-h-[260px]');
+    expect(column).toContain('lg:aspect-auto lg:h-[260px]');
+  });
+
   it('draws no rows under the card, like Home since 2026-10-26', () => {
     expect(column).not.toContain('data-skeleton="rows"');
     expect(homeFour).not.toContain('data-home-block="rows"');

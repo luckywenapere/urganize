@@ -74,7 +74,7 @@ describe('Home golden layout B (Oyin, Oct 18, 2026)', () => {
   const rows = read('components', 'home', 'v2', 'HomeRow.tsx');
 
   it('the task card is a golden rectangle that can still grow', () => {
-    expect(oneThing).toContain("const GOLDEN = 'aspect-[1.618/1]'");
+    expect(oneThing).toContain("const GOLDEN = 'aspect-[1.618/1] lg:aspect-auto lg:min-h-[260px]'");
     expect(taskBranch).toContain('${GOLDEN}');
     expect(moveBranch).toContain('${GOLDEN}');
     // A fixed height would clip a long title.

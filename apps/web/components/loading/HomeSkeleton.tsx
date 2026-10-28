@@ -75,7 +75,7 @@ function HomeColumnBlocks() {
         </div>
       </div>
       <div className="mt-6" data-skeleton="one-thing">
-        <SkeletonBlock className="aspect-[1.618/1] w-full rounded-[20px]" />
+        <SkeletonBlock className="aspect-[1.618/1] w-full rounded-[20px] lg:aspect-auto lg:h-[260px]" />
       </div>
     </div>
   );
