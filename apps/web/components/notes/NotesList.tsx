@@ -258,7 +258,6 @@ export function NotesList({
           />
         ) : isEmpty ? (
           <EmptyState
-            mascot="resting"
             title={
               isFiltering ? 'No notes for this rollout yet.' : 'Park a thought before it gets away.'
             }

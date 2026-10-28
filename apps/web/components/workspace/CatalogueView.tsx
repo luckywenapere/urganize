@@ -198,7 +198,6 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
     return (
       <div>
         <EmptyState
-          mascot="resting"
           title="No rollouts yet"
           description="Create your first rollout to start planning activities."
           action={

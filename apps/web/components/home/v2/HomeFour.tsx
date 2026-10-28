@@ -21,6 +21,7 @@ import { OPPORTUNITIES_ENABLED } from '@/lib/paused-features';
 import { HomeBell } from './HomeBell';
 import { OneThing } from './OneThing';
 import { RecordAskCard } from '../RecordAskCard';
+import { HomeDistributeCard } from '../HomeDistributeCard';
 import { ReleaseReviewCard } from '@/components/between-releases/BetweenReleaseCards';
 import { StartNextSheet } from '@/components/between-releases/StartNextSheet';
 
@@ -53,6 +54,11 @@ function ReleaseHome({ home, viewerId }: { home: HomePayload; viewerId: string }
           2026-10-26 (founder call): people found it confusing. The greeting and
           the bell stay, the same as Home with nothing in flight. */}
       <HomeGreeting home={home} />
+      <Fenced name="distribute">
+        <div className="mt-6 empty:hidden">
+          <HomeDistributeCard />
+        </div>
+      </Fenced>
       <div className="mt-6">
         <Fenced name="one-thing">
           <OneThing
@@ -120,6 +126,11 @@ function BetweenHome({ home }: { home: HomePayload; onNewRollout: () => void }) 
   return (
     <div className="flex flex-col">
       <HomeGreeting home={home} line={HOME_FOUR_COPY.noRelease} />
+      <Fenced name="distribute">
+        <div className="mt-6 empty:hidden">
+          <HomeDistributeCard />
+        </div>
+      </Fenced>
       {/* The post-release review (URG-253): renders nothing when no review is open. */}
       <Fenced name="release-review">
         <div className="mt-6 empty:hidden">

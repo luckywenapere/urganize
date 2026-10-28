@@ -1,7 +1,5 @@
 'use client';
 
-import { Chappi, CHAPPI_MIN_SIZE } from '@urganize/ui';
-
 /**
  * Every activity on the release is done. Kept as a named predicate so the
  * mobile Motion strip (WorkspaceView) and the desktop one
@@ -18,7 +16,7 @@ export function isReleaseDelivered(total: number, done: number) {
 }
 
 /**
- * Chappi celebrating, beside the Motion readout that just reached 100%.
+ * A "Delivered" mark beside the Motion readout that just reached 100%.
  *
  * Placed here rather than in a toast or a sheet on purpose. Task completion
  * already has a three-way contest for the one bottom surface (cover art ask,
@@ -31,12 +29,7 @@ export function ReleaseDeliveredMark({ total, done }: { total: number; done: num
   if (!isReleaseDelivered(total, done)) return null;
 
   return (
-    <span className="flex shrink-0 items-center gap-1.5">
-      <Chappi
-        pose="celebrating"
-        size={CHAPPI_MIN_SIZE}
-        ariaLabel="Every activity on this rollout is done"
-      />
+    <span className="flex shrink-0 items-center" aria-label="Every activity on this rollout is done">
       <span className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-brand">
         Delivered
       </span>

@@ -1,7 +1,10 @@
 'use client';
 
-import { Chappi, Button } from '@urganize/ui';
+import { Button } from '@urganize/ui';
 import { HomeHeaderRow } from './HomeHeaderRow';
+import { HomeDistributeCard } from './HomeDistributeCard';
+import { ErrorBoundary } from '@/components/app/ErrorBoundary';
+import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { useStartTestRelease } from '@/components/releases/useStartTestRelease';
 import { isTestReleaseEnabled } from '@/lib/test-release';
 import {
@@ -11,8 +14,6 @@ import {
   WELCOME_SECONDARY,
 } from '@/lib/home/welcome';
 import type { HomePayload } from '@/lib/home/types';
-
-const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
 /**
  * Home for a manager with no rollouts yet. Calm on purpose: Chappi, one line,
@@ -31,13 +32,14 @@ export function ManagerNewView({
   return (
     <div className="space-y-8">
       <HomeHeaderRow header={home.header} />
+      {/* Distribute (2026-10-27): after the greeting, before getting started. */}
+      <ErrorBoundary name="home-block-distribute" onError={reportBoundaryError}>
+        <HomeDistributeCard />
+      </ErrorBoundary>
       <section
         aria-label="Get started"
         className="mx-auto flex max-w-xl flex-col items-center gap-5 py-6 text-center sm:py-10"
       >
-        {/* On a computer the conversation beside this column already has Chappi
-            waiting, and two on one screen is one too many. */}
-        <Chappi pose="idle" size={132} className={CHAPPI_ENABLED ? 'lg:hidden' : ''} />
         <div className="space-y-2">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
             {WELCOME_EYEBROW}

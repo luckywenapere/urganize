@@ -3,12 +3,8 @@
 import { useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { SkeletonBlock } from './SkeletonBlock';
-import { useKnownResumableChat } from './known-counts';
-import { ChappiConversationSkeleton } from './ChappiConversationSkeleton';
-import { isChappiHistoryEnabled } from '@/lib/chappi/history-flag';
 
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
-const HISTORY_ENABLED = isChappiHistoryEnabled();
 
 // False on the server and in the hydration render, so the portal below never
 // makes the two disagree (the same trick HomeAskBar uses).
@@ -109,44 +105,22 @@ function PinnedAskBoxPlaceholder() {
  * Home's own loading shape, in the order the page reads. Used by
  * app/dashboard/home/loading.tsx and by HomePageClient while Home's data (and
  * its dismissed next moves) load. Keep in step with HomeFour (ReleaseHome),
- * HomeGreeting, OneThing, HomeRow and HomeDesktopSplit.
+ * HomeGreeting, OneThing, HomeRow and HomePageClient's desktop column.
  *
- * Two shapes, switched by CSS rather than by reading the viewport, so the
- * server's markup is right at every width with nothing to correct after load:
- *  - below lg, one column, with a placeholder for the UrgAns box that is pinned
- *    above the bottom bar (only drawn in the browser, since it is portalled);
- *  - at lg and up (with UrgAns on), Home's column on the left and the
- *    conversation on the right, with the Chat | Sessions switch above it.
+ * One column at every width, switched by CSS rather than by reading the
+ * viewport, so the server's markup is right with nothing to correct after load:
+ *  - below lg, with a placeholder for the UrgAns box that is pinned above the
+ *    bottom bar (only drawn in the browser, since it is portalled);
+ *  - at lg and up, centred at Home's desktop width, with no chat beside it
+ *    (2026-10-27: Home on a computer no longer shows the UrgAns chat).
  */
 export function HomeSkeleton() {
-  const resumableMessages = useKnownResumableChat();
-
   return (
     <div aria-hidden="true">
-      <div className={`home-scene-container ${CHAPPI_ENABLED ? 'lg:hidden' : ''}`}>
+      <div className="home-scene-container lg:mx-auto lg:w-full lg:max-w-[920px]">
         <HomeColumnBlocks />
       </div>
       <PinnedAskBoxPlaceholder />
-      {CHAPPI_ENABLED ? (
-        <div className="home-split-height hidden gap-6 lg:flex xl:gap-8">
-          {/* Same box as the real column: padding included in the width. */}
-          <div className="home-scene-container w-[26rem] shrink-0 overflow-hidden pb-2 pr-1 xl:w-[28rem]">
-            <HomeColumnBlocks />
-          </div>
-          <div className="flex min-w-0 flex-1 flex-col border-l border-stroke-subtle pl-6 xl:pl-8">
-            {HISTORY_ENABLED ? (
-              <div className="mx-auto flex w-full max-w-[46rem] shrink-0 justify-end px-1">
-                {/* The Chat | Sessions switch: two h-8 buttons inside p-1,
-                    lined up with the chat column as in HomeDesktopSplit. */}
-                <SkeletonBlock className="h-10 w-40 rounded-full" />
-              </div>
-            ) : null}
-            <div className="min-h-0 flex-1">
-              <ChappiConversationSkeleton resumableMessages={HISTORY_ENABLED ? resumableMessages : 0} />
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

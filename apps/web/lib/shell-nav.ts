@@ -174,9 +174,9 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       isActive: (p) => startsWithPath(p, HOME_HREF),
     },
     // UrgAns sits right after Home on the desktop top bar (founder, 2026-10-15).
-    // On a desktop the pill opens Home's chat full width (TopNav), the same view
-    // pressing Home again on Home gives, and lights while that view is up. Its
-    // href is the assistant's own page, for a new tab or a direct link.
+    // The pill opens the assistant's own page, which on a desktop is the
+    // sessions view (UrgansSessionsLayout). Since 2026-10-27 it is the only
+    // place a computer shows the chat: Home there has none.
     {
       key: 'urgans',
       label: 'UrgAns',

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { History, Maximize2, MessageCircle, RotateCcw, X } from '@/components/icons';
 import { useChappiStore } from '@/stores/useChappiStore';
-import { HOME_PATH } from '@/lib/home-path';
+import { URGANS_HREF } from '@/lib/shell-nav';
 import { isChappiHistoryEnabled } from '@/lib/chappi/history-flag';
 import { ChappiConversation } from './ChappiConversation';
 import { ChappiHistoryList } from './ChappiHistoryList';
@@ -118,15 +118,16 @@ export function ChappiSidePanel({ open, onNewRelease }: ChappiSidePanelProps) {
           <button
             type="button"
             onClick={() => {
-              // On a computer the full chat is Home (2026-10-07). Home and this
-              // card share one conversation, so expanding is a pure navigation
-              // and the transcript follows. The drawer is closed first, or it
-              // would pop open again on the next page after Home.
+              // On a computer the full chat is the UrgAns page (2026-10-27:
+              // Home no longer carries it). The page and this card share one
+              // conversation, so expanding is a pure navigation and the
+              // transcript follows. The drawer is closed first, or it would pop
+              // open again on the next page.
               setRailOpen(false);
-              router.push(HOME_PATH);
+              router.push(URGANS_HREF);
             }}
-            aria-label="Open UrgAns on Home"
-            title="Open on Home"
+            aria-label="Open UrgAns full page"
+            title="Open full page"
             className="motion-focus motion-press grid h-7 w-7 place-items-center text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
           >
             <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />

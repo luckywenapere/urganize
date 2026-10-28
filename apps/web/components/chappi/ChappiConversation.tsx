@@ -3,7 +3,6 @@
 import { Fragment, useEffect, useRef, useState, type FormEvent, type ReactNode, type RefObject } from 'react';
 import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
-import { Chappi, CHAPPI_MIN_SIZE } from '@urganize/ui';
 import {
   ArrowDown,
   ArrowUp,
@@ -1697,19 +1696,13 @@ export function ChappiConversation({
     // is byte-for-byte the same layout as before.
     return (
       <div className="flex h-full min-h-0 flex-col px-2 text-center lg:justify-center">
-        {/* Chappi waits here while there is nothing to answer (mascot brief,
-            2026-08-30). He is stacked above the question inside the SAME
-            flex-1 region, which is the part that matters: the two-region
-            split below is what three rejected attempts landed on, so he
-            joins a region rather than becoming a third one. Page variant
-            only — the dock and rail keep the question alone, so an empty
-            state elsewhere on the screen is never competing with him. */}
+        {/* The question sits inside the SAME flex-1 region: the two-region
+            split below is what three rejected attempts landed on. */}
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-y-auto lg:flex-none lg:overflow-visible">
           {/* One block, so the question glides with the keyboard as one piece
               instead of snapping half a screen (morph-urgans-hero, globals.css;
               KeyboardViewportBridge runs the move in a view transition). */}
           <div className="morph-urgans-hero flex flex-col items-center gap-4">
-            <Chappi pose="idle" size={96} />
             {headingLevel === 'h2' ? (
               <h2 className="font-display text-xl font-semibold tracking-tight text-content-primary sm:text-2xl">
                 What do you want to get done today?
@@ -1935,10 +1928,6 @@ function Transcript({
       ))}
       {trailing && (trailingAt === undefined || trailingAt > messages.length) ? trailing : null}
 
-      {/* Chappi IS the loading state here — he replaces the spinner rather
-          than sitting beside one (mascot brief, 2026-08-30). He carries the
-          aria-label, so the row still announces itself; the visible word
-          stays for anyone who reads the transcript rather than the picture. */}
       {isThinking && previewText ? (
         // Hidden from assistive technology on purpose: the finished reply is
         // announced by the live region below when it arrives, and reading out a
@@ -1951,7 +1940,6 @@ function Transcript({
       ) : null}
       {isThinking && !previewText ? (
         <div className="inline-flex items-center gap-2 rounded-2xl rounded-bl-md border border-stroke-default bg-bg-surface px-4 py-3 text-sm text-content-tertiary">
-          <Chappi pose="thinking" size={CHAPPI_MIN_SIZE} ariaLabel="UrgAns is thinking" />
           Thinking…
         </div>
       ) : null}

@@ -51,8 +51,8 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
  * +, or talk with the mic, all without leaving Home. Send slides the box down
  * into the full chat (lib/home-chat-glide.ts), where the message is sent.
  *
- * Phone only. On a desktop Home carries the conversation itself
- * (HomeDesktopSplit), so this is never mounted there.
+ * Phone only. On a desktop Home has no chat (2026-10-27): UrgAns is its own
+ * page, so this is never mounted there.
  *
  * Three things about it are not obvious:
  *  - It is portalled to <body>. .app-layout carries a transform, which makes it

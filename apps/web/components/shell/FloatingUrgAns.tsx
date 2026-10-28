@@ -46,7 +46,8 @@ export function FloatingUrgAns() {
   const [everOpened, setEverOpened] = useState(false);
   if (open && !everOpened) setEverOpened(true);
 
-  // Home and the assistant's own page are the chat already.
+  // The assistant's own page is the chat already. Home has no drawer either:
+  // on a computer "Ask UrgAns" there goes to the UrgAns page (lib/ask-urgans.ts).
   if (pathname === '/dashboard/urgans' || pathname === '/dashboard/home') return null;
 
   return (
