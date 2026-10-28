@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase/client';
 import { uploadCoverArt, validateCoverArtFile } from '@/lib/cover-art-upload';
 import { gradeCoverArt, type CoverArtGrade } from '@/lib/cover-art-dsp';
 import { readImageDimensions } from '@/lib/cover-art-image';
+import { coverArtUpscaleTarget, upscaleCoverArt } from '@/lib/upscale-cover-art';
 import type { ReleaseCoverArt } from '@/types/cover-art';
 import { isBrowserOnline } from '@/lib/offline/status';
 import { enqueue, type QueuedMutation } from '@/lib/offline/queue';
@@ -63,7 +64,8 @@ export function useCoverArtUpload(params: {
   const [queued, setQueued] = useState(false);
 
   const begin = useCallback(
-    async (file: File) => {
+    async (pickedFile: File) => {
+      let file = pickedFile;
       setError('');
       setRetryFile(null);
       setQueued(false);
@@ -81,17 +83,38 @@ export function useCoverArtUpload(params: {
       // Measure before uploading, so a file no DSP would accept never becomes
       // the release's cover in the first place. Dimensions are then handed to
       // the record step rather than re-derived (see uploadCoverArt).
-      const dimensions = await readImageDimensions(file);
-      const dspGrade = gradeCoverArt({
+      let dimensions = await readImageDimensions(file);
+      const pickedGrade = gradeCoverArt({
         width: dimensions?.width ?? null,
         height: dimensions?.height ?? null,
         mimeType: file.type || '',
       });
-      setGrade(dspGrade);
-      if (dspGrade.verdict === 'blocked') {
-        setError(`${dspGrade.headline} ${dspGrade.detail}`.trim());
+      if (pickedGrade.verdict === 'blocked') {
+        setGrade(pickedGrade);
+        setError(`${pickedGrade.headline} ${pickedGrade.detail}`.trim());
         return;
       }
+
+      // Square but under 3000: enlarge it to 3000 x 3000 before it goes up,
+      // and say nothing about it (founder call, lib/upscale-cover-art.ts).
+      // The spinner covers the wait. If the browser cannot do it, the
+      // original goes up and grades as it always did.
+      const upscaleTarget = coverArtUpscaleTarget(dimensions);
+      if (upscaleTarget) {
+        setIsUploading(true);
+        const enlarged = await upscaleCoverArt(file, upscaleTarget);
+        setIsUploading(false);
+        if (enlarged) {
+          file = enlarged.file;
+          dimensions = enlarged.dimensions;
+        }
+      }
+
+      setGrade(
+        file === pickedFile
+          ? pickedGrade
+          : gradeCoverArt({ width: dimensions?.width ?? null, height: dimensions?.height ?? null, mimeType: file.type || '' })
+      );
 
       const {
         data: { session },

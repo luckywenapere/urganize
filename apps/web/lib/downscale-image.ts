@@ -28,8 +28,9 @@
  * failures recorded in CLAUDE.md under "The front door is server-rendered").
  *
  * Deliberately NOT the cover-art treatment (lib/cover-art-dsp.ts), which
- * grades and warns but never alters the file: a distributor needs the exact
- * 3000x3000 master the manager commissioned. A logo has no such contract.
+ * never shrinks the file: a distributor needs the 3000x3000 master the
+ * manager commissioned. (Since 2026-10-28 cover art under 3000 is ENLARGED
+ * to it instead, see lib/upscale-cover-art.ts.) A logo has no such contract.
  *
  * Client-side only, and that is a considered limit rather than an oversight:
  * measuring an image on the server needs a native image dependency this repo

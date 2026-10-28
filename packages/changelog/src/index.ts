@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.200.2",
+    tag: "Rollouts",
+    date: "October 28, 2026",
+    listed: false,
+    highlights: [
+      "Cover art smaller than 3000 × 3000 now goes up at the size stores need.",
+    ],
+  },
+  {
     version: "1.200.1",
     tag: "App",
     date: "October 27, 2026",
