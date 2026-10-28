@@ -1,0 +1,184 @@
+<title>Cover Art Auto-Enlarge</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Space+Mono:wght@400;700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* Layout: a board of phone-width screens, one per upload case, then the rules.
+     Single light look on purpose: these are the app's own light-theme tokens
+     (same as docs/mocks/distribution-limits), so the mock reads like the product. */
+  :root {
+    --board:#e9e3d7; --a-bg:#f3efe6; --a-card:#f8f4ec; --a-base:#efe9de; --a-text:#1a1611;
+    --a-sec:#5c544a; --a-ter:#6d6459; --a-line:#e6dfd2; --a-line2:#d8d0c2;
+    --a-brand:#14643a; --a-brand-sub:rgba(20,100,58,.08);
+    --ok:#1f8a4c; --warn:#b7791f; --err:#b42318; --on-brand:#ffffff;
+    --serif:'Young Serif', Georgia, serif; --sans:'Instrument Sans', system-ui, sans-serif; --mono:'Space Mono', ui-monospace, monospace;
+    color-scheme: light;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--board); color:var(--a-text); font:14px/1.5 var(--sans); -webkit-font-smoothing:antialiased; letter-spacing:-.01em;
+    padding-block:32px 64px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
+  p { margin:0; }
+  header.top { max-width:1240px; margin:0 auto 28px; }
+  header.top h1 { font-family:var(--serif); font-weight:400; font-size:30px; line-height:1.15; margin:6px 0 8px; text-wrap:balance; }
+  header.top p { color:var(--a-sec); max-width:62ch; }
+  .tag { font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--a-sec); }
+  .board { display:flex; flex-wrap:wrap; gap:28px; justify-content:center; max-width:1240px; margin:0 auto; }
+  .col { width:390px; max-width:100%; min-width:0; }
+  .why { font-size:13px; color:var(--a-ter); margin:6px 0 12px; min-height:40px; }
+  .phone { background:var(--a-bg); border:1px solid var(--a-line2); border-radius:28px; padding:22px 16px 28px; min-height:560px; position:relative; overflow:hidden; }
+  .crumb { font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--a-sec); }
+  .rel { font-family:var(--serif); font-size:22px; line-height:1.2; margin:4px 0 18px; }
+  .card { border:1px solid var(--a-line); background:var(--a-card); border-radius:16px; padding:16px; }
+  .square { aspect-ratio:1/1; width:100%; max-width:100%; border-radius:12px; overflow:hidden; position:relative; }
+  .art { position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 30% 35%, #f2b84b 0 18%, transparent 19%),
+      radial-gradient(circle at 70% 70%, #1d3b53 0 30%, transparent 31%),
+      linear-gradient(140deg, #c2462f 0%, #7a2e46 55%, #2a1f3d 100%); }
+  .art .word { position:absolute; left:8%; bottom:8%; font-family:var(--serif); color:#fff6e8; font-size:28px; letter-spacing:.02em; }
+  .art.soft { filter: blur(1.4px) saturate(.95); }
+  .busy { position:absolute; inset:0; background:rgba(26,22,17,.55); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#fff; text-align:center; padding:16px; }
+  .spin { width:22px; height:22px; border:2.5px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin 1s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation:none; } }
+  .bar { width:70%; height:4px; background:rgba(255,255,255,.3); border-radius:4px; overflow:hidden; }
+  .bar i { display:block; height:100%; width:62%; background:#fff; }
+  .busy b { font-weight:600; font-size:15px; }
+  .busy span { font-size:13px; opacity:.85; }
+  .wide { aspect-ratio:16/9; }
+  .h3 { font-family:var(--serif); font-size:22px; line-height:1.2; margin-top:14px; }
+  .req { font-size:14px; color:var(--a-sec); margin-top:4px; }
+  .file { font-family:var(--mono); font-size:11px; color:var(--a-ter); margin-top:8px; overflow-wrap:anywhere; }
+  .verdict { display:flex; gap:8px; align-items:flex-start; margin-top:10px; font-size:14px; }
+  .dot { width:8px; height:8px; border-radius:50%; margin-top:7px; flex-shrink:0; }
+  .dot.ok { background:var(--ok); } .dot.warn { background:var(--warn); } .dot.err { background:var(--err); }
+  .verdict small { display:block; font-size:13px; color:var(--a-sec); }
+  .btns { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .btn { height:38px; padding:0 14px; border-radius:10px; display:inline-flex; align-items:center; font-weight:600; font-size:14px; border:1px solid var(--a-line2); color:var(--a-text); background:transparent; font-family:inherit; }
+  .btn.primary { background:var(--a-brand); border-color:var(--a-brand); color:var(--on-brand); }
+  .btn.dim { color:var(--a-sec); }
+  .err-line { color:var(--err); font-size:13px; margin-top:10px; }
+  .new { display:inline-block; font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; background:var(--a-brand-sub); color:var(--a-brand); padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:2px; }
+  .rules { max-width:1240px; margin:40px auto 0; display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:20px; }
+  .rules section { background:var(--a-card); border:1px solid var(--a-line2); border-radius:16px; padding:20px; min-width:0; }
+  .rules h2 { font-family:var(--serif); font-weight:400; font-size:20px; margin:0 0 10px; }
+  .rules table { width:100%; border-collapse:collapse; font-size:14px; }
+  .rules td { padding:9px 0; border-top:1px solid var(--a-line); vertical-align:top; }
+  .rules tr:first-child td { border-top:0; }
+  .rules td:first-child { font-family:var(--mono); font-size:12px; color:var(--a-sec); width:42%; padding-right:10px; font-variant-numeric:tabular-nums; }
+  .rules ul { margin:0; padding-left:18px; display:flex; flex-direction:column; gap:8px; color:var(--a-sec); }
+  .rules li b { color:var(--a-text); font-weight:600; }
+  .label { font-family:var(--mono); font-size:10px; letter-spacing:.06em; text-transform:uppercase; padding:1px 5px; border:1px solid var(--a-line2); border-radius:4px; color:var(--a-ter); margin-left:4px; }
+</style>
+
+<header class="top">
+  <div class="tag">Mock · Cover art · v1</div>
+  <h1>Cover art gets enlarged to 3000 × 3000 on upload</h1>
+  <p>No button and no extra step. When a team uploads square art smaller than 3000 × 3000, Urganize enlarges it in the browser before it saves. The four screens below are the four things that can happen.</p>
+</header>
+
+<div class="board">
+
+  <!-- 1. While it works -->
+  <div class="col">
+    <div class="tag">1 · While it enlarges</div>
+    <p class="why">They drop a 1500 × 1500 file. The square shows what is happening, then it uploads. About 1 to 2 seconds on a phone (assumed).</p>
+    <div class="phone">
+      <div class="crumb">Ayo Banks · Single</div>
+      <div class="rel">Lagos Summer</div>
+      <div class="card">
+        <div class="square">
+          <div class="art"><span class="word">LAGOS SUMMER</span></div>
+          <div class="busy">
+            <div class="spin" aria-hidden="true"></div>
+            <b>Making it 3000 × 3000</b>
+            <span>Your file is 1500 × 1500</span>
+            <div class="bar"><i></i></div>
+          </div>
+        </div>
+        <div class="h3">Cover art</div>
+        <p class="req">Square JPEG or PNG, at least 3000 × 3000.</p>
+        <div class="btns"><span class="btn dim">Uploading…</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Good source, now ready -->
+  <div class="col">
+    <div class="tag">2 · Enlarged and ready</div>
+    <p class="why">From 1500px or more, the result looks fine in stores. It goes straight to "Ready for stores", with one quiet line saying what we did.</p>
+    <div class="phone">
+      <div class="crumb">Ayo Banks · Single</div>
+      <div class="rel">Lagos Summer</div>
+      <div class="card">
+        <div class="square"><div class="art"><span class="word">LAGOS SUMMER</span></div></div>
+        <div class="h3">Cover art</div>
+        <p class="req">Square JPEG or PNG, at least 3000 × 3000.</p>
+        <p class="file">lagos-summer-3000.jpg</p>
+        <div class="verdict"><span class="dot ok"></span><span>Ready for stores<small>We enlarged it from 1500 × 1500 to 3000 × 3000. <span class="new">New</span></small></span></div>
+        <div class="btns"><span class="btn">Replace</span><span class="btn dim">Remove</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Small source, enlarged but warned -->
+  <div class="col">
+    <div class="tag">3 · Small file, enlarged with a warning</div>
+    <p class="why">An 800 × 800 file still gets enlarged, so stores will take it. But it will look soft, so we say so and tell them what fixes it.</p>
+    <div class="phone">
+      <div class="crumb">Ayo Banks · Single</div>
+      <div class="rel">Lagos Summer</div>
+      <div class="card">
+        <div class="square"><div class="art soft"><span class="word">LAGOS SUMMER</span></div></div>
+        <div class="h3">Cover art</div>
+        <p class="req">Square JPEG or PNG, at least 3000 × 3000.</p>
+        <p class="file">lagos-summer-3000.jpg</p>
+        <div class="verdict"><span class="dot warn"></span><span>Enlarged, but it may look soft<small>We made it 3000 × 3000 from 800 × 800. Stores will take it. For a sharp cover, ask your designer for a 3000 × 3000 file.</small></span></div>
+        <div class="btns"><span class="btn primary">Replace with a bigger file</span><span class="btn dim">Remove</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Cannot fix -->
+  <div class="col">
+    <div class="tag">4 · Not square: same as today</div>
+    <p class="why">Enlarging cannot fix shape. A non-square file, or one under 640 × 640, is still refused and nothing is saved.</p>
+    <div class="phone">
+      <div class="crumb">Ayo Banks · Single</div>
+      <div class="rel">Lagos Summer</div>
+      <div class="card">
+        <div class="square">
+          <div style="position:absolute;inset:0;background:var(--a-base);border:1px dashed var(--a-line2);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--a-sec);font-size:13px;">Drop or choose</div>
+        </div>
+        <div class="h3">Cover art</div>
+        <p class="req">Square JPEG or PNG, at least 3000 × 3000.</p>
+        <div class="btns"><span class="btn primary">Choose a file</span></div>
+        <p class="err-line" role="alert">That image is 1920 × 1080, not square. Crop it to a square and try again.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="rules">
+  <section>
+    <h2>What happens to each file</h2>
+    <table>
+      <tr><td>3000 × 3000 or bigger</td><td>Saved as it is. Nothing changes.</td></tr>
+      <tr><td>1500 to 2999, square</td><td>Enlarged to 3000 × 3000. Ready for stores.</td></tr>
+      <tr><td>640 to 1499, square</td><td>Enlarged to 3000 × 3000. Amber warning to get a bigger file.</td></tr>
+      <tr><td>Under 640, or not square</td><td>Refused, same as today.</td></tr>
+      <tr><td>WebP</td><td>Turned into a JPEG while we enlarge it, so stores accept it.</td></tr>
+    </table>
+  </section>
+  <section>
+    <h2>How it works</h2>
+    <ul>
+      <li><b>Runs in the browser.</b> No outside service, no cost per image, and the art never leaves Urganize.</li>
+      <li><b>Every upload path gets it.</b> The release page and the "upload your cover art" sheet after a task is ticked both use the same upload step.</li>
+      <li><b>Saves as a JPEG</b> at high quality, about 2 to 4 MB <span class="label">assumed</span>. Well under the 25 MB limit.</li>
+      <li><b>The 1500px line</b> between "ready" and "may look soft" is my judgement, not a store rule <span class="label">assumed</span>.</li>
+      <li><b>The original is not kept.</b> Only the 3000 × 3000 file is saved.</li>
+    </ul>
+  </section>
+</div>
