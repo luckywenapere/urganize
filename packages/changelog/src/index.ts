@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.202.0",
+    title: "List and Timeline in one place",
+    tag: "Rollouts",
+    date: "October 28, 2026",
+    highlights: [
+      "Work the plan now has a small switch for List and Timeline. The separate Timeline menu row is gone.",
+      "On a phone, turn it sideways to see the timeline. Held upright, it asks you to turn the phone.",
+    ],
+  },
+  {
     version: "1.201.2",
     tag: "Team",
     date: "October 28, 2026",

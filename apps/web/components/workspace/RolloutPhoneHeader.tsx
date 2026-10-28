@@ -5,6 +5,8 @@ import { ChevronLeft, Menu, Search, Sparkles } from '@/components/icons';
 import { ArtistFace } from '@/components/shared/ArtistFace';
 import { rolloutMetaLine } from '@/lib/release-timeline';
 import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
+import type { PlanView } from '@/lib/plan-view';
+import { PlanViewToggle } from './PlanViewToggle';
 import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
 import { RolloutCoverTile } from './RolloutCoverTile';
 
@@ -37,8 +39,11 @@ export function RolloutPhoneHeader({
   showMeta,
   showSearch,
   onAddIdea,
+  planView,
   below,
 }: {
+  /** Which plan view is showing, for the List / Timeline switch. Null hides it. */
+  planView?: PlanView | null;
   /** Opens the idea box on a planned rollout. Absent, no button. */
   onAddIdea?: () => void;
   releaseId: string;
@@ -92,6 +97,11 @@ export function RolloutPhoneHeader({
           <Sparkles className="h-4 w-4" aria-hidden="true" />
           Add idea
         </button>
+      ) : null}
+      {planView ? (
+        <span className="mr-1">
+          <PlanViewToggle releaseId={releaseId} view={planView} />
+        </span>
       ) : null}
       {showSearch ? (
         <button

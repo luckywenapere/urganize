@@ -42,6 +42,9 @@ import { distributionStripMode } from '@/lib/distribution-strip-visibility';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { TasksPanel } from './TasksPanel';
 import { useSceneOverlay } from './useSceneOverlay';
+import { RotatePrompt } from './PlanViewToggle';
+import { useNarrowPortrait } from '@/lib/use-narrow-portrait';
+import { isPlanView, pickPlanView, recallPlanView, rememberPlanView, type PlanView } from '@/lib/plan-view';
 import { fadeIn, morphCommitted } from '@/lib/morph';
 import { fadeInScreen } from '@/components/motion/MainMorph';
 import { resolveActiveScene, resolvePanelBody } from '@/lib/scene-cache';
@@ -226,7 +229,7 @@ export function WorkspaceView() {
   // the way UrgAns is on the side but in the place where activity lists
   // appear"), so this view has to know about it to build the panel body and to
   // give the calendar its width.
-  const { activeScene: urlScene, closeScene } = useSceneOverlay();
+  const { activeScene: urlScene, closeScene, openScene } = useSceneOverlay();
   // Flag-gate the scene the URL names: with a flag off the param reads as
   // no-scene, matching the pill (which never renders) and the API routes (which
   // 404). One shared resolver rather than a local copy — TasksPanel and
@@ -249,7 +252,21 @@ export function WorkspaceView() {
     const found = state.releases.find((release) => release.id === scopedReleaseId);
     return Boolean(found) && !found?.releaseDate;
   });
-  const panelBody = resolvePanelBody(urlScene, scopedHasNoDate);
+  const isDesktopViewport = useIsDesktopViewport();
+  // A phone held upright cannot draw the timeline's weeks (Oct 28, 2026): it
+  // shows a "turn your phone" screen when the timeline is asked for, and a
+  // rollout with no pick yet opens on the list there.
+  const upright = useNarrowPortrait() && !isDesktopViewport;
+  const resolvedBody = resolvePanelBody(urlScene, scopedHasNoDate);
+  const panelBody =
+    activeScene === null && isPlanView(resolvedBody)
+      ? pickPlanView({
+          last: scopedReleaseId && !scopedHasNoDate ? recallPlanView(scopedReleaseId) : null,
+          fallback: resolvedBody,
+          narrowPortrait: upright,
+        })
+      : resolvedBody;
+  const showRotatePrompt = panelBody === 'timeline' && upright;
   // A scene opened or closed (lib/morph.ts): tell the view transition the new
   // body has drawn, so it crossfades to the finished scene; with no view
   // transition (an older iPhone) the scene body fades in on its own instead.
@@ -263,7 +280,6 @@ export function WorkspaceView() {
   const bodyIsMainView = panelBody === 'activities' || panelBody === 'timeline';
   // Which of the two always-in-the-DOM layout branches (mobile drill-down /
   // desktop focused) should receive side-effectful children — see the hook.
-  const isDesktopViewport = useIsDesktopViewport();
   // Warm the scoped release's four scenes during idle time, so the pills in
   // TasksPanel's header open instantly instead of each costing a round trip.
   // Skipped entirely on Data Saver / 2g — see useScenePrefetch.
@@ -1300,7 +1316,14 @@ export function WorkspaceView() {
     ) : null;
 
   const timelineScene =
-    panelBody === 'timeline' && scopedReleaseSlim ? (
+    panelBody === 'timeline' && scopedReleaseSlim && showRotatePrompt ? (
+      <RotatePrompt
+        onStay={() => {
+          rememberPlanView(scopedReleaseSlim.id, 'activities');
+          openScene('activities', scopedReleaseSlim.id);
+        }}
+      />
+    ) : panelBody === 'timeline' && scopedReleaseSlim ? (
       <TimelineScene
         release={scopedReleaseSlim}
         tasks={scopedTasks}
@@ -1716,7 +1739,8 @@ export function WorkspaceView() {
                   backLabel={backLabel}
                   onBack={handleMobileBack}
                   showMeta={bodyIsMainView}
-                  showSearch={panelBody === 'timeline' && scopedTasks.length > 0}
+                  showSearch={panelBody === 'timeline' && !showRotatePrompt && scopedTasks.length > 0}
+                  planView={bodyIsMainView && scopedTasks.length > 0 ? (panelBody as PlanView) : null}
                   onAddIdea={addIdea && scopedReleaseSlim.releaseDate && !onlyPreProductionWork(scopedTasks) ? addIdea : undefined}
                   below={
                     <>

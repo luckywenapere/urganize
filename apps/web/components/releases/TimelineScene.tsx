@@ -27,6 +27,7 @@ import {
 } from '@/lib/release-timeline';
 import { getAccessToken } from '@/components/content-calendar/get-access-token';
 import { useKeepInViewport } from '@/lib/use-keep-in-viewport';
+import { PlanViewToggle } from '@/components/workspace/PlanViewToggle';
 import {
   PlanListControls,
   PlanShowAllToggle,
@@ -455,6 +456,7 @@ export function TimelineScene({
               plan={plan}
               phoneSearchOnly={toolsInBar}
               inPageBar={toolsInBar}
+              viewToggle={toolsInBar ? <PlanViewToggle releaseId={release.id} view="timeline" /> : undefined}
               trailing={
                 <>
                   {selectControl(toolsInBar)}

@@ -26,6 +26,8 @@ import {
   type LucideProps,
 } from '@/components/icons';
 import type { ReleaseMenuKey } from '@/lib/release-menu';
+import { isPlanView, pickPlanView, recallPlanView } from '@/lib/plan-view';
+import { useNarrowPortrait } from '@/lib/use-narrow-portrait';
 import {
   buildRolloutMenu,
   type RolloutMenuDialogAction,
@@ -140,6 +142,7 @@ export function useRolloutMenuActions({
   deleteRollout,
 }: UseRolloutMenuActionsInput): RolloutMenuAction[] {
   const router = useRouter();
+  const upright = useNarrowPortrait();
   // Asked once per rollout and shared by every surface that draws the menu. The
   // row appears only after the server says this person may see the cost.
   const showSpend = useCanViewSpend(releaseId);
@@ -184,18 +187,12 @@ export function useRolloutMenuActions({
     deleteRollout,
   });
 
-  const withoutDated = dateMissing ? allEntries.filter((entry) => !NEEDS_DATE.includes(entry.key)) : allEntries;
-  // No date: the timeline has nothing to draw yet, so it moves to third, after
-  // Work the plan and Read the brief (2026-10-26).
-  const entries = (() => {
-    if (!dateMissing) return withoutDated;
-    const timeline = withoutDated.find((entry) => entry.key === 'timeline');
-    if (!timeline) return withoutDated;
-    const rest = withoutDated.filter((entry) => entry.key !== 'timeline');
-    const briefIndex = rest.findIndex((entry) => entry.key === 'brief');
-    const at = briefIndex >= 0 ? briefIndex + 1 : rest.findIndex((entry) => entry.key === 'activities') + 1;
-    return [...rest.slice(0, at), timeline, ...rest.slice(at)];
-  })();
+  // Timeline is not a row of its own: it is the other view of Work the plan,
+  // behind the List / Timeline switch (founder approved, Oct 28, 2026). The
+  // Work the plan row is lit for either view.
+  const entries = (dateMissing ? allEntries.filter((entry) => !NEEDS_DATE.includes(entry.key)) : allEntries)
+    .filter((entry) => entry.key !== 'timeline')
+    .map((entry) => (entry.key === 'activities' ? { ...entry, isActive: isPlanView(activeScene) } : entry));
 
   const dialogFor =(key: ReleaseMenuKey): RolloutMenuDialogInput | null | undefined =>
     key === 'share' ? share : key === 'change-artist' ? changeArtist : key === 'archive' ? archive : key === 'delete' ? deleteRollout : null;
@@ -206,6 +203,25 @@ export function useRolloutMenuActions({
 
     if (target.kind === 'scene') {
       const id = releaseId ?? '';
+      if (entry.key === 'activities') {
+        // Opens the view the person last used (the default on a first visit);
+        // pressed while on either view it stays put.
+        return {
+          ...base,
+          isActive: entry.isActive,
+          onClick: () => {
+            if (isPlanView(activeScene)) return;
+            openScene(
+              pickPlanView({
+                last: dateMissing ? null : recallPlanView(id),
+                fallback: dateMissing ? 'activities' : 'timeline',
+                narrowPortrait: upright,
+              }),
+              id
+            );
+          },
+        };
+      }
       return { ...base, isActive: entry.isActive, onClick: () => toggle(target.scene, id) };
     }
     if (target.kind === 'link') {

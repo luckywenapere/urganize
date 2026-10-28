@@ -28,6 +28,7 @@ import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { resolvePanelBody } from '@/lib/scene-cache';
 import { useSceneOverlay } from './useSceneOverlay';
+import { PlanViewToggle } from './PlanViewToggle';
 import { PlanListControls, PlanShowAllToggle, usePlanList } from './PlanListControls';
 import { RolloutPhaseHeader } from './RolloutPhases';
 import { PhaseSuggestions, PlanSuggestionToast, usePlanSuggestions } from './PlanSuggestions';
@@ -713,6 +714,7 @@ export function TasksPanel({
             plan={plan}
             phoneSearchOnly
             inPageBar={pageBarTools}
+            viewToggle={<PlanViewToggle releaseId={scopedRelease.id} view="activities" />}
             extra={
               <>
                 {groupByControl(true)}

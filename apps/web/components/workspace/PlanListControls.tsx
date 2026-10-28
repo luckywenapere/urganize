@@ -192,6 +192,7 @@ export function PlanListControls({
   plan,
   trailing,
   extra,
+  viewToggle,
   phoneSearchOnly = false,
   inPageBar = false,
   autoFocusSearch = false,
@@ -200,6 +201,8 @@ export function PlanListControls({
   plan: PlanListState;
   trailing?: ReactNode;
   extra?: ReactNode;
+  /** The List / Timeline switch. Computer only: the phone's lives in its header. */
+  viewToggle?: ReactNode;
   phoneSearchOnly?: boolean;
   inPageBar?: boolean;
   /** Focus the field on mount (the phone timeline's search icon, Oct 18, 2026). */
@@ -213,6 +216,7 @@ export function PlanListControls({
       <PlanListRow
         plan={plan}
         trailing={trailing}
+        viewToggle={viewToggle}
         search={phoneSearchOnly ? 'phone' : 'always'}
         autoFocusSearch={autoFocusSearch}
         onDone={onDone}
@@ -226,6 +230,7 @@ export function PlanListControls({
       </div>
       {createPortal(
         <div className="flex items-center gap-[13px]" role="toolbar" aria-label="Plan tools">
+          {viewToggle}
           {extra}
           <PlanListRow plan={plan} trailing={trailing} search="never" bar />
         </div>,
@@ -238,6 +243,7 @@ export function PlanListControls({
 function PlanListRow({
   plan,
   trailing,
+  viewToggle,
   search,
   bar = false,
   autoFocusSearch = false,
@@ -245,6 +251,7 @@ function PlanListRow({
 }: {
   plan: PlanListState;
   trailing?: ReactNode;
+  viewToggle?: ReactNode;
   search: 'always' | 'phone' | 'never';
   bar?: boolean;
   autoFocusSearch?: boolean;
@@ -301,6 +308,8 @@ function PlanListRow({
         />
       </label>
       )}
+
+      {viewToggle ? <span className="hidden lg:contents">{viewToggle}</span> : null}
 
       {/* One Filter button at every width (2026-10-14 declutter): three
           dropdowns in a row were the loudest thing above the timeline. */}
