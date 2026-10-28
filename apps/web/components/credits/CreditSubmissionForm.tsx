@@ -412,7 +412,7 @@ export function CreditSubmissionForm({
       </label>
 
       {error ? (
-        <p className="mt-4 text-sm" style={{ color: '#f0847a' }}>
+        <p className="mt-4 text-sm" style={{ color: 'var(--credits-danger)' }}>
           {error}
         </p>
       ) : null}

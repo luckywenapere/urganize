@@ -613,8 +613,9 @@ html[data-theme='light'] .cc-island {
    than shared: this is a distinct public surface (a form collaborators fill
    in, not a kit they read). Since 2026-10-27 it wears the app's current dark
    palette (plain near-black, neutral greys, spring accent) rather than the
-   older ink and cream. Still dark-locked: every collaborator sees the same
-   form whatever their theme. */
+   older ink and cream. It follows the visitor's SYSTEM light or dark setting
+   (prefers-color-scheme), not the app's stored theme, since most people who
+   open it have never used Urganize. */
 .credits-island {
   color-scheme: dark;
   --credits-ground: #0c0c0d;
@@ -627,12 +628,35 @@ html[data-theme='light'] .cc-island {
   --credits-border: rgba(242, 242, 240, 0.07);
   /* Form fields only; the line above stays a divider. 3:1 on the ground. */
   --credits-field-border: #6a6a6c;
+  --credits-danger: #f0847a;
+  --credits-logo-filter: none;
 }
 
-/* The wordmark is white. The app inverts it for light themes, but this page
-   stays dark, so the invert is cancelled here. */
-html[data-theme='light'] .credits-island .app-wordmark {
-  filter: none;
+/* Paper mode, the app's own light palette: cream ground, ink text, forest
+   accent (spring fails contrast on cream). */
+@media (prefers-color-scheme: light) {
+  .credits-island {
+    color-scheme: light;
+    --credits-ground: #f5f0e6;
+    --credits-surface: #faf5ec;
+    --credits-accent: #14643a;
+    --credits-text: #1a1611;
+    --credits-text-muted: #4b4740;
+    --credits-text-faint: #6a665f;
+    --credits-border: rgba(26, 22, 17, 0.09);
+    --credits-field-border: #857f76;
+    --credits-danger: #a8321f;
+    --credits-logo-filter: invert(1);
+  }
+  html .credits-island :focus-visible {
+    outline-color: #14643a;
+  }
+}
+
+/* The wordmark PNG is white. The app inverts it by its STORED theme; this page
+   goes by the system setting instead, so its own variable wins. */
+html .credits-island .app-wordmark {
+  filter: var(--credits-logo-filter) !important;
 }
 
 /* Public fan-capture island (2026-08-14). Third instance of the pattern above,
@@ -2302,82 +2326,6 @@ html select.field-native {
 .urg-textile .urg-above {
   position: relative;
   z-index: 1;
-}
-
-/* ---- Textile on the public islands ---------------------------------------
-   The press-kit, credits and capture pages are dark-locked artifacts sent
-   outside the product — a press contact judges the company by them, and they render
-   identically for every recipient regardless of the visitor's theme. That
-   makes them the right place for the richest treatment in the app: a press kit
-   is a printed object, and printed objects have a stock.
-
-   Two things differ from the rest of this layer, both following how the
-   islands themselves are already built:
-
-   1. The thread colours are HARDCODED cream rather than routed through
-      --color-stroke. These islands deliberately do not participate in the
-      theme cascade (no html[data-theme='light'] counterpart exists for them),
-      so a themed token would be the one thing here that could flip.
-   2. The texture goes on `background-image` of the island element itself, not
-      a pseudo-element. Each page sets only `backgroundColor` via inline style,
-      so a background-image on the class composites over it cleanly — and
-      ::before/::after stay free for the page components.
-
-   The credits page is left out since 2026-10-27: it moved to the app's plain
-   near-black ground, which has no texture.
-
-   The first layer is a woven header band: a broad gold wash across the top,
-   the brocade selvedge a bolt of cloth carries. The rest is the same
-   warp/weft/twill grain the app ground uses. */
-.urg-textile .epk-island,
-.urg-textile .capture-island,
-.urg-textile .kit-island {
-  background-image:
-    linear-gradient(
-      180deg,
-      rgba(240, 185, 92, 0.05) 0%,
-      rgba(240, 185, 92, 0.018) 38%,
-      transparent 100%
-    ),
-    repeating-linear-gradient(
-      0deg,
-      rgba(245, 240, 230, 0.026) 0 1px,
-      transparent 1px 3px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      rgba(245, 240, 230, 0.019) 0 1px,
-      transparent 1px 4px
-    ),
-    repeating-linear-gradient(
-      45deg,
-      rgba(245, 240, 230, 0.010) 0 1px,
-      transparent 1px 6px
-    );
-  background-size: 100% 320px, auto, auto, auto;
-  background-repeat: no-repeat, repeat, repeat, repeat;
-  background-attachment: scroll, fixed, fixed, fixed;
-}
-
-/* ...and none of it prints. The @media print block far above redefines the
-   island's own variables so every colour on the page follows without a single
-   print specific override in the component — the kit island's ground goes
-   white and its text goes ink. This rule is the one thing that cannot follow,
-   because its thread colours are hardcoded cream rather than routed through a
-   token (see the note above for why that is deliberate). On a white sheet the
-   cream grain is invisible and the gold wash is a faint yellow band across the
-   top, so printing it would waste ink to render nothing.
-
-   Mostly belt-and-braces: `print-color-adjust` is `economy` by default, so
-   browsers already drop backgrounds. What this covers is the reader who ticks
-   "Print backgrounds" in the print dialog — a standard checkbox, and a press
-   kit is the one page in this product designed to be printed. */
-@media print {
-  .urg-textile .epk-island,
-  .urg-textile .capture-island,
-  .urg-textile .kit-island {
-    background-image: none;
-  }
 }
 
 .field-label {

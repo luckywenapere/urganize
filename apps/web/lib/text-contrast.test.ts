@@ -237,4 +237,24 @@ describe('the credits page palette', () => {
     expect(contrast(hex('field-border'), hex('ground'))).toBeGreaterThanOrEqual(3);
     expect(contrast(hex('field-border'), hex('surface'))).toBeGreaterThanOrEqual(3);
   });
+
+  // The light palette, used when the visitor's system is set to light.
+  const light = css.match(/@media \(prefers-color-scheme: light\) \{\s*\.credits-island \{([^}]*)\}/);
+  const lightHex = (name: string): Rgb => {
+    const value = new RegExp(`--credits-${name}:\\s*#([0-9a-f]{6});`).exec(light?.[1] || '');
+    expect(value).not.toBeNull();
+    const h = value![1];
+    return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)) as Rgb;
+  };
+
+  it('in light mode, text and the accent are 4.5:1 and the field border 3:1', () => {
+    for (const name of ['text', 'text-muted', 'text-faint', 'accent', 'danger']) {
+      expect(contrast(lightHex(name), lightHex('ground'))).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(lightHex(name), lightHex('surface'))).toBeGreaterThanOrEqual(4.5);
+    }
+    // The send button's label is the ground colour on the accent.
+    expect(contrast(lightHex('ground'), lightHex('accent'))).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(lightHex('field-border'), lightHex('ground'))).toBeGreaterThanOrEqual(3);
+    expect(contrast(lightHex('field-border'), lightHex('surface'))).toBeGreaterThanOrEqual(3);
+  });
 });
