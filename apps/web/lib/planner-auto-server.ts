@@ -120,6 +120,9 @@ export async function runOnboardingAutoPlan(
   params: {
     releaseId: string;
     user: { id: string; email?: string | null };
+    /** Who owns the rollout, when it is not `user` (#854: a Manager's rollout
+     *  in a team they joined is owned by that team's owner). */
+    ownerUserId?: string;
     readyToday: ReadyItem[];
     onboarding: PlannerOnboardingContext | null;
     /** When POST /api/releases started: the model's deadline counts from it,
@@ -134,7 +137,7 @@ export async function runOnboardingAutoPlan(
     captureServerAnalyticsEvent(posthog, user.id, event);
 
   try {
-    const release = await claimPlannerAuto(admin, releaseId, user.id);
+    const release = await claimPlannerAuto(admin, releaseId, params.ownerUserId || user.id);
     if (!release) return;
     capture(createPostHogEvent('plan_auto_started', { release_id: releaseId }));
 

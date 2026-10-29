@@ -1014,6 +1014,7 @@ export async function POST(request: NextRequest) {
         runOnboardingAutoPlan(adminClient, {
           releaseId,
           user: autoUser,
+          ownerUserId: releaseOwnerId,
           readyToday,
           onboarding: toPlannerOnboardingContext({
             onboarding_where_stuck: whereStuck,

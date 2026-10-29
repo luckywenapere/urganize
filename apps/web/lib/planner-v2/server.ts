@@ -335,7 +335,9 @@ export async function applyPlanV2(
       ...(fromAnswers ? { release_date: releaseDate } : {}),
     })
     .eq('id', releaseId)
-    .eq('owner_user_id', actor.id);
+    // The rollout's owner, not the actor (#854): a Manager plans rollouts that
+    // the team owner owns. loadOwnedRelease already checked they may.
+    .eq('owner_user_id', release.owner_user_id);
   if (contextSave.error && fromAnswers) {
     return { ok: false, status: 500, error: 'Could not save the release date. Try again.' };
   }
@@ -440,7 +442,9 @@ export async function applyPlanV2(
     .from('releases')
     .update({ metadata: writePlannedByUrgans(writeTemplatePending(writePlannerPending(release.metadata, false), false), true) })
     .eq('id', releaseId)
-    .eq('owner_user_id', actor.id);
+    // The rollout's owner, not the actor (#854): a Manager plans rollouts that
+    // the team owner owns. loadOwnedRelease already checked they may.
+    .eq('owner_user_id', release.owner_user_id);
   if (settle.error) console.error('[plan-v2] activities created but the rollout flags did not clear:', settle.error);
   const stamp = await admin.from('release_plan_drafts').update({ approved_task_count: created.tasksCreated }).eq('id', planRowId);
   if (stamp.error) console.error('[plan-v2] activities created but the plan count did not stamp:', stamp.error);

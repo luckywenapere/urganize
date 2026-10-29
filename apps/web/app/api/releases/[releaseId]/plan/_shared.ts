@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/app/api/_shared/auth';
 import { resolveReleaseTaskWorkspace } from '@/lib/tasks-server';
+import { canPlanRelease } from '@/lib/release-team';
 import type { WorkspaceMember } from '@/types/auth';
 import { parseDraftDoc, type ReleasePlanDraft, type ReleasePlanDraftDoc } from '@/lib/release-planning';
 
@@ -81,11 +82,54 @@ export async function loadOwnedRelease(
     };
   }
 
-  if (!data || String((data as PlannerReleaseRow).owner_user_id || '') !== userId) {
+  const releaseOwnerId = String((data as PlannerReleaseRow | null)?.owner_user_id || '');
+  if (!data || !releaseOwnerId) {
     return { error: NextResponse.json({ error: 'Rollout not found.' }, { status: 404 }) };
+  }
+  if (releaseOwnerId !== userId) {
+    // #854: a rollout a Manager made in a team they joined is owned by that
+    // team's owner, so the Manager must still be able to plan it. Owner, or an
+    // active owner/admin of the owner's team (lib/release-team.ts). Only read
+    // when the caller is not the owner, so the owner's path costs nothing new.
+    const membership = await loadMembershipInOwnersTeam(adminClient, releaseOwnerId, userId);
+    if (!canPlanRelease({ userId, releaseOwnerId, membershipInOwnersTeam: membership })) {
+      return { error: NextResponse.json({ error: 'Rollout not found.' }, { status: 404 }) };
+    }
   }
 
   return { release: data as PlannerReleaseRow };
+}
+
+/** The caller's membership in the team `ownerUserId` owns, or null. Never throws. */
+export async function loadMembershipInOwnersTeam(
+  adminClient: NonNullable<ReturnType<typeof createAdminClient>>,
+  ownerUserId: string,
+  userId: string
+): Promise<{ role: string; status: string } | null> {
+  try {
+    const team = await adminClient
+      .from('workspaces')
+      .select('id')
+      .eq('owner_id', ownerUserId)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    const workspaceId = (team.data as { id?: string } | null)?.id;
+    if (team.error || !workspaceId) return null;
+    const member = await adminClient
+      .from('workspace_members')
+      .select('role,status')
+      .eq('workspace_id', workspaceId)
+      .eq('user_id', userId)
+      .neq('status', 'removed')
+      .limit(1)
+      .maybeSingle();
+    const row = member.data as { role?: string; status?: string } | null;
+    if (member.error || !row) return null;
+    return { role: String(row.role || ''), status: String(row.status || '') };
+  } catch {
+    return null;
+  }
 }
 
 type PlanRow = {
