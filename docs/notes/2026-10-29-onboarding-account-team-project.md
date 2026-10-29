@@ -14,6 +14,10 @@ Built from the approved mocks in `docs/mocks/onboarding-team/` (spec.md, mock.ht
 
 `POST /api/releases` always made the artist in the caller's own team (`ensureOwnedWorkspace`) and owned the rollout as the caller. Rollouts are seen by owner id, so a Manager who joined a team and added a rollout put it in their own empty team: the owner never saw it, and owning a rollout flipped the Manager's primary team to the empty one. `lib/release-team.ts` now decides: the team named in the body, else the primary team; in a team someone else owns, the rollout and a new artist are owned by that team's owner. Viewers are refused when they name the team.
 
+**Tightened in review (29 Oct):** only a Manager (owner or admin, active membership) puts a rollout in a team someone else owns; Team members and Viewers keep the old path in the app and are refused when they name a team. With no team named, a picked artist's team decides before the primary team, and an artist from a different team than the one named is refused. A Manager scoped to one artist adds only for that artist. Because a team rollout is owned by the team's owner, the planner (`loadOwnedRelease`), planner v2's two `releases` writes and the onboarding auto build now use the rollout's owner and let the team's Managers in (`canPlanRelease`); before this, a Manager's own new rollout answered "Rollout not found" in the planner and its auto plan never ran. **Still owner-only:** renaming, re-dating through `/schedule`, archiving and moving a rollout (`ensureReleaseOwnership`), as for every team rollout before #854.
+
+Also from review: onboarding matches invites with an escaped ILIKE (an unescaped `_` let "j_hn@" join john@'s invite), the artist scope is checked before an artist can be added, and the onboarding analytics helpers never throw on blocked storage.
+
 ## Traps
 
 - The record page reads the person's primary team. A record saved into a team that is not their primary lands on Home instead.
