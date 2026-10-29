@@ -43,6 +43,11 @@
   .by a { display:inline-flex; align-items:center; gap:6px; color:var(--text); text-decoration:none; font-weight:600; letter-spacing:-.02em; }
   .by .word { height:15px; width:auto; display:block; }
   .by .mark { height:16px; width:16px; border-radius:4px; display:block; }
+  /* Dark fix A: a thin light ring so the black tile keeps its square shape. */
+  .by .mark.ring { height:18px; width:18px; box-shadow:0 0 0 1px rgba(242,242,240,.45); }
+  /* Dark fix B: their navy wordmark on a small light pill. */
+  .by .pill { display:inline-flex; align-items:center; background:#f2f2f0; border-radius:999px; padding:4px 10px; }
+  .by .pill .word { height:13px; }
   .row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--line); }
   .row:first-child { border-top:0; }
   .small { font-size:12px; color:var(--sec); }
@@ -76,8 +81,8 @@
   </div>
 
   <div class="col">
-    <div class="tag">Proposed: dark mode</div>
-    <p class="why">Their square mark, then "Altlink" in our type so the name reads. Mark and name together are the link to altlink.co.</p>
+    <div class="tag">Dark, as first drawn (the problem)</div>
+    <p class="why">The black tile melts into the dark background, so only the white circle shows. It reads as a dot, not their logo.</p>
     <div class="phone dark">
       <div class="card">
         <span class="live"><i></i>Live</span>
@@ -87,6 +92,38 @@
       </div>
       <p class="by outline">powered by
         <a href="https://altlink.co" target="_blank" rel="noopener"><img class="mark" src="https://altlink.co/assets/altlink-logo-black-Cfa8BD74.png" alt="" />Altlink</a>
+      </p>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="tag">Dark fix A (recommended): a thin ring</div>
+    <p class="why">The same square mark, a little bigger, with a faint light edge so the tile's square shape shows. Their logo itself is untouched.</p>
+    <div class="phone dark">
+      <div class="card">
+        <span class="live"><i></i>Live</span>
+        <div class="ser" style="font-size:26px;margin-top:10px">Drops in 22 days.</div>
+        <div class="urlbox"><span class="mono">altlink.co/ada/midnight-drive</span><span class="mu" style="font-size:13px;font-weight:600">Copy</span></div>
+        <div class="btn">Share link</div>
+      </div>
+      <p class="by outline">powered by
+        <a href="https://altlink.co" target="_blank" rel="noopener"><img class="mark ring" src="https://altlink.co/assets/altlink-logo-black-Cfa8BD74.png" alt="" />Altlink</a>
+      </p>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="tag">Dark fix B: the wordmark on a light pill</div>
+    <p class="why">Their full navy wordmark, the same file as light mode, on a small light pill. Clearest logo, but the only light patch on a dark screen.</p>
+    <div class="phone dark">
+      <div class="card">
+        <span class="live"><i></i>Live</span>
+        <div class="ser" style="font-size:26px;margin-top:10px">Drops in 22 days.</div>
+        <div class="urlbox"><span class="mono">altlink.co/ada/midnight-drive</span><span class="mu" style="font-size:13px;font-weight:600">Copy</span></div>
+        <div class="btn">Share link</div>
+      </div>
+      <p class="by outline">powered by
+        <a href="https://altlink.co" target="_blank" rel="noopener" aria-label="Altlink"><span class="pill"><img class="word" src="https://altlink.co/assets/altlink-logo-Bw5A4RY2.png" alt="Altlink" /></span></a>
       </p>
     </div>
   </div>
@@ -108,7 +145,7 @@
   </div>
 
   <div class="col">
-    <div class="tag">Proposed: artist's past releases (dark)</div>
+    <div class="tag">Artist's past releases (dark, fix A)</div>
     <p class="why">These links are Altlink's too but carry no label today. The same line goes under the list once any release has a link.</p>
     <div class="phone dark">
       <div class="ser" style="font-size:20px">Past releases</div>
@@ -117,7 +154,7 @@
         <div class="row"><div><div>Lagos Rain</div><div class="small">ISRC NGA1B2600001</div></div><span style="font-size:12px;font-weight:600;border:1px solid var(--line2);border-radius:8px;padding:6px 10px">Grab a smart link</span></div>
       </div>
       <p class="by outline">powered by
-        <a href="https://altlink.co" target="_blank" rel="noopener"><img class="mark" src="https://altlink.co/assets/altlink-logo-black-Cfa8BD74.png" alt="" />Altlink</a>
+        <a href="https://altlink.co" target="_blank" rel="noopener"><img class="mark ring" src="https://altlink.co/assets/altlink-logo-black-Cfa8BD74.png" alt="" />Altlink</a>
       </p>
     </div>
   </div>
