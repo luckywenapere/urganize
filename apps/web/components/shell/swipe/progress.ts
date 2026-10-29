@@ -1,6 +1,6 @@
 'use client';
 
-// The pager's position, in pages (0 = Home, 1 = UrgAns, 2 = Artists, and every
+// The pager's position, in pages (0 = Artists, 1 = UrgAns, 2 = Team, and every
 // fraction between while a finger or the spring is moving). Published outside
 // React so the tab underline can follow it every frame without re-rendering
 // the tab row: the same spring drives the pages and the underline.

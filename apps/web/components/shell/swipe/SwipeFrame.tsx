@@ -3,8 +3,8 @@
 import { Suspense, useEffect, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import HomePageClient from '@/app/dashboard/home/HomePageClient';
 import ArtistsPageClient from '@/app/dashboard/artists/ArtistsPageClient';
+import TeamPageClient from '@/app/dashboard/team/TeamPageClient';
 import { Sidebar } from '@/components/shell/Sidebar';
 import { PageBar } from '@/components/shell/PageBar';
 import { MainMorph } from '@/components/motion/MainMorph';
@@ -37,7 +37,7 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
  * The workspace chrome when the swipe navigation is on (URG-380). Replaces the
  * top bar, the phone's tab row and bottom bar, and the More sheet:
  *
- *  - On Home, UrgAns and Artists: the top tabs over the pager, one app-height
+ *  - On Artists, UrgAns and Team (Home left Oct 29, 2026, #876): the top tabs over the pager, one app-height
  *    column pinned to the visible viewport, each page scrolling on its own, and
  *    ONE "Message UrgAns…" box pinned at the bottom across all three tabs: the
  *    same instance, shape, size and place whichever tab is up, so a swipe
@@ -106,15 +106,15 @@ export function SwipeFrame({
             <WorkspacePageErrorBoundary>
               <SwipePager
                 panes={{
-                  home: (
-                    <div className="swipe-page mx-auto w-full max-w-[40rem] px-5">
-                      <HomePageClient swipe />
-                    </div>
-                  ),
-                  urgans: CHAPPI_ENABLED ? <UrgAnsPane active={tab === 'urgans'} /> : null,
                   artists: (
                     <div className="swipe-page mx-auto w-full max-w-[40rem] px-5">
                       <ArtistsPageClient swipe active={tab === 'artists'} />
+                    </div>
+                  ),
+                  urgans: CHAPPI_ENABLED ? <UrgAnsPane active={tab === 'urgans'} /> : null,
+                  team: (
+                    <div className="swipe-page mx-auto w-full max-w-[40rem] px-5">
+                      <TeamPageClient />
                     </div>
                   ),
                 }}
@@ -167,9 +167,9 @@ export function SwipeFrame({
 }
 
 /**
- * The one "Message UrgAns…" box, shared by Home, UrgAns and Artists (URG-380).
- * On UrgAns it hands the text to the conversation on screen. On Home and
- * Artists it always posts to Main: Main is put on screen first, then the
+ * The one "Message UrgAns…" box, shared by Artists, UrgAns and Team (URG-380).
+ * On UrgAns it hands the text to the conversation on screen. On Artists and
+ * Team it always posts to Main: Main is put on screen first, then the
  * message is handed over and the pager glides to UrgAns, where the
  * conversation sends it.
  */

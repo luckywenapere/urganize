@@ -15,7 +15,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export async function GET(request: NextRequest) {
   const id = request.nextUrl.searchParams.get('id') ?? '';
   const to = request.nextUrl.searchParams.get('to');
-  const destination = isSafeNextPath(to) ? to : '/dashboard/home';
+  const destination = isSafeNextPath(to) ? to : '/dashboard/artists';
   const response = NextResponse.redirect(new URL(destination, request.nextUrl.origin), 303);
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();

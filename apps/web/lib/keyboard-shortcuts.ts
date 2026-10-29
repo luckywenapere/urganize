@@ -14,9 +14,9 @@
 
 /** Second key after G, to the top-bar area it opens (lib/shell-nav.ts keys). */
 export const GO_KEYS: Record<string, string> = {
-  h: 'home',
-  u: 'urgans',
   c: 'catalogue',
+  u: 'urgans',
+  t: 'team',
   r: 'relationships',
   o: 'opportunities',
 };

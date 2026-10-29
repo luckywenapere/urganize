@@ -49,7 +49,7 @@ export function lifecycleClickUrl(sendId: string, to: string): string {
 export function nudgeDestination(variant: NudgeVariant, focusReleaseId: string | null): string {
   switch (variant) {
     case 'rollout':
-      return '/dashboard/home';
+      return '/dashboard/artists';
     case 'tasks':
       return focusReleaseId ? `/dashboard?release=${focusReleaseId}` : '/dashboard';
     case 'invite':

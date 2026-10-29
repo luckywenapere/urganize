@@ -1,6 +1,6 @@
 // The app's navigation, as data (design overhaul, 2026-10-04).
 //
-// One top bar of areas (UrgAns got its own pill after Home on 2026-10-15; the
+// One top bar of areas (Artists, UrgAns, Team since 2026-10-29, #876: Home left; the
 // floating button stays as its door on other screens), a second row of tabs for the area you are
 // in, and a bottom bar on a phone. Everything the desktop top bar, the sub-tab
 // row, the phone's bottom bar and its "More" sheet show comes from here, so they
@@ -15,7 +15,6 @@ import { TEAM_HREF } from './team-page';
 import { isOpportunitiesEnabled, isRelationshipsFlagOn } from './paused-features';
 
 export type ShellAreaKey =
-  | 'home'
   | 'urgans'
   | 'catalogue'
   | 'team'
@@ -91,7 +90,9 @@ export function readShellFlags(): ShellFlags {
   };
 }
 
-export const HOME_HREF = '/dashboard/home';
+/** Home left the menu (founder, 2026-10-29, #876). Its old address now opens
+ *  Artists, so anything still pointing here lands where the menu starts. */
+export const HOME_HREF = '/dashboard/artists';
 export const URGANS_HREF = '/dashboard/urgans';
 export const CATALOGUE_HREF = '/dashboard';
 export const DISTRIBUTE_HREF = '/dashboard/distribute';
@@ -169,27 +170,8 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
     });
   }
 
+  // Artists, UrgAns, Team (founder, 2026-10-29, #876): Home left the menu.
   return [
-    {
-      key: 'home',
-      label: 'Home',
-      href: HOME_HREF,
-      live: true,
-      subTabs: [],
-      isActive: (p) => startsWithPath(p, HOME_HREF),
-    },
-    // UrgAns sits right after Home on the desktop top bar (founder, 2026-10-15).
-    // The pill opens the assistant's own page, which on a desktop is the
-    // sessions view (UrgansSessionsLayout). Since 2026-10-27 it is the only
-    // place a computer shows the chat: Home there has none.
-    {
-      key: 'urgans',
-      label: 'UrgAns',
-      href: URGANS_HREF,
-      live: true,
-      subTabs: [],
-      isActive: (p) => startsWithPath(p, URGANS_HREF),
-    },
     {
       // Labelled Artists since 2026-10-17 (founder's word); the key stays
       // 'catalogue' so stored state, tours and analytics keep their names.
@@ -205,7 +187,16 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
         startsWithPath(p, DISTRIBUTE_HREF) ||
         startsWithPath(p, '/dashboard/notes'),
     },
-    // Team sits right after Artists (founder, 2026-10-29, #853).
+    // The pill opens the assistant's own page, which on a desktop is the
+    // sessions view (UrgansSessionsLayout).
+    {
+      key: 'urgans',
+      label: 'UrgAns',
+      href: URGANS_HREF,
+      live: true,
+      subTabs: [],
+      isActive: (p) => startsWithPath(p, URGANS_HREF),
+    },
     {
       key: 'team',
       label: 'Team',
@@ -248,7 +239,7 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       : []),
     // Audience left the nav (Oct 16, 2026 cuts, URG-319): a top-bar pill that
     // only said "Coming soon". It comes back when it exists. /dashboard/audience
-    // forwards to Home.
+    // forwards to Artists.
   ];
 }
 
@@ -264,27 +255,32 @@ export function visibleSubTabs(area: ShellArea | null): ShellSubTab[] {
   return area.subTabs;
 }
 
-export type MobileTab = { key: string; label: string; href: string; area: ShellAreaKey | 'urgans' };
+export type MobileTab = { key: string; label: string; href: string; area: ShellAreaKey };
 
 /** The phone's bottom bar. UrgAns is a tab here (the full page) because a
  *  drawer on a phone is a full page anyway, and it is the one thing a thumb
  *  should always reach. */
 export function buildMobileTabs(areas?: ShellArea[]): MobileTab[] {
+  // Team goes to the bar (founder, 2026-10-29, #876) unless a role view tucked
+  // it into More.
   // The Artists tab goes where its area's pill goes (Artists, or Rollouts when
   // the artist page is off or a role view tucks it).
   const catalogueHref = areas?.find((area) => area.key === 'catalogue')?.href ?? CATALOGUE_HREF;
-  return [
-    { key: 'home', label: 'Home', href: HOME_HREF, area: 'home' },
+  const tabs: MobileTab[] = [
     { key: 'catalogue', label: CATALOGUE_LABEL, href: catalogueHref, area: 'catalogue' },
-    { key: 'urgans', label: 'UrgAns', href: '/dashboard/urgans', area: 'urgans' },
+    { key: 'urgans', label: 'UrgAns', href: URGANS_HREF, area: 'urgans' },
   ];
+  if (!areas || areas.some((area) => area.key === 'team')) {
+    tabs.push({ key: 'team', label: 'Team', href: TEAM_HREF, area: 'team' });
+  }
+  return tabs;
 }
 
 /** Everything the bottom bar's tabs do not carry. */
 export function buildMoreItems(
   areas: ShellArea[]
 ): Array<{ key: string; label: string; href: string; soon: boolean }> {
-  const keep: ShellAreaKey[] = ['team', 'relationships', 'opportunities'];
+  const keep: ShellAreaKey[] = ['relationships', 'opportunities'];
   return areas
     .filter((area) => keep.includes(area.key))
     .map((area) => ({ key: area.key, label: area.label, href: area.href, soon: !area.live }));
@@ -295,7 +291,7 @@ export function activeMobileTab(areas: ShellArea[], pathname: string): string {
   if (startsWithPath(pathname, URGANS_HREF)) return 'urgans';
   const area = activeShellArea(areas, pathname);
   if (!area) return 'more';
-  if (area.key === 'home' || area.key === 'catalogue') return area.key;
+  if (area.key === 'catalogue' || area.key === 'team') return area.key;
   return 'more';
 }
 

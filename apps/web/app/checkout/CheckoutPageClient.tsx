@@ -647,7 +647,7 @@ function CheckoutStep({
         return;
       }
       if (payload.kind === 'upgrade_applied') {
-        window.location.assign('/dashboard/home');
+        window.location.assign('/dashboard/artists');
         return;
       }
       if (payload.kind === 'downgrade' && payload.effectiveAt) {
@@ -843,7 +843,7 @@ function CheckoutStep({
                 <p className="text-content-primary">
                   {changeNote ?? `You're already on ${planName(intent.plan)}. It renews by itself.`}
                 </p>
-                <Link href="/dashboard/home" className={primaryButton}>
+                <Link href="/dashboard/artists" className={primaryButton}>
                   Go to Home
                 </Link>
               </div>

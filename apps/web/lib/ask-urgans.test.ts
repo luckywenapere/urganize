@@ -2,12 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { askUrgansTarget } from './ask-urgans';
 
 describe('askUrgansTarget', () => {
-  it("fills Home's own box on a phone's Home", () => {
-    expect(askUrgansTarget('/dashboard/home', false)).toBe('home-composer');
-  });
-
-  it('sends a computer on Home to the UrgAns page, since Home has no chat there', () => {
-    expect(askUrgansTarget('/dashboard/home', true)).toBe('chat-page');
+  it('treats Artists, the new front door, like any other page (#876)', () => {
+    expect(askUrgansTarget('/dashboard/artists', false)).toBe('chat-page');
+    expect(askUrgansTarget('/dashboard/artists', true)).toBe('drawer');
   });
 
   it('opens the drawer on any other desktop page', () => {

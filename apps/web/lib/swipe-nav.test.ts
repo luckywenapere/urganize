@@ -41,7 +41,8 @@ describe('swipe navigation switch', () => {
 
 describe('tabs and areas', () => {
   it('knows the three tab routes and nothing else', () => {
-    expect(swipeTabForPath('/dashboard/home')).toBe('home');
+    expect(swipeTabForPath('/dashboard/home')).toBeNull();
+    expect(swipeTabForPath('/dashboard/team')).toBe('team');
     expect(swipeTabForPath('/dashboard/urgans/')).toBe('urgans');
     expect(swipeTabForPath('/dashboard/artists')).toBe('artists');
     expect(swipeTabForPath('/dashboard/artists/abc')).toBeNull();
@@ -197,7 +198,7 @@ describe('swipe nav is for phone-width screens only', () => {
 describe('swipeDocumentTitle', () => {
   it('names each swipe tab with the brand once', async () => {
     const { swipeDocumentTitle } = await import('./swipe-nav');
-    expect(swipeDocumentTitle('home')).toBe('Home | Urganize');
+    expect(swipeDocumentTitle('team')).toBe('Team | Urganize');
     expect(swipeDocumentTitle('urgans')).toBe('UrgAns | Urganize');
     expect(swipeDocumentTitle('artists')).toBe('Artists | Urganize');
   });

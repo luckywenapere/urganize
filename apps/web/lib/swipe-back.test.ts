@@ -6,10 +6,10 @@ import { withoutViewer } from './directory-search';
 describe('swipe back arrow', () => {
   it('opts in only the pages with no back of their own', () => {
     for (const path of ['/dashboard/directory', '/dashboard/relationships', '/dashboard/opportunities', '/dashboard/press-kits/']) {
-      expect(swipeBackFor(path)).toEqual({ href: '/dashboard/home' });
+      expect(swipeBackFor(path)).toEqual({ href: '/dashboard/artists' });
     }
     // Pages that already carry a back, tabs, and unknown paths get none.
-    for (const path of ['/dashboard/credits', '/dashboard/notes', '/dashboard/relationships/p1', '/dashboard/home', '/dashboard', null]) {
+    for (const path of ['/dashboard/credits', '/dashboard/notes', '/dashboard/relationships/p1', '/dashboard/artists', '/dashboard', null]) {
       expect(swipeBackFor(path as string | null)).toBeNull();
     }
   });

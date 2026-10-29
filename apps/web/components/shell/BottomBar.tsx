@@ -13,7 +13,6 @@ import {
   DoorOpen,
   HandshakeLine,
   Headphones,
-  Home,
   MoreHorizontal,
   Search,
   Settings,
@@ -59,13 +58,14 @@ const MORE_ICON: Record<string, IconComponent> = {
 };
 
 const TAB_ICON: Record<string, IconComponent> = {
-  home: Home,
   catalogue: Disc3,
   urgans: Sparkles,
+  team: Users,
 };
 
 /**
- * The phone's bottom bar: Home, Artists (Catalogue until 2026-10-17), UrgAns and More (Pitching left it
+ * The phone's bottom bar: Artists, UrgAns, Team and More since 2026-10-29
+ * (#876: Home left, Team came out of More). Before that Home, Artists, UrgAns and More (Pitching left it
  * on 2026-10-15 and lives inside each rollout). Thumb
  * reachable, and the same destinations as the desktop pills, because both read
  * lib/shell-nav.ts.
@@ -112,7 +112,7 @@ export function BottomBar({ showHelp = false }: { showHelp?: boolean }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const morePresence = usePresence(moreOpen);
   const collapsed = useBarCollapsedOnScroll(pathname);
-  const ActiveIcon = active === 'more' ? MoreHorizontal : (TAB_ICON[active ?? ''] ?? Home);
+  const ActiveIcon = active === 'more' ? MoreHorizontal : (TAB_ICON[active ?? ''] ?? Disc3);
   const unread = useNotificationsDoorStore((state) => (state.available ? state.unread : 0));
 
   return (
@@ -147,7 +147,7 @@ export function BottomBar({ showHelp = false }: { showHelp?: boolean }) {
           aria-hidden={collapsed}
         >
           {tabs.map((tab) => {
-            const Icon = TAB_ICON[tab.key] ?? Home;
+            const Icon = TAB_ICON[tab.key] ?? Disc3;
             const isActive = active === tab.key;
             return (
               <li key={tab.key} className="flex-1">
@@ -167,16 +167,16 @@ export function BottomBar({ showHelp = false }: { showHelp?: boolean }) {
                     isActive ? 'bg-bg-hover text-brand' : 'text-content-tertiary'
                   }`}
                 >
-                  {/* Unread notifications show on Home, where the bell is now
-                      (2026-10-17), and only while you are somewhere else. */}
+                  {/* Unread notifications show on Artists, where the bell is now
+                      (2026-10-29, #876), and only while you are somewhere else. */}
                   <span className="pointer-events-none relative">
                     <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
-                    {tab.key === 'home' && !isActive && unread > 0 ? (
+                    {tab.key === 'catalogue' && !isActive && unread > 0 ? (
                       <span aria-hidden="true" className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-brand" />
                     ) : null}
                   </span>
                   {tab.label}
-                  {tab.key === 'home' && !isActive && unread > 0 ? (
+                  {tab.key === 'catalogue' && !isActive && unread > 0 ? (
                     <span className="sr-only">, unread notifications</span>
                   ) : null}
                 </Link>

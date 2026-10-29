@@ -103,7 +103,7 @@ export default function TeamPageClient() {
     });
     if (!response.ok) return readError(response, 'Could not leave the team.');
     // A full load, so every cached list forgets the team they just left.
-    window.location.assign('/dashboard/home');
+    window.location.assign('/dashboard/artists');
     return null;
   };
 

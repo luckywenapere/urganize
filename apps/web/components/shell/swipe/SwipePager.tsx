@@ -37,14 +37,14 @@ function pagingFrozen(target: EventTarget | null): boolean {
 }
 
 /**
- * The swipe pager (URG-380): Home, UrgAns and Artists side by side, one finger
+ * The swipe pager (URG-380): Artists, UrgAns and Team side by side, one finger
  * or one tab tap moving between them on the approved spring.
  *
  * Rules (notes.md, "Swipe-gesture conflicts"):
  *  - The pager owns horizontal swipes; nothing inside a page scrolls sideways.
  *  - After 10px pick the axis (|dx| > 1.2·|dy| is ours), held until touch-up.
  *  - Release past half the width or faster than 500px/s turns the page; past
- *    Home or Artists it gives 24px and springs back.
+ *    Artists or Team it gives 24px and springs back.
  *  - Sheets, dialogs, the keyboard, a text selection and a long press freeze it.
  *  - Each page scrolls on its own, so a page keeps its place when you come back.
  *
@@ -54,7 +54,7 @@ function pagingFrozen(target: EventTarget | null): boolean {
  */
 export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> }) {
   const pathname = usePathname();
-  const routeTab = swipeTabForPath(pathname) ?? 'home';
+  const routeTab = swipeTabForPath(pathname) ?? 'artists';
   // Paging is for the three tab pages only; an artist or rollout page opened from
   // a tab is a detail screen and a sideways drag there must not switch tabs.
   const onTabPage = swipeTabForPath(pathname) !== null;

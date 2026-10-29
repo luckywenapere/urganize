@@ -42,22 +42,22 @@ afterEach(() => {
 });
 
 describe('buildAppPages — always present', () => {
-  it('offers Home, the catalog, the assistant and settings with every flag off', async () => {
+  it('offers the catalog, the assistant, Team and settings with every flag off', async () => {
     const { buildAppPages } = await loadPages();
     const keys = buildAppPages({ hasCuratorProfile: false }).map((page) => page.key);
-    expect(keys).toEqual(['home', 'catalog', 'urgans', 'team', 'settings']);
+    expect(keys).toEqual(['catalog', 'urgans', 'team', 'settings']);
   });
 
   it('offers Opportunities only when it is unpaused (paused Oct 27, 2026)', async () => {
     const { buildAppPages } = await loadPages({ NEXT_PUBLIC_FEATURE_OPPORTUNITIES: 'true' });
     const keys = buildAppPages({ hasCuratorProfile: false }).map((page) => page.key);
-    expect(keys).toEqual(['home', 'catalog', 'urgans', 'team', 'opportunities', 'settings']);
+    expect(keys).toEqual(['catalog', 'urgans', 'team', 'opportunities', 'settings']);
   });
 
-  it('offers Home first, ahead of the catalog, when its flag is on', async () => {
+  it('never offers Home, which left the menu (2026-10-29, #876)', async () => {
     const { buildAppPages } = await loadPages({ NEXT_PUBLIC_FEATURE_HOME: 'true' });
     const keys = buildAppPages({ hasCuratorProfile: false }).map((page) => page.key);
-    expect(keys).toEqual(['home', 'catalog', 'urgans', 'team', 'settings']);
+    expect(keys).toEqual(['catalog', 'urgans', 'team', 'settings']);
   });
 
   it('keeps Home as its own page, not a Catalog keyword', async () => {

@@ -602,10 +602,11 @@ export type AndroidBackAction = 'go-back' | 'go-home' | 'exit';
 
 /** Where Android back lands. Must equal `HOME_PATH` in apps/web/lib/home-path.ts
  * (a web test holds the two together). */
-export const SHELL_HOME_PATH = '/dashboard/home';
+export const SHELL_HOME_PATH = '/dashboard/artists';
 
-/** Pages Android Back sends to Home even when history exists (tab roots and the paywall flow). */
-const GO_HOME_EXACT = ['/dashboard/urgans', '/dashboard/artists'];
+/** Pages Android Back sends to Home even when history exists (tab roots and the paywall flow).
+ *  Home is Artists since 2026-10-29 (#876); /dashboard/home only redirects there. */
+const GO_HOME_EXACT = ['/dashboard/urgans', '/dashboard/team', '/dashboard/home'];
 const GO_HOME_PREFIXES = [
   '/locked',
   '/start-trial',

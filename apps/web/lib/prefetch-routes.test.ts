@@ -33,7 +33,6 @@ describe('buildPrefetchRoutes', () => {
     expect(buildPrefetchRoutes({ hasCuratorProfile: false })).toEqual([
       '/dashboard',
       '/dashboard/urgans',
-      '/dashboard/home',
       '/dashboard/team',
     ]);
   });
@@ -46,7 +45,6 @@ describe('buildPrefetchRoutes', () => {
     expect(buildPrefetchRoutes({ hasCuratorProfile: true })).toEqual([
       '/dashboard',
       '/dashboard/urgans',
-      '/dashboard/home',
       '/dashboard/team',
       '/dashboard/notes',
       '/dashboard/opportunities',
@@ -54,17 +52,16 @@ describe('buildPrefetchRoutes', () => {
     ]);
   });
 
-  // The newest landing destination: the same bug this module exists for,
-  // caught before it could happen this time — /dashboard/home is warmed the
-  // moment its own flag is on, with no dependency on any of the others.
-  it('warms the Home tab when its flag is on, and nothing else has to be', async () => {
+  // Home left the menu (2026-10-29, #876): its address only redirects now, so
+  // it is never warmed, even with its old flag on.
+  it('never warms Home, even with its old flag on', async () => {
     const { buildPrefetchRoutes } = await loadRoutes({
       notes: false,
      
       pitching: false,
       home: true,
     });
-    expect(buildPrefetchRoutes({ hasCuratorProfile: false })).toContain('/dashboard/home');
+    expect(buildPrefetchRoutes({ hasCuratorProfile: false })).not.toContain('/dashboard/home');
   });
 
   // Pitching left the nav (2026-10-15) and lives inside each rollout, so its

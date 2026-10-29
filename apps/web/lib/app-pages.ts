@@ -33,7 +33,8 @@ const RELATIONSHIPS_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 // Paused Oct 27, 2026 (lib/paused-features.ts).
 const OPPORTUNITIES_ENABLED = isOpportunitiesEnabled();
-const HOME_ENABLED = true;
+// Home left the menu (founder, 2026-10-29, #876).
+const HOME_ENABLED = false;
 
 export type AppPage = {
   key: string;

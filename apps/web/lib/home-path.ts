@@ -42,7 +42,10 @@
 //
 // It is inlined at build time like every other NEXT_PUBLIC_* read, so a flag
 // flip needs a deploy that actually rebuilds apps/web before this moves.
-export const HOME_PATH = '/dashboard/home';
+//
+// 2026-10-29 (founder, #876): Home left the menu and Artists is the front
+// door. /dashboard/home itself redirects to Artists for old links.
+export const HOME_PATH = '/dashboard/artists';
 
 /** Where a curator-only account lands. That surface has no team chrome at all. */
 export const CURATOR_HOME_PATH = '/curator';

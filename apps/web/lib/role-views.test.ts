@@ -96,7 +96,7 @@ describe('the defaults every view keeps', () => {
       }
       const shown = destinations(view(v).filter((area) => area.key !== 'more'));
       expect(shown).toEqual(
-        expect.arrayContaining(['home', 'catalogue/releases', 'catalogue/notes'])
+        expect.arrayContaining(['urgans', 'catalogue/releases', 'catalogue/notes'])
       );
     }
   });
@@ -120,14 +120,14 @@ describe('the nav filter, per view', () => {
 
   it('Artist manager tucks nothing now that Audience is off the nav (URG-319)', () => {
     const list = view('artist_manager');
-    expect(list.map((a) => a.key)).toEqual(['home', 'urgans', 'catalogue', 'team', 'relationships', 'opportunities']);
+    expect(list.map((a) => a.key)).toEqual(['catalogue', 'urgans', 'team', 'relationships', 'opportunities']);
     expect(destinations(list)).toContain('catalogue/artists');
     expect(destinations(list)).toContain('relationships/people');
   });
 
   it('Label tucks Opportunities', () => {
     const list = view('label');
-    expect(list.map((a) => a.key)).toEqual(['home', 'urgans', 'catalogue', 'team', 'relationships', 'more']);
+    expect(list.map((a) => a.key)).toEqual(['catalogue', 'urgans', 'team', 'relationships', 'more']);
     expect(more(list)).toEqual(['opportunities']);
     const relationships = list.find((a) => a.key === 'relationships')!;
     expect(relationships.subTabs.map((t) => t.key)).toEqual(['directory', 'people']);
@@ -144,7 +144,7 @@ describe('the nav filter, per view', () => {
 
   it('Artist team tucks Artists, People, Directory and Opportunities', () => {
     const list = view('artist_team');
-    expect(list.map((a) => a.key)).toEqual(['home', 'urgans', 'catalogue', 'team', 'more']);
+    expect(list.map((a) => a.key)).toEqual(['catalogue', 'urgans', 'team', 'more']);
     expect(more(list)).toEqual(['artists', 'directory', 'people', 'opportunities']);
   });
 
@@ -168,7 +168,7 @@ describe('the nav filter, per view', () => {
 
   it("hands the phone's More sheet the tucked pages after the areas it already lists", () => {
     const list = view('label');
-    expect(buildMoreItems(list).map((i) => i.key)).toEqual(['team', 'relationships']);
+    expect(buildMoreItems(list).map((i) => i.key)).toEqual(['relationships']);
     expect(tuckedMoreItems(list)).toEqual([
       { key: 'opportunities', label: 'Opportunities', href: '/dashboard/opportunities', soon: false },
     ]);

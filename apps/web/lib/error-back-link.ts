@@ -7,11 +7,11 @@
  * so it goes to the catalogue (/dashboard), which is where the rollouts are.
  *
  * The one page that cannot be sent there is the catalogue itself, for the same
- * reason; a crash there goes to Home instead. Any other page goes to the
+ * reason; a crash there goes to Artists instead. Any other page goes to the
  * catalogue. Pure, so both directions are tested.
  */
 export const ERROR_BACK_PATH = '/dashboard';
-export const ERROR_BACK_FALLBACK_PATH = '/dashboard/home';
+export const ERROR_BACK_FALLBACK_PATH = '/dashboard/artists';
 
 export function errorBackHref(pathname: string | null | undefined): string {
   const path = (pathname || '').split(/[?#]/)[0].replace(/\/+$/, '') || '/';

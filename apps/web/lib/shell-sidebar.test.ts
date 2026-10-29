@@ -67,7 +67,7 @@ describe('the desktop side menu: the open area\u2019s pages (URG-254, founder ca
 describe('the desktop page bar title', () => {
   it('names the page on screen, else the area, else nothing', () => {
     const on = buildShellAreas(ALL_ON);
-    expect(shellPageTitle(on, '/dashboard/home')).toBe('Home');
+    expect(shellPageTitle(on, '/dashboard/team')).toBe('Team');
     expect(shellPageTitle(on, '/dashboard/notes')).toBe('Notes');
     expect(shellPageTitle(on, '/dashboard')).toBe('Rollouts');
     expect(shellPageTitle(on, '/dashboard/pitching')).toBeNull();

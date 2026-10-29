@@ -41,6 +41,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.213.0",
+    title: "A shorter menu",
+    tag: "App",
+    date: "October 29, 2026",
+    highlights: [
+      "The menu is now Artists, UrgAns and Team. Home is gone, and Urganize opens on Artists.",
+      "On your phone, Team sits in the bottom menu, so you reach it in one tap.",
+      "Your notifications bell is at the top of Artists on your phone.",
+    ],
+  },
+  {
     version: "1.212.2",
     tag: "App",
     date: "October 29, 2026",
