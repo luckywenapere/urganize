@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.203.1",
+    tag: "Rollouts",
+    date: "October 29, 2026",
+    listed: false,
+    highlights: [
+      "Fill in details now opens from the Distribute page, not the rollout menu. Tap Edit on Details to change them.",
+    ],
+  },
+  {
     version: "1.203.0",
     title: "Urganize has a new address",
     tag: "Account",

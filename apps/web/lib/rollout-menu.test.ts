@@ -51,7 +51,9 @@ const keysOf = (entries: RolloutMenuEntry[]) => entries.map((entry) => entry.key
 /** Since 2026-10-16 the pitch kit and promo live inside Pitch this!, so with
  *  pitching on their own rows are not in the menu. */
 const FOLDED_INTO_PITCH: ReleaseMenuKey[] = ['pitchkit', 'promo'];
-const ALL_ON_ORDER = RELEASE_MENU_ORDER.filter((key) => !FOLDED_INTO_PITCH.includes(key) && key !== 'spend');
+/** Fill in details opens from inside Distribute only (2026-10-29, #848). */
+const NOT_A_ROW: ReleaseMenuKey[] = ['spend', 'metadata'];
+const ALL_ON_ORDER = RELEASE_MENU_ORDER.filter((key) => !FOLDED_INTO_PITCH.includes(key) && !NOT_A_ROW.includes(key));
 
 /** Which row each feature switch owns. The mapping is the thing being tested,
  *  so it is written out here rather than derived from the module. */
@@ -62,7 +64,7 @@ const ROW_BY_FLAG: Record<keyof RolloutMenuFlags, ReleaseMenuKey[]> = {
   contentCalendar: ['calendar'],
   pitching: ['pitch'],
   pitchKit: [],
-  metadata: ['metadata'],
+  metadata: [],
   notes: ['note'],
   coverArt: ['coverart'],
   files: ['files'],
@@ -144,6 +146,12 @@ describe('buildRolloutMenu', () => {
     ]);
   });
 
+  it('never shows Fill in details: it opens from inside Distribute (#848)', () => {
+    for (const variant of ['rail', 'phone'] as const) {
+      expect(keysOf(build({ variant })), variant).not.toContain('metadata');
+    }
+  });
+
   it('never shows the Spend row: the spend tracker is cut (URG-319)', () => {
     for (const showSpend of [true, false, undefined]) {
       expect(keysOf(build({ showSpend })), String(showSpend)).not.toContain('spend');
@@ -195,10 +203,15 @@ describe('which row is lit', () => {
   });
 
   it('lights exactly the open scene’s row, for every scene that has one', () => {
-    for (const scene of SCENE_ROWS.filter((key) => !FOLDED_INTO_PITCH.includes(key))) {
+    for (const scene of SCENE_ROWS.filter((key) => !FOLDED_INTO_PITCH.includes(key) && key !== 'metadata')) {
       const lit = build({ activeScene: scene as SceneName }).filter((entry) => entry.isActive);
       expect(lit.map((entry) => entry.key), scene).toEqual([scene]);
     }
+  });
+
+  it('lights Distribute while Fill in details is open (#848)', () => {
+    const lit = build({ activeScene: 'metadata' }).filter((entry) => entry.isActive);
+    expect(lit.map((entry) => entry.key)).toEqual(['distribute']);
   });
 
   it('lights Timeline, and only Timeline, while the timeline is showing', () => {
@@ -270,7 +283,6 @@ describe('what each row does', () => {
       chat: 'Talk to the team',
       calendar: 'Plan content',
       pitch: 'Pitch this!',
-      metadata: 'Fill in details',
       coverart: 'Add cover art',
       files: 'Add files',
       capture: 'Pre-save link',
