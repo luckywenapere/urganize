@@ -11,7 +11,7 @@ const header = read('components/workspace/RolloutPhoneHeader.tsx');
 const subNav = read('components/shell/SubNav.tsx');
 const panel = read('components/workspace/TasksPanel.tsx');
 const timeline = read('components/releases/TimelineScene.tsx');
-const checklist = read('components/workspace/DistributionChecklist.tsx');
+const strip = read('components/workspace/DistributionStatusStrip.tsx');
 
 describe('phone rollout declutter', () => {
   it('hides the Artists / Rollouts tabs while a rollout is open, and only then', () => {
@@ -50,12 +50,12 @@ describe('phone rollout declutter', () => {
     expect(panel).not.toContain('hasMobileDockControls');
   });
 
-  it('shows the readiness check as one row that goes when the checklist is complete', () => {
+  it('shows no readiness checklist: the work is plan tasks, only warnings stay as a line (#851)', () => {
     expect(view).toContain('row={!isDesktopViewport}');
-    expect(checklist).toMatch(/if \(row\) \{\s*if \(allDone\) return null;/);
-    expect(checklist).toContain('Before distribution</span>');
-    // Empty blocks never render: an empty checklist draws nothing at all.
-    expect(checklist).toContain('if (checklist.total === 0) return null;');
+    expect(strip).toContain('issuesLeftOnRollout(data)');
+    expect(strip).not.toContain('DistributionChecklist');
+    // Empty blocks never render.
+    expect(strip).toContain('if (rejections.length === 0 && left.errors.length + left.warnings.length === 0) return null;');
   });
 
   it('hides search behind the header icon and swaps the Info popover for a colour key', () => {
@@ -94,14 +94,8 @@ describe('phone rollout declutter', () => {
     // computer mounts it only off the timeline, so the card stays desktop-only.
     expect(view).toContain('{isDesktopViewport ? null : distributionStatusStrip}');
     expect(view).toContain("{isDesktopViewport && panelBody !== 'timeline' ? distributionStatusStrip : null}");
-    // The strip hands the row flag to the checklist, and the row branch
-    // returns before the card (its "Before you order distribution" title) is reached.
-    const strip = read('components/workspace/DistributionStatusStrip.tsx');
-    expect(strip).toContain('row={row}');
-    const rowAt = checklist.indexOf('if (row) {');
-    const cardAt = checklist.indexOf("'Before you order distribution'");
-    expect(rowAt).toBeGreaterThan(-1);
-    expect(cardAt).toBeGreaterThan(rowAt);
+    // The "Before you order distribution" card is gone: its work is plan tasks (#851).
+    expect(strip).not.toContain('Before you order distribution');
   });
 
   it('lays the header out in two rows on golden-ratio steps (mock option A, Oct 26, 2026)', () => {

@@ -2,9 +2,9 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { prefersReducedMotion } from '@/lib/morph';
-import { DistributionRejectionList } from '@/components/releases/DistributionIssueList';
+import { DistributionIssueList, DistributionRejectionList } from '@/components/releases/DistributionIssueList';
 import { useDistributionStatus } from '@/components/releases/useDistributionStatus';
-import { DistributionChecklist, hasChecklistRecord } from './DistributionChecklist';
+import { issuesLeftOnRollout } from '@/lib/distribution-prep-tasks';
 import { HandoffChip } from './HandoffChip';
 
 type DistributionStatusStripProps = {
@@ -38,13 +38,10 @@ type DistributionStatusStripProps = {
  * nothing at all: a "you're ready" banner on every release would be chrome that
  * teaches people to stop reading the banners.
  *
- * A CHECKLIST, NOT A WALL (2026-10-11, founder call). A new rollout with no
- * details yet can carry eight items, and a replay showed a first-time manager
- * open "Fix these before you order distribution (8)" and close it within six
- * seconds. So the readiness half is DistributionChecklist now: progress in the
- * header ("3 of 8 done"), the next open item in view with its Fix button, the
- * rest one tap away, warnings tickable by hand, and a `role_gap_fixed` event
- * each time an item is done. See lib/distribution-checklist.ts.
+ * TASKS, NOT A CHECKLIST (#851, 2026-10-29, founder call). The checklist that
+ * replaced the wall (2026-10-11) is gone too: what it asked for is three plan
+ * tasks now (lib/distribution-prep-tasks.ts). This shows only the warnings,
+ * any error no task covers, and the distributor's answer.
  *
  * NOT ON A RELEASED ROLLOUT (v1.92.5). Once the rollout reads Released (the
  * Catalogue's derived status), WorkspaceView passes `showReadiness={false}`:
@@ -88,30 +85,28 @@ export function DistributionStatusStrip({
   // rather than a wrong one.
   if (!data) return null;
 
-  // Mounted even with nothing open, so a checklist the team has worked through
-  // keeps saying "8 of 8 done" until the order is handed off. It draws nothing
-  // for a rollout the check has never raised anything about.
+  // THE WORK IS IN THE PLAN NOW (#851, 2026-10-29, founder call). Genre,
+  // language, explicit, songwriter credits and artwork are three ordinary tasks
+  // (lib/distribution-prep-tasks.ts), so the checklist card is gone. What is
+  // left here is what is not a to-do: a date that is tight, splits that do not
+  // add up, and anything the distributor sent back.
   const showIssues = showReadiness && !data.lastHandoffAt;
+  const left = showIssues ? issuesLeftOnRollout(data) : { errors: [], warnings: [] };
   // The newest answer only: the Distribute scene keeps the history.
   const rejections = data.rejections.slice(0, 1);
-  if (!showIssues && rejections.length === 0) return null;
-  if (rejections.length === 0 && data.errors.length + data.warnings.length === 0 && !hasChecklistRecord(releaseId)) {
-    return null;
-  }
+  if (rejections.length === 0 && left.errors.length + left.warnings.length === 0) return null;
 
   const section = (
-    <section aria-label="Check before distribution" className={compact || row ? 'space-y-2' : 'mb-3 space-y-2'}>
+    <section aria-label="Check before distribution" className={row ? 'space-y-2' : 'mb-3 space-y-2'}>
       {rejections.length > 0 ? <DistributionRejectionList rejections={rejections} /> : null}
-
-      {showIssues ? (
-        <DistributionChecklist
+      {left.errors.length + left.warnings.length > 0 ? (
+        <DistributionIssueList
           releaseId={releaseId}
-          errors={data.errors}
-          warnings={data.warnings}
+          errors={left.errors}
+          warnings={left.warnings}
           onOpenDetails={onOpenDetails}
           onChangeArtist={onChangeArtist}
-          compact={compact}
-          row={row}
+          skipFirstHeading
         />
       ) : null}
     </section>

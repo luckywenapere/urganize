@@ -29,7 +29,6 @@ const FILES = [
   'components/releases/ReleaseSetupSheet.tsx',
   'components/shell/swipe/UrgAnsPane.tsx',
   'components/share/ShareSheet.tsx',
-  'components/workspace/DistributionChecklist.tsx',
 ];
 
 describe('44px tap targets', () => {

@@ -49,9 +49,6 @@ describe('copy fixes', () => {
     expect(read('lib', 'planner-template-preview.ts')).toContain('DATED_ROLLOUT_PHASES');
     expect(read('lib', 'planner-template-preview.ts')).not.toContain('derivePlanPhase(');
   });
-  it('the empty rollout row reads "Before distribution", never "Ready to distribute"', () => {
-    expect(read('components', 'workspace', 'DistributionChecklist.tsx')).toContain('Before distribution</span>');
-  });
   it('the pitch kit pill has no leading comma in its hidden text', () => {
     const kit = read('components', 'releases', 'PitchKitSection.tsx');
     expect(kit).not.toContain("', done'");
