@@ -1,6 +1,6 @@
 // Closed sign-up (2026-10-15), browser half of a /start/<code> invite.
 //
-// The person opens my.urganize.app/start/<code>, then signs up, often with
+// The person opens team.urganize.app/start/<code>, then signs up, often with
 // Google, which leaves the site and comes back. The code has to survive that
 // trip, so it lives in localStorage (sessionStorage does not survive the
 // system-browser round trip the Expo shell uses), with its own expiry so a

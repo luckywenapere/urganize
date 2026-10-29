@@ -8,7 +8,7 @@ import { APP_LOGIN_URL, APP_PASSWORD_RESET_URL } from "@/lib/app-urls";
 import { PageDawn } from "../components/marketing/PageDawn";
 
 // Why this page exists on the MARKETING domain rather than being a bare
-// redirect to my.urganize.app (founder call, 2026-08-09): people search the
+// redirect to team.urganize.app (founder call, 2026-08-09): people search the
 // brand to log in, and Google draws the sitelinks under the urganize.app
 // result only from pages ON urganize.app. A subdomain is a separate site for
 // that purpose, and a pure redirect isn't indexable either — so a real page
@@ -37,7 +37,7 @@ export default function LoginPage() {
               Log in to Urganize
             </h1>
             <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
-              Urganize is at my.urganize.app. Sign in there to pick up your
+              Urganize is at team.urganize.app. Sign in there to pick up your
               rollouts, your activity list and whatever your team moved since
               you last looked.
             </p>

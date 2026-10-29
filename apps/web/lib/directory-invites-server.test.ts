@@ -185,7 +185,7 @@ describe('createDirectoryInvite', () => {
     const result = await createDirectoryInvite(admin(), { inviter, workspaceId: 'ws-1', data: input() });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.url).toMatch(/^https:\/\/my\.urganize\.app\/welcome\/[A-Za-z0-9_-]{20,}$/);
+    expect(result.url).toMatch(/^https:\/\/team\.urganize\.app\/welcome\/[A-Za-z0-9_-]{20,}$/);
     expect(result.emailed).toBe(false);
     expect(result.invite).toMatchObject({ name: 'Tobi Ade', role: 'mix_engineer', channel: 'link', status: 'invited' });
 

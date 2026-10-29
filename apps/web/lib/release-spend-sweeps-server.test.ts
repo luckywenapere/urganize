@@ -216,7 +216,7 @@ describe('runPaybackQuestionSweep', () => {
       props: {
         recipientName: 'Ada Obi',
         releaseTitle: 'Ohema',
-        spendUrl: `https://my.urganize.app/dashboard?release=${R1}&scene=spend`,
+        spendUrl: `https://team.urganize.app/dashboard?release=${R1}&scene=spend`,
       },
       recipientUserId: 'owner-1',
     });

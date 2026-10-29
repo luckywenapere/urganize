@@ -495,7 +495,7 @@ export function MetadataSection({
       });
       if (outcome === 'unsupported') {
         onToast?.(
-          'This app version cannot save files. Open my.urganize.app in your browser and export from there.',
+          'This app version cannot save files. Open team.urganize.app in your browser and export from there.',
           'warning'
         );
       } else if (outcome === 'downloaded') {

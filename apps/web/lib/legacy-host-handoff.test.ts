@@ -12,6 +12,7 @@ const at = (pathname: string, search = '', hash = '') => ({ pathname, search, ha
 
 describe('shareOrigin', () => {
   it('puts go.urganize.app on links made on any product host', () => {
+    expect(shareOrigin('https://team.urganize.app')).toBe(SHARE_ORIGIN);
     expect(shareOrigin('https://my.urganize.app')).toBe(SHARE_ORIGIN);
     expect(shareOrigin('https://app.urganize.app/')).toBe(SHARE_ORIGIN);
     expect(shareOrigin('https://go.urganize.app')).toBe(SHARE_ORIGIN);
@@ -27,9 +28,11 @@ describe('shareOrigin', () => {
     expect(currentShareOrigin()).toBe('');
   });
 
-  it('knows the old host only', () => {
+  it('knows the old hosts only', () => {
     expect(isLegacyAppHost('App.Urganize.App')).toBe(true);
-    expect(isLegacyAppHost('my.urganize.app')).toBe(false);
+    expect(isLegacyAppHost('my.urganize.app')).toBe(true);
+    expect(isLegacyAppHost('team.urganize.app')).toBe(false);
+    expect(isLegacyAppHost('go.urganize.app')).toBe(false);
   });
 });
 
@@ -98,6 +101,8 @@ describe('the early <head> script', () => {
       'https://app.urganize.app/auth#error=x&error_description=y',
       'https://app.urganize.app/dashboard',
       'https://app.urganize.app/k/tobi#photos',
+      'https://my.urganize.app/auth/callback#access_token=a&refresh_token=b',
+      'https://my.urganize.app/dashboard',
     ];
     for (const href of cases) {
       const url = new URL(href);
@@ -107,6 +112,6 @@ describe('the early <head> script', () => {
   });
 
   it('does nothing on the new host', () => {
-    expect(run('https://my.urganize.app/auth/callback#access_token=a')).toBeNull();
+    expect(run('https://team.urganize.app/auth/callback#access_token=a')).toBeNull();
   });
 });

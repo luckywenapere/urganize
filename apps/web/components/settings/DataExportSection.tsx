@@ -67,7 +67,7 @@ export function DataExportSection() {
       // the product.
       if (outcome === 'unsupported') {
         setError(
-          'This app version cannot save files. Open my.urganize.app in your browser and export from there.'
+          'This app version cannot save files. Open team.urganize.app in your browser and export from there.'
         );
       } else if (outcome === 'downloaded') {
         setNotice('Your export has been downloaded.');

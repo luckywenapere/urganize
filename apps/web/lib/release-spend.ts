@@ -126,7 +126,7 @@ export const SPEND_COPY = {
   // The spreadsheet download, in the words the credits export already uses.
   csvDownloaded: 'Spreadsheet downloaded.',
   csvShared: 'Your spreadsheet is ready to save.',
-  csvUnsupported: 'This app version cannot save files. Open my.urganize.app in your browser and export from there.',
+  csvUnsupported: 'This app version cannot save files. Open team.urganize.app in your browser and export from there.',
 } as const;
 
 /** The payback question, the brief's wording. An untitled rollout is "this rollout". */
