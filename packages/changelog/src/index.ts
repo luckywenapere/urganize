@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.207.0",
+    title: "UrgAns knows your smart link",
+    tag: "AI",
+    date: "October 29, 2026",
+    highlights: [
+      "Once your rollout has its UPC or ISRC, UrgAns gives you its smart link and how many fans have pre-saved, and tells you to share it before release day.",
+    ],
+  },
+  {
     version: "1.206.3",
     tag: "Account",
     date: "October 29, 2026",
