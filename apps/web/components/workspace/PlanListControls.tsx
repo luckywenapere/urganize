@@ -387,11 +387,14 @@ function PlanListRow({
 export function PlanShowAllToggle({
   plan,
   cancelledOnly = false,
+  done = null,
 }: {
   plan: PlanListState;
   /** Just the cancelled link: the undated pre-production list shows every
    *  activity already, so "Show all" would promise nothing. */
   cancelledOnly?: boolean;
+  /** The timeline's Hide done switch (#867), as a link between the two. */
+  done?: { count: number; shown: boolean; onToggle: () => void } | null;
 }) {
   if (plan.filtering) {
     if (plan.visible.length > 0) return null;
@@ -401,9 +404,14 @@ export function PlanShowAllToggle({
   }
   const showAllLink = plan.hiddenCount > 0 && !cancelledOnly;
   const cancelledLink = plan.cancelledCount > 0;
-  if (!showAllLink && !cancelledLink) return null;
+  if (!showAllLink && !cancelledLink && !done) return null;
   const linkClass =
     'motion-focus rounded-md px-2 py-1 text-xs font-medium text-content-secondary underline-offset-4 transition-colors hover:text-content-primary hover:underline';
+  const dot = (
+    <span className="text-xs text-content-tertiary" aria-hidden="true">
+      ·
+    </span>
+  );
   return (
     <div className="flex flex-wrap items-center justify-center gap-x-1 pt-1" data-plan-quiet-line>
       {showAllLink ? (
@@ -416,11 +424,19 @@ export function PlanShowAllToggle({
           {plan.showAll ? 'Show key activities' : `Show all ${plan.totalCount} activities`}
         </button>
       ) : null}
-      {showAllLink && cancelledLink ? (
-        <span className="text-xs text-content-tertiary" aria-hidden="true">
-          ·
-        </span>
+      {showAllLink && done ? dot : null}
+      {done ? (
+        <button
+          type="button"
+          onClick={done.onToggle}
+          aria-pressed={done.shown}
+          data-show-done
+          className={linkClass}
+        >
+          {done.shown ? 'Hide done' : `Show done · ${done.count}`}
+        </button>
       ) : null}
+      {(showAllLink || done) && cancelledLink ? dot : null}
       {cancelledLink ? (
         <button
           type="button"

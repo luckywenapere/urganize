@@ -337,6 +337,12 @@ export function isShowCancelledMap(value: unknown): value is ShowCancelledMap {
   );
 }
 
+/** Done work on the timeline grid (#867) is hidden by default and, like
+ *  cancelled work, the choice to show it is remembered per rollout on this
+ *  device. Same map shape, so it reuses isShowCancelledMap and withShowCancelled. */
+export const SHOW_DONE_STORAGE_KEY = 'urganize.timeline.show-done';
+export const SHOW_DONE_STORAGE_VERSION = 1;
+
 /** The map with one rollout turned on or off. Off removes the entry; on adds
  *  it at the end and drops the oldest past the cap. */
 export function withShowCancelled(map: ShowCancelledMap, rolloutId: string, on: boolean): ShowCancelledMap {
