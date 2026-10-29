@@ -15,7 +15,10 @@ describe('searchSettings', () => {
     expect(searchSettings('invoice', ALL)[0]).toMatchObject({ segment: 'billing' });
     expect(searchSettings('invite', ALL)[0]).toMatchObject({ segment: 'team', section: 'teammates' });
     expect(searchSettings('theme', ALL)[0]).toMatchObject({ segment: 'general' });
-    expect(searchSettings('claude', ALL)[0]).toMatchObject({ segment: 'connections', section: 'connected-apps' });
+    // Connections was retired (#860): its apps entry is gone, and the export
+    // lives in Security & account.
+    expect(searchSettings('claude', ALL)).toEqual([]);
+    expect(searchSettings('csv', ALL)[0]).toMatchObject({ segment: 'security', section: 'export' });
     // Press kits left Settings Oct 17, 2026; the bio lives in Pitch this!.
     expect(searchSettings('epk', ALL).some((hit) => hit.section === 'press-kits')).toBe(false);
   });
@@ -68,6 +71,8 @@ describe('searchSettings', () => {
 describe('the search index', () => {
   it('has a whole-segment entry for every segment, so each one is findable by name', () => {
     for (const segment of SETTINGS_SEGMENTS) {
+      // Retired (#860): nothing in the index should lead to it.
+      if (segment === 'connections') continue;
       expect(SETTINGS_SEARCH_ENTRIES.some((entry) => entry.segment === segment && !entry.section)).toBe(true);
     }
   });

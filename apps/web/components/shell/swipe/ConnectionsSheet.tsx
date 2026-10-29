@@ -11,6 +11,9 @@ import { SwipeSheet } from './SwipeSheet';
  * settings section. The placeholder services (the list of coming-later apps and
  * accounts) were removed on 2026-10-21 because tapping them did nothing; they
  * come back one at a time, when the service is actually wired.
+ *
+ * Retired 2026-10-29 (#860): nothing opens this sheet any more. Kept so it can
+ * come back; see AvatarMenu.tsx and the `connections` line in settings-nav.ts.
  */
 
 const ROW = 'flex min-h-[58px] items-center gap-4 border-b border-content-primary/[0.07] last:border-b-0';

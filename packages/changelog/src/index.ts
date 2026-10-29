@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.209.2",
+    tag: "Account",
+    date: "October 29, 2026",
+    highlights: [
+      "Connections is gone from the menu and from Settings.",
+      "To download a copy of your data, go to Settings, then Security & account.",
+    ],
+  },
+  {
     version: "1.209.1",
     tag: "Team",
     date: "October 29, 2026",

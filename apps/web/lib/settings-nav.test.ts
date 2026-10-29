@@ -39,7 +39,10 @@ const params = (query: string) => new URLSearchParams(query);
 
 /** Everything except Admin, which only an admin account gets. */
 // Team moved to its own tab (#853), so no one sees it in Settings any more.
-const NON_ADMIN = SETTINGS_SEGMENTS.filter((segment) => segment !== 'admin' && segment !== 'team');
+// Connections was retired (#860), the same way.
+const NON_ADMIN = SETTINGS_SEGMENTS.filter(
+  (segment) => segment !== 'admin' && segment !== 'team' && segment !== 'connections'
+);
 
 describe('the segment list', () => {
   it('is ten segments, in the order the founder chose, with Admin last', () => {
@@ -98,7 +101,6 @@ describe('visibleSettingsSegments', () => {
       'notifications',
       'urgans',
       'directory',
-      'connections',
       'security',
     ]);
   });
@@ -131,14 +133,15 @@ describe('visibleSettingsSegments', () => {
     expect(visibleSettingsSegments({ role: 'manager' }, ALL_OFF)).not.toContain('artists');
   });
 
-  it('keeps Connections & data while either AI apps or export exists, and drops it when neither does', () => {
-    expect(
-      visibleSettingsSegments({ role: 'manager' }, { ...ALL_OFF, mcpConnect: true })
-    ).toContain('connections');
-    expect(
-      visibleSettingsSegments({ role: 'manager' }, { ...ALL_OFF, dataExport: true })
-    ).toContain('connections');
-    expect(visibleSettingsSegments({ role: 'manager' }, ALL_OFF)).not.toContain('connections');
+  it('never shows Connections & data, which was retired (#860, Oct 29, 2026)', () => {
+    for (const role of ['manager', 'artist', 'team-member', 'viewer']) {
+      expect(visibleSettingsSegments({ role }, ALL_ON)).not.toContain('connections');
+    }
+  });
+
+  it('sends an old ?settings=connections link to the menu, not an empty pane', () => {
+    const visible = visibleSettingsSegments({ role: 'manager' }, ALL_ON);
+    expect(resolveSettingsView('connections', visible)).toBe(SETTINGS_MENU);
   });
 
   it('always keeps General, Notifications and Security & account, so the pop-up is never empty', () => {
@@ -297,10 +300,8 @@ describe('legacySettingsTarget (the /settings redirect stub)', () => {
       segment: 'artists',
       section: 'brand-colors',
     });
-    expect(legacySettingsTarget('', '#connected-apps')).toEqual({
-      segment: 'connections',
-      section: 'connected-apps',
-    });
+    // Connections was retired (#860), so its old anchor opens the menu.
+    expect(legacySettingsTarget('', '#connected-apps')).toEqual({ segment: SETTINGS_MENU, section: null });
     expect(legacySettingsTarget('?tab=workspace', '#brand-colors')).toEqual({
       segment: 'artists',
       section: 'brand-colors',

@@ -122,21 +122,16 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     ],
   },
 
-  wholeSegment('connections', ['data', 'apps']),
+  // Connections was retired on 2026-10-29 (#860); its Connected apps entry
+  // left with it and the export moved to Security & account.
   {
-    segment: 'connections',
-    section: 'connected-apps',
-    label: 'Connected apps',
-    keywords: ['mcp', 'claude', 'chatgpt', 'ai apps', 'disconnect', 'integrations', 'access'],
-  },
-  {
-    segment: 'connections',
+    segment: 'security',
     section: 'export',
     label: 'Export your data',
     keywords: ['download', 'csv', 'json', 'backup', 'spreadsheet', 'copy of my data'],
   },
 
-  wholeSegment('security', ['account']),
+  wholeSegment('security', ['account', 'data']),
 
   wholeSegment('admin', ['internal', 'teams', 'growth', 'metrics', 'waitlist', 'emails', 'dashboard']),
   {
