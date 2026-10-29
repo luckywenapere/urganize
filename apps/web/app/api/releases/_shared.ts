@@ -12,6 +12,8 @@ import {
   type ReleaseSummary,
 } from '@/lib/release-ops';
 import { createAdminClient } from '@/app/api/_shared/auth';
+import { canPlanRelease } from '@/lib/release-team';
+import { loadMembershipInOwnersTeam } from '@/app/api/releases/[releaseId]/plan/_shared';
 
 export {
   ARTISTS_TABLE,
@@ -139,17 +141,19 @@ export async function ensureReleaseOpsSchema(
 }
 
 /**
- * OWNER-ONLY by recorded decision, not by accident: the release row itself
- * stays the owner's to change — its PATCH/DELETE, archive, and schedule.
- * Teammates work through activities and the scenes, whose route groups gate
- * through lib/release-access-server.ts's team-aware pair instead. Do not
- * reach for this helper in a new scene route group; the guard test
- * (lib/release-access-guard.test.ts) bans it there.
+ * The release row's owner, or (since #854, Oyin 29 Oct 2026) an active Manager
+ * of the owner's team, may change the row itself: rename, re-date, archive,
+ * move, schedule, collaborators. Deleting stays owner-only (`ownerOnly`).
+ * Team members and viewers still work through activities and the scenes, whose
+ * route groups gate through lib/release-access-server.ts's team-aware pair
+ * instead. Do not reach for this helper in a new scene route group; the guard
+ * test (lib/release-access-guard.test.ts) bans it there.
  */
 export async function ensureReleaseOwnership(
   adminClient: ReturnType<typeof createAdminClient>,
   releaseId: string,
-  userId: string
+  userId: string,
+  options: { ownerOnly?: boolean } = {}
 ) {
   if (!adminClient) {
     return { error: NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 }) };
@@ -170,8 +174,16 @@ export async function ensureReleaseOwnership(
 
   const ownerId = String(release?.owner_user_id || '');
   // Trash is reached only through the trash routes, never through this check.
-  if (!release || ownerId !== userId || (release as { deleted_at?: string | null }).deleted_at) {
+  if (!release || !ownerId || (release as { deleted_at?: string | null }).deleted_at) {
     return { error: NextResponse.json({ error: 'Rollout not found.' }, { status: 404 }) };
+  }
+  if (ownerId !== userId) {
+    const membership = options.ownerOnly
+      ? null
+      : await loadMembershipInOwnersTeam(adminClient, ownerId, userId);
+    if (!canPlanRelease({ userId, releaseOwnerId: ownerId, membershipInOwnersTeam: membership })) {
+      return { error: NextResponse.json({ error: 'Rollout not found.' }, { status: 404 }) };
+    }
   }
 
   return { release: toReleaseSummary(release as Record<string, unknown>) };

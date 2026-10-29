@@ -163,7 +163,8 @@ export async function GET(
 
   const adminClient = createAdminClient(auth.supabaseUrl);
   // Read path allows any member of the owner's workspace (whole-workspace
-  // visibility); PATCH/DELETE below keep owner-only ensureReleaseOwnership.
+  // visibility); PATCH below allows the owner or a team Manager (#854),
+  // DELETE stays owner-only.
   const ownership = await ensureReleaseReadAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
@@ -414,7 +415,7 @@ export async function DELETE(
     if (!releaseId) return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
 
     const adminClient = createAdminClient(auth.supabaseUrl);
-    const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+    const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id, { ownerOnly: true });
     if ('error' in ownership) return ownership.error;
 
     // Closing the UrgAns planner before it finished asks for this (2026-10-09):
