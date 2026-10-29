@@ -7,14 +7,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <style>
-  /* App tokens: apps/web dark and light themes. Logos are Altlink's own files,
-     loaded from altlink.co (read Oct 29, 2026): the navy wordmark for light
-     mode, the square mark for dark mode (Oyin's call). */
-  :root {
-    --board:#e9e3d7; --board-text:#1a1611; --board-sec:#5c544a;
-  }
-  .dark { --bg:#0c0c0d; --card:#171719; --line:rgba(242,242,240,.07); --line2:#2e2e32; --text:#f2f2f0; --sec:#929291; --ter:#6a6a69; --brand:#7fd99a; --on-brand:#0c0c0d; }
-  .light { --bg:#f7f6f3; --card:#ffffff; --line:rgba(20,20,20,.08); --line2:#d9d7d2; --text:#141414; --sec:#5f5e5b; --ter:#8a8986; --brand:#2f9e5a; --on-brand:#ffffff; }
+  /* App tokens: apps/web light and dark themes. The logo is Altlink's own
+     wordmark from altlink.co (read Oct 29, 2026), the same file in both modes;
+     dark mode inverts it to white (Oyin's call). */
+  :root { --board:#e9e3d7; --board-text:#1a1611; --board-sec:#5c544a; }
+  .light { --bg:#f7f6f3; --card:#ffffff; --line:rgba(20,20,20,.08); --line2:#d9d7d2; --text:#141414; --sec:#5f5e5b; --brand:#2f9e5a; --on-brand:#ffffff; }
+  .dark { --bg:#0c0c0d; --card:#171719; --line:rgba(242,242,240,.07); --line2:#2e2e32; --text:#f2f2f0; --sec:#929291; --brand:#7fd99a; --on-brand:#0c0c0d; }
   * { box-sizing:border-box; }
   html,body { margin:0; background:var(--board); }
   body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--board-text); padding:32px 16px 64px; }
@@ -25,7 +23,7 @@
   .board { display:flex; flex-wrap:wrap; gap:28px; justify-content:center; }
   .col { width:360px; max-width:100%; }
   .tag { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin-bottom:6px; }
-  .why { font-size:13px; color:var(--board-sec); margin-bottom:12px; min-height:58px; }
+  .why { font-size:13px; color:var(--board-sec); margin-bottom:12px; min-height:40px; }
   .phone { background:var(--bg); color:var(--text); border-radius:28px; padding:18px 16px 20px; }
   .ser { font-family:'Young Serif', serif; font-weight:400; }
   .mono { font-family:'JetBrains Mono', monospace; }
@@ -36,21 +34,15 @@
   .urlbox { display:flex; align-items:center; gap:8px; border:1px solid var(--line2); border-radius:12px; padding:8px 10px; margin-top:12px; background:var(--bg); }
   .urlbox .mono { flex:1; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .btn { display:flex; align-items:center; justify-content:center; min-height:44px; border-radius:12px; font-weight:600; font-size:14px; margin-top:12px; background:var(--brand); color:var(--on-brand); }
-  .old { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:16px; font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; opacity:.55; }
-  .old span { display:inline-grid; place-items:center; width:16px; height:16px; border:1px solid currentColor; border-radius:4px; font-size:9px; }
-  /* The new line: "powered by" + Altlink's logo, the logo is the link. */
-  .by { display:flex; align-items:center; justify-content:center; gap:7px; margin-top:16px; font-size:13px; color:var(--sec); }
-  .by a { display:inline-flex; align-items:center; gap:6px; color:var(--text); text-decoration:none; font-weight:600; letter-spacing:-.02em; }
-  .by .word { height:15px; width:auto; display:block; }
-  .by .mark { height:16px; width:16px; border-radius:4px; display:block; }
-  /* Dark fix A: a thin light ring so the black tile keeps its square shape. */
-  .by .mark.ring { height:18px; width:18px; box-shadow:0 0 0 1px rgba(242,242,240,.45); }
-  /* Dark fix B: their navy wordmark on a small light pill. */
-  .by .pill { display:inline-flex; align-items:center; background:#f2f2f0; border-radius:999px; padding:4px 10px; }
-  .by .pill .word { height:13px; }
   .row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--line); }
   .row:first-child { border-top:0; }
   .small { font-size:12px; color:var(--sec); }
+  /* "powered by" + Altlink's wordmark; the wordmark is the link to altlink.co. */
+  .by { display:flex; align-items:center; justify-content:center; gap:7px; margin-top:16px; font-size:13px; color:var(--sec); }
+  .by a { display:inline-flex; }
+  .by img { height:15px; width:auto; display:block; }
+  /* Dark mode: the same file, colours inverted, so the navy reads as white. */
+  .dark .by img { filter:brightness(0) invert(1); }
   .outline { outline:2px dashed rgba(127,217,154,.7); outline-offset:4px; border-radius:6px; }
   .note { max-width:900px; margin:28px auto 0; font-size:13px; color:var(--board-sec); }
   .note + .note { margin-top:8px; }
@@ -61,76 +53,14 @@
 
 <div class="intro">
   <h1>powered by Altlink</h1>
-  <p>From the Oct 28 call: sentence case, linked to Altlink's landing page. Their real logos, from altlink.co. Dashed outline = what changes. Issue #852.</p>
+  <p>Altlink's own wordmark, linked to altlink.co. Light mode as is, dark mode inverted. Dashed outline = what changes. Issue #852.</p>
 </div>
 
 <div class="board">
 
   <div class="col">
-    <div class="tag">Today (live since Oct 22)</div>
-    <p class="why">All caps, a small "A" box we drew ourselves (not Altlink's mark). Not a link.</p>
-    <div class="phone dark">
-      <div class="card">
-        <span class="live"><i></i>Live</span>
-        <div class="ser" style="font-size:26px;margin-top:10px">Drops in 22 days.</div>
-        <div class="urlbox"><span class="mono">altlink.co/ada/midnight-drive</span><span class="mu" style="font-size:13px;font-weight:600">Copy</span></div>
-        <div class="btn">Share link</div>
-      </div>
-      <p class="old"><span>A</span>Powered by Altlink</p>
-    </div>
-  </div>
-
-  <div class="col">
-    <div class="tag">Dark, as first drawn (the problem)</div>
-    <p class="why">The black tile melts into the dark background, so only the white circle shows. It reads as a dot, not their logo.</p>
-    <div class="phone dark">
-      <div class="card">
-        <span class="live"><i></i>Live</span>
-        <div class="ser" style="font-size:26px;margin-top:10px">Drops in 22 days.</div>
-        <div class="urlbox"><span class="mono">altlink.co/ada/midnight-drive</span><span class="mu" style="font-size:13px;font-weight:600">Copy</span></div>
-        <div class="btn">Share link</div>
-      </div>
-      <p class="by outline">powered by
-        <a href="https://altlink.co" target="_blank" rel="noopener"><img class="mark" src="https://altlink.co/assets/altlink-logo-black-Cfa8BD74.png" alt="" />Altlink</a>
-      </p>
-    </div>
-  </div>
-
-  <div class="col">
-    <div class="tag">Dark fix A (recommended): a thin ring</div>
-    <p class="why">The same square mark, a little bigger, with a faint light edge so the tile's square shape shows. Their logo itself is untouched.</p>
-    <div class="phone dark">
-      <div class="card">
-        <span class="live"><i></i>Live</span>
-        <div class="ser" style="font-size:26px;margin-top:10px">Drops in 22 days.</div>
-        <div class="urlbox"><span class="mono">altlink.co/ada/midnight-drive</span><span class="mu" style="font-size:13px;font-weight:600">Copy</span></div>
-        <div class="btn">Share link</div>
-      </div>
-      <p class="by outline">powered by
-        <a href="https://altlink.co" target="_blank" rel="noopener"><img class="mark ring" src="https://altlink.co/assets/altlink-logo-black-Cfa8BD74.png" alt="" />Altlink</a>
-      </p>
-    </div>
-  </div>
-
-  <div class="col">
-    <div class="tag">Dark fix B: the wordmark on a light pill</div>
-    <p class="why">Their full navy wordmark, the same file as light mode, on a small light pill. Clearest logo, but the only light patch on a dark screen.</p>
-    <div class="phone dark">
-      <div class="card">
-        <span class="live"><i></i>Live</span>
-        <div class="ser" style="font-size:26px;margin-top:10px">Drops in 22 days.</div>
-        <div class="urlbox"><span class="mono">altlink.co/ada/midnight-drive</span><span class="mu" style="font-size:13px;font-weight:600">Copy</span></div>
-        <div class="btn">Share link</div>
-      </div>
-      <p class="by outline">powered by
-        <a href="https://altlink.co" target="_blank" rel="noopener" aria-label="Altlink"><span class="pill"><img class="word" src="https://altlink.co/assets/altlink-logo-Bw5A4RY2.png" alt="Altlink" /></span></a>
-      </p>
-    </div>
-  </div>
-
-  <div class="col">
-    <div class="tag">Proposed: light mode</div>
-    <p class="why">Their full navy wordmark, as on altlink.co. The wordmark is the link to altlink.co.</p>
+    <div class="tag">Light mode</div>
+    <p class="why">Their wordmark exactly as on altlink.co.</p>
     <div class="phone light">
       <div class="card">
         <span class="live"><i></i>Live</span>
@@ -139,30 +69,46 @@
         <div class="btn">Share link</div>
       </div>
       <p class="by outline">powered by
-        <a href="https://altlink.co" target="_blank" rel="noopener" aria-label="Altlink"><img class="word" src="https://altlink.co/assets/altlink-logo-Bw5A4RY2.png" alt="Altlink" /></a>
+        <a href="https://altlink.co" target="_blank" rel="noopener"><img src="https://altlink.co/assets/altlink-logo-Bw5A4RY2.png" alt="Altlink" /></a>
       </p>
     </div>
   </div>
 
   <div class="col">
-    <div class="tag">Artist's past releases (dark, fix A)</div>
-    <p class="why">These links are Altlink's too but carry no label today. The same line goes under the list once any release has a link.</p>
+    <div class="tag">Dark mode</div>
+    <p class="why">The same wordmark, colours inverted to white.</p>
     <div class="phone dark">
+      <div class="card">
+        <span class="live"><i></i>Live</span>
+        <div class="ser" style="font-size:26px;margin-top:10px">Drops in 22 days.</div>
+        <div class="urlbox"><span class="mono">altlink.co/ada/midnight-drive</span><span class="mu" style="font-size:13px;font-weight:600">Copy</span></div>
+        <div class="btn">Share link</div>
+      </div>
+      <p class="by outline">powered by
+        <a href="https://altlink.co" target="_blank" rel="noopener"><img src="https://altlink.co/assets/altlink-logo-Bw5A4RY2.png" alt="Altlink" /></a>
+      </p>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="tag">Artist's past releases</div>
+    <p class="why">These links are Altlink's too. The same line goes under the list.</p>
+    <div class="phone light">
       <div class="ser" style="font-size:20px">Past releases</div>
       <div class="card" style="padding:4px 14px">
         <div class="row"><div><div>Owambe</div><div class="small">UPC 123456789012</div></div><span class="mono" style="font-size:12px;color:var(--brand)">altlink.co/ada/owambe</span></div>
         <div class="row"><div><div>Lagos Rain</div><div class="small">ISRC NGA1B2600001</div></div><span style="font-size:12px;font-weight:600;border:1px solid var(--line2);border-radius:8px;padding:6px 10px">Grab a smart link</span></div>
       </div>
       <p class="by outline">powered by
-        <a href="https://altlink.co" target="_blank" rel="noopener"><img class="mark ring" src="https://altlink.co/assets/altlink-logo-black-Cfa8BD74.png" alt="" />Altlink</a>
+        <a href="https://altlink.co" target="_blank" rel="noopener"><img src="https://altlink.co/assets/altlink-logo-Bw5A4RY2.png" alt="Altlink" /></a>
       </p>
     </div>
   </div>
 
 </div>
 
-<p class="note"><b>Logos:</b> Altlink's own files from altlink.co, unchanged. Light mode: the navy wordmark (altlink-logo, 558 x 112). Dark mode: the square mark (altlink-logo-black, 456 x 456), a black tile with a white circle. The site has no white wordmark, so dark mode spells the name in our type beside the mark.</p>
-<p class="note"><b>Still assumed:</b> lowercase "powered" is what they meant by sentence case, and https://altlink.co is the page to link. Worth confirming when you send this for approval.</p>
+<p class="note"><b>Logo:</b> Altlink's wordmark from altlink.co (altlink-logo, 558 x 112), unchanged in light mode. In dark mode the app inverts it to white on screen; the file itself is not edited.</p>
+<p class="note"><b>Replaces today's label:</b> "POWERED BY ALTLINK" in caps with an "A" box we drew ourselves, not linked.</p>
 
 </body>
 </html>
