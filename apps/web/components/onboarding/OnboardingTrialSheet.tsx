@@ -137,7 +137,7 @@ export function OnboardingTrialSheetHost() {
             <div className="flex items-baseline justify-between gap-2.5">
               <span className="text-base font-semibold">
                 {plan.name}
-                <span className="ml-1.5 rounded-full border border-stroke-control px-2 py-0.5 align-middle font-mono text-[10.5px] uppercase tracking-[0.06em] text-content-tertiary">
+                <span className="ml-1.5 rounded-full border border-brand px-2 py-0.5 align-middle font-mono text-[10.5px] uppercase tracking-[0.06em] text-brand">
                   Fits you
                 </span>
               </span>

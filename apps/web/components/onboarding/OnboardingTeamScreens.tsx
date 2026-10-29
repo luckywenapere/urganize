@@ -368,6 +368,22 @@ export function AskInviteScreen({
           <BackLink onClick={onBack} />
           <Heading>Ask your team to invite you</Heading>
           <Lede>The team owner adds you from Team, then Invite. Send them this.</Lede>
+          <div role="status" className={`${surfaceClass} mt-[18px] flex items-start gap-3 p-4`}>
+            {longWait ? <span className="shrink-0 text-status-warning">{icons.whatsapp}</span> : <Spinner />}
+            <div>
+              <p className="font-semibold">{longWait ? 'No invite yet' : 'Waiting for your invite'}</p>
+              <p className="text-[13.5px] text-content-secondary">
+                {longWait
+                  ? 'Send the message again? Owners often miss the first one.'
+                  : 'This page updates by itself. You can close it and come back.'}
+              </p>
+              {longWait ? (
+                <button type="button" onClick={sendWhatsapp} className={`${smallSecondaryClass} mt-2.5`}>
+                  Send on WhatsApp again
+                </button>
+              ) : null}
+            </div>
+          </div>
           <Chips account={account} />
         </>
       }
@@ -404,7 +420,7 @@ export function AskInviteScreen({
               <button
                 type="button"
                 onClick={() => void copy(account.email).then((ok) => setEmailCopied(ok))}
-                className="min-h-10 rounded-full px-3 text-sm font-semibold text-content-primary hover:bg-bg-hover"
+                className="min-h-11 rounded-full px-3.5 text-sm font-semibold text-content-primary hover:bg-bg-hover"
               >
                 {emailCopied ? 'Copied' : 'Copy'}
               </button>
@@ -450,22 +466,6 @@ export function AskInviteScreen({
                 </button>
               </p>
             )}
-          </div>
-          <div role="status" className={`${surfaceClass} mt-2.5 flex items-start gap-3 p-4`}>
-            {longWait ? <span className="shrink-0 text-status-warning">{icons.whatsapp}</span> : <Spinner />}
-            <div>
-              <p className="font-semibold">{longWait ? 'No invite yet' : 'Waiting for your invite'}</p>
-              <p className="text-[13.5px] text-content-secondary">
-                {longWait
-                  ? 'Send the message again? Owners often miss the first one.'
-                  : 'This page updates by itself. You can close it and come back.'}
-              </p>
-              {longWait ? (
-                <button type="button" onClick={sendWhatsapp} className={`${smallSecondaryClass} mt-2.5`}>
-                  Send on WhatsApp again
-                </button>
-              ) : null}
-            </div>
           </div>
           <p className="mt-5 text-center text-sm text-content-secondary">
             <button type="button" onClick={onUseDifferentEmail} className={textLinkClass}>

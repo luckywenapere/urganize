@@ -61,7 +61,7 @@ export function OnboardingHeardFromRow({ releaseId }: { releaseId: string }) {
                 key={option.value}
                 type="button"
                 onClick={() => void answer(option.value)}
-                className="motion-press inline-flex min-h-10 items-center rounded-full border border-stroke-control bg-bg-base px-3.5 text-sm text-content-primary transition-colors hover:bg-bg-hover"
+                className="motion-press inline-flex min-h-11 items-center rounded-full border border-stroke-control bg-bg-base px-3.5 text-sm text-content-primary transition-colors hover:bg-bg-hover"
               >
                 {option.value === 'x' ? 'X' : option.label}
               </button>

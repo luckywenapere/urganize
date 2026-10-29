@@ -19,10 +19,10 @@ export const secondaryButtonClass =
   'motion-press inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-full border border-stroke-control bg-transparent px-5 text-[15px] font-semibold text-content-primary transition-colors duration-fast ease-standard hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-50';
 
 export const smallSecondaryClass =
-  'motion-press inline-flex min-h-10 items-center justify-center rounded-full border border-stroke-control bg-transparent px-4 text-sm font-semibold text-content-primary transition-colors duration-fast ease-standard hover:bg-bg-hover disabled:opacity-50';
+  'motion-press inline-flex min-h-11 items-center justify-center rounded-full border border-stroke-control bg-transparent px-4 text-sm font-semibold text-content-primary transition-colors duration-fast ease-standard hover:bg-bg-hover disabled:opacity-50';
 
 export const textLinkClass =
-  'text-content-primary underline decoration-content-tertiary underline-offset-[3px] transition-colors hover:decoration-content-primary';
+  "relative after:absolute after:-inset-x-1 after:-inset-y-3.5 after:content-[''] text-content-primary underline decoration-content-tertiary underline-offset-[3px] transition-colors hover:decoration-content-primary";
 
 export const inputClass =
   'block h-12 w-full rounded-xl border border-stroke-control bg-bg-base px-3.5 text-base text-content-primary outline-none transition-colors duration-fast ease-standard placeholder:text-content-tertiary focus:border-brand disabled:opacity-50';
@@ -33,7 +33,7 @@ export const errorTextClass = 'mt-1.5 block text-[13px] text-status-error';
 export const surfaceClass = 'rounded-2xl border border-stroke-control bg-bg-surface';
 
 export function chipClass(selected: boolean): string {
-  return `motion-press inline-flex min-h-10 items-center rounded-full border px-3.5 text-sm text-content-primary transition-colors duration-fast ease-standard ${
+  return `motion-press inline-flex min-h-11 items-center rounded-full border px-4 text-sm text-content-primary transition-colors duration-fast ease-standard ${
     selected ? 'border-brand bg-brand/10 shadow-[inset_0_0_0_0.5px_rgb(var(--color-brand))]' : 'border-stroke-control bg-bg-base hover:bg-bg-hover'
   }`;
 }
@@ -146,7 +146,7 @@ export function AccountChip({
     >
       <Avatar name={name || email} />
       <span className="min-w-0 truncate text-content-primary">{email}</span>
-      <button type="button" onClick={onLogout} className={`ml-auto min-h-10 shrink-0 ${textLinkClass} text-content-secondary`}>
+      <button type="button" onClick={onLogout} className={`ml-auto shrink-0 ${textLinkClass} text-content-secondary`}>
         {logoutLabel}
       </button>
     </div>
@@ -294,21 +294,21 @@ export function Sheet({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[80]">
-      <div className="absolute inset-0 animate-fade-in bg-black/50" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 animate-fade-in bg-[rgb(13_18_14/0.55)]" onClick={onClose} aria-hidden="true" />
       <div
         ref={panelRef}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
-        className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-y-auto rounded-t-[22px] border-t border-stroke-control bg-bg-surface px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-2 text-content-primary outline-none md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:w-[460px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:border md:p-6"
+        className="absolute inset-x-0 bottom-0 max-h-[88vh] animate-fade-in overflow-y-auto overscroll-contain rounded-t-[22px] border-t border-stroke-control bg-bg-surface px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-2 text-content-primary outline-none md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:w-[460px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:border md:p-6"
       >
         <div className="mx-auto mb-2.5 mt-1 h-1 w-10 rounded-full bg-stroke-control md:hidden" aria-hidden="true" />
         <button
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-2.5 top-2.5 grid h-10 w-10 place-items-center rounded-full text-xl text-content-secondary hover:bg-bg-hover"
+          className="absolute right-2 top-2 grid h-11 w-11 place-items-center rounded-full text-xl text-content-secondary hover:bg-bg-hover"
         >
           ×
         </button>

@@ -199,7 +199,7 @@ export function NewProjectScreen({
         onClick={() => setTeamMenuOpen((open) => !open)}
         aria-haspopup="listbox"
         aria-expanded={teamMenuOpen}
-        className="inline-flex min-h-8 items-center gap-1 rounded-full border border-stroke-control bg-bg-hover px-2.5 font-semibold text-content-primary"
+        className="relative inline-flex min-h-8 items-center gap-1 rounded-full border border-stroke-control bg-bg-hover px-2.5 font-semibold text-content-primary after:absolute after:-inset-y-1.5 after:inset-x-0 after:content-['']"
       >
         {teamName}
         {icons.chevronDown}
@@ -272,7 +272,7 @@ export function NewProjectScreen({
           <button
             type="button"
             onClick={() => pickStage(null)}
-            className="min-h-10 px-2.5 text-sm text-content-secondary underline underline-offset-[3px]"
+            className="min-h-11 px-3 text-sm text-content-secondary underline underline-offset-[3px]"
           >
             Change
           </button>
