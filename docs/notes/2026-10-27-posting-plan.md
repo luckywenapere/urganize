@@ -23,7 +23,7 @@ The old calendar is untouched: its flag stays forced off in `lib/cut-features.js
 - `apps/web/lib/posting-plan.ts` (pure: weeks run Monday to Sunday in Lagos days, buckets, week summary, next post, input checks, weekly expansion, nudge text) with `posting-plan.test.ts`.
 - `apps/web/lib/posting-plan-server.ts`, `lib/posting-plan-client.ts`.
 - Routes: `app/api/workspace/artists/[artistId]/posts` (GET, POST single or `{ posts: [] }` up to 60), `.../posts/[postId]` (PATCH, DELETE), `app/api/workspace/posts/today` (Home). Behind the artist page flags (`NEXT_PUBLIC_FEATURE_ARTIST_PAGE` and `_WORKSPACE`, both on), so no new flag. The artist routes accept the internal actor for UrgAns.
-- UI: `components/artists/PostingPlanCard.tsx` (on the artist page, under Rollouts), `components/home/TodayPostCard.tsx` (Home, after the rollout offer, draws nothing without posts this week or next).
+- UI: ~~`components/artists/PostingPlanCard.tsx` (on the artist page)~~ removed 2026-10-29 (#873, founder call; the artist page no longer shows the posting plan), `components/home/TodayPostCard.tsx` (Home, after the rollout offer, draws nothing without posts this week or next).
 - UrgAns: `lib/chappi/tool-families/posting-plan.ts` (`list_artist_posts`, `plan_posts`), one line in the system prompt.
 - WhatsApp: `lib/whatsapp/server.ts` (`nudgeOnePost`, `actOnPostReply`), `reply-intent.ts` (Skip), the settings switch "Remind people to post, on the day".
 

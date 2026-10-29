@@ -20,7 +20,6 @@ import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { CoverThumbEditor } from '@/components/artists/CoverThumbEditor';
 import { ArtistCatalogueCard } from '@/components/artists/ArtistCatalogueCard';
 import { ImportReleasesButton } from '@/components/artists/ImportReleasesDialog';
-import { PostingPlanCard } from '@/components/artists/PostingPlanCard';
 import { RecordRows, isUntitledRecord, useArtistRecords } from '@/components/artists/ArtistRecordsCard';
 import type { ExecutionRelease } from '@/lib/execution-types';
 import { displayReleaseTitle } from '@/types/releases';
@@ -379,7 +378,7 @@ export default function ArtistPageClient() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl lg:max-w-5xl">
+    <div className="mx-auto w-full max-w-3xl">
       {backLink}
 
       <header className="mt-5 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -427,7 +426,7 @@ export default function ArtistPageClient() {
         </p>
       ) : null}
 
-      <div className="mt-6 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-10">
+      <div className="mt-6">
         <div className="min-w-0">
           {/* A known rollout wins Up next, so only wait for records without one. */}
           {records === null && rolling.length === 0 ? (
@@ -510,12 +509,6 @@ export default function ArtistPageClient() {
             </ol>
           </section>
         </div>
-
-        {/* Posting plan (2026-10-27): what to post between releases. Useful
-            weekly rather than every visit, so it sits to the side. */}
-        <aside className="min-w-0">
-          <PostingPlanCard artistId={artist.id} artistName={artist.name} />
-        </aside>
       </div>
     </div>
   );
