@@ -111,8 +111,8 @@ async function computeOnboardingSetupRequired(userId: string, supabaseUrl: strin
   const admin = createAdminClient(supabaseUrl);
   if (!admin) return false;
   try {
-    const [profileResult, membershipResult] = await Promise.all([
-      admin.from('profiles').select('created_at, role, onboarding_completed').eq('id', userId).maybeSingle(),
+    const [profileResult, membershipResult, releaseResult, ownTeamResult] = await Promise.all([
+      admin.from('profiles').select('role, onboarding_completed').eq('id', userId).maybeSingle(),
       admin
         .from('workspace_members')
         .select('id')
@@ -120,14 +120,25 @@ async function computeOnboardingSetupRequired(userId: string, supabaseUrl: strin
         .eq('status', 'active')
         .neq('role', 'owner')
         .limit(1),
+      admin.from('releases').select('id', { count: 'exact', head: true }).eq('owner_user_id', userId).is('deleted_at', null),
+      admin.from('workspaces').select('id').eq('owner_id', userId).limit(1).maybeSingle(),
     ]);
-    if (profileResult.error || !profileResult.data || membershipResult.error) return false;
+    if (profileResult.error || !profileResult.data || membershipResult.error || releaseResult.error) return false;
+    let ownsWork = (releaseResult.count ?? 0) > 0;
+    if (!ownsWork && ownTeamResult.data?.id) {
+      const records = await admin
+        .from('next_records')
+        .select('id', { count: 'exact', head: true })
+        .eq('workspace_id', ownTeamResult.data.id);
+      // An unreadable count is unknown, which fails closed.
+      ownsWork = records.error ? true : (records.count ?? 0) > 0;
+    }
     return resolveOnboardingSetupRequired({
       onboardingCompleted:
         typeof profileResult.data.onboarding_completed === 'boolean' ? profileResult.data.onboarding_completed : null,
       role: profileResult.data.role ? String(profileResult.data.role) : null,
       isWorkspaceMember: (membershipResult.data?.length ?? 0) > 0,
-      createdAtIso: profileResult.data.created_at ? String(profileResult.data.created_at) : null,
+      ownsWork,
     });
   } catch {
     return false;

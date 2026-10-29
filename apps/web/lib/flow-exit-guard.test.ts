@@ -35,10 +35,10 @@ describe('one-way flow exits replace the page', () => {
     expect(src).not.toMatch(/router\.push\(HOME_PATH\)/);
     expect(src).not.toMatch(/router\.push\(settingsDeepLink/);
   });
-  it('the onboarding wizard maps device Back to its steps and never lets a finished step be walked into', () => {
+  it('onboarding maps device Back to the team screen and never walks back into account creation (#854)', () => {
     const src = read('app/onboarding/OnboardingPageClient.tsx');
     expect(src).toMatch(/addEventListener\('popstate'/);
-    expect(src).toMatch(/decidePop\(/);
-    expect(src).toMatch(/historyActionForStep\(/);
+    expect(src).toMatch(/setScreen\('setup'\)/);
+    expect(src).toMatch(/window\.history\.pushState\(\{ urganizeOnboarding/);
   });
 });

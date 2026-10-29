@@ -95,7 +95,28 @@ export interface AnalyticsEventPropertiesMap {
     waited_ms: number;
     online: boolean;
   };
-  onboarding_started: EmptyAnalyticsProperties;
+  /** First view of the account or team screen (#854). Starts the onboarding clock. */
+  onboarding_started: { entry: 'auth' | 'homepage' | 'invite' | 'google' };
+  /** Onboarding v3 (#854): account, team, New project. Each carries seconds_since_start when known. */
+  onboarding_account_created: { method: 'google' | 'email'; had_referral: boolean; seconds_since_start?: number };
+  onboarding_team_viewed: { invites: number; state: 'invited' | 'none' | 'check_failed'; seconds_since_start?: number };
+  onboarding_team_created: { who_for: string; name_edited: boolean; seconds_since_start?: number };
+  onboarding_team_joined: { via: 'pending' | 'link' | 'waited' | 'accept_page'; role: string; seconds_since_start?: number };
+  onboarding_join_asked: { channel: 'whatsapp' | 'copy'; seconds_since_start?: number };
+  onboarding_join_resolved: { waited_seconds: number; seconds_since_start?: number };
+  onboarding_music_viewed: { teams: number; joined: boolean; seconds_since_start?: number };
+  onboarding_music_added: {
+    stage: string;
+    kind: string;
+    has_date: boolean;
+    saved_as: 'record' | 'rollout';
+    seconds_since_start?: number;
+  };
+  onboarding_music_skipped: { seconds_since_start?: number };
+  onboarding_import_opened: { seconds_since_start?: number };
+  onboarding_invite_opened: { seconds_since_start?: number };
+  onboarding_trial_sheet_viewed: { tier_shown: string; ios: boolean };
+  onboarding_trial_sheet_closed: { tier_shown: string; ios: boolean; opened_plans: boolean };
   onboarding_role_selected: { role: 'artist' | 'manager' | 'label' | 'other' };
   onboarding_release_created: {
     release_id: string;
@@ -466,7 +487,7 @@ export interface AnalyticsEventPropertiesMap {
    */
   record_started: {
     artist_id: string;
-    source: 'artist_page' | 'home_ask';
+    source: 'artist_page' | 'home_ask' | 'onboarding';
   };
   /** Home's next-record asks (step 3): which answer was given. */
   record_ask_answered: {

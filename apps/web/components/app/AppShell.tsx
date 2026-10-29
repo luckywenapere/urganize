@@ -72,6 +72,13 @@ const InviteGate = dynamic(
   () => import('@/components/app/InviteGate').then((m) => m.InviteGate),
   { ssr: false }
 );
+// The trial sheet after onboarding's first music (#854). Loaded on its own so
+// app pages that never need it do not carry its code up front.
+const OnboardingTrialSheetHost = dynamic(
+  () => import('@/components/onboarding/OnboardingTrialSheet').then((m) => m.OnboardingTrialSheetHost),
+  { ssr: false }
+);
+
 const PlanChoiceHost = dynamic(
   () => import('@/components/releases/PlanChoiceDialog').then((m) => m.PlanChoiceHost),
   { ssr: false }
@@ -623,6 +630,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           other area until a rollout existed; see lib/rollout-offer.ts. */}
       {isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
         <PlanChoiceHost />
+      ) : null}
+      {/* "Your 3-day trial is on" (#854): once, after the first music, never
+          over the planner's questions. Renders nothing until its moment. */}
+      {isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
+        <ErrorBoundary name="onboarding-trial-sheet" onError={reportBoundaryError}>
+          <OnboardingTrialSheetHost />
+        </ErrorBoundary>
       ) : null}
       {shouldLoadVercelAnalytics ? <Analytics /> : null}
       {/* FirstTimeOnboardingGate was mounted here until 2026-07-29 (URG-191).

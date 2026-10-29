@@ -3,17 +3,6 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  ONBOARDING_STEP,
-  ONBOARDING_STEP_TITLES,
-  firstStepAfterAccount,
-  lastQuestionStep,
-  nextOnboardingStep,
-  onboardingStepKicker,
-  onboardingStepSequence,
-  previousOnboardingStep,
-  type OnboardingStepOptions,
-} from './onboarding-steps';
-import {
   DEFAULT_OPT_IN_CHOICES,
   OPT_IN_WINDOW_MS,
   attachOptInChoices,
@@ -38,9 +27,6 @@ import {
   findPinnedConfirmDateTask,
   isConfirmReleaseDateTask,
 } from './pinned-confirm-date';
-import { buildOnboardingPlanPreview } from './onboarding-plan-preview';
-import { isWelcomeSeenValue } from './onboarding-welcome';
-import { describeNextBlocker } from './onboarding-next-hint';
 import { getAuthoredTemplate } from './release-templates/loader';
 import { TEAM_TRIAL_DAYS } from './team-billing';
 
@@ -67,119 +53,6 @@ function installFakeWindow() {
   vi.stubGlobal('window', { localStorage, sessionStorage: localStorage });
   return store;
 }
-
-const baseOptions: OnboardingStepOptions = {
-  workspaceEnabled: true,
-  authedSetup: false,
-  startFromScratch: false,
-  paywallEnabled: true,
-  welcomeEnabled: true,
-  previewEnabled: true,
-  optInEnabled: true,
-};
-
-describe('the step list', () => {
-  it('runs persona → questions → first move → preview → opt-in → account → paywall → welcome → team', () => {
-    expect(onboardingStepSequence(baseOptions)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-    expect(ONBOARDING_STEP_TITLES[ONBOARDING_STEP.optIn]).toBe('Stay on top of your next move');
-    expect(ONBOARDING_STEP_TITLES[ONBOARDING_STEP.account]).toBe('Create your account');
-    expect(ONBOARDING_STEP_TITLES[ONBOARDING_STEP.invite]).toBe('Bring your team in');
-  });
-
-  it('shows the plan preview only to people who did not start from scratch', () => {
-    const scratch = onboardingStepSequence({ ...baseOptions, startFromScratch: true });
-    expect(scratch).not.toContain(ONBOARDING_STEP.preview);
-    expect(nextOnboardingStep(scratch, ONBOARDING_STEP.firstMove)).toBe(ONBOARDING_STEP.optIn);
-    expect(previousOnboardingStep(scratch, ONBOARDING_STEP.optIn)).toBe(ONBOARDING_STEP.firstMove);
-    const template = onboardingStepSequence(baseOptions);
-    expect(nextOnboardingStep(template, ONBOARDING_STEP.firstMove)).toBe(ONBOARDING_STEP.preview);
-  });
-
-  it('"Nothing planned yet" skips the rollout steps and keeps the rest (2026-10-24)', () => {
-    const steps = onboardingStepSequence({ ...baseOptions, nothingPlanned: true });
-    expect(steps).toEqual([0, 1, 6, 7, 8, 9, 10]);
-    expect(nextOnboardingStep(steps, ONBOARDING_STEP.fallsApart)).toBe(ONBOARDING_STEP.optIn);
-    expect(firstStepAfterAccount(steps)).toBe(ONBOARDING_STEP.paywall);
-    const authed = onboardingStepSequence({ ...baseOptions, nothingPlanned: true, authedSetup: true, optInEnabled: false });
-    expect(lastQuestionStep(authed)).toBe(ONBOARDING_STEP.fallsApart);
-  });
-
-  it('puts the opt-in right before the account, and the paywall right after it', () => {
-    const steps = onboardingStepSequence(baseOptions);
-    expect(nextOnboardingStep(steps, ONBOARDING_STEP.optIn)).toBe(ONBOARDING_STEP.account);
-    expect(firstStepAfterAccount(steps)).toBe(ONBOARDING_STEP.paywall);
-    expect(nextOnboardingStep(steps, ONBOARDING_STEP.paywall)).toBe(ONBOARDING_STEP.welcome);
-    expect(nextOnboardingStep(steps, ONBOARDING_STEP.welcome)).toBe(ONBOARDING_STEP.invite);
-  });
-
-  it('skips the account step in authed setup, which finishes on the opt-in', () => {
-    const steps = onboardingStepSequence({ ...baseOptions, authedSetup: true, paywallEnabled: false });
-    expect(steps).not.toContain(ONBOARDING_STEP.account);
-    expect(steps).toContain(ONBOARDING_STEP.optIn);
-    expect(lastQuestionStep(steps)).toBe(ONBOARDING_STEP.optIn);
-  });
-
-  it('drops the welcome once seen, and finishes when nothing follows the account', () => {
-    const steps = onboardingStepSequence({
-      ...baseOptions,
-      welcomeEnabled: false,
-      paywallEnabled: false,
-      workspaceEnabled: false,
-    });
-    expect(firstStepAfterAccount(steps)).toBeNull();
-  });
-
-  it('counts "Step N of M" from the list, persona first', () => {
-    const scratch = onboardingStepSequence({ ...baseOptions, startFromScratch: true });
-    expect(onboardingStepKicker(scratch, 'persona')).toEqual({ number: 1, total: scratch.length + 1 });
-    expect(onboardingStepKicker(scratch, ONBOARDING_STEP.optIn).number).toBe(7);
-  });
-
-  it('falls back to the old flow with v2 off', () => {
-    const old = onboardingStepSequence({
-      ...baseOptions,
-      paywallEnabled: false,
-      welcomeEnabled: false,
-      previewEnabled: false,
-      optInEnabled: false,
-    });
-    expect(old).toEqual([0, 1, 2, 3, 4, 7, 10]);
-  });
-});
-
-describe('skippable invites (URG-274)', () => {
-  it('the team step never blocks the button, so Skip always reaches the rollout', () => {
-    expect(
-      describeNextBlocker({
-        step: ONBOARDING_STEP.invite,
-        releaseTypeAvailable: true,
-        whereStuckCount: 1,
-        hasStage: true,
-        hasTitle: true,
-        dateValid: true,
-        hasReleaseArtist: true,
-        hasName: false,
-        hasEmail: false,
-        passwordLongEnough: false,
-        needsArtistName: false,
-        hasArtistName: false,
-      })
-    ).toBeNull();
-  });
-
-  it('the wizard marks the gate skipped from both team-step exits that send nothing', () => {
-    const page = code('app/onboarding/OnboardingPageClient.tsx');
-    expect(page.match(/markOnboardingInviteSkipped\(\)/g)?.length).toBeGreaterThanOrEqual(2);
-    expect(page).toContain('{inviteLabels.skip}');
-  });
-
-  it('the in-app gate honours the first session and the onboarding skip', () => {
-    const gate = code('components/app/InviteGate.tsx');
-    expect(gate).toContain('isInviteGateHeldBack(');
-    expect(gate).toContain('inFirstSession: isInFirstSession()');
-    expect(gate).toContain('INVITE_GATE_ONBOARDING_SKIP_KEY');
-  });
-});
 
 describe('opt-in choices (URG-251 Part 2)', () => {
   beforeEach(() => {
@@ -257,24 +130,6 @@ describe('opt-in choices (URG-251 Part 2)', () => {
     expect(saveEmailConsent).not.toHaveBeenCalled();
   });
 
-  it('asks for push permission only on the toggle tap, never on step load', () => {
-    const step = code('components/onboarding/OnboardingOptInStep.tsx');
-    const beforeTap = step.slice(0, step.indexOf('const togglePush'));
-    expect(beforeTap).not.toContain('requestPermission');
-    expect(beforeTap).not.toContain("'push.request'");
-    expect(beforeTap).not.toContain('enablePush(');
-    expect(step).toContain('markPushAskedInOnboarding()');
-  });
-
-  it('the wizard attaches the choices only after the account exists', () => {
-    const page = code('app/onboarding/OnboardingPageClient.tsx');
-    const handoff = page.slice(page.indexOf('const runPostSignupHandoff'));
-    expect(handoff.indexOf("fetch('/api/releases'")).toBeGreaterThan(-1);
-    expect(handoff.indexOf('await attachOnboardingOptIn(accessToken)')).toBeGreaterThan(
-      handoff.indexOf("fetch('/api/releases'")
-    );
-  });
-
   it('the migration adds consent and a timestamp, default off', () => {
     const sql = readFileSync(
       join(REPO_ROOT, 'supabase/migrations/20261014160000_profiles_marketing_email_consent.sql'),
@@ -307,7 +162,6 @@ describe('referral code field (URG-251 Part 1)', () => {
     expect(readReferralCode()).toBe('PARTNER1');
     const page = code('app/onboarding/OnboardingPageClient.tsx');
     expect(page).toContain('const remembered = readReferralCode();');
-    expect(page).toContain('setReferralInput((current) => current || remembered)');
   });
 
   it('an invalid code is reported, never stored, and never blocks sign-up', async () => {
@@ -320,7 +174,7 @@ describe('referral code field (URG-251 Part 1)', () => {
     expect(readReferralCode()).toBe('GOOD1');
     const page = code('app/onboarding/OnboardingPageClient.tsx');
     // The account button's gate does not read the referral field at all.
-    const gate = page.slice(page.indexOf('const canAdvance'), page.indexOf('const nextHint'));
+    const gate = page.slice(page.indexOf('const accountBlocker'), page.indexOf('const createAccount'));
     expect(gate).not.toContain('referral');
   });
 
@@ -345,7 +199,7 @@ describe('paywall (URG-251 Part 3)', () => {
   it('uses the headline Oyin picked, and the landing page wording for the logos', () => {
     expect(PAYWALL_HEADLINE).toBe('Run your next release like a pro.');
     expect(PAYWALL_LOGOS_LINE).toBe('Shaped with managers from');
-    const ui = code('components/onboarding/OnboardingPaywall.tsx') + code('lib/onboarding-paywall.ts');
+    const ui = code('lib/onboarding-paywall.ts');
     expect(ui).not.toMatch(/trusted by/i);
     expect(ui).not.toMatch(/save 55/i);
   });
@@ -403,14 +257,11 @@ describe('paywall (URG-251 Part 3)', () => {
 
   it('states the real trial length, and takes prices from @urganize/pricing', () => {
     expect(paywallTrialLine(TEAM_TRIAL_DAYS)).toBe('Start your 3-day free trial, cancel anytime.');
-    const ui = code('components/onboarding/OnboardingPaywall.tsx');
-    expect(ui).toContain('<TierPlanPicker');
+    // The paywall screen moved to the trial sheet after the first music (#854):
+    // no price typed in, and none at all in the iPhone app.
+    const ui = code('components/onboarding/OnboardingTrialSheet.tsx');
     expect(ui).not.toMatch(/₦\s?\d/);
     expect(ui).toContain('isIOSApp()');
-    expect(ui).toContain('SALES_WHATSAPP_URL');
-    // No skip, no close: the only button forward is the trial.
-    expect(ui).not.toMatch(/>\s*(Skip|Not now|Close)\b/);
-    expect(ui).not.toContain('/start-trial');
   });
 
   it('remembers the plan they picked for the billing wall', () => {
@@ -478,48 +329,5 @@ describe('"Confirm your release date" pinned on top', () => {
     expect(view).toContain('findPinnedConfirmDateTask(');
     expect(view).toContain('activitiesBanner={activitiesBannerNode}');
     expect(view).toContain('panelActivitiesBanner={activitiesBannerNode}');
-  });
-});
-
-describe('plan preview', () => {
-  const now = Date.parse('2026-10-14T09:00:00Z');
-
-  it('lays a single out week by week from the release date, release week marked', () => {
-    const preview = buildOnboardingPlanPreview({ releaseType: 'single', releaseDate: '2027-01-15', now })!;
-    expect(preview.templateId).toBe('single_v0.3');
-    expect(preview.weeks[0].isCatchUp).toBe(false);
-    expect(preview.weeks[0].label).toMatch(/^Week of /);
-    expect(preview.weeks.filter((week) => week.isReleaseWeek)).toHaveLength(1);
-    for (const week of preview.weeks) expect(week.tasks.length).toBeLessThanOrEqual(2);
-    // Weeks run in date order.
-    const starts = preview.weeks.map((week) => week.startsOn!);
-    expect([...starts].sort()).toEqual(starts);
-  });
-
-  it('folds weeks already behind today into one catch-up group', () => {
-    const preview = buildOnboardingPlanPreview({ releaseType: 'single', releaseDate: '2026-11-01', now })!;
-    expect(preview.weeks[0].isCatchUp).toBe(true);
-    expect(preview.weeks.filter((week) => week.isCatchUp)).toHaveLength(1);
-  });
-
-  it('returns null without a usable date', () => {
-    expect(buildOnboardingPlanPreview({ releaseType: 'single', releaseDate: '', now })).toBeNull();
-  });
-});
-
-describe('welcome screen (URG-251 Part 5)', () => {
-  it('counts only a stored value as seen', () => {
-    expect(isWelcomeSeenValue(null)).toBe(false);
-    expect(isWelcomeSeenValue('')).toBe(false);
-    expect(isWelcomeSeenValue('1800000000000')).toBe(true);
-  });
-
-  it('opens none of the offers the first session keeps quiet', () => {
-    const welcome = code('components/onboarding/OnboardingWelcome.tsx');
-    for (const forbidden of ['useShareStore', 'startTour', 'InstallAppPrompt', 'startFirstSession', 'useTourStore']) {
-      expect(welcome).not.toContain(forbidden);
-    }
-    expect(welcome).toContain('Sparkles');
-    expect(welcome).toContain('ContactIcon');
   });
 });

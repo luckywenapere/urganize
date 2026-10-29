@@ -46,15 +46,14 @@ describe('the planner intake', () => {
 describe('onboarding', () => {
   const page = code('app/onboarding/OnboardingPageClient.tsx');
 
-  it('asks for the artist on the rollout step and sends it with the release', () => {
-    expect(page).toMatch(/<span className=\{labelBase\}>Artist name<\/span>/);
-    expect(page).toContain('maxLength={MAX_ONBOARDING_ARTIST_NAME_LENGTH}');
-    expect(page).toMatch(/artistName: draft\.artistName\.trim\(\)\.slice\(0, MAX_ONBOARDING_ARTIST_NAME_LENGTH\)/);
-    expect(page).toMatch(/draft\.artistName\.trim\(\)\.length > 0/);
+  it('asks for the artist on New project and sends it with the rollout (#854)', () => {
+    const screen = code('components/onboarding/NewProjectScreen.tsx');
+    expect(screen).toContain('<span className={labelClass}>Artist</span>');
+    expect(page).toContain('artistName: submission.artistName');
   });
 
   it('lands on the new rollout and hands the planner over, instead of Home', () => {
-    expect(page).toContain('homePath: onboardingLandingPath(created?.id, HOME_PATH)');
+    expect(page).toContain('goHome(onboardingLandingPath(releaseId, HOME_PATH))');
     expect(page).toContain('markOnboardingPlannerHandoff(');
     expect(page).toContain('startFirstSession(');
   });
@@ -63,18 +62,10 @@ describe('onboarding', () => {
     expect(page).not.toContain('markPendingFirstShare');
   });
 
-  it('shows staged progress, guards a double submit and a tab close', () => {
-    expect(page).toContain("onboardingProgressMessage('account'");
-    expect(page).toContain("onboardingProgressMessage('rollout'");
-    expect(page).toContain('ONBOARDING_PROGRESS_NOTE');
-    expect(page).toContain('handoffRunningRef.current');
+  it('says what it is doing, and guards a tab close while the account is made', () => {
+    expect(page).toContain("'Creating your account…'");
+    expect(page).toContain("label: 'Building your plan…'");
     expect(page).toContain("addEventListener('beforeunload'");
-  });
-
-  it('says Continuing on Skip and Sending on Send', () => {
-    expect(page).toContain('{inviteLabels.skip}');
-    expect(page).toContain('{inviteLabels.send}');
-    expect(page).not.toContain("isFinishing ? 'Sending…'");
   });
 });
 

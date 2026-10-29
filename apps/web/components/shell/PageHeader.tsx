@@ -37,7 +37,7 @@ export function PageHeader({ title, description, info, action, className = '' }:
       <div className="min-w-0">
         {title ? (
           <div className="flex items-center gap-2">
-            <h1 className="font-display text-4xl font-semibold leading-tight tracking-tight text-content-primary sm:text-[44px]">
+            <h1 className="font-display text-4xl font-normal leading-tight tracking-tight text-content-primary sm:text-[44px]">
               {title}
             </h1>
             {info ? <InfoTip label={title} text={info} className="shrink-0" /> : null}

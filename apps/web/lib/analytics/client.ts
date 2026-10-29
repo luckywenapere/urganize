@@ -327,7 +327,7 @@ export function resetAnalyticsUser() {
   void posthogClientPromise.then((client) => client?.reset());
 }
 
-export function markOnboardingStarted() {
+export function markOnboardingStarted(entry: 'auth' | 'homepage' | 'invite' | 'google' = 'homepage') {
   if (typeof window === 'undefined') {
     return;
   }
@@ -340,7 +340,7 @@ export function markOnboardingStarted() {
   window.localStorage.setItem(ONBOARDING_STARTED_AT_STORAGE_KEY, String(Date.now()));
   captureAnalyticsEvent({
     name: 'onboarding_started',
-    properties: {},
+    properties: { entry },
   });
 }
 

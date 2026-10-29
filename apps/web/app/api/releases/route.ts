@@ -43,6 +43,7 @@ function sanitizeTextField(value: string, maxLength: number): string {
   return value.trim().replace(/\s+/g, ' ').slice(0, maxLength);
 }
 import { ensureOwnedWorkspace, loadWorkspaceAccessContext } from '@/lib/tasks-server';
+import { resolveReleaseTeam } from '@/lib/release-team';
 import { instantiateTemplate } from '@/lib/release-templates/instantiate';
 import {
   CONFIRM_RELEASE_DATE_DESCRIPTION,
@@ -118,6 +119,9 @@ type CreateReleaseBody = {
    * done?" and "Where does a rollout usually fall apart?". Only read for an
    * onboarding rollout on the template path. */
   autoPlan?: { readyToday?: unknown; whereStuck?: unknown } | null;
+  /** The team to make it in (#854): onboarding's team picker. Absent means the
+   * caller's primary team. See lib/release-team.ts. */
+  workspaceId?: unknown;
 };
 
 function toSelectorRelease(
@@ -469,6 +473,49 @@ export async function POST(request: NextRequest) {
     let artistIdToUse = artistId;
     let artistName = artistNameInput || getDefaultArtistName(auth.user);
 
+    // Which team this rollout belongs to (#854, lib/release-team.ts): the team
+    // named in the body, else the caller's primary team. In a team someone
+    // else owns, the rollout and a new artist are owned by that team's owner,
+    // so the whole team sees it. Before this, every rollout went to the
+    // caller's own team, which hid a joined Manager's rollouts from the team.
+    // A failed read keeps the old path rather than failing the create.
+    const requestedWorkspaceId = trimString(body?.workspaceId).slice(0, 100) || null;
+    let teamTarget: { workspaceId: string; ownerUserId: string } | null = null;
+    try {
+      const access = await loadWorkspaceAccessContext(adminClient, auth.user);
+      const ownerByWorkspaceId: Record<string, string> = {};
+      if (access.primaryWorkspace) ownerByWorkspaceId[access.primaryWorkspace.id] = access.primaryWorkspace.ownerId;
+      if (requestedWorkspaceId && !ownerByWorkspaceId[requestedWorkspaceId]) {
+        const ownerResult = await adminClient
+          .from('workspaces')
+          .select('id,owner_id')
+          .eq('id', requestedWorkspaceId)
+          .maybeSingle();
+        if (ownerResult.data?.owner_id) ownerByWorkspaceId[requestedWorkspaceId] = String(ownerResult.data.owner_id);
+      }
+      const decision = resolveReleaseTeam({
+        userId: auth.user.id,
+        requestedWorkspaceId,
+        memberships: access.memberships.map((member) => ({ workspaceId: member.workspaceId, role: member.role })),
+        primaryWorkspaceId: access.primaryWorkspaceId,
+        ownerByWorkspaceId,
+      });
+      if (decision.kind === 'refused') {
+        return NextResponse.json({ error: decision.message }, { status: decision.status });
+      }
+      if (decision.kind === 'team') {
+        teamTarget = { workspaceId: decision.workspaceId, ownerUserId: ownerByWorkspaceId[decision.workspaceId] };
+      }
+    } catch (teamError) {
+      if (requestedWorkspaceId) {
+        return NextResponse.json({ error: 'Could not find that team.' }, { status: 500 });
+      }
+      console.error('[releases.POST] team resolution failed, using own team', teamError);
+    }
+    const releaseOwnerId = teamTarget?.ownerUserId ?? auth.user.id;
+    // A rollout made in someone else's team is never "your first rollout".
+    if (teamTarget) firstRelease = false;
+
     // Phase 3 (workspace-scoped artists): when the workspace flag is on AND
     // the client did not provide an artistId/artistName, derive both from the
     // workspace's single artist. This is the implicit-artist path the
@@ -476,10 +523,12 @@ export async function POST(request: NextRequest) {
     // If no workspace artist exists yet, fall through to the legacy
     // lookup-or-create branch below, which will scope the new artist to the
     // workspace (see workspaceIdForArtist below).
-    let workspaceIdForArtist: string | null = null;
+    let workspaceIdForArtist: string | null = teamTarget?.workspaceId ?? null;
     if (isWorkspaceFeatureEnabled() && !artistIdToUse) {
       try {
-        const workspace = await ensureOwnedWorkspace(adminClient, auth.user);
+        const workspace = teamTarget
+          ? { id: teamTarget.workspaceId }
+          : await ensureOwnedWorkspace(adminClient, auth.user);
         workspaceIdForArtist = workspace.id;
         if (!artistNameInput) {
           const workspaceArtist = await getWorkspaceArtist(adminClient, workspace.id);
@@ -597,7 +646,9 @@ export async function POST(request: NextRequest) {
         const insertArtistResult = await adminClient
           .from(ARTISTS_TABLE)
           .insert({
-            owner_user_id: auth.user.id,
+            // The team's owner in a team the caller joined (#854), so the
+            // artist stays with the team; the caller otherwise, as before.
+            owner_user_id: releaseOwnerId,
             workspace_id: workspaceIdForArtist,
             name: artistName,
             slug: normalizedSlug || `artist-${Date.now()}`,
@@ -651,11 +702,11 @@ export async function POST(request: NextRequest) {
     // Placed immediately before the insert so nothing is half-created when it
     // refuses, and after every validation so a refusal is the LAST word rather
     // than pre-empting a 400 the caller should see first.
-    const releaseCap = await checkActiveReleaseAllowance(adminClient, auth.user.id);
+    const releaseCap = await checkActiveReleaseAllowance(adminClient, releaseOwnerId);
     if (!releaseCap.verdict.allowed) {
       await recordLimitHit(adminClient, {
         workspaceId: releaseCap.workspaceId ?? '',
-        ownerUserId: auth.user.id,
+        ownerUserId: releaseOwnerId,
         actorUserId: auth.user.id,
         key: releaseCap.verdict.key,
         limit: releaseCap.verdict.limit,
@@ -667,7 +718,8 @@ export async function POST(request: NextRequest) {
     const releaseResult = await adminClient
       .from('releases')
       .insert({
-        owner_user_id: auth.user.id,
+        // Owned by the team it was made in (#854, lib/release-team.ts).
+        owner_user_id: releaseOwnerId,
         artist_id: artistIdToUse || null,
         artist_name: artistName,
         title,
@@ -897,7 +949,7 @@ export async function POST(request: NextRequest) {
     // After the reply (2026-10-11): it only records, and never throws, so the
     // person creating the rollout does not wait on it.
     if (!isTest) {
-      const activationOwnerId = auth.user.id;
+      const activationOwnerId = releaseOwnerId;
       const activationSignupAt = auth.user.created_at;
       afterResponse('release activation check', () =>
         captureActivationIfReached(adminClient, {

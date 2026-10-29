@@ -37,6 +37,7 @@ import { HOME_PATH } from '@/lib/home-path';
 import { safeInviteNextPath } from '@/lib/rollout-ideas';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
+import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import type { InviteInitialLoad } from '@/lib/invite-metadata-server';
 import { MIN_PASSWORD_LENGTH, PASSWORD_LENGTH_HINT } from '@/lib/password-rules';
 import { clearPendingConfirmation, firstNameOf, writePendingConfirmation } from '@/lib/email-confirmation';
@@ -219,6 +220,10 @@ export default function InviteAcceptPageClient({
       };
       if (!response.ok) {
         return { ok: false, message: payload.error || 'Could not accept invite.' };
+      }
+      // Onboarding's join measure (#854) counts the accept page too.
+      if (payload.status === 'accepted') {
+        captureAnalyticsEvent({ name: 'onboarding_team_joined', properties: { via: 'accept_page', role: '' } });
       }
       return { ok: true };
     } catch (acceptError) {

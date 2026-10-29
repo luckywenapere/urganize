@@ -186,6 +186,9 @@ export type OnboardingPlannerHandoff = {
   /** "What's already done?", asked once in onboarding (2026-10-11). Present
    *  and non-empty means the planner skips its own copy of the question. */
   readyToday?: ReadyItem[];
+  /** Where the music is (#854): "Ready to release" in onboarding is 'finished',
+   *  so planner v2 skips "Where's the music right now?". */
+  musicStage?: 'making' | 'finished';
   at: number;
 };
 
@@ -213,6 +216,7 @@ export function parseOnboardingPlannerHandoff(
         const ready = Array.isArray(parsed.readyToday) ? normalizeReadyToday(parsed.readyToday) : [];
         return ready.length ? { readyToday: ready } : {};
       })(),
+      ...(parsed.musicStage === 'making' || parsed.musicStage === 'finished' ? { musicStage: parsed.musicStage } : {}),
       at: parsed.at,
     };
   } catch {

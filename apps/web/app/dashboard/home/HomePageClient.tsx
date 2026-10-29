@@ -18,6 +18,7 @@ import { Plus } from '@/components/icons';
 import { NpsPrompt } from '@/components/home/NpsPrompt';
 import { PersonaAskCard } from '@/components/home/PersonaAskCard';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
+import { JoinedTeamNote } from '@/components/onboarding/OnboardingTrialSheet';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
 
 /**
@@ -97,6 +98,10 @@ export default function HomePageClient({ swipe = false }: { swipe?: boolean } = 
   // Each block inside is fenced too (HomeBlocks), so this is the outer net.
   const view = (
     <ErrorBoundary name="home-view" onError={reportBoundaryError} fallback={<HomeViewFallback />}>
+      {/* "You're in {team}." Once, after joining a team in onboarding (#854). */}
+      <ErrorBoundary name="home-block-joined-team" onError={reportBoundaryError}>
+        <JoinedTeamNote />
+      </ErrorBoundary>
       {/* "Got a release coming?": zero-rollout teams only, until Not now. */}
       <ErrorBoundary name="home-block-rollout-offer" onError={reportBoundaryError}>
         <RolloutOfferCard />

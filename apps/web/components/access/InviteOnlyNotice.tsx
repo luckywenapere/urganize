@@ -21,7 +21,7 @@ type Props = {
 export function InviteOnlyNotice({ signInHref = '/auth', onSignIn, className = '' }: Props) {
   return (
     <div role="status" className={`w-full text-center ${className}`}>
-      <h2 className="font-display text-2xl font-bold text-content-primary">{INVITE_ONLY_COPY.title}</h2>
+      <h2 className="font-display text-2xl font-normal text-content-primary">{INVITE_ONLY_COPY.title}</h2>
       <p className="mt-3 text-base text-content-secondary">{INVITE_ONLY_COPY.body}</p>
       <button
         type="button"

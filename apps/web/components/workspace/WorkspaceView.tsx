@@ -71,6 +71,8 @@ import { RELEASE_BRIEF_ENABLED } from '@/lib/release-brief-flag';
 import { compareForTopUp, isOpenTask } from '@/lib/plan-focus';
 import { formatShortDay } from '@/lib/release-brief';
 import { AutoPlanCard } from '@/components/planner/AutoPlanCard';
+import { OnboardingHeardFromRow } from '@/components/onboarding/OnboardingHeardFromRow';
+import { PLAN_LANDED_EVENT } from '@/lib/onboarding-landing';
 import { useAutoPlan } from '@/components/planner/useAutoPlan';
 import { readPlannerAuto } from '@/lib/planner-auto';
 import { usePlanBuiltSeen } from '@/components/planner/usePlanBuiltSeen';
@@ -913,6 +915,8 @@ export function WorkspaceView() {
         ...(handoff.artistName ? { artistName: handoff.artistName } : {}),
         // Asked once in onboarding: the planner skips "What's already done?".
         ...(handoff.readyToday?.length ? { readyToday: handoff.readyToday } : {}),
+        // "Ready to release" in onboarding (#854): the music is finished.
+        ...(handoff.musicStage ? { musicStage: handoff.musicStage } : {}),
       },
     });
   }, [scopedReleaseId, scopedReleaseSlim, scopedTasks.length, openIntake]);
@@ -1059,18 +1063,29 @@ export function WorkspaceView() {
         }
       : null,
     hasActivities: !onlyPreProductionWork(scopedTasks),
-    onLanded: () => void loadCommandCenter({ force: true }),
+    onLanded: () => {
+      void loadCommandCenter({ force: true });
+      // The onboarding trial sheet waits for this (#854, lib/onboarding-landing.ts).
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(PLAN_LANDED_EVENT, { detail: { releaseId: scopedReleaseSlim?.id ?? null } }));
+      }
+    },
   });
 
   const planBanner =
     PLANNER_ENABLED && scopedReleaseSlim && scopedReleaseIsOwn && autoPlan.view ? (
-      <AutoPlanCard
-        state={autoPlan.view}
-        startedAt={autoPlan.startedAt}
-        retrying={autoPlan.retrying}
-        onRetry={autoPlan.retry}
-        onAddActivity={() => openQuickCreate({ releaseId: scopedReleaseSlim.id, source: 'inline' })}
-      />
+      <>
+        {/* "While you wait: how did you hear about Urganize?" (#854): once,
+            above the build it is meant to fill, for the rollout onboarding made. */}
+        {autoPlan.view === 'generating' ? <OnboardingHeardFromRow releaseId={scopedReleaseSlim.id} /> : null}
+        <AutoPlanCard
+          state={autoPlan.view}
+          startedAt={autoPlan.startedAt}
+          retrying={autoPlan.retrying}
+          onRetry={autoPlan.retry}
+          onAddActivity={() => openQuickCreate({ releaseId: scopedReleaseSlim.id, source: 'inline' })}
+        />
+      </>
     ) :
     // A pre-production rollout (URG-280) still owes its release plan: its
     // eight seeded activities are not a plan, so the card stays until one is built.

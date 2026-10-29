@@ -1,114 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { describeNextBlocker, type NextBlockerInput } from './onboarding-next-hint';
+import { describeNextBlocker } from './onboarding-next-hint';
+import { MIN_PASSWORD_LENGTH } from './password-rules';
 
-function input(over: Partial<NextBlockerInput>): NextBlockerInput {
-  return {
-    step: 0,
-    releaseTypeAvailable: true,
-    whereStuckCount: 1,
-    hasStage: true,
-    hasTitle: true,
-    dateValid: true,
-    hasReleaseArtist: true,
-    hasName: true,
-    hasEmail: true,
-    passwordLongEnough: true,
-    needsArtistName: false,
-    hasArtistName: false,
-    ...over,
-  };
-}
+const ready = { hasName: true, hasEmail: true, passwordLongEnough: true };
 
-// The sentence opens "To sign up with email, add ...", so the field list is
-// what follows; asserting on the whole sentence would find "email" in the
-// prefix and prove nothing about which fields are named.
-const fieldsOf = (text: string | null) => (text ?? '').replace(/^To sign up with email, add /, '');
-
-describe('describeNextBlocker', () => {
+describe('describeNextBlocker (Create your account)', () => {
   it('says nothing when nothing is in the way', () => {
-    for (const step of [0, 1, 2, 3, 4, 5, 6] as const) {
-      expect(describeNextBlocker(input({ step }))).toBeNull();
-    }
+    expect(describeNextBlocker(ready)).toBe('');
   });
 
-  it('names the one thing missing on each question step', () => {
-    expect(describeNextBlocker(input({ step: 0, releaseTypeAvailable: false }))).toMatch(/kind of rollout/i);
-    expect(describeNextBlocker(input({ step: 1, whereStuckCount: 0 }))).toMatch(/at least one/i);
-    expect(describeNextBlocker(input({ step: 2, hasStage: false }))).toMatch(/choose one/i);
-  });
-
-  it('asks for the title and the date separately, and both when both are missing', () => {
-    expect(describeNextBlocker(input({ step: 3, hasTitle: false }))).toMatch(/title/i);
-    expect(describeNextBlocker(input({ step: 3, hasTitle: false }))).not.toMatch(/date/i);
-    expect(describeNextBlocker(input({ step: 3, dateValid: false }))).toMatch(/date/i);
-    expect(describeNextBlocker(input({ step: 3, dateValid: false }))).not.toMatch(/title/i);
-    const both = describeNextBlocker(input({ step: 3, hasTitle: false, dateValid: false }));
-    expect(both).toMatch(/title/i);
-    expect(both).toMatch(/date/i);
-  });
-
-  it('asks for the artist name on the rollout step, alone or with the others', () => {
-    expect(describeNextBlocker(input({ step: 3, hasReleaseArtist: false }))).toBe(
-      'Add the artist name to go on.'
+  it('names one missing thing at a time, in the form order', () => {
+    expect(describeNextBlocker({ hasName: false, hasEmail: false, passwordLongEnough: false })).toBe('Add your name.');
+    expect(describeNextBlocker({ ...ready, hasEmail: false, passwordLongEnough: false })).toBe('Add your email.');
+    expect(describeNextBlocker({ ...ready, passwordLongEnough: false })).toBe(
+      `Use at least ${MIN_PASSWORD_LENGTH} characters.`
     );
-    expect(
-      describeNextBlocker(input({ step: 3, hasTitle: false, dateValid: false, hasReleaseArtist: false }))
-    ).toBe('Add a title, a release date and the artist name to go on.');
-    expect(describeNextBlocker(input({ step: 3, hasTitle: false, hasReleaseArtist: false }))).toBe(
-      'Add a title and the artist name to go on.'
-    );
-  });
-
-  it('lists exactly the account fields still missing', () => {
-    const onlyPassword = describeNextBlocker(input({ step: 7, passwordLongEnough: false }));
-    expect(fieldsOf(onlyPassword)).toMatch(/password/i);
-    expect(fieldsOf(onlyPassword)).not.toMatch(/name|email/i);
-
-    const nameAndEmail = describeNextBlocker(input({ step: 7, hasName: false, hasEmail: false }));
-    expect(fieldsOf(nameAndEmail)).toMatch(/name/i);
-    expect(fieldsOf(nameAndEmail)).toMatch(/email/i);
-    expect(fieldsOf(nameAndEmail)).not.toMatch(/password/i);
-  });
-
-  it('asks for the artist name only when the role needs one', () => {
-    expect(describeNextBlocker(input({ step: 7, needsArtistName: true, hasArtistName: false }))).toMatch(
-      /artist name/i
-    );
-    expect(describeNextBlocker(input({ step: 7, needsArtistName: false, hasArtistName: false }))).toBeNull();
-    expect(describeNextBlocker(input({ step: 7, needsArtistName: true, hasArtistName: true }))).toBeNull();
-  });
-
-  it('never blames a field on a step that does not ask for it', () => {
-    // A bad password count must not block the question steps.
-    expect(describeNextBlocker(input({ step: 2, passwordLongEnough: false, hasName: false }))).toBeNull();
-    // And a missing title must not block the account step.
-    expect(describeNextBlocker(input({ step: 7, hasTitle: false, dateValid: false }))).toBeNull();
-  });
-
-  it('the invite step and the last question never block', () => {
-    expect(describeNextBlocker(input({ step: 4, hasName: false, hasTitle: false }))).toBeNull();
-    // The preview (5), the opt-in (6), the paywall (8), the welcome (9) and
-    // the invite step (10) never block either.
-    for (const step of [5, 6, 8, 9, 10]) {
-      expect(describeNextBlocker(input({ step, hasName: false, hasTitle: false }))).toBeNull();
-    }
-  });
-
-  it('is written for someone reading a phone, with no jargon and no em dashes', () => {
-    const all = [
-      describeNextBlocker(input({ step: 0, releaseTypeAvailable: false })),
-      describeNextBlocker(input({ step: 1, whereStuckCount: 0 })),
-      describeNextBlocker(input({ step: 2, hasStage: false })),
-      describeNextBlocker(input({ step: 3, hasTitle: false, dateValid: false })),
-      describeNextBlocker(
-        input({ step: 7, hasName: false, hasEmail: false, passwordLongEnough: false, needsArtistName: true })
-      ),
-    ];
-    for (const text of all) {
-      expect(text).not.toBeNull();
-      expect(text).not.toMatch(/—|–/);
-      expect(text).not.toMatch(/workspace/i);
-      expect(text!.length).toBeLessThan(120);
-    }
   });
 });

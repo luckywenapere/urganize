@@ -501,13 +501,12 @@ export default function AuthPage() {
         <div className="urg-above mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center">
           <LogoIcon size={64} priority />
 
-          {/* One h1, two renderings: phones read the reference layout's
-              "Log into Urganize"; desktop says what the identifier-first flow
-              actually does — sign up or log in, decided by the email.
-              (Founder call, 2026-08-21.) */}
-          <h1 className="mt-10 text-center font-display text-2xl font-bold uppercase tracking-[0.06em] text-content-primary">
-            <span className="lg:hidden">Log into Urganize</span>
-            <span className="hidden lg:inline">Sign up or log in</span>
+          {/* One heading on every screen size (#854): the page logs in AND
+              starts a new account, decided by the email. It said "Log into
+              Urganize" on phones and "Sign up or log in" on desktop, in capitals.
+              Young Serif at its real weight, never a fake bold. */}
+          <h1 className="mt-10 text-balance text-center font-display text-[28px] font-normal leading-tight tracking-[-0.012em] text-content-primary">
+            Log in or create your account
           </h1>
 
           {/* Signing in needs JavaScript. Say so instead of leaving the user

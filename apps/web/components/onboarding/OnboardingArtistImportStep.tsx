@@ -23,9 +23,9 @@ const MAX_REVEAL_MS = 2600;
 const MAX_COVERS_SHOWN = 12;
 
 const primaryButton =
-  'motion-press inline-flex min-h-12 items-center justify-center rounded-full bg-content-primary px-6 text-sm font-semibold text-content-inverse transition-opacity duration-fast ease-standard hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
+  'motion-press inline-flex min-h-12 items-center justify-center rounded-full bg-brand px-6 text-sm font-semibold text-content-inverse transition-colors duration-fast ease-standard hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-bg-hover disabled:text-content-tertiary';
 const secondaryButton =
-  'motion-press inline-flex min-h-12 items-center justify-center rounded-full border border-stroke-default bg-bg-surface px-6 text-sm font-medium text-content-secondary transition-colors duration-fast ease-standard hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-50';
+  'motion-press inline-flex min-h-12 items-center justify-center rounded-full border border-stroke-control bg-transparent px-6 text-sm font-medium text-content-secondary transition-colors duration-fast ease-standard hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-50';
 
 /**
  * "Who is the artist?" (2026-10-26). Type a name, pick the profile, watch the
@@ -212,7 +212,7 @@ export function OnboardingArtistImportStep({
               key={`${candidate.provider}-${candidate.id}`}
               type="button"
               onClick={() => void pick(candidate)}
-              className="motion-press flex w-full items-center gap-3 rounded-xl border border-stroke-default bg-bg-surface px-3 py-2.5 text-left transition-colors duration-fast ease-standard hover:border-stroke-strong hover:bg-bg-hover"
+              className="motion-press flex w-full items-center gap-3 rounded-xl border border-stroke-control bg-bg-base px-3 py-2.5 text-left transition-colors duration-fast ease-standard hover:border-stroke-strong hover:bg-bg-hover"
             >
               {candidate.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element -- remote photo, never optimised or stored
@@ -345,7 +345,7 @@ export function OnboardingArtistImportStep({
   return (
     <div className="mt-5">
       <p className="text-sm text-content-secondary">{nudgeLine}</p>
-      <div className="mt-4 rounded-xl bg-bg-surface px-4 py-3.5">
+      <div className="mt-4 rounded-xl border border-stroke-control bg-bg-base px-4 py-3.5">
         <p className="text-sm font-semibold text-content-primary">
           {cadence?.usualGapMonths
             ? `Their releases usually land every ${cadence.usualGapMonths} ${cadence.usualGapMonths === 1 ? 'month' : 'months'}.`
