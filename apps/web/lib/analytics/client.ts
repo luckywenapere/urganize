@@ -327,17 +327,27 @@ export function resetAnalyticsUser() {
   void posthogClientPromise.then((client) => client?.reset());
 }
 
+let onboardingStartedThisPage = false;
+
 export function markOnboardingStarted(entry: 'auth' | 'homepage' | 'invite' | 'google' = 'homepage') {
   if (typeof window === 'undefined') {
     return;
   }
 
-  const existingValue = window.localStorage.getItem(ONBOARDING_STARTED_AT_STORAGE_KEY);
-  if (existingValue) {
-    return;
+  // Once per device. Storage can be blocked (private modes, some in-app
+  // browsers) and must never throw into onboarding (#854 review: a throw here
+  // left the team screen loading forever), so a page-life flag backs it up.
+  if (onboardingStartedThisPage) return;
+  try {
+    if (window.localStorage.getItem(ONBOARDING_STARTED_AT_STORAGE_KEY)) {
+      onboardingStartedThisPage = true;
+      return;
+    }
+    window.localStorage.setItem(ONBOARDING_STARTED_AT_STORAGE_KEY, String(Date.now()));
+  } catch {
+    // Counted once for this page life instead.
   }
-
-  window.localStorage.setItem(ONBOARDING_STARTED_AT_STORAGE_KEY, String(Date.now()));
+  onboardingStartedThisPage = true;
   captureAnalyticsEvent({
     name: 'onboarding_started',
     properties: { entry },
@@ -349,7 +359,12 @@ export function getOnboardingElapsedSeconds(): number | null {
     return null;
   }
 
-  const rawValue = window.localStorage.getItem(ONBOARDING_STARTED_AT_STORAGE_KEY);
+  let rawValue: string | null = null;
+  try {
+    rawValue = window.localStorage.getItem(ONBOARDING_STARTED_AT_STORAGE_KEY);
+  } catch {
+    return null;
+  }
   const startedAt = Number(rawValue);
   if (!Number.isFinite(startedAt) || startedAt <= 0) {
     return null;
