@@ -7,12 +7,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <style>
-  /* App tokens: apps/web dark theme (same as docs/mocks/presave-distribute). */
+  /* App tokens: apps/web dark and light themes. Logos are Altlink's own files,
+     loaded from altlink.co (read Oct 29, 2026): the navy wordmark for light
+     mode, the square mark for dark mode (Oyin's call). */
   :root {
-    --bg:#0c0c0d; --card:#171719; --elev:#1b1b1e; --line:rgba(242,242,240,.07); --line2:#2e2e32;
-    --text:#f2f2f0; --sec:#929291; --ter:#6a6a69; --brand:#7fd99a;
     --board:#e9e3d7; --board-text:#1a1611; --board-sec:#5c544a;
   }
+  .dark { --bg:#0c0c0d; --card:#171719; --line:rgba(242,242,240,.07); --line2:#2e2e32; --text:#f2f2f0; --sec:#929291; --ter:#6a6a69; --brand:#7fd99a; --on-brand:#0c0c0d; }
+  .light { --bg:#f7f6f3; --card:#ffffff; --line:rgba(20,20,20,.08); --line2:#d9d7d2; --text:#141414; --sec:#5f5e5b; --ter:#8a8986; --brand:#2f9e5a; --on-brand:#ffffff; }
   * { box-sizing:border-box; }
   html,body { margin:0; background:var(--board); }
   body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--board-text); padding:32px 16px 64px; }
@@ -29,20 +31,24 @@
   .mono { font-family:'JetBrains Mono', monospace; }
   .mu { color:var(--sec); }
   .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-top:12px; }
-  .live { display:inline-flex; align-items:center; gap:6px; background:rgba(127,217,154,.15); color:var(--brand); border-radius:999px; padding:3px 10px; font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; }
+  .live { display:inline-flex; align-items:center; gap:6px; background:color-mix(in srgb, var(--brand) 15%, transparent); color:var(--brand); border-radius:999px; padding:3px 10px; font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; }
   .live i { width:6px; height:6px; border-radius:50%; background:var(--brand); }
   .urlbox { display:flex; align-items:center; gap:8px; border:1px solid var(--line2); border-radius:12px; padding:8px 10px; margin-top:12px; background:var(--bg); }
   .urlbox .mono { flex:1; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .btn { display:flex; align-items:center; justify-content:center; min-height:44px; border-radius:12px; font-weight:600; font-size:14px; margin-top:12px; background:var(--brand); color:var(--bg); }
+  .btn { display:flex; align-items:center; justify-content:center; min-height:44px; border-radius:12px; font-weight:600; font-size:14px; margin-top:12px; background:var(--brand); color:var(--on-brand); }
   .old { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:16px; font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; opacity:.55; }
   .old span { display:inline-grid; place-items:center; width:16px; height:16px; border:1px solid currentColor; border-radius:4px; font-size:9px; }
-  .new { display:block; text-align:center; margin-top:16px; font-size:13px; color:var(--sec); }
-  .new a { color:var(--text); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--ter); }
+  /* The new line: "powered by" + Altlink's logo, the logo is the link. */
+  .by { display:flex; align-items:center; justify-content:center; gap:7px; margin-top:16px; font-size:13px; color:var(--sec); }
+  .by a { display:inline-flex; align-items:center; gap:6px; color:var(--text); text-decoration:none; font-weight:600; letter-spacing:-.02em; }
+  .by .word { height:15px; width:auto; display:block; }
+  .by .mark { height:16px; width:16px; border-radius:4px; display:block; }
   .row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--line); }
   .row:first-child { border-top:0; }
   .small { font-size:12px; color:var(--sec); }
-  .outline { outline:2px dashed rgba(127,217,154,.55); outline-offset:4px; border-radius:6px; }
+  .outline { outline:2px dashed rgba(127,217,154,.7); outline-offset:4px; border-radius:6px; }
   .note { max-width:900px; margin:28px auto 0; font-size:13px; color:var(--board-sec); }
+  .note + .note { margin-top:8px; }
   .note b { color:var(--board-text); }
 </style>
 </head>
@@ -50,15 +56,15 @@
 
 <div class="intro">
   <h1>powered by Altlink</h1>
-  <p>From the Oct 28 call: sentence case, linked to Altlink's landing page. Dashed outline = what changes. Issue #852.</p>
+  <p>From the Oct 28 call: sentence case, linked to Altlink's landing page. Their real logos, from altlink.co. Dashed outline = what changes. Issue #852.</p>
 </div>
 
 <div class="board">
 
   <div class="col">
     <div class="tag">Today (live since Oct 22)</div>
-    <p class="why">All caps, mono type, a small "A" box. Not a link.</p>
-    <div class="phone">
+    <p class="why">All caps, a small "A" box we drew ourselves (not Altlink's mark). Not a link.</p>
+    <div class="phone dark">
       <div class="card">
         <span class="live"><i></i>Live</span>
         <div class="ser" style="font-size:26px;margin-top:10px">Drops in 22 days.</div>
@@ -70,36 +76,56 @@
   </div>
 
   <div class="col">
-    <div class="tag">Proposed: smart link view</div>
-    <p class="why">Plain sentence, the app's normal text. "Altlink" is the link, to altlink.co, opening in a new tab. Same spot, under the link.</p>
-    <div class="phone">
+    <div class="tag">Proposed: dark mode</div>
+    <p class="why">Their square mark, then "Altlink" in our type so the name reads. Mark and name together are the link to altlink.co.</p>
+    <div class="phone dark">
       <div class="card">
         <span class="live"><i></i>Live</span>
         <div class="ser" style="font-size:26px;margin-top:10px">Drops in 22 days.</div>
         <div class="urlbox"><span class="mono">altlink.co/ada/midnight-drive</span><span class="mu" style="font-size:13px;font-weight:600">Copy</span></div>
         <div class="btn">Share link</div>
       </div>
-      <p class="new outline">powered by <a href="https://altlink.co" target="_blank" rel="noopener">Altlink</a></p>
+      <p class="by outline">powered by
+        <a href="https://altlink.co" target="_blank" rel="noopener"><img class="mark" src="https://altlink.co/assets/altlink-logo-black-Cfa8BD74.png" alt="" />Altlink</a>
+      </p>
     </div>
   </div>
 
   <div class="col">
-    <div class="tag">Proposed: artist's past releases</div>
+    <div class="tag">Proposed: light mode</div>
+    <p class="why">Their full navy wordmark, as on altlink.co. The wordmark is the link to altlink.co.</p>
+    <div class="phone light">
+      <div class="card">
+        <span class="live"><i></i>Live</span>
+        <div class="ser" style="font-size:26px;margin-top:10px">Drops in 22 days.</div>
+        <div class="urlbox"><span class="mono">altlink.co/ada/midnight-drive</span><span class="mu" style="font-size:13px;font-weight:600">Copy</span></div>
+        <div class="btn">Share link</div>
+      </div>
+      <p class="by outline">powered by
+        <a href="https://altlink.co" target="_blank" rel="noopener" aria-label="Altlink"><img class="word" src="https://altlink.co/assets/altlink-logo-Bw5A4RY2.png" alt="Altlink" /></a>
+      </p>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="tag">Proposed: artist's past releases (dark)</div>
     <p class="why">These links are Altlink's too but carry no label today. The same line goes under the list once any release has a link.</p>
-    <div class="phone">
+    <div class="phone dark">
       <div class="ser" style="font-size:20px">Past releases</div>
       <div class="card" style="padding:4px 14px">
         <div class="row"><div><div>Owambe</div><div class="small">UPC 123456789012</div></div><span class="mono" style="font-size:12px;color:var(--brand)">altlink.co/ada/owambe</span></div>
         <div class="row"><div><div>Lagos Rain</div><div class="small">ISRC NGA1B2600001</div></div><span style="font-size:12px;font-weight:600;border:1px solid var(--line2);border-radius:8px;padding:6px 10px">Grab a smart link</span></div>
       </div>
-      <p class="new outline">powered by <a href="https://altlink.co" target="_blank" rel="noopener">Altlink</a></p>
+      <p class="by outline">powered by
+        <a href="https://altlink.co" target="_blank" rel="noopener"><img class="mark" src="https://altlink.co/assets/altlink-logo-black-Cfa8BD74.png" alt="" />Altlink</a>
+      </p>
     </div>
   </div>
 
 </div>
 
-<p class="note"><b>From altlink.co (checked Oct 29):</b> the landing page is https://altlink.co. Their wordmark is a dark navy square mark beside lowercase "altlink", set in Inter, with a lime green accent (#C4F188). The only logo file on the site is dark ink on a clear background, so it disappears on our dark screens. That is why the proposal is text only, in our own type. If they want their mark shown, ask them for a white version. Their API docs say nothing about how partners should credit them.</p>
-<p class="note"><b>Still assumed:</b> lowercase "powered" is what they meant by sentence case. Worth confirming when you send this for approval.</p>
+<p class="note"><b>Logos:</b> Altlink's own files from altlink.co, unchanged. Light mode: the navy wordmark (altlink-logo, 558 x 112). Dark mode: the square mark (altlink-logo-black, 456 x 456), a black tile with a white circle. The site has no white wordmark, so dark mode spells the name in our type beside the mark.</p>
+<p class="note"><b>Still assumed:</b> lowercase "powered" is what they meant by sentence case, and https://altlink.co is the page to link. Worth confirming when you send this for approval.</p>
 
 </body>
 </html>
