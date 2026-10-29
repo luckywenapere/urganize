@@ -13,6 +13,11 @@
     "dev": "node scripts/run-turbo.cjs dev",
     "lint": "node scripts/run-turbo.cjs lint",
     "test": "node scripts/run-turbo.cjs test",
+    "db:local:start": "npx -y supabase@2 start",
+    "db:local:stop": "npx -y supabase@2 stop",
+    "db:local:reset": "node scripts/local-db.mjs reset",
+    "db:local:seed": "node scripts/local-db.mjs seed",
+    "dev:local": "node scripts/dev-local.mjs",
     "mobile:start": "pnpm --filter @urganize/mobile start",
     "mobile:build:android": "pnpm --filter @urganize/mobile build:android",
     "mobile:build:ios": "pnpm --filter @urganize/mobile build:ios"
