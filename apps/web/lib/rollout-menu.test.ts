@@ -51,7 +51,10 @@ const keysOf = (entries: RolloutMenuEntry[]) => entries.map((entry) => entry.key
 /** Since 2026-10-16 the pitch kit and promo live inside Pitch this!, so with
  *  pitching on their own rows are not in the menu. */
 const FOLDED_INTO_PITCH: ReleaseMenuKey[] = ['pitchkit', 'promo'];
-const ALL_ON_ORDER = RELEASE_MENU_ORDER.filter((key) => !FOLDED_INTO_PITCH.includes(key) && key !== 'spend');
+/** Fill in details opens from inside Distribute only (2026-10-29, #848), and
+ *  the cover is changed on the cover itself, not a row (2026-10-29, #847). */
+const NOT_A_ROW: ReleaseMenuKey[] = ['spend', 'metadata', 'coverart'];
+const ALL_ON_ORDER = RELEASE_MENU_ORDER.filter((key) => !FOLDED_INTO_PITCH.includes(key) && !NOT_A_ROW.includes(key));
 
 /** Which row each feature switch owns. The mapping is the thing being tested,
  *  so it is written out here rather than derived from the module. */
@@ -62,9 +65,9 @@ const ROW_BY_FLAG: Record<keyof RolloutMenuFlags, ReleaseMenuKey[]> = {
   contentCalendar: ['calendar'],
   pitching: ['pitch'],
   pitchKit: [],
-  metadata: ['metadata'],
+  metadata: [],
   notes: ['note'],
-  coverArt: ['coverart'],
+  coverArt: [],
   files: ['files'],
   capture: ['capture'],
 };
@@ -82,10 +85,8 @@ const SCENE_ROWS: ReleaseMenuKey[] = [
   'promo',
   'metadata',
   'distribute',
-  'coverart',
   'files',
-  'capture',
-  'urgans',
+  'capture',
 ];
 
 
@@ -95,8 +96,7 @@ describe('buildRolloutMenu', () => {
     // built for it (so a ranked entry silently never appears), and a row built
     // in an order the ranking does not agree with.
     expect(keysOf(build())).toEqual([...ALL_ON_ORDER]);
-    // The phone's cover is the tile by the title (Oct 24, 2026), not a row.
-    expect(keysOf(build({ variant: 'phone' }))).toEqual(ALL_ON_ORDER.filter((key) => key !== 'coverart'));
+    expect(keysOf(build({ variant: 'phone' }))).toEqual([...ALL_ON_ORDER]);
   });
 
   it('is empty without a rollout, however much else is passed', () => {
@@ -136,12 +136,17 @@ describe('buildRolloutMenu', () => {
     expect(keysOf(build({ flags: allOff, showSpend: false }))).toEqual([
       'distribute',
       'promo',
-      'share',
-      'urgans',
+      'share',
       'change-artist',
       'archive',
       'delete',
     ]);
+  });
+
+  it('never shows Fill in details: it opens from inside Distribute (#848)', () => {
+    for (const variant of ['rail', 'phone'] as const) {
+      expect(keysOf(build({ variant })), variant).not.toContain('metadata');
+    }
   });
 
   it('never shows the Spend row: the spend tracker is cut (URG-319)', () => {
@@ -195,10 +200,15 @@ describe('which row is lit', () => {
   });
 
   it('lights exactly the open scene’s row, for every scene that has one', () => {
-    for (const scene of SCENE_ROWS.filter((key) => !FOLDED_INTO_PITCH.includes(key))) {
+    for (const scene of SCENE_ROWS.filter((key) => !FOLDED_INTO_PITCH.includes(key) && key !== 'metadata')) {
       const lit = build({ activeScene: scene as SceneName }).filter((entry) => entry.isActive);
       expect(lit.map((entry) => entry.key), scene).toEqual([scene]);
     }
+  });
+
+  it('lights Distribute while Fill in details is open (#848)', () => {
+    const lit = build({ activeScene: 'metadata' }).filter((entry) => entry.isActive);
+    expect(lit.map((entry) => entry.key)).toEqual(['distribute']);
   });
 
   it('lights Timeline, and only Timeline, while the timeline is showing', () => {
@@ -270,8 +280,6 @@ describe('what each row does', () => {
       chat: 'Talk to the team',
       calendar: 'Plan content',
       pitch: 'Pitch this!',
-      metadata: 'Fill in details',
-      coverart: 'Add cover art',
       files: 'Add files',
       capture: 'Smart link',
     });
@@ -301,12 +309,10 @@ describe('the two variants', () => {
     expect(note?.target).toEqual({ kind: 'link', href: '/dashboard/notes?release=a%20b%2Fc' });
   });
 
-  it('differs only in the notes and cover art rows', () => {
+  it('differs only in the notes row', () => {
     // Everything else must be identical, or a rollout would read differently on
-    // a phone and a laptop for no reason anybody chose. Cover art is chosen:
-    // the phone's cover is the tile by the title (Oct 24, 2026).
-    const strip = (entries: RolloutMenuEntry[]) =>
-      entries.filter((entry) => entry.key !== 'note' && entry.key !== 'coverart');
+    // a phone and a laptop for no reason anybody chose.
+    const strip = (entries: RolloutMenuEntry[]) => entries.filter((entry) => entry.key !== 'note');
     expect(strip(build({ variant: 'phone' }))).toEqual(strip(build({ variant: 'rail' })));
   });
 });

@@ -94,12 +94,6 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     label: 'Team brief',
     keywords: ['brief', 'ai', 'context', 'teach', 'how we work', 'vocabulary', 'positioning'],
   },
-  {
-    segment: 'urgans',
-    section: 'what-urgans-did',
-    label: 'What UrgAns did',
-    keywords: ['history', 'log', 'activity', 'changes', 'audit', 'who changed'],
-  },
 
   wholeSegment('directory', ['find', 'hire', 'listed']),
   {

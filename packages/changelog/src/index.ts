@@ -41,6 +41,33 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.204.0",
+    title: "See what UrgAns did, on the UrgAns page",
+    tag: "AI",
+    date: "October 29, 2026",
+    highlights: [
+      "What UrgAns did now lives on the UrgAns page. Pick a rollout, or see them all.",
+      "It is no longer in the rollout menu or in Settings.",
+    ],
+  },
+  {
+    version: "1.203.2",
+    tag: "Rollouts",
+    date: "October 29, 2026",
+    highlights: [
+      "To change a cover, hover over it on the artist page and tap the pencil. The rollout menu is shorter now.",
+    ],
+  },
+  {
+    version: "1.203.1",
+    tag: "Rollouts",
+    date: "October 29, 2026",
+    listed: false,
+    highlights: [
+      "Fill in details now opens from the Distribute page, not the rollout menu. Tap Edit on Details to change them.",
+    ],
+  },
+  {
     version: "1.203.0",
     title: "Urganize has a new address",
     tag: "Account",

@@ -20,7 +20,6 @@ import { ReleaseChatSection } from '@/components/releases/ReleaseChatSection';
 import { PitchKitSection } from '@/components/releases/PitchKitSection';
 import { DistributionSection } from '@/components/releases/DistributionSection';
 import { SpendSection } from '@/components/releases/SpendSection';
-import { UrgansActivityList } from '@/components/urgans-activity/UrgansActivityList';
 import { ReleaseBriefScene } from '@/components/releases/ReleaseBriefScene';
 import { BriefIdeaGate } from '@/components/releases/BriefIdeaGate';
 import { onlyPreProductionWork } from '@/lib/pre-production';
@@ -67,7 +66,6 @@ const SECTION_SCENES = [
   'spend',
   'promo',
   'brief',
-  'urgans',
 ] as const;
 
 // No compile-time coverage check beside this list, deliberately. One was
@@ -100,7 +98,6 @@ const SCENE_LABELS: Record<SceneName, string> = {
   spend: 'Spend',
   promo: 'Promo',
   brief: 'Brief',
-  urgans: 'What UrgAns did',
 };
 
 type ReleaseScenePanelProps = {
@@ -296,14 +293,6 @@ export function ReleaseScenePanel({
             onBuildPlan={onBuildPlanFromBrief}
           />
         </BriefIdeaGate>
-      ) : null}
-      {scene === 'urgans' ? (
-        <div className="mt-6">
-          <p className="mb-4 text-sm text-content-secondary">
-            Every change UrgAns made on this rollout in the last 30 days, and who asked for it.
-          </p>
-          <UrgansActivityList releaseId={release.id} />
-        </div>
       ) : null}
       {scene === 'timeline' ? (
         <TimelineScene
