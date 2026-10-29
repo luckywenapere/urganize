@@ -3,7 +3,6 @@
 import { memo } from 'react';
 import { TeamBriefSection } from '../TeamBriefSection';
 import { WhatsappChasingSection } from '../WhatsappChasingSection';
-import { UrgansActivitySection } from '../UrgansActivitySection';
 import { isTeamBriefEnabled } from '@/lib/team-brief';
 
 /**
@@ -17,7 +16,6 @@ function UrgansSegmentView() {
     <div className="divide-y divide-stroke-subtle">
       {isTeamBriefEnabled() ? <TeamBriefSection /> : null}
       <WhatsappChasingSection />
-      <UrgansActivitySection />
     </div>
   );
 }

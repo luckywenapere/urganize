@@ -163,10 +163,6 @@ export const RELEASE_MENU_ORDER = [
   // with it as the other "send this outward" item — his pairing, kept from the
   // desktop footer row.
   'capture',
-  // What UrgAns did (2026-10-27): the record of every change UrgAns made on
-  // this rollout. Read now and then to check, not worked in, so it sits with
-  // the corrections rather than the daily band.
-  'urgans',
   // A correction, not a place to work.
   'change-artist',
   // Terminal.
@@ -259,7 +255,6 @@ const GROUP_BY_KEY: Record<ReleaseMenuKey, RolloutMenuGroupKey> = {
   promo: 'promote',
   share: 'promote',
   capture: 'promote',
-  urgans: 'manage',
   'change-artist': 'manage',
   archive: 'manage',
   delete: 'manage',

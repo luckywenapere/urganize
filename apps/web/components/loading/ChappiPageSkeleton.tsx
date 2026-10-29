@@ -34,6 +34,7 @@ export function ChappiPageSkeleton() {
         {HISTORY_ENABLED ? (
           <>
             <div className="flex shrink-0 items-center justify-end gap-2">
+              <SkeletonBlock className="h-9 w-24 rounded-full" />
               <SkeletonBlock className="h-9 w-28 rounded-full" />
             </div>
             <SessionRows />
@@ -47,6 +48,7 @@ export function ChappiPageSkeleton() {
       <div className="home-split-height hidden gap-6 lg:flex xl:gap-8" aria-hidden="true">
         <div className="flex w-72 shrink-0 flex-col xl:w-80">
           <SkeletonBlock className="mb-3 h-10 w-36 rounded-full" />
+          <SkeletonBlock className="mb-3 h-10 w-40 rounded-full" />
           <SessionRows />
         </div>
         <div className="min-h-0 min-w-0 flex-1">

@@ -258,21 +258,30 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
     );
   };
 
-  const readyRow = (row: TrmRowView) => (
-    <Row
-      key={row.key}
-      mark={<Tick />}
-      title={row.title}
-      detail={row.detail}
-      right={
-        row.key === 'rights' ? (
-          <button type="button" onClick={() => setSheet('settings')} className={QUIET_LINK}>
-            Edit
-          </button>
-        ) : null
-      }
-    />
-  );
+  const readyRow = (row: TrmRowView) => {
+    // The details form lives only here (not in the rollout menu), so a filled
+    // Details row still opens it.
+    const editDetails = row.key === 'details' ? fixRun(row.fix) : null;
+    return (
+      <Row
+        key={row.key}
+        mark={<Tick />}
+        title={row.title}
+        detail={row.detail}
+        right={
+          row.key === 'rights' ? (
+            <button type="button" onClick={() => setSheet('settings')} className={QUIET_LINK}>
+              Edit
+            </button>
+          ) : editDetails ? (
+            <button type="button" onClick={editDetails} className={QUIET_LINK}>
+              Edit
+            </button>
+          ) : null
+        }
+      />
+    );
+  };
 
   const sheets = (
     <>

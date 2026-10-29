@@ -1,8 +1,9 @@
 'use client';
 
-// "What UrgAns did": every change UrgAns made, and who asked for it. One list,
-// shown in two places: a rollout's own scene (releaseId set) and Settings >
-// UrgAns (every rollout, with a filter by person). Reads GET
+// "What UrgAns did": every change UrgAns made, and who asked for it. Shown on
+// the UrgAns page only (2026-10-29, #849, founder approved the mock): it left
+// the rollout menu and Settings > UrgAns, and the page picks the rollout
+// itself (All rollouts, or one) with a filter by person. Reads GET
 // /api/urgans/activity; words each row with lib/urgans-activity.ts. Mocks
 // approved by the founder 2026-10-27. No Undo: the mock showed one on a
 // WhatsApp row, and it was left out because an undo is a write of its own that
@@ -12,6 +13,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Clock, MessageCircle, MessageSquare, Mic, Plug, Sparkles } from '@/components/icons';
 import { SiWhatsapp } from 'react-icons/si';
 import { supabase } from '@/lib/supabase/client';
+import { useReleaseStore } from '@/stores/useReleaseStore';
+import { displayReleaseTitle } from '@/types/releases';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import {
   describeActivity,
@@ -40,12 +43,15 @@ async function authHeaders(): Promise<Record<string, string>> {
 }
 
 export function UrgansActivityList({
-  releaseId,
+  showRolloutPicker = false,
   showPersonFilter = false,
 }: {
-  releaseId?: string;
+  showRolloutPicker?: boolean;
   showPersonFilter?: boolean;
 }) {
+  const releases = useReleaseStore((state) => state.releases);
+  // Empty means every rollout this person can see.
+  const [releaseId, setReleaseId] = useState('');
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState('');
   const [person, setPerson] = useState('');
@@ -76,13 +82,36 @@ export function UrgansActivityList({
     return ids.map((id) => ({ id, label: id === data.viewerId ? 'You' : data.names[id] || 'Someone' }));
   }, [data]);
 
+  const rolloutPicker = showRolloutPicker ? (
+    <select
+      aria-label="Rollout"
+      value={releaseId}
+      onChange={(event) => {
+        setData(null);
+        setReleaseId(event.target.value);
+      }}
+      className="motion-focus min-w-0 max-w-full rounded-md border border-stroke-control bg-bg-surface px-2 py-1 text-sm text-content-primary"
+    >
+      <option value="">All rollouts</option>
+      {releases.map((release) => (
+        <option key={release.id} value={release.id}>
+          {displayReleaseTitle(release.title)}
+          {release.artistName ? ` · ${release.artistName}` : ''}
+        </option>
+      ))}
+    </select>
+  ) : null;
+
   if (error) {
     return (
-      <div className="text-sm text-content-secondary" role="alert">
-        {error}{' '}
-        <button type="button" onClick={() => void load()} className="motion-focus font-semibold text-brand hover:underline">
-          Try again
-        </button>
+      <div>
+        {rolloutPicker ? <div className="mb-3">{rolloutPicker}</div> : null}
+        <div className="text-sm text-content-secondary" role="alert">
+          {error}{' '}
+          <button type="button" onClick={() => void load()} className="motion-focus font-semibold text-brand hover:underline">
+            Try again
+          </button>
+        </div>
       </div>
     );
   }
@@ -90,6 +119,7 @@ export function UrgansActivityList({
   if (!data) {
     return (
       <div className="space-y-3" aria-busy="true">
+        {rolloutPicker}
         <SkeletonBlock className="h-12 w-full" />
         <SkeletonBlock className="h-12 w-full" />
         <SkeletonBlock className="h-12 w-full" />
@@ -101,10 +131,12 @@ export function UrgansActivityList({
 
   return (
     <div>
-      {showPersonFilter && people.length > 1 ? (
-        <label className="mb-3 flex items-center gap-2 text-sm text-content-secondary">
-          Show
+      {rolloutPicker || (showPersonFilter && people.length > 1) ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-content-secondary">
+          {rolloutPicker}
+          {showPersonFilter && people.length > 1 ? (
           <select
+            aria-label="Who asked"
             value={person}
             onChange={(event) => setPerson(event.target.value)}
             className="motion-focus rounded-md border border-stroke-control bg-bg-surface px-2 py-1 text-sm text-content-primary"
@@ -116,7 +148,8 @@ export function UrgansActivityList({
               </option>
             ))}
           </select>
-        </label>
+          ) : null}
+        </div>
       ) : null}
 
       {rows.length === 0 ? (

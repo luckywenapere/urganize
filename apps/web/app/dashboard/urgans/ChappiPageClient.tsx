@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, History, Plus } from '@/components/icons';
+import { ArrowLeft, Clock, History, Plus } from '@/components/icons';
 import { consumeArrivingFromHome } from '@/lib/home-chat-glide';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { ChappiConversation } from '@/components/chappi/ChappiConversation';
 import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
+import { UrgansActivityView } from '@/components/urgans-activity/UrgansActivityView';
 import { ChappiPageSkeleton } from '@/components/loading/ChappiPageSkeleton';
 import { RolloutCreateFlow } from '@/components/releases/RolloutCreateFlow';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
@@ -55,6 +56,8 @@ export default function ChappiPageClient() {
     return HISTORY_ENABLED && !sendInputOnOpen && input.trim().length === 0;
   });
   const hasConversation = useChappiStore((state) => state.messages.length > 0);
+  // "What UrgAns did" swaps in for the chat, like the sessions list (#849).
+  const [showActivity, setShowActivity] = useState(false);
 
   // iOS scrolls the document to reveal a focused field BEFORE the layout has
   // had a chance to react, and this page's own contract is that it never
@@ -124,10 +127,29 @@ export default function ChappiPageClient() {
         }`}
       >
         <div className="flex shrink-0 items-center justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              setShowActivity((current) => !current);
+              setShowSessions(false);
+            }}
+            aria-pressed={showActivity}
+            className="motion-focus motion-press mr-2 inline-flex min-h-9 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+          >
+            {showActivity ? (
+              <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : (
+              <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            {showActivity ? 'Back' : 'What I did'}
+          </button>
           {HISTORY_ENABLED ? (
             <button
               type="button"
-              onClick={() => setShowSessions((current) => !current)}
+              onClick={() => {
+                setShowSessions((current) => !current);
+                setShowActivity(false);
+              }}
               className="motion-focus motion-press mr-2 inline-flex min-h-9 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
             >
               {showSessions ? (
@@ -147,6 +169,7 @@ export default function ChappiPageClient() {
               onClick={() => {
                 useChappiStore.getState().reset();
                 setShowSessions(false);
+                setShowActivity(false);
               }}
               className="motion-focus motion-press inline-flex min-h-9 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
             >
@@ -159,6 +182,7 @@ export default function ChappiPageClient() {
           <InviteTeamBanner />
         </div>
         <div className="min-h-0 min-w-0 flex-1">
+          {showActivity ? <UrgansActivityView /> : null}
           {HISTORY_ENABLED && showSessions ? (
             <div className="h-full min-h-0">
               <ChappiHistoryList variant="panel" onDone={() => setShowSessions(false)} />
@@ -166,7 +190,7 @@ export default function ChappiPageClient() {
           ) : null}
           {/* Hidden, never unmounted, while the list shows: the upload and
               recap cards, and any reply still on its way, live in it. */}
-          <div className={`h-full min-h-0 ${showSessions ? 'hidden' : ''}`}>
+          <div className={`h-full min-h-0 ${showSessions || showActivity ? 'hidden' : ''}`}>
             <ChappiConversation onNewRelease={() => setIsCreateModalOpen(true)} />
           </div>
         </div>
