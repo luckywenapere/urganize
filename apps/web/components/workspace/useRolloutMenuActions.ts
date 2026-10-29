@@ -37,6 +37,8 @@ import { resolvePanelBody, type SceneName } from '@/lib/scene-cache';
 import { useCanViewSpend } from '@/stores/useSpendAccessStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useSceneOverlay } from './useSceneOverlay';
+import { useSmartLinkReady } from '@/components/releases/useSmartLinkReady';
+import { captureRowLabel } from '@/lib/smart-link-task';
 
 /**
  * One icon per ranked key. A `Record` over the closed `ReleaseMenuKey` union, so
@@ -147,7 +149,9 @@ export function useRolloutMenuActions({
   // a stale `?scene=…` must not light a row for a scene that is not rendering.
   // `resolvePanelBody` rather than `resolveActiveScene`, so a bare rollout (no
   // `?scene=`) lights Timeline: that is the view it is actually showing.
-  // The Promote row is always "Smart link", never "Pre-save link" (Oyin, Oct 29, 2026, #850).
+  // The Promote row is "Smart link" once the rollout has a link or a UPC/ISRC,
+  // "Fan emails" until then (Altlink call, #852); never "Pre-save link" (#850).
+  const smartLinkReady = useSmartLinkReady(releaseId);
   // Distribute, Pitch this! and the Smart link all hang off release day, so
   // they wait for a date (2026-10-26, declutter). Unknown release: show all.
   const dateMissing = useReleaseStore((state) => {
@@ -172,7 +176,7 @@ export function useRolloutMenuActions({
     variant,
     flags: ROLLOUT_MENU_FLAGS,
     showSpend,
-    captureLabel: 'Smart link',
+    captureLabel: captureRowLabel(smartLinkReady),
     share,
     changeArtist,
     archive,

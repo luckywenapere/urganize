@@ -22,6 +22,7 @@ import {
 } from '@/lib/altlink/rules';
 import { CaptureSection } from './CaptureSection';
 import { PoweredByAltlink } from './PoweredByAltlink';
+import { markSmartLinkReady } from './useSmartLinkReady';
 
 type SmartLinkView = {
   enabled: boolean;
@@ -164,6 +165,12 @@ export function SmartLinkSection({ releaseId, onToast, part = 'all', onOpenLink 
     Boolean(view?.enabled && view?.configured) && !view?.link && !view?.notReady;
   const creating = phase === 'creating' || waitingToCreate;
 
+  // A link seen here turns the menu row and panel title to "Smart link" (#852).
+  const linkSeen = phase === 'presave' || phase === 'released';
+  useEffect(() => {
+    if (linkSeen) markSmartLinkReady(releaseId);
+  }, [linkSeen, releaseId]);
+
   // While a link is being made, look again a few times (never on lists).
   useEffect(() => {
     if (!creating || polls.current >= 15) return;
@@ -241,6 +248,11 @@ export function SmartLinkSection({ releaseId, onToast, part = 'all', onOpenLink 
 
   const hasLink = phase === 'presave' || phase === 'released';
   const hidden = view.notReady === 'test' || view.notReady === 'archived' || view.notReady === 'no_release';
+  // No link, not being made and not failed: the rollout has no code (or no
+  // date, name or artist) yet. Altlink asked that no smart link show then
+  // (#852): the fan email page alone, a line on when the link comes, and the
+  // way to add the code. No Altlink label, since nothing of theirs is shown.
+  const waitingForCode = !hasLink && phase !== 'failed' && !creating;
 
   if (part === 'numbers') {
     return (
@@ -261,6 +273,25 @@ export function SmartLinkSection({ releaseId, onToast, part = 'all', onOpenLink 
           </section>
         )}
         <PoweredByAltlink />
+      </div>
+    );
+  }
+
+  if (waitingForCode) {
+    return (
+      <div className="mt-6 space-y-4">
+        <section className={`${CARD} px-5 pb-5 pt-4`}>
+          <h3 className="text-sm font-semibold text-content-primary">Fan email page</h3>
+          <CaptureSection releaseId={releaseId} onToast={onToast} embedded beforeLink />
+        </section>
+        {hidden ? null : (
+          <SmartLinkComing
+            reason={view.notReady}
+            configured={view.configured}
+            canWrite={canWrite}
+            onAddCode={() => openScene('metadata', releaseId, { field: 'upc' })}
+          />
+        )}
       </div>
     );
   }
@@ -301,14 +332,7 @@ export function SmartLinkSection({ releaseId, onToast, part = 'all', onOpenLink 
           </div>
           <Facts facts={view.facts} />
         </section>
-      ) : (
-        <NotReadyRow
-          reason={view.notReady}
-          configured={view.configured}
-          canWrite={canWrite}
-          onAddUpc={() => openScene('metadata', releaseId, { field: 'upc' })}
-        />
-      )}
+      ) : null}
 
       <details className={`${CARD} group`} open={!hasLink}>
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-sm font-semibold text-content-primary">
@@ -325,38 +349,37 @@ export function SmartLinkSection({ releaseId, onToast, part = 'all', onOpenLink 
   );
 }
 
-function NotReadyRow({
+/** Under the fan email page while there is no link: when it comes, and the way to add the code. */
+function SmartLinkComing({
   reason,
   configured,
   canWrite,
-  onAddUpc,
+  onAddCode,
 }: {
   reason: string | null;
   configured: boolean;
   canWrite: boolean;
-  onAddUpc: () => void;
+  onAddCode: () => void;
 }) {
-  const meta = !configured
-    ? 'Switching on soon'
-    : reason === 'no_date'
-      ? 'Unlocks with a release date'
+  if (!configured) return null;
+  const line =
+    reason === 'no_date'
+      ? 'Your smart link shows up here once the rollout has a release date and the song has a UPC or ISRC.'
       : reason === 'no_title'
-        ? 'Unlocks once the rollout has a name'
+        ? 'Your smart link shows up here once the rollout has a name.'
         : reason === 'no_artist'
-          ? 'Unlocks once the rollout has an artist'
-          : 'Unlocks with a UPC or ISRC';
+          ? 'Your smart link shows up here once the rollout has an artist.'
+          : 'Your smart link shows up here once the song has a UPC or ISRC.';
+  const needsCode = reason === 'no_code' || reason === 'missing_identifier';
   return (
-    <section className={`${CARD} flex flex-wrap items-center justify-between gap-3 px-5 py-4`}>
-      <div className="min-w-0">
-        <p className="text-sm font-semibold text-content-primary">Smart link</p>
-        <p className={`mt-1 ${META} opacity-80`}>{meta}</p>
-      </div>
-      {configured && reason === 'no_code' && canWrite ? (
-        <button type="button" onClick={onAddUpc} className={QUIET_BUTTON}>
-          Add UPC
+    <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+      <p className="min-w-0 flex-1 text-sm text-content-secondary">{line}</p>
+      {needsCode && canWrite ? (
+        <button type="button" onClick={onAddCode} className={QUIET_BUTTON}>
+          Add UPC or ISRC
         </button>
       ) : null}
-    </section>
+    </div>
   );
 }
 
