@@ -84,8 +84,7 @@ const SCENE_ROWS: ReleaseMenuKey[] = [
   'distribute',
   'coverart',
   'files',
-  'capture',
-  'urgans',
+  'capture',
 ];
 
 
@@ -136,8 +135,7 @@ describe('buildRolloutMenu', () => {
     expect(keysOf(build({ flags: allOff, showSpend: false }))).toEqual([
       'distribute',
       'promo',
-      'share',
-      'urgans',
+      'share',
       'change-artist',
       'archive',
       'delete',

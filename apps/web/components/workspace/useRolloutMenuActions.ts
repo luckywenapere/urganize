@@ -10,7 +10,6 @@ import {
   ClipboardList,
   FolderOpen,
   Globe,
-  History,
   Image as ImageIcon,
   ListChecks,
   Link2,
@@ -70,8 +69,6 @@ const ICONS: Record<ReleaseMenuKey, ComponentType<LucideProps>> = {
   share: Share2,
   // The pre-save / smart link (with fan capture inside): a link.
   capture: Link2,
-  // What UrgAns did: a history of changes.
-  urgans: History,
   'change-artist': Users,
   archive: Archive,
   delete: Trash2,

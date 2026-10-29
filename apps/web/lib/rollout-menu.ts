@@ -189,7 +189,7 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     flags.notes ? note : null,
     input.share ? dialog('share', input.share) : null,
     flags.capture ? scene('capture', input.captureLabel ?? 'Pre-save link') : null,
-    scene('urgans', 'What UrgAns did'),
+    // What UrgAns did moved to the UrgAns page (2026-10-29, #849).
     input.changeArtist ? dialog('change-artist', input.changeArtist) : null,
     input.archive ? dialog('archive', input.archive) : null,
     input.deleteRollout ? dialog('delete', input.deleteRollout) : null,

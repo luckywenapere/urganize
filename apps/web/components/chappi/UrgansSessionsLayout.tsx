@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { Plus } from '@/components/icons';
+import { useEffect, useRef, useState } from 'react';
+import { Clock, Plus } from '@/components/icons';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { ChappiConversation } from '@/components/chappi/ChappiConversation';
 import { ChappiHistoryList } from '@/components/chappi/ChappiHistoryList';
 import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
+import { UrgansActivityView } from '@/components/urgans-activity/UrgansActivityView';
 import { withoutHomeChat } from '@/lib/chappi/home-chat';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { useChappiHistoryStore } from '@/stores/useChappiHistoryStore';
@@ -31,6 +32,8 @@ export function UrgansSessionsLayout({ onNewRelease }: { onNewRelease: () => voi
   const loadList = useChappiHistoryStore((state) => state.loadList);
   const open = useChappiHistoryStore((state) => state.open);
   const settled = useRef(false);
+  // "What UrgAns did" shows in the middle in place of the session (#849).
+  const [showActivity, setShowActivity] = useState(false);
 
   useEffect(() => {
     void loadList();
@@ -56,7 +59,10 @@ export function UrgansSessionsLayout({ onNewRelease }: { onNewRelease: () => voi
     }
   }, [listStatus, summaries, homeChatId, open]);
 
-  const startNew = () => useChappiStore.getState().reset();
+  const startNew = () => {
+    useChappiStore.getState().reset();
+    setShowActivity(false);
+  };
 
   return (
     <div className="home-split-height flex gap-6 xl:gap-8">
@@ -69,8 +75,21 @@ export function UrgansSessionsLayout({ onNewRelease }: { onNewRelease: () => voi
           <Plus className="h-4 w-4" aria-hidden="true" />
           New session
         </button>
+        <button
+          type="button"
+          onClick={() => setShowActivity(true)}
+          aria-pressed={showActivity}
+          className={`motion-focus motion-press mb-3 inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full px-3.5 text-sm font-medium transition-colors ${
+            showActivity
+              ? 'bg-bg-hover text-content-primary'
+              : 'text-content-secondary hover:bg-bg-hover hover:text-content-primary'
+          }`}
+        >
+          <Clock className="h-4 w-4" aria-hidden="true" />
+          What UrgAns did
+        </button>
         <div className="min-h-0 flex-1">
-          <ChappiHistoryList variant="panel" />
+          <ChappiHistoryList variant="panel" onDone={() => setShowActivity(false)} />
         </div>
       </aside>
 
@@ -78,7 +97,14 @@ export function UrgansSessionsLayout({ onNewRelease }: { onNewRelease: () => voi
         <div className="shrink-0">
           <InviteTeamBanner />
         </div>
-        <div className="min-h-0 flex-1">
+        {showActivity ? (
+          <div className="min-h-0 flex-1">
+            <UrgansActivityView />
+          </div>
+        ) : null}
+        {/* Hidden, never unmounted, while the history shows: a reply on its
+            way lives in it. */}
+        <div className={`min-h-0 flex-1 ${showActivity ? 'hidden' : ''}`}>
           <ErrorBoundary name="urgans-conversation" onError={reportBoundaryError} fallback={null}>
             <ChappiConversation onNewRelease={onNewRelease} />
           </ErrorBoundary>
