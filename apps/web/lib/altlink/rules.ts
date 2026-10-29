@@ -8,13 +8,11 @@ import { DEFAULT_RELEASE_TITLE } from '@/types/releases';
 export const isAltlinkEnabled = (): boolean => process.env.NEXT_PUBLIC_FEATURE_ALTLINK !== 'false';
 
 /**
- * Fan capture was cut on Oct 16, 2026 (lib/cut-features.json forces its own flag
- * off). The pre-save view brings it back as part of ONE Promote entry, so it is
- * available whenever either switch is on.
+ * Fan emails are off (Oct 29, 2026, #872, Oyin's call): only the capture flag,
+ * which lib/cut-features.json forces off, turns them on. The smart link lives on
+ * Distribute and no longer brings the fan email page back with it.
  */
-export const isFanCaptureAvailable = (): boolean =>
-  process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true' ||
-  process.env.NEXT_PUBLIC_FEATURE_ALTLINK !== 'false';
+export const isFanCaptureAvailable = (): boolean => process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 
 export const ALTLINK_TIMEZONE = 'Africa/Lagos';
 /** Lagos is UTC+1 all year. */

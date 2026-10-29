@@ -1,8 +1,9 @@
 'use client';
 
 // The Promote entry "Smart link" (never "Pre-save link", Oct 29, 2026, #850):
-// the Altlink link leads, the fan email page sits under it in a fold. The
-// Distribute tab shows it in two parts: the link, and its numbers. Design signed off in
+// the Altlink link, on Distribute in two parts: the link, and its numbers. The
+// fan email page that sat under it is off (Oct 29, 2026, #872) unless the
+// capture flag comes back. Design signed off in
 // BUILD-NOTES-ALTLINK.md: one hero sentence per state, one green action, empty
 // blocks never render, pending text quiet. Nothing here creates a link on a tap
 // except "Try again": the server makes it as soon as the rollout is ready.
@@ -15,6 +16,7 @@ import { copyText, shareTextToApps } from '@/lib/share-file';
 import {
   ctrPercent,
   daysUntilRelease,
+  isFanCaptureAvailable,
   orderPlatforms,
   smartLinkPhase,
   type SmartLinkPlatform,
@@ -23,6 +25,8 @@ import {
 import { CaptureSection } from './CaptureSection';
 import { PoweredByAltlink } from './PoweredByAltlink';
 import { markSmartLinkReady } from './useSmartLinkReady';
+
+const FAN_EMAILS_ENABLED = isFanCaptureAvailable();
 
 type SmartLinkView = {
   enabled: boolean;
@@ -280,10 +284,12 @@ export function SmartLinkSection({ releaseId, onToast, part = 'all', onOpenLink 
   if (waitingForCode) {
     return (
       <div className="mt-6 space-y-4">
-        <section className={`${CARD} px-5 pb-5 pt-4`}>
-          <h3 className="text-sm font-semibold text-content-primary">Fan email page</h3>
-          <CaptureSection releaseId={releaseId} onToast={onToast} embedded beforeLink />
-        </section>
+        {FAN_EMAILS_ENABLED ? (
+          <section className={`${CARD} px-5 pb-5 pt-4`}>
+            <h3 className="text-sm font-semibold text-content-primary">Fan email page</h3>
+            <CaptureSection releaseId={releaseId} onToast={onToast} embedded beforeLink />
+          </section>
+        ) : null}
         {hidden ? null : (
           <SmartLinkComing
             reason={view.notReady}
@@ -334,15 +340,17 @@ export function SmartLinkSection({ releaseId, onToast, part = 'all', onOpenLink 
         </section>
       ) : null}
 
-      <details className={`${CARD} group`} open={!hasLink}>
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-sm font-semibold text-content-primary">
-          Fan email page
-          <span className={META}>{hasLink ? 'Your emails' : 'Collect emails now'}</span>
-        </summary>
-        <div className="border-t border-stroke-default px-5 pb-5">
-          <CaptureSection releaseId={releaseId} onToast={onToast} embedded quiet={hasLink} />
-        </div>
-      </details>
+      {FAN_EMAILS_ENABLED ? (
+        <details className={`${CARD} group`} open={!hasLink}>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-sm font-semibold text-content-primary">
+            Fan email page
+            <span className={META}>{hasLink ? 'Your emails' : 'Collect emails now'}</span>
+          </summary>
+          <div className="border-t border-stroke-default px-5 pb-5">
+            <CaptureSection releaseId={releaseId} onToast={onToast} embedded quiet={hasLink} />
+          </div>
+        </details>
+      ) : null}
 
       <PoweredByAltlink />
     </div>

@@ -25,7 +25,7 @@ import { DEFAULT_BUTTON_LABEL, DEFAULT_CONSENT_NOTE, isUsableDestination } from 
 const RELEASE_CAPTURE_PAGES_TABLE = 'release_capture_pages';
 
 export const isCaptureFeatureEnabled = (): boolean =>
-  (process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true' || process.env.NEXT_PUBLIC_FEATURE_ALTLINK !== 'false');
+  process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 
 // Tokens are 24-char base64url, same shape as EPK and credit share tokens; a
 // cheap shape check keeps junk paths from reaching the database.
@@ -110,6 +110,28 @@ async function resolveGraphicUrl(
     { id: releaseId, artwork_asset_id: artworkAssetId },
   ]);
   return coverMap.get(releaseId) || null;
+}
+
+/**
+ * The rollout behind a fan page link, read even with fan emails off (#872), so
+ * an old link in a bio can still send fans to the smart link. Null for an
+ * unknown token or a broken environment.
+ */
+export async function loadCaptureReleaseId(token: string): Promise<string | null> {
+  const normalizedToken = token.trim();
+  if (!CAPTURE_TOKEN_SHAPE.test(normalizedToken)) return null;
+  const client = createCaptureServiceClient();
+  if (!client) return null;
+  try {
+    const { data, error } = await client
+      .from(RELEASE_CAPTURE_PAGES_TABLE)
+      .select('release_id')
+      .eq('share_token', normalizedToken)
+      .maybeSingle();
+    return error || !data?.release_id ? null : String(data.release_id);
+  } catch {
+    return null;
+  }
 }
 
 /**

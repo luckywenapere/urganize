@@ -88,10 +88,6 @@ describe('persist policy', () => {
       pitchkit: 'NEXT_PUBLIC_FEATURE_PITCH_KIT',
     };
     const cacheable = [...SCENE_NAMES].filter(isCacheableScene).filter((scene) => {
-      // The Pre-save link scene (capture) opens on either flag; Altlink ships on.
-      if (scene === 'capture') {
-        return process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true' || process.env.NEXT_PUBLIC_FEATURE_ALTLINK !== 'false';
-      }
       const flag = flagFor[scene];
       return !flag || process.env[flag] === 'true';
     });
@@ -297,8 +293,6 @@ const SCENE_FLAGS = [
   'NEXT_PUBLIC_FEATURE_RELEASE_CHAT',
   'NEXT_PUBLIC_FEATURE_PITCH_KIT',
   'NEXT_PUBLIC_FEATURE_RELEASE_BRIEF',
-  // The Pre-save link scene (capture) opens on CAPTURE or ALTLINK.
-  'NEXT_PUBLIC_FEATURE_ALTLINK',
 ] as const;
 
 async function loadResolver(flagsOn: boolean) {
