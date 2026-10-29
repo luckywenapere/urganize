@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.206.4",
+    tag: "Rollouts",
+    date: "October 29, 2026",
+    highlights: [
+      "Until your song has a UPC or ISRC, the rollout menu shows Fan emails. Once it has one, the same spot becomes your Smart link.",
+      "You can add the UPC or ISRC straight from there.",
+    ],
+  },
+  {
     version: "1.206.3",
     tag: "Account",
     date: "October 29, 2026",
