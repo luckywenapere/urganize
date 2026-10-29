@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { isSmartLinkTask, isSmartLinkTaskTitle, smartLinkWording } from './smart-link-task';
+import { captureRowLabel, isSmartLinkTask, isSmartLinkTaskTitle, smartLinkWording } from './smart-link-task';
+
+describe('the capture row label (#852)', () => {
+  it('says Smart link only once the rollout can have one', () => {
+    expect(captureRowLabel(true)).toBe('Smart link');
+    expect(captureRowLabel(false)).toBe('Fan emails');
+    expect(captureRowLabel(null)).toBe('Fan emails');
+  });
+});
 
 describe('the smart link task', () => {
   it('knows the planner task and the playbook steps', () => {

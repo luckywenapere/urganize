@@ -76,9 +76,11 @@ type CaptureSectionProps = {
   embedded?: boolean;
   /** The Altlink link already has the screen's green action, so ours is plain. */
   quiet?: boolean;
+  /** No smart link yet (#852): there is no link for fans to be tapping. */
+  beforeLink?: boolean;
 };
 
-export function CaptureSection({ releaseId, onToast, embedded = false, quiet = false }: CaptureSectionProps) {
+export function CaptureSection({ releaseId, onToast, embedded = false, quiet = false, beforeLink = false }: CaptureSectionProps) {
   const {
     data,
     isLoading,
@@ -309,7 +311,9 @@ export function CaptureSection({ releaseId, onToast, embedded = false, quiet = f
       ) : !page ? (
         <div className="mt-4 border border-stroke-default bg-bg-surface p-6 text-center">
           <p className="text-sm text-content-secondary">
-            Build a page that collects emails from the fans already tapping your link.
+            {beforeLink
+              ? 'Build a page where fans leave their email before release day.'
+              : 'Build a page that collects emails from the fans already tapping your link.'}
           </p>
           <button
             type="button"
@@ -325,7 +329,7 @@ export function CaptureSection({ releaseId, onToast, embedded = false, quiet = f
             ) : (
               <>
                 <Mail className="h-3.5 w-3.5" />
-                Create capture page
+                Create fan email page
               </>
             )}
           </button>
