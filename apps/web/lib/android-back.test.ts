@@ -22,12 +22,12 @@ describe('decideAndroidBack with history', () => {
     expect(decideAndroidBack(`${base}/dashboard/artists/42`)).toBe('go-home');
   });
   it('tab roots and the paywall flow keep going Home, so Back never reveals the app behind the wall', () => {
-    for (const path of ['/dashboard/urgans', '/dashboard/artists', '/locked', '/locked/urgans', '/start-trial', '/payment/callback', '/auth']) {
+    for (const path of ['/dashboard/urgans', '/dashboard/team', '/dashboard/home', '/locked', '/locked/urgans', '/start-trial', '/payment/callback', '/auth']) {
       expect(decideAndroidBack(base + path, true)).toBe('go-home');
     }
   });
   it('Home exits and the settings pop-up closes first, whatever history says', () => {
-    expect(decideAndroidBack(`${base}/dashboard/home`, true)).toBe('exit');
+    expect(decideAndroidBack(`${base}/dashboard/artists`, true)).toBe('exit');
     expect(decideAndroidBack(`${base}/dashboard/artists/1?settings=menu`, true)).toBe('go-back');
   });
 });

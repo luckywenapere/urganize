@@ -17,8 +17,8 @@ describe('errorBackHref', () => {
   });
 
   it('never links a crashed page back to itself', () => {
-    expect(errorBackHref('/dashboard')).toBe('/dashboard/home');
-    expect(errorBackHref('/dashboard/')).toBe('/dashboard/home');
+    expect(errorBackHref('/dashboard')).toBe('/dashboard/artists');
+    expect(errorBackHref('/dashboard/')).toBe('/dashboard/artists');
     for (const path of ['/dashboard', '/dashboard/home', '/dashboard/notes', '/']) {
       expect(errorBackHref(path)).not.toBe(path.replace(/\/+$/, '') || '/');
     }

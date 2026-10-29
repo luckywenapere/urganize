@@ -42,7 +42,8 @@ const RELATIONSHIPS_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 // Paused Oct 27, 2026 (lib/paused-features.ts).
 const OPPORTUNITIES_ENABLED = isOpportunitiesEnabled();
-const HOME_ENABLED = true;
+// Home left the menu (founder, 2026-10-29, #876).
+const HOME_ENABLED = false;
 
 /** The two destinations every signed-in team account has. Settings left this
  *  list on 2026-09-29: it is a pop-up over these pages now, so there is no

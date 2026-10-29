@@ -1,10 +1,7 @@
-import type { Metadata } from 'next';
-import HomePageClient from './HomePageClient';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: 'Home',
-};
-
+// Home left the menu (founder, 2026-10-29, #876). Its address opens Artists,
+// so old links, emails and installed apps still land somewhere real.
 export default function HomePage() {
-  return <HomePageClient />;
+  redirect('/dashboard/artists');
 }

@@ -55,10 +55,11 @@ describe('isEdgeStart', () => {
 describe('decideAndroidBack', () => {
   const base = 'https://app.urganize.app';
   it('closes settings first, then goes Home, then exits', () => {
-    expect(decideAndroidBack(`${base}/dashboard/home?settings=menu`)).toBe('go-back');
+    expect(decideAndroidBack(`${base}/dashboard/artists?settings=menu`)).toBe('go-back');
     expect(decideAndroidBack(`${base}/dashboard/urgans`)).toBe('go-home');
-    expect(decideAndroidBack(`${base}/dashboard/home`)).toBe('exit');
-    expect(decideAndroidBack(`${base}/dashboard/home/`)).toBe('exit');
+    expect(decideAndroidBack(`${base}/dashboard/team`)).toBe('go-home');
+    expect(decideAndroidBack(`${base}/dashboard/artists`)).toBe('exit');
+    expect(decideAndroidBack(`${base}/dashboard/artists/`)).toBe('exit');
     expect(decideAndroidBack(null)).toBe('exit');
     expect(decideAndroidBack('not a url')).toBe('exit');
   });

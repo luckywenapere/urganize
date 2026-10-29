@@ -15,7 +15,7 @@ import { AvatarMenu } from './AvatarMenu';
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 /**
- * The swipe navigation's top bar (URG-380). Phone: Home · UrgAns · Artists at
+ * The swipe navigation's top bar (URG-380). Phone: Artists · UrgAns · Team at
  * the left, 17px/600, inactive at 45%, a 2.5px green underline that follows
  * the pager every frame (its x and width lerp between the labels), and the
  * avatar at the right. Desktop: the Urganize mark left, the tabs centred, the
@@ -98,7 +98,7 @@ export function SwipeTopBar({ showHelp, pagerActive }: { showHelp: boolean; page
       data-swipe-topbar
     >
       <div className="relative flex h-[50px] items-center px-5 lg:h-[72px] lg:px-8">
-        <Link href={SWIPE_TABS[0].href} className="motion-focus hidden items-center lg:flex" aria-label="Urganize, Home">
+        <Link href={SWIPE_TABS[0].href} className="motion-focus hidden items-center lg:flex" aria-label="Urganize, Artists">
           <Logo size="sm" priority />
         </Link>
         <nav aria-label="Primary" className="flex h-full items-center lg:absolute lg:inset-y-0 lg:left-1/2 lg:-translate-x-1/2">

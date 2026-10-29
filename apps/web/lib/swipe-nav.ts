@@ -1,6 +1,7 @@
 // The swipe navigation (URG-380, Oyin approved the mocks Oct 18, 2026).
 //
-// Three top tabs you swipe between, Home · UrgAns · Artists, and one avatar
+// Three top tabs you swipe between, Artists · UrgAns · Team (Home left the
+// menu Oct 29, 2026, #876, founder call), and one avatar
 // menu for everything else. The bottom bar and the More sheet go away while it
 // is on. On for everyone since v1.160.5; a person can opt out (see
 // useSwipeNavStore).
@@ -10,16 +11,16 @@
 // unit tested without a DOM. The numbers are the approved motion spec in
 // /workspace/work/nav-swipe-mocks/notes.md, copied, never re-tuned by eye.
 
-import { HOME_HREF, URGANS_HREF, ARTISTS_HREF } from './shell-nav';
+import { URGANS_HREF, ARTISTS_HREF, TEAM_HREF } from './shell-nav';
 
-export type SwipeTabKey = 'home' | 'urgans' | 'artists';
+export type SwipeTabKey = 'artists' | 'urgans' | 'team';
 
 export type SwipeTab = { key: SwipeTabKey; label: string; href: string };
 
 export const SWIPE_TABS: readonly SwipeTab[] = [
-  { key: 'home', label: 'Home', href: HOME_HREF },
-  { key: 'urgans', label: 'UrgAns', href: URGANS_HREF },
   { key: 'artists', label: 'Artists', href: ARTISTS_HREF },
+  { key: 'urgans', label: 'UrgAns', href: URGANS_HREF },
+  { key: 'team', label: 'Team', href: TEAM_HREF },
 ];
 
 /** The user_metadata key a person's own choice is kept in (false = classic). */
@@ -69,9 +70,9 @@ export function readSwipeNavQuery(value: string | null | undefined): boolean | n
 export function swipeTabForPath(pathname: string | null | undefined): SwipeTabKey | null {
   if (!pathname) return null;
   const path = pathname.replace(/\/+$/, '') || '/';
-  if (path === HOME_HREF) return 'home';
-  if (path === URGANS_HREF) return 'urgans';
   if (path === ARTISTS_HREF) return 'artists';
+  if (path === URGANS_HREF) return 'urgans';
+  if (path === TEAM_HREF) return 'team';
   return null;
 }
 
@@ -113,7 +114,7 @@ export const SWIPE_BACK_PATHS: readonly string[] = [
 export function swipeBackFor(pathname: string | null | undefined): { href: string } | null {
   if (!pathname) return null;
   const path = pathname.replace(/\/+$/, '') || '/';
-  return SWIPE_BACK_PATHS.includes(path) ? { href: HOME_HREF } : null;
+  return SWIPE_BACK_PATHS.includes(path) ? { href: ARTISTS_HREF } : null;
 }
 
 /** An earlier in-app page is a fine place to go back to only when it is inside the app. */
@@ -143,7 +144,7 @@ export function swipeBackAction(
 /** The browser tab title for a swipe tab, in the same shape the pages' own metadata gives. */
 export function swipeDocumentTitle(key: SwipeTabKey): string {
   const tab = SWIPE_TABS.find((entry) => entry.key === key);
-  return `${tab ? tab.label : 'Home'} | Urganize`;
+  return `${tab ? tab.label : 'Artists'} | Urganize`;
 }
 
 export function swipeTabIndex(key: SwipeTabKey): number {
@@ -160,7 +161,7 @@ export const HORIZONTAL_BIAS = 1.2;
 export const SETTLE_DISTANCE = 0.5;
 /** Or a flick faster than this, in px per second. */
 export const SETTLE_VELOCITY = 500;
-/** How far you can pull past Home or past Artists, in px. */
+/** How far you can pull past Artists or past Team, in px. */
 export const RUBBER_BAND_PX = 24;
 
 export type GestureAxis = 'undecided' | 'horizontal' | 'vertical';

@@ -8,7 +8,7 @@ const press = (key: string, over: Partial<{ metaKey: boolean; ctrlKey: boolean; 
   altKey: false,
   ...over,
 });
-const AREAS = ['home', 'urgans', 'catalogue', 'relationships', 'opportunities'];
+const AREAS = ['catalogue', 'urgans', 'team', 'relationships', 'opportunities'];
 
 describe('isBareKey', () => {
   it('treats ⌘C, Ctrl+C and Alt+C as not bare, so copy keeps working', () => {
@@ -22,7 +22,7 @@ describe('isBareKey', () => {
 describe('decideGoKey', () => {
   it('starts on G and goes on the second key', () => {
     expect(decideGoKey(press('g'), null, 0, AREAS)).toEqual({ kind: 'start' });
-    expect(decideGoKey(press('h'), 0, 300, AREAS)).toEqual({ kind: 'go', area: 'home' });
+    expect(decideGoKey(press('t'), 0, 300, AREAS)).toEqual({ kind: 'go', area: 'team' });
     expect(decideGoKey(press('C'), 0, 300, AREAS)).toEqual({ kind: 'go', area: 'catalogue' });
   });
 
@@ -43,7 +43,8 @@ describe('decideGoKey', () => {
 
 describe('goHintForArea', () => {
   it('names the keys for each area', () => {
-    expect(goHintForArea('home')).toBe('G H');
+    expect(goHintForArea('team')).toBe('G T');
+    expect(goHintForArea('home')).toBeNull();
     expect(goHintForArea('urgans')).toBe('G U');
     expect(goHintForArea('settings')).toBeNull();
   });

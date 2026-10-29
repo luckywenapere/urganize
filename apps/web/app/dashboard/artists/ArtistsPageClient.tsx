@@ -18,6 +18,7 @@ import { DuplicateArtistsPrompt } from '@/components/artists/DuplicateArtistsPro
 import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
+import { HomeBell } from '@/components/home/v2/HomeBell';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
 
@@ -225,6 +226,9 @@ function SwipeArtists({
           >
             <Plus className="h-[18px] w-[18px]" aria-hidden="true" />
           </Link>
+          {/* The phone's bell moved here from Home (2026-10-29, #876). Phone
+              only and hidden in the swipe nav, as it was on Home. */}
+          <HomeBell />
         </div>
       </div>
       {loading ? (

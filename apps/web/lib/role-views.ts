@@ -166,7 +166,6 @@ const TAB_FEATURE: Record<string, RoleViewFeature> = {
 /** An area with no tabs is one destination; this is the feature it is. An
  *  empty Relationships (its flags off) counts as People, its first tab. */
 const AREA_FEATURE: Partial<Record<ShellAreaKey, RoleViewFeature>> = {
-  home: 'home',
   urgans: 'urgans',
   team: 'team',
   relationships: 'people',

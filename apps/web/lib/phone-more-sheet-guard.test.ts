@@ -58,9 +58,9 @@ describe('the phone More sheet', () => {
     expect(bar).not.toMatch(/\bBell,/);
   });
 
-  it('moves the unread dot from More to the Home tab', () => {
+  it('keeps the unread dot on the Artists tab, where the bell is (#876)', () => {
     const tabs = bar.slice(0, bar.indexOf('data-shell-more'));
-    expect(tabs).toContain("tab.key === 'home' && !isActive && unread > 0");
+    expect(tabs).toContain("tab.key === 'catalogue' && !isActive && unread > 0");
     const more = bar.slice(bar.indexOf('data-shell-more'), bar.indexOf('function useBarCollapsedOnScroll'));
     expect(more).not.toContain('unread');
   });
