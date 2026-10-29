@@ -41,6 +41,18 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.208.0",
+    title: "Your team, in one place",
+    tag: "Team",
+    date: "October 29, 2026",
+    highlights: [
+      "Team is a new tab after Artists. See who is on your team, when each person was last in, and the tasks they hold.",
+      "Tap someone to see their tasks, late ones first.",
+      "Managers can invite people, change their role, and pick which rollouts each person can see.",
+      "Anyone can leave a team. Their open tasks go back to the owner.",
+    ],
+  },
+  {
     version: "1.207.2",
     tag: "Rollouts",
     date: "October 29, 2026",
