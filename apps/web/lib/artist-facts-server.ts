@@ -24,6 +24,9 @@ const FACT_COLUMNS = 'id, workspace_id, artist_id, topic, value, source, said_by
 export type FactScope = {
   workspaceIds: string[];
   artistScopeByWorkspaceId: Record<string, string>;
+  /** Chosen-rollout limits (#853). Facts are artist-wide, so a member limited
+   * to chosen rollouts sees none of them in that workspace. */
+  releaseScopeByWorkspaceId: Record<string, readonly string[]>;
 };
 
 export type FactArtist = { id: string; name: string; workspaceId: string };
@@ -45,6 +48,7 @@ function toFact(row: Record<string, unknown>): ArtistFact | null {
 
 const inScope = (scope: FactScope, workspaceId: string, artistId: string) => {
   if (!scope.workspaceIds.includes(workspaceId)) return false;
+  if (scope.releaseScopeByWorkspaceId[workspaceId]) return false;
   const only = scope.artistScopeByWorkspaceId[workspaceId];
   return !only || only === artistId;
 };

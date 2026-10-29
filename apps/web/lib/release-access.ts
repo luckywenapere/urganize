@@ -45,11 +45,49 @@ export type ReleaseAccessContextSlice = {
   /** Artist-scoped memberships, keyed by OWNER user id: when set, the caller
    * only sees that owner's releases whose artist_id matches. */
   artistScopeByOwnerId: Record<string, string>;
+  /** Chosen-rollout memberships (2026-10-29, #853), keyed by OWNER user id:
+   * when set, the caller only sees that owner's releases whose id is in the
+   * list. An EMPTY list means no releases at all, never "everything".
+   * Optional so older slices (tests, fixtures) stay assignable; absent = no
+   * rollout limit anywhere. */
+  releaseScopeByOwnerId?: Record<string, readonly string[]>;
   /** The caller's role in each owner's workspace, keyed by OWNER user id.
    * Missing key = no membership row resolved — treated as read-only for
    * writes, the same fail-closed rule as isReadOnlyWorkspaceMember. */
   memberRoleByOwnerId: Record<string, string>;
 };
+
+/**
+ * Is this release inside the caller's limits for its owner's workspace?
+ * Both limits apply when both are set (one artist AND chosen rollouts).
+ * A rollout limit with no release id to test fails closed.
+ *
+ * THE ONE CHECK for "may this scoped member see this release". Every list or
+ * gate that filters by artist_scope_id must call this instead, so the rollout
+ * limit cannot be forgotten in one place (that is how the task lists leaked
+ * the artist limit until #853).
+ */
+export function isReleaseInScope(
+  release: { ownerId: string; artistId: string | null | undefined; releaseId?: string | null },
+  access: Pick<ReleaseAccessContextSlice, 'artistScopeByOwnerId' | 'releaseScopeByOwnerId'>
+): boolean {
+  const artistScope = access.artistScopeByOwnerId[release.ownerId];
+  if (artistScope && String(release.artistId || '') !== artistScope) return false;
+  const releaseScope = access.releaseScopeByOwnerId?.[release.ownerId];
+  if (releaseScope) {
+    if (!release.releaseId) return false;
+    return releaseScope.includes(release.releaseId);
+  }
+  return true;
+}
+
+/** True when the caller carries either limit in that owner's workspace. */
+export function hasScopeForOwner(
+  ownerId: string,
+  access: Pick<ReleaseAccessContextSlice, 'artistScopeByOwnerId' | 'releaseScopeByOwnerId'>
+): boolean {
+  return Boolean(access.artistScopeByOwnerId[ownerId] || access.releaseScopeByOwnerId?.[ownerId]);
+}
 
 /**
  * The whole access rule, in evaluation order (each step is a test):
@@ -58,7 +96,8 @@ export type ReleaseAccessContextSlice = {
  *    never lock an owner out of their own release.
  * 2. Not a member of the owner's workspace → not_found (whole-workspace
  *    visibility; the refusal must not distinguish "exists but not yours").
- * 3. Artist-scoped member looking at the wrong artist's release → not_found.
+ * 3. Scoped member (one artist, or chosen rollouts) looking at a release
+ *    outside the limit → not_found.
  * 4. Writes only: guests (and members whose role could not be resolved) are
  *    read-only. This runs AFTER visibility, so it can only ever be reached
  *    by someone who is allowed to see the release.
@@ -66,11 +105,14 @@ export type ReleaseAccessContextSlice = {
 export function decideReleaseAccess(input: {
   releaseOwnerId: string;
   releaseArtistId: string;
+  /** Needed for the chosen-rollout limit; without it a rollout-limited
+   * member is refused (fail closed). */
+  releaseId?: string | null;
   userId: string;
   access: ReleaseAccessContextSlice;
   write: boolean;
 }): ReleaseAccessDecision {
-  const { releaseOwnerId, releaseArtistId, userId, access, write } = input;
+  const { releaseOwnerId, releaseArtistId, releaseId, userId, access, write } = input;
 
   if (releaseOwnerId && releaseOwnerId === userId) {
     return 'allow';
@@ -80,8 +122,7 @@ export function decideReleaseAccess(input: {
     return 'not_found';
   }
 
-  const scope = access.artistScopeByOwnerId[releaseOwnerId];
-  if (scope && releaseArtistId !== scope) {
+  if (!isReleaseInScope({ ownerId: releaseOwnerId, artistId: releaseArtistId, releaseId }, access)) {
     return 'not_found';
   }
 

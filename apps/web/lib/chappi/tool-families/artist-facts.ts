@@ -34,6 +34,7 @@ import { argString, fail, type ChappiTool, type ChappiToolContext } from './shar
 const scopeOf = (ctx: ChappiToolContext) => ({
   workspaceIds: ctx.workspaceIds,
   artistScopeByWorkspaceId: ctx.artistScopeByWorkspaceId,
+  releaseScopeByWorkspaceId: ctx.releaseScopeByWorkspaceId,
 });
 
 const NO_ARTIST = 'That artist was not found. Call list_artists for the right id.';

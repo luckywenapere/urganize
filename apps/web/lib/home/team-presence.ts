@@ -18,7 +18,8 @@ export const HOME_TEAM_COPY = {
   manage: 'Manage team',
 } as const;
 
-export const HOME_TEAM_HREF = '/dashboard?settings=team';
+// The Team tab (#853, 2026-10-29); Settings → Team moved there.
+export const HOME_TEAM_HREF = '/dashboard/team';
 
 export type TeamPresenceMember = {
   userId: string;

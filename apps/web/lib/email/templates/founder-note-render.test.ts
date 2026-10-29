@@ -29,7 +29,7 @@ describe('OnboardingStepEmail', () => {
     const { html } = await renderEmail(OnboardingStepEmail({ step: 'day2', recipientName: 'Ada' }));
     expect(html).not.toMatch(/background-color:#7fd99a/i);
     // Straight into the Settings pop-up's team section, not the old /settings page.
-    expect(html).toContain('https://team.urganize.app/dashboard?settings=team');
+    expect(html).toContain('https://team.urganize.app/dashboard/team');
   });
 
   it('greets without a name when the stored one is only an email handle', async () => {

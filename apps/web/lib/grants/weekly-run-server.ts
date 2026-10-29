@@ -100,12 +100,17 @@ async function teamPushRecipients(admin: SupabaseClient, workspaceId: string): P
   if (ownerId) ids.add(ownerId);
   const { data: members, error } = await admin
     .from('workspace_members')
-    .select('user_id, artist_scope_id')
+    .select('user_id, artist_scope_id, release_scope_ids')
     .eq('workspace_id', workspaceId)
     .eq('status', 'active');
   if (!error) {
-    for (const member of (members ?? []) as Array<{ user_id: string | null; artist_scope_id: string | null }>) {
-      if (member.user_id && !member.artist_scope_id) ids.add(member.user_id);
+    for (const member of (members ?? []) as Array<{
+      user_id: string | null;
+      artist_scope_id: string | null;
+      release_scope_ids: string[] | null;
+    }>) {
+      // Only unlimited members: a limited one (one artist, or chosen rollouts) is not told about team grants.
+      if (member.user_id && !member.artist_scope_id && !Array.isArray(member.release_scope_ids)) ids.add(member.user_id);
     }
   }
   return [...ids];

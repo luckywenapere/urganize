@@ -96,9 +96,9 @@ describe('TaskService list reads', () => {
       releases,
     });
     const service = new TaskService(admin);
-    const mine = (await service.getTasksForUser('u1', ['w1'])) as unknown as Row[];
+    const mine = (await service.getTasksForUser('u1', { workspaceIds: ['w1'], artistScopeByWorkspaceId: {}, releaseScopeByWorkspaceId: {} })) as unknown as Row[];
     expect(mine.map((t) => t.id)).toEqual(['t-live']);
-    const ws = (await service.getWorkspaceTasks('w1', 'u1')) as unknown as Row[];
+    const ws = (await service.getWorkspaceTasks('w1', 'u1', { workspaceIds: ['w1'], artistScopeByWorkspaceId: {}, releaseScopeByWorkspaceId: {} })) as unknown as Row[];
     expect(ws.map((t) => t.id)).toEqual(['t-live']);
     vi.doUnmock('@/lib/tasks-server');
   });

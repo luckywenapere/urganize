@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
         decideReleaseAccess({
           releaseOwnerId: owner,
           releaseArtistId: String(row.artist_id ?? ''),
+          releaseId: String(row.id ?? ''),
           userId: auth.user.id,
           access,
           write: false,

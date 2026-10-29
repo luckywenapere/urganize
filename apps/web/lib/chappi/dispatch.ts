@@ -33,6 +33,8 @@ export async function resolveChappiContext(params: {
     releaseOwnerIds: access.releaseOwnerIds,
     artistScopeByOwnerId: access.artistScopeByOwnerId,
     artistScopeByWorkspaceId: access.artistScopeByWorkspaceId,
+    releaseScopeByOwnerId: access.releaseScopeByOwnerId,
+    releaseScopeByWorkspaceId: access.releaseScopeByWorkspaceId,
     origin: params.origin,
     authToken: params.authToken,
     ...(params.urgansPass ? { urgansPass: params.urgansPass } : {}),

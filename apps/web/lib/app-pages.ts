@@ -125,6 +125,15 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
     });
   }
 
+  // Team sits right after Artists (#853, 2026-10-29). The team words moved
+  // here from Settings, where the team used to live.
+  pages.push({
+    key: 'team',
+    label: 'Team',
+    href: '/dashboard/team',
+    keywords: ['team', 'teammates', 'invite', 'members', 'people', 'seats', 'access', 'workspace name', 'leave'],
+  });
+
   if (RELATIONSHIPS_ENABLED) {
     pages.push({
       key: 'relationships',
@@ -234,9 +243,6 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
       'plan',
       'subscription',
       'payment',
-      'team',
-      'teammates',
-      'invite',
       'notifications',
       'appearance',
       'theme',

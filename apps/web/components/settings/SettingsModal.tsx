@@ -21,6 +21,7 @@ import { useDialogFocus } from '@/lib/use-dialog-focus';
 import {
   SETTINGS_MENU,
   SETTINGS_SEGMENT_LABELS,
+  TEAM_PAGE_HREF,
   closeSettingsUrl,
   SETTINGS_PARAM,
   isPlainLeftClick,
@@ -92,7 +93,16 @@ function SettingsModalGate() {
   const searchParams = useSearchParams();
   const state = readSettingsRequest(searchParams);
   const user = useAuthStore((s) => s.user);
+  const router = useRouter();
+  const toTeamTab = state?.request === 'team';
 
+  // Settings → Team is the Team tab now (#853): an old ?settings=team link
+  // (emails, bookmarks) lands there instead of on the Settings menu.
+  useEffect(() => {
+    if (toTeamTab) router.replace(TEAM_PAGE_HREF);
+  }, [toTeamTab, router]);
+
+  if (toTeamTab) return null;
   if (!state || !user || typeof document === 'undefined') return null;
   return createPortal(
     <SettingsDialog request={state.request} section={state.section} />,

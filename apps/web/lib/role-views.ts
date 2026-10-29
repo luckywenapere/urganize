@@ -168,6 +168,7 @@ const TAB_FEATURE: Record<string, RoleViewFeature> = {
 const AREA_FEATURE: Partial<Record<ShellAreaKey, RoleViewFeature>> = {
   home: 'home',
   urgans: 'urgans',
+  team: 'team',
   relationships: 'people',
   opportunities: 'opportunities',
   audience: 'audience',

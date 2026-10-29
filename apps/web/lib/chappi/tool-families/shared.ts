@@ -41,6 +41,11 @@ export type ChappiToolContext = {
   artistScopeByOwnerId: Record<string, string>;
   /** The same scopes keyed by workspace id, for task/board checks. */
   artistScopeByWorkspaceId: Record<string, string>;
+  /** Chosen-rollout limits (#853), keyed by OWNER user id. Required for the
+   * same fail-open reason as artistScopeByOwnerId. Empty list = no rollouts. */
+  releaseScopeByOwnerId: Record<string, string[]>;
+  /** The same rollout limits keyed by workspace id. */
+  releaseScopeByWorkspaceId: Record<string, string[]>;
   /** Same-origin base for internal REST calls, e.g. "http://localhost:3000". */
   origin: string;
   /** The caller's bearer token, forwarded to the protected REST endpoints. */

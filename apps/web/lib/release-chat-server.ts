@@ -24,6 +24,9 @@ type ReleaseRef = {
   ownerUserId: string;
   /** '' when the rollout has no artist; then artist-scoped members cannot see it. */
   artistId: string;
+  /** The rollout's id. Without it, members limited to chosen rollouts (#853)
+   * are left off: they can only be on a rollout we can name. */
+  id?: string;
 };
 
 const normaliseEmail = (value: unknown): string => String(value || '').trim().toLowerCase();
@@ -61,12 +64,17 @@ export async function loadReleaseChatPeople(
     if (workspaceId) {
       const members = await admin
         .from('workspace_members')
-        .select('user_id,artist_scope_id')
+        .select('user_id,artist_scope_id,release_scope_ids')
         .eq('workspace_id', workspaceId)
         .eq('status', 'active');
-      for (const row of (members.data || []) as Array<{ user_id: string | null; artist_scope_id: string | null }>) {
+      for (const row of (members.data || []) as Array<{
+        user_id: string | null;
+        artist_scope_id: string | null;
+        release_scope_ids: string[] | null;
+      }>) {
         if (!row.user_id) continue;
         if (row.artist_scope_id && row.artist_scope_id !== release.artistId) continue;
+        if (Array.isArray(row.release_scope_ids) && !(release.id && row.release_scope_ids.includes(release.id))) continue;
         ids.add(row.user_id);
       }
     }

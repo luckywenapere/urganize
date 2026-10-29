@@ -70,6 +70,7 @@ import {
 import { checkActiveReleaseAllowance } from '@/lib/release-cap-server';
 import { recordLimitHit } from '@/lib/seats-server';
 import { resolveRolloutOrigin } from '@/lib/rollout-origin';
+import { isReleaseInScope } from '@/lib/release-access';
 
 const trimString = (value: unknown): string => String(value || '').trim();
 
@@ -287,13 +288,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: releasesResult.error.message || 'Could not load rollouts.' }, { status: 500 });
   }
 
-  // Artist-scoped members only see their own artist's releases.
+  // Scoped members (one artist, or chosen rollouts) only see their releases.
   const releases = (Array.isArray(releasesResult.data) ? (releasesResult.data as ReleaseRow[]) : []).filter(
-    (release) => {
-      const scope = access.artistScopeByOwnerId[String(release.owner_user_id || '')];
-      if (!scope) return true;
-      return String(release.artist_id || '') === scope;
-    }
+    (release) =>
+      String(release.owner_user_id || '') === auth.user.id ||
+      isReleaseInScope(
+        {
+          ownerId: String(release.owner_user_id || ''),
+          artistId: String(release.artist_id || ''),
+          releaseId: String(release.id || ''),
+        },
+        access
+      )
   );
 
   const metadataResult = await loadReleaseMetadataMap(

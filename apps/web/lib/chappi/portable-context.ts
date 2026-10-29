@@ -64,7 +64,7 @@ export async function buildPortableWorkspaceContext(
   try {
     const releases = await listVisibleReleases(ctx);
     const tasks = ctx.workspaceIds.length
-      ? await new TaskService(ctx.adminClient).getTasksForUser(ctx.user.id, ctx.workspaceIds)
+      ? await new TaskService(ctx.adminClient).getTasksForUser(ctx.user.id, ctx)
       : [];
     snapshot = await buildWorkspaceSummary(ctx, releases, tasks, today);
   } catch (error) {
@@ -104,6 +104,7 @@ export async function loadArtistFactsBlock(ctx: ChappiToolContext): Promise<stri
     const groups = await listFactsInScope(ctx.adminClient, {
       workspaceIds: ctx.workspaceIds,
       artistScopeByWorkspaceId: ctx.artistScopeByWorkspaceId,
+      releaseScopeByWorkspaceId: ctx.releaseScopeByWorkspaceId,
     });
     return formatArtistFactsForPrompt(groups);
   } catch (error) {
@@ -267,7 +268,7 @@ export async function buildReleaseContext(
   if (!release) return null;
 
   const allTasks = ctx.workspaceIds.length
-    ? await new TaskService(ctx.adminClient).getTasksForUser(ctx.user.id, ctx.workspaceIds)
+    ? await new TaskService(ctx.adminClient).getTasksForUser(ctx.user.id, ctx)
     : [];
 
   const tasks = allTasks.filter((task) => task.releaseId === id);

@@ -140,7 +140,9 @@ export function visibleSettingsSegments(
   const wanted: Record<SettingsSegment, boolean> = {
     general: true,
     notifications: true,
-    team: isManager,
+    // The team moved to its own tab (#853, 2026-10-29). The segment key stays
+    // so old ?settings=team links resolve; they are sent to the tab instead.
+    team: false,
     // Press kits left this segment Oct 17, 2026, so the roster alone fills it.
     artists: isManager && flags.workspace,
     // WhatsApp chasing lives here too (2026-10-26), and it is the manager's, so
@@ -320,8 +322,13 @@ export function closeSettingsUrl(pathname: string, search: string): string {
  * pop-up can always open.
  */
 export function settingsDeepLink(target: SettingsTarget = {}): string {
+  if (target.segment === 'team') return TEAM_PAGE_HREF;
   return buildSettingsUrl('/dashboard', '', target);
 }
+
+/** Settings → Team became the Team tab (#853). Kept here as a literal so this
+ *  module stays free of imports from the nav it is imported by. */
+export const TEAM_PAGE_HREF = '/dashboard/team';
 
 // ── Old /settings links ─────────────────────────────────────────────────────
 

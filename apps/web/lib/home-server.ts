@@ -149,6 +149,7 @@ async function loadTeamPitches(
       decideReleaseAccess({
         releaseOwnerId: release.ownerUserId,
         releaseArtistId: release.artistId,
+        releaseId,
         userId: user.id,
         access,
         write: false,
@@ -224,7 +225,11 @@ export async function loadHomeData(
     loadHomeOpportunities(
       adminClient,
       access.primaryWorkspaceId,
-      Boolean(access.primaryWorkspaceId && access.artistScopeByWorkspaceId[access.primaryWorkspaceId]),
+      Boolean(
+        access.primaryWorkspaceId &&
+          (access.artistScopeByWorkspaceId[access.primaryWorkspaceId] ||
+            access.releaseScopeByWorkspaceId[access.primaryWorkspaceId])
+      ),
       now
     )
   );
@@ -363,6 +368,9 @@ async function loadRecordAsk(
 ): Promise<RecordAsk | null> {
   const workspaceId = access.primaryWorkspaceId;
   if (!workspaceId) return null;
+  // Record asks are about the artist's next record: artist-wide, so not for a
+  // member limited to chosen rollouts (#853).
+  if (access.releaseScopeByWorkspaceId[workspaceId]) return null;
   const membership = access.memberships.find((member) => member.workspaceId === workspaceId);
   if (!canSeeRecordAsks(membership?.role)) return null;
 

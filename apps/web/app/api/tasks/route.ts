@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     const status = request.nextUrl.searchParams.get('status') || undefined;
     const mineOnly = request.nextUrl.searchParams.get('mine') === '1';
 
-    const tasks = await taskService.getTasksForUser(auth.user.id, access.workspaceIds, {
+    const tasks = await taskService.getTasksForUser(auth.user.id, access, {
       releaseId,
       priority,
       status,

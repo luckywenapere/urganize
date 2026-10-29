@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
     const filters = normalizeTaskFilters(request.nextUrl.searchParams);
     const tasks = sortTasks(
-      await taskService.getWorkspaceTasks(workspaceId, auth.user.id, filters),
+      await taskService.getWorkspaceTasks(workspaceId, auth.user.id, access, filters),
       filters.sort || 'due_date'
     );
 

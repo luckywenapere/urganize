@@ -11,12 +11,14 @@
 // only place that reads them.
 
 import { buildSettingsUrl } from './settings-nav';
+import { TEAM_HREF } from './team-page';
 import { isOpportunitiesEnabled, isRelationshipsFlagOn } from './paused-features';
 
 export type ShellAreaKey =
   | 'home'
   | 'urgans'
   | 'catalogue'
+  | 'team'
   | 'relationships'
   | 'opportunities'
   | 'audience'
@@ -94,6 +96,9 @@ export const URGANS_HREF = '/dashboard/urgans';
 export const CATALOGUE_HREF = '/dashboard';
 export const DISTRIBUTE_HREF = '/dashboard/distribute';
 export const ARTISTS_HREF = '/dashboard/artists';
+/** The Team tab (issue #853, 2026-10-29): who is on the team, when they were
+ *  last in, their tasks, and the workspace's settings. */
+export { TEAM_HREF };
 /** Add artist: the existing add field in Settings -> Artists & brand (v1 of
  *  the tab action, no sheet of its own), opened over the Artists page so the
  *  tab under it does not change. */
@@ -200,17 +205,34 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
         startsWithPath(p, DISTRIBUTE_HREF) ||
         startsWithPath(p, '/dashboard/notes'),
     },
+    // Team sits right after Artists (founder, 2026-10-29, #853).
+    {
+      key: 'team',
+      label: 'Team',
+      href: TEAM_HREF,
+      live: true,
+      subTabs: [],
+      isActive: (p) => startsWithPath(p, TEAM_HREF),
+    },
     // Pitching left the top bar and the phone's bottom bar (founder,
     // 2026-10-15): it lives fully inside each rollout, as its Pitch tab.
-    {
-      key: 'relationships',
-      label: 'Relationships',
-      href: relationshipTabs[0]?.href ?? '/dashboard/directory',
-      live: relationshipTabs.length > 0,
-      subTabs: relationshipTabs,
-      isActive: (p) =>
-        startsWithPath(p, '/dashboard/relationships') || startsWithPath(p, '/dashboard/directory'),
-    },
+    // Relationships is parked with My People (founder, 2026-10-29, #853): the
+    // whole area, Directory included, comes back when My People is unpaused
+    // (lib/paused-features.ts). The Directory page itself still opens from
+    // search and from its links.
+    ...(flags.relationships
+      ? [
+          {
+            key: 'relationships' as const,
+            label: 'Relationships',
+            href: relationshipTabs[0]?.href ?? '/dashboard/directory',
+            live: relationshipTabs.length > 0,
+            subTabs: relationshipTabs,
+            isActive: (p: string) =>
+              startsWithPath(p, '/dashboard/relationships') || startsWithPath(p, '/dashboard/directory'),
+          },
+        ]
+      : []),
     // Opportunities is paused (Oct 27, 2026): no pill, no More row, no G O.
     ...(flags.opportunities
       ? [
@@ -262,7 +284,7 @@ export function buildMobileTabs(areas?: ShellArea[]): MobileTab[] {
 export function buildMoreItems(
   areas: ShellArea[]
 ): Array<{ key: string; label: string; href: string; soon: boolean }> {
-  const keep: ShellAreaKey[] = ['relationships', 'opportunities'];
+  const keep: ShellAreaKey[] = ['team', 'relationships', 'opportunities'];
   return areas
     .filter((area) => keep.includes(area.key))
     .map((area) => ({ key: area.key, label: area.label, href: area.href, soon: !area.live }));

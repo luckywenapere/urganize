@@ -38,7 +38,8 @@ const ALL_OFF: SettingsFlags = {
 const params = (query: string) => new URLSearchParams(query);
 
 /** Everything except Admin, which only an admin account gets. */
-const NON_ADMIN = SETTINGS_SEGMENTS.filter((segment) => segment !== 'admin');
+// Team moved to its own tab (#853), so no one sees it in Settings any more.
+const NON_ADMIN = SETTINGS_SEGMENTS.filter((segment) => segment !== 'admin' && segment !== 'team');
 
 describe('the segment list', () => {
   it('is ten segments, in the order the founder chose, with Admin last', () => {

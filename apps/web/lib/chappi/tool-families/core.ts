@@ -61,7 +61,7 @@ export const CORE_TOOLS: ChappiTool[] = [
       if (!release) return fail('That rollout was not found on your team.');
       const tasks = await new TaskService(ctx.adminClient).getTasksForUser(
         ctx.user.id,
-        ctx.workspaceIds,
+        ctx,
         { releaseId }
       );
       // Cancelled work is out of both numbers (URG-389).
@@ -98,7 +98,7 @@ export const CORE_TOOLS: ChappiTool[] = [
     execute: async (ctx, args) => {
       const tasks = await new TaskService(ctx.adminClient).getTasksForUser(
         ctx.user.id,
-        ctx.workspaceIds,
+        ctx,
         {
           releaseId: argString(args, 'releaseId') || undefined,
           status: argString(args, 'status') || undefined,
@@ -118,7 +118,7 @@ export const CORE_TOOLS: ChappiTool[] = [
     execute: async (ctx) => {
       const releases = await listVisibleReleases(ctx);
       const tasks = ctx.workspaceIds.length
-        ? await new TaskService(ctx.adminClient).getTasksForUser(ctx.user.id, ctx.workspaceIds)
+        ? await new TaskService(ctx.adminClient).getTasksForUser(ctx.user.id, ctx)
         : [];
       const incomplete = tasks.filter((t) => t.status !== 'done' && t.status !== 'cancelled');
       const todayStr = new Date().toISOString().slice(0, 10);

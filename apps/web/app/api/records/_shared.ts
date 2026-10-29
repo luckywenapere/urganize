@@ -54,6 +54,8 @@ export async function resolveRecordsContext(
 
   const scope = access.artistScopeByWorkspaceId[workspaceId];
   if (scope && scope !== artistId) return { error: notFound() };
+  // Records are artist-wide: a member limited to chosen rollouts (#853) gets none.
+  if (access.releaseScopeByWorkspaceId[workspaceId]) return { error: notFound() };
 
   if (options.write && isReadOnlyWorkspaceMember(access, workspaceId)) return { error: buildReadOnlyResponse() };
 

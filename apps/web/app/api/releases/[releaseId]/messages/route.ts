@@ -59,6 +59,7 @@ export async function GET(
       loadReleaseChatPeople(adminClient, {
         ownerUserId: ownership.release.ownerUserId,
         artistId: ownership.release.artistId,
+        id: releaseId,
       }),
     ]);
     return NextResponse.json({ messages, people: toChatPeoplePayload(people) });

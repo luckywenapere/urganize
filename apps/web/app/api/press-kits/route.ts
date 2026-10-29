@@ -45,9 +45,12 @@ export async function GET(request: NextRequest) {
   // An artist-scoped teammate sees their artist and nobody else's, matching
   // what decideReleaseAccess would allow them on the kit itself.
   const scopedArtistId = access.artistScopeByWorkspaceId[access.primaryWorkspaceId] || null;
-  const visible = scopedArtistId
-    ? roster.filter((artist) => artist.id === scopedArtistId)
-    : roster;
+  // Kits are artist-wide: a member limited to chosen rollouts (#853) sees none.
+  const visible = access.releaseScopeByWorkspaceId[access.primaryWorkspaceId]
+    ? []
+    : scopedArtistId
+      ? roster.filter((artist) => artist.id === scopedArtistId)
+      : roster;
 
   if (visible.length === 0) {
     return NextResponse.json({ entries: [] });
@@ -133,7 +136,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'That artist is not on your roster.' }, { status: 404 });
   }
   const scopedArtistId = access.artistScopeByWorkspaceId[access.primaryWorkspaceId] || null;
-  if (scopedArtistId && scopedArtistId !== artist.id) {
+  if ((scopedArtistId && scopedArtistId !== artist.id) || access.releaseScopeByWorkspaceId[access.primaryWorkspaceId]) {
     return NextResponse.json({ error: 'That artist is not on your roster.' }, { status: 404 });
   }
 

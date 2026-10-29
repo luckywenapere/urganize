@@ -177,7 +177,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
 
       const tasks = await new TaskService(ctx.adminClient).getTasksForUser(
         ctx.user.id,
-        ctx.workspaceIds,
+        ctx,
         { releaseId }
       );
       const taskLine = tasks.length === 1 ? '1 activity' : `${tasks.length} activities`;
@@ -225,7 +225,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
       if (!taskId) return { ok: false, summary: 'taskId is required.' };
       const tasks = await new TaskService(ctx.adminClient).getTasksForUser(
         ctx.user.id,
-        ctx.workspaceIds
+        ctx
       );
       const task = tasks.find((t) => t.id === taskId);
       if (!task) return { ok: false, summary: 'That activity was not found on your team.' };

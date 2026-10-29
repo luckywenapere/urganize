@@ -4,6 +4,7 @@ import { DEFAULT_RELEASE_TITLE, isDbReleaseType, type ReleaseStatus } from '@/ty
 import { loadCoverArtUrls, type ReleaseCoverInput } from '@/lib/cover-art';
 import { loadWorkspaceLogoFallbackUrl } from '@/lib/workspace-logo';
 import { readTemplatePending } from '@/lib/release-template-pending';
+import { isReleaseInScope } from '@/lib/release-access';
 
 export class ReleaseService {
   constructor(private adminClient: SupabaseClient) {}
@@ -18,7 +19,8 @@ export class ReleaseService {
   async getReleasesForUser(
     userId: string,
     visibleOwnerIds?: string[],
-    artistScopeByOwnerId?: Record<string, string>
+    artistScopeByOwnerId?: Record<string, string>,
+    releaseScopeByOwnerId?: Record<string, readonly string[]>
   ) {
     const ownerIds = Array.from(
       new Set([userId, ...(visibleOwnerIds || [])].filter(Boolean))
@@ -38,12 +40,23 @@ export class ReleaseService {
     // invited to a manager's workspace only sees THEIR releases. Filtered
     // in JS — the per-owner OR-of-ANDs doesn't express cleanly in a single
     // PostgREST filter, and roster-scale row counts make this free.
-    const scopeMap = artistScopeByOwnerId || {};
-    const rows = (data || []).filter((row) => {
-      const scope = scopeMap[String(row.owner_user_id || '')];
-      if (!scope) return true;
-      return String(row.artist_id || '') === scope;
-    });
+    // Chosen-rollout limits (#853) go through the same pure check as every
+    // other gate, so the two limits cannot drift apart here.
+    const scopes = {
+      artistScopeByOwnerId: artistScopeByOwnerId || {},
+      releaseScopeByOwnerId: releaseScopeByOwnerId || {},
+    };
+    const rows = (data || []).filter((row) =>
+      String(row.owner_user_id || '') === userId ||
+      isReleaseInScope(
+        {
+          ownerId: String(row.owner_user_id || ''),
+          artistId: String(row.artist_id || ''),
+          releaseId: String(row.id || ''),
+        },
+        scopes
+      )
+    );
 
     // Resolve Phase 3 cover art (signed URLs) via the shared helper that
     // /api/releases also uses. Releases without artwork fall back to the
