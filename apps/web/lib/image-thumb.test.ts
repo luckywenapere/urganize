@@ -72,7 +72,7 @@ describe('generateThumbSignedUrls', () => {
 describe('thumbnail surfaces (guard)', () => {
   it('small cover slots read the thumb and never paint through next/image', () => {
     const files = [
-      'app/dashboard/artists/[artistId]/ArtistPageClient.tsx',
+      'components/artists/CoverThumbEditor.tsx',
       'app/dashboard/distribute/DistributePageClient.tsx',
       'components/chappi/ChappiScopePicker.tsx',
       'components/notes/NoteReleasePicker.tsx',

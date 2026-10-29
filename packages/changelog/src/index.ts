@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.203.2",
+    tag: "Rollouts",
+    date: "October 29, 2026",
+    highlights: [
+      "To change a cover, hover over it on the artist page and tap the pencil. The rollout menu is shorter now.",
+    ],
+  },
+  {
     version: "1.203.1",
     tag: "Rollouts",
     date: "October 29, 2026",
