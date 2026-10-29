@@ -7,7 +7,7 @@ Founder said the artist page was "too chaotic and rough on the eyes even mislead
 - **Header**: photo (80px, a small neutral camera chip via `ProfilePhotoPicker quietBadge`), name, two status chips (the lit one is what is happening: rolling out X, X is out, making X), then **New record** (primary, first, founder call) and **Plan a rollout**.
 - **Up next**: one card from `artistUpNext` in `lib/artist-overview.ts` (tested). Order: nearest planned rollout (countdown, tasks due this week, late), then a release just out that still has open tasks, then the record being made (finish it, plan it once every song is done, or add the first song), else start a record.
 - **Music**: one line with three stops. In the making = records (`RecordRows`). Rolling out = planned plus just-out rollouts, with task progress. Out now = past rollouts plus imported catalogue rows (`ArtistCatalogueCard` now draws rows only and reports its count). The lit dot is where the artist is.
-- **Posting plan**: side column on desktop (320px), under Music on a phone.
+- **Posting plan**: removed from the artist page 2026-10-29 (#873, founder call). The page is one column again (`max-w-3xl`).
 
 ## Removed
 
