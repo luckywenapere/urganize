@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Plus } from '@/components/icons';
@@ -15,7 +15,7 @@ import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
-import { ThumbImage } from '@/components/shared/ThumbImage';
+import { CoverThumbEditor } from '@/components/artists/CoverThumbEditor';
 import { ArtistCatalogueCard } from '@/components/artists/ArtistCatalogueCard';
 import { ArtistFactsCard } from '@/components/artists/ArtistFactsCard';
 import { PostingPlanCard } from '@/components/artists/PostingPlanCard';
@@ -69,6 +69,12 @@ export default function ArtistPageClient() {
   const releases = useReleaseStore((state) => state.releases);
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
   const openCreateForArtist = useShellStore((state) => state.openCreateForArtist);
+  // One quiet line under Rollouts for what a cover upload did (this page has no toasts).
+  const [coverNotice, setCoverNotice] = useState<{ message: string; tone: 'success' | 'error' | 'warning' } | null>(null);
+  const onCoverToast = useCallback(
+    (message: string, tone: 'success' | 'error' | 'warning') => setCoverNotice({ message, tone }),
+    []
+  );
 
   useEffect(() => {
     if (!ARTIST_PAGE_ENABLED) {
@@ -128,23 +134,24 @@ export default function ArtistPageClient() {
     );
   }
 
+  // The cover sits outside the link so its pencil is its own button (#847).
   const releaseRow = (release: (typeof releases)[number]) => (
-    <li key={release.id}>
+    <li
+      key={release.id}
+      className="flex items-center gap-3 rounded-lg border border-stroke-default pl-2.5 transition-colors hover:border-stroke-strong"
+    >
+      <CoverThumbEditor
+        releaseId={release.id}
+        title={displayReleaseTitle(release.title)}
+        coverUrl={release.coverArtUrl}
+        coverThumbUrl={release.coverThumbUrl}
+        onToast={onCoverToast}
+      />
       <Link
         href={releaseHref(release.id)}
         onClick={() => act('open_release')}
-        className="motion-focus flex items-center gap-3 rounded-lg border border-stroke-default p-2.5 transition-colors hover:border-stroke-strong"
+        className="motion-focus flex min-w-0 flex-1 items-center gap-3 rounded-r-lg py-2.5 pr-2.5"
       >
-        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border border-stroke-default bg-bg-elevated">
-          {release.coverArtUrl ? (
-            <ThumbImage
-              src={release.coverThumbUrl ?? release.coverArtUrl}
-              width={40}
-              height={40}
-              className="h-full w-full object-cover"
-            />
-          ) : null}
-        </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-content-primary">{displayReleaseTitle(release.title)}</p>
           <p className="text-xs text-content-secondary">
@@ -232,6 +239,14 @@ export default function ArtistPageClient() {
             {group('Planned', buckets.planned)}
             {group('Out now', buckets.live)}
             {group('Past', buckets.past)}
+            {coverNotice ? (
+              <p
+                role="status"
+                className={`mt-3 text-xs ${coverNotice.tone === 'error' ? 'text-status-error' : 'text-content-secondary'}`}
+              >
+                {coverNotice.message}
+              </p>
+            ) : null}
           </>
         )}
       </SectionCard>

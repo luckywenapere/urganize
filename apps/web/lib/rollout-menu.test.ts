@@ -51,8 +51,9 @@ const keysOf = (entries: RolloutMenuEntry[]) => entries.map((entry) => entry.key
 /** Since 2026-10-16 the pitch kit and promo live inside Pitch this!, so with
  *  pitching on their own rows are not in the menu. */
 const FOLDED_INTO_PITCH: ReleaseMenuKey[] = ['pitchkit', 'promo'];
-/** Fill in details opens from inside Distribute only (2026-10-29, #848). */
-const NOT_A_ROW: ReleaseMenuKey[] = ['spend', 'metadata'];
+/** Fill in details opens from inside Distribute only (2026-10-29, #848), and
+ *  the cover is changed on the cover itself, not a row (2026-10-29, #847). */
+const NOT_A_ROW: ReleaseMenuKey[] = ['spend', 'metadata', 'coverart'];
 const ALL_ON_ORDER = RELEASE_MENU_ORDER.filter((key) => !FOLDED_INTO_PITCH.includes(key) && !NOT_A_ROW.includes(key));
 
 /** Which row each feature switch owns. The mapping is the thing being tested,
@@ -66,7 +67,7 @@ const ROW_BY_FLAG: Record<keyof RolloutMenuFlags, ReleaseMenuKey[]> = {
   pitchKit: [],
   metadata: [],
   notes: ['note'],
-  coverArt: ['coverart'],
+  coverArt: [],
   files: ['files'],
   capture: ['capture'],
 };
@@ -84,7 +85,6 @@ const SCENE_ROWS: ReleaseMenuKey[] = [
   'promo',
   'metadata',
   'distribute',
-  'coverart',
   'files',
   'capture',
 ];
@@ -96,8 +96,7 @@ describe('buildRolloutMenu', () => {
     // built for it (so a ranked entry silently never appears), and a row built
     // in an order the ranking does not agree with.
     expect(keysOf(build())).toEqual([...ALL_ON_ORDER]);
-    // The phone's cover is the tile by the title (Oct 24, 2026), not a row.
-    expect(keysOf(build({ variant: 'phone' }))).toEqual(ALL_ON_ORDER.filter((key) => key !== 'coverart'));
+    expect(keysOf(build({ variant: 'phone' }))).toEqual([...ALL_ON_ORDER]);
   });
 
   it('is empty without a rollout, however much else is passed', () => {
@@ -281,7 +280,6 @@ describe('what each row does', () => {
       chat: 'Talk to the team',
       calendar: 'Plan content',
       pitch: 'Pitch this!',
-      coverart: 'Add cover art',
       files: 'Add files',
       capture: 'Pre-save link',
     });
@@ -311,12 +309,10 @@ describe('the two variants', () => {
     expect(note?.target).toEqual({ kind: 'link', href: '/dashboard/notes?release=a%20b%2Fc' });
   });
 
-  it('differs only in the notes and cover art rows', () => {
+  it('differs only in the notes row', () => {
     // Everything else must be identical, or a rollout would read differently on
-    // a phone and a laptop for no reason anybody chose. Cover art is chosen:
-    // the phone's cover is the tile by the title (Oct 24, 2026).
-    const strip = (entries: RolloutMenuEntry[]) =>
-      entries.filter((entry) => entry.key !== 'note' && entry.key !== 'coverart');
+    // a phone and a laptop for no reason anybody chose.
+    const strip = (entries: RolloutMenuEntry[]) => entries.filter((entry) => entry.key !== 'note');
     expect(strip(build({ variant: 'phone' }))).toEqual(strip(build({ variant: 'rail' })));
   });
 });
