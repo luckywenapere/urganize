@@ -397,6 +397,7 @@ async function freshStats(
       ctr: stats.ctr,
       presaves: stats.presaves,
       top_platforms: stats.topPlatforms,
+      top_countries: stats.topCountries,
     };
     await admin.from(SMART_LINKS_TABLE).update({ stats: raw, stats_fetched_at: fetchedAt }).eq('id', row.id);
     return { stats, fetchedAt };

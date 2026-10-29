@@ -194,24 +194,65 @@ export type SmartLinkStats = {
   ctr: number | null;
   presaves: number;
   topPlatforms: { platform: string; clicks: number; percentage: number }[];
+  /** Country names (never codes), share of visits. Empty when Altlink sends none. */
+  topCountries: { country: string; clicks: number; percentage: number }[];
 };
 
 const num = (value: unknown): number => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
 
+const regionNames = (() => {
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'region' });
+  } catch {
+    return null;
+  }
+})();
+
+/** Altlink documents names ("Nigeria"); a two-letter code ("NG") is named too. */
+export function countryName(value: string): string {
+  if (!/^[A-Za-z]{2}$/.test(value)) return value;
+  try {
+    return regionNames?.of(value.toUpperCase()) ?? value;
+  } catch {
+    return value;
+  }
+}
+
+/** Rows like { key, count } (Altlink's docs) or our cached { <name>, clicks, percentage }. */
+function readTop(value: unknown, nameKey: string, total: number): { name: string; clicks: number; percentage: number }[] {
+  if (!Array.isArray(value)) return [];
+  const rows = value
+    .filter((p): p is Record<string, unknown> => Boolean(p) && typeof p === 'object')
+    .map((p) => ({ name: text(p[nameKey]) ?? text(p.key), clicks: typeof p.clicks === 'number' ? num(p.clicks) : num(p.count), percentage: p.percentage }))
+    .filter((p): p is { name: string; clicks: number; percentage: unknown } => Boolean(p.name));
+  const base = total > 0 ? total : rows.reduce((sum, p) => sum + p.clicks, 0);
+  return rows.slice(0, 6).map((p) => ({
+    name: p.name,
+    clicks: p.clicks,
+    percentage: typeof p.percentage === 'number' && Number.isFinite(p.percentage) ? p.percentage : base > 0 ? (p.clicks / base) * 100 : 0,
+  }));
+}
+
+/**
+ * Altlink's documented stats send clicks (landing-page visits) and redirects
+ * (clicks on to a store). Our cache, and the earlier shape, send views and
+ * clicks. Both read the same.
+ */
 export function readStats(value: unknown): SmartLinkStats | null {
   if (!value || typeof value !== 'object') return null;
   const row = value as Record<string, unknown>;
-  const ctr = typeof row.ctr === 'number' && Number.isFinite(row.ctr) ? row.ctr : null;
-  const top = Array.isArray(row.top_platforms) ? row.top_platforms : [];
+  const documented = row.views === undefined && row.redirects !== undefined;
+  const views = documented ? num(row.clicks) : num(row.views);
+  const clicks = documented ? num(row.redirects) : num(row.clicks);
+  const sentCtr = typeof row.ctr === 'number' && Number.isFinite(row.ctr) ? row.ctr : null;
+  const ctr = sentCtr ?? (documented && views > 0 ? clicks / views : null);
   return {
-    views: num(row.views),
-    clicks: num(row.clicks),
+    views,
+    clicks,
     ctr,
     presaves: num(row.presaves),
-    topPlatforms: top
-      .filter((p): p is Record<string, unknown> => Boolean(p) && typeof p === 'object')
-      .map((p) => ({ platform: text(p.platform) ?? 'other', clicks: num(p.clicks), percentage: num(p.percentage) }))
-      .slice(0, 6),
+    topPlatforms: readTop(row.top_platforms, 'platform', clicks).map((p) => ({ platform: p.name, clicks: p.clicks, percentage: p.percentage })),
+    topCountries: readTop(row.top_countries, 'country', views).map((p) => ({ country: countryName(p.name), clicks: p.clicks, percentage: p.percentage })),
   };
 }
 

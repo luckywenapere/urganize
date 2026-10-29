@@ -70,6 +70,7 @@ const PLATFORM_NAMES: Record<string, string> = {
   spotify: 'Spotify',
   apple_music: 'Apple Music',
   applemusic: 'Apple Music',
+  apple: 'Apple Music',
   audiomack: 'Audiomack',
   boomplay: 'Boomplay',
   youtube_music: 'YouTube Music',
@@ -481,7 +482,7 @@ function LinkCard({
   );
 }
 
-/** "So far" and "Where fans click": the rollout menu's view, and Distribute's Numbers tab. */
+/** "So far", "Where fans click" and "Where fans are": the rollout menu's view, and Distribute's Numbers tab. */
 function LinkNumbers({ view, released }: { view: SmartLinkView; released: boolean }) {
   const stats = view.stats;
   const presaves = Math.max(stats?.presaves ?? 0, view.link?.presaveSignups ?? 0);
@@ -519,26 +520,52 @@ function LinkNumbers({ view, released }: { view: SmartLinkView; released: boolea
         </section>
 
         {stats && stats.topPlatforms.length > 0 ? (
-          <section className={`${CARD} p-5 lg:col-span-2`}>
-            <h4 className={META}>Where fans click</h4>
-            <ul className="mt-3 space-y-3">
-              {stats.topPlatforms.map((p) => (
-                <li key={p.platform}>
-                  <div className="flex items-baseline justify-between gap-3 text-sm">
-                    <span className="text-content-primary">{platformName(p.platform)}</span>
-                    <span className="font-mono text-content-secondary">
-                      {p.clicks.toLocaleString('en')} · {Math.round(p.percentage)}%
-                    </span>
-                  </div>
-                  <div className="mt-1.5 h-1.5 rounded-full bg-stroke-strong">
-                    <div className="h-1.5 rounded-full bg-brand" style={{ width: `${Math.max(2, Math.min(100, p.percentage))}%` }} />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
+          <ShareList
+            title="Where fans click"
+            wide={stats.topCountries.length === 0}
+            rows={stats.topPlatforms.map((p) => ({ key: p.platform, label: platformName(p.platform), clicks: p.clicks, percentage: p.percentage }))}
+          />
+        ) : null}
+        {stats && stats.topCountries.length > 0 ? (
+          <ShareList
+            title="Where fans are"
+            wide={stats.topPlatforms.length === 0}
+            rows={stats.topCountries.map((c) => ({ key: c.country, label: c.country, clicks: c.clicks, percentage: c.percentage }))}
+          />
         ) : null}
     </>
+  );
+}
+
+/** A card of names with a count, a share and a bar. Takes the full row when it is alone. */
+function ShareList({
+  title,
+  wide,
+  rows,
+}: {
+  title: string;
+  wide: boolean;
+  rows: { key: string; label: string; clicks: number; percentage: number }[];
+}) {
+  return (
+    <section className={`${CARD} p-5 ${wide ? 'lg:col-span-2' : ''}`}>
+      <h4 className={META}>{title}</h4>
+      <ul className="mt-3 space-y-3">
+        {rows.map((row) => (
+          <li key={row.key}>
+            <div className="flex items-baseline justify-between gap-3 text-sm">
+              <span className="text-content-primary">{row.label}</span>
+              <span className="font-mono text-content-secondary">
+                {row.clicks.toLocaleString('en')} · {Math.round(row.percentage)}%
+              </span>
+            </div>
+            <div className="mt-1.5 h-1.5 rounded-full bg-stroke-strong">
+              <div className="h-1.5 rounded-full bg-brand" style={{ width: `${Math.max(2, Math.min(100, row.percentage))}%` }} />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

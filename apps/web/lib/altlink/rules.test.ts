@@ -145,6 +145,41 @@ describe('payloads', () => {
     expect(ctrPercent(stats!.ctr)).toBe(71);
     expect(ctrPercent(71)).toBe(71);
   });
+  it('reads the documented stats shape: clicks are visits, redirects are store clicks', () => {
+    const stats = readStats({
+      clicks: 1240,
+      redirects: 980,
+      presaves: 320,
+      top_platforms: [{ key: 'spotify', count: 490 }, { key: 'apple', count: 245 }],
+      top_countries: [{ key: 'Nigeria', count: 620 }, { key: 'GH', count: 124 }],
+    });
+    expect(stats).toMatchObject({ views: 1240, clicks: 980, presaves: 320 });
+    expect(ctrPercent(stats!.ctr)).toBe(79);
+    expect(stats!.topPlatforms[0]).toEqual({ platform: 'spotify', clicks: 490, percentage: 50 });
+    expect(stats!.topCountries).toEqual([
+      { country: 'Nigeria', clicks: 620, percentage: 50 },
+      { country: 'Ghana', clicks: 124, percentage: 10 },
+    ]);
+  });
+  it('reads its own cached stats back unchanged', () => {
+    const first = readStats({ clicks: 100, redirects: 40, top_countries: [{ key: 'Kenya', count: 30 }] })!;
+    const cached = {
+      views: first.views,
+      clicks: first.clicks,
+      ctr: first.ctr,
+      presaves: first.presaves,
+      top_platforms: first.topPlatforms,
+      top_countries: first.topCountries,
+    };
+    expect(readStats(cached)).toEqual(first);
+  });
+  it('shows no countries when Altlink sends none, and at most six', () => {
+    expect(readStats({ views: 10, clicks: 5 })!.topCountries).toEqual([]);
+    expect(readStats({ views: 10, top_countries: 'nope' })!.topCountries).toEqual([]);
+    const many = Array.from({ length: 10 }, (_, i) => ({ key: `Country ${i}`, count: 10 - i }));
+    expect(readStats({ clicks: 100, top_countries: many })!.topCountries).toHaveLength(6);
+    expect(readStats({ clicks: 100, top_countries: [{ count: 5 }, null] })!.topCountries).toEqual([]);
+  });
   it('keeps stats for 10 minutes', () => {
     expect(statsAreFresh(new Date(NOW - 9 * 60_000).toISOString(), NOW)).toBe(true);
     expect(statsAreFresh(new Date(NOW - 11 * 60_000).toISOString(), NOW)).toBe(false);
