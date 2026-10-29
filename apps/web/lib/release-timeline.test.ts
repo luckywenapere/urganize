@@ -14,6 +14,8 @@ import {
   rolloutMetaLine,
   isoForDayOffset,
   itemPosition,
+  countDoneItems,
+  hideDoneItems,
   narrowTimeline,
   toneForSection,
   weekIndexForDay,
@@ -631,5 +633,42 @@ describe('narrowTimeline (key tasks, URG-258)', () => {
     expect(short.phases).toHaveLength(1);
     expect(short.phases[0].items).toHaveLength(1);
     expect(short.phases[0].doneCount).toBe(1);
+  });
+});
+
+describe('hideDoneItems (Hide done, #867)', () => {
+  const now = new Date(dueAt(-60));
+  const tasks = [
+    makeTask({ id: 'a', dueDate: dueAt(-50) }),
+    makeTask({ id: 'b', dueDate: dueAt(-49), status: 'done' }),
+    makeTask({ id: 'c', dueDate: dueAt(-48), status: 'done' }),
+    makeTask({ id: 'd', dueDate: dueAt(20), status: 'done' }),
+    makeTask({ id: 'e', dueDate: null, status: 'done' }),
+  ];
+  const full = buildReleaseTimeline({ tasks, releaseDate: RELEASE_DATE, now })!;
+
+  it('takes done activities off the grid and keeps the open ones', () => {
+    const open = hideDoneItems(full);
+    expect(open.phases.flatMap((p) => p.items.map((i) => i.taskId))).toEqual(['a']);
+    expect(open.unscheduled).toHaveLength(0);
+    expect(open.weeks).toEqual(full.weeks);
+  });
+
+  it('keeps each phase counting the whole plan, so 1/3 stays 1/3', () => {
+    const before = full.phases.find((p) => p.items.some((i) => i.taskId === 'a'))!;
+    const after = hideDoneItems(full).phases.find((p) => p.phase === before.phase)!;
+    expect(after.doneCount).toBe(before.doneCount);
+    expect(after.liveCount).toBe(before.liveCount);
+  });
+
+  it('keeps a phase whose work is all done as a header with no rows', () => {
+    const allDone = full.phases.find((p) => p.items.every((i) => i.tone === 'done'))!;
+    const after = hideDoneItems(full).phases.find((p) => p.phase === allDone.phase)!;
+    expect(after.items).toHaveLength(0);
+    expect(after.doneCount).toBe(allDone.doneCount);
+  });
+
+  it('counts the done activities it hid', () => {
+    expect(countDoneItems(full)).toBe(4);
   });
 });

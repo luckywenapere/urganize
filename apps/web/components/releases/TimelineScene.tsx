@@ -19,6 +19,8 @@ import {
   rolloutClosedSummary,
   itemPosition,
   narrowTimeline,
+  hideDoneItems,
+  countDoneItems,
   type ReleaseTimeline,
   type TimelineItem,
   type TimelinePhaseGroup,
@@ -37,7 +39,14 @@ import { RolloutPhaseStrip } from '@/components/workspace/RolloutPhases';
 import { PlanSuggestionToast } from '@/components/workspace/PlanSuggestions';
 import { pickStartHereTaskId } from '@/lib/plan-core';
 import { formatPhaseDates, summarizeRolloutPhases } from '@/lib/rollout-phases';
-import { EMPTY_PLAN_FILTERS } from '@/lib/plan-focus';
+import {
+  EMPTY_PLAN_FILTERS,
+  SHOW_DONE_STORAGE_KEY,
+  SHOW_DONE_STORAGE_VERSION,
+  isShowCancelledMap,
+  withShowCancelled,
+} from '@/lib/plan-focus';
+import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { TASKS_CHANGED_EVENT } from '@/components/tasks/TaskUIProvider';
@@ -128,6 +137,71 @@ type TimelineSelection = {
 const TimelineSelectContext = createContext<TimelineSelection | null>(null);
 const useTimelineSelection = () => useContext(TimelineSelectContext);
 
+/**
+ * Whether done work shows on the grid (#867), per rollout on this device.
+ * Hidden by default; only rollouts someone turned it on for are stored. Reset
+ * during render on a new rollout and read after mount, like show-cancelled.
+ */
+function useShowDone(rolloutId: string): [boolean, (on: boolean) => void] {
+  const [showDone, setShowDoneState] = useState(false);
+  const [forRollout, setForRollout] = useState(rolloutId);
+  if (forRollout !== rolloutId) {
+    setForRollout(rolloutId);
+    setShowDoneState(false);
+  }
+  useEffect(() => {
+    const saved = readPersistedState(SHOW_DONE_STORAGE_KEY, SHOW_DONE_STORAGE_VERSION, isShowCancelledMap);
+    setShowDoneState(Boolean(saved?.[rolloutId]));
+  }, [rolloutId]);
+  const setShowDone = useCallback(
+    (on: boolean) => {
+      setShowDoneState(on);
+      const saved = readPersistedState(SHOW_DONE_STORAGE_KEY, SHOW_DONE_STORAGE_VERSION, isShowCancelledMap) ?? {};
+      try {
+        writePersistedState(SHOW_DONE_STORAGE_KEY, SHOW_DONE_STORAGE_VERSION, withShowCancelled(saved, rolloutId, on));
+      } catch {
+        // Storage full or blocked: the choice still holds for this visit.
+      }
+    },
+    [rolloutId]
+  );
+  return [showDone, setShowDone];
+}
+
+/** "Hide done · 6" (pressed, green) or "Show done · 6", beside Select. */
+function HideDoneButton({
+  count,
+  shown,
+  onToggle,
+  bar,
+}: {
+  count: number;
+  shown: boolean;
+  onToggle: () => void;
+  bar: boolean;
+}) {
+  const hiding = !shown;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={hiding}
+      data-hide-done
+      className={`hit-44 relative motion-focus inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-3 font-semibold transition-colors ${
+        bar ? 'h-[34px] text-[13px]' : 'h-8 text-xs'
+      } ${
+        hiding
+          ? 'border-brand bg-brand/10 text-brand hover:bg-brand/15'
+          : 'border-stroke-default bg-bg-surface text-content-primary hover:bg-bg-hover'
+      }`}
+    >
+      {hiding ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
+      {hiding ? 'Hide done' : 'Show done'}
+      <span className="font-mono text-[11px] font-normal tabular-nums opacity-80">· {count}</span>
+    </button>
+  );
+}
+
 type TimelineSceneProps = {
   release: Pick<Release, 'id' | 'title' | 'artistName' | 'releaseDate'>;
   tasks: Task[];
@@ -198,6 +272,7 @@ export function TimelineScene({
   // "Show all" decide the rest, and cancelled work stays out until asked for
   // (URG-389).
   const plan = usePlanList(tasks, release.id);
+  const [showDone, setShowDone] = useShowDone(release.id);
 
   // ---- Select mode (bulk mark as done) -----------------------------------
   const [selecting, setSelecting] = useState(false);
@@ -259,10 +334,23 @@ export function TimelineScene({
   // ("52 suggested" under a 12-activity plan read as "your plan is missing 52
   // things"); they live in Work the plan (TasksPanel's PhaseSuggestions).
   const startHereId = useMemo(() => pickStartHereTaskId(tasks), [tasks]);
-  const shown = useMemo(
+  // Hide done (#867): done work leaves the grid until asked for, so open work
+  // and Start here sit at the top. A search or filter looks at everything, and
+  // the phone keeps its own "Done earlier" fold, so neither hides anything.
+  const hidingDone = !showDone && !plan.filtering && !phone;
+  const narrowed = useMemo(
     () => (timeline ? narrowTimeline(timeline, new Set(plan.visible.map((task) => task.id))) : null),
     [timeline, plan.visible]
   );
+  const shown = useMemo(
+    () => (narrowed && hidingDone ? hideDoneItems(narrowed) : narrowed),
+    [narrowed, hidingDone]
+  );
+  const doneCount = useMemo(() => (narrowed ? countDoneItems(narrowed) : 0), [narrowed]);
+  const doneToggle =
+    !phone && !plan.filtering && doneCount > 0
+      ? { count: doneCount, shown: showDone, onToggle: () => setShowDone(!showDone) }
+      : null;
 
   // What select mode can pick: open work showing on the timeline, never a
   // milestone (release day is a date to steer for, not a job to tick).
@@ -459,6 +547,7 @@ export function TimelineScene({
               viewToggle={toolsInBar ? <PlanViewToggle releaseId={release.id} view="timeline" /> : undefined}
               trailing={
                 <>
+                  {doneToggle ? <HideDoneButton {...doneToggle} bar={toolsInBar} /> : null}
                   {selectControl(toolsInBar)}
                   <TimelineChrome />
                 </>
@@ -596,7 +685,7 @@ export function TimelineScene({
       <PlanSuggestionToast />
 
       <div className="mt-4">
-        <PlanShowAllToggle plan={plan} />
+        <PlanShowAllToggle plan={plan} done={doneToggle} />
       </div>
 
       {/* One collapsed row (Oct 17, 2026 just-planned cuts): these are real

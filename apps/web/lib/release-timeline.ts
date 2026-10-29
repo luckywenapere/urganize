@@ -451,6 +451,31 @@ export function narrowTimeline(timeline: ReleaseTimeline, keep: ReadonlySet<stri
   };
 }
 
+/**
+ * The timeline with done work off the grid (Hide done, #867). Unlike
+ * narrowTimeline, each phase keeps its counts and span: "7/15" is a fact about
+ * the plan, not about the rows on screen, and a phase that is all done stays
+ * as a header so its 15/15 still reads.
+ */
+export function hideDoneItems(timeline: ReleaseTimeline): ReleaseTimeline {
+  const phases = timeline.phases.map((phase) => ({
+    ...phase,
+    items: phase.items.filter((item) => item.tone !== 'done'),
+  }));
+  return {
+    ...timeline,
+    phases,
+    unscheduled: timeline.unscheduled.filter((item) => item.tone !== 'done'),
+    placedCount: phases.reduce((sum, phase) => sum + phase.items.length, 0),
+  };
+}
+
+/** How many done activities a timeline holds, placed or undated. */
+export function countDoneItems(timeline: ReleaseTimeline): number {
+  const placed = timeline.phases.reduce((sum, phase) => sum + phase.items.filter((item) => item.tone === 'done').length, 0);
+  return placed + timeline.unscheduled.filter((item) => item.tone === 'done').length;
+}
+
 /** Chronological, then by severity so the week's problems lead, then stable
  * by title so two activities on one day never swap places between renders. */
 function compareItems(left: TimelineItem, right: TimelineItem): number {

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timeline: Hide done</title>
+<style>
+  :root {
+    --bg: #f5f0e6; --surface: #faf5ec; --brand: #14643a; --brand-soft: rgba(20,100,58,.5);
+    --text: #1a1611; --text-2: #4b4740; --text-3: #6a665f; --line: #e3dccf; --line-2: #cfc7b8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; padding: 24px 16px 48px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .note { color: var(--text-2); margin: 0 0 20px; max-width: 720px; }
+  .state { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin: 28px 0 8px; }
+  .frame { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 16px; overflow-x: auto; }
+  .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; min-width: 900px; }
+  .search { flex: 0 0 260px; height: 32px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text-3); padding: 0 10px; display: flex; align-items: center; font-size: 13px; }
+  .btn { height: 32px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+  .spacer { flex: 1; }
+  .btn.on { background: rgba(20,100,58,.08); border-color: var(--brand); color: var(--brand); }
+  .count { font-family: ui-monospace, monospace; font-size: 12px; color: inherit; opacity: .8; }
+  .new { outline: 2px dashed #b06a00; outline-offset: 3px; }
+  .grid { display: grid; grid-template-columns: 176px 1fr; min-width: 900px; }
+  .labels .row, .axis .row { height: 32px; display: flex; align-items: center; }
+  .labels .row { font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 12px; }
+  .labels .phase { font-weight: 600; color: var(--text); gap: 6px; }
+  .labels .phase .n { margin-left: auto; font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; font-weight: 400; }
+  .start { font-family: ui-monospace, monospace; font-size: 11px; color: var(--brand); margin-left: 8px; }
+  .done-row { color: var(--text-3); }
+  .done-row s { text-decoration: none; opacity: .65; }
+  .axis { position: relative; }
+  .weeks { display: grid; grid-template-columns: repeat(13, 1fr); height: 28px; align-items: end; font-size: 11px; font-weight: 600; color: var(--text-3); }
+  .weeks span { padding-left: 4px; }
+  .weeks .rel { color: var(--brand); }
+  .cols { position: absolute; inset: 28px 0 0 0; display: grid; grid-template-columns: repeat(13, 1fr); pointer-events: none; }
+  .cols div { border-left: 1px solid var(--line); }
+  .cols .relc { border-left: 1.5px solid var(--brand); }
+  .today { position: absolute; top: 18px; bottom: 0; left: 8.3%; width: 1.5px; background: var(--text); }
+  .today b { position: absolute; top: -4px; left: 50%; transform: translateX(-50%); background: var(--text); color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 6px; letter-spacing: .04em; }
+  .axis .row { position: relative; }
+  .dot { position: absolute; width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--line-2); background: var(--surface); transform: translateX(-50%); }
+  .dot.done { background: var(--brand-soft); border-color: transparent; }
+  .bar { position: absolute; height: 8px; border-radius: 4px; background: var(--line); }
+  .quiet { min-width: 900px; padding: 8px 0 0 0; font-size: 12px; color: var(--text-3); }
+  .quiet a { color: var(--text-2); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .callouts { margin-top: 28px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; color: var(--text-2); }
+  .callouts ol { margin: 6px 0 0; padding-left: 18px; }
+  .callouts li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Timeline: Hide done (#867)</h1>
+  <p class="note">The dashed outline marks what is new. Done work drops off the grid by default, so open work starts at the top. One tap brings it back. Counts like 7/15 do not change.</p>
+
+  <div class="state">1 · Default: done hidden</div>
+  <div class="frame" id="a"></div>
+
+  <div class="state">2 · After a tap: done shown (today's view)</div>
+  <div class="frame" id="b"></div>
+
+  <div class="callouts">
+    <strong>How it behaves</strong>
+    <ol>
+      <li>The button reads <b>Hide done · 6</b> when on (green), <b>Show done · 6</b> when off. The number is how many done activities there are.</li>
+      <li>Starts on for everyone. The app remembers your choice per rollout on this device.</li>
+      <li>No new line under the grid. The existing quiet line gets one more link in the middle, which does the same as the button. "Show all" means all key and extra activities; it does not bring back done work. Done and cancelled each have their own switch.</li>
+      <li>Phase counts (7/15) and the phase strip above stay the same: they count the whole plan.</li>
+      <li>A search or filter looks at everything, done included, same as cancelled work today.</li>
+      <li>Phone week list keeps its own "Done earlier" fold. No change there.</li>
+      <li>If every activity is done, the grid shows the existing "All clear" line and the button.</li>
+    </ol>
+  </div>
+</div>
+
+<script>
+  const rows = [
+    { t: 'Draft split sheet', w: 1, done: false, start: true },
+    { t: 'Choose distributor and contract', w: 1, done: true },
+    { t: 'Confirm release date and label', w: 1, done: true },
+    { t: 'Lock the master file', w: 1, done: true },
+    { t: 'Write song metadata', w: 1, done: true },
+    { t: 'Confirm release date locked', w: 2, done: false },
+    { t: 'Finalize split sheet signatures', w: 2, done: false },
+    { t: 'Upload cover art to distributor', w: 2, done: false },
+    { t: 'Brief designer on cover art', w: 2, done: true },
+    { t: 'Confirm distributor accepted', w: 2.3, done: false },
+    { t: 'Upload the final cover art', w: 3, done: false },
+    { t: 'Upload track and metadata', w: 3, done: false },
+    { t: 'Cover art first draft delivered', w: 3, done: true },
+  ];
+  const weekNames = ['W9','W8','W7','W6','W5','W4','W3','W2','W1','RELEASE','+1','+2','+3'];
+  const pct = (w) => ((w + 0.05) / 13 * 100) + '%';
+
+  function render(el, hideDone) {
+    const doneCount = rows.filter(r => r.done).length;
+    const list = hideDone ? rows.filter(r => !r.done) : rows;
+    const btn = hideDone
+      ? `<span class="btn on new" aria-pressed="true">✓ Hide done <span class="count">· ${doneCount}</span></span>`
+      : `<span class="btn new" aria-pressed="false">Show done <span class="count">· ${doneCount}</span></span>`;
+    const labels = [`<div class="row phase">⌄ Pre-release <span class="n">7/15</span></div>`]
+      .concat(list.map(r => `<div class="row ${r.done ? 'done-row' : ''}">${r.done ? '<s>' + r.t + '</s>' : r.t}${r.start ? '<span class="start">Start here</span>' : ''}</div>`)).join('');
+    const marks = [`<div class="row"><div class="bar" style="left:${pct(1)};width:52%"></div></div>`]
+      .concat(list.map(r => `<div class="row"><div class="dot ${r.done ? 'done' : ''}" style="left:${pct(r.w)}"></div></div>`)).join('');
+    el.innerHTML = `
+      <div class="toolbar">
+        <div class="search">Search activities</div>
+        <span class="btn">Filter</span>
+        <span class="spacer"></span>
+        ${btn}
+        <span class="btn">Select</span>
+        <span class="btn">Key</span>
+      </div>
+      <div class="grid">
+        <div class="labels"><div style="height:28px"></div>${labels}</div>
+        <div class="axis">
+          <div class="weeks">${weekNames.map(w => `<span class="${w === 'RELEASE' ? 'rel' : ''}">${w}</span>`).join('')}</div>
+          <div class="cols">${weekNames.map(w => `<div class="${w === 'RELEASE' ? 'relc' : ''}"></div>`).join('')}</div>
+          <div class="today"><b>TODAY</b></div>
+          ${marks}
+        </div>
+      </div>
+      <div class="quiet" style="text-align:center"><a>Show all 64 activities</a> · <span class="new"><a>${hideDone ? 'Show done · ' + doneCount : 'Hide done'}</a></span> · <a>Show cancelled · 3</a></div>`;
+  }
+  render(document.getElementById('a'), true);
+  render(document.getElementById('b'), false);
+</script>
+</body>
+</html>
