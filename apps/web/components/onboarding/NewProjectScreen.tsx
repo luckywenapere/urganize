@@ -415,7 +415,7 @@ export function NewProjectScreen({
 
   const preview = form.stage ? (
     <div className="mt-[18px] rounded-xl border border-dashed border-stroke-control p-3">
-      <p className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.06em] text-content-tertiary">Preview</p>
+      <p className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.06em] text-content-tertiary">How it shows on Home</p>
       <div className="flex items-center gap-3 rounded-xl border border-stroke-control bg-bg-surface p-3">
         <span className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-bg-hover text-base font-semibold text-content-secondary">
           {initialsOf(form.artist || '?')}
@@ -425,7 +425,11 @@ export function NewProjectScreen({
           <p className="mt-0.5 truncate text-[13px] text-content-secondary">
             {form.artist.trim() || 'Artist'} · {form.kind === 'unsure' ? 'Kind not set' : MUSIC_KIND_LABELS[form.kind]}
           </p>
-          <p className="mt-1.5 font-mono text-[10.5px] uppercase tracking-[0.06em] text-content-tertiary">{previewStatus}</p>
+          <p className="mt-1.5 font-mono text-[10.5px] uppercase tracking-[0.06em] text-content-tertiary">
+            {/* The stage word in brand green, the rest quiet, like the catalogue stamps. */}
+            <span className="text-brand">{previewStatus.split(' · ')[0]}</span>
+            {previewStatus.includes(' · ') ? ` · ${previewStatus.split(' · ').slice(1).join(' · ')}` : ''}
+          </p>
         </div>
       </div>
     </div>
@@ -443,7 +447,7 @@ export function NewProjectScreen({
       {rest}
       {preview}
       {/* On a phone, Add it stays pinned to the bottom once the form is long. */}
-      <div className="sticky bottom-0 z-[5] -mx-4 -mb-4 mt-4 bg-gradient-to-b from-transparent to-bg-surface to-[14px] px-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] pt-3 md:static md:m-0 md:mt-4 md:bg-none md:p-0">
+      <div className="sticky bottom-0 z-[5] -mx-4 -mb-4 mt-4 bg-gradient-to-b from-transparent to-bg-surface to-[14px] px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3 md:static md:m-0 md:mt-4 md:bg-none md:p-0">
         <button type="submit" disabled={Boolean(blocker) || busy} aria-describedby="music-blocker" className={primaryButtonClass}>
           {buttonLabel}
         </button>
@@ -457,10 +461,15 @@ export function NewProjectScreen({
             {submit.message}
           </p>
         ) : null}
-        <p id="music-blocker" className="mt-2 min-h-5 text-center text-[13px] text-content-secondary">
-          {blocker}
+        {/* One line under the button, so the pinned bar stays short on a phone:
+            what is missing while something is, then what the button promises. */}
+        <p
+          id="music-blocker"
+          aria-live="polite"
+          className={`mt-2 min-h-5 text-balance text-center text-[13px] ${blocker ? 'text-content-secondary' : 'text-content-tertiary'}`}
+        >
+          {blocker || musicPromise(form)}
         </p>
-        <p className="text-center text-[13px] text-content-tertiary">{musicPromise(form)}</p>
       </div>
     </form>
   );

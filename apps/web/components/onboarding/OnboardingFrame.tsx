@@ -10,7 +10,7 @@
 // (12 for fields and rows, 16 for surfaces, full for buttons and chips).
 
 import { useEffect, useRef, type ReactNode } from 'react';
-import { LogoIcon } from '@urganize/ui/Logo';
+import { Logo, LogoIcon } from '@urganize/ui/Logo';
 
 export const primaryButtonClass =
   'motion-press inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-full bg-brand px-5 text-[15px] font-semibold text-content-inverse transition-colors duration-fast ease-standard hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-bg-hover disabled:text-content-tertiary';
@@ -65,11 +65,14 @@ export function Avatar({ name, size = 32 }: { name: string; size?: number }) {
 
 export function TopBar({ name }: { name?: string | null }) {
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between px-4 md:h-[72px] md:px-8">
-      <div className="flex items-center gap-2 text-[15px] font-semibold">
+    // Same box as the app's TopNav (max 1440, px-8 and 72px tall from lg), and
+    // the same wordmark there, so landing in the app does not move the logo.
+    <header className="mx-auto flex h-14 w-full max-w-[1440px] shrink-0 items-center justify-between px-4 sm:px-5 lg:h-[72px] lg:px-8">
+      <div className="flex items-center gap-2 text-[15px] font-semibold lg:hidden">
         <LogoIcon size={26} priority />
         <span>Urganize</span>
       </div>
+      <Logo size="sm" priority className="hidden opacity-95 lg:flex" />
       {name ? <Avatar name={name} /> : null}
     </header>
   );
