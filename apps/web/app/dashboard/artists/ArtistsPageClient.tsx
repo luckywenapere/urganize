@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, ChevronRight, Plus, Users } from '@/components/icons';
@@ -14,13 +14,17 @@ import { artistHref, describeArtistCounts, isArtistPageEnabled } from '@/lib/art
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { ArtistsRolloutsSwitch } from '@/components/shell/swipe/ArtistsRolloutsSwitch';
 import { ImportReleasesButton } from '@/components/artists/ImportReleasesDialog';
+import { DuplicateArtistsPrompt } from '@/components/artists/DuplicateArtistsPrompt';
 import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
 
-export default function ArtistsPageClient({ swipe = false }: { swipe?: boolean } = {}) {
+export default function ArtistsPageClient({
+  swipe = false,
+  active = true,
+}: { swipe?: boolean; active?: boolean } = {}) {
   const router = useRouter();
   const authLoading = useAuthStore((state) => state.isLoading);
 
@@ -29,6 +33,11 @@ export default function ArtistsPageClient({ swipe = false }: { swipe?: boolean }
   const loadRoster = useArtistRosterStore((state) => state.load);
   const setArtistPhoto = useArtistRosterStore((state) => state.setArtistPhoto);
   const releases = useReleaseStore((state) => state.releases);
+  // The phone pager mounts every tab at once, so the duplicate-artist popup
+  // waits until Artists is first opened, then stays mounted so closing it
+  // holds until the next visit (#865).
+  const [opened, setOpened] = useState(active);
+  if (active && !opened) setOpened(true);
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
 
   useEffect(() => {
@@ -55,10 +64,18 @@ export default function ArtistsPageClient({ swipe = false }: { swipe?: boolean }
 
   const loading = (authLoading || !rosterLoaded) && artists.length === 0;
 
-  if (swipe) return <SwipeArtists loading={loading} artists={artists} releases={releases} />;
+  if (swipe) {
+    return (
+      <>
+        <SwipeArtists loading={loading} artists={artists} releases={releases} />
+        {opened ? <DuplicateArtistsPrompt /> : null}
+      </>
+    );
+  }
 
   return (
     <div>
+      <DuplicateArtistsPrompt />
       {/* The section's content top: the same spacer CatalogueView draws, and
           nothing else above the list, so both tabs start 20px under the tab
           row (tab jump fix, Oct 18, 2026; lib/section-content-top-guard). */}

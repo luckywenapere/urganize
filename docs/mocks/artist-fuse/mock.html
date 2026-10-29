@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fuse artists</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --card:#faf5ec; --hover:#ebe6dc;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.16);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --board:#d9d5cc; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--text); padding:32px 16px 64px; }
+  p { margin:0; }
+  .wrap { max-width:1160px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; margin:0 0 6px; }
+  .intro p, .sec-h p { color:var(--board-sec); max-width:720px; }
+  .sec-h { margin:44px 0 14px; }
+  .sec-h h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:0 0 4px; }
+  .row { display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap; }
+
+  /* app frame */
+  .desk { flex:1 1 640px; min-width:0; background:var(--bg); border-radius:18px; overflow:hidden; position:relative; min-height:500px; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .top { display:flex; align-items:center; justify-content:space-between; padding:16px 24px; }
+  .logo { font-family:'Young Serif', serif; font-size:18px; }
+  .tabs { display:flex; gap:4px; }
+  .tabs span { padding:6px 14px; border-radius:99px; color:var(--sec); font-size:13.5px; }
+  .tabs span.on { background:var(--hover); color:var(--text); font-weight:600; }
+  .page { padding:8px 32px 32px; }
+  .page h3 { font-size:17px; margin:0 0 16px; }
+  .list { background:var(--card); border:1px solid var(--line); border-radius:14px; }
+  .li { display:grid; grid-template-columns:44px 1fr 60px 16px; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--line); color:var(--sec); }
+  .li:first-child { border-top:0; }
+  .li b { font-family:'Young Serif', serif; font-weight:400; font-size:15px; color:var(--text); }
+  .scrim { position:absolute; inset:0; background:rgba(26,22,17,.28); backdrop-filter:blur(2px); display:grid; place-items:center; padding:16px; }
+
+  /* avatars */
+  .av { width:38px; height:38px; border-radius:50%; background:#e3ddd0; display:grid; place-items:center; font-size:12px; font-weight:600; color:var(--sec); flex:none; }
+  .av.ph { background:#3b3328; color:#f5f0e6; }
+  .duo { display:flex; align-items:center; justify-content:center; margin:4px 0 18px; }
+  .duo .av { width:64px; height:64px; font-size:18px; border:3px solid var(--card); }
+  .duo .av + .av { margin-left:-14px; }
+  .duo .link { width:28px; height:28px; border-radius:50%; background:var(--brand); color:#f5f0e6; display:grid; place-items:center; margin:0 -14px; position:relative; z-index:2; border:3px solid var(--card); }
+  .duo .link svg { width:13px; height:13px; }
+
+  /* dialog */
+  .dlg { background:var(--card); border-radius:22px; width:400px; max-width:100%; padding:28px 24px 20px; box-shadow:0 24px 60px rgba(26,22,17,.22); text-align:center; position:relative; }
+  .dlg h4 { font-family:'Young Serif', serif; font-weight:400; font-size:23px; line-height:1.2; margin:0 0 6px; }
+  .dlg .sub { color:var(--sec); font-size:14px; }
+  .x { position:absolute; top:14px; right:14px; width:30px; height:30px; border-radius:50%; display:grid; place-items:center; color:var(--ter); font-size:18px; }
+  .x:hover { background:var(--hover); }
+
+  /* the result preview */
+  .after { text-align:left; display:flex; align-items:center; gap:12px; margin:20px 0 0; padding:12px 14px; border-radius:14px; background:var(--bg); border:1px solid var(--line); }
+  .after .nm { font-family:'Young Serif', serif; font-size:16px; }
+  .after .meta { font-size:12.5px; color:var(--sec); }
+  .after .new { color:var(--brand); font-weight:600; }
+  .lbl { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ter); text-align:left; margin:20px 0 6px 2px; }
+  .lbl + .after { margin-top:0; }
+
+  .btn { display:flex; align-items:center; justify-content:center; width:100%; min-height:46px; border-radius:12px; font-weight:600; font-size:14.5px; background:var(--brand); color:#f5f0e6; margin-top:18px; }
+  .txt { display:block; margin-top:8px; padding:10px; font-weight:600; color:var(--sec); font-size:14px; }
+  .dots { display:flex; gap:5px; justify-content:center; margin-top:6px; }
+  .dots i { width:6px; height:6px; border-radius:50%; background:var(--line2); }
+  .dots i.on { background:var(--text); width:16px; border-radius:4px; }
+
+  /* import dialog */
+  .imp { text-align:left; padding:22px; width:440px; }
+  .imp h4 { font-size:20px; }
+  .srch { display:flex; align-items:center; gap:10px; background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin:14px 0 8px; }
+  .srch svg { width:15px; height:15px; color:var(--ter); }
+  .res { display:flex; align-items:center; gap:12px; padding:10px; border-radius:12px; color:var(--sec); }
+  .res .nm { color:var(--text); font-weight:600; }
+  .res .meta { font-size:12.5px; }
+  .cov { width:42px; height:42px; border-radius:9px; background:#a89c86; flex:none; }
+  .res.sel { background:var(--bg); border:1px solid var(--line); flex-direction:column; align-items:stretch; padding:10px 10px 12px; }
+  .res.sel .rtop { display:flex; align-items:center; gap:12px; }
+  .ask { display:flex; align-items:center; gap:10px; margin-top:12px; padding-top:12px; border-top:1px solid var(--line); }
+  .ask .av { width:28px; height:28px; font-size:11px; }
+  .ask p { flex:1; color:var(--text); font-size:13.5px; }
+  .chip { padding:7px 12px; border-radius:99px; font-weight:600; font-size:13px; white-space:nowrap; }
+  .chip.y { background:var(--brand); color:#f5f0e6; }
+  .chip.n { color:var(--sec); }
+
+  /* phone */
+  .phone { width:340px; flex:none; background:var(--bg); border-radius:34px; border:8px solid #1a1611; height:680px; position:relative; overflow:hidden; }
+  .phone .page { padding:56px 16px 16px; }
+  .phone .li { grid-template-columns:40px 1fr 16px; padding:10px 14px; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; background:var(--card); border-radius:26px 26px 0 0; padding:10px 20px 18px; text-align:center; box-shadow:0 -12px 40px rgba(26,22,17,.18); }
+  .grab { width:38px; height:4px; border-radius:4px; background:var(--line2); margin:0 auto 18px; }
+  .sheet h4 { font-family:'Young Serif', serif; font-weight:400; font-size:21px; line-height:1.2; margin:0 0 6px; }
+
+  .note { margin-top:14px; color:var(--board-sec); font-size:13px; padding-left:18px; }
+  .note li { margin-bottom:4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <h1>Fuse duplicate artists</h1>
+    <p>One question, one tap. Each card shows what you end up with, so nobody has to work out what "join" means.</p>
+  </div>
+
+  <!-- 1: existing duplicates -->
+  <div class="sec-h">
+    <h2>1 · Already duplicated: on opening Artists</h2>
+    <p>The two faces meet in the middle. Under them, the artist you will have after. One big button, and a quiet way out.</p>
+  </div>
+  <div class="row">
+    <div class="desk">
+      <div class="top"><span class="logo">Urganize</span><div class="tabs"><span>Home</span><span>UrgAns</span><span class="on">Artists</span><span>Team</span></div><span></span></div>
+      <div class="page">
+        <h3>Artists</h3>
+        <div class="list">
+          <div class="li"><span class="av ph">D</span><b>Dorian</b><span>1</span><span>→</span></div>
+          <div class="li"><span class="av">T</span><b>T3N</b><span>0</span><span>→</span></div>
+          <div class="li"><span class="av">BD</span><b>Babyboy Dorian</b><span>1</span><span>→</span></div>
+        </div>
+      </div>
+      <div class="scrim">
+        <div class="dlg">
+          <span class="x">×</span>
+          <div class="duo">
+            <span class="av ph">D</span>
+            <span class="link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 9.5l3-3M7 4.5l1-1a2.8 2.8 0 014 4l-1 1M9 11.5l-1 1a2.8 2.8 0 01-4-4l1-1"/></svg></span>
+            <span class="av">BD</span>
+          </div>
+          <h4>Dorian and Babyboy Dorian, same artist?</h4>
+          <p class="sub">Join them and everything sits in one place.</p>
+          <p class="lbl">You'll have</p>
+          <div class="after">
+            <span class="av ph">D</span>
+            <div><div class="nm">Dorian</div><div class="meta">2 rollouts · <span class="new">+14 past releases</span></div></div>
+          </div>
+          <span class="btn">Join them</span>
+          <span class="txt">They're different</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="phone">
+      <div class="page">
+        <h3>Artists</h3>
+        <div class="list">
+          <div class="li"><span class="av ph">D</span><b>Dorian</b><span>→</span></div>
+          <div class="li"><span class="av">T</span><b>T3N</b><span>→</span></div>
+          <div class="li"><span class="av">BD</span><b>Babyboy Dorian</b><span>→</span></div>
+        </div>
+      </div>
+      <div class="scrim" style="place-items:end stretch;padding:0">
+        <div class="sheet">
+          <div class="grab"></div>
+          <div class="duo">
+            <span class="av ph">D</span>
+            <span class="link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 9.5l3-3M7 4.5l1-1a2.8 2.8 0 014 4l-1 1M9 11.5l-1 1a2.8 2.8 0 01-4-4l1-1"/></svg></span>
+            <span class="av">BD</span>
+          </div>
+          <h4>Dorian and Babyboy Dorian, same artist?</h4>
+          <p class="sub" style="color:var(--sec)">Join them and everything sits in one place.</p>
+          <div class="after">
+            <span class="av ph">D</span>
+            <div><div class="nm">Dorian</div><div class="meta">2 rollouts · <span class="new">+14 past releases</span></div></div>
+          </div>
+          <span class="btn">Join them</span>
+          <span class="txt">They're different</span>
+          <div class="dots"><i class="on"></i><i></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <ul class="note">
+    <li>The profile the team made keeps its name and photo. The other one is removed after its rollouts and releases move over.</li>
+    <li>× or a swipe down brings it back next visit. "They're different" hides this pair for good.</li>
+    <li>More than one pair: the dots show how many, one at a time. Admins only.</li>
+  </ul>
+
+  <!-- 2: during import -->
+  <div class="sec-h">
+    <h2>2 · During import: a question right under the pick</h2>
+    <p>No second popup. When they tap a result that matches someone on the roster, the question opens inside that row.</p>
+  </div>
+  <div class="row">
+    <div class="desk">
+      <div class="top"><span class="logo">Urganize</span><div class="tabs"><span>Home</span><span>UrgAns</span><span class="on">Artists</span><span>Team</span></div><span></span></div>
+      <div class="page">
+        <h3>Artists</h3>
+        <div class="list">
+          <div class="li"><span class="av ph">D</span><b>Dorian</b><span>1</span><span>→</span></div>
+          <div class="li"><span class="av">T</span><b>T3N</b><span>0</span><span>→</span></div>
+        </div>
+      </div>
+      <div class="scrim">
+        <div class="dlg imp">
+          <span class="x">×</span>
+          <h4>Import past releases</h4>
+          <div class="srch"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>dorian</div>
+          <div class="res sel">
+            <div class="rtop"><span class="cov"></span><div><div class="nm">Babyboy Dorian</div><div class="meta">14 releases · 2.1k fans</div></div></div>
+            <div class="ask">
+              <span class="av ph">D</span>
+              <p>Add these to <b>Dorian</b>?</p>
+              <span class="chip n">New artist</span>
+              <span class="chip y">Add to Dorian</span>
+            </div>
+          </div>
+          <div class="res"><span class="cov" style="background:#c4baa7"></span><div><div class="nm">Dorian Electra</div><div class="meta">31 releases · 88k fans</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <ul class="note">
+    <li>A result with no roster match saves straight away, as today.</li>
+    <li>Two roster matches: the line reads "Add these to…" with one chip per artist.</li>
+  </ul>
+</div>
+</body>
+</html>

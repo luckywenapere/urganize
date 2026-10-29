@@ -17,10 +17,19 @@ export type ImportOutcome =
  *
  * Names the artist as typed on the team's roster when no artist of that name
  * is there yet; otherwise the releases join the artist already on the roster.
+ * `artistId` (a roster artist the person chose, #865) puts the releases on
+ * that artist instead, so "Babyboy Dorian" can land on "Dorian".
  */
 export async function importArtistCatalogue(
   adminClient: SupabaseClient,
-  input: { workspaceId: string; userId: string; provider: ImportProvider; sourceId: string; name: string }
+  input: {
+    workspaceId: string;
+    userId: string;
+    provider: ImportProvider;
+    sourceId: string;
+    name: string;
+    artistId?: string;
+  }
 ): Promise<ImportOutcome> {
   const name = input.name.trim().slice(0, 120);
   const releases = await fetchImportReleases(input.provider, input.sourceId);
@@ -30,9 +39,24 @@ export async function importArtistCatalogue(
 
   const slug = normalizeReleaseSlug(name);
   let artistId: string | null = null;
+  let artistName = name;
   let createdArtist = false;
 
-  if (slug) {
+  if (input.artistId) {
+    const chosen = await adminClient
+      .from(ARTISTS_TABLE)
+      .select('id,name')
+      .eq('workspace_id', input.workspaceId)
+      .eq('id', input.artistId)
+      .maybeSingle();
+    if (!chosen.data) {
+      return { ok: false, reason: 'save_failed', message: 'That artist is not on your roster.' };
+    }
+    artistId = String((chosen.data as { id: string }).id);
+    artistName = String((chosen.data as { name: string }).name || name);
+  }
+
+  if (!artistId && slug) {
     const existing = await adminClient
       .from(ARTISTS_TABLE)
       .select('id')
@@ -51,6 +75,7 @@ export async function importArtistCatalogue(
       workspaceId: input.workspaceId,
       ownerUserId: input.userId,
       name,
+      createdVia: 'import',
     });
     if (!created.data) {
       return { ok: false, reason: 'save_failed', message: created.error || 'Could not add the artist.' };
@@ -68,7 +93,7 @@ export async function importArtistCatalogue(
   if (added === null) {
     return { ok: false, reason: 'save_failed', message: 'Could not save the releases.' };
   }
-  return { ok: true, artistId, artistName: name, added, total: releases.length, createdArtist };
+  return { ok: true, artistId, artistName, added, total: releases.length, createdArtist };
 }
 
 /** Rows newly added (existing ones are refreshed, not counted), or null on a write error. */

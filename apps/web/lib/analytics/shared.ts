@@ -139,7 +139,11 @@ export interface AnalyticsEventPropertiesMap {
   onboarding_artist_plan_next: EmptyAnalyticsProperties;
   /** Artist import for existing accounts (2026-10-26): the dialog opened from `from`, and an artist saved. */
   artist_import_opened: { from: 'artists' | 'artist' };
-  artist_import_saved: { provider: string; added: number; created_artist: boolean };
+  artist_import_saved: { provider: string; added: number; created_artist: boolean; onto_match: boolean };
+  /** Duplicate artists (#865): the import asked "Add these to X?"; the Artists page offered a pair and how it was answered. */
+  artist_import_match_asked: { matches: number };
+  artist_duplicate_shown: { pairs: number };
+  artist_duplicate_answered: { answer: 'join' | 'dismiss' | 'later' };
   /** Catalogue Get link (2026-10-26): a link was made, or the team hit its daily cap. */
   catalogue_link_made: { existing: boolean };
   catalogue_link_cap_hit: EmptyAnalyticsProperties;

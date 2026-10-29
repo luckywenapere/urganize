@@ -41,6 +41,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.211.0",
+    title: "Join duplicate artists",
+    tag: "App",
+    listed: false,
+    date: "October 29, 2026",
+    highlights: [
+      "If two of your artists look like the same person, the Artists page asks if you want to join them. One tap puts everything on one artist.",
+      "When you import past releases for someone already on your roster, we ask if they belong to that artist first.",
+    ],
+  },
+  {
     version: "1.210.0",
     title: "A calmer artist page",
     tag: "App",

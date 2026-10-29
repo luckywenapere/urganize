@@ -5,8 +5,10 @@ import { createPortal } from 'react-dom';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { saveArtistImport, type SavedImport } from '@/lib/artist-import/client';
+import { findRosterMatches } from '@/lib/artist-merge';
 import type { ImportArtistCandidate, ImportRelease } from '@/lib/artist-import/providers';
-import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
+import { useArtistRosterStore, type RosterArtist } from '@/stores/useArtistRosterStore';
+import { ProfileFace } from '@/components/shared/ProfileFace';
 import { Cover, formatFans, initials, kindLabel } from './ImportParts';
 
 type Phase = 'search' | 'pulling' | 'done';
@@ -60,10 +62,17 @@ export function ImportReleasesDialog({
   const [shown, setShown] = useState(0);
   const [result, setResult] = useState<SavedImport | null>(null);
   const [savedCount, setSavedCount] = useState(0);
+  // A picked profile that looks like someone already on the roster ("Babyboy
+  // Dorian" and "Dorian", #865) waits here for the answer before saving.
+  const [asking, setAsking] = useState<{ candidate: ImportArtistCandidate; matches: RosterArtist[] } | null>(null);
   const searchSeq = useRef(0);
+  const roster = useArtistRosterStore((state) => state.artists);
   const loadRoster = useArtistRosterStore((state) => state.load);
 
   useEffect(() => lockBodyScroll(), []);
+  useEffect(() => {
+    void loadRoster();
+  }, [loadRoster]);
   useEffect(() => {
     captureAnalyticsEvent({ name: 'artist_import_opened', properties: { from } });
   }, [from]);
@@ -137,7 +146,18 @@ export function ImportReleasesDialog({
     }
   }, [phase, result, finishedReveal]);
 
-  const pick = async (candidate: ImportArtistCandidate) => {
+  const choose = (candidate: ImportArtistCandidate) => {
+    const matches = findRosterMatches(candidate.name, roster);
+    if (matches.length === 0) {
+      void pick(candidate);
+      return;
+    }
+    setAsking({ candidate, matches });
+    captureAnalyticsEvent({ name: 'artist_import_match_asked', properties: { matches: matches.length } });
+  };
+
+  const pick = async (candidate: ImportArtistCandidate, onto?: RosterArtist) => {
+    setAsking(null);
     setError('');
     setPicked(candidate);
     setReleases([]);
@@ -148,7 +168,7 @@ export function ImportReleasesDialog({
     // save is separate and pulls the releases again on the server.
     const [lookup, saved] = await Promise.all([
       lookupReleases(candidate),
-      saveArtistImport({ provider: candidate.provider, id: candidate.id, name: candidate.name }),
+      saveArtistImport({ provider: candidate.provider, id: candidate.id, name: candidate.name, artistId: onto?.id }),
     ]);
     if (!saved.ok) {
       setError(saved.message);
@@ -161,7 +181,12 @@ export function ImportReleasesDialog({
     void loadRoster({ force: true });
     captureAnalyticsEvent({
       name: 'artist_import_saved',
-      properties: { provider: candidate.provider, added: saved.added, created_artist: saved.createdArtist },
+      properties: {
+        provider: candidate.provider,
+        added: saved.added,
+        created_artist: saved.createdArtist,
+        onto_match: Boolean(onto),
+      },
     });
   };
 
@@ -216,12 +241,23 @@ export function ImportReleasesDialog({
                   No profile found for that name. Check the spelling and try again.
                 </p>
               ) : null}
-              {candidates?.map((candidate) => (
-                <button
+              {candidates?.map((candidate) => {
+                const open =
+                  asking?.candidate.provider === candidate.provider && asking.candidate.id === candidate.id
+                    ? asking
+                    : null;
+                return (
+                <div
                   key={`${candidate.provider}-${candidate.id}`}
+                  className={`rounded-xl border bg-bg-surface transition-colors duration-fast ease-standard ${
+                    open ? 'border-stroke-strong' : 'border-stroke-default hover:border-stroke-strong'
+                  }`}
+                >
+                <button
                   type="button"
-                  onClick={() => void pick(candidate)}
-                  className="motion-press flex w-full items-center gap-3 rounded-xl border border-stroke-default bg-bg-surface px-3 py-2.5 text-left transition-colors duration-fast ease-standard hover:border-stroke-strong hover:bg-bg-hover"
+                  onClick={() => choose(candidate)}
+                  aria-expanded={open ? true : undefined}
+                  className="motion-press flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-fast ease-standard hover:bg-bg-hover"
                 >
                   {candidate.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element -- remote photo, never optimised or stored
@@ -238,7 +274,10 @@ export function ImportReleasesDialog({
                     </span>
                   </span>
                 </button>
-              ))}
+                {open ? <MatchQuestion matches={open.matches} onNew={() => void pick(candidate)} onAdd={(artist) => void pick(candidate, artist)} /> : null}
+                </div>
+                );
+              })}
               {error ? (
                 <p role="alert" className="text-sm text-status-error">
                   {error}
@@ -312,6 +351,57 @@ export function ImportReleasesDialog({
       </div>
     </div>,
     document.body
+  );
+}
+
+/**
+ * The question under a picked profile that looks like a roster artist:
+ * "Add these to Dorian?" (#865). One add button per match, so two look-alikes
+ * on the roster are both offered.
+ */
+function MatchQuestion({
+  matches,
+  onNew,
+  onAdd,
+}: {
+  matches: RosterArtist[];
+  onNew: () => void;
+  onAdd: (artist: RosterArtist) => void;
+}) {
+  const single = matches.length === 1 ? matches[0] : null;
+  return (
+    <div className="mx-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-stroke-subtle py-3">
+      {single ? <ProfileFace name={single.name} photoUrl={single.photoUrl} size={28} /> : null}
+      <p className="min-w-0 flex-1 text-sm text-content-primary">
+        {single ? (
+          <>
+            Add these to <span className="font-semibold">{single.name}</span>?
+          </>
+        ) : (
+          'Add these to one of your artists?'
+        )}
+      </p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <button
+          type="button"
+          onClick={onNew}
+          className="motion-press inline-flex min-h-9 items-center rounded-full px-3 text-sm font-semibold text-content-secondary transition-colors duration-fast ease-standard hover:bg-bg-hover hover:text-content-primary"
+        >
+          New artist
+        </button>
+        {matches.map((artist) => (
+          <button
+            key={artist.id}
+            type="button"
+            onClick={() => onAdd(artist)}
+            autoFocus={artist === matches[0]}
+            className="motion-press inline-flex min-h-9 items-center rounded-full bg-brand px-3.5 text-sm font-semibold text-content-inverse transition-opacity duration-fast ease-standard hover:opacity-90"
+          >
+            Add to {artist.name}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 

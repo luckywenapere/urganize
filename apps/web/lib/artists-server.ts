@@ -128,7 +128,7 @@ export async function checkArtistAllowance(
  */
 export async function createWorkspaceArtist(
   adminClient: SupabaseClient,
-  input: { workspaceId: string; ownerUserId: string; name: string }
+  input: { workspaceId: string; ownerUserId: string; name: string; createdVia?: 'manual' | 'import' }
 ): Promise<{ data: WorkspaceArtist | null; error: string | null; conflict?: boolean }> {
   const trimmed = input.name.trim();
   if (!trimmed) {
@@ -162,6 +162,8 @@ export async function createWorkspaceArtist(
       workspace_id: input.workspaceId,
       name: trimmed,
       slug,
+      // Which one stays when two look-alike artists are joined (#865).
+      created_via: input.createdVia ?? 'manual',
       updated_at: new Date().toISOString(),
     })
     .select(ARTIST_COLUMNS)
