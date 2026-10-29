@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.207.2",
+    tag: "Rollouts",
+    date: "October 29, 2026",
+    highlights: [
+      "Your smart link's numbers now show where your fans are, country by country.",
+      "Visits, clicks and the stores fans pick now read correctly from Altlink.",
+    ],
+  },
+  {
     version: "1.207.1",
     tag: "Rollouts",
     date: "October 29, 2026",
