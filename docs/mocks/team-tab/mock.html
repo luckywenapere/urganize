@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Team tab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --side:#f0ebe1; --side-on:#e6e1d6; --card:#faf5ec; --hover:#ebe6dc;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --err:#961a1a;
+    --board:#d9d5cc; --board-text:#1a1611; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--board-text); padding:32px 16px 64px; }
+  p { margin:0; }
+  .intro, .sec-h, .note { max-width:1160px; margin:0 auto; }
+  .intro { margin-bottom:28px; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; margin:0 0 6px; }
+  .intro p, .sec-h p { color:var(--board-sec); }
+  .sec-h { margin-top:40px; margin-bottom:12px; }
+  .sec-h h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:0 0 4px; }
+  .mono { font-family:'JetBrains Mono', monospace; }
+  .mu { color:var(--sec); } .ter { color:var(--ter); }
+
+  .desk { max-width:1160px; margin:0 auto; background:var(--bg); color:var(--text); border-radius:18px; overflow:hidden; display:grid; grid-template-columns:200px 1fr; min-height:620px; position:relative; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .rail { background:var(--side); border-right:1px solid var(--line); padding:18px 12px; display:flex; flex-direction:column; gap:2px; }
+  .rail .logo { font-family:'Young Serif', serif; font-size:18px; padding:0 8px 16px; }
+  .rail a { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px; color:var(--sec); font-size:13.5px; }
+  .rail a.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .rail a i { width:16px; height:16px; border-radius:4px; border:1.5px solid currentColor; opacity:.6; }
+  .rail .gone { text-decoration:line-through; opacity:.45; }
+  .main { padding:24px 28px 28px; display:flex; flex-direction:column; min-width:0; }
+  .head { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; }
+  .head h3 { font-family:'Young Serif', serif; font-weight:400; font-size:26px; margin:0; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:0 14px; border-radius:10px; font-weight:600; font-size:13.5px; background:var(--brand); color:#f5f0e6; white-space:nowrap; }
+  .btn.ghost { background:transparent; color:var(--text); border:1px solid var(--line2); }
+  .btn.danger { background:transparent; color:var(--err); border:1px solid rgba(150,26,26,.3); }
+  .seg { display:inline-flex; gap:2px; background:var(--hover); border-radius:10px; padding:3px; margin-top:18px; align-self:flex-start; }
+  .seg span { padding:5px 14px; border-radius:7px; font-size:13px; color:var(--sec); }
+  .seg span.on { background:var(--card); color:var(--text); font-weight:600; box-shadow:0 1px 2px rgba(26,22,17,.08); }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:14px; margin-top:16px; }
+  .pc { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; display:flex; flex-direction:column; min-height:262px; }
+  .pc.sel { border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft); }
+  .pc.short { min-height:0; }
+  .pc .top { display:flex; align-items:flex-start; justify-content:space-between; }
+  .av { width:32px; height:32px; border-radius:50%; background:#e3ddd0; color:var(--text); display:grid; place-items:center; font-size:12px; font-weight:600; flex:none; position:relative; }
+  .av.big { width:52px; height:52px; font-size:17px; }
+  .av.on::after { content:''; position:absolute; right:0; bottom:0; width:12px; height:12px; border-radius:50%; background:#2f9a5b; border:2px solid var(--card); }
+  .av:not(.big).on::after { width:9px; height:9px; right:-1px; bottom:-1px; }
+  .pill { font-size:11.5px; padding:2px 8px; border-radius:99px; background:var(--hover); color:var(--sec); white-space:nowrap; }
+  .pill.lim { background:var(--brand-soft); color:var(--brand); font-weight:600; }
+  .nm { font-weight:600; font-size:15px; margin-top:12px; }
+  .rl { font-size:12.5px; color:var(--sec); }
+  .seen { font-size:12.5px; color:var(--sec); margin-top:2px; }
+  .seen.live { color:var(--brand); font-weight:500; }
+  .nums { display:flex; gap:14px; margin-top:12px; padding-top:12px; border-top:1px solid var(--line); }
+  .nums div b { display:block; font-family:'JetBrains Mono', monospace; font-size:16px; font-weight:500; line-height:1.2; }
+  .nums div span { font-size:11.5px; color:var(--ter); }
+  .nums .late b { color:var(--err); }
+  .next { margin-top:12px; font-size:12.5px; }
+  .next .lbl { font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ter); }
+  .next p { margin-top:3px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .next .late { color:var(--err); }
+  .pc .foot { margin-top:auto; padding-top:10px; font-size:12.5px; color:var(--sec); }
+  .pc.wait { background:transparent; border:1.5px dashed var(--line2); }
+  .pc.add { background:transparent; border:1.5px dashed var(--line2); align-items:center; justify-content:center; text-align:center; color:var(--sec); }
+  .pc.add .plus { width:44px; height:44px; border-radius:50%; border:1.5px dashed var(--line2); display:grid; place-items:center; font-size:20px; color:var(--brand); margin-bottom:10px; }
+  .link { font-size:13px; color:var(--text); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--ter); }
+
+  .scrim { position:absolute; inset:0; background:rgba(26,22,17,.18); }
+  .drawer { position:absolute; top:0; right:0; bottom:0; width:380px; max-width:100%; background:var(--card); border-left:1px solid var(--line); box-shadow:-12px 0 32px rgba(26,22,17,.12); padding:20px; overflow:hidden; }
+  .ph { display:flex; align-items:center; gap:12px; }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px; }
+  .stat { background:var(--bg); border-radius:10px; padding:8px 10px; }
+  .stat b { display:block; font-family:'JetBrains Mono', monospace; font-size:17px; font-weight:500; }
+  .stat span { font-size:11.5px; color:var(--sec); }
+  .grp { margin-top:16px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ter); }
+  .grp.err { color:var(--err); }
+  .task { display:flex; gap:10px; padding:9px 0; border-top:1px solid var(--line); }
+  .grp + .task { border-top:0; }
+  .ck { width:16px; height:16px; border-radius:5px; border:1.5px solid var(--line2); flex:none; margin-top:2px; }
+  .tt { font-size:13.5px; }
+  .tm { font-size:12px; color:var(--sec); }
+  .tm .late { color:var(--err); }
+  .x { position:absolute; top:16px; right:16px; width:30px; height:30px; border-radius:8px; display:grid; place-items:center; color:var(--sec); border:1px solid var(--line); }
+
+  .wsgrid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; }
+  .box { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; }
+  .box h4 { margin:0 0 4px; font-size:14px; font-weight:600; }
+  .box .d { font-size:13px; color:var(--sec); margin-bottom:12px; }
+  .field { display:flex; gap:8px; }
+  .input { flex:1; border:1px solid var(--line2); background:#fffdf8; border-radius:10px; padding:8px 11px; font-size:14px; }
+  .bar { height:6px; background:var(--hover); border-radius:99px; overflow:hidden; margin:10px 0 6px; }
+  .bar i { display:block; height:100%; background:var(--brand); }
+  .lk { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:9px 0; border-top:1px solid var(--line); font-size:13px; }
+  .lk:first-of-type { border-top:0; }
+  .box.full { grid-column:1/-1; }
+  .dz { border-color:rgba(150,26,26,.2); }
+  .rowbtn { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:10px 0; border-top:1px solid var(--line); }
+  .rowbtn:first-of-type { border-top:0; }
+
+  .phones { display:flex; flex-wrap:wrap; gap:28px; justify-content:center; max-width:1160px; margin:0 auto; }
+  .col { width:340px; max-width:100%; }
+  .tag { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin-bottom:6px; }
+  .why { font-size:13px; color:var(--board-sec); margin-bottom:12px; min-height:40px; }
+  .phone { background:var(--bg); color:var(--text); border-radius:28px; padding:18px 14px 20px; min-height:560px; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .phone .head h3 { font-size:22px; }
+  .prow { display:flex; align-items:center; gap:10px; padding:11px 2px; border-top:1px solid var(--line); }
+  .prow:first-child { border-top:0; }
+  .prow .meta { flex:1; min-width:0; }
+  .prow .nm { margin-top:0; font-size:14px; }
+  .prow .cnt { font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--sec); text-align:right; }
+  .sub { padding:9px 2px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ter); border-top:1px solid var(--line); margin-top:4px; }
+  .back { font-size:13px; color:var(--sec); margin-bottom:10px; }
+  .dialog { background:var(--card); border:1px solid var(--line2); border-radius:16px; padding:16px; margin-top:10px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .chip { border:1px solid var(--line2); border-radius:99px; padding:4px 11px; font-size:12.5px; color:var(--sec); }
+  .chip.on { border-color:var(--brand); color:var(--brand); background:var(--brand-soft); font-weight:600; }
+  .lbl2 { font-size:12px; color:var(--sec); margin:12px 0 6px; }
+
+  .outline { outline:2px dashed rgba(20,100,58,.5); outline-offset:8px; border-radius:8px; }
+  .note { margin-top:36px; font-size:13.5px; color:var(--board-sec); }
+  .note h3 { color:var(--board-text); font-size:15px; margin:0 0 8px; }
+  .note ol, .note ul { margin:0 0 14px; padding-left:20px; }
+  .note li { margin:4px 0; }
+  .note b { color:var(--board-text); }
+  @media (max-width:900px) {
+    .desk { grid-template-columns:1fr; } .rail { display:none; }
+    .wsgrid { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Team</h1>
+  <p>A new tab after Artists. Desktop lays the team out as cards, phone keeps the list. Everyone in the workspace sees it; only managers see Invite, Remove and the workspace controls. Dashed green outline = changed since the last round. Issue #853. Demo team: Northline Music.</p>
+</div>
+
+<div class="sec-h">
+  <h2>1 · Desktop, People (a manager)</h2>
+  <p>The whole team at a glance: who is around, who is holding late work, and what each person does next. Empty seats show as an "Invite" card, so you see the room left too.</p>
+</div>
+<div class="desk">
+  <nav class="rail">
+    <div class="logo">Urganize</div>
+    <a><i></i>Home</a>
+    <a><i></i>Rollouts</a>
+    <a><i></i>UrgAns</a>
+    <a><i></i>Artists</a>
+    <a class="on"><i></i>Team</a>
+    <a class="gone"><i></i>My People</a>
+    <a><i></i>Notes</a>
+    <a><i></i>Directory</a>
+  </nav>
+  <div class="main">
+    <div class="head">
+      <div>
+        <h3>Team</h3>
+        <p class="mu" style="font-size:13px">Northline Music · 5 of 6 seats · 2 online now</p>
+      </div>
+      <span class="btn">+ Invite</span>
+    </div>
+    <div class="seg"><span class="on">People</span><span>Workspace</span></div>
+
+    <div class="grid outline">
+      <div class="pc">
+        <div class="top"><div class="av big on">AO</div><span class="pill">You</span></div>
+        <div class="nm">Ada Obi</div>
+        <div class="rl">Manager</div>
+        <div class="seen live">Online now</div>
+        <div class="nums"><div><b>6</b><span>Open</span></div><div><b>0</b><span>Late</span></div><div><b>9</b><span>Done 7d</span></div></div>
+        <div class="next"><div class="lbl">Next</div><p>Approve the "Soft Life" artwork · Thu</p></div>
+        <div class="foot">See 6 tasks ›</div>
+      </div>
+
+      <div class="pc">
+        <div class="top"><div class="av big on">TK</div><span class="pill lim">2 rollouts</span></div>
+        <div class="nm">Tunde Kola</div>
+        <div class="rl">Team member</div>
+        <div class="seen live">Online now</div>
+        <div class="nums"><div><b>8</b><span>Open</span></div><div class="late"><b>2</b><span>Late</span></div><div><b>4</b><span>Done 7d</span></div></div>
+        <div class="next"><div class="lbl">Next</div><p class="late">Send cover art to distributor · Mon</p></div>
+        <div class="foot">See 8 tasks ›</div>
+      </div>
+
+      <div class="pc">
+        <div class="top"><div class="av big">ZE</div><span class="pill lim">Zara only</span></div>
+        <div class="nm">Zara Eze</div>
+        <div class="rl">Artist</div>
+        <div class="seen">Active 2 days ago</div>
+        <div class="nums"><div><b>3</b><span>Open</span></div><div><b>0</b><span>Late</span></div><div><b>1</b><span>Done 7d</span></div></div>
+        <div class="next"><div class="lbl">Next</div><p>Record radio drops · Fri</p></div>
+        <div class="foot">See 3 tasks ›</div>
+      </div>
+
+      <div class="pc">
+        <div class="top"><div class="av big">DM</div></div>
+        <div class="nm">Dayo Musa</div>
+        <div class="rl">Viewer</div>
+        <div class="seen">Not seen yet</div>
+        <div class="nums"><div><b>0</b><span>Open</span></div><div><b>0</b><span>Late</span></div><div><b>0</b><span>Done 7d</span></div></div>
+        <div class="next"><div class="lbl">Next</div><p class="ter">Nothing assigned</p></div>
+        <div class="foot">&nbsp;</div>
+      </div>
+
+      <div class="pc wait">
+        <div class="top"><div class="av big" style="background:transparent;border:1.5px dashed var(--line2);color:var(--ter)">K</div><span class="pill">Invited</span></div>
+        <div class="nm" style="font-weight:500">kemi@northline.ng</div>
+        <div class="rl">Team member</div>
+        <div class="seen">Invited 3 days ago</div>
+        <div class="foot" style="display:flex;justify-content:space-between"><span class="link">Copy link</span><span class="link" style="color:var(--sec)">Cancel</span></div>
+      </div>
+
+      <div class="pc add">
+        <div class="plus">+</div>
+        <div style="font-weight:600;color:var(--text)">Invite someone</div>
+        <div style="font-size:12.5px">1 seat left</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sec-h">
+  <h2>2 · Desktop, one person opened</h2>
+  <p>Click a card. Their tasks slide in from the right over the grid, late first. Close it and you are back on the team.</p>
+</div>
+<div class="desk">
+  <nav class="rail">
+    <div class="logo">Urganize</div>
+    <a><i></i>Home</a><a><i></i>Rollouts</a><a><i></i>UrgAns</a><a><i></i>Artists</a>
+    <a class="on"><i></i>Team</a><a><i></i>Notes</a><a><i></i>Directory</a>
+  </nav>
+  <div class="main">
+    <div class="head">
+      <div><h3>Team</h3><p class="mu" style="font-size:13px">Northline Music · 5 of 6 seats · 2 online now</p></div>
+      <span class="btn">+ Invite</span>
+    </div>
+    <div class="seg"><span class="on">People</span><span>Workspace</span></div>
+    <div class="grid">
+      <div class="pc short"><div class="top"><div class="av big on">AO</div></div><div class="nm">Ada Obi</div><div class="rl">Manager</div></div>
+      <div class="pc short sel"><div class="top"><div class="av big on">TK</div></div><div class="nm">Tunde Kola</div><div class="rl">Team member</div></div>
+      <div class="pc short"><div class="top"><div class="av big">ZE</div></div><div class="nm">Zara Eze</div><div class="rl">Artist</div></div>
+      <div class="pc short"><div class="top"><div class="av big">DM</div></div><div class="nm">Dayo Musa</div><div class="rl">Viewer</div></div>
+    </div>
+  </div>
+  <div class="scrim"></div>
+  <aside class="drawer outline" style="outline-offset:-6px">
+    <span class="x">✕</span>
+    <div class="ph"><div class="av big on">TK</div><div><div class="nm" style="margin:0;font-size:17px">Tunde Kola</div><div class="rl">Team member · Online now</div></div></div>
+    <div class="stats">
+      <div class="stat"><b>8</b><span>Open</span></div>
+      <div class="stat"><b style="color:var(--err)">2</b><span>Late</span></div>
+      <div class="stat"><b>4</b><span>Done 7d</span></div>
+    </div>
+    <div class="grp err">Late</div>
+    <div class="task"><span class="ck"></span><div><div class="tt">Send cover art to distributor</div><div class="tm">Zara · "Lagos Nights" · <span class="late">due Mon</span></div></div></div>
+    <div class="task"><span class="ck"></span><div><div class="tt">Book radio run, week 1</div><div class="tm">Zara · "Lagos Nights" · <span class="late">due Tue</span></div></div></div>
+    <div class="grp">This week</div>
+    <div class="task"><span class="ck"></span><div><div class="tt">Teaser clip for Instagram</div><div class="tm">Femi · "Soft Life" · due Fri</div></div></div>
+    <div class="task"><span class="ck"></span><div><div class="tt">Confirm pre-save link</div><div class="tm">Zara · "Lagos Nights" · due Sat</div></div></div>
+    <p class="mu" style="font-size:13px;margin-top:8px">Later · 4 more</p>
+    <div style="margin-top:14px;padding:12px;background:var(--bg);border-radius:10px">
+      <div class="grp" style="margin-top:0">Access</div>
+      <p style="font-size:13.5px;margin-top:4px">Only "Lagos Nights" and "Soft Life"</p>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <span class="btn ghost" style="flex:1">Change role or access</span><span class="btn danger">Remove</span>
+    </div>
+  </aside>
+</div>
+
+<div class="sec-h">
+  <h2>3 · Desktop, Workspace (a manager who owns it)</h2>
+  <p>Everything that was in Settings → Team, plus rename, hand over and leave. Same as last round, now in light mode.</p>
+</div>
+<div class="desk">
+  <nav class="rail">
+    <div class="logo">Urganize</div>
+    <a><i></i>Home</a><a><i></i>Rollouts</a><a><i></i>UrgAns</a><a><i></i>Artists</a>
+    <a class="on"><i></i>Team</a><a><i></i>Notes</a><a><i></i>Directory</a>
+  </nav>
+  <div class="main">
+    <div class="head">
+      <div><h3>Team</h3><p class="mu" style="font-size:13px">Northline Music · 5 of 6 seats · 2 online now</p></div>
+      <span class="btn">+ Invite</span>
+    </div>
+    <div class="seg"><span>People</span><span class="on">Workspace</span></div>
+    <div class="wsgrid">
+      <div class="box">
+        <h4>Workspace name</h4>
+        <p class="d">What your team sees at the top of the app and in invites.</p>
+        <div class="field"><span class="input">Northline Music</span><span class="btn ghost">Save</span></div>
+      </div>
+      <div class="box">
+        <h4>Seats</h4>
+        <p class="d">Manager plan. Pending invites take a seat.</p>
+        <div class="bar"><i style="width:83%"></i></div>
+        <p style="font-size:13px"><span class="mono">5 of 6</span> used · <span class="link">Need more?</span></p>
+      </div>
+      <div class="box full">
+        <h4>Invite links</h4>
+        <p class="d">Links you paste into WhatsApp. Each one lets one person join, then stops working.</p>
+        <div class="lk"><span>For Kemi (studio)</span><span class="mu">Ends in 6 days</span><span class="link">Copy</span></div>
+        <div class="lk"><span>Spare link</span><span class="mu">Ends in 13 days</span><span class="link">Copy</span></div>
+        <div style="margin-top:10px"><span class="btn ghost">+ New link</span></div>
+      </div>
+      <div class="box full dz">
+        <div class="rowbtn">
+          <div><h4>Hand the workspace to someone else</h4><p class="d" style="margin:0">They become the owner and pay for the plan. You stay on as a manager.</p></div>
+          <span class="btn ghost">Hand over</span>
+        </div>
+        <div class="rowbtn">
+          <div><h4>Leave this workspace</h4><p class="d" style="margin:0">Hand it to someone else first. An owner cannot leave their own workspace.</p></div>
+          <span class="btn danger" style="opacity:.45">Leave</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sec-h">
+  <h2>4 · Phone</h2>
+  <p>Team sits in the More sheet (the bottom bar is full). A list, not cards: on a phone a list shows the whole team without scrolling.</p>
+</div>
+<div class="phones">
+  <div class="col">
+    <div class="tag">People list</div>
+    <p class="why">Green dot = online. The number is open tasks; red shows late ones.</p>
+    <div class="phone">
+      <div class="head"><div><h3>Team</h3><p class="mu" style="font-size:12.5px">Northline Music · 5 of 6 seats</p></div><span class="btn" style="min-height:40px">+ Invite</span></div>
+      <div class="seg" style="display:flex"><span class="on" style="flex:1;text-align:center">People</span><span style="flex:1;text-align:center">Workspace</span></div>
+      <div style="margin-top:12px">
+        <div class="prow"><div class="av on">AO</div><div class="meta"><div class="nm">Ada Obi</div><div class="rl">Manager · Online now</div></div><div class="cnt">6 open</div></div>
+        <div class="prow"><div class="av on">TK</div><div class="meta"><div class="nm">Tunde Kola</div><div class="rl">Team member · 2 rollouts</div></div><div class="cnt">8 open<br><span style="color:var(--err)">2 late</span></div></div>
+        <div class="prow"><div class="av">ZE</div><div class="meta"><div class="nm">Zara Eze</div><div class="rl">Artist · 2 days ago</div></div><div class="cnt">3 open</div></div>
+        <div class="prow"><div class="av">DM</div><div class="meta"><div class="nm">Dayo Musa</div><div class="rl">Viewer · Not seen yet</div></div><div class="cnt">0 open</div></div>
+      </div>
+      <div class="sub">Waiting to join · 1</div>
+      <div class="prow" style="border-top:0"><div class="av" style="background:transparent;border:1px dashed var(--line2)">K</div><div class="meta"><div class="nm" style="font-weight:500">kemi@northline.ng</div><div class="rl">Invited 3 days ago</div></div><span class="link">Copy link</span></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="tag">One person</div>
+    <p class="why">Tap a person. Their tasks across every rollout, late first.</p>
+    <div class="phone">
+      <p class="back">‹ Team</p>
+      <div class="ph"><div class="av big on">TK</div><div><div class="nm" style="margin:0;font-size:17px">Tunde Kola</div><div class="rl">Team member · Online now</div></div></div>
+      <div class="stats"><div class="stat"><b>8</b><span>Open</span></div><div class="stat"><b style="color:var(--err)">2</b><span>Late</span></div><div class="stat"><b>4</b><span>Done 7d</span></div></div>
+      <div class="grp err">Late</div>
+      <div class="task"><span class="ck"></span><div><div class="tt">Send cover art to distributor</div><div class="tm">Zara · "Lagos Nights" · <span class="late">due Mon</span></div></div></div>
+      <div class="task"><span class="ck"></span><div><div class="tt">Book radio run, week 1</div><div class="tm">Zara · "Lagos Nights" · <span class="late">due Tue</span></div></div></div>
+      <div class="grp">This week</div>
+      <div class="task"><span class="ck"></span><div><div class="tt">Teaser clip for Instagram</div><div class="tm">Femi · "Soft Life" · due Fri</div></div></div>
+      <div class="task"><span class="ck"></span><div><div class="tt">Confirm pre-save link</div><div class="tm">Zara · "Lagos Nights" · due Sat</div></div></div>
+      <p class="mu" style="font-size:13px;margin-top:10px">Later · 4 more</p>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="tag">Invite (managers)</div>
+    <p class="why">Today's invite form, plus "What can they see?".</p>
+    <div class="phone">
+      <div class="head"><div><h3>Team</h3></div></div>
+      <div class="dialog">
+        <p class="nm" style="margin:0;font-size:16px">Invite someone</p>
+        <p class="lbl2">Email</p>
+        <span class="input" style="display:block">kemi@northline.ng</span>
+        <p class="lbl2">Role</p>
+        <div class="chips"><span class="chip">Manager</span><span class="chip on">Team member</span><span class="chip">Artist</span><span class="chip">Viewer</span></div>
+        <p class="lbl2">What can they see?</p>
+        <div class="chips"><span class="chip">All rollouts</span><span class="chip">One artist</span><span class="chip on">Chosen rollouts</span></div>
+        <div style="margin-top:10px;border:1px solid var(--line2);border-radius:10px;padding:4px 10px;background:#fffdf8">
+          <div class="lk" style="padding:7px 0"><span>Zara · "Lagos Nights"</span><span style="color:var(--brand)">✓</span></div>
+          <div class="lk" style="padding:7px 0"><span>Femi · "Soft Life"</span><span style="color:var(--brand)">✓</span></div>
+          <div class="lk" style="padding:7px 0"><span class="mu">Zara · "Gbedu" (EP)</span><span class="ck" style="margin:0"></span></div>
+        </div>
+        <p class="mu" style="font-size:12.5px;margin-top:12px">Uses your last free seat.</p>
+        <span class="btn" style="display:flex;margin-top:14px;min-height:44px">Send invite</span>
+        <p style="text-align:center;margin-top:12px"><span class="link">Or copy an invite link</span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="tag">Workspace (not a manager)</div>
+    <p class="why">Members see the name and seats, no edit controls, and can leave.</p>
+    <div class="phone">
+      <div class="head"><div><h3>Team</h3><p class="mu" style="font-size:12.5px">Northline Music · 5 of 6 seats</p></div></div>
+      <div class="seg" style="display:flex"><span style="flex:1;text-align:center">People</span><span class="on" style="flex:1;text-align:center">Workspace</span></div>
+      <div class="box" style="margin-top:12px"><h4>Northline Music</h4><p class="d" style="margin:0">Owned by Ada Obi. You are a team member.</p></div>
+      <div class="box dz" style="margin-top:12px">
+        <h4>Leave this workspace</h4>
+        <p class="d">You lose access to its rollouts. Your open tasks go back to Ada.</p>
+        <span class="btn danger" style="display:flex">Leave Northline Music</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <h3>What changed this round</h3>
+  <ol>
+    <li><b>Desktop People is a card grid.</b> Each card: face, role, when they were last active, Open / Late / Done 7d, and their next task (red if late). Teams here are 2 to 8 people, so the whole team fits on one screen.</li>
+    <li><b>Empty seats show as an "Invite someone" card</b> and pending invites as dashed cards in the same grid. You see the full shape of the team, including the room left.</li>
+    <li><b>One person opens in a side panel</b> over the grid instead of a fixed column, so the grid keeps its full width.</li>
+    <li><b>The access limit shows on the card</b> as a green pill ("2 rollouts", "Zara only"), so you can tell who sees what at a glance.</li>
+    <li><b>Phone stays a list</b>, only light mode changed. Cards on a phone would show 1 to 2 people per screen and hide the team.</li>
+    <li><b>"Transfer" is now "Hand over"</b>: plainer.</li>
+  </ol>
+  <h3>Still standing from last round (say if any is wrong)</h3>
+  <ul>
+    <li>Order: online first, then most recently active, then never seen. Same as Home's "Your team" card.</li>
+    <li>You can only hand the workspace to a manager on this team who does not own another workspace.</li>
+    <li>When someone leaves or is removed, their open tasks go back to the owner.</li>
+    <li>Someone limited to chosen rollouts sees teammates' tasks only on those rollouts. If all their rollouts are deleted they see nothing, not everything. New rollouts are not added to them on their own.</li>
+    <li>My People stays hidden. Settings → Team goes away; its link opens this tab. Billing stays in Settings.</li>
+  </ul>
+</div>
+
+</body>
+</html>
