@@ -8,9 +8,9 @@ import {
   CircleHelp,
   DoorOpen,
   HandshakeLine,
-  Plug,
   Search,
   Settings,
+  Users,
   X,
   type LucideProps,
 } from '@/components/icons';
@@ -23,7 +23,6 @@ import { useHelpMenuGroups } from '@/components/app/HelpMenu';
 import { useShellAreas } from '@/components/shell/useShellAreas';
 import { describeRole, initialsFor } from '@/lib/swipe-nav';
 import { SwipeSheet, SHEET_ROW } from './SwipeSheet';
-import { ConnectionsSheet } from './ConnectionsSheet';
 import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 
 type Icon = ComponentType<LucideProps>;
@@ -56,12 +55,16 @@ export function AvatarFace({ size = 32, dot = false }: { size?: number; dot?: bo
  * The avatar menu (URG-380): everything the old More sheet held. On a phone a
  * bottom sheet; on a desktop a popover under the avatar. Profile, a search
  * field (the same search bar as ⌘K), Relationships, Opportunities with its new
- * count, Connections, Settings, and Help as a quiet last row that opens the
- * help list in place.
+ * count, Settings, and Help as a quiet last row that opens the help list in
+ * place.
+ *
+ * Connections was retired on 2026-10-29 (#860): its row and ConnectionsSheet
+ * left this menu. The sheet file stays; to bring it back, re-add the row, the
+ * `connections` state and the <ConnectionsSheet> mount (see git history of
+ * this file at #860), and turn the Settings segment back on in settings-nav.
  */
 export function AvatarMenu({ showHelp }: { showHelp: boolean }) {
   const [open, setOpen] = useState(false);
-  const [connections, setConnections] = useState(false);
   const newOpportunities = useNewOpportunities();
   const wrapRef = useRef<HTMLDivElement>(null);
   const isDesktop = useIsDesktopViewport();
@@ -88,10 +91,6 @@ export function AvatarMenu({ showHelp }: { showHelp: boolean }) {
   }, [open, isDesktop]);
 
   const close = () => setOpen(false);
-  const openConnections = () => {
-    setOpen(false);
-    setConnections(true);
-  };
 
   return (
     <div ref={wrapRef} className="relative">
@@ -119,16 +118,14 @@ export function AvatarMenu({ showHelp }: { showHelp: boolean }) {
           aria-label="Account and more"
           className="animate-menu-down absolute right-0 top-full z-[160] mt-3 w-[20rem] origin-top-right rounded-[22px] border border-stroke-default bg-bg-surface p-4 shadow-2xl lg:block"
         >
-          <MenuBody showHelp={showHelp} onClose={close} onConnections={openConnections} desktop />
+          <MenuBody showHelp={showHelp} onClose={close} desktop />
         </div>
       ) : null}
 
       {/* Phone: a bottom sheet. */}
       <SwipeSheet open={open && !isDesktop} label="Account and more" onClose={close} desktop="phone">
-        <MenuBody showHelp={showHelp} onClose={close} onConnections={openConnections} />
+        <MenuBody showHelp={showHelp} onClose={close} />
       </SwipeSheet>
-
-      <ConnectionsSheet open={connections} onClose={() => setConnections(false)} />
     </div>
   );
 }
@@ -136,12 +133,10 @@ export function AvatarMenu({ showHelp }: { showHelp: boolean }) {
 function MenuBody({
   showHelp,
   onClose,
-  onConnections,
   desktop = false,
 }: {
   showHelp: boolean;
   onClose: () => void;
-  onConnections: () => void;
   desktop?: boolean;
 }) {
   const user = useAuthStore((state) => state.user);
@@ -159,6 +154,10 @@ function MenuBody({
   const subline = [role, workspaceName].filter(Boolean).join(' · ');
   const relationships = areas.find((area) => area.key === 'relationships' && area.live) ?? null;
   const opportunities = areas.find((area) => area.key === 'opportunities') ?? null;
+  // The Team tab (#853). On a phone this sheet is the swipe layout's menu, so
+  // Team needs its row here; it takes the place Connections had (retired the
+  // same day). A view that tucks Team (solo artist) has no team area.
+  const team = areas.find((area) => area.key === 'team') ?? null;
 
   if (view === 'help') {
     return (
@@ -247,13 +246,7 @@ function MenuBody({
             }
           />
         ) : null}
-        <li>
-          <button type="button" onClick={onConnections} className={SHEET_ROW}>
-            <Plug className="h-[22px] w-[22px] shrink-0 text-content-primary/75" aria-hidden="true" />
-            <span className="flex-1">Connections</span>
-            <ChevronRight className="h-[18px] w-[18px] text-content-primary/35" aria-hidden="true" />
-          </button>
-        </li>
+        {team ? <MenuLink href={team.href} icon={Users} label="Team" onClose={onClose} /> : null}
         <li>
           <button
             type="button"

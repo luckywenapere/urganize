@@ -67,7 +67,7 @@ export const SETTINGS_SEGMENT_HINTS: Record<SettingsSegment, string> = {
   directory: 'How other teams can find you',
   billing: 'Your plan and trial',
   connections: 'Connected apps and your data',
-  security: 'Password and deleting things',
+  security: 'Password, your data and deleting things',
   admin: 'Internal dashboards',
 };
 
@@ -150,7 +150,13 @@ export function visibleSettingsSegments(
     urgans: isManager || flags.teamBrief,
     directory: flags.directory,
     billing: ownsPlan,
-    connections: flags.mcpConnect || flags.dataExport,
+    // Connections was retired on 2026-10-29 (#860). Connected apps was already
+    // cut (MCP_CONNECT forced off), and "Download everything" moved to
+    // Security & account. The key, the segment and ConnectionsSegment stay, so
+    // an old ?settings=connections link opens the menu. To bring it back, set
+    // this to `flags.mcpConnect || flags.dataExport` again and re-add its
+    // search entries and the avatar menu row.
+    connections: false,
     security: true,
     admin: viewer.isAdmin === true,
   };
@@ -344,7 +350,6 @@ const LEGACY_ANCHOR_TARGET: Record<string, { segment: SettingsSegment; section: 
   'team-logins': { segment: 'team', section: 'team-logins' },
   directory: { segment: 'directory', section: 'directory' },
   'brand-colors': { segment: 'artists', section: 'brand-colors' },
-  'connected-apps': { segment: 'connections', section: 'connected-apps' },
 };
 
 /**

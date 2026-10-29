@@ -3,12 +3,17 @@
 import { memo } from 'react';
 import { useAuthStore } from '@/lib/auth-store';
 import { canDeleteRollouts } from '@/lib/settings-nav';
+import { DataExportSection } from '../DataExportSection';
 import { DeleteAccountSection } from '../DeleteAccountSection';
 import { ReleasesSection } from '../ReleasesSection';
 import { SecuritySection } from '../SecuritySection';
 
 /**
- * Your password, then the danger zone.
+ * Your password, a copy of your data, then the danger zone.
+ *
+ * The data export moved here from Connections when that segment was retired
+ * (#860, 2026-10-29). It sits just above the danger zone on purpose: take your
+ * data, then decide.
  *
  * Every irreversible action in Settings lives in the one clearly separated block
  * at the bottom: deleting rollouts (the only place a real one can be deleted,
@@ -22,6 +27,7 @@ function SecuritySegmentView() {
   return (
     <div>
       <SecuritySection />
+      <DataExportSection />
       <div className="mt-6 border border-status-error/40 bg-status-error/5 p-4 sm:p-5">
         <h2 className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-status-error">
           Danger zone
