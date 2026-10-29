@@ -166,6 +166,9 @@ export default function OnboardingPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [referralOpen, setReferralOpen] = useState(false);
+  // The missing-answer line waits for the first keystroke, so a fresh form
+  // does not open on "Add your name." like a telling-off.
+  const [accountTouched, setAccountTouched] = useState(false);
   const [referralInput, setReferralInput] = useState('');
   const [referralInvalid, setReferralInvalid] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -907,6 +910,7 @@ export default function OnboardingPage() {
           </div>
 
           <form
+            onInput={() => setAccountTouched(true)}
             onSubmit={(event) => {
               event.preventDefault();
               void createAccount();
@@ -998,7 +1002,7 @@ export default function OnboardingPage() {
                 {creating ? 'Creating your account…' : 'Create account'}
               </button>
               <p id="account-blocker" className="mt-2 min-h-5 text-center text-[13px] text-content-secondary">
-                {accountBlocker}
+                {accountTouched ? accountBlocker : ''}
               </p>
               {accountError?.kind === 'message' ? (
                 <p role="alert" className="text-center text-[13px] text-status-error">
