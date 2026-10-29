@@ -79,10 +79,10 @@ function LinkNotice({
   return (
     <Modal titleId="link-notice-title" onClose={onClose}>
       <h2 id="link-notice-title" className="font-display text-xl font-semibold text-content-primary">
-        Make a link for {row.title}?
+        Grab a smart link for {row.title}?
       </h2>
       <p className="mt-2 text-sm leading-6 text-content-secondary">
-        This makes a public link on Altlink that fans can open to stream or save the release. Anyone with the link can see it.
+        This makes a public smart link on Altlink that fans can open to stream or save the release. Anyone with the link can see it.
       </p>
       <ul className="mt-3 list-disc space-y-1 pl-5 text-sm leading-6 text-content-secondary">
         <li>
@@ -102,7 +102,7 @@ function LinkNotice({
           Cancel
         </button>
         <button type="button" onClick={onConfirm} disabled={working} className={primaryButton}>
-          {working ? 'Making the link…' : 'Make link'}
+          {working ? 'Getting your smart link…' : 'Grab a smart link'}
         </button>
       </div>
     </Modal>
@@ -174,7 +174,7 @@ function AddCode({ artistId, row, onSaved }: { artistId: string; row: CatalogueR
 }
 
 /**
- * The artist's past releases, with their UPC and ISRC and a Get link on each
+ * The artist's past releases, with their UPC and ISRC and a Grab a smart link on each
  * (2026-10-26, founder approved the mock). Always drawn, so the Import button
  * is where the artist is. A link is made only after a notice, and a team can
  * make a limited number a day (lib/artist-import/codes.ts).
@@ -322,7 +322,7 @@ export function ArtistCatalogueCard({ artistId, artistName }: { artistId: string
                         }}
                         className={smallButton}
                       >
-                        Get link
+                        Grab a smart link
                       </button>
                     ) : lookingUp ? null : (
                       <AddCode artistId={artistId} row={row} onSaved={load} />

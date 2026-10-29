@@ -1,5 +1,7 @@
 # Smart link in every plan and in Distribute (2026-10-29, v1.206.0, no flag)
 
+> **Amended 2026-10-29, v1.206.1 (#852), after the Oct 28 call with Altlink.** The code-less create below was tried live and Altlink answered 422 `missing_identifier` (Midnight Drive), as their team had said on the call, so `decideCreate` needs a UPC or ISRC again (the later-UPC patch stays). Altlink also asked that the link not show on rollouts without one: the Distribute tag (`linkChip` takes `hasCode`; the summary route reads codes from `release_metadata` and `distribution_submissions`) and the Smart link and Numbers tabs (the rollout page asks the summary route for its one id) show only once a link exists or a code and a release date do. Before that, the task panel says the link comes with a code and points to Stores. The rollout menu's Smart link row is unchanged (it also holds the fan email page). The catalogue's "Get link" / "Make a link" read "Grab a smart link". Still open: "powered by Altlink" in sentence case with a link to Altlink, mock first, then Altlink approves it.
+
 GitHub #850. Mocks approved by Oyin: `docs/mocks/presave-distribute/mock.html`, with two changes he asked for on approval: call it "smart link", never "pre-save link", and make it without a UPC or ISRC.
 
 ## What changed

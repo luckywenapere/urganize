@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from '@/components/icons';
@@ -8,6 +8,8 @@ import { DistributionSection } from '@/components/releases/DistributionSection';
 import { SmartLinkSection } from '@/components/releases/SmartLinkSection';
 import { isAltlinkEnabled } from '@/lib/altlink/rules';
 import { useAuthStore } from '@/lib/auth-store';
+import { supabase } from '@/lib/supabase/client';
+import type { DistributeRow } from '@/lib/distribute-summary';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 
 /**
@@ -23,6 +25,10 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
  * Three tabs (Oct 29, 2026, #850): Stores (the step above, unchanged), Smart
  * link (the same view the rollout menu opens) and Numbers (the link's Altlink
  * numbers). `?tab=link` / `?tab=numbers`; no tab is Stores.
+ *
+ * The two link tabs show only once the rollout has a link or could have one
+ * (a UPC or ISRC and a release date), the same rule as the list's tag; until
+ * then the page is Stores alone (Altlink call, Oct 28, 2026, #852).
  */
 
 type Tab = 'stores' | 'link' | 'numbers';
@@ -42,7 +48,30 @@ export default function DistributeReleaseClient({ releaseId }: { releaseId: stri
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
 
   const scene = searchParams.get('scene');
-  const tab = readTab(searchParams.get('tab'));
+  const [linkReady, setLinkReady] = useState(false);
+  useEffect(() => {
+    if (!isAltlinkEnabled()) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const response = await fetch(`/api/distribute/summary?ids=${encodeURIComponent(releaseId)}`, {
+          headers: { Authorization: `Bearer ${session?.access_token ?? ''}` },
+        });
+        if (!response.ok) return;
+        const body = (await response.json()) as { rows?: Record<string, DistributeRow> };
+        if (!cancelled) setLinkReady(Boolean(body.rows?.[releaseId]?.link));
+      } catch {
+        // Stores stands on its own.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [releaseId]);
+  const tab = linkReady ? readTab(searchParams.get('tab')) : 'stores';
   const pickTab = (next: Tab) => {
     const params = new URLSearchParams(searchParams.toString());
     if (next === 'stores') params.delete('tab');
@@ -86,7 +115,7 @@ export default function DistributeReleaseClient({ releaseId }: { releaseId: stri
         ) : null}
       </div>
 
-      {release && isAltlinkEnabled() ? (
+      {release && linkReady ? (
         <div role="tablist" aria-label="Distribute" className="mt-5 flex gap-1 rounded-full bg-bg-elevated p-1 sm:max-w-md">
           {TABS.map((entry) => (
             <button

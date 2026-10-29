@@ -304,7 +304,7 @@ async function patchIfChanged(
   facts: SmartLinkSourceFacts
 ): Promise<SyncOutcome> {
   const patch: { upc?: string; isrc?: string; artwork_url?: string } = {};
-  // A pre-save can be made before the codes exist, so a UPC may arrive later too.
+  // A link made from the ISRC alone gets the UPC when it arrives, and the other way round.
   const upcChanged = Boolean(facts.upc) && facts.upc !== normalizeUpc(row.sent_upc);
   if (upcChanged && facts.upc) patch.upc = facts.upc;
   const isrcChanged = Boolean(facts.isrc) && facts.isrc !== normalizeIsrc(row.sent_isrc);

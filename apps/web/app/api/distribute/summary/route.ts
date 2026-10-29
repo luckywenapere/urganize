@@ -3,7 +3,7 @@ import { createAdminClient, requireActiveAuthenticatedUser } from '@/app/api/_sh
 import { decideReleaseAccess } from '@/lib/release-access';
 import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
 import { SMART_LINKS_TABLE } from '@/lib/altlink/server';
-import { isAltlinkEnabled } from '@/lib/altlink/rules';
+import { isAltlinkEnabled, normalizeIsrc, normalizeUpc } from '@/lib/altlink/rules';
 import { linkChip, storesChip, type DistributeRow, type SmartLinkRowFacts } from '@/lib/distribute-summary';
 
 // The two tags on each Distribute row (Oct 29, 2026, #850): stores, and the
@@ -13,6 +13,11 @@ import { linkChip, storesChip, type DistributeRow, type SmartLinkRowFacts } from
 // GET ?ids=a,b,c (the rollouts the list already shows). Each id goes through
 // the same team-aware decision as every scene route (lib/release-access.ts);
 // one the caller cannot read is left out, never an error.
+//
+// The smart link tag shows only once a link exists or could: a UPC or ISRC
+// (from Metadata or the distributor's submission) and a release date. Altlink
+// asked for that on the Oct 28 call (#852). The rollout page reads this route
+// for one id to decide whether to show its Smart link and Numbers tabs.
 
 export const dynamic = 'force-dynamic';
 
@@ -59,14 +64,21 @@ export async function GET(request: NextRequest) {
     const readableIds = readable.map((row) => String(row.id));
     if (readableIds.length === 0) return NextResponse.json({ rows: {} });
 
-    const [links, submissions] = await Promise.all([
+    const [links, submissions, metadata] = await Promise.all([
       isAltlinkEnabled()
         ? admin.from(SMART_LINKS_TABLE).select('release_id,status,url,presave_signups,stats').in('release_id', readableIds)
         : Promise.resolve({ data: [], error: null }),
-      admin.from('distribution_submissions').select('release_id,status,updated_at').in('release_id', readableIds),
+      admin.from('distribution_submissions').select('release_id,status,updated_at,upc,isrc').in('release_id', readableIds),
+      admin.from('release_metadata').select('release_id,upc,isrc').in('release_id', readableIds),
     ]);
     if (links.error) throw new Error(links.error.message);
     if (submissions.error) throw new Error(submissions.error.message);
+    if (metadata.error) throw new Error(metadata.error.message);
+
+    const withCode = new Set<string>();
+    for (const row of [...(submissions.data ?? []), ...(metadata.data ?? [])] as Array<{ release_id: string; upc: unknown; isrc: unknown }>) {
+      if (normalizeUpc(row.upc) || normalizeIsrc(row.isrc)) withCode.add(row.release_id);
+    }
 
     const linkBy = new Map<string, SmartLinkRowFacts>();
     for (const row of (links.data ?? []) as Array<SmartLinkRowFacts & { release_id: string }>) linkBy.set(row.release_id, row);
@@ -83,7 +95,7 @@ export async function GET(request: NextRequest) {
       const id = String(row.id);
       rows[id] = {
         stores: storesChip(storesBy.get(id)?.status ?? null),
-        link: linkChip(linkBy.get(id) ?? null, row.release_date ? String(row.release_date) : null, now),
+        link: linkChip(linkBy.get(id) ?? null, row.release_date ? String(row.release_date) : null, now, withCode.has(id)),
       };
     }
     return NextResponse.json({ rows, altlink: isAltlinkEnabled() });

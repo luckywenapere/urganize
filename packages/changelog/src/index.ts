@@ -41,13 +41,21 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.206.1",
+    tag: "Rollouts",
+    date: "October 29, 2026",
+    highlights: [
+      "Your smart link and its numbers show up once your song has a UPC or ISRC. Before that, the task tells you when it is coming.",
+      "On an artist's past releases, the button now says Grab a smart link.",
+    ],
+  },
+  {
     version: "1.206.0",
     title: "Your smart link, in every plan and in Distribute",
     tag: "Rollouts",
     date: "October 29, 2026",
     highlights: [
       "Every new plan has a task to set up and share your smart link. Open it to copy or share the link.",
-      "Your smart link is made before you have a UPC or ISRC, so fans can pre-save sooner.",
       "Distribute now has three tabs for each rollout: Stores, Smart link and Numbers. Numbers shows visits, clicks, pre-saves and which stores fans pick.",
       "The Distribute list shows where each rollout is with stores and how its link is doing.",
     ],

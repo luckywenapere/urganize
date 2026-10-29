@@ -21,12 +21,17 @@ type View = {
   notReady: string | null;
 };
 
+// Altlink makes a link only from a UPC or ISRC (Oct 28 call, #852), so before
+// one exists the panel says when the link comes and points at Stores.
+const NEEDS_CODE = 'Your smart link appears once the song has a UPC or ISRC. You get one when you send it to stores.';
 const NOT_READY: Record<string, string> = {
-  no_date: 'Set a release date and the link makes itself.',
+  no_date: 'Set a release date first. Then your smart link appears once the song has a UPC or ISRC.',
   no_title: 'Name the rollout and the link makes itself.',
   no_artist: 'Add the artist and the link makes itself.',
-  no_code: 'The song is out, so the link needs its UPC or ISRC. Add one in the details.',
+  no_code: NEEDS_CODE,
+  missing_identifier: NEEDS_CODE,
 };
+const WAITS_FOR_STORES = new Set(['no_date', 'no_code', 'missing_identifier']);
 
 const BUTTON =
   'motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors';
@@ -63,7 +68,8 @@ export function SmartLinkTaskPanel({ releaseId }: { releaseId: string }) {
     };
   }, [releaseId]);
 
-  const href = (tab: 'link' | 'numbers') => `/dashboard/distribute/${encodeURIComponent(releaseId)}?tab=${tab}`;
+  const href = (tab: 'stores' | 'link' | 'numbers') =>
+    `/dashboard/distribute/${encodeURIComponent(releaseId)}${tab === 'stores' ? '' : `?tab=${tab}`}`;
 
   if (failed || (view && !view.enabled)) return null;
   if (!view) {
@@ -137,9 +143,15 @@ export function SmartLinkTaskPanel({ releaseId }: { releaseId: string }) {
                 ? 'The link was not made. Open it to try again.'
                 : (view.notReady && NOT_READY[view.notReady]) ?? 'The link makes itself once the rollout is ready.'}
           </p>
-          <Link href={href('link')} className={`${BUTTON} mt-3 border border-stroke-control text-content-primary hover:bg-bg-hover`}>
-            Open smart link
-          </Link>
+          {view.notReady && WAITS_FOR_STORES.has(view.notReady) ? (
+            <Link href={href('stores')} className={`${BUTTON} mt-3 border border-stroke-control text-content-primary hover:bg-bg-hover`}>
+              Go to Stores
+            </Link>
+          ) : (
+            <Link href={href('link')} className={`${BUTTON} mt-3 border border-stroke-control text-content-primary hover:bg-bg-hover`}>
+              Open smart link
+            </Link>
+          )}
         </>
       )}
     </section>

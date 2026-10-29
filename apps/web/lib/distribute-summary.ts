@@ -41,10 +41,19 @@ export type SmartLinkRowFacts = {
 
 const count = (n: number, one: string, many: string) => `${n.toLocaleString('en')} ${n === 1 ? one : many}`;
 
-/** The smart link tag, from the stored row and its cached numbers (never a live Altlink call). */
-export function linkChip(row: SmartLinkRowFacts | null, releaseDate: string | null, nowMs: number): DistributeChip {
+/**
+ * The smart link tag, from the stored row and its cached numbers (never a live
+ * Altlink call). Null, so nothing shows, until a link exists or the rollout
+ * could have one: a UPC or ISRC and a release date (Altlink call, #852).
+ */
+export function linkChip(
+  row: SmartLinkRowFacts | null,
+  releaseDate: string | null,
+  nowMs: number,
+  hasCode = false
+): DistributeChip | null {
   const phase = smartLinkPhase(row, releaseDate, nowMs);
-  if (phase === 'none') return { label: 'No smart link yet', tone: 'quiet' };
+  if (phase === 'none') return hasCode && releaseDate ? { label: 'No smart link yet', tone: 'quiet' } : null;
   if (phase === 'creating') return { label: 'Making smart link', tone: 'quiet' };
   if (phase === 'failed') return { label: 'Smart link not made', tone: 'error' };
   const stats = readStats(row?.stats);

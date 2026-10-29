@@ -47,10 +47,8 @@ describe('codes', () => {
 });
 
 describe('decideCreate (trigger conditions)', () => {
-  it('makes a pre-save with no code yet (Altlink takes one without)', () => {
-    expect(decideCreate(facts({ upc: null, isrc: null }), NOW)).toEqual({ ready: true, type: 'pre_save', releaseDate: '2026-11-06' });
-  });
-  it('waits for a code when the song is already out', () => {
+  it('waits with no code, before or after release day (Altlink needs one: 422 missing_identifier, #852)', () => {
+    expect(decideCreate(facts({ upc: null, isrc: null }), NOW)).toEqual({ ready: false, reason: 'no_code' });
     expect(decideCreate(facts({ upc: null, isrc: null, releaseDate: '2026-09-01' }), NOW)).toEqual({ ready: false, reason: 'no_code' });
   });
   it('makes a pre-save for a future date, with that date', () => {
