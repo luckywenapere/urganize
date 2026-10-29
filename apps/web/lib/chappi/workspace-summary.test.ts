@@ -238,3 +238,26 @@ describe('degrading a large catalog', () => {
     expect(out).not.toContain('most recently worked on');
   });
 });
+
+describe('smart links (#858)', () => {
+  const link = {
+    title: 'Release r1',
+    releaseDate: '2026-09-10',
+    hasCode: true,
+    isTest: false,
+    isArchived: false,
+    link: { url: 'https://altlink.co/r1', status: 'scheduled', presaves: 2 },
+    shareTask: 'open' as const,
+  };
+
+  it('lists a rollout that has a smart link, with its web address', () => {
+    const text = formatWorkspaceSummary({ ...base, smartLinks: [link] });
+    expect(text).toContain('Smart links');
+    expect(text).toContain('https://altlink.co/r1');
+  });
+
+  it('carries no smart link section while no rollout has a code', () => {
+    const text = formatWorkspaceSummary({ ...base, smartLinks: [{ ...link, hasCode: false, link: null }] });
+    expect(text).not.toContain('Smart link');
+  });
+});

@@ -484,7 +484,13 @@ export type RecordInScope = { id: string; title: string; artistId: string; artis
  */
 export async function listRecordsInMaking(
   admin: SupabaseClient,
-  scope: { workspaceIds: string[]; artistScopeByWorkspaceId: Record<string, string> }
+  scope: {
+    workspaceIds: string[];
+    artistScopeByWorkspaceId: Record<string, string>;
+    /** Records are artist-wide: a member limited to chosen rollouts (#853)
+     * sees none in that workspace. */
+    releaseScopeByWorkspaceId: Record<string, readonly string[]>;
+  }
 ): Promise<RecordInScope[] | null> {
   if (scope.workspaceIds.length === 0) return [];
   const { data, error } = await admin
@@ -496,6 +502,7 @@ export async function listRecordsInMaking(
     .limit(50);
   if (error) return null;
   const rows = ((data ?? []) as Row[]).filter((row) => {
+    if (scope.releaseScopeByWorkspaceId[text(row.workspace_id)]) return false;
     const scoped = scope.artistScopeByWorkspaceId[text(row.workspace_id)];
     return !scoped || scoped === text(row.artist_id);
   });

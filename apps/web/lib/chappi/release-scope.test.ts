@@ -23,6 +23,7 @@ import type { ChappiToolContext } from './tools';
 const OWNER = 'owner-1';
 const TEAMMATE = 'teammate-1';
 const ARTIST_SCOPE = { 'owner-1': 'artist-9' };
+const RELEASE_SCOPE = { 'owner-1': ['release-3'] };
 
 function makeCtx(overrides: Partial<ChappiToolContext> = {}): ChappiToolContext {
   return {
@@ -34,6 +35,8 @@ function makeCtx(overrides: Partial<ChappiToolContext> = {}): ChappiToolContext 
     releaseOwnerIds: [OWNER, TEAMMATE],
     artistScopeByOwnerId: ARTIST_SCOPE,
     artistScopeByWorkspaceId: {},
+    releaseScopeByOwnerId: RELEASE_SCOPE,
+    releaseScopeByWorkspaceId: {},
     origin: 'http://localhost:3000',
     authToken: 'token',
     ...overrides,
@@ -74,12 +77,12 @@ describe('every assistant surface resolves releases the same way', () => {
 
   it('listVisibleReleases passes the owner set AND the artist scope', async () => {
     await listVisibleReleases(makeCtx());
-    expect(spy).toHaveBeenCalledWith(TEAMMATE, [OWNER, TEAMMATE], ARTIST_SCOPE);
+    expect(spy).toHaveBeenCalledWith(TEAMMATE, [OWNER, TEAMMATE], ARTIST_SCOPE, RELEASE_SCOPE);
   });
 
   it('the system prompt snapshot passes both', async () => {
     await buildChappiSystemPrompt(makeCtx());
-    expect(spy).toHaveBeenCalledWith(TEAMMATE, [OWNER, TEAMMATE], ARTIST_SCOPE);
+    expect(spy).toHaveBeenCalledWith(TEAMMATE, [OWNER, TEAMMATE], ARTIST_SCOPE, RELEASE_SCOPE);
   });
 
   // The self-inconsistency that started this: the snapshot said "no releases"
@@ -91,7 +94,7 @@ describe('every assistant surface resolves releases the same way', () => {
       const tool = getChappiTool(toolName);
       expect(tool, `${toolName} should exist`).toBeTruthy();
       await tool!.execute(makeCtx(), { releaseId: 'rel-1' });
-      expect(spy).toHaveBeenCalledWith(TEAMMATE, [OWNER, TEAMMATE], ARTIST_SCOPE);
+      expect(spy).toHaveBeenCalledWith(TEAMMATE, [OWNER, TEAMMATE], ARTIST_SCOPE, RELEASE_SCOPE);
     }
   );
 

@@ -30,6 +30,8 @@ const ctx = {
   releaseOwnerIds: ['user-1'],
   artistScopeByOwnerId: {},
   artistScopeByWorkspaceId: {},
+  releaseScopeByOwnerId: {},
+  releaseScopeByWorkspaceId: {},
   origin: 'https://app.test',
   authToken: 'jwt',
 } satisfies ChappiToolContext;

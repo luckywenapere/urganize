@@ -180,7 +180,10 @@ export async function ensureReleaseOwnership(
   if (ownerId !== userId) {
     const membership = options.ownerOnly
       ? null
-      : await loadMembershipInOwnersTeam(adminClient, ownerId, userId);
+      : await loadMembershipInOwnersTeam(adminClient, ownerId, userId, {
+          id: String(release.id || releaseId),
+          artistId: release.artist_id ? String(release.artist_id) : null,
+        });
     if (!canPlanRelease({ userId, releaseOwnerId: ownerId, membershipInOwnersTeam: membership })) {
       return { error: NextResponse.json({ error: 'Rollout not found.' }, { status: 404 }) };
     }

@@ -91,6 +91,7 @@ async function ensureReleaseAccess(
       decision = decideReleaseAccess({
         releaseOwnerId,
         releaseArtistId: String(row.artist_id || ''),
+        releaseId: String(row.id || releaseId || ''),
         userId: user.id,
         access,
         write,

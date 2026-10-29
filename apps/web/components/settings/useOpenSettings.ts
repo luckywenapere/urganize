@@ -16,6 +16,7 @@ import {
 import {
   SETTINGS_MENU,
   SETTINGS_PARAM,
+  TEAM_PAGE_HREF,
   buildSettingsUrl,
   canHostSettings,
   closeSettingsUrl,
@@ -65,10 +66,15 @@ export function useOpenSettings() {
       const wasOpen = new URLSearchParams(search).has(SETTINGS_PARAM);
       // A page without app chrome has nothing mounted to read the param, so the
       // dashboard is where it opens from there.
-      const url = canHostSettings(pathname)
-        ? buildSettingsUrl(pathname, search, target)
-        : settingsDeepLink(target);
-      if (!canHostSettings(pathname)) {
+      // Settings → Team is the Team tab now (#853): a page of its own, so it is
+      // a navigation like any page without app chrome.
+      const toTeamTab = target?.segment === 'team';
+      const url = toTeamTab
+        ? TEAM_PAGE_HREF
+        : canHostSettings(pathname)
+          ? buildSettingsUrl(pathname, search, target)
+          : settingsDeepLink(target);
+      if (toTeamTab || !canHostSettings(pathname)) {
         router.push(url, { scroll: false });
         return;
       }

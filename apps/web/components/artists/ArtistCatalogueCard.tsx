@@ -14,6 +14,7 @@ import {
 } from '@/lib/artist-import/client';
 import { ImportReleasesButton } from './ImportReleasesDialog';
 import { kindLabel } from './ImportParts';
+import { PoweredByAltlink } from '@/components/releases/PoweredByAltlink';
 
 const SHOWN_AT_FIRST = 8;
 const POLL_MS = 6000;
@@ -341,6 +342,8 @@ export function ArtistCatalogueCard({ artistId, artistName }: { artistId: string
               {showAll ? 'Show fewer' : `Show all ${rows.length}`}
             </button>
           ) : null}
+          {/* The links are Altlink's, so their credit sits under the list (#852). */}
+          {rows.some((row) => row.link?.url) ? <PoweredByAltlink className="mt-3" /> : null}
         </>
       )}
 

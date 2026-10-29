@@ -26,6 +26,16 @@ export function isSmartLinkTask(task: { title?: string | null; templateTaskId?: 
   return isSmartLinkTaskTitle(task.title);
 }
 
+/**
+ * The rollout menu row and panel title for the `capture` scene (#852, Altlink
+ * call): "Smart link" once the rollout has a link or could have one (a UPC or
+ * ISRC and a release date), "Fan emails" until then, so no smart link shows on
+ * a rollout Altlink cannot make one for. Unknown (still loading) reads as not
+ * ready: most rollouts have no code yet.
+ */
+export const captureRowLabel = (smartLinkReady: boolean | null): 'Smart link' | 'Fan emails' =>
+  smartLinkReady ? 'Smart link' : 'Fan emails';
+
 /** "Set up the pre-save link" reads "Set up the smart link". */
 export const smartLinkWording = (title: string): string =>
   title.replace(/\bpre-?save link\b/gi, (match) => (match[0] === 'P' ? 'Smart link' : 'smart link'));

@@ -12,6 +12,8 @@ import { type WorkspaceMemberRole } from '@/lib/tasks';
 import { isEmailConfigured, sendEmail } from '@/lib/email';
 import { checkSeatAllowance, recordLimitHit } from '@/lib/seats-server';
 import { ensureReleaseTeamWriteAccess } from '@/lib/release-access-server';
+import { ownedReleaseIds } from '@/lib/team-page-server';
+import { readAccessRequest } from '@/lib/team-page';
 import { isIdeaEmailInvitesEnabled, withInviteNext } from '@/lib/rollout-ideas';
 import { captureActivationIfReached } from '@/lib/activation-server';
 import {
@@ -31,6 +33,9 @@ type InviteWorkspaceMemberBody = {
    * the invite is for. The invitee lands on it after joining, and an ARTIST
    * invite is scoped to this rollout's artist. Ignored while the flag is off. */
   releaseId?: unknown;
+  /** Chosen-rollout access (#853): the invitee only sees these rollouts.
+   * Wins over artistId when both are sent. */
+  releaseIds?: unknown;
 };
 
 const WORKSPACE_ROLE_OPTIONS: WorkspaceMemberRole[] = ['owner', 'admin', 'member', 'guest'];
@@ -118,9 +123,24 @@ export async function POST(request: NextRequest) {
     }
     // An artist invited from a rollout sees that artist's releases, like any
     // other ARTIST invite; an explicit artistId from the caller still wins.
-    const artistScopeId =
-      artistScopeRequested ||
-      (ideaReleaseId && readString(body.role).toLowerCase() === 'artist' ? artistScopeFromRelease : null);
+    // Chosen rollouts: kept only when they are rollouts this team owns. A
+    // list that resolves to nothing is refused rather than widened to all.
+    let releaseScopeIds: string[] | null = null;
+    if (body.releaseIds !== undefined) {
+      const requested = readAccessRequest({ kind: 'rollouts', releaseIds: body.releaseIds });
+      const ownerId = access.primaryWorkspace?.ownerId || '';
+      releaseScopeIds =
+        requested && requested.kind === 'rollouts' && ownerId
+          ? await ownedReleaseIds(adminClient, ownerId, requested.releaseIds)
+          : [];
+      if (!releaseScopeIds.length) {
+        return NextResponse.json({ error: 'Pick at least one rollout they can see.' }, { status: 400 });
+      }
+    }
+    const artistScopeId = releaseScopeIds
+      ? null
+      : artistScopeRequested ||
+        (ideaReleaseId && readString(body.role).toLowerCase() === 'artist' ? artistScopeFromRelease : null);
 
     const existingResult = await adminClient
       .from(WORKSPACE_MEMBERS_TABLE)
@@ -176,6 +196,10 @@ export async function POST(request: NextRequest) {
       if (artistScopeId) {
         updatePayload.artist_scope_id = artistScopeId;
       }
+      if (releaseScopeIds) {
+        updatePayload.release_scope_ids = releaseScopeIds;
+        updatePayload.artist_scope_id = null;
+      }
 
       const updateResult = await adminClient
         .from(WORKSPACE_MEMBERS_TABLE)
@@ -230,6 +254,9 @@ export async function POST(request: NextRequest) {
       };
       if (artistScopeId) {
         insertPayload.artist_scope_id = artistScopeId;
+      }
+      if (releaseScopeIds) {
+        insertPayload.release_scope_ids = releaseScopeIds;
       }
       const insertResult = await adminClient.from(WORKSPACE_MEMBERS_TABLE).insert(insertPayload);
 

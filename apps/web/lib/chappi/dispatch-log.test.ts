@@ -30,6 +30,8 @@ function ctx(over: Partial<ChappiToolContext> = {}): ChappiToolContext {
     releaseOwnerIds: ['user-1'],
     artistScopeByOwnerId: {},
     artistScopeByWorkspaceId: {},
+    releaseScopeByOwnerId: {},
+    releaseScopeByWorkspaceId: {},
     origin: 'http://x',
     authToken: 't',
     ...over,

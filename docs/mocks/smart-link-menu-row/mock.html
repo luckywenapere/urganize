@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Smart link menu row</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --side:#f0ebe1; --side-on:#e6e1d6; --card:#faf5ec; --hover:#ebe6dc;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --board:#d9d5cc; --board-text:#1a1611; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--board-text); padding:32px 16px 64px; }
+  p { margin:0; }
+  .intro { max-width:960px; margin:0 auto 28px; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; margin:0 0 6px; }
+  .intro p { color:var(--board-sec); }
+  .board { display:flex; flex-wrap:wrap; gap:28px; justify-content:center; }
+  .col { width:360px; max-width:100%; }
+  .tag { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin-bottom:6px; }
+  .why { font-size:13px; color:var(--board-sec); margin-bottom:12px; min-height:58px; }
+  .phone { background:var(--bg); color:var(--text); border-radius:28px; padding:18px 16px 20px; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .ser { font-family:'Young Serif', serif; font-weight:400; }
+  .mono { font-family:'JetBrains Mono', monospace; }
+  .mu { color:var(--sec); } .ter { color:var(--ter); }
+  .crumb { font-size:13px; color:var(--sec); margin-bottom:10px; }
+  .crumb b { color:var(--text); }
+  .group { font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ter); margin:14px 4px 4px; }
+  .item { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:10px; color:var(--sec); font-size:14px; }
+  .item i { width:16px; height:16px; border-radius:4px; border:1.5px solid currentColor; opacity:.55; flex:none; }
+  .item.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-top:12px; }
+  .h { font-family:'Young Serif', serif; font-size:20px; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:0 16px; border-radius:10px; font-weight:600; font-size:14px; background:var(--brand); color:#f5f0e6; margin-top:12px; }
+  .quiet { font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ter); margin-top:4px; }
+  .live { display:inline-flex; align-items:center; gap:6px; background:var(--brand-soft); color:var(--brand); border-radius:999px; padding:3px 10px; font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; }
+  .live i { width:6px; height:6px; border-radius:50%; background:var(--brand); }
+  .urlbox { display:flex; align-items:center; gap:8px; border:1px solid var(--line2); border-radius:12px; padding:8px 10px; margin-top:12px; background:var(--bg); font-size:13px; }
+  .urlbox .mono { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fold { display:flex; justify-content:space-between; align-items:center; }
+  .by { display:flex; align-items:center; justify-content:center; gap:7px; margin-top:14px; font-size:13px; color:var(--sec); }
+  .by img { height:14px; }
+  .new { outline:2px dashed rgba(20,100,58,.55); outline-offset:3px; border-radius:10px; }
+  .gone { text-decoration:line-through; opacity:.5; }
+  .note { max-width:960px; margin:28px auto 0; font-size:13px; color:var(--board-sec); }
+  .note + .note { margin-top:8px; }
+  .note b { color:var(--board-text); }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>The Smart link row waits for a code</h1>
+  <p>Altlink's ask from the Oct 28 call: no smart link on rollouts without a UPC or ISRC. Fan emails keep their own row until then. Dashed outline = what changes. Issue #852.</p>
+</div>
+
+<div class="board">
+
+  <div class="col">
+    <div class="tag">Today: no code yet</div>
+    <p class="why">The row says Smart link, but opening it shows "Unlocks with a UPC or ISRC" and an Altlink label. This is what Altlink saw.</p>
+    <div class="phone">
+      <div class="crumb">Victory · <b>Midnight Drive</b></div>
+      <div class="group">Promote</div>
+      <div class="item"><i></i>Pitch this!</div>
+      <div class="item"><i></i>Share</div>
+      <div class="item on"><i></i>Smart link</div>
+      <div class="card">
+        <div style="font-weight:600">Smart link</div>
+        <div class="quiet">Unlocks with a UPC or ISRC</div>
+      </div>
+      <div class="card fold"><span style="font-weight:600">Fan email page</span><span class="quiet" style="margin:0">Collect emails now</span></div>
+      <p class="by">powered by <img src="https://altlink.co/assets/altlink-logo-Bw5A4RY2.png" alt="Altlink" /></p>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="tag">Proposed: no code yet</div>
+    <p class="why">The row reads Fan emails and opens only the fan email page. No smart link, no Altlink label. A quiet line says when the smart link comes.</p>
+    <div class="phone">
+      <div class="crumb">Victory · <b>Midnight Drive</b></div>
+      <div class="group">Promote</div>
+      <div class="item"><i></i>Pitch this!</div>
+      <div class="item"><i></i>Share</div>
+      <div class="item on new"><i></i>Fan emails</div>
+      <div class="card">
+        <div class="h">Fan email page</div>
+        <p class="mu" style="font-size:13px;margin-top:4px">Build a page where fans leave their email before release day.</p>
+        <span class="btn">Create fan email page</span>
+      </div>
+      <p class="mu new" style="font-size:12px;margin-top:12px;padding:6px 8px">Your smart link shows up here once the song has a UPC or ISRC.</p>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="tag">Proposed: once there's a code</div>
+    <p class="why">The same row becomes Smart link, exactly as it works today: the link leads, fan emails fold under it, Altlink's label at the foot.</p>
+    <div class="phone">
+      <div class="crumb">Victory · <b>Midnight Drive</b></div>
+      <div class="group">Promote</div>
+      <div class="item"><i></i>Pitch this!</div>
+      <div class="item"><i></i>Share</div>
+      <div class="item on new"><i></i>Smart link</div>
+      <div class="card">
+        <span class="live"><i></i>Live</span>
+        <div class="h" style="font-size:24px;margin-top:8px">Drops in 36 days.</div>
+        <div class="urlbox"><span class="mono">altlink.co/victory/midnight-drive</span><span class="mu" style="font-weight:600">Copy</span></div>
+        <span class="btn" style="width:100%">Share link</span>
+      </div>
+      <div class="card fold"><span style="font-weight:600">Fan email page</span><span class="quiet" style="margin:0">Your emails</span></div>
+      <p class="by">powered by <img src="https://altlink.co/assets/altlink-logo-Bw5A4RY2.png" alt="Altlink" /></p>
+    </div>
+  </div>
+
+</div>
+
+<p class="note"><b>Also changes:</b> the fan email page's line "collects emails from the fans already tapping your link" reads "where fans leave their email before release day" while there is no link yet, since there's no link to tap.</p>
+<p class="note"><b>Same rule as Distribute:</b> a rollout counts as having a code when Metadata or the distributor's submission holds a UPC or ISRC (what v1.206.1 uses for the Distribute tag and tabs). Old <span class="mono">?scene=capture</span> links still open this row.</p>
+
+</body>
+</html>

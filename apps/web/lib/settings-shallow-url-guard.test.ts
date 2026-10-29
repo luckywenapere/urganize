@@ -32,10 +32,11 @@ describe('settings pop-up writes its URL without a navigation', () => {
   it('never routes for a param change on a page that hosts the pop-up', () => {
     expect(hook).not.toMatch(/router\.replace\(/);
     // The one router.push left is the fallback to the dashboard, behind the
-    // canHostSettings check.
+    // canHostSettings check, plus Settings -> Team, which is a page of its own
+    // since #853 (the Team tab), not a param change.
     const pushes = hook.match(/router\.push\(/g) ?? [];
     expect(pushes).toHaveLength(1);
-    expect(hook).toMatch(/if \(!canHostSettings\(pathname\)\) \{\s*router\.push\(url/);
+    expect(hook).toMatch(/if \(toTeamTab \|\| !canHostSettings\(pathname\)\) \{\s*router\.push\(url/);
     expect(modal).not.toMatch(/router\.replace\(closeSettingsUrl/);
   });
 

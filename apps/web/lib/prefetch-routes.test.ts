@@ -34,6 +34,7 @@ describe('buildPrefetchRoutes', () => {
       '/dashboard',
       '/dashboard/urgans',
       '/dashboard/home',
+      '/dashboard/team',
     ]);
   });
 
@@ -46,6 +47,7 @@ describe('buildPrefetchRoutes', () => {
       '/dashboard',
       '/dashboard/urgans',
       '/dashboard/home',
+      '/dashboard/team',
       '/dashboard/notes',
       '/dashboard/opportunities',
       '/curator',

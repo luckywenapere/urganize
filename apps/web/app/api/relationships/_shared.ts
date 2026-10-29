@@ -58,10 +58,10 @@ export async function resolveRelationshipsContext(
     return { error: NextResponse.json({ error: 'Team not found.' }, { status: 404 }) };
   }
 
-  if (access.artistScopeByWorkspaceId[workspaceId]) {
+  if (access.artistScopeByWorkspaceId[workspaceId] || access.releaseScopeByWorkspaceId[workspaceId]) {
     return {
       error: NextResponse.json(
-        { error: 'Your access is limited to one artist, so the team contacts are not available to you.' },
+        { error: 'Your access is limited, so the team contacts are not available to you.' },
         { status: 403 }
       ),
     };

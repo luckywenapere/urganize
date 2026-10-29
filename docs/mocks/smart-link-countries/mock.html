@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Smart link countries</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --card:#faf5ec; --hover:#ebe6dc;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --board:#d9d5cc; --board-text:#1a1611; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--board-text); padding:32px 16px 64px; }
+  p { margin:0; }
+  .wrap { max-width:1000px; margin:0 auto; }
+  .intro { margin-bottom:28px; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; margin:0 0 6px; }
+  .intro p, .sec-h p { color:var(--board-sec); }
+  .sec-h { margin-top:40px; margin-bottom:12px; }
+  .sec-h h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:0 0 4px; }
+  .mono { font-family:'JetBrains Mono', monospace; }
+
+  .panel { background:var(--bg); color:var(--text); border-radius:18px; padding:24px; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .panel h3 { font-family:'Young Serif', serif; font-weight:400; font-size:22px; margin:0 0 16px; }
+  .grid { display:grid; gap:16px; grid-template-columns:1fr 1fr; }
+  .stack { display:flex; flex-direction:column; gap:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px; }
+  .span2 { grid-column:span 2; }
+  .meta { font-family:'JetBrains Mono', monospace; font-size:11px; text-transform:uppercase; letter-spacing:.14em; color:var(--ter); margin:0; font-weight:400; }
+  .row { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+  dl { margin:12px 0 0; }
+  dl > div { display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:10px 0; border-top:1px solid var(--line); }
+  dl > div:first-child { border-top:0; }
+  dt { font-size:14px; color:var(--sec); }
+  dd { margin:0; font-family:'JetBrains Mono', monospace; font-size:16px; }
+  dd small { font-size:11px; color:var(--ter); margin-left:8px; letter-spacing:.1em; text-transform:uppercase; }
+  ul.bars { list-style:none; padding:0; margin:12px 0 0; display:flex; flex-direction:column; gap:12px; }
+  ul.bars .n { font-family:'JetBrains Mono', monospace; color:var(--sec); font-size:13px; }
+  .track { margin-top:6px; height:6px; border-radius:999px; background:var(--line2); }
+  .fill { height:6px; border-radius:999px; background:var(--brand); }
+  .new { outline:2px dashed var(--brand); outline-offset:4px; }
+  .tag { display:inline-block; font-size:11px; font-weight:600; color:var(--brand); background:var(--brand-soft); border-radius:6px; padding:1px 7px; margin-left:8px; vertical-align:middle; text-transform:none; letter-spacing:0; font-family:'Instrument Sans', sans-serif; }
+  .stores li { display:flex; justify-content:space-between; padding:10px 0; border-top:1px solid var(--line); }
+  .stores li:first-child { border-top:0; }
+  .ok { color:var(--brand); font-weight:600; }
+  .phone { max-width:375px; }
+  .phone .grid { grid-template-columns:1fr; }
+  .phone .span2 { grid-column:auto; }
+  .note { margin-top:12px; color:var(--board-sec); font-size:13px; }
+  @media (max-width:720px) { .grid { grid-template-columns:1fr; } .span2 { grid-column:auto; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <h1>Smart link: where fans are</h1>
+    <p>Altlink already sends the top 10 countries for each link. We show them next to "Where fans click". Country names, not codes. New part has a dashed outline.</p>
+  </div>
+
+  <div class="sec-h">
+    <h2>1. Released, rollout menu Smart link view (desktop)</h2>
+    <p>Stores and So far stay where they are. Where fans click and Where fans are sit side by side under them.</p>
+  </div>
+  <div class="panel">
+    <h3>Smart link</h3>
+    <div class="grid">
+      <section class="card">
+        <div class="row"><p class="meta">Stores</p><p class="meta">4 of 5 found</p></div>
+        <ul class="stores" style="list-style:none;padding:0;margin:12px 0 0">
+          <li><span>Spotify</span><span class="ok">✓</span></li>
+          <li><span>Apple Music</span><span class="ok">✓</span></li>
+          <li><span>Audiomack</span><span class="ok">✓</span></li>
+          <li><span>Boomplay</span><span class="ok">✓</span></li>
+          <li><span style="color:var(--ter)">YouTube Music</span><span class="meta">Looking</span></li>
+        </ul>
+      </section>
+      <section class="card">
+        <div class="row"><p class="meta">So far</p><p class="meta">Updated 4:12 pm</p></div>
+        <dl>
+          <div><dt>Visits</dt><dd>1,240</dd></div>
+          <div><dt>Clicks</dt><dd>980<small>79% of visits</small></dd></div>
+        </dl>
+      </section>
+      <section class="card">
+        <p class="meta">Where fans click</p>
+        <ul class="bars">
+          <li><div class="row"><span>Spotify</span><span class="n">450 · 46%</span></div><div class="track"><div class="fill" style="width:46%"></div></div></li>
+          <li><div class="row"><span>Apple Music</span><span class="n">210 · 21%</span></div><div class="track"><div class="fill" style="width:21%"></div></div></li>
+          <li><div class="row"><span>Audiomack</span><span class="n">180 · 18%</span></div><div class="track"><div class="fill" style="width:18%"></div></div></li>
+          <li><div class="row"><span>Boomplay</span><span class="n">140 · 14%</span></div><div class="track"><div class="fill" style="width:14%"></div></div></li>
+        </ul>
+      </section>
+      <section class="card new">
+        <p class="meta">Where fans are<span class="tag">New</span></p>
+        <ul class="bars">
+          <li><div class="row"><span>Nigeria</span><span class="n">720 · 58%</span></div><div class="track"><div class="fill" style="width:58%"></div></div></li>
+          <li><div class="row"><span>Ghana</span><span class="n">190 · 15%</span></div><div class="track"><div class="fill" style="width:15%"></div></div></li>
+          <li><div class="row"><span>United Kingdom</span><span class="n">140 · 11%</span></div><div class="track"><div class="fill" style="width:11%"></div></div></li>
+          <li><div class="row"><span>United States</span><span class="n">95 · 8%</span></div><div class="track"><div class="fill" style="width:8%"></div></div></li>
+          <li><div class="row"><span>South Africa</span><span class="n">40 · 3%</span></div><div class="track"><div class="fill" style="width:3%"></div></div></li>
+        </ul>
+      </section>
+    </div>
+    <p class="note" style="color:var(--ter)">Top 6 countries shown, like stores. The % is each country's share of all visits.</p>
+  </div>
+
+  <div class="sec-h">
+    <h2>2. Before release (pre-save), Distribute's Numbers tab</h2>
+    <p>One column, so the cards stack: So far, Where fans click, then Where fans are.</p>
+  </div>
+  <div class="panel" style="max-width:560px">
+    <h3>Numbers</h3>
+    <div class="stack">
+      <section class="card">
+        <div class="row"><p class="meta">So far</p><p class="meta">Updated 9:40 am</p></div>
+        <dl>
+          <div><dt>Visits</dt><dd>312</dd></div>
+          <div><dt>Clicks</dt><dd>205</dd></div>
+          <div><dt>Pre-saves</dt><dd>88</dd></div>
+        </dl>
+      </section>
+      <section class="card new">
+        <p class="meta">Where fans are<span class="tag">New</span></p>
+        <ul class="bars">
+          <li><div class="row"><span>Nigeria</span><span class="n">201 · 64%</span></div><div class="track"><div class="fill" style="width:64%"></div></div></li>
+          <li><div class="row"><span>Ghana</span><span class="n">58 · 19%</span></div><div class="track"><div class="fill" style="width:19%"></div></div></li>
+          <li><div class="row"><span>Kenya</span><span class="n">22 · 7%</span></div><div class="track"><div class="fill" style="width:7%"></div></div></li>
+        </ul>
+      </section>
+    </div>
+    <p class="note" style="color:var(--ter)">Before release there are no store clicks yet, so only Where fans are shows under So far.</p>
+  </div>
+
+  <div class="sec-h">
+    <h2>3. No country data yet</h2>
+    <p>If Altlink sends no countries, the card is not shown at all, and Where fans click takes the full width as it does today. No empty box.</p>
+  </div>
+
+  <div class="sec-h">
+    <h2>4. Phone</h2>
+  </div>
+  <div class="panel phone">
+    <div class="grid">
+      <section class="card new">
+        <p class="meta">Where fans are<span class="tag">New</span></p>
+        <ul class="bars">
+          <li><div class="row"><span>Nigeria</span><span class="n">720 · 58%</span></div><div class="track"><div class="fill" style="width:58%"></div></div></li>
+          <li><div class="row"><span>Ghana</span><span class="n">190 · 15%</span></div><div class="track"><div class="fill" style="width:15%"></div></div></li>
+          <li><div class="row"><span>United Kingdom</span><span class="n">140 · 11%</span></div><div class="track"><div class="fill" style="width:11%"></div></div></li>
+        </ul>
+      </section>
+    </div>
+  </div>
+</div>
+</body>
+</html>

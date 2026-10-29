@@ -21,7 +21,8 @@ describe('settingsStubTarget', () => {
     '?settings=%s keeps its segment',
     (segment) => {
       expect(settingsStubTarget(`?settings=${segment}`, '')).toEqual({ segment, section: null });
-      expect(land(`?settings=${segment}`)).toBe(`/dashboard?settings=${segment}`);
+      // Team is its own tab since #853; every other segment opens the pop-up.
+      expect(land(`?settings=${segment}`)).toBe(segment === 'team' ? '/dashboard/team' : `/dashboard?settings=${segment}`);
     }
   );
 
@@ -84,10 +85,10 @@ describe('settingsStubTarget', () => {
     expect(target).toEqual({ segment: 'menu', section: null });
   });
 
-  it('always lands on /dashboard, where the pop-up is mounted', () => {
+  it('always lands on /dashboard, where the pop-up is mounted (Team, its own tab since #853, aside)', () => {
+    expect(land('?settings=team')).toBe('/dashboard/team');
     for (const [search, hash] of [
       ['', ''],
-      ['?settings=team', ''],
       ['', '#delete-rollouts'],
       ['?tab=account', ''],
     ]) {

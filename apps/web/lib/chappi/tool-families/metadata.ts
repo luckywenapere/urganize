@@ -6,6 +6,7 @@
 // patch would therefore quietly erase the ISRC while setting the genre. Every
 // write here reads the current row and merges first.
 
+import { isAltlinkEnabled, normalizeIsrc, normalizeUpc } from '@/lib/altlink/rules';
 import {
   apiError,
   argBoolean,
@@ -142,9 +143,16 @@ export const METADATA_TOOLS: ChappiTool[] = [
       if (!res.ok) return fail(apiError(res, 'Could not save the rollout details.'));
 
       const names = [...changed, ...(explicitChanged ? ['explicit'] : [])];
+      // A new UPC or ISRC is what lets Altlink make the smart link (#858); the
+      // metadata route starts it after the save, so say so instead of waiting.
+      const codeAdded = (changed.includes('upc') && normalizeUpc(argString(args, 'upc'))) ||
+        (changed.includes('isrc') && normalizeIsrc(argString(args, 'isrc')));
+      const smartLinkNote = codeAdded && isAltlinkEnabled()
+        ? ' With a code in, Altlink makes the smart link in a moment if the release date is set; it shows on the Smart link tab of the Distribute page.'
+        : '';
       return {
         ok: true,
-        summary: `Updated ${names.join(', ')}.`,
+        summary: `Updated ${names.join(', ')}.${smartLinkNote}`,
         clientAction: { type: 'refresh' },
       };
     },

@@ -41,6 +41,61 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.208.0",
+    title: "Your team, in one place",
+    tag: "Team",
+    date: "October 29, 2026",
+    highlights: [
+      "Team is a new tab after Artists. See who is on your team, when each person was last in, and the tasks they hold.",
+      "Tap someone to see their tasks, late ones first.",
+      "Managers can invite people, change their role, and pick which rollouts each person can see.",
+      "Anyone can leave a team. Their open tasks go back to the owner.",
+    ],
+  },
+  {
+    version: "1.207.2",
+    tag: "Rollouts",
+    date: "October 29, 2026",
+    highlights: [
+      "Your smart link's numbers now show where your fans are, country by country.",
+      "Visits, clicks and the stores fans pick now read correctly from Altlink.",
+    ],
+  },
+  {
+    version: "1.207.1",
+    tag: "Rollouts",
+    date: "October 29, 2026",
+    highlights: [
+      "Until your song has a UPC or ISRC, the rollout menu shows Fan emails. Once it has one, the same spot becomes your Smart link.",
+      "You can add the UPC or ISRC straight from there.",
+    ],
+  },
+  {
+    version: "1.207.0",
+    title: "UrgAns knows your smart link",
+    tag: "AI",
+    date: "October 29, 2026",
+    highlights: [
+      "Once your rollout has its UPC or ISRC, UrgAns gives you its smart link and how many fans have pre-saved, and tells you to share it before release day.",
+    ],
+  },
+  {
+    version: "1.206.3",
+    tag: "Account",
+    date: "October 29, 2026",
+    highlights: [
+      "Urganize now lives at team.urganize.app. The old addresses take you there, and you stay signed in.",
+    ],
+  },
+  {
+    version: "1.206.2",
+    tag: "Rollouts",
+    date: "October 29, 2026",
+    highlights: [
+      "Your smart link now shows the Altlink logo under it, and tapping it opens Altlink's site.",
+    ],
+  },
+  {
     version: "1.206.1",
     tag: "Rollouts",
     date: "October 29, 2026",

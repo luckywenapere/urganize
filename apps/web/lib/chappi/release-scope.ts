@@ -51,7 +51,8 @@ export function listVisibleReleases(ctx: ChappiToolContext) {
   return new ReleaseService(ctx.adminClient).getReleasesForUser(
     ctx.user.id,
     resolveVisibleOwnerIds(ctx.user.id, ctx.releaseOwnerIds),
-    ctx.artistScopeByOwnerId
+    ctx.artistScopeByOwnerId,
+    ctx.releaseScopeByOwnerId
   );
 }
 

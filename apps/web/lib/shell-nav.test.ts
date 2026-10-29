@@ -31,19 +31,31 @@ const ALL_OFF: ShellFlags = {
 };
 
 describe('shell nav', () => {
-  it('offers the five areas in the strategy order (UrgAns after Home; Pitching lives inside each rollout; Audience cut Oct 16, 2026)', () => {
+  it('offers the areas in the strategy order (UrgAns after Home; Team after Artists, #853; Audience cut Oct 16, 2026)', () => {
     expect(buildShellAreas(ALL_ON).map((a) => a.key)).toEqual([
       'home',
       'urgans',
       'catalogue',
+      'team',
       'relationships',
       'opportunities',
     ]);
   });
 
-  it('drops Opportunities while it is paused (Oct 27, 2026)', () => {
-    expect(buildShellAreas(ALL_OFF).map((a) => a.key)).toEqual(['home', 'urgans', 'catalogue', 'relationships']);
-    expect(buildMoreItems(buildShellAreas(ALL_OFF)).map((i) => i.key)).toEqual(['relationships']);
+  it('drops Opportunities and parks Relationships while they are paused (Oct 27 and 29, 2026)', () => {
+    expect(buildShellAreas(ALL_OFF).map((a) => a.key)).toEqual(['home', 'urgans', 'catalogue', 'team']);
+    // Directory alone does not bring the Relationships pill back (#853).
+    expect(buildShellAreas({ ...ALL_OFF, directory: true }).map((a) => a.key)).toEqual(['home', 'urgans', 'catalogue', 'team']);
+    expect(buildMoreItems(buildShellAreas(ALL_OFF)).map((i) => i.key)).toEqual(['team']);
+  });
+
+  it('Team is one destination, lit on its page', () => {
+    const areas = buildShellAreas(ALL_OFF);
+    const team = areas.find((a) => a.key === 'team')!;
+    expect(team.href).toBe('/dashboard/team');
+    expect(team.subTabs).toEqual([]);
+    expect(activeShellArea(areas, '/dashboard/team')?.key).toBe('team');
+    expect(activeMobileTab(areas, '/dashboard/team')).toBe('more');
   });
 
   it('marks areas with nothing built as not live, so their page says coming soon', () => {
@@ -53,7 +65,7 @@ describe('shell nav', () => {
       home: true,
       urgans: true,
       catalogue: true,
-      relationships: false,
+      team: true,
     });
   });
 
@@ -70,9 +82,7 @@ describe('shell nav', () => {
     expect(
       buildShellAreas({ ...ALL_OFF, relationships: true }).find((a) => a.key === 'relationships')?.href
     ).toBe('/dashboard/relationships');
-    expect(buildShellAreas(ALL_OFF).find((a) => a.key === 'relationships')?.href).toBe(
-      '/dashboard/directory'
-    );
+    expect(buildShellAreas(ALL_OFF).find((a) => a.key === 'relationships')).toBeUndefined();
   });
 
   it('catalogue always has Rollouts and adds only the tabs whose page opens', () => {
@@ -150,6 +160,7 @@ describe('shell nav', () => {
     expect(buildMobileTabs(buildShellAreas(ALL_ON))[1].href).toBe('/dashboard/artists');
     expect(buildMobileTabs(buildShellAreas(ALL_OFF))[1].href).toBe('/dashboard');
     expect(buildMoreItems(buildShellAreas(ALL_ON)).map((i) => i.key)).toEqual([
+      'team',
       'relationships',
       'opportunities',
     ]);
@@ -159,7 +170,7 @@ describe('shell nav', () => {
     const soon = Object.fromEntries(
       buildMoreItems(buildShellAreas(ALL_ON)).map((i) => [i.key, i.soon])
     );
-    expect(soon).toEqual({ relationships: false, opportunities: false });
+    expect(soon).toEqual({ team: false, relationships: false, opportunities: false });
   });
 
   it('lights More for an area the bar does not carry, UrgAns for its page', () => {

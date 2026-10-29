@@ -12,7 +12,7 @@ import { HeaderDropdown } from "./HeaderDropdown";
 // while its link stays here so crawlers can still reach it and READ that tag.
 //
 // Log in / Sign up point at pages on THIS domain, not straight at
-// my.urganize.app, and that's the whole point: sitelinks under the
+// team.urganize.app, and that's the whole point: sitelinks under the
 // urganize.app result can only be urganize.app pages — a subdomain is a
 // separate site as far as that block is concerned. Those two pages then hand
 // off to the app (see lib/app-urls.ts).

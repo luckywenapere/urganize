@@ -16,6 +16,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/types/tasks';
 import { assistantReleaseStatus, dayToDate } from './release-status';
+import { formatSmartLinksSection, loadSmartLinkPromptFacts, type SmartLinkPromptFacts } from './smart-link-context';
 import type { ChappiToolContext } from './tool-families/shared';
 
 /** How many releases survive into the prompt. Unchanged from the original
@@ -182,6 +183,8 @@ export function formatWorkspaceSummary(input: {
   tasks: Task[];
   members: SnapshotMember[];
   today: string;
+  /** Smart link facts per rollout (#858); rollouts with no code add nothing. */
+  smartLinks?: SmartLinkPromptFacts[];
 }): string {
   const { tasks, members, today } = input;
   if (input.releases.length === 0) return 'The user has no rollouts yet.';
@@ -204,6 +207,9 @@ export function formatWorkspaceSummary(input: {
       })
       .join('\n')}`
   );
+
+  const smartLinks = formatSmartLinksSection(input.smartLinks ?? [], today);
+  if (smartLinks) sections.push(smartLinks);
 
   // ── Overdue ───────────────────────────────────────────────────────────────
   const titleById = new Map(input.releases.map((r) => [r.id, r.title]));
@@ -276,6 +282,9 @@ export async function buildWorkspaceSummary(
   tasks: Task[],
   today: string
 ): Promise<string> {
-  const members = await loadSnapshotMembers(ctx.adminClient, ctx.workspaceIds, ctx.user.id);
-  return formatWorkspaceSummary({ releases, tasks, members, today });
+  const [members, smartLinks] = await Promise.all([
+    loadSnapshotMembers(ctx.adminClient, ctx.workspaceIds, ctx.user.id),
+    loadSmartLinkPromptFacts(ctx.adminClient, selectSnapshotReleases(releases, tasks), tasks),
+  ]);
+  return formatWorkspaceSummary({ releases, tasks, members, today, smartLinks });
 }

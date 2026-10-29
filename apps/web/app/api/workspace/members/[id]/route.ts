@@ -8,6 +8,7 @@ import {
   loadWorkspaceAccessContext,
 } from '@/lib/tasks-server';
 import { type WorkspaceMemberRole } from '@/lib/tasks';
+import { forgetAccess, returnOpenTasksToOwner } from '@/lib/team-page-server';
 
 type UpdateWorkspaceMemberBody = {
   role?: unknown;
@@ -142,7 +143,7 @@ export async function DELETE(
 
     const memberResult = await adminClient
       .from(WORKSPACE_MEMBERS_TABLE)
-      .select('id,role')
+      .select('id,role,user_id')
       .eq('id', id)
       .eq('workspace_id', access.workspaceId)
       .maybeSingle();
@@ -166,6 +167,17 @@ export async function DELETE(
       return NextResponse.json({ error: 'The team owner cannot be removed.' }, { status: 400 });
     }
 
+    const removedUserId = readString(memberResult.data.user_id) || null;
+    const workspaceRow = await adminClient
+      .from('workspaces')
+      .select('owner_id')
+      .eq('id', access.workspaceId)
+      .maybeSingle();
+    const ownerUserId = readString((workspaceRow.data as { owner_id?: unknown } | null)?.owner_id);
+    if (removedUserId && removedUserId === ownerUserId) {
+      return NextResponse.json({ error: 'The team owner cannot be removed.' }, { status: 400 });
+    }
+
     const deleteResult = await adminClient
       .from(WORKSPACE_MEMBERS_TABLE)
       .update({
@@ -186,7 +198,13 @@ export async function DELETE(
       );
     }
 
-    return NextResponse.json({ ok: true });
+    // Their open tasks go back to the owner, so nothing is left with no one (#853).
+    const tasksReturned = ownerUserId
+      ? await returnOpenTasksToOwner(adminClient, { workspaceId: access.workspaceId, fromUserId: removedUserId, ownerUserId })
+      : 0;
+    forgetAccess(removedUserId);
+
+    return NextResponse.json({ ok: true, tasksReturned });
   } catch (error) {
     if (isTaskSchemaMissingError(error)) {
       return buildTaskSchemaResponse();

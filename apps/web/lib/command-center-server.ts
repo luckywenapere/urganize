@@ -88,12 +88,17 @@ export async function loadCommandCenterData(
   // activity). Fanned out, the request costs the slowest one, not the sum.
   const [releases, rawTasks, activity] = await Promise.all([
     step('cc_releases', () =>
-      releaseService.getReleasesForUser(user.id, access.releaseOwnerIds, access.artistScopeByOwnerId)
+      releaseService.getReleasesForUser(
+        user.id,
+        access.releaseOwnerIds,
+        access.artistScopeByOwnerId,
+        access.releaseScopeByOwnerId
+      )
     ),
     (async (): Promise<ExecutionTask[]> => {
       if (!access.workspaceIds.length || !access.membershipIds.length) return [];
       return (await step('cc_tasks', () =>
-        taskService.getTasksForUser(user.id, access.workspaceIds, {}, timings)
+        taskService.getTasksForUser(user.id, access, {}, timings)
       )) as ExecutionTask[];
     })(),
     step('cc_activity', async (): Promise<ActivityLogEntry[]> => {
@@ -132,7 +137,11 @@ export async function loadCommandCenterData(
   // allow-list. Unscoped users skip this entirely. Pure JS, so it happens
   // after the fan-out rather than forcing tasks to wait on releases.
   let tasks: ExecutionTask[] = rawTasks;
-  if (tasks.length && Object.keys(access.artistScopeByOwnerId).length > 0) {
+  if (
+    tasks.length &&
+    (Object.keys(access.artistScopeByOwnerId).length > 0 ||
+      Object.keys(access.releaseScopeByOwnerId).length > 0)
+  ) {
     const visibleReleaseIds = new Set(releases.map((release) => release.id));
     tasks = tasks.filter((task) => task.releaseId && visibleReleaseIds.has(task.releaseId));
   }

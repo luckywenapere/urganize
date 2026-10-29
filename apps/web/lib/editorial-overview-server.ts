@@ -48,6 +48,7 @@ export async function loadEditorialOverview(
       decideReleaseAccess({
         releaseOwnerId: release.owner_user_id,
         releaseArtistId: release.artist_id,
+        releaseId: release.id,
         userId,
         access,
         write: false,

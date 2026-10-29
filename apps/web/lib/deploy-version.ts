@@ -11,7 +11,7 @@ import { CURRENT_VERSION } from '@urganize/changelog';
  * and nobody could tell from the outside.
  *
  * With this, the check is two lines:
- *   curl -s https://my.urganize.app/api/version
+ *   curl -s https://team.urganize.app/api/version
  *   git rev-parse --short origin/main
  *
  * PUBLIC ON PURPOSE, and the shape below is the security boundary. A version

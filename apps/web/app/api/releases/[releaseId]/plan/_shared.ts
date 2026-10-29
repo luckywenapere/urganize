@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/app/api/_shared/auth';
 import { resolveReleaseTaskWorkspace } from '@/lib/tasks-server';
 import { canPlanRelease } from '@/lib/release-team';
+import { isReleaseInScope } from '@/lib/release-access';
 import type { WorkspaceMember } from '@/types/auth';
 import { parseDraftDoc, type ReleasePlanDraft, type ReleasePlanDraftDoc } from '@/lib/release-planning';
 
@@ -41,6 +42,7 @@ export { getPlannerTemplate } from '@/lib/release-planning-actions-server';
 export type PlannerReleaseRow = {
   id: string;
   owner_user_id: string;
+  artist_id: string | null;
   title: string | null;
   artist_name: string | null;
   release_date: string | null;
@@ -50,7 +52,7 @@ export type PlannerReleaseRow = {
 };
 
 const RELEASE_COLUMNS =
-  'id,owner_user_id,title,artist_name,release_date,release_type,release_context,metadata';
+  'id,owner_user_id,artist_id,title,artist_name,release_date,release_type,release_context,metadata';
 
 /**
  * Load the release and confirm the caller owns it.
@@ -91,7 +93,11 @@ export async function loadOwnedRelease(
     // team's owner, so the Manager must still be able to plan it. Owner, or an
     // active owner/admin of the owner's team (lib/release-team.ts). Only read
     // when the caller is not the owner, so the owner's path costs nothing new.
-    const membership = await loadMembershipInOwnersTeam(adminClient, releaseOwnerId, userId);
+    const row = data as PlannerReleaseRow;
+    const membership = await loadMembershipInOwnersTeam(adminClient, releaseOwnerId, userId, {
+      id: row.id,
+      artistId: row.artist_id,
+    });
     if (!canPlanRelease({ userId, releaseOwnerId, membershipInOwnersTeam: membership })) {
       return { error: NextResponse.json({ error: 'Rollout not found.' }, { status: 404 }) };
     }
@@ -100,11 +106,16 @@ export async function loadOwnedRelease(
   return { release: data as PlannerReleaseRow };
 }
 
-/** The caller's membership in the team `ownerUserId` owns, or null. Never throws. */
+/**
+ * The caller's membership in the team `ownerUserId` owns, or null. Never throws.
+ * With `release`, a member limited to one artist or to chosen rollouts (#853)
+ * who is outside that limit counts as no membership, so they get the same 404.
+ */
 export async function loadMembershipInOwnersTeam(
   adminClient: NonNullable<ReturnType<typeof createAdminClient>>,
   ownerUserId: string,
-  userId: string
+  userId: string,
+  release?: { id: string; artistId: string | null | undefined }
 ): Promise<{ role: string; status: string } | null> {
   try {
     const team = await adminClient
@@ -118,14 +129,33 @@ export async function loadMembershipInOwnersTeam(
     if (team.error || !workspaceId) return null;
     const member = await adminClient
       .from('workspace_members')
-      .select('role,status')
+      .select('role,status,artist_scope_id,release_scope_ids')
       .eq('workspace_id', workspaceId)
       .eq('user_id', userId)
       .neq('status', 'removed')
       .limit(1)
       .maybeSingle();
-    const row = member.data as { role?: string; status?: string } | null;
+    const row = member.data as {
+      role?: string;
+      status?: string;
+      artist_scope_id?: string | null;
+      release_scope_ids?: string[] | null;
+    } | null;
     if (member.error || !row) return null;
+    if (
+      release &&
+      !isReleaseInScope(
+        { ownerId: ownerUserId, artistId: release.artistId, releaseId: release.id },
+        {
+          artistScopeByOwnerId: row.artist_scope_id ? { [ownerUserId]: String(row.artist_scope_id) } : {},
+          releaseScopeByOwnerId: Array.isArray(row.release_scope_ids)
+            ? { [ownerUserId]: row.release_scope_ids.map(String) }
+            : {},
+        }
+      )
+    ) {
+      return null;
+    }
     return { role: String(row.role || ''), status: String(row.status || '') };
   } catch {
     return null;

@@ -76,6 +76,7 @@ export function buildPrefetchRoutes({ hasCuratorProfile }: PrefetchAudience): st
   // signed-in account reaches right after the three base routes above warm.
   if (HOME_ENABLED) routes.push('/dashboard/home');
   if (ARTIST_PAGE_ENABLED) routes.push('/dashboard/artists');
+  routes.push('/dashboard/team');
   if (NOTES_ENABLED) routes.push('/dashboard/notes');
   // Pitching left the nav (founder, 2026-10-15) and lives inside each
   // rollout, so /dashboard/pitching (now a bridge) is no longer prefetched.

@@ -87,7 +87,7 @@ export async function loadIdeaNotes(
 
 /** Everyone who can see the rollout (the chat's own set), with emails, server side only. */
 export async function loadIdeasPeople(admin: SupabaseClient, release: IdeasRelease): Promise<ReleaseChatPerson[]> {
-  return loadReleaseChatPeople(admin, { ownerUserId: release.ownerUserId, artistId: release.artistId });
+  return loadReleaseChatPeople(admin, { ownerUserId: release.ownerUserId, artistId: release.artistId, id: release.id });
 }
 
 /** The picker's list: the people besides the viewer, names only, the artist marked. */

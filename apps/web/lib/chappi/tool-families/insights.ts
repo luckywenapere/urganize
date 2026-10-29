@@ -161,7 +161,7 @@ export const INSIGHTS_TOOLS: ChappiTool[] = [
       const taskService = new TaskService(ctx.adminClient);
       const rows = await Promise.all(
         recent.map(async (release) => {
-          const tasks = await taskService.getTasksForUser(ctx.user.id, ctx.workspaceIds, {
+          const tasks = await taskService.getTasksForUser(ctx.user.id, ctx, {
             releaseId: release.id,
           });
           // Cancelled work is out of both numbers (URG-389).
@@ -207,7 +207,7 @@ export const INSIGHTS_TOOLS: ChappiTool[] = [
         .filter((m): m is WorkloadMember => Boolean(m.userId));
 
       const tasks = ctx.workspaceIds.length
-        ? await new TaskService(ctx.adminClient).getTasksForUser(ctx.user.id, ctx.workspaceIds)
+        ? await new TaskService(ctx.adminClient).getTasksForUser(ctx.user.id, ctx)
         : [];
       const today = new Date().toISOString().slice(0, 10);
       const result = computeTeamWorkload(

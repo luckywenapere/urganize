@@ -371,6 +371,13 @@ export type WorkspaceAccessContext = {
   artistScopeByOwnerId: Record<string, string>;
   /** Same scopes keyed by workspace id — for task/board checks. */
   artistScopeByWorkspaceId: Record<string, string>;
+  /** Chosen-rollout limits (2026-10-29, #853): release ids the caller may see
+   * in an owner's workspace, keyed by OWNER user id. Absent = no rollout
+   * limit; an EMPTY list = sees no rollouts. Apply with isReleaseInScope
+   * (lib/release-access.ts), never by hand. */
+  releaseScopeByOwnerId: Record<string, string[]>;
+  /** Same rollout limits keyed by workspace id. */
+  releaseScopeByWorkspaceId: Record<string, string[]>;
   /** The caller's role in each owner's workspace, keyed by OWNER user id
    * (first-wins on the owner-first membership sort above the primary pick).
    * Missing key = no membership resolved — writers treat that as read-only,
@@ -1075,25 +1082,36 @@ async function resolveWorkspaceAccessContext(
   // membership select must never reference a column that may not exist).
   const artistScopeByOwnerId: Record<string, string> = {};
   const artistScopeByWorkspaceId: Record<string, string> = {};
+  const releaseScopeByOwnerId: Record<string, string[]> = {};
+  const releaseScopeByWorkspaceId: Record<string, string[]> = {};
   if (membershipRows.length) {
     try {
       const scopeResult = await adminClient
         .from(WORKSPACE_MEMBERS_TABLE)
-        .select('id,workspace_id,artist_scope_id')
+        .select('id,workspace_id,artist_scope_id,release_scope_ids')
         .in('id', membershipRows.map((row) => row.id));
       if (!scopeResult.error && Array.isArray(scopeResult.data)) {
         for (const row of scopeResult.data as Array<{
           id: string;
           workspace_id: string;
           artist_scope_id: string | null;
+          release_scope_ids: string[] | null;
         }>) {
-          const scope = String(row.artist_scope_id || '');
-          if (!scope) continue;
           const workspace = workspaceById.get(row.workspace_id);
           // Never scope the user against their OWN workspace.
           if (!workspace || workspace.owner_id === user.id) continue;
-          artistScopeByWorkspaceId[row.workspace_id] = scope;
-          if (workspace.owner_id) artistScopeByOwnerId[workspace.owner_id] = scope;
+          const scope = String(row.artist_scope_id || '');
+          if (scope) {
+            artistScopeByWorkspaceId[row.workspace_id] = scope;
+            if (workspace.owner_id) artistScopeByOwnerId[workspace.owner_id] = scope;
+          }
+          // An empty array is a real limit (sees nothing), so test for the
+          // array itself, not its length.
+          if (Array.isArray(row.release_scope_ids)) {
+            const ids = row.release_scope_ids.map(String).filter(Boolean);
+            releaseScopeByWorkspaceId[row.workspace_id] = ids;
+            if (workspace.owner_id) releaseScopeByOwnerId[workspace.owner_id] = ids;
+          }
         }
       }
     } catch {
@@ -1124,6 +1142,8 @@ async function resolveWorkspaceAccessContext(
       releaseOwnerIds,
       artistScopeByOwnerId,
       artistScopeByWorkspaceId,
+      releaseScopeByOwnerId,
+      releaseScopeByWorkspaceId,
       memberRoleByOwnerId,
     },
     hasProvisionedOwnWorkspace,
@@ -1149,6 +1169,8 @@ const EMPTY_WORKSPACE_ACCESS_CONTEXT: WorkspaceAccessContext = {
   releaseOwnerIds: [],
   artistScopeByOwnerId: {},
   artistScopeByWorkspaceId: {},
+  releaseScopeByOwnerId: {},
+  releaseScopeByWorkspaceId: {},
   memberRoleByOwnerId: {},
 };
 
@@ -1552,6 +1574,14 @@ export async function ensureTaskAccess(
   // A task of a rollout in Trash is gone as far as the app is concerned, so the
   // rollout is always read here (not only for artist scopes).
   const artistScope = access.artistScopeByWorkspaceId[String(task.workspace_id || '')];
+  const releaseScope = access.releaseScopeByWorkspaceId[String(task.workspace_id || '')];
+  // A rollout-limited member never sees a task that belongs to no rollout.
+  if (releaseScope && !task.release_id) {
+    return { error: NextResponse.json({ error: 'Task not found.' }, { status: 404 }) };
+  }
+  if (releaseScope && task.release_id && !releaseScope.includes(String(task.release_id))) {
+    return { error: NextResponse.json({ error: 'Task not found.' }, { status: 404 }) };
+  }
   if (task.release_id) {
     const releaseResult = await adminClient
       .from(RELEASES_TABLE)
@@ -1725,6 +1755,10 @@ export async function resolveReleaseTaskWorkspace(
     artistScope &&
     String((releaseResult.data as { artist_id?: unknown }).artist_id || '') !== artistScope
   ) {
+    throw new Error('Could not find the team for this rollout.');
+  }
+  const releaseScope = access.releaseScopeByWorkspaceId[releaseWorkspaceId];
+  if (releaseScope && !releaseScope.includes(releaseId)) {
     throw new Error('Could not find the team for this rollout.');
   }
 

@@ -45,19 +45,19 @@ describe('buildAppPages — always present', () => {
   it('offers Home, the catalog, the assistant and settings with every flag off', async () => {
     const { buildAppPages } = await loadPages();
     const keys = buildAppPages({ hasCuratorProfile: false }).map((page) => page.key);
-    expect(keys).toEqual(['home', 'catalog', 'urgans', 'settings']);
+    expect(keys).toEqual(['home', 'catalog', 'urgans', 'team', 'settings']);
   });
 
   it('offers Opportunities only when it is unpaused (paused Oct 27, 2026)', async () => {
     const { buildAppPages } = await loadPages({ NEXT_PUBLIC_FEATURE_OPPORTUNITIES: 'true' });
     const keys = buildAppPages({ hasCuratorProfile: false }).map((page) => page.key);
-    expect(keys).toEqual(['home', 'catalog', 'urgans', 'opportunities', 'settings']);
+    expect(keys).toEqual(['home', 'catalog', 'urgans', 'team', 'opportunities', 'settings']);
   });
 
   it('offers Home first, ahead of the catalog, when its flag is on', async () => {
     const { buildAppPages } = await loadPages({ NEXT_PUBLIC_FEATURE_HOME: 'true' });
     const keys = buildAppPages({ hasCuratorProfile: false }).map((page) => page.key);
-    expect(keys).toEqual(['home', 'catalog', 'urgans', 'settings']);
+    expect(keys).toEqual(['home', 'catalog', 'urgans', 'team', 'settings']);
   });
 
   it('keeps Home as its own page, not a Catalog keyword', async () => {
@@ -209,7 +209,7 @@ describe('appPageHaystack + the shared matcher', () => {
     // The whole reason keywords exist: nothing in this app is labelled
     // "billing", and a manager hunting for their card details types exactly
     // that.
-    for (const query of ['billing', 'subscription', 'teammates', 'export']) {
+    for (const query of ['billing', 'subscription', 'export']) {
       expect(matchesSearchTerms(appPageHaystack(settings!), parseSearchTerms(query))).toBe(true);
     }
   });

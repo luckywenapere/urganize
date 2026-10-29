@@ -51,7 +51,11 @@ type Prepared = { ok: true; target: Target; plan: CapturePlan } | { ok: false; e
 const recordLine = (r: { id: string; title: string; artistName: string }) => `${r.title} (${r.artistName}, recordId ${r.id})`;
 
 async function resolveTarget(ctx: ChappiToolContext, args: Record<string, unknown>): Promise<{ ok: true; target: Target } | { ok: false; error: string }> {
-  const scope = { workspaceIds: ctx.workspaceIds, artistScopeByWorkspaceId: ctx.artistScopeByWorkspaceId };
+  const scope = {
+    workspaceIds: ctx.workspaceIds,
+    artistScopeByWorkspaceId: ctx.artistScopeByWorkspaceId,
+    releaseScopeByWorkspaceId: ctx.releaseScopeByWorkspaceId,
+  };
   const records = await listRecordsInMaking(ctx.adminClient, scope);
   if (!records) return { ok: false, error: 'Could not load the records.' };
 
@@ -92,6 +96,8 @@ async function resolveTarget(ctx: ChappiToolContext, args: Record<string, unknow
     return { ok: false, error: 'No record is in the making yet. Ask which artist it is for, then pass artistId (from list_artists).' };
   }
   for (const workspaceId of ctx.workspaceIds) {
+    // Records are artist-wide; a member limited to chosen rollouts gets none.
+    if (ctx.releaseScopeByWorkspaceId[workspaceId]) continue;
     const scoped = scopeFor(workspaceId);
     if (scoped && scoped !== artistId) continue;
     const artist = await findTeamArtist(ctx.adminClient, workspaceId, artistId);
@@ -149,6 +155,7 @@ export async function recordScopePrompt(ctx: ChappiToolContext, recordId: string
   const records = await listRecordsInMaking(ctx.adminClient, {
     workspaceIds: ctx.workspaceIds,
     artistScopeByWorkspaceId: ctx.artistScopeByWorkspaceId,
+    releaseScopeByWorkspaceId: ctx.releaseScopeByWorkspaceId,
   });
   const record = records?.find((r) => r.id === recordId);
   return record ? recordScopeLine(record) : null;

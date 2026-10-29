@@ -68,7 +68,8 @@ export async function GET(request: NextRequest) {
     const releases = await new ReleaseService(adminClient).getReleasesForUser(
       user.id,
       ctx.releaseOwnerIds,
-      ctx.artistScopeByOwnerId
+      ctx.artistScopeByOwnerId,
+      ctx.releaseScopeByOwnerId
     );
     const ids = (releases || [])
       .map((release: { id?: string }) => release.id)

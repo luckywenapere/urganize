@@ -10,6 +10,8 @@ import { isMetadataFixField } from '@/lib/distribution-fix';
 import { captureFeatureDiscoveryByName } from '@/lib/analytics';
 import { MetadataSection } from '@/components/releases/MetadataSection';
 import { SmartLinkSection } from '@/components/releases/SmartLinkSection';
+import { useSmartLinkReady } from '@/components/releases/useSmartLinkReady';
+import { captureRowLabel } from '@/lib/smart-link-task';
 import { AssetSection } from '@/components/releases/AssetSection';
 import { CoverArtSection } from '@/components/releases/CoverArtSection';
 import { CalendarScene } from '@/components/content-calendar/CalendarScene';
@@ -148,6 +150,9 @@ export function ReleaseScenePanel({
   const focusField = scene === 'metadata' && isMetadataFixField(requestedField) ? requestedField : null;
   // Home's money card sends `field=add` to land on Spend with the form open.
   const spendStartAdding = scene === 'spend' && requestedField === SPEND_ADD_FIELD;
+  // "Fan emails" until the rollout can have a smart link (#852), as the menu row says.
+  const smartLinkReady = useSmartLinkReady(scene === 'capture' ? release.id : null);
+  const sceneLabel = scene === 'capture' ? captureRowLabel(smartLinkReady) : SCENE_LABELS[scene];
 
   // Feature-discovery analytics used to ride the route change (a
   // featureRouteMatchers entry for the old /metadata path). With no route change
@@ -164,11 +169,11 @@ export function ReleaseScenePanel({
   // so it won't re-fire just because a scene closed.
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = `${release.title} | ${SCENE_LABELS[scene]} | Urganize`;
+    document.title = `${release.title} | ${sceneLabel} | Urganize`;
     return () => {
       document.title = previousTitle;
     };
-  }, [scene, release.title]);
+  }, [sceneLabel, release.title]);
 
   // The calendar is its own brand island (URG.001 ink/cream/spring, theme-
   // flipped) and brings its own header and month nav — so it gets the island
@@ -209,7 +214,7 @@ export function ReleaseScenePanel({
 
   return (
     <section
-      aria-label={`${release.title} — ${SCENE_LABELS[scene]}`}
+      aria-label={`${release.title} — ${sceneLabel}`}
       // No visible header on any scene (founder, 2026-10-11: "remove this from
       // all the tabs, I don't want the title to appear twice"). The tab strip
       // already names the scene and the rollout header names the release and
@@ -222,7 +227,7 @@ export function ReleaseScenePanel({
       className={`min-w-0 [&>h2+*]:mt-4 ${scene === 'chat' ? 'flex flex-1 flex-col' : ''}`}
     >
       <h2 className="sr-only">
-        {SCENE_LABELS[scene]} for {release.title}
+        {sceneLabel} for {release.title}
         {release.artistName ? ` by ${release.artistName}` : ''}
       </h2>
 

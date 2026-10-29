@@ -105,18 +105,22 @@ async function loadHandoffMembers(
     try {
       const [members, scopes] = await Promise.all([
         loadWorkspaceMembers(admin, workspaceId, viewerId),
-        admin.from('workspace_members').select('id,artist_scope_id').eq('workspace_id', workspaceId),
+        admin.from('workspace_members').select('id,artist_scope_id,release_scope_ids').eq('workspace_id', workspaceId),
       ]);
+      type ScopeRow = { id: string; artist_scope_id: string | null; release_scope_ids: string[] | null };
+      const scopeRows = (scopes.data as ScopeRow[] | null) ?? [];
       const scopeById = new Map<string, string | null>(
-        ((scopes.data as Array<{ id: string; artist_scope_id: string | null }> | null) ?? []).map((row) => [
-          String(row.id),
-          row.artist_scope_id ? String(row.artist_scope_id) : null,
-        ])
+        scopeRows.map((row) => [String(row.id), row.artist_scope_id ? String(row.artist_scope_id) : null])
+      );
+      const releaseScopeById = new Map<string, string[] | null>(
+        scopeRows.map((row) => [String(row.id), Array.isArray(row.release_scope_ids) ? row.release_scope_ids : null])
       );
       for (const member of members) {
         if (!member.userId || member.status !== 'active' || member.role === 'guest') continue;
         const scope = scopeById.get(member.id) ?? null;
         if (scope && release.artist_id && scope !== release.artist_id) continue;
+        const releaseScope = releaseScopeById.get(member.id) ?? null;
+        if (releaseScope && !releaseScope.includes(release.id)) continue;
         people.set(member.userId, member.name || member.email);
       }
     } catch {

@@ -7,7 +7,7 @@ import { isLegacyAppHost } from '@/lib/app-hosts';
 import { buildHandoffUrl } from '@/lib/legacy-host-handoff';
 
 /**
- * On app.urganize.app, moves the visitor to my.urganize.app, signed in if they
+ * On an old host (app. or my.urganize.app), moves the visitor to team.urganize.app, signed in if they
  * were signed in here. Renders nothing anywhere else. See
  * lib/legacy-host-handoff.ts for why the old host still serves the app.
  */

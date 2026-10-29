@@ -460,6 +460,13 @@ html[data-theme='light'] .app-mark-invert {
   filter: invert(1);
 }
 
+/* Partner logos drawn dark on transparent (Altlink's navy wordmark) are the
+   other way round: right on light, invisible on dark. Dark is the baseline,
+   so they turn white everywhere except light (#852). */
+:root:not([data-theme='light']) .partner-logo-invert {
+  filter: brightness(0) invert(1);
+}
+
 /* Content-calendar brand island (URG-157). The ONLY place this feature's
    colors are defined; every component consumes the vars via Tailwind
    arbitrary values. Follows the app's data-theme toggle (founder decision,

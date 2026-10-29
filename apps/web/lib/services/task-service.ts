@@ -34,6 +34,65 @@ export type CompleteTaskResult =
 // still logged when hit, because a silent cap would read as "that's all there is".
 const TASK_LIST_MAX_ROWS = ROWS_PAGE_SIZE * ROWS_MAX_PAGES;
 
+/**
+ * Who is asking, as far as task lists care: the workspaces they belong to and
+ * the limits they carry in each. WorkspaceAccessContext and ChappiToolContext
+ * both satisfy it, so callers pass the whole context.
+ *
+ * Required, not optional (#853): the lists used to take bare workspace ids,
+ * so an artist-limited member read every task on the team. A required field
+ * cannot be forgotten.
+ */
+export type TaskListScope = {
+  workspaceIds: string[];
+  artistScopeByWorkspaceId: Record<string, string>;
+  releaseScopeByWorkspaceId: Record<string, readonly string[]>;
+};
+
+/**
+ * Drop rows the caller's limits hide. Unlimited callers pay nothing. A limited
+ * member never sees a task with no rollout, and sees a rollout's task only
+ * when that rollout passes both limits for the task's workspace.
+ */
+export async function dropRowsOutsideScope<T>(
+  adminClient: SupabaseClient,
+  rows: T[],
+  scope: TaskListScope,
+  pick: (row: T) => { workspaceId: string; releaseId: string | null }
+): Promise<T[]> {
+  const limited = (workspaceId: string) =>
+    Boolean(scope.artistScopeByWorkspaceId[workspaceId] || scope.releaseScopeByWorkspaceId[workspaceId]);
+  if (!rows.some((row) => limited(pick(row).workspaceId))) return rows;
+
+  const artistNeeded = new Set<string>();
+  for (const row of rows) {
+    const { workspaceId, releaseId } = pick(row);
+    if (releaseId && scope.artistScopeByWorkspaceId[workspaceId]) artistNeeded.add(releaseId);
+  }
+  const artistByRelease = new Map<string, string>();
+  if (artistNeeded.size) {
+    const { data, error } = await adminClient
+      .from('releases')
+      .select('id,artist_id')
+      .in('id', Array.from(artistNeeded));
+    if (error) throw error;
+    for (const row of (data || []) as Array<{ id: string; artist_id: string | null }>) {
+      artistByRelease.set(String(row.id), String(row.artist_id || ''));
+    }
+  }
+
+  return rows.filter((row) => {
+    const { workspaceId, releaseId } = pick(row);
+    if (!limited(workspaceId)) return true;
+    if (!releaseId) return false;
+    const releaseScope = scope.releaseScopeByWorkspaceId[workspaceId];
+    if (releaseScope && !releaseScope.includes(releaseId)) return false;
+    const artistScope = scope.artistScopeByWorkspaceId[workspaceId];
+    if (artistScope && artistByRelease.get(releaseId) !== artistScope) return false;
+    return true;
+  });
+}
+
 export class TaskService {
   constructor(private adminClient: SupabaseClient) {}
 
@@ -46,12 +105,13 @@ export class TaskService {
    *
    * Pass `mineOnly: true` to re-narrow to tasks assigned to the user.
    */
-  async getTasksForUser(userId: string, workspaceIds: string[], filters: {
+  async getTasksForUser(userId: string, scope: TaskListScope, filters: {
     releaseId?: string | null;
     priority?: string;
     status?: string;
     mineOnly?: boolean;
   } = {}, timings?: Timings) {
+    const { workspaceIds } = scope;
     // `id` is the last sort key so paging is stable: due date and position are
     // not unique, and a tie could otherwise skip or repeat a row across pages.
     const readRows = () =>
@@ -82,10 +142,14 @@ export class TaskService {
 
     // Tasks of a rollout in Trash stay in the table but never list.
     const liveRows = await dropRowsOfDeletedReleases(this.adminClient, rows, (row) => row.release_id);
-    return loadTasks(this.adminClient, liveRows, userId, undefined, timings);
+    const visibleRows = await dropRowsOutsideScope(this.adminClient, liveRows, scope, (row) => ({
+      workspaceId: String(row.workspace_id || ''),
+      releaseId: row.release_id ? String(row.release_id) : null,
+    }));
+    return loadTasks(this.adminClient, visibleRows, userId, undefined, timings);
   }
 
-  async getWorkspaceTasks(workspaceId: string, userId: string, filters: {
+  async getWorkspaceTasks(workspaceId: string, userId: string, scope: TaskListScope, filters: {
     releaseId?: string | null;
     priority?: string;
     status?: string;
@@ -112,7 +176,11 @@ export class TaskService {
     }
 
     const liveRows = await dropRowsOfDeletedReleases(this.adminClient, rows, (row) => row.release_id);
-    return loadTasks(this.adminClient, liveRows, userId);
+    const visibleRows = await dropRowsOutsideScope(this.adminClient, liveRows, scope, (row) => ({
+      workspaceId: String(row.workspace_id || ''),
+      releaseId: row.release_id ? String(row.release_id) : null,
+    }));
+    return loadTasks(this.adminClient, visibleRows, userId);
   }
 
   async getTaskById(taskId: string, userId: string) {

@@ -15,7 +15,7 @@ describe('OnboardingStepEmail', () => {
   it('renders every step with a first-name greeting, the sign-off and the unsubscribe link', async () => {
     for (const step of ONBOARDING_STEP_KEYS) {
       const { html, text } = await renderEmail(
-        OnboardingStepEmail({ step, recipientName: 'Ada Obi', unsubscribeUrl: 'https://my.urganize.app/unsubscribe?t=x' })
+        OnboardingStepEmail({ step, recipientName: 'Ada Obi', unsubscribeUrl: 'https://team.urganize.app/unsubscribe?t=x' })
       );
       expect(text).toContain('Hey Ada,');
       expect(text).toContain('Founder, Urganize');
@@ -29,7 +29,7 @@ describe('OnboardingStepEmail', () => {
     const { html } = await renderEmail(OnboardingStepEmail({ step: 'day2', recipientName: 'Ada' }));
     expect(html).not.toMatch(/background-color:#7fd99a/i);
     // Straight into the Settings pop-up's team section, not the old /settings page.
-    expect(html).toContain('https://my.urganize.app/dashboard?settings=team');
+    expect(html).toContain('https://team.urganize.app/dashboard/team');
   });
 
   it('greets without a name when the stored one is only an email handle', async () => {
@@ -96,7 +96,7 @@ describe('the founder signs as Wena', () => {
 describe('AnnouncementEmail', () => {
   const base = {
     subject: 'News',
-    body: 'First paragraph.\n\nSee [the plan](https://my.urganize.app/dashboard).',
+    body: 'First paragraph.\n\nSee [the plan](https://team.urganize.app/dashboard).',
     recipientName: 'Ada',
     includeGreeting: true,
     signOff: true,
@@ -104,7 +104,7 @@ describe('AnnouncementEmail', () => {
 
   it('renders the paragraphs and turns the link into a link', async () => {
     const { html, text } = await renderEmail(AnnouncementEmail(base));
-    expect(html).toContain('href="https://my.urganize.app/dashboard"');
+    expect(html).toContain('href="https://team.urganize.app/dashboard"');
     expect(text).toContain('Hey Ada,');
     expect(text).toContain('First paragraph.');
     expectMailSafe(html);
