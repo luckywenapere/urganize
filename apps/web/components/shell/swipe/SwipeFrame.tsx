@@ -114,7 +114,7 @@ export function SwipeFrame({
                   urgans: CHAPPI_ENABLED ? <UrgAnsPane active={tab === 'urgans'} /> : null,
                   artists: (
                     <div className="swipe-page mx-auto w-full max-w-[40rem] px-5">
-                      <ArtistsPageClient swipe />
+                      <ArtistsPageClient swipe active={tab === 'artists'} />
                     </div>
                   ),
                 }}

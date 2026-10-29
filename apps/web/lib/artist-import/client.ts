@@ -98,6 +98,8 @@ export async function saveArtistImport(input: {
   provider: 'deezer' | 'itunes';
   id: string;
   name: string;
+  /** A roster artist to put the releases on, instead of matching by name. */
+  artistId?: string;
 }): Promise<SavedImport> {
   try {
     const token = await getAccessToken();

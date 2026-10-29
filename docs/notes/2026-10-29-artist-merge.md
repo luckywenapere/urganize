@@ -1,0 +1,19 @@
+# Join duplicate artists (2026-10-29, v1.211.0, #865)
+
+Founder approved the mock `docs/mocks/artist-fuse/mock.html` ("yes, build it"). Import joined an existing artist only on an exact name, so "Babyboy Dorian" (from Deezer) sat beside "Dorian" (made by the team) as two artists.
+
+## How it works
+
+- **Match rule** (`lib/artist-merge.ts`, pure, tested): `namesLookAlike` is true when two names are the same once case, accents, spaces and symbols go, or when one name's words sit inside the other's as whole words. Never part of a word ("Dor" vs "Dorian"), never a name under three letters ("DJ").
+- **Who stays** (`chooseSurvivor`): the one the team made (`artists.created_via = 'manual'`) over an imported one, then the one with a photo, then more rollouts, then the older.
+- **Artists page popup** (`components/artists/DuplicateArtistsPrompt.tsx`, mounted in `ArtistsPageClient` for desktop and the phone swipe view): `GET /api/workspace/artists/duplicates` returns pairs only to the team owner and admins (`canJoinArtists`; artist-scoped teammates never). "Join them" and "They're different" go to `POST` on the same route. × / Escape / tapping outside is "not now": the next visit asks again. "They're different" is stored in `artist_merge_dismissals` (ordered pair, `artist_a < artist_b`). The rollout count on the card is counted from the release store, the same count as the list behind it; the server's own count includes rollouts the viewer cannot see.
+- **The join** is the Postgres function `merge_artists(keep, drop)` (service role only), one transaction: moves rollouts (and rewrites `releases.artist_name` and `release_metadata.primary_artist_name` to keep's name), past releases, facts, posts, next records, songs, events, opportunities, grant suggestions, distribution submissions, and teammates' and invite links' artist scope, then deletes drop. Where only one row per artist is allowed (press kit, one fact per topic, one catalogue row per source release) keep's row wins and drop's goes with drop. Keep's photo and brand colours win; drop's fill only what keep lacks.
+- **Import question** (`ImportReleasesDialog`): tapping a result that looks like a roster artist (but is not the exact name, which the import already joins) opens "Add these to Dorian?" inside that row. "Add to Dorian" sends `artistId` to `POST /api/artist-import`. Imports normally save into the person's own workspace (`ensureOwnedWorkspace`), but the roster shown is their primary team's, so when the chosen artist is on that team the route saves onto the artist's team instead, if `canImportOnto` allows it (owner; any non-guest teammate not limited to a different artist). Otherwise 403. "New artist" saves as before.
+- **Migration** `20261029180000_artist_merge.sql`, applied to live 2026-10-29 (backup `artists_backup_20261029`, 68 rows). Backfill set 4 artists to `created_via = 'import'` (first catalogue row within two minutes of the artist).
+
+## Traps
+
+- **A new table pointing at `artists` must be added to `merge_artists`**, or a join either fails (`on delete restrict`), silently loses rows (`cascade`), or orphans them (`set null`). The live list on 2026-10-29: releases, songs, events (restrict); artist_catalogue_releases, artist_facts, artist_posts, next_records, press_kits, workspace_invite_links (cascade); distribution_submissions, grant_suggestions, opportunities, workspace_members (set null).
+- `artist_scope_id` set to null means a teammate sees everything, so the function moves scopes before the delete.
+- Verified on live with a dry run that always raises at the end (so it rolls back): Dorian + Babyboy Dorian moved 4 rollouts and 6 past releases, 17 rollouts carried the name Dorian, the drop row was gone. Nothing was changed. Not verified: a real join from the UI against live (that removes a real artist).
+- Onboarding's import has no roster yet, so it never asks.
