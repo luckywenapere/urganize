@@ -36,7 +36,7 @@ describe('WorkspaceInviteEmail', () => {
   const base = {
     workspaceName: 'Wavefront Records',
     inviterLabel: 'Oyin',
-    inviteUrl: 'https://app.urganize.app/invite/accept?token=abc-123',
+    inviteUrl: 'https://my.urganize.app/invite/accept?token=abc-123',
     accessLabel: 'manager access',
   };
 
@@ -95,7 +95,7 @@ describe('WelcomeEmail', () => {
     const { html, text } = await render(WelcomeEmail({ recipientName: 'Oyin' }));
     for (const part of [html, text]) {
       expect(part).toContain('https://wa.me/2347067367057');
-      expect(part).toContain('https://app.urganize.app');
+      expect(part).toContain('https://my.urganize.app');
     }
     expect(text).toContain('Founder, Urganize');
   });
@@ -115,7 +115,7 @@ describe('CreditSubmissionEmail', () => {
       { label: 'Writing share', value: '50%' },
       { label: 'Society ID (IPI)', value: '00123456789' },
     ],
-    metadataUrl: 'https://app.urganize.app/dashboard?release=rel-1&scene=metadata',
+    metadataUrl: 'https://my.urganize.app/dashboard?release=rel-1&scene=metadata',
   };
 
   it('names who sent it and which rollout in the subject, defaulting blanks', () => {
@@ -181,7 +181,7 @@ describe('TaskAssignedEmail', () => {
     dueDateLabel: 'Fri, Sep 4',
     priorityLabel: 'High priority',
     note: 'Brief for the designer is in the files.',
-    taskUrl: 'https://app.urganize.app/dashboard?release=rel-1',
+    taskUrl: 'https://my.urganize.app/dashboard?release=rel-1',
   };
 
   it('reads as a note from the assigner in the subject', () => {
@@ -200,8 +200,8 @@ describe('TaskAssignedEmail', () => {
     // react-email inserts <!-- --> markers between adjacent JSX nodes, so the
     // footer sentence is split in the HTML but intact in the plain-text part.
     expect(text).toContain('Oyin Wenapere assigned the activity to you');
-    expect(html).toContain('https://app.urganize.app/dashboard?release=rel-1');
-    expect(text).toContain('https://app.urganize.app/dashboard?release=rel-1');
+    expect(html).toContain('https://my.urganize.app/dashboard?release=rel-1');
+    expect(text).toContain('https://my.urganize.app/dashboard?release=rel-1');
     expect(/background-color:#0d120e/i.test(html)).toBe(false);
     expectMailSafe(html);
   });
@@ -240,7 +240,7 @@ describe('WorkRequestEmail', () => {
     senderName: 'Oyin',
     roleLabel: 'Graphic designer',
     note: 'Cover art for an EP dropping in October.',
-    settingsUrl: 'https://app.urganize.app/settings#directory',
+    settingsUrl: 'https://my.urganize.app/settings#directory',
   };
 
   it('names the sender and role in the subject', () => {
@@ -299,7 +299,7 @@ describe('WorkRequestAnswerEmail', () => {
       WorkRequestAnswerEmail({
         ...answered,
         interested: true,
-        profileUrl: 'https://app.urganize.app/p/dami-cole',
+        profileUrl: 'https://my.urganize.app/p/dami-cole',
       })
     );
     expect(withPage.html).toContain('/p/dami-cole');
@@ -312,7 +312,7 @@ describe('NotifyAdminEmail', () => {
   const input = {
     requesterLabel: 'Tolu',
     teamName: 'Midnight Records',
-    activateUrl: 'https://app.urganize.app/locked',
+    activateUrl: 'https://my.urganize.app/locked',
   };
 
   it('names the person asking and links where they activate', async () => {
@@ -322,7 +322,7 @@ describe('NotifyAdminEmail', () => {
     expect(notifyAdminSubject('', null)).toBe('A teammate is waiting on your team in Urganize');
     const { html, text } = await render(NotifyAdminEmail(input));
     expect(text).toContain('Tolu');
-    expect(html).toContain('https://app.urganize.app/locked');
+    expect(html).toContain('https://my.urganize.app/locked');
     // Reassures the admin nothing was lost.
     expect(text).toContain('still there');
     expect(html).toContain('still there');
@@ -376,7 +376,7 @@ describe('FounderBillingAlertEmail', () => {
 });
 
 describe('ReferralRewardEmail', () => {
-  const props = { recipientName: 'Ada Okafor', credits: 100, creditsUrl: 'https://app.urganize.app/dashboard/credits' };
+  const props = { recipientName: 'Ada Okafor', credits: 100, creditsUrl: 'https://my.urganize.app/dashboard/credits' };
 
   it('puts the amount in the subject', () => {
     expect(referralRewardSubject(100)).toBe('You earned 100 credits');
@@ -386,7 +386,7 @@ describe('ReferralRewardEmail', () => {
     const { html, text } = await render(ReferralRewardEmail(props));
     expect(text).toContain('Hey Ada,');
     expect(text).toContain('A team you invited just subscribed, so we added 100 credits to your balance.');
-    expect(html).toContain('https://app.urganize.app/dashboard/credits');
+    expect(html).toContain('https://my.urganize.app/dashboard/credits');
     expectMailSafe(html);
   });
 

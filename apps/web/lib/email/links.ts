@@ -1,3 +1,4 @@
+import { APP_ORIGIN } from '../app-hosts';
 // Constant links used inside email bodies. React-free leaf module, so templates
 // and tasks-server can import it with no cycle and no react-email pulled along.
 //
@@ -7,7 +8,7 @@
 // welcome and assignment notes have always used (matching the old
 // lib/email-templates.ts APP_URL), which is correct: those emails only ever go
 // out from production.
-export const APP_URL = 'https://app.urganize.app';
+export const APP_URL = APP_ORIGIN;
 
 /** The founder's WhatsApp deep link — the app's real support channel. The
  *  welcome note points here rather than a support@ address because this is where

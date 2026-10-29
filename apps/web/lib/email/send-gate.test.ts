@@ -40,7 +40,7 @@ describe('sendEmail unsubscribe and suppression', () => {
     await sendWelcome();
     const input = sendViaResend.mock.calls[0][1];
     expect(input.headers['List-Unsubscribe']).toMatch(
-      /^<https:\/\/app\.urganize\.app\/api\/email\/unsubscribe\?t=/
+      /^<https:\/\/my\.urganize\.app\/api\/email\/unsubscribe\?t=/
     );
     expect(input.headers['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click');
     expect(input.html).toContain('/unsubscribe?t=');
@@ -60,7 +60,7 @@ describe('sendEmail unsubscribe and suppression', () => {
     const result = await sendEmail(admin, {
       templateId: 'notify_admin',
       to: 'ada@example.com',
-      props: { requesterLabel: 'Bo', teamName: 'T', activateUrl: 'https://app.urganize.app/locked' },
+      props: { requesterLabel: 'Bo', teamName: 'T', activateUrl: 'https://my.urganize.app/locked' },
       trigger: 'test',
     });
     expect(isSuppressed).not.toHaveBeenCalled();

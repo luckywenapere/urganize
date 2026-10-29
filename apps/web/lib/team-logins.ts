@@ -27,7 +27,7 @@ export type TeamLoginState = 'active' | 'revoked' | 'expired';
 
 export type TeamLogin = {
   id: string;
-  /** The full shareable URL — app.urganize.app/join/<code>. */
+  /** The full shareable URL — go.urganize.app/join/<code>. */
   url: string;
   label: string | null;
   /** Title of the release whose creation minted this link, when it had one. */

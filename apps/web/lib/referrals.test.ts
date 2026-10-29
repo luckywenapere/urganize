@@ -79,7 +79,7 @@ describe('codes', () => {
   });
 
   it('builds the link a partner shares', () => {
-    expect(referralLink('SOUNDWAVE')).toBe('https://app.urganize.app/onboarding?ref=SOUNDWAVE');
+    expect(referralLink('SOUNDWAVE')).toBe('https://go.urganize.app/onboarding?ref=SOUNDWAVE');
     expect(referralLink('X Y', 'https://example.com/')).toBe('https://example.com/onboarding?ref=X%20Y');
   });
 });

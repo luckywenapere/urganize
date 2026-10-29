@@ -1,3 +1,4 @@
+import { APP_ORIGIN, shareOrigin } from './app-hosts';
 /**
  * Referral partners and their commission. Pure: no database, no React.
  *
@@ -63,8 +64,8 @@ export function normalizeReferralCode(raw: unknown): string | null {
 
 /** The link a partner shares. The marketing site's signup button points at the
  *  app's onboarding, and `ref` rides along. */
-export function referralLink(code: string, appOrigin = 'https://app.urganize.app'): string {
-  return `${appOrigin.replace(/\/+$/, '')}/onboarding?ref=${encodeURIComponent(code)}`;
+export function referralLink(code: string, appOrigin: string = APP_ORIGIN): string {
+  return `${shareOrigin(appOrigin)}/onboarding?ref=${encodeURIComponent(code)}`;
 }
 
 /** A tag is only accepted on a team this new. After that a code typed into a

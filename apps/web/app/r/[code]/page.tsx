@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import FriendLinkClient from './FriendLinkClient';
 
-// A held account's waitlist share link, app.urganize.app/r/<code>
+// A held account's waitlist share link, go.urganize.app/r/<code>
 // (2026-10-23). See lib/waitlist-share.ts.
 export const metadata: Metadata = {
   title: "You're invited to join the waitlist",

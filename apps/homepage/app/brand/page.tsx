@@ -58,7 +58,7 @@ const COLORS = [
   { name: "Ink", hex: "#171311", note: "Primary text", border: false },
   { name: "Accent green", hex: "#3f7e5c", note: "Marketing emphasis + links (light)", border: false },
   { name: "Accent green (dark)", hex: "#6ee99b", note: "Same accent on dark surfaces", border: false },
-  { name: "Product green", hex: "#7fd99a", note: "The app UI accent (app.urganize.app)", border: false },
+  { name: "Product green", hex: "#7fd99a", note: "The app UI accent (my.urganize.app)", border: false },
 ] as const;
 
 const FONTS = [
@@ -344,7 +344,7 @@ export default function BrandPage() {
               ))}
             </div>
             <p className={`mt-3 text-xs ${bodyText}`}>
-              The product app (app.urganize.app) uses its own fonts: IBM Plex Sans, Space Grotesk,
+              The product app (my.urganize.app) uses its own fonts: IBM Plex Sans, Space Grotesk,
               and JetBrains Mono.
             </p>
 

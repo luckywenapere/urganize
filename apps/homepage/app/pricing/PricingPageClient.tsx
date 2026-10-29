@@ -23,7 +23,7 @@ import { PageDawn } from "../components/marketing/PageDawn";
 //
 // What made removing the gate the right trade rather than a shortcut: THIS PAGE
 // HAS NO RISK SURFACE. Every CTA is a mailto in both modes and nothing here
-// links to app.urganize.app, so the rollback lever was never protecting money —
+// links to my.urganize.app, so the rollback lever was never protecting money —
 // it was protecting a headline. Reverting it is a one-line code change either
 // way.
 //

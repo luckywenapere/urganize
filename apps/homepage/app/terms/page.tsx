@@ -57,7 +57,7 @@ export default function TermsPage() {
                 {CORE_LINE}{" "}
                 It is operated by Urganization, based in
                 Nigeria (&ldquo;we&rdquo;, &ldquo;our&rdquo;, &ldquo;us&rdquo;).
-                The service runs at urganize.app and app.urganize.app.
+                The service runs at urganize.app and my.urganize.app.
               </p>
             </Section>
 

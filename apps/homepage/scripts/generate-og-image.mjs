@@ -12,7 +12,7 @@
 //
 // It writes the SAME bytes to both apps, because both reference
 // `/opengraph-image.png` on their own origin and a card that disagreed between
-// urganize.app and app.urganize.app would be a worse bug than a stale one.
+// urganize.app and my.urganize.app would be a worse bug than a stale one.
 //
 // AFTER RUNNING IT, TWO THINGS MUST MOVE WITH THE IMAGE or the change is only
 // half applied:

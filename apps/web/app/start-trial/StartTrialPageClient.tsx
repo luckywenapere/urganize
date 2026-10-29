@@ -249,10 +249,10 @@ export default function StartTrialPageClient() {
                     Trials are set up on the web. Visit{' '}
                     <button
                       type="button"
-                      onClick={() => openExternalUrl('https://app.urganize.app/start-trial')}
+                      onClick={() => openExternalUrl('https://my.urganize.app/start-trial')}
                       className="underline text-content-primary hover:text-brand"
                     >
-                      app.urganize.app
+                      my.urganize.app
                     </button>{' '}
                     in your browser to add a card and start your {TRIAL_DAYS}-day
                     free trial, then come back here.

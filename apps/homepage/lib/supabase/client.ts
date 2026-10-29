@@ -3,7 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 // Points at the SAME Supabase project apps/web uses (shared auth.users pool)
 // -- see supabase/migrations/20260713_add_roadmap_feature_voting.sql. This is
 // a SEPARATE client instance with its own session (localStorage is
-// origin-scoped, so urganize.app and app.urganize.app never share a session
+// origin-scoped, so urganize.app and my.urganize.app never share a session
 // -- no SSO, by design). Never point these env vars at a different project.
 //
 // Lazily constructed (unlike apps/web's equivalent, which throws eagerly at

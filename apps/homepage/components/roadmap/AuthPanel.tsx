@@ -10,7 +10,7 @@ type Mode = "sign_in" | "sign_up";
  * /auth flow (separate session, same auth.users pool -- see
  * lib/supabase/client.ts). Every call passes an EXPLICIT redirect target
  * rather than relying on the Supabase project's shared Site URL, which
- * defaults to app.urganize.app -- omitting this would strand homepage users
+ * defaults to my.urganize.app -- omitting this would strand homepage users
  * on the wrong domain after a confirmation email or OAuth round-trip.
  */
 export function AuthPanel({ onClose }: { onClose?: () => void }) {

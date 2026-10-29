@@ -48,7 +48,7 @@ export function isInviteLinkToken(token: string): boolean {
 }
 
 // ── Short join codes (founder request, 2026-07-23) ─────────────────────────
-// The presentable Linear-style form: app.urganize.app/join/<code>, backed by
+// The presentable Linear-style form: go.urganize.app/join/<code>, backed by
 // the workspace_invite_links table. The stateless wl.* tokens above remain
 // verifiable so links minted before the table existed keep working until
 // they expire.

@@ -1,7 +1,8 @@
+import { shareOrigin } from './app-hosts';
 // Held accounts share a link to move up the line (2026-10-23).
 // Pure rules and copy, safe for the client. Server half: waitlist-share-server.ts.
 //
-// A held account (not let in yet) gets a personal link, app.urganize.app/r/<code>.
+// A held account (not let in yet) gets a personal link, go.urganize.app/r/<code>.
 // Each other account that signs up through it is one friend. FRIENDS_NEEDED
 // friends lets the sharer in. A friend stays held themselves and gets a link of
 // their own.
@@ -40,7 +41,7 @@ export function makeShareCode(randomByte: (i: number) => number): string {
 }
 
 export function buildShareUrl(origin: string, code: string): string {
-  return `${origin.replace(/\/+$/, '')}/r/${code}`;
+  return `${shareOrigin(origin)}/r/${code}`;
 }
 
 export function buildShareMessage(url: string): string {

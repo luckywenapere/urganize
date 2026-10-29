@@ -9,6 +9,7 @@ import {
 } from '@/lib/press-kits';
 import { authHeaders, readError } from './press-kit-client';
 import type { PressKit, PressKitSection, PressKitVisibility } from '@/types/press-kits';
+import { currentShareOrigin } from '@/lib/app-hosts';
 
 /**
  * Publishing a kit, and everything about the link it lives at.
@@ -55,7 +56,7 @@ export function PublishPanel({
   const [copied, setCopied] = useState(false);
 
   const publicUrl = useMemo(() => {
-    const origin = typeof window === 'undefined' ? '' : window.location.origin;
+    const origin = currentShareOrigin();
     return `${origin}/k/${kit.slug}`;
   }, [kit.slug]);
 

@@ -80,6 +80,7 @@ import {
   type SendBody,
 } from '@/lib/pitch-credits-client';
 import { CuratorFace } from './CuratorFace';
+import { currentShareOrigin } from '@/lib/app-hosts';
 
 type Props = {
   releaseId: string;
@@ -148,7 +149,7 @@ export function CreditPitchPicker({
   const [selected, setSelected] = useState<string[]>([]);
   const [songUrl, setSongUrl] = useState('');
   const attachKit = Boolean(kitUrl || kitReady);
-  const origin = typeof window === 'undefined' ? '' : window.location.origin;
+  const origin = currentShareOrigin();
   const room = noteRoom(attachKit ? kitUrl || longestKitUrl(origin) : null, MAX_PITCH_NOTE_LENGTH);
   const [note, setNote] = useState('');
   const [noteTouched, setNoteTouched] = useState(false);

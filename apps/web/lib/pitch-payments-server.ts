@@ -57,6 +57,7 @@ import {
 import { sendPushToUsers } from './push-server';
 import { sendEmail } from './email';
 import { logBillingEvent } from './billing-events-server';
+import { APP_ORIGIN } from './app-hosts';
 
 export const PITCHES_TABLE = 'playlist_pitches';
 export const CURATOR_PROFILES_TABLE = 'curator_profiles';
@@ -72,7 +73,7 @@ const APP_SETTINGS_TABLE = 'app_settings';
 const BANKS_SETTINGS_KEY = 'paystack_banks_ng';
 const BANKS_TTL_MS = 24 * 60 * 60 * 1000;
 
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL?.trim() || 'https://app.urganize.app').replace(/\/$/, '');
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL?.trim() || APP_ORIGIN).replace(/\/$/, '');
 
 // ─── who is who ──────────────────────────────────────────────────────────────
 

@@ -39,7 +39,7 @@ import { shareFile, shareText } from './src/share';
 import { finishShare, readSharedChunk, registerShare } from './src/shareIntent';
 import { useShareIntent } from 'expo-share-intent';
 
-const APP_URL = 'https://app.urganize.app';
+const APP_URL = 'https://my.urganize.app';
 const SHELL_VERSION = Constants.expoConfig?.version ?? 'unknown';
 
 // The splash stays up until the first page finishes loading. This is the

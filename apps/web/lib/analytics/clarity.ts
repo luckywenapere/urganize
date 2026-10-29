@@ -1,5 +1,5 @@
 // Microsoft Clarity: heatmaps and session recordings, beside PostHog
-// (2026-10-18, founder asked for Clarity on app.urganize.app).
+// (2026-10-18, founder asked for Clarity on my.urganize.app).
 //
 // Same rules as PostHog:
 // - Loads after the page is usable (window load + idle), never during

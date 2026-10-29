@@ -205,7 +205,7 @@ describe('event payloads carry no names, contacts or titles', () => {
 
 describe('sharing your own page', () => {
   it('builds the page address and refuses a bad slug', () => {
-    expect(publicProfileUrl('https://app.urganize.app/', 'tobi-ade')).toBe('https://app.urganize.app/p/tobi-ade');
+    expect(publicProfileUrl('https://app.urganize.app/', 'tobi-ade')).toBe('https://go.urganize.app/p/tobi-ade');
     expect(publicProfileUrl('https://app.urganize.app', '../x')).toBeNull();
   });
 

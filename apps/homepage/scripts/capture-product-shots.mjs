@@ -11,7 +11,7 @@
 //   pnpm --filter @urganize/homepage shots -- --mode=seed  seed the demo team (one-off)
 //   pnpm --filter @urganize/homepage shots -- --mode=all   seed, then capture
 //
-// Flags: --base=https://app.urganize.app  --release=<id>  --epk=<token>
+// Flags: --base=https://my.urganize.app  --release=<id>  --epk=<token>
 //        --hero-title="Harmattan Gold"  --login-timeout=900000
 //        --refresh-covers[=renamed]  (redraw cover art, all or renamed artists only)
 //        --anonymise="Real Name=Dami Okafor"  (swap the signed-in person's
@@ -69,7 +69,7 @@ const args = Object.fromEntries(
   }),
 );
 const MODE = args.mode ?? "capture";
-const BASE = (args.base ?? "https://app.urganize.app").replace(/\/$/, "");
+const BASE = (args.base ?? "https://my.urganize.app").replace(/\/$/, "");
 const LOGIN_TIMEOUT_MS = Number(args["login-timeout"] ?? 15 * 60 * 1000);
 const ONLY = args.only ? new Set(args.only.split(",").map((s) => s.trim())) : null;
 

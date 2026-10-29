@@ -102,7 +102,7 @@ describe('the marketing site redirect', () => {
     for (const [cookie, search] of cases) {
       expect(runScript(cookie, search) !== null).toBe(shouldRedirectToApp(cookie, search));
     }
-    expect(runScript(`${LOGIN_COOKIE_NAME}=1`, '')).toBe('https://app.urganize.app/');
+    expect(runScript(`${LOGIN_COOKIE_NAME}=1`, '')).toBe('https://my.urganize.app/');
   });
 
   it('fails open when the page cannot read cookies', () => {

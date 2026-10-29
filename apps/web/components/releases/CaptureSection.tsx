@@ -16,6 +16,7 @@ import { useSceneDataStore } from '@/stores/useSceneDataStore';
 import { useCaptureAutosave } from './useCaptureAutosave';
 import { CaptureEditor } from './CaptureEditor';
 import { CaptureChecklist } from './CaptureChecklist';
+import { currentShareOrigin } from '@/lib/app-hosts';
 
 /**
  * The fan-capture manager (2026-08-14). Self-contained: takes releaseId,
@@ -96,7 +97,7 @@ export function CaptureSection({ releaseId, onToast, embedded = false, quiet = f
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const shareUrl = page
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/capture/${page.shareToken}`
+    ? `${currentShareOrigin()}/capture/${page.shareToken}`
     : '';
 
   // Server truth for the autosave hook to seed from. Memoized on the fields it

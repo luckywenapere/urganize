@@ -1,3 +1,4 @@
+import { shareOrigin } from './app-hosts';
 /**
  * The profile growth loop (2026-10-11): credits, then a claim, then a public
  * page at /p/{slug} that the person shares to get work, and that sends the
@@ -89,11 +90,12 @@ export function profileWhatsappHref(url: string): string {
   return `https://wa.me/?text=${encodeURIComponent(profileShareText(url))}`;
 }
 
-/** The public page's address on a given origin. Null for a bad slug. */
+/** The public page's address, on go.urganize.app when made on a product host
+ *  (lib/app-hosts.ts). Null for a bad slug. */
 export function publicProfileUrl(origin: string, slug: string): string | null {
   const clean = normalizeSlug(slug);
   if (!clean) return null;
-  return `${origin.replace(/\/+$/, '')}/p/${clean}`;
+  return `${shareOrigin(origin)}/p/${clean}`;
 }
 
 // ---------------------------------------------------------------------------

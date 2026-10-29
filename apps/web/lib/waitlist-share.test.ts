@@ -41,7 +41,7 @@ describe('waitlist share rules', () => {
 
   it('builds the link, message and labels', () => {
     const url = buildShareUrl('https://app.urganize.app/', 'ABCDEFGH');
-    expect(url).toBe('https://app.urganize.app/r/ABCDEFGH');
+    expect(url).toBe('https://go.urganize.app/r/ABCDEFGH');
     expect(buildShareMessage(url)).toContain(url);
     expect(buildShareMessage(url)).not.toMatch(/—|start free|sign up|get started/i);
     expect(SHARE_COPY.progress(1)).toBe('1 of 3 joined. Each friend who joins moves you up.');

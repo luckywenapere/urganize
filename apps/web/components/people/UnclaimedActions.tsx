@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { whatsappShareHref } from '@/lib/claim-copy';
+import { currentShareOrigin } from '@/lib/app-hosts';
 
 // The two buttons on an unclaimed page (URG-304): Claim this profile, and
 // Invite <first name>.
@@ -56,7 +57,7 @@ export function UnclaimedActions({ slug, displayName }: { slug: string; displayN
   }
 
   async function invite() {
-    const url = `${window.location.origin}/p/${slug}`;
+    const url = `${currentShareOrigin()}/p/${slug}`;
     const text = `${firstName}, your page on Urganize: ${url}`;
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       try {

@@ -32,6 +32,7 @@ import {
   type BriefPayload,
   type BriefReference,
 } from '@/lib/release-brief';
+import { currentShareOrigin } from '@/lib/app-hosts';
 
 /**
  * The release brief scene (URG-281): one page per rollout for the whole team.
@@ -229,7 +230,7 @@ function ShareSheet({
 
   const copy = async () => {
     if (!brief.share.token) return;
-    const url = `${window.location.origin}/brief/${brief.share.token}`;
+    const url = `${currentShareOrigin()}/brief/${brief.share.token}`;
     try {
       await navigator.clipboard.writeText(url);
       onToast('Link copied.', 'success');

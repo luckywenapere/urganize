@@ -4,7 +4,7 @@ import { safeInviteNextPath } from '@/lib/rollout-ideas';
 import InviteAcceptPageClient from '@/app/invite/accept/InviteAcceptPageClient';
 
 // The presentable invite-link entry point (founder request, 2026-07-23):
-// app.urganize.app/join/<code>, Linear-style. It used to redirect to
+// go.urganize.app/join/<code>, Linear-style. It used to redirect to
 // /invite/accept?token=<code>, and that page showed "Loading invite" until
 // JavaScript arrived. It now renders the same invite page itself with the
 // invite already read on the server, so the HTML a phone gets on weak data

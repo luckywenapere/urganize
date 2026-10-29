@@ -36,6 +36,7 @@ import { publishReleaseKitLink } from '@/lib/pitch-kit-client';
 import { longestKitUrl, noteRoom, noteWithKit } from '@/lib/pitch-kit-link';
 import { groupPlaylistsByCurator, type CuratorGroup } from '@/lib/curator-groups';
 import { CuratorFace } from './CuratorFace';
+import { currentShareOrigin } from '@/lib/app-hosts';
 
 type CuratorPickerProps = {
   releaseId: string;
@@ -229,7 +230,7 @@ function PitchSheet({
   // Room for the kit line is kept whether or not the kit is live yet: it goes
   // live on send when the story is in.
   const attachKit = Boolean(kitUrl || kitReady);
-  const origin = typeof window === 'undefined' ? '' : window.location.origin;
+  const origin = currentShareOrigin();
   const room = noteRoom(attachKit ? kitUrl || longestKitUrl(origin) : null, MAX_PITCH_NOTE_LENGTH);
   const [note, setNote] = useState(() => pitchNoteFromStory(story, room));
   const [sending, setSending] = useState(false);

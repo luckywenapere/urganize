@@ -1,7 +1,7 @@
 import { Space_Mono, Young_Serif } from "next/font/google";
 
 // The homepage wears the product's own type (2026-10-17, URG-334): Young Serif
-// for display and Space Mono for meta, the same pair app.urganize.app uses.
+// for display and Space Mono for meta, the same pair my.urganize.app uses.
 // Since 2026-10-18 (URG-383) every marketing page wears it: app/layout.tsx
 // puts these variables on <html> and globals.css points --font-display and
 // --font-mono at them. The homepage still adds them on `.home-v2` too; it is

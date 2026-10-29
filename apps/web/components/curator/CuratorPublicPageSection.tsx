@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react';
 import { CopyLinkButton } from '@/components/shared/CopyLinkButton';
 import { curatorPagePath, isValidCuratorSlug } from '@/lib/curator-public';
 import { useCuratorStore } from '@/stores/useCuratorStore';
+import { currentShareOrigin } from '@/lib/app-hosts';
 
 export function CuratorPublicPageSection() {
   const profile = useCuratorStore((state) => state.profile);
@@ -28,7 +29,7 @@ export function CuratorPublicPageSection() {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
 
-  useEffect(() => setOrigin(window.location.origin), []);
+  useEffect(() => setOrigin(currentShareOrigin()), []);
 
   if (!profile) return null;
 

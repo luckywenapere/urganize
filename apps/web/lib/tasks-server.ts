@@ -54,6 +54,7 @@ import { claimPendingWorkspaceInvite } from '@/lib/invite-claims-server';
 import { isAppAccessAllowed } from '@/lib/access-gate-server';
 import { isEditorialPitchTask, isPitchReminderType } from '@/lib/editorial-pitch';
 import { dropRowsOfDeletedReleases, findDeletedReleaseIds } from '@/lib/rollout-trash-server';
+import { APP_ORIGIN, shareOrigin } from '@/lib/app-hosts';
 
 export const WORKSPACES_TABLE = 'workspaces';
 export const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
@@ -2411,7 +2412,7 @@ export function resolveAppBaseUrl(): string {
   // Vercel SSO login, so invite links minted from it were unopenable for
   // anyone without a Vercel account (found 2026-07-23 when a real invite
   // hit the SSO wall). NEXT_PUBLIC_APP_URL, when set, still wins above.
-  if (process.env.VERCEL_ENV === 'production') return 'https://app.urganize.app';
+  if (process.env.VERCEL_ENV === 'production') return APP_ORIGIN;
   const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
   if (vercelHost) return `https://${vercelHost}`;
   return 'http://localhost:3000';
@@ -2458,14 +2459,14 @@ export function buildInviteUrl(token: string): string {
  * request, 2026-07-23 — Linear-style). The route redirects into the same
  * /invite/accept flow. */
 export function buildJoinUrl(code: string): string {
-  return `${resolveAppBaseUrl()}/join/${encodeURIComponent(code)}`;
+  return `${shareOrigin(resolveAppBaseUrl())}/join/${encodeURIComponent(code)}`;
 }
 
 /** Curator invite links: /curator/join/<code>. Kept here so every invite URL
  * in the product resolves its base the same way, including the canonical-domain
  * fallback that stops a link pointing at an SSO-walled deployment host. */
 export function buildCuratorJoinUrl(code: string): string {
-  return `${resolveAppBaseUrl()}/curator/join/${encodeURIComponent(code)}`;
+  return `${shareOrigin(resolveAppBaseUrl())}/curator/join/${encodeURIComponent(code)}`;
 }
 
 export function buildWorkspaceMembersResponse(

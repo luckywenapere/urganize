@@ -36,6 +36,7 @@ import { HelpTip } from '@/components/shared/HelpTip';
 import { HELP_COPY, type HelpKey } from '@/lib/help-copy';
 import { useSceneData } from './useSceneData';
 import { useSceneDataStore, type MetadataScenePayload } from '@/stores/useSceneDataStore';
+import { currentShareOrigin } from '@/lib/app-hosts';
 
 // The metadata hub (URG-108). Self-contained (the EpkSection pattern): takes
 // releaseId, fetches its own data, renders its own loading/empty/error
@@ -286,7 +287,7 @@ export function MetadataSection({
   const [isExporting, setIsExporting] = useState(false);
 
   const shareUrl = link
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/credits/${link.shareToken}`
+    ? `${currentShareOrigin()}/credits/${link.shareToken}`
     : '';
   /** A closed link still resolves: the public page shows a "this request is
    * closed" message instead of the form, so the URL stays valid and reopening
@@ -494,7 +495,7 @@ export function MetadataSection({
       });
       if (outcome === 'unsupported') {
         onToast?.(
-          'This app version cannot save files. Open app.urganize.app in your browser and export from there.',
+          'This app version cannot save files. Open my.urganize.app in your browser and export from there.',
           'warning'
         );
       } else if (outcome === 'downloaded') {

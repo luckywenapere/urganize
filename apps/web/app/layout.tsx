@@ -3,6 +3,9 @@ import type { ReactNode } from 'react';
 import { Instrument_Sans, Young_Serif, Space_Mono } from 'next/font/google';
 import { AppShell } from '@/components/app/AppShell';
 import { CursorRefresher } from '@/components/app/CursorRefresher';
+import { LegacyHostHandoff } from '@/components/app/LegacyHostHandoff';
+import { APP_ORIGIN } from '@/lib/app-hosts';
+import { LEGACY_HOST_EARLY_SCRIPT } from '@/lib/legacy-host-handoff';
 import { NavPendingBar } from '@/components/app/NavPendingBar';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import { BRAND_LINE, CANONICAL_DESCRIPTION } from '@/lib/positioning';
@@ -53,7 +56,7 @@ function getMetadataBase() {
   // lib/tasks-server.ts resolveAppBaseUrl). NEXT_PUBLIC_APP_URL still wins.
   const configuredUrl =
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    (process.env.VERCEL_ENV === 'production' ? 'https://app.urganize.app' : '') ||
+    (process.env.VERCEL_ENV === 'production' ? APP_ORIGIN : '') ||
     process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ||
     process.env.VERCEL_URL?.trim();
 
@@ -141,6 +144,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`dark ${TEXTILE_ENABLED ? 'urg-textile ' : ''}${instrumentSans.variable} ${youngSerif.variable} ${spaceMono.variable}`}
     >
       <head>
+        {/* First, so a sign-in link that lands on the old host moves to the
+            new one before supabase-js can read it (lib/legacy-host-handoff.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: LEGACY_HOST_EARLY_SCRIPT }} />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -266,6 +272,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="app-body bg-bg-base text-content-primary antialiased">
+        <LegacyHostHandoff />
         <CursorRefresher />
         <NavPendingBar />
         <PostHogProvider>

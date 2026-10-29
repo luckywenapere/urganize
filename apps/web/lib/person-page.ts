@@ -71,7 +71,7 @@ export function shareCardPath(slug: string): string {
   return `/p/${encodeURIComponent(slug)}/card`;
 }
 
-/** "app.urganize.app/p/tobi" from a full url: what the card prints. The host
+/** "go.urganize.app/p/tobi" from a full url: what the card prints. The host
  *  stays whole, so the printed link is one that works when typed. */
 export function displayLink(url: string): string {
   return url.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '');

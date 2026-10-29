@@ -8,7 +8,7 @@ import { readDeployVersion } from '@/lib/deploy-version';
  * silently did not ship (a Vercel deployment cap, a skipped build) looked
  * exactly like a merge that did. This makes the check two lines:
  *
- *   curl -s https://app.urganize.app/api/version
+ *   curl -s https://my.urganize.app/api/version
  *   git rev-parse --short origin/main
  *
  * Matching shas mean live is current. See lib/deploy-version.ts for what this

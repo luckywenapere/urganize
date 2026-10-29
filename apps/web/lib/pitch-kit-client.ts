@@ -1,6 +1,7 @@
 'use client';
 
 import { supabase } from '@/lib/supabase/client';
+import { currentShareOrigin } from '@/lib/app-hosts';
 export { kitNoteLine, noteWithKit, noteRoom } from '@/lib/pitch-kit-link';
 
 export type PublishKitResponse =
@@ -33,7 +34,7 @@ export async function publishReleaseKitLink(releaseId: string): Promise<PublishK
 }
 
 export function absoluteKitUrl(path: string): string {
-  const origin = typeof window === 'undefined' ? '' : window.location.origin;
+  const origin = currentShareOrigin();
   return `${origin}${path}`;
 }
 

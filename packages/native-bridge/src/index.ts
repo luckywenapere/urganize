@@ -523,7 +523,7 @@ export function isSameOriginPath(url: unknown): url is string {
   if (typeof url !== 'string' || !url.startsWith('/')) return false;
   if (url.startsWith('//') || url.startsWith('/\\')) return false;
   try {
-    const base = 'https://app.urganize.app';
+    const base = 'https://my.urganize.app';
     return new URL(url, base).origin === base;
   } catch {
     return false;
