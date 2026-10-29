@@ -26,7 +26,7 @@ export const ROLLOUT_MENU_FLAGS: RolloutMenuFlags = {
   notes: process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true',
   coverArt: process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true',
   files: process.env.NEXT_PUBLIC_FEATURE_FILES === 'true',
-  // One Promote entry: the Altlink pre-save link plus fan capture (cut on its
-  // own Oct 16, 2026; brought back inside this view).
-  capture: (process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true' || process.env.NEXT_PUBLIC_FEATURE_ALTLINK !== 'false'),
+  // Fan emails are off and the smart link lives on Distribute (Oct 29, 2026,
+  // #872), so the rollout has no Fan emails / Smart link row.
+  capture: process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true',
 };

@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.212.1",
+    tag: "Rollouts",
+    date: "October 29, 2026",
+    highlights: [
+      "Fan emails are gone from rollouts. Your smart link lives in Distribute.",
+    ],
+  },
+  {
     version: "1.212.0",
     title: "Finished work out of the way",
     tag: "Rollouts",

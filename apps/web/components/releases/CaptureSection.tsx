@@ -31,7 +31,7 @@ import { currentShareOrigin } from '@/lib/app-hosts';
  * NEXT_PUBLIC_ prefix so the value is inlined at build time for this client
  * component. The API routes guard the same flag server-side (404 when off).
  */
-const CAPTURE_ENABLED = (process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true' || process.env.NEXT_PUBLIC_FEATURE_ALTLINK !== 'false');
+const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 
 async function getAccessToken(): Promise<string> {
   const {

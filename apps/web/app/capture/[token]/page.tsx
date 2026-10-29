@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { createAdminClient } from '@/app/api/_shared/auth';
 import { isAltlinkEnabled } from '@/lib/altlink/rules';
 import { loadLiveSmartLinkUrl } from '@/lib/altlink/server';
-import { loadPublicCapturePage } from '@/lib/capture-server';
+import { isCaptureFeatureEnabled, loadCaptureReleaseId, loadPublicCapturePage } from '@/lib/capture-server';
 import { CaptureLeadForm } from '@/components/capture/CaptureLeadForm';
 
 // The public fan-capture page (2026-08-14). Server component, no auth: the
@@ -55,7 +55,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function PublicCapturePage({ params }: PageProps) {
   const { token } = await params;
   const page = await loadPublicCapturePage(token);
-  if (!page) notFound();
+  if (!page) {
+    // Fan emails are off (#872): an old fan page link goes to the rollout's
+    // live smart link when it has one, and is a 404 otherwise.
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+    const releaseId = !isCaptureFeatureEnabled() && isAltlinkEnabled() && supabaseUrl ? await loadCaptureReleaseId(token) : null;
+    const admin = releaseId && supabaseUrl ? createAdminClient(supabaseUrl) : null;
+    const altlinkUrl = admin && releaseId ? await loadLiveSmartLinkUrl(admin, releaseId) : null;
+    if (altlinkUrl) redirect(altlinkUrl);
+    notFound();
+  }
 
   // Once the rollout has its Altlink pre-save / smart link, an old fan page
   // link sends fans there instead (307, so it can change back). Emails already
