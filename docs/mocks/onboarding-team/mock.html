@@ -1,0 +1,1053 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Onboarding: team, then music</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  /* ---------- Board (the paper around the mock, house mock style) ---------- */
+  :root { --board:#e9e3d7; --board-text:#1a1611; --board-sec:#5c544a; --board-line:rgba(26,22,17,.14); }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--board-text); padding:28px 16px 64px; }
+  p { margin:0; }
+  button { font:inherit; color:inherit; }
+  .intro { max-width:1180px; margin:0 auto 18px; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-synthesis:none; font-size:28px; margin:0 0 6px; }
+  .intro p { color:var(--board-sec); max-width:820px; }
+  .ctrl { max-width:1180px; margin:0 auto 18px; display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center; }
+  .ctrl .g { display:flex; align-items:center; gap:6px; }
+  .ctrl .g > span { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); }
+  .seg { display:inline-flex; background:rgba(26,22,17,.06); border:1px solid var(--board-line); border-radius:999px; padding:3px; }
+  .seg button { border:0; background:transparent; padding:5px 12px; border-radius:999px; font-size:13px; color:var(--board-sec); cursor:pointer; }
+  .seg button.on { background:var(--board-text); color:var(--board); }
+  .bbtn { border:1px solid var(--board-line); background:transparent; border-radius:999px; padding:6px 12px; font-size:13px; cursor:pointer; }
+  .bbtn:hover { background:rgba(26,22,17,.06); }
+  .bbtn.hot { background:#14643a; color:#f5f0e6; border-color:#14643a; }
+  select.bsel { font:inherit; font-size:13px; border:1px solid var(--board-line); background:transparent; border-radius:999px; padding:6px 10px; color:var(--board-text); }
+  .stagewrap { max-width:1180px; margin:0 auto; display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:24px; align-items:start; }
+  .stagewrap.desk { grid-template-columns:1fr; }
+  .stage { display:flex; justify-content:center; min-width:0; }
+  .where { text-align:center; font-size:12px; color:var(--board-sec); margin:0 0 8px; font-family:'Space Mono', monospace; letter-spacing:.02em; }
+
+  /* Notes panel */
+  .notes { background:#f5f0e6; border:1px solid var(--board-line); border-radius:16px; padding:0; font-size:13.5px; color:var(--board-sec); position:sticky; top:16px; max-height:calc(100vh - 32px); overflow:auto; }
+  .stagewrap.desk .notes { position:static; max-height:none; }
+  .notes > summary { list-style:none; cursor:pointer; padding:14px 16px; font-weight:700; color:var(--board-text); display:flex; justify-content:space-between; align-items:center; }
+  .notes > summary::-webkit-details-marker { display:none; }
+  .notes > summary::after { content:'Hide'; font-weight:500; font-size:12px; color:var(--board-sec); }
+  .notes:not([open]) > summary::after { content:'Show'; }
+  .notes .in { padding:0 16px 16px; }
+  .notes h3 { color:var(--board-text); font-size:14px; margin:16px 0 6px; }
+  .notes h3:first-child { margin-top:0; }
+  .notes ol, .notes ul { margin:0; padding-left:18px; }
+  .notes li { margin:5px 0; }
+  .notes b { color:var(--board-text); }
+  .await { display:inline-block; font-family:'Space Mono', monospace; font-size:10px; letter-spacing:.04em; text-transform:uppercase; background:#f0b95c33; color:#7a5310; border-radius:999px; padding:1px 7px; margin-left:4px; white-space:nowrap; }
+  @media (max-width:980px) { .stagewrap { grid-template-columns:1fr; } .notes { position:static; max-height:none; } }
+
+  /* ---------- Device frames ---------- */
+  .phone { width:375px; max-width:100%; height:780px; border-radius:40px; background:#05070a; padding:10px; box-shadow:0 30px 60px -30px rgba(26,22,17,.45); flex:none; }
+  .phone .app { border-radius:31px; height:100%; }
+  .sbar { height:30px; display:flex; align-items:center; justify-content:space-between; padding:0 22px; font:600 12px 'Instrument Sans', sans-serif; color:var(--text); background:var(--bg); flex:none; }
+  .sbar .net { font-family:'Space Mono', monospace; font-size:10.5px; color:var(--sec); }
+  .desk-frame { width:100%; max-width:1180px; border-radius:14px; overflow:hidden; box-shadow:0 30px 60px -30px rgba(26,22,17,.45); background:#05070a; }
+  .chrome { height:38px; display:flex; align-items:center; gap:8px; padding:0 14px; background:#202421; }
+  .chrome i { width:10px; height:10px; border-radius:50%; background:#3a3f3b; }
+  .chrome .url { margin-left:14px; flex:1; max-width:420px; background:#151916; color:#a1a098; border-radius:999px; padding:4px 12px; font-size:12px; font-family:'Space Mono', monospace; }
+  .desk-frame .app { height:720px; }
+
+  /* ---------- App tokens (apps/web/app/globals.css, dark and paper) ---------- */
+  .app { --bg:#0d120e; --surface:#181d19; --elev:#1f2520; --hover:#252b26; --text:#f5f0e6; --sec:#a1a098; --ter:#878881;
+         --line:rgba(245,240,230,.08); --line2:rgba(245,240,230,.18); --brand:#7fd99a; --brand-hover:#8cdda4; --on-brand:#0d120e;
+         --brand-soft:rgba(127,217,154,.12); --err:#fa8a8a; --warn:#f0b95c; --scrim:rgba(5,8,6,.6);
+         --r-sm:8px; --r-field:12px; --r-card:16px; --r-pill:999px;
+         --fast:120ms; --base:180ms; --slow:280ms; --out:cubic-bezier(.2,.8,.2,1);
+         position:relative; overflow:hidden; display:flex; flex-direction:column; background:var(--bg); color:var(--text);
+         font:15px/1.5 'Instrument Sans', system-ui, sans-serif; letter-spacing:-.01em; container-type:inline-size; color-scheme:dark; }
+  .app[data-theme="light"] { --bg:#f5f0e6; --surface:#fbf7ef; --elev:#fbf7ef; --hover:#ebe6dc; --text:#1a1611; --sec:#4b4740; --ter:#6a665f;
+         --line:rgba(26,22,17,.10); --line2:rgba(26,22,17,.24); --brand:#14643a; --brand-hover:#247648; --on-brand:#f5f0e6;
+         --brand-soft:rgba(20,100,58,.09); --err:#b3412f; --warn:#8a5a10; --scrim:rgba(26,22,17,.35); color-scheme:light; }
+  .scroll { flex:1; overflow-y:auto; overflow-x:hidden; position:relative; scrollbar-width:thin; scrollbar-color:var(--line2) transparent; }
+  .ser { font-family:'Young Serif', serif; font-weight:400; font-synthesis:none; }
+  .mono { font-family:'Space Mono', monospace; }
+
+  /* Onboarding top bar: same spot for logo and avatar as the app's TopNav */
+  .tb { height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex:none; }
+  .brandmk { display:flex; align-items:center; gap:8px; font-weight:600; font-size:15px; }
+  .mark { width:26px; height:26px; border-radius:var(--r-sm); background:var(--text); color:var(--bg); display:grid; place-items:center; font-family:'Young Serif', serif; font-size:16px; line-height:1; }
+  .av { width:32px; height:32px; border-radius:50%; background:var(--hover); color:var(--sec); display:grid; place-items:center; font-size:12px; font-weight:600; flex:none; }
+  .av.lg { width:40px; height:40px; font-size:13px; }
+  .tile { width:40px; height:40px; border-radius:var(--r-sm); background:var(--hover); color:var(--sec); display:grid; place-items:center; font-size:13px; font-weight:600; flex:none; }
+  .tile.brand { background:var(--brand); color:var(--on-brand); }
+
+  /* Page column */
+  .col { width:100%; max-width:480px; margin:0 auto; padding:20px 16px 40px; }
+  .h { font-family:'Young Serif', serif; font-weight:400; font-synthesis:none; font-size:30px; line-height:1.12; letter-spacing:-.012em; margin:0; text-wrap:balance; }
+  .lede { margin-top:8px; color:var(--sec); font-size:15px; text-wrap:pretty; }
+  .lede b { color:var(--text); font-weight:600; }
+  .lede a, .tlink { color:var(--text); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--ter); cursor:pointer; background:none; border:0; padding:0; font:inherit; }
+  .split { display:block; }
+  .split .rcol { margin-top:20px; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-card); }
+  .pad { padding:16px; }
+  .gap-s > * + * { margin-top:8px; }
+
+  /* Fields */
+  .field { display:block; margin-top:16px; }
+  .field > .lbl, .lbl { display:block; font-size:13.5px; font-weight:600; color:var(--text); margin-bottom:6px; }
+  .lbl .optl { font-weight:400; color:var(--ter); }
+  .inp { display:block; width:100%; height:48px; border-radius:var(--r-field); border:1px solid var(--line2); background:var(--bg); color:var(--text); padding:0 14px; font:16px 'Instrument Sans', sans-serif; outline:none; transition:border-color var(--fast); }
+  .card .inp { background:var(--bg); }
+  .inp::placeholder { color:var(--ter); }
+  .inp:focus { border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft); }
+  .inp:disabled { opacity:.45; }
+  .hint { margin-top:6px; font-size:13px; color:var(--ter); }
+  .err { margin-top:6px; font-size:13px; color:var(--err); }
+
+  /* Buttons: one primary (spring), one secondary (outline), text links */
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:10px; width:100%; min-height:48px; padding:0 20px; border-radius:var(--r-pill); font:600 15px 'Instrument Sans', sans-serif; cursor:pointer; border:1px solid transparent; transition:background var(--fast), opacity var(--fast), transform var(--fast); }
+  .btn:active { transform:scale(.985); }
+  .btn.pri { background:var(--brand); color:var(--on-brand); }
+  .btn.pri:hover { background:var(--brand-hover); }
+  .btn.pri[aria-disabled="true"] { background:var(--hover); color:var(--ter); cursor:not-allowed; transform:none; }
+  .btn.out { background:transparent; color:var(--text); border-color:var(--line2); }
+  .btn.out:hover { background:var(--hover); }
+  .btn.sm { width:auto; min-height:40px; padding:0 16px; font-size:14px; }
+  .blocker { margin-top:8px; font-size:13px; color:var(--sec); text-align:center; min-height:20px; }
+  .or { display:flex; align-items:center; gap:12px; margin:18px 0 2px; font-size:13px; color:var(--ter); }
+  .or::before, .or::after { content:''; flex:1; height:1px; background:var(--line2); }
+  .foot { margin-top:22px; text-align:center; font-size:14px; color:var(--sec); }
+  .back { display:inline-flex; align-items:center; gap:4px; min-height:44px; margin:-6px 0 4px -4px; padding:0 4px; color:var(--sec); font-size:14px; background:none; border:0; cursor:pointer; }
+
+  /* Account chip */
+  .acct { display:flex; align-items:center; gap:10px; margin-top:20px; font-size:13.5px; color:var(--sec); min-width:0; }
+  .acct .em { color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .acct .lo { margin-left:auto; flex:none; min-height:40px; color:var(--sec); font-size:13.5px; }
+  .acct-top { display:none; }
+  .acct-bottom { margin-top:28px; padding-top:16px; border-top:1px solid var(--line); }
+  .flatm { background:transparent; border:0; padding:0; }
+
+  /* Choice rows (who is the team for, stage) */
+  .opts { display:grid; gap:8px; }
+  .opt { display:flex; align-items:center; gap:12px; width:100%; min-height:52px; padding:10px 14px; border-radius:var(--r-field); border:1px solid var(--line2); background:var(--bg); text-align:left; cursor:pointer; transition:border-color var(--fast), background var(--fast); }
+  .opt:hover { background:var(--hover); }
+  .opt .ck { width:20px; height:20px; border-radius:50%; border:1.5px solid var(--line2); flex:none; display:grid; place-items:center; }
+  .opt[aria-checked="true"] { border-color:var(--brand); box-shadow:inset 0 0 0 .5px var(--brand); }
+  .opt[aria-checked="true"] .ck { background:var(--brand); border-color:var(--brand); }
+  .opt[aria-checked="true"] .ck::after { content:''; width:8px; height:8px; border-radius:50%; background:var(--on-brand); }
+  .opt .t { font-size:15px; font-weight:500; }
+  .opt .s { font-size:13px; color:var(--sec); }
+
+  /* Stage track: five stops on one line of work */
+  .track { position:relative; display:grid; gap:6px; }
+  .track::before { content:''; position:absolute; left:23px; top:24px; bottom:24px; width:1.5px; background:var(--line2); }
+  .stop { position:relative; display:flex; align-items:center; gap:12px; min-height:48px; padding:8px 12px 8px 14px; border-radius:var(--r-field); border:1px solid transparent; background:transparent; text-align:left; cursor:pointer; width:100%; }
+  .stop:hover { background:var(--hover); }
+  .stop .dot { width:20px; height:20px; border-radius:50%; border:1.5px solid var(--line2); background:var(--surface); flex:none; display:grid; place-items:center; position:relative; z-index:1; }
+  .stop .t { flex:1; font-size:15px; font-weight:500; }
+  .stop .t small { display:block; font-size:12.5px; font-weight:400; color:var(--sec); }
+  .stamp { font-family:'Space Mono', monospace; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ter); border:1px solid var(--line2); border-radius:var(--r-pill); padding:2px 8px; white-space:nowrap; }
+  .stamp.on { color:var(--brand); border-color:var(--brand); }
+  .picked { display:flex; align-items:center; gap:12px; min-height:52px; padding:8px 8px 8px 14px; border-radius:var(--r-field); border:1px solid var(--brand); background:var(--bg); }
+  .picked .dot { width:20px; height:20px; border-radius:50%; background:var(--brand); flex:none; display:grid; place-items:center; }
+  .picked .dot::after, .stop .dot.done::after { content:''; width:8px; height:8px; border-radius:50%; background:var(--on-brand); }
+  .picked .t { flex:1; font-weight:600; }
+  .picked .chg { min-height:40px; padding:0 10px; background:none; border:0; color:var(--sec); text-decoration:underline; text-underline-offset:3px; cursor:pointer; font-size:14px; }
+
+  /* Chips */
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { min-height:40px; padding:0 14px; border-radius:var(--r-pill); border:1px solid var(--line2); background:var(--bg); font-size:14px; cursor:pointer; color:var(--text); }
+  .chip:hover { background:var(--hover); }
+  .chip[aria-checked="true"] { border-color:var(--brand); background:var(--brand-soft); color:var(--text); box-shadow:inset 0 0 0 .5px var(--brand); }
+  .checkrow { display:flex; align-items:center; gap:10px; margin-top:10px; min-height:40px; font-size:14px; cursor:pointer; }
+  .box { width:20px; height:20px; border-radius:6px; border:1.5px solid var(--line2); display:grid; place-items:center; flex:none; }
+  .box.on { background:var(--brand); border-color:var(--brand); }
+  .box.on::after { content:''; width:9px; height:5px; border-left:2px solid var(--on-brand); border-bottom:2px solid var(--on-brand); transform:rotate(-45deg) translate(1px,-1px); }
+
+  /* Action cards on S4 */
+  .acard { overflow:clip; }
+  .stick { position:sticky; bottom:0; z-index:5; margin:16px -16px -16px; padding:12px 16px 16px; background:linear-gradient(to bottom, transparent, var(--surface) 14px); }
+  .sugg { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .rlist { padding:4px 0; }
+  .rrow { display:flex; align-items:center; gap:12px; padding:10px 14px; border-top:1px solid var(--line); }
+  .rrow:first-child { border-top:0; }
+  .rrow .rt { font-weight:600; font-size:14.5px; }
+  .rrow .rs { font-size:13px; color:var(--sec); }
+  .teampick { display:inline-flex; align-items:center; gap:4px; font:inherit; font-weight:600; color:var(--text); background:var(--hover); border:1px solid var(--line2); border-radius:var(--r-pill); padding:0 10px; min-height:32px; cursor:pointer; }
+  .inv.dead { opacity:.85; }
+  .acard + .acard { margin-top:10px; }
+  .ahead { display:flex; align-items:center; gap:12px; width:100%; min-height:64px; padding:12px 14px; background:none; border:0; text-align:left; cursor:pointer; }
+  button.ahead:hover { background:var(--hover); }
+  .ahead .tt { font-size:15px; font-weight:600; }
+  .ahead .ss { font-size:13px; color:var(--sec); }
+  .chev { margin-left:auto; color:var(--ter); flex:none; }
+  .form { padding:2px 16px 16px; border-top:1px solid var(--line); }
+  .done-note { font-size:13px; color:var(--brand); }
+
+  /* Live preview: the card that becomes Home's first card */
+  .preview { margin-top:18px; padding:12px; border-radius:var(--r-field); border:1px dashed var(--line2); }
+  .preview .cap { font-family:'Space Mono', monospace; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ter); margin-bottom:8px; }
+  .pcard { display:flex; gap:12px; align-items:center; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-field); padding:12px; }
+  .pcover { width:56px; height:56px; border-radius:var(--r-sm); background:var(--hover); color:var(--sec); display:grid; place-items:center; font-weight:600; font-size:16px; flex:none; }
+  .pcard .pt { font-family:'Young Serif', serif; font-weight:400; font-synthesis:none; font-size:19px; line-height:1.15; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pcard .pm { font-size:13px; color:var(--sec); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pcard .ps { font-family:'Space Mono', monospace; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ter); margin-top:6px; }
+  .pcard .ps b { color:var(--brand); font-weight:400; }
+  .promise { margin-top:10px; font-size:13.5px; color:var(--sec); text-align:center; text-wrap:balance; }
+  .warnline { margin-top:8px; font-size:13px; color:var(--warn); }
+
+  /* Invite and waiting */
+  .inv { padding:16px; }
+  .inv.hl { border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft); animation:hl 1.6s var(--out); }
+  @keyframes hl { from { box-shadow:0 0 0 12px var(--brand-soft); } to { box-shadow:0 0 0 3px var(--brand-soft); } }
+  .inv .row { display:flex; gap:12px; align-items:center; }
+  .inv .nm { font-weight:600; font-size:16px; }
+  .inv .by { font-size:13.5px; color:var(--sec); }
+  .wait { display:flex; gap:12px; align-items:center; padding:14px 16px; }
+  .spin { width:18px; height:18px; border-radius:50%; border:2px solid var(--line2); border-top-color:var(--brand); animation:sp 1s linear infinite; flex:none; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+  .copyrow { display:flex; align-items:center; gap:8px; height:48px; padding:0 6px 0 14px; border-radius:var(--r-field); border:1px solid var(--line2); background:var(--bg); }
+  .copyrow span { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .copyrow button { min-height:36px; padding:0 12px; border-radius:var(--r-pill); border:0; background:var(--hover); cursor:pointer; font-size:13.5px; font-weight:600; }
+  .msg { padding:12px 14px; border-radius:var(--r-field); background:var(--bg); border:1px solid var(--line); font-size:14px; color:var(--sec); line-height:1.5; }
+  .skel { height:14px; border-radius:6px; background:var(--hover); animation:pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity:.5; } }
+
+  /* App shell (landing) */
+  .shtop { display:flex; align-items:center; gap:4px; height:56px; padding:0 12px 0 16px; flex:none; border-bottom:1px solid var(--line); }
+  .shtop .tabs { display:flex; gap:18px; align-items:stretch; height:100%; }
+  .shtop .tab { display:flex; align-items:center; font-size:16px; font-weight:600; color:var(--ter); position:relative; }
+  .shtop .tab.on { color:var(--text); }
+  .shtop .tab.on::after { content:''; position:absolute; left:0; right:0; bottom:-1px; height:2.5px; border-radius:2px; background:var(--brand); }
+  .shtop .pills { display:none; }
+  .shtop .right { margin-left:auto; display:flex; gap:8px; align-items:center; }
+  .deskonly { display:none; }
+  .crumb { font-family:'Space Mono', monospace; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ter); }
+  .ptitle { font-family:'Young Serif', serif; font-weight:400; font-synthesis:none; font-size:30px; line-height:1.1; margin:6px 0 4px; }
+  .banner { display:flex; gap:10px; align-items:center; padding:12px 14px; border-radius:var(--r-field); background:var(--brand-soft); border:1px solid var(--line); font-size:14px; }
+  .week { display:flex; gap:12px; padding:12px 0; border-top:1px solid var(--line); opacity:0; transform:translateY(6px); transition:opacity var(--slow) var(--out), transform var(--slow) var(--out); }
+  .week.in { opacity:1; transform:none; }
+  .week .wk { font-family:'Space Mono', monospace; font-size:11px; color:var(--ter); width:62px; flex:none; padding-top:2px; text-transform:uppercase; letter-spacing:.04em; }
+  .week .tk { font-size:14.5px; }
+  .week .tk small { display:block; color:var(--sec); font-size:12.5px; }
+  .bar { height:6px; border-radius:99px; background:var(--hover); overflow:hidden; margin-top:10px; }
+  .bar i { display:block; height:100%; background:var(--brand); width:0; transition:width .6s var(--out); }
+  .steps { display:flex; gap:6px; margin-top:14px; }
+  .steps span { flex:1; text-align:center; font-family:'Space Mono', monospace; font-size:10px; letter-spacing:.04em; text-transform:uppercase; padding:8px 2px; border-radius:var(--r-sm); background:var(--surface); color:var(--ter); border:1px solid var(--line); }
+  .steps span.on { color:var(--on-brand); background:var(--brand); border-color:var(--brand); }
+  .taskcard { padding:18px; }
+  .taskcard .k { font-family:'Space Mono', monospace; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--brand); }
+  .taskcard .ti { font-family:'Young Serif', serif; font-weight:400; font-synthesis:none; font-size:24px; line-height:1.15; margin:8px 0 6px; }
+
+  /* Sheets: bottom sheet on phone, centred dialog on desktop */
+  .scrim { position:absolute; inset:0; background:var(--scrim); z-index:20; animation:fade var(--base) var(--out); }
+  .sheet { position:absolute; left:0; right:0; bottom:0; z-index:21; background:var(--surface); border-radius:22px 22px 0 0; border-top:1px solid var(--line2); max-height:88%; overflow:auto; padding:8px 16px 24px; animation:up var(--slow) var(--out); }
+  .grab { width:40px; height:4px; border-radius:2px; background:var(--line2); margin:4px auto 10px; }
+  .sheet .x { position:absolute; right:10px; top:10px; width:40px; height:40px; border-radius:50%; border:0; background:transparent; color:var(--sec); cursor:pointer; font-size:20px; }
+  .sheet .x:hover { background:var(--hover); }
+  .plan { border:1px solid var(--brand); border-radius:var(--r-card); padding:14px; margin-top:16px; background:var(--bg); }
+  .plan .top { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+  .plan .pn { font-weight:600; font-size:16px; }
+  .plan .pp { font-family:'Space Mono', monospace; font-size:14px; }
+  .plan ul { margin:8px 0 0; padding-left:18px; color:var(--sec); font-size:14px; }
+  .covers { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px; }
+  .covers .cv { aspect-ratio:1; border-radius:var(--r-sm); background:var(--hover); color:var(--sec); display:grid; place-items:center; font-weight:600; }
+  .covers p { font-size:12.5px; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .toast { position:absolute; left:50%; bottom:20px; transform:translateX(-50%); z-index:30; background:var(--text); color:var(--bg); padding:10px 16px; border-radius:var(--r-pill); font-size:14px; font-weight:500; white-space:nowrap; max-width:92%; overflow:hidden; text-overflow:ellipsis; animation:up var(--base) var(--out); }
+
+  /* Motion: direction-aware screen entry */
+  .enter-f { animation:inF var(--base) var(--out); }
+  .enter-b { animation:inB var(--base) var(--out); }
+  .rise { animation:rise var(--slow) var(--out); }
+  @keyframes inF { from { opacity:0; transform:translateX(14px); } }
+  @keyframes inB { from { opacity:0; transform:translateX(-14px); } }
+  @keyframes rise { from { opacity:0; transform:translateY(8px); } }
+  @keyframes fade { from { opacity:0; } }
+  @keyframes up { from { transform:translateY(24px); opacity:0; } }
+  @media (prefers-reduced-motion:reduce) { .app *, .app *::before, .app *::after { animation:none !important; transition:none !important; } .week { opacity:1; transform:none; } }
+
+  /* ---------- Desktop (container width, so the same markup serves both) ---------- */
+  @container (min-width:760px) {
+    .tb { height:72px; padding:0 32px; }
+    .col { max-width:1000px; padding:56px 32px 56px; }
+    .col.narrow { max-width:440px; padding-top:40px; }
+    .col.narrow.carded > .inner { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-card); padding:28px; }
+    .split { display:grid; grid-template-columns:minmax(0,1fr) 460px; gap:56px; align-items:start; }
+    .split .lcol { padding-top:8px; position:sticky; top:0; }
+    .split .rcol { margin-top:0; }
+    .h { font-size:40px; }
+    .btn.auto-d { width:auto; }
+    .shtop { height:72px; padding:0 32px; }
+    .shtop .tabs { display:none; }
+    .shtop .pills { display:flex; gap:4px; margin-left:28px; }
+    .shtop .pills span { padding:8px 14px; border-radius:var(--r-pill); color:var(--sec); font-size:14px; font-weight:500; }
+    .shtop .pills span.on { background:var(--hover); color:var(--text); }
+    .deskonly { display:flex; }
+    .acct-top { display:flex; }
+    .acct-bottom { display:none; }
+    .flatm { background:var(--surface); border:1px solid var(--line); padding:16px; }
+    .ptitle { font-size:40px; }
+    .stick { position:static; margin:16px 0 0; padding:0; background:none; }
+    .sheet { left:50%; right:auto; bottom:auto; top:50%; width:460px; transform:translate(-50%,-50%); border-radius:var(--r-card); border:1px solid var(--line2); padding:24px; animation:fade var(--base) var(--out); }
+    .grab { display:none; }
+    .covers { grid-template-columns:repeat(4,1fr); }
+    .landgrid { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:32px; align-items:start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Onboarding: account, team, then music</h1>
+  <p>Clickable prototype for issue #854. Four screens for a new team, two for an invited teammate. Every button works. Use the controls to switch phone and desktop, dark and light, and to start either path. Built from <b>spec.md</b> and <b>design-direction.md</b> in this folder. Demo people: Kemi Bello (new), invited by Tobi Adeyemi of Northline Music.</p>
+</div>
+
+<div class="ctrl" id="ctrl"></div>
+
+<div class="stagewrap" id="wrap">
+  <div>
+    <p class="where" id="where"></p>
+    <div class="stage" id="stage"></div>
+  </div>
+  <details class="notes" open>
+    <summary>Notes: what changed and why</summary>
+    <div class="in">
+      <h3>Three questions for Oyin</h3>
+      <ol>
+        <li>Unfinished music (Just an idea, Recording, Mixing or mastering) saves as a record in the making; Ready and Already out save as a rollout. One form either way. <span class="await">recommended: yes</span></li>
+        <li>When someone who joined a team as a Manager adds music, it belongs to that team (the one in the pill). Needs a server fix. <span class="await">recommended: yes</span></li>
+        <li>The card says "New music", not "project". Use the Card control above to compare. <span class="await">recommended: New music</span></li>
+      </ol>
+      <h3>Settled in the spec (change if you disagree)</h3>
+      <ul>
+        <li>The team is made on "Set up your team", prefilled "{First name}'s Team". Blank is fine. Names need not be unique.</li>
+        <li>"Ask to be invited" leads to a calm waiting screen that checks every 20 seconds and takes a pasted invite link.</li>
+        <li>The trial sheet can be closed. It opens once the plan is built (or 8 seconds after a record lands), never over the planner's questions.</li>
+      </ul>
+
+      <h3>PM review fixes (29 Oct)</h3>
+      <ul>
+        <li>The artist field no longer fills in your own name. A stage name is rarely the name on the account.</li>
+        <li>"Pick a day" with no day, or a day that has passed, now blocks Add it and says why.</li>
+        <li>On phone, Add it stays at the bottom of the screen once the form is long. It was a scroll away.</li>
+        <li>The preview shows only after a stage is picked, captioned "Preview". The "URG·001" number and "How it shows on Home" are gone: no such number exists, and a record lives under the artist, not on Home.</li>
+        <li>The waiting row sits under the WhatsApp button, so nobody waits before asking.</li>
+        <li>The invite sheet drops "What can they see?" here: with no rollouts yet there is nothing to choose.</li>
+        <li>Artist suggestions: after "Bring in released music", the artist shows as a one-tap suggestion.</li>
+        <li>"Not you?" now says "Not you? Log out", so it says what it does.</li>
+        <li>Going back to the team after it is made says "Save and continue", not "Create team" again.</li>
+        <li>The trial sheet waits for the planner's answer on a rollout with no date, instead of covering the question.</li>
+        <li>Trial plan lines match the pricing package (Manager: 3 artists, 5 people, three rollouts at a time). "Distribution included" was dropped: it depends on how they pay.</li>
+        <li>New states in Jump: email already used, invite-only, two invites with one run out, couldn't check for invites, still waiting after 30 minutes, no connection on Add it, joined a team as a Manager.</li>
+      </ul>
+
+      <h3>What changed from today, and why</h3>
+      <ul>
+        <li><b>13 screens down to 4</b> (2 for an invited teammate). Nothing was saved until screen 10 before, so anyone who left early left with nothing.</li>
+        <li><b>Account first.</b> No questions before it. Google works from the first second.</li>
+        <li><b>Join before you make.</b> We check for a waiting invite before offering a new team, so invited people stop landing in an empty team of their own.</li>
+        <li><b>Music at any stage.</b> No release day needed. "Just an idea" is the first stop on the list, drawn the same size as "Ready to release", so it never looks like the lesser answer.</li>
+        <li><b>A live preview card</b> fills in as you type. It is the same card you meet on Home, so the first thing you see in the app is the thing you just made.</li>
+        <li><b>Price after value.</b> The trial sheet comes after the plan, says what is true ("is on"), and closes.</li>
+        <li><b>"How did you hear about us"</b> moved to the plan-building wait, one tap.</li>
+      </ul>
+
+      <h3>Visual fixes from the audit</h3>
+      <ul>
+        <li>Young Serif at its real weight. Today it is drawn in fake bold.</li>
+        <li>One main button colour: spring green, same as /auth and the app. Today onboarding uses cream.</li>
+        <li>Sentence case labels. Capitals only in Space Mono stamps and dates.</li>
+        <li>One radius scale: 8 tiles, 12 fields and rows, 16 cards, full for buttons and chips.</li>
+        <li>Outlined Google button. Today it is pure white.</li>
+        <li>No box around the question on phone, no "Welcome aboard" title, no 12-part progress bar.</li>
+        <li>Choice rows have a visible edge in light mode, and selected means a filled dot plus a green border, not a faint tint.</li>
+        <li>Back is a small text link, so it never competes with the main button.</li>
+        <li>Logo and avatar sit where the app puts them, so landing in the app does not jump.</li>
+      </ul>
+
+      <h3>Where the designer went against the spec (all accepted by the PM)</h3>
+      <ul>
+        <li><b>Spring green main button, not the cream one.</b> The spec keeps today's buttons; the cream one is the odd one out across auth and the app.</li>
+        <li><b>No card around the step on phone.</b> The spec says "dark card on the app background". On 375px the card costs 40px of width and a layer of chrome. Desktop keeps cards on the right, like the reference.</li>
+        <li><b>Stage asked before artist.</b> The fields below depend on the stage, so asking it first means the form never reshapes under something already typed.</li>
+        <li><b>Stages as a list, not chips.</b> Five chips of very different lengths wrap into ragged lines on a phone and look ranked. A list reads as one line of work, idea to out, each stop the same size.</li>
+        <li><b>"Who is this team for?" as three rows, not chips</b>, for the same reason: equal targets for the thumb.</li>
+        <li><b>Release day as two chips</b> (No date yet, Pick a day) instead of a date box plus a "No date yet" checkbox. A greyed-out date box above a ticked box read as broken, and it matches the Already out chips.</li>
+        <li><b>On the waiting screen, WhatsApp comes first</b>, then the message preview, then the email. Once the invite lands, the ask disappears and only Join is left, so there is one green button on screen.</li>
+        <li><b>"How did you hear about Urganize?" sits above the plan while it builds</b>, not under it, so it is seen during the wait it is meant for.</li>
+      </ul>
+
+      <h3>Mock-only shortcuts</h3>
+      <ul>
+        <li>The waiting screen gets its invite after 8 seconds (real: checks every 20 seconds). "Send the invite now" forces it.</li>
+        <li>The trial sheet opens 3 seconds after landing (spec: 8 seconds, or when the plan is built, up to 45).</li>
+        <li>Today is fixed at 29 Oct 2026. Nothing is saved.</li>
+      </ul>
+    </div>
+  </details>
+</div>
+
+<script>
+(() => {
+  const TODAY = '2026-10-29';
+  const STAGES = [
+    { id:'idea', label:'Just an idea', sub:'No date. Nothing recorded yet.', stamp:'Idea' },
+    { id:'recording', label:'Recording', sub:'In the studio.', stamp:'Recording' },
+    { id:'mixing', label:'Mixing or mastering', sub:'Recorded, being finished.', stamp:'Mixing' },
+    { id:'ready', label:'Ready to release', sub:'Mastered. Time to plan the release.', stamp:'Ready' },
+    { id:'out', label:'Already out', sub:'Keep it going after release day.', stamp:'Out' },
+  ];
+  const EARLY = ['idea','recording','mixing'];
+  const KINDS = [['single','Single'],['ep','EP'],['album','Album'],['unsure','Not sure yet']];
+  const WHO = [['artist',"Just me, I'm the artist"],['manager','Artists I manage'],['label','A label']];
+  const OUTWHEN = [['week','This week'],['month','This month'],['earlier','Earlier'],['day','Pick a day']];
+  const HEARD = ['Instagram','X','TikTok','A friend or artist','A manager or label','WhatsApp','Event','Google','Other'];
+  const ORDER = { s1:1, s2load:2, s2a:2, s2b:2, s3:3, s4:4, land:5, home:5 };
+
+  const fresh = () => ({
+    view:'phone', theme:'dark', label:'music', ios:false, path:'owner',
+    screen:'s1', dir:'f',
+    name:'Kemi Bello', email:'kemi.bello@gmail.com', pw:'northline8', refOpen:false, ref:'', s1Busy:false,
+    teamName:"Kemi's Team", whoFor:null, s2Busy:false, joinBusy:false, teamErr:'', teamMade:false, checkFailed:false,
+    s1State:'', invites:'one', joinedMgr:false, formOpen:true, offline:false,
+    s3:{ linkOpen:false, link:'', linkErr:'', arrived:false, long:false },
+    m:{ artist:'', stage:null, kind:'single', name:'', noDate:true, date:'', outWhen:null, outDay:'', busy:'', netErr:false },
+    imported:null, invited:null, sheet:null, sheetData:{},
+    land:null, heard:null, trialSeen:false, homeKind:null, buildStep:0,
+  });
+  let S = fresh();
+  let timers = [];
+  const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
+  const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  const first = () => (S.name.trim().split(/\s+/)[0] || '');
+  const initials = (s) => (s || '').trim().split(/\s+/).slice(0,2).map((w) => w[0] || '').join('').toUpperCase() || '?';
+  const fmtDate = (iso) => { if (!iso) return ''; const d = new Date(iso + 'T00:00:00Z'); return d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric', timeZone:'UTC' }); };
+  const stage = () => STAGES.find((s) => s.id === S.m.stage);
+  const isEarly = () => EARLY.includes(S.m.stage);
+  const cardLabel = () => (S.label === 'music' ? 'New music' : 'New project');
+  const teamArtists = () => (S.joinedMgr ? ['Starlife', 'Femi Cole'] : (S.imported ? ['Starlife'] : []));
+  const teamDisplay = () => S.teamName.trim() || (first() ? `${first()}'s Team` : 'My Team');
+
+  const ICON = {
+    google:'<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>',
+    plus:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+    disc:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/></svg>',
+    people:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.8-3.2 3-5 5.5-5s4.7 1.8 5.5 5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2c2.2.2 3.8 1.8 4.4 4.3"/></svg>',
+    chev:'<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>',
+    chevd:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
+    back:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>',
+    wa:'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1-.7-.3-1.4-.7-2-1.3-.5-.5-.9-1-1.3-1.6-.1-.2 0-.4.1-.5l.4-.5.2-.4v-.4l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.6.6-.9 1.4-.9 2.2 0 .9.4 1.8.9 2.5 1.1 1.6 2.5 2.9 4.2 3.6.6.3 1.1.4 1.6.5.7.1 1.4 0 2-.4.4-.3.7-.7.8-1.2v-.6c0-.1-.2-.2-.4-.3z"/></svg>',
+    check:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+  };
+
+  // ---------- Board controls ----------
+  function renderCtrl() {
+    const seg = (key, opts) => `<div class="seg">${opts.map(([v,l]) => `<button data-board="${key}:${v}" class="${S[key]===v?'on':''}">${l}</button>`).join('')}</div>`;
+    document.getElementById('ctrl').innerHTML = `
+      <div class="g"><span>View</span>${seg('view',[['phone','Phone'],['desk','Desktop']])}</div>
+      <div class="g"><span>Theme</span>${seg('theme',[['dark','Dark'],['light','Light']])}</div>
+      <div class="g"><span>Card</span>${seg('label',[['music','New music'],['project','New project']])}</div>
+      <div class="g"><span>Start</span>
+        <button class="bbtn" data-board="start:owner">New team owner</button>
+        <button class="bbtn" data-board="start:invited">Invited teammate</button>
+        <button class="bbtn" data-board="start:ask">Ask to be invited</button>
+      </div>
+      <div class="g"><span>Jump</span>
+        <select class="bsel" id="jump">
+          <option value="">Pick a screen</option>
+          <option value="s1">S1 Create your account</option>
+          <option value="s1:taken">S1 Email already has an account</option>
+          <option value="s1:closed">S1 Invite-only (no invite for this email)</option>
+          <option value="s2a">S2 You're invited</option>
+          <option value="s2a:two">S2 Two invites, one run out</option>
+          <option value="s2b">S2 Set up your team</option>
+          <option value="s2b:failed">S2 Couldn't check for invites</option>
+          <option value="s3">S3 Ask to be invited</option>
+          <option value="s3:long">S3 Still waiting after 30 minutes</option>
+          <option value="s4">S4 Nothing here yet (form open)</option>
+          <option value="s4:offline">S4 No connection on Add it</option>
+          <option value="s4:mgr">S4 Joined a team as a Manager</option>
+          <option value="land:record">S5 Record in the making</option>
+          <option value="land:rollout">S5 Rollout, plan building</option>
+          <option value="land:nodate">S5 Rollout, no date yet</option>
+          <option value="land:out">S5 Already out</option>
+          <option value="trial">S5 Trial sheet</option>
+          <option value="home:joined">Home, joined a team</option>
+          <option value="home:skipped">Home, skipped for now</option>
+        </select>
+      </div>
+      <div class="g"><span>Device</span>${seg('ios',[[false,'Web'],[true,'iPhone app']])}</div>
+      ${S.screen==='s3' && !S.s3.arrived ? '<button class="bbtn hot" data-board="arrive:1">Send the invite now</button>' : ''}
+    `;
+  }
+
+  // ---------- Pieces ----------
+  const topbar = (withAv) => `<header class="tb"><div class="brandmk"><span class="mark" aria-hidden="true">U</span>Urganize</div>${withAv ? `<span class="av" aria-label="${esc(S.name)}">${esc(initials(S.name))}</span>` : ''}</header>`;
+  const acct = (where = 'top') => `<div class="acct acct-${where}"><span class="av">${esc(initials(S.name))}</span><span class="em">${esc(S.email)}</span><button class="tlink lo" data-act="logout">Not you? Log out</button></div>`;
+  const spl = (l, r) => `<div class="split"><div class="lcol">${l}</div><div class="rcol">${r}${S.screen !== 's1' ? acct('bottom') : ''}</div></div>`;
+
+  // ---------- S1 ----------
+  function s1Blocker() {
+    if (!S.name.trim()) return 'Add your name.';
+    if (!/^\S+@\S+\.\S+$/.test(S.email.trim())) return 'Add your email.';
+    if (S.pw.length < 8) return 'Use at least 8 characters.';
+    return '';
+  }
+  function S1() {
+    const b = s1Blocker();
+    if (S.s1State === 'closed') {
+      return `${topbar(false)}<div class="col narrow carded"><div class="inner" role="status">
+        <h1 class="h">Urganize is invite-only for now.</h1>
+        <p class="lede">Join the waitlist and we'll reach out.</p>
+        <div style="margin-top:22px"><button class="btn pri" data-act="toast:Opens the waitlist">Join the waitlist</button></div>
+        <p class="foot">Have an invite? <button class="tlink" data-act="login">Sign in.</button></p>
+        <p class="hint" style="text-align:center;margin-top:14px">Shown when ${esc(S.email)} has no invite. A team invite for this email lets them in.</p>
+      </div></div>`;
+    }
+    return `${topbar(false)}<div class="col narrow carded"><div class="inner">
+      <h1 class="h">Create your account</h1>
+      <p class="lede">Plan every release with your team. It takes a minute.</p>
+      <div style="margin-top:22px"><button class="btn out" data-act="google">${ICON.google}Continue with Google</button></div>
+      <div class="or">or with email</div>
+      <label class="field"><span class="lbl">Your name</span><input class="inp" data-f="name" autocomplete="name" value="${esc(S.name)}"></label>
+      <label class="field"><span class="lbl">Email</span><input class="inp" data-f="email" type="email" autocomplete="email" value="${esc(S.email)}">${S.s1State === 'taken' ? `<span class="err">This email already has an account. <button class="tlink" data-act="login" style="color:var(--err)">Log in instead</button></span>` : ''}</label>
+      <label class="field"><span class="lbl">Password</span><input class="inp" data-f="pw" type="password" autocomplete="new-password" value="${esc(S.pw)}"><span class="hint">At least 8 characters.</span></label>
+      ${S.refOpen
+        ? `<label class="field"><span class="lbl">Referral code <span class="optl">(optional)</span></span><input class="inp" data-f="ref" value="${esc(S.ref)}" autocapitalize="characters"><span class="hint" data-live="referr"></span></label>`
+        : `<p style="margin-top:14px"><button class="tlink" data-act="ref" style="font-size:14px;color:var(--sec)">Have a referral code?</button></p>`}
+      <div style="margin-top:22px">
+        <button class="btn pri" data-act="s1go" data-live="s1btn" aria-disabled="${b?'true':'false'}">${S.s1Busy ? 'Creating your account…' : 'Create account'}</button>
+        <p class="blocker" data-live="s1block">${esc(b)}</p>
+      </div>
+      <p class="foot">Already have an account? <button class="tlink" data-act="login">Log in</button></p>
+    </div></div>`;
+  }
+
+  // ---------- S2 ----------
+  function S2load() {
+    return `${topbar(true)}<div class="col">${spl(
+      `<h1 class="h">Your team</h1><p class="lede">Checking for invites to ${esc(S.email)}.</p>${acct()}`,
+      `<div class="card pad" aria-busy="true"><div class="skel" style="width:55%"></div><div class="skel" style="width:85%;margin-top:12px"></div><div class="skel" style="height:44px;border-radius:999px;margin-top:18px"></div></div>`
+    )}</div>`;
+  }
+  function inviteCard(hl) {
+    return `<div class="card inv ${hl?'hl':''}">
+      <div class="row"><span class="tile">NM</span><div><p class="nm">Northline Music</p><p class="by">Tobi Adeyemi invited you as a team member.</p></div></div>
+      <div style="margin-top:14px"><button class="btn pri" data-act="join">${S.joinBusy ? 'Joining…' : 'Join Northline Music'}</button></div>
+    </div>`;
+  }
+  function deadInviteCard() {
+    return `<div class="card inv dead" style="margin-top:10px">
+      <div class="row"><span class="tile">BK</span><div><p class="nm">Blackroom Records</p><p class="by">This invite has run out.</p></div></div>
+      <div style="margin-top:14px"><button class="btn out" data-act="askDead">Ask Bisi for a new one</button></div>
+    </div>`;
+  }
+  function S2a() {
+    return `${topbar(true)}<div class="col">${spl(
+      `<h1 class="h">You're invited</h1><p class="lede">Join the team to see the plan and what's yours to do.</p>${acct()}`,
+      `${inviteCard(false)}${S.invites === 'two' ? deadInviteCard() : ''}<p class="foot" style="margin-top:16px">Want your own team too? <button class="tlink" data-act="toS2b">Create a team</button></p>`
+    )}</div>`;
+  }
+  function s2Blocker() {
+    if (S.teamName.length > 80) return 'Keep it under 80 characters.';
+    if (!S.whoFor) return 'Pick who the team is for.';
+    return '';
+  }
+  function S2b() {
+    const b = s2Blocker();
+    const form = `<div class="card flatm">
+      <label class="field" style="margin-top:0"><span class="lbl">Team name</span><input class="inp" data-f="teamName" id="teamName" value="${esc(S.teamName)}" placeholder="e.g. Northline Music" maxlength="120"><span class="hint" data-live="teamhint">Your team sees this name, and so does anyone you invite.</span></label>
+      <div class="field" role="radiogroup" aria-label="Who is this team for?"><span class="lbl">Who is this team for?</span>
+        <div class="opts">${WHO.map(([v,l]) => `<button class="opt" role="radio" aria-checked="${S.whoFor===v}" data-act="who:${v}"><span class="ck"></span><span class="t">${l}</span></button>`).join('')}</div>
+      </div>
+      <div style="margin-top:20px">
+        <button class="btn pri" data-act="createTeam" data-live="s2btn" aria-disabled="${b?'true':'false'}">${S.s2Busy ? (S.teamMade ? 'Saving…' : 'Making your team…') : (S.teamMade ? 'Save and continue' : 'Create team')}</button>
+        <p class="blocker" data-live="s2block">${esc(b)}</p>
+      </div>
+    </div>`;
+    const join = `<div class="card acard" style="margin-top:10px"><button class="ahead" data-act="toS3"><span class="tile">${ICON.people}</span><span><span class="tt" style="display:block">I'm joining someone's team</span><span class="ss">Ask the owner to invite ${esc(S.email)}.</span></span>${ICON.chev}</button></div>`;
+    return `${topbar(true)}<div class="col">${spl(
+      `<h1 class="h">${S.teamMade ? 'Your team' : 'Set up your team'}</h1><p class="lede">Your team is everyone who works on your releases. You can invite them next.</p>${S.checkFailed ? `<p class="hint" style="margin-top:10px">Couldn't check for invites. We'll keep looking.</p>` : ''}${acct()}`,
+      form + (S.teamMade ? '' : join)
+    )}</div>`;
+  }
+
+  // ---------- S3 ----------
+  function S3() {
+    const msg = `Hi, please add me to our team on Urganize so I can see the plan. My email is ${S.email}. In Urganize, go to Team, then Invite.`;
+    if (S.s3.arrived) {
+      return `${topbar(true)}<div class="col">${spl(
+        `<h1 class="h">Your invite is here</h1><p class="lede">Tobi added you. Join to see the plan and what's yours to do.</p>${acct()}`,
+        `<div class="rise">${inviteCard(true)}</div><p class="foot" style="margin-top:16px">Not the right team? <button class="tlink" data-act="toS2b">Create my own team instead</button></p>`
+      )}</div>`;
+    }
+    return `${topbar(true)}<div class="col">${spl(
+      `<button class="back" data-act="toS2b">${ICON.back}Back</button>
+       <h1 class="h">Ask your team to invite you</h1><p class="lede">The team owner adds you from Team, then Invite. Send them this.</p>
+       ${acct()}`,
+      `<div class="card flatm">
+        <div class="gap-s">
+          <button class="btn pri" data-act="wa">${ICON.wa}Send on WhatsApp</button>
+          <button class="btn out" data-act="copyMsg">Copy message</button>
+        </div>
+        <span class="lbl" style="margin-top:18px">What they get</span>
+        <div class="msg">${esc(msg)}</div>
+        <span class="lbl" style="margin-top:16px">Your email</span>
+        <div class="copyrow"><span>${esc(S.email)}</span><button data-act="copyEmail">Copy</button></div>
+        ${S.s3.linkOpen
+          ? `<label class="field"><span class="lbl">Paste the link here</span><div style="display:flex;gap:8px"><input class="inp" data-f="link" value="${esc(S.s3.link)}" placeholder="my.urganize.app/invite/…" autocapitalize="none"><button class="btn out sm" data-act="linkJoin">Join</button></div>${S.s3.linkErr ? `<span class="err">${esc(S.s3.linkErr)}</span>` : ''}</label>`
+          : `<p style="margin-top:16px;text-align:center"><button class="tlink" data-act="linkOpen" style="font-size:14px">Got an invite link?</button></p>`}
+      </div>
+      ${S.s3.long
+        ? `<div class="card wait" role="status" style="margin-top:10px"><span style="color:var(--warn);flex:none">${ICON.wa}</span><div><p style="font-weight:600">No invite yet</p><p style="font-size:13.5px;color:var(--sec)">Send the message again? Owners often miss the first one.</p><button class="btn out sm" style="margin-top:10px" data-act="wa">Send on WhatsApp again</button></div></div>`
+        : `<div class="card wait" role="status" style="margin-top:10px"><span class="spin" aria-hidden="true"></span><div><p style="font-weight:600">Waiting for your invite</p><p style="font-size:13.5px;color:var(--sec)">This page updates by itself. You can close it and come back.</p></div></div>`}
+      <p class="foot"><button class="tlink" data-act="logout">Use a different email</button> · <button class="tlink" data-act="toS2b">Create my own team instead</button></p>`
+    )}</div>`;
+  }
+
+  // ---------- S4 ----------
+  function s4Blocker() {
+    const m = S.m;
+    if (!m.stage) return 'Pick where it is now.';
+    if (!m.artist.trim()) return 'Add the artist.';
+    if (m.stage === 'out' && !m.outWhen) return 'Pick when it came out.';
+    if (m.stage === 'out' && m.outWhen === 'day' && !m.outDay) return 'Pick the day.';
+    if (m.stage === 'ready' && !m.noDate && !m.date) return 'Pick the day, or choose No date yet.';
+    if (m.stage === 'ready' && !m.noDate && m.date && m.date < TODAY) return 'That day has passed.';
+    return '';
+  }
+  function promise() {
+    const m = S.m;
+    if (!m.stage) return '';
+    if (isEarly()) return "We'll keep track of it while you make it. Plan the rollout when you're ready.";
+    if (m.stage === 'ready') return m.noDate || !m.date ? "We'll ask a few questions, then build your plan." : "We'll build your rollout plan, week by week.";
+    return "We'll build the plan for after the release.";
+  }
+  function previewHTML() {
+    const m = S.m; const st = stage();
+    const title = m.name.trim() || (m.stage ? (m.stage === 'idea' ? 'Untitled idea' : 'Untitled') : 'Untitled');
+    const kind = (KINDS.find(([v]) => v === m.kind) || [,''])[1];
+    const artist = m.artist.trim() || 'Artist';
+    let status = 'Pick a stage';
+    if (st) {
+      if (isEarly()) status = `<b>${st.stamp}</b> · in the making`;
+      else if (m.stage === 'ready') status = `<b>Ready</b> · ${m.noDate || !m.date ? 'no date yet' : 'out ' + fmtDate(m.date)}`;
+      else status = `<b>Out</b> · ${m.outWhen === 'day' && m.outDay ? fmtDate(m.outDay) : ((OUTWHEN.find(([v]) => v === m.outWhen) || [,'when?'])[1]).toLowerCase()}`;
+    }
+    if (!st) return '';
+    return `<p class="cap">Preview</p>
+      <div class="pcard"><span class="pcover">${esc(initials(m.artist || '?'))}</span><div style="min-width:0">
+        <p class="pt">${esc(title)}</p><p class="pm">${esc(artist)} · ${esc(m.kind === 'unsure' ? 'Kind not set' : kind)}</p><p class="ps">${status}</p></div></div>`;
+  }
+  function stageBlock() {
+    const m = S.m;
+    if (m.stage) {
+      const st = stage();
+      return `<div class="picked"><span class="dot"></span><span class="t">${st.label}</span><button class="chg" data-act="stageChange">Change</button></div>`;
+    }
+    return `<div class="track" role="radiogroup" aria-label="Where is it now?">${STAGES.map((s) => `<button class="stop" role="radio" aria-checked="false" data-act="stage:${s.id}"><span class="dot"></span><span class="t">${s.label}<small>${s.sub}</small></span></button>`).join('')}</div>`;
+  }
+  function musicForm() {
+    const m = S.m; const b = s4Blocker();
+    const kinds = KINDS.filter(([v]) => v !== 'unsure' || isEarly() || !m.stage);
+    let extra = '';
+    if (m.stage === 'ready') {
+      const past = !m.noDate && m.date && m.date < TODAY;
+      extra = `<div class="field" role="radiogroup" aria-label="Release day"><span class="lbl">Release day</span>
+        <div class="chips"><button class="chip" role="radio" aria-checked="${m.noDate}" data-act="noDate:1">No date yet</button><button class="chip" role="radio" aria-checked="${!m.noDate}" data-act="noDate:0">Pick a day</button></div>
+        ${m.noDate ? '' : `<input class="inp rise" type="date" data-f="date" min="${TODAY}" value="${esc(m.date)}" style="margin-top:10px" aria-label="Release day">`}
+        <div data-live="pastwarn">${past ? `<p class="warnline">That day has passed. <button class="tlink" data-act="stage:out" style="color:var(--warn)">Pick Already out instead?</button></p>` : ''}</div></div>`;
+    }
+    if (m.stage === 'out') {
+      extra = `<div class="field" role="radiogroup" aria-label="When did it come out?"><span class="lbl">When did it come out?</span>
+        <div class="chips">${OUTWHEN.map(([v,l]) => `<button class="chip" role="radio" aria-checked="${m.outWhen===v}" data-act="outWhen:${v}">${l}</button>`).join('')}</div>
+        ${m.outWhen === 'day' ? `<input class="inp rise" type="date" data-f="outDay" max="${TODAY}" value="${esc(m.outDay)}" style="margin-top:10px" aria-label="Day it came out">` : ''}</div>`;
+    }
+    const rest = m.stage ? `<div class="rise">
+      <label class="field"><span class="lbl">Artist</span><input class="inp" data-f="artist" id="artist" value="${esc(m.artist)}" placeholder="Artist name" autocomplete="off"><span class="hint">${S.whoFor === 'artist' ? 'Your artist name.' : 'You, or the artist you manage.'}</span>${teamArtists().length && !teamArtists().includes(m.artist.trim()) ? `<span class="sugg">${teamArtists().map((a) => `<button class="chip" data-act="pickArtist:${esc(a)}">${esc(a)}</button>`).join('')}</span>` : ''}</label>
+      <div class="field" role="radiogroup" aria-label="What is it?"><span class="lbl">What is it?</span><div class="chips">${kinds.map(([v,l]) => `<button class="chip" role="radio" aria-checked="${m.kind===v}" data-act="kind:${v}">${l}</button>`).join('')}</div></div>
+      <label class="field"><span class="lbl">Name <span class="optl">(optional)</span></span><input class="inp" data-f="mname" value="${esc(m.name)}" placeholder="Untitled"><span class="hint">A working title is fine.</span></label>
+      ${extra}
+    </div>` : '';
+    return `<div class="form">
+      <div class="field" style="margin-top:14px"><span class="lbl">Where is it now?</span>${stageBlock()}</div>
+      ${rest}
+      <div class="preview" data-live="preview" ${m.stage ? '' : 'hidden'}>${previewHTML()}</div>
+      <div class="stick">
+        <button class="btn pri" data-act="add" data-live="s4btn" aria-disabled="${b?'true':'false'}">${m.busy || (m.netErr ? 'Try again' : 'Add it')}</button>
+        ${m.netErr ? `<p class="err" style="text-align:center" role="alert">No connection. Your answers are saved. Tap Try again.</p>` : ''}
+        <p class="blocker" data-live="s4block">${esc(b)}</p>
+        <p class="promise" data-live="promise">${esc(promise())}</p>
+      </div>
+    </div>`;
+  }
+  function S4() {
+    const mgr = S.joinedMgr;
+    const left = mgr
+      ? `<h1 class="h">Northline Music has 3 rollouts.</h1>
+      <p class="lede">Add what you're working on in <button class="teampick" data-act="teamPick">Northline Music ${ICON.chevd}</button>, or open one of the team's rollouts.</p>${acct()}`
+      : `<button class="back" data-act="toS2b">${ICON.back}Team</button>
+      <h1 class="h">Nothing here yet.</h1>
+      <p class="lede">Add what you're working on in <b>${esc(teamDisplay())}</b>, or <a data-act="toS3">ask someone to invite you</a>.</p>${acct()}`;
+    const rollouts = mgr ? `<div class="card acard rlist" style="margin-bottom:10px">${[['Midnight Run','Starlife · Single · out 12 Dec'],['Soft Life','Femi Cole · Single · out 21 Nov'],['Gbedu','Starlife · EP · no date yet']].map(([t,s]) => `<button class="ahead rrow" data-act="toast:Opens this rollout"><span><span class="rt" style="display:block">${t}</span><span class="rs">${s}</span></span>${ICON.chev}</button>`).join('')}</div>` : '';
+    const open = !mgr || S.formOpen;
+    const right = `${rollouts}
+      <div class="card acard">${open
+        ? `<div class="ahead"><span class="tile brand">${ICON.plus}</span><span><span class="tt" style="display:block">${cardLabel()}</span><span class="ss">Any stage, even just an idea.</span></span></div>${musicForm()}`
+        : `<button class="ahead" data-act="openForm"><span class="tile brand">${ICON.plus}</span><span><span class="tt" style="display:block">${cardLabel()}</span><span class="ss">Any stage, even just an idea.</span></span>${ICON.chev}</button>`}</div>
+      <div class="card acard"><button class="ahead" data-act="openImport"><span class="tile">${ICON.disc}</span><span><span class="tt" style="display:block">Bring in released music</span><span class="ss">${S.imported ? `<span class="done-note">${S.imported} releases from Starlife added</span>` : "Type an artist's name. We pull in their releases."}</span></span>${ICON.chev}</button></div>
+      <div class="card acard"><button class="ahead" data-act="openInvite"><span class="tile">${ICON.people}</span><span><span class="tt" style="display:block">Invite your team</span><span class="ss">${S.invited ? `<span class="done-note">Invite sent to ${esc(S.invited)}</span>` : "They see what's theirs to do."}</span></span>${ICON.chev}</button></div>
+      <p class="foot"><button class="tlink" data-act="skip" style="color:var(--sec)">${mgr ? 'Go to Home' : 'Skip for now'}</button></p>`;
+    return `${topbar(true)}<div class="col">${spl(left, right)}</div>`;
+  }
+
+  // ---------- Landing (app shell) ----------
+  function shell(inner, tab) {
+    return `<header class="shtop">
+      <div class="brandmk deskonly"><span class="mark" aria-hidden="true">U</span>Urganize</div>
+      <nav class="tabs"><span class="tab ${tab==='home'?'on':''}">Home</span><span class="tab">UrgAns</span><span class="tab ${tab==='artists'?'on':''}">Artists</span></nav>
+      <nav class="pills"><span class="${tab==='home'?'on':''}">Home</span><span class="${tab==='artists'?'on':''}">Catalogue</span><span>Team</span><span>UrgAns</span></nav>
+      <div class="right"><span class="av" style="background:var(--brand);color:var(--on-brand)">${esc(initials(S.name))}</span></div>
+    </header><div class="col" style="padding-top:18px">${inner}</div>`;
+  }
+  const WEEKS = [
+    ['Wk 1','Send the master to your distributor','Most need 3 to 4 weeks before release day'],
+    ['Wk 1','Brief the cover designer','Size, mood and the deadline'],
+    ['Wk 2','Pitch to playlists','Starts 4 weeks before release day'],
+    ['Wk 3','Plan three short videos','One teaser, one lyric, one behind the scenes'],
+    ['Wk 4','Line up radio and press','A short note and the private link'],
+  ];
+  const AFTER = [
+    ['Day 1','Share the release everywhere','A post, a story and a pinned post on X'],
+    ['Wk 1','Thank the playlists that added it','A short note keeps the door open'],
+    ['Wk 2','Post the second video','Keep it moving after the first week'],
+  ];
+  function heardRow() {
+    if (S.heard === 'done') return '';
+    if (S.heard) return `<p class="card pad rise" style="margin-top:16px;color:var(--sec)">Thanks.</p>`;
+    return `<div class="card pad" style="margin-top:16px"><p style="font-size:14px;margin-bottom:10px">While you wait: how did you hear about Urganize?</p><div class="chips">${HEARD.map((h) => `<button class="chip" data-act="heard:${h}">${h}</button>`).join('')}</div></div>`;
+  }
+  function Land() {
+    const m = S.m; const st = stage() || STAGES[0];
+    const title = m.name.trim() || (m.stage === 'idea' ? 'Untitled idea' : 'Untitled');
+    const kind = (KINDS.find(([v]) => v === m.kind) || [,'Single'])[1];
+    const artist = m.artist.trim() || 'Starlife';
+    if (S.land === 'record') {
+      const idx = ['idea','recording','mixing'].indexOf(m.stage);
+      return shell(`<p class="crumb">Artists / ${esc(artist)} / Records</p>
+        <h1 class="ptitle">${esc(title)}</h1><p style="color:var(--sec)">${esc(artist)} · ${esc(m.kind==='unsure'?'Kind not set':kind)} · in the making</p>
+        <div class="steps" aria-label="Stage">${['Idea','Recording','Mixing','Done'].map((s,i) => `<span class="${i===idx?'on':''}">${s}</span>`).join('')}</div>
+        <div class="card pad" style="margin-top:18px"><p style="font-weight:600">Songs</p><div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 0;margin-top:10px;border-top:1px solid var(--line)"><span>${esc(m.kind==='single'?title:'Song 1')}</span><span class="stamp on">${st.stamp}</span></div></div>
+        <div style="margin-top:18px"><button class="btn pri auto-d" data-act="planRollout">Plan the rollout</button><p class="promise">When it's ready, we build the plan from what you've told us.</p></div>`, 'artists');
+    }
+    if (S.land === 'nodate') {
+      return shell(`<p class="crumb">Rollout · ${esc(kind)} · no date yet</p><h1 class="ptitle">${esc(title)}</h1><p style="color:var(--sec)">${esc(artist)}</p>
+        <div class="card pad" style="margin-top:18px">
+          <p style="font-weight:600;font-size:16px">A few questions, then your plan</p>
+          <ul style="list-style:none;padding:0;margin:12px 0 0;display:grid;gap:8px;font-size:14px;color:var(--sec)">
+            <li style="display:flex;gap:8px;align-items:center"><span style="color:var(--brand)">${ICON.check}</span>Artist: ${esc(artist)}</li>
+            <li style="display:flex;gap:8px;align-items:center"><span style="color:var(--brand)">${ICON.check}</span>${esc(kind)}, ready to release</li>
+          </ul>
+          <p style="margin-top:16px;font-weight:600">When do you want it out?</p>
+          <div class="chips" style="margin-top:10px"><button class="chip" data-act="plannerAnswer">In 4 weeks</button><button class="chip" data-act="plannerAnswer">In 6 weeks</button><button class="chip" data-act="plannerAnswer">In 8 weeks</button><button class="chip" data-act="plannerAnswer">Pick a day</button></div>
+        </div>`, 'home');
+    }
+    const after = S.land === 'out';
+    const list = after ? AFTER : WEEKS;
+    const shown = Math.min(S.buildStep, list.length);
+    const done = shown >= list.length;
+    const meta = after ? `Out ${m.outWhen === 'day' && m.outDay ? fmtDate(m.outDay) : (OUTWHEN.find(([v]) => v === m.outWhen) || [,'this week'])[1].toLowerCase()}` : `Out ${fmtDate(m.date) || '12 Dec 2026'}`;
+    return shell(`<div class="landgrid"><div>
+      <p class="crumb">Rollout · ${esc(kind)} · ${esc(meta)}</p><h1 class="ptitle">${esc(title)}</h1><p style="color:var(--sec)">${esc(artist)}</p>
+      ${heardRow()}
+      <div class="card pad" style="margin-top:16px" role="status">
+        <div style="display:flex;align-items:center;gap:10px">${done ? `<span style="color:var(--brand)">${ICON.check}</span>` : '<span class="spin" aria-hidden="true"></span>'}<p style="font-weight:600">${done ? (after ? 'Your plan for after the release is ready' : 'Your plan is ready') : (after ? 'Building the plan for after the release…' : 'Building your plan…')}</p></div>
+        <div class="bar"><i style="width:${Math.round((shown/list.length)*100)}%"></i></div>
+        <div style="margin-top:6px">${list.map((w,i) => `<div class="week ${i<shown?'in':''}"><span class="wk">${w[0]}</span><span class="tk">${w[1]}<small>${w[2]}</small></span></div>`).join('')}</div>
+      </div></div>
+      <div class="card pad deskonly" style="flex-direction:column;gap:6px"><p class="crumb">Up next</p><p style="font-size:14px;color:var(--sec)">Invite the people who will do this work. They see only what's theirs.</p><button class="btn out sm" style="margin-top:8px;align-self:flex-start" data-act="toast:Opens the invite sheet">Invite your team</button></div></div>`, 'home');
+  }
+  function Home() {
+    const joined = S.homeKind === 'joined';
+    const greet = `<p class="crumb">Thursday, October 29</p><h1 class="ptitle" style="margin-bottom:16px">Good evening, ${esc(first() || 'there')}.</h1>`;
+    if (joined) {
+      return shell(`${greet}<div class="banner rise"><span style="color:var(--brand)">${ICON.check}</span><span>You're in <b>Northline Music</b>. Here's what's yours to do.</span></div>
+        <div class="card taskcard" style="margin-top:14px"><p class="k">Next · due Friday</p><p class="ti">Brief the designer on the lead single artwork</p><p style="color:var(--sec);font-size:14px">Starlife · Midnight Run</p></div>
+        <div class="card taskcard" style="margin-top:10px"><p class="k" style="color:var(--ter)">Then · due 5 Nov</p><p class="ti" style="font-size:20px">Send the lyric sheet to the label</p><p style="color:var(--sec);font-size:14px">Starlife · Midnight Run</p></div>`, 'home');
+    }
+    return shell(`${greet}<div class="card taskcard"><p class="k">Got a release coming?</p><p class="ti">Add it and get a plan, week by week.</p><p style="color:var(--sec);font-size:14px;margin-bottom:14px">Any stage, even just an idea.</p><button class="btn pri auto-d" data-act="backToS4">${cardLabel()}</button></div>`, 'home');
+  }
+
+  // ---------- Sheets ----------
+  function Sheet() {
+    if (!S.sheet) return '';
+    let body = '';
+    if (S.sheet === 'trial') {
+      const solo = S.whoFor === 'artist';
+      body = `<h2 class="h" style="font-size:26px;padding-right:36px">Your 3-day trial is on</h2>
+        <p class="lede">Everything is open for your whole team. No card needed.</p>
+        ${S.ios ? `<p class="lede" style="margin-top:14px">You can pick a plan later in Settings.</p>` : `
+        <div class="plan"><div class="top"><span class="pn">${solo ? 'Solo' : 'Manager'} <span class="stamp on" style="margin-left:6px">Fits you</span></span><span class="pp">${solo ? '₦5,000' : '₦30,000'}<span style="color:var(--ter);font-size:12px">/mo</span></span></div>
+          <ul>${solo ? '<li>One artist, you and one other person.</li><li>One rollout at a time.</li>' : '<li>Up to 3 artists and 5 people.</li><li>Three rollouts at a time.</li>'}</ul></div>
+        <p style="margin-top:12px;text-align:center"><button class="tlink" data-act="toast:Opens the plan picker" style="font-size:14px">See all plans</button></p>`}
+        <div style="margin-top:18px"><button class="btn pri" data-act="closeSheet">Keep going</button></div>
+        ${S.ios ? '' : `<p class="hint" style="text-align:center;margin-top:10px">We'll remind you before it ends.</p>`}`;
+    }
+    if (S.sheet === 'import') {
+      const d = S.sheetData;
+      body = `<h2 class="h" style="font-size:24px;padding-right:36px">Bring in released music</h2>
+        <p class="lede">Type an artist's name. We pull in their releases.</p>
+        <input class="inp" data-f="imp" value="${esc(d.q || '')}" placeholder="Artist name" style="margin-top:16px" autocomplete="off">
+        ${d.picked ? `<p style="margin-top:14px;font-size:14px;color:var(--sec)">Found 6 releases from Starlife.</p>
+          <div class="covers">${['Midnight Run','Lagos Air','Slow Wine','Third Mainland','Owambe','Gold Teeth'].map((t) => `<div><div class="cv">${initials(t)}</div><p>${t}</p></div>`).join('')}</div>
+          <div style="margin-top:16px"><button class="btn pri" data-act="importAdd">Add these 6</button></div>`
+        : (d.q || '').trim().length > 1 ? `<div style="margin-top:10px"><button class="opt" data-act="importPick"><span class="tile" style="border-radius:50%">ST</span><span><span class="t" style="display:block">Starlife</span><span class="s">6 releases · Afrobeats</span></span></button></div>` : `<p class="hint">Try "Starlife".</p>`}`;
+    }
+    if (S.sheet === 'invite') {
+      const d = S.sheetData;
+      body = `<h2 class="h" style="font-size:24px;padding-right:36px">Invite your team</h2>
+        <p class="lede">They see what's theirs to do.</p>
+        <label class="field"><span class="lbl">Email</span><input class="inp" data-f="invEmail" value="${esc(d.email || '')}" type="email" placeholder="name@email.com"></label>
+        <div class="field"><span class="lbl">Role</span><div class="chips">${['Manager','Team member','Artist','Viewer'].map((r) => `<button class="chip" role="radio" aria-checked="${(d.role||'Team member')===r}" data-act="invRole:${r}">${r}</button>`).join('')}</div></div>
+        <p class="hint" style="margin-top:12px">They see everything in your team. You can limit them to chosen rollouts later, in Team.</p>
+        <div style="margin-top:18px"><button class="btn pri" data-act="invSend">Send invite</button></div>
+        <p style="margin-top:12px;text-align:center"><button class="tlink" data-act="toast:Invite link copied" style="font-size:14px">Or copy an invite link</button></p>`;
+    }
+    return `<div class="scrim" data-act="closeSheet"></div><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div><button class="x" data-act="closeSheet" aria-label="Close">×</button>${body}</div>`;
+  }
+
+  // ---------- Render ----------
+  function screenHTML() {
+    switch (S.screen) {
+      case 's1': return S1();
+      case 's2load': return S2load();
+      case 's2a': return S2a();
+      case 's2b': return S2b();
+      case 's3': return S3();
+      case 's4': return S4();
+      case 'land': return Land();
+      case 'home': return Home();
+    }
+  }
+  const URLS = { s1:'my.urganize.app/onboarding', s2load:'my.urganize.app/onboarding', s2a:'my.urganize.app/onboarding', s2b:'my.urganize.app/onboarding', s3:'my.urganize.app/onboarding', s4:'my.urganize.app/onboarding', land:'my.urganize.app/dashboard', home:'my.urganize.app/dashboard/home' };
+  const NAMES = { s1:'S1 · Create your account', s2load:'S2 · Checking for invites', s2a:"S2A · You're invited", s2b:'S2B · Set up your team', s3:'S3 · Ask to be invited', s4:'S4 · Nothing here yet', land:'S5 · Landing', home:'Home' };
+  let toastMsg = '';
+  function render(keepScroll) {
+    renderCtrl();
+    const prev = document.querySelector('#stage .scroll');
+    const top = keepScroll && prev ? prev.scrollTop : 0;
+    const app = `<div class="app" data-theme="${S.theme}">${S.view==='phone' ? '<div class="sbar"><span>9:41</span><span class="net">MTN 3G</span></div>' : ''}
+      <div class="scroll"><div class="${keepScroll ? '' : (S.dir==='b'?'enter-b':'enter-f')}">${screenHTML()}</div></div>
+      ${Sheet()}${toastMsg ? `<div class="toast" role="status">${esc(toastMsg)}</div>` : ''}</div>`;
+    document.getElementById('stage').innerHTML = S.view === 'phone'
+      ? `<div class="phone">${app}</div>`
+      : `<div class="desk-frame"><div class="chrome"><i></i><i></i><i></i><span class="url">${URLS[S.screen]}</span></div>${app}</div>`;
+    document.getElementById('wrap').className = 'stagewrap' + (S.view === 'desk' ? ' desk' : '');
+    document.getElementById('where').textContent = `${NAMES[S.screen]}${S.screen==='land' ? ' · ' + ({record:'record in the making', rollout:'rollout, plan building', nodate:'rollout, no date yet', out:'already out'})[S.land] : ''}${S.sheet ? ' · ' + S.sheet + ' sheet' : ''}`;
+    const sc = document.querySelector('#stage .scroll'); if (sc) sc.scrollTop = top;
+  }
+  function go(screen, opts = {}) {
+    clearTimers();
+    S.dir = (ORDER[screen] || 0) < (ORDER[S.screen] || 0) ? 'b' : 'f';
+    S.screen = screen; S.sheet = null;
+    render(false);
+    onEnter(screen, opts);
+  }
+  let toastT;
+  function toast(msg) { toastMsg = msg; render(true); clearTimeout(toastT); toastT = setTimeout(() => { toastMsg = ''; render(true); }, 2400); }
+
+  function onEnter(screen) {
+    if (screen === 's2load') later(() => go(S.path === 'invited' ? 's2a' : 's2b'), 900);
+    if (screen === 's2b') later(() => { const el = document.getElementById('teamName'); if (el && S.view==='desk') el.select(); }, 50);
+    if (screen === 's3' && !S.s3.arrived && !S.s3.long) later(() => { S.s3.arrived = true; render(true); }, 8000);
+    if (screen === 'land') {
+      if (S.land === 'rollout' || S.land === 'out') {
+        S.buildStep = 0;
+        const n = S.land === 'out' ? AFTER.length : WEEKS.length;
+        for (let i = 1; i <= n; i++) later(() => { S.buildStep = i; render(true); }, 700 * i);
+        later(() => openTrial(), 700 * n + 900);
+      } else if (S.land === 'record') later(() => openTrial(), 3000);
+    }
+    if (screen === 'home' && S.homeKind === 'skipped' && S.path !== 'invited') later(() => openTrial(), 3000);
+  }
+  function openTrial() {
+    if (S.trialSeen || S.path === 'invited') return;
+    S.trialSeen = true; S.sheet = 'trial'; render(true);
+  }
+
+  // ---------- Live updates while typing (no full re-render, so focus stays) ----------
+  function live(sel, fn) { document.querySelectorAll(`[data-live="${sel}"]`).forEach(fn); }
+  function updateLive() {
+    if (S.screen === 's1') {
+      const b = s1Blocker();
+      live('s1btn', (el) => el.setAttribute('aria-disabled', b ? 'true' : 'false'));
+      live('s1block', (el) => (el.textContent = b));
+      live('referr', (el) => (el.textContent = S.ref && !/^[A-Z0-9-]{4,}$/i.test(S.ref.trim()) ? "That code doesn't look right. You can carry on without it." : ''));
+    }
+    if (S.screen === 's2b') {
+      const b = s2Blocker();
+      live('s2btn', (el) => el.setAttribute('aria-disabled', b ? 'true' : 'false'));
+      live('s2block', (el) => (el.textContent = b));
+      live('teamhint', (el) => { el.className = S.teamName.length > 80 ? 'err' : 'hint'; el.textContent = S.teamName.length > 80 ? 'Keep it under 80 characters.' : (S.teamName.trim() ? 'Your team sees this name, and so does anyone you invite.' : `Left blank, it will be "${teamDisplay()}".`); });
+    }
+    if (S.screen === 's4') {
+      const b = s4Blocker();
+      live('s4btn', (el) => el.setAttribute('aria-disabled', b ? 'true' : 'false'));
+      live('s4block', (el) => (el.textContent = b));
+      live('preview', (el) => (el.innerHTML = previewHTML()));
+      live('promise', (el) => (el.textContent = promise()));
+      live('pastwarn', (el) => { const past = S.m.stage==='ready' && !S.m.noDate && S.m.date && S.m.date < TODAY; el.innerHTML = past ? `<p class="warnline">That day has passed. <button class="tlink" data-act="stage:out" style="color:var(--warn)">Pick Already out instead?</button></p>` : ''; });
+    }
+  }
+
+  document.addEventListener('input', (e) => {
+    const f = e.target.dataset && e.target.dataset.f; if (!f) return;
+    const v = e.target.value;
+    if (['name','email','pw','ref','teamName'].includes(f)) S[f] = v;
+    if (f === 'artist') S.m.artist = v;
+    if (f === 'mname') S.m.name = v;
+    if (f === 'date') S.m.date = v;
+    if (f === 'outDay') S.m.outDay = v;
+    if (f === 'link') { S.s3.link = v; S.s3.linkErr = ''; }
+    if (f === 'imp') { S.sheetData.q = v; S.sheetData.picked = false; render(true); const el = document.querySelector('[data-f="imp"]'); if (el) { el.focus(); el.setSelectionRange(v.length, v.length); } return; }
+    if (f === 'invEmail') S.sheetData.email = v;
+    updateLive();
+  });
+  document.addEventListener('keydown', (e) => {
+    if ((e.key === ' ' || e.key === 'Enter') && e.target.matches && e.target.matches('.checkrow')) { e.preventDefault(); e.target.click(); }
+    if (e.key === 'Escape' && S.sheet) { S.sheet = null; render(true); }
+  });
+
+  document.addEventListener('click', (e) => {
+    const bd = e.target.closest('[data-board]');
+    if (bd) {
+      const [k, v] = bd.dataset.board.split(':');
+      if (k === 'view' || k === 'theme' || k === 'label') { S[k] = v; render(true); return; }
+      if (k === 'ios') { S.ios = v === 'true'; render(true); return; }
+      if (k === 'arrive') { S.s3.arrived = true; clearTimers(); render(true); return; }
+      if (k === 'start') {
+        const keep = { view:S.view, theme:S.theme, label:S.label, ios:S.ios };
+        S = Object.assign(fresh(), keep);
+        if (v === 'invited') { S.path = 'invited'; S.name = 'Kemi Bello'; }
+        if (v === 'ask') { S.path = 'owner'; S.screen = 's2b'; go('s3'); return; }
+        go('s1'); return;
+      }
+    }
+    const el = e.target.closest('[data-act]'); if (!el) return;
+    const [act, arg] = el.dataset.act.split(/:(.*)/s);
+    const m = S.m;
+    switch (act) {
+      case 'google': S.name = S.name || 'Kemi Bello'; toast('Signed in with Google'); later(() => go('s2load'), 700); break;
+      case 'ref': S.refOpen = true; render(true); document.querySelector('[data-f="ref"]')?.focus(); break;
+      case 'login': toast('Goes to Log in, keeping the email'); break;
+      case 's1go':
+        if (el.getAttribute('aria-disabled') === 'true') return;
+        S.s1Busy = true; render(true);
+        later(() => { S.s1Busy = false; if (!S.teamName || S.teamName === "Kemi's Team") S.teamName = first() ? `${first()}'s Team` : 'My Team'; go('s2load'); }, 900); break;
+      case 'logout': go('s1'); break;
+      case 'toS2b': go('s2b'); break;
+      case 'toS3': S.s3.arrived = false; go('s3'); break;
+      case 'who': S.whoFor = arg; render(true); break;
+      case 'createTeam':
+        if (el.getAttribute('aria-disabled') === 'true') return;
+        if (!S.teamName.trim()) S.teamName = teamDisplay();
+        S.s2Busy = true; render(true);
+        later(() => { S.s2Busy = false; S.teamMade = true; go('s4'); }, 800); break;
+      case 'join': S.joinBusy = true; render(true); later(() => { S.joinBusy = false; S.homeKind = 'joined'; S.path = 'invited'; go('home'); }, 900); break;
+      case 'copyEmail': toast('Email copied'); break;
+      case 'wa': toast('Message ready. Send it, then come back here.'); break;
+      case 'copyMsg': toast('Message ready. Send it, then come back here.'); break;
+      case 'linkOpen': S.s3.linkOpen = true; render(true); document.querySelector('[data-f="link"]')?.focus(); break;
+      case 'linkJoin': {
+        const l = S.s3.link.trim();
+        if (!/urganize\.app\/invite/i.test(l)) { S.s3.linkErr = "That isn't an invite link. Ask for a new one."; render(true); }
+        else if (/expired|old/i.test(l)) { S.s3.linkErr = 'That link has run out. Ask the owner for a new one.'; render(true); }
+        else { S.homeKind = 'joined'; S.path = 'invited'; go('home'); }
+        break;
+      }
+      case 'stage':
+        m.stage = arg;
+        if (!EARLY.includes(arg) && m.kind === 'unsure') m.kind = 'single';
+        if (arg === 'out') { m.date = ''; }
+        render(true);
+        if (!m.artist) later(() => document.getElementById('artist')?.focus({ preventScroll:true }), 60);
+        break;
+      case 'stageChange': m.stage = null; render(true); break;
+      case 'kind': m.kind = arg; render(true); break;
+      case 'noDate': m.noDate = arg === '1'; render(true); if (!m.noDate) document.querySelector('[data-f="date"]')?.focus(); break;
+      case 'outWhen': m.outWhen = arg; render(true); break;
+      case 'add': {
+        if (el.getAttribute('aria-disabled') === 'true') return;
+        const rollout = !isEarly();
+        const dated = m.stage === 'ready' && !m.noDate && m.date;
+        if (S.offline) { m.busy = 'Adding…'; render(true); later(() => { m.busy = ''; m.netErr = true; S.offline = false; render(true); }, 1200); break; }
+        m.netErr = false;
+        m.busy = 'Adding…'; render(true);
+        later(() => {
+          if (dated || m.stage === 'out') { m.busy = 'Building your plan…'; render(true); }
+          later(() => { m.busy = ''; S.land = !rollout ? 'record' : m.stage === 'out' ? 'out' : dated ? 'rollout' : 'nodate'; go('land'); }, dated || m.stage === 'out' ? 900 : 10);
+        }, 800);
+        break;
+      }
+      case 'skip': if (S.joinedMgr) { S.homeKind = 'joined'; S.path = 'invited'; go('home'); break; } S.homeKind = 'skipped'; go('home'); break;
+      case 'pickArtist': m.artist = arg; render(true); break;
+      case 'openForm': S.formOpen = true; render(true); break;
+      case 'teamPick': toast('Pick a team: Northline Music or Kemi\'s Team'); break;
+      case 'askDead': S.s3.arrived = false; go('s3'); break;
+      case 'plannerAnswer': toast('Building your plan'); later(() => openTrial(), 1600); break;
+      case 'backToS4': go('s4'); break;
+      case 'openImport': S.sheet = 'import'; S.sheetData = {}; render(true); document.querySelector('[data-f="imp"]')?.focus(); break;
+      case 'importPick': S.sheetData.picked = true; render(true); break;
+      case 'importAdd': S.imported = 6; S.sheet = null; render(true); toast('6 releases from Starlife added'); break;
+      case 'openInvite': S.sheet = 'invite'; S.sheetData = { role:'Team member', see:'Everything' }; render(true); break;
+      case 'invRole': S.sheetData.role = arg; render(true); break;
+      case 'invSee': S.sheetData.see = arg; render(true); break;
+      case 'invSend': {
+        const em = (S.sheetData.email || '').trim();
+        if (!/^\S+@\S+\.\S+$/.test(em)) { toast('Add their email first'); return; }
+        S.invited = em; S.sheet = null; render(true); toast(`Invite sent to ${em}`); break;
+      }
+      case 'closeSheet': if (e.target.closest('.sheet') && !el.matches('.x, .btn')) return; S.sheet = null; render(true); break;
+      case 'heard': S.heard = arg; render(true); later(() => { S.heard = 'done'; render(true); }, 1600); break;
+      case 'planRollout': toast('Opens the planner with the stage already known'); break;
+      case 'toast': toast(arg); break;
+    }
+  });
+  document.addEventListener('change', (e) => {
+    if (e.target.id !== 'jump' || !e.target.value) return;
+    const v = e.target.value; e.target.value = '';
+    const keep = { view:S.view, theme:S.theme, label:S.label, ios:S.ios };
+    S = Object.assign(fresh(), keep);
+    S.whoFor = 'manager';
+    const demo = (stage) => Object.assign(S.m, { artist:'Starlife', stage, kind:'single', name:'Midnight Run', noDate: stage !== 'ready', date: stage === 'ready' ? '2026-12-12' : '', outWhen: stage === 'out' ? 'week' : null });
+    if (v === 's2a') { S.path = 'invited'; go('s2a'); return; }
+    if (v === 's2a:two') { S.path = 'invited'; S.invites = 'two'; go('s2a'); return; }
+    if (v === 's1:taken') { S.s1State = 'taken'; go('s1'); return; }
+    if (v === 's1:closed') { S.s1State = 'closed'; S.email = 'kemi.bello@yahoo.com'; go('s1'); return; }
+    if (v === 's2b:failed') { S.whoFor = null; S.checkFailed = true; go('s2b'); return; }
+    if (v === 's3:long') { S.s3.long = true; go('s3'); return; }
+    if (v === 's4:offline') { S.teamMade = true; Object.assign(S.m, { artist:'Starlife', stage:'recording', kind:'single', name:'Midnight Run' }); S.offline = true; go('s4'); return; }
+    if (v === 's4:mgr') { S.path = 'invited'; S.joinedMgr = true; S.formOpen = false; S.trialSeen = true; go('s4'); return; }
+    if (v === 's4') { S.teamMade = true; }
+    if (v.startsWith('land:')) {
+      const k = v.split(':')[1];
+      demo({ record:'idea', rollout:'ready', nodate:'ready', out:'out' }[k]);
+      if (k === 'record') S.m.name = '';
+      if (k === 'nodate') S.m.noDate = true;
+      S.land = k; go('land'); return;
+    }
+    if (v === 'trial') { demo('idea'); S.m.name = ''; S.land = 'record'; go('land'); clearTimers(); openTrial(); return; }
+    if (v.startsWith('home:')) { S.homeKind = v.split(':')[1]; if (S.homeKind === 'joined') S.path = 'invited'; go('home'); return; }
+    go(v);
+  });
+
+  render(false);
+})();
+</script>
+</body>
+</html>
