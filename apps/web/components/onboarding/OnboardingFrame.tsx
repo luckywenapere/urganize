@@ -291,8 +291,13 @@ export function Sheet({
       if (event.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', onKey);
+    // Focus moves into the sheet, and back to whatever opened it on close.
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     panelRef.current?.focus();
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      opener?.focus?.();
+    };
   }, [open, onClose]);
   if (!open) return null;
   return (

@@ -23,9 +23,9 @@ const MAX_REVEAL_MS = 2600;
 const MAX_COVERS_SHOWN = 12;
 
 const primaryButton =
-  'motion-press inline-flex min-h-12 items-center justify-center rounded-full bg-brand px-6 text-sm font-semibold text-content-inverse transition-colors duration-fast ease-standard hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-bg-hover disabled:text-content-tertiary';
+  'motion-press inline-flex min-h-12 items-center justify-center rounded-full bg-brand px-6 text-[15px] font-semibold text-content-inverse transition-colors duration-fast ease-standard hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-bg-hover disabled:text-content-tertiary';
 const secondaryButton =
-  'motion-press inline-flex min-h-12 items-center justify-center rounded-full border border-stroke-control bg-transparent px-6 text-sm font-medium text-content-secondary transition-colors duration-fast ease-standard hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-50';
+  'motion-press inline-flex min-h-12 items-center justify-center rounded-full border border-stroke-control bg-transparent px-6 text-[15px] font-semibold text-content-primary transition-colors duration-fast ease-standard hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-50';
 
 /**
  * "Who is the artist?" (2026-10-26). Type a name, pick the profile, watch the
