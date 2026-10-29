@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { FaChevronDown } from "react-icons/fa6";
+import { HeaderDropdown } from "./HeaderDropdown";
 
 // Order is deliberate and load-bearing, not cosmetic: this is the order we
 // want Google to surface as sitelinks (founder calls, 2026-08-06 and
@@ -29,9 +28,9 @@ const productLinks = [
 
 // The "Product" submenu bundles every product page into one top-menu entry
 // (URG-161). These pages live ONLY here — they were removed from the footer
-// on purpose, so this menu is their single home. Click-to-toggle (not
-// hover) so the same control works on touch screens; the trigger renders at
-// every breakpoint, which is what keeps the menu reachable on mobile.
+// on purpose, so this menu is their single home. The toggle itself is
+// HeaderDropdown; the trigger renders at every breakpoint, which is what
+// keeps the menu reachable on mobile.
 //
 // Because this menu is their single home, its markup is ALWAYS rendered and
 // merely hidden when closed — never `{open && <menu/>}`. Conditional mounting
@@ -47,61 +46,24 @@ const productLinks = [
 // artists). This menu is still their only home, so the DOM rule above now
 // matters for five pages rather than two (four since /for-labels was removed
 // on 2026-09-11).
+export function ProductLinks({ close }: { close: () => void }) {
+  return productLinks.map(({ href, label }) => (
+    <Link
+      key={href}
+      role="menuitem"
+      href={href}
+      onClick={close}
+      className="block px-5 py-3 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:bg-[var(--marketing-surface)] hover:text-[var(--marketing-text)]"
+    >
+      {label}
+    </Link>
+  ));
+}
+
 export function ProductMenu() {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open]);
-
   return (
-    <div ref={containerRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        className="-mx-2 flex min-h-11 items-center gap-1.5 px-2 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)]"
-      >
-        Product
-        <FaChevronDown
-          aria-hidden
-          className={`h-2.5 w-2.5 transition-transform ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      <div
-        role="menu"
-        hidden={!open}
-        className="absolute right-0 top-full z-50 mt-1 min-w-[11rem] border border-[color:var(--marketing-border)] bg-[var(--marketing-bg)] py-2 shadow-lg"
-      >
-        {productLinks.map(({ href, label }) => (
-          <Link
-            key={href}
-            role="menuitem"
-            href={href}
-            onClick={() => setOpen(false)}
-            className="block px-5 py-3 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:bg-[var(--marketing-surface)] hover:text-[var(--marketing-text)]"
-          >
-            {label}
-          </Link>
-        ))}
-      </div>
-    </div>
+    <HeaderDropdown label="Product">
+      {(close) => <ProductLinks close={close} />}
+    </HeaderDropdown>
   );
 }

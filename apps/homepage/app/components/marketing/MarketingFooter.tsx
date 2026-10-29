@@ -2,43 +2,7 @@ import Image from "next/image";
 import { ONE_LINER } from "@/lib/positioning";
 import Link from "next/link";
 import { BackToTopButton } from "./BackToTopButton";
-import { FaLinkedin } from "react-icons/fa6";
-import {
-  SiInstagram,
-  SiThreads,
-  SiTiktok,
-  SiX,
-  SiYoutube,
-} from "react-icons/si";
-
-const socialLinks = [
-  { href: "https://x.com/urganize", label: "Urganize on X", Icon: SiX },
-  {
-    href: "https://www.linkedin.com/company/urganize",
-    label: "Urganize on LinkedIn",
-    Icon: FaLinkedin,
-  },
-  {
-    href: "https://www.instagram.com/urganize",
-    label: "Urganize on Instagram",
-    Icon: SiInstagram,
-  },
-  {
-    href: "https://www.tiktok.com/@urganize",
-    label: "Urganize on TikTok",
-    Icon: SiTiktok,
-  },
-  {
-    href: "https://www.youtube.com/@urganize",
-    label: "Urganize on YouTube",
-    Icon: SiYoutube,
-  },
-  {
-    href: "https://www.threads.net/@urganize",
-    label: "Urganize on Threads",
-    Icon: SiThreads,
-  },
-] as const;
+import { SOCIAL_LINKS } from "@/lib/socials";
 
 // Flag-gated (matches app/roadmap/page.tsx's own 404-when-off guard): the
 // footer link only appears once NEXT_PUBLIC_FEATURE_ROADMAP is on, so
@@ -49,14 +13,15 @@ const ROADMAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_ROADMAP === "true";
 // ProductMenu dropdown (URG-161). The footer carries two short columns:
 // the company pages, and the legal pages people look for at the bottom of a
 // site (URG-413, 2026-10-19: Privacy and Subprocessors added after the terms
-// update, so the policy is one click from every page).
+// update, so the policy is one click from every page). Community left the
+// footer on 2026-10-29 (founder call: nobody used it); the WhatsApp group and
+// the socials now sit in the header menu's Community section.
 const footerColumns = [
   {
     heading: "Company",
     links: [
       { href: "/team", label: "Team" },
       { href: "/guides", label: "Guides" },
-      { href: "/community", label: "Community" },
       { href: "/changelog", label: "Updates" },
       ...(ROADMAP_ENABLED ? [{ href: "/roadmap", label: "Roadmap" }] : []),
       { href: "/brand", label: "Brand" },
@@ -108,7 +73,7 @@ export function MarketingFooter() {
               {ONE_LINER}
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-5">
-              {socialLinks.map(({ href, label, Icon }) => (
+              {SOCIAL_LINKS.map(({ href, label, Icon }) => (
                 <a
                   key={href}
                   href={href}

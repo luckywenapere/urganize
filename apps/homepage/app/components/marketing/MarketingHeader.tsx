@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import { CommunityMenu } from "./CommunityMenu";
+import { MobileMenu } from "./MobileMenu";
 import { ProductMenu } from "./ProductMenu";
 import { ThemeToggle } from "./ThemeToggle";
 import { WAITLIST_URL } from "@/lib/app-urls";
@@ -74,7 +76,14 @@ export function MarketingHeader() {
           </Link>
 
           <div className="flex items-center gap-3 sm:gap-6">
-            <ProductMenu />
+            {/* Phones get one Menu holding both; see MobileMenu.tsx. */}
+            <div className="sm:hidden">
+              <MobileMenu />
+            </div>
+            <div className="hidden items-center gap-6 sm:flex">
+              <ProductMenu />
+              <CommunityMenu />
+            </div>
             <Link
               href="/login"
               className="-mx-2 hidden min-h-11 items-center px-2 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)] sm:inline-flex"
