@@ -172,8 +172,10 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     // (RolloutCoverTile), so the row would be a second door to one place. The
     // computer's header has no cover, so the rail keeps the row.
     flags.coverArt && variant !== 'phone' ? scene('coverart', 'Add cover art') : null,
-    flags.metadata ? scene('metadata', 'Fill in details') : null,
-    scene('distribute', 'Distribute now'),
+    // Fill in details is not a row (Oct 29, 2026, #848): it is part of
+    // Distribute, which opens it from its own checklist rows, so Distribute
+    // stays lit while it is open.
+    { ...scene('distribute', 'Distribute now'), isActive: activeScene === 'distribute' || activeScene === 'metadata' },
     flags.files ? scene('files', 'Add files') : null,
     // ONE row since 2026-10-16 (Pitch this! as one place): the pitch kit and
     // promo channels live inside it, so "Build your pitch kit" and "Find
