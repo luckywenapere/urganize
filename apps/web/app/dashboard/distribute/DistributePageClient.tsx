@@ -9,6 +9,8 @@ import type { ExecutionRelease } from '@/lib/execution-types';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { ThumbImage } from '@/components/shared/ThumbImage';
 import { NeedsRolloutEmpty } from '@/components/releases/NeedsRolloutEmpty';
+import { supabase } from '@/lib/supabase/client';
+import type { DistributeChip, DistributeRow } from '@/lib/distribute-summary';
 
 /**
  * Distribute, a Catalogue tab (founder call, 2026-10-14: it took Press kits'
@@ -16,7 +18,26 @@ import { NeedsRolloutEmpty } from '@/components/releases/NeedsRolloutEmpty';
  * step, which opens inside this tab ([releaseId]/) so the tab stays lit
  * (founder, same day: "it still looks like it is under catalogue"). No
  * partner is named here: there will be more than one.
+ *
+ * Each row carries two tags (Oct 29, 2026, #850): where it is with stores, and
+ * its smart link. They come from one read after the list shows, so a slow read
+ * never holds the list back.
  */
+
+const CHIP_TONE: Record<DistributeChip['tone'], string> = {
+  live: 'border-brand/45 text-brand',
+  done: 'border-brand/45 text-brand',
+  error: 'border-status-error/45 text-status-error',
+  quiet: 'border-stroke-strong text-content-secondary',
+};
+
+function Chip({ chip }: { chip: DistributeChip }) {
+  return (
+    <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${CHIP_TONE[chip.tone]}`}>
+      {chip.label}
+    </span>
+  );
+}
 
 const distributeHref = (releaseId: string) => `/dashboard/distribute/${encodeURIComponent(releaseId)}`;
 
@@ -80,11 +101,41 @@ export default function DistributePageClient() {
 
   const loading = (authLoading || initialLoading) && rows.length === 0;
 
+  const idsKey = rows.map((release) => release.id).join(',');
+  const [tags, setTags] = useState<Record<string, DistributeRow>>({});
+  useEffect(() => {
+    if (!idsKey) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const response = await fetch(`/api/distribute/summary?ids=${encodeURIComponent(idsKey)}`, {
+          headers: { Authorization: `Bearer ${session?.access_token ?? ''}` },
+        });
+        if (!response.ok) return;
+        const body = (await response.json()) as { rows?: Record<string, DistributeRow>; altlink?: boolean };
+        if (cancelled || !body.rows) return;
+        // With Altlink switched off, the smart link tag says nothing useful.
+        const shown = Object.fromEntries(
+          Object.entries(body.rows).map(([id, row]) => [id, body.altlink === false ? { ...row, link: null } : row])
+        );
+        setTags(shown as Record<string, DistributeRow>);
+      } catch {
+        // Tags are extra; the list stands without them.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [idsKey]);
+
   return (
     <div>
       <div className="pt-5 sm:pt-6" />
       <p className="mb-4 text-sm text-content-secondary">
-        Pick a rollout to send to stores.
+        Send each rollout to stores and share its smart link.
       </p>
 
       {loading ? (
@@ -103,6 +154,7 @@ export default function DistributePageClient() {
         <ul className="divide-y divide-stroke-subtle overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
           {rows.map((release) => {
             const day = formatDate(release.releaseDate);
+            const tag = tags[release.id];
             return (
               <li key={release.id}>
                 <Link
@@ -118,6 +170,12 @@ export default function DistributePageClient() {
                       {release.artistName}
                       {day ? ` · ${day}` : ''}
                     </span>
+                    {tag && (tag.stores || tag.link) ? (
+                      <span className="mt-1.5 flex flex-wrap gap-1.5">
+                        {tag.stores ? <Chip chip={tag.stores} /> : null}
+                        {tag.link ? <Chip chip={tag.link} /> : null}
+                      </span>
+                    ) : null}
                   </span>
                   <ArrowRight className="h-4 w-4 shrink-0 text-content-tertiary" aria-hidden />
                 </Link>

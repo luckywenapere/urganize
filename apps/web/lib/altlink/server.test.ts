@@ -186,8 +186,29 @@ describe('syncSmartLink', () => {
     expect(tables.release_smart_links).toHaveLength(1);
   });
 
-  it('waits, calling nothing, when there is no code', async () => {
+  it('makes a pre-save with no code, sending no upc or isrc', async () => {
+    const { client: db } = fakeDb(seed({ upc: null }));
+    const altlink = fakeClient();
+    expect((await syncSmartLink(db, RELEASE_ID, { client: altlink, now: NOW })).kind).toBe('created');
+    const sent = altlink.createLink.mock.calls[0][0];
+    expect(sent).toMatchObject({ status: 'approved', release_date: '2026-11-06' });
+    expect(sent).not.toHaveProperty('upc');
+    expect(sent).not.toHaveProperty('isrc');
+  });
+
+  it('patches the UPC silently when it arrives after a code-less pre-save', async () => {
     const { client: db, tables } = fakeDb(seed({ upc: null }));
+    const altlink = fakeClient();
+    await syncSmartLink(db, RELEASE_ID, { client: altlink, now: NOW });
+    tables.release_metadata[0].upc = '123456789012';
+    const outcome = await syncSmartLink(db, RELEASE_ID, { client: altlink, now: NOW });
+    expect(outcome.kind).toBe('patched');
+    expect(altlink.patchLink).toHaveBeenCalledWith('lnk_1', { upc: '123456789012' });
+    expect(tables.release_smart_links[0].sent_upc).toBe('123456789012');
+  });
+
+  it('waits, calling nothing, when the song is out and there is no code', async () => {
+    const { client: db, tables } = fakeDb(seed({ upc: null, date: '2026-09-01' }));
     const altlink = fakeClient();
     expect(await syncSmartLink(db, RELEASE_ID, { client: altlink, now: NOW })).toEqual({ kind: 'not_ready', reason: 'no_code' });
     expect(altlink.createLink).not.toHaveBeenCalled();

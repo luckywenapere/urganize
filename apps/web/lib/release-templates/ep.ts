@@ -320,7 +320,7 @@ export const EP_RELEASE_TEMPLATE: Template = {
     },
     {
       id: 'w10_single_presave_setup',
-      title: 'Set up the lead single pre-save link',
+      title: 'Set up the lead single smart link',
       description:
         'Build the pre-save now the distributor has accepted the single. Capture the audience here: these are the people you will point at the EP in 6 weeks.',
       role: 'manager',
@@ -719,7 +719,7 @@ export const EP_RELEASE_TEMPLATE: Template = {
     },
     {
       id: 'w4_ep_presave_setup',
-      title: 'Set up the EP pre-save link',
+      title: 'Set up the EP smart link',
       description:
         'Build the EP pre-save now the distributor has accepted, and point the single\'s pre-save audience at it.',
       role: 'manager',

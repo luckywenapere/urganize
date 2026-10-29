@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from '@/components/icons';
 import { DistributionSection } from '@/components/releases/DistributionSection';
+import { SmartLinkSection } from '@/components/releases/SmartLinkSection';
+import { isAltlinkEnabled } from '@/lib/altlink/rules';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 
@@ -17,7 +19,20 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
  * useSceneOverlay, which keeps the current path. Those scenes live on the
  * rollout, so when one lands here as `?scene=` it is handed straight across to
  * the rollout with the same params.
+ *
+ * Three tabs (Oct 29, 2026, #850): Stores (the step above, unchanged), Smart
+ * link (the same view the rollout menu opens) and Numbers (the link's Altlink
+ * numbers). `?tab=link` / `?tab=numbers`; no tab is Stores.
  */
+
+type Tab = 'stores' | 'link' | 'numbers';
+const TABS: ReadonlyArray<{ key: Tab; label: string }> = [
+  { key: 'stores', label: 'Stores' },
+  { key: 'link', label: 'Smart link' },
+  { key: 'numbers', label: 'Numbers' },
+];
+const readTab = (value: string | null): Tab =>
+  isAltlinkEnabled() && (value === 'link' || value === 'numbers') ? value : 'stores';
 export default function DistributeReleaseClient({ releaseId }: { releaseId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -27,6 +42,14 @@ export default function DistributeReleaseClient({ releaseId }: { releaseId: stri
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
 
   const scene = searchParams.get('scene');
+  const tab = readTab(searchParams.get('tab'));
+  const pickTab = (next: Tab) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === 'stores') params.delete('tab');
+    else params.set('tab', next);
+    const query = params.toString();
+    router.replace(`/dashboard/distribute/${encodeURIComponent(releaseId)}${query ? `?${query}` : ''}`, { scroll: false });
+  };
   useEffect(() => {
     if (!scene || scene === 'distribute') return;
     const next = new URLSearchParams(searchParams.toString());
@@ -63,8 +86,36 @@ export default function DistributeReleaseClient({ releaseId }: { releaseId: stri
         ) : null}
       </div>
 
+      {release && isAltlinkEnabled() ? (
+        <div role="tablist" aria-label="Distribute" className="mt-5 flex gap-1 rounded-full bg-bg-elevated p-1 sm:max-w-md">
+          {TABS.map((entry) => (
+            <button
+              key={entry.key}
+              type="button"
+              role="tab"
+              aria-selected={tab === entry.key}
+              onClick={() => pickTab(entry.key)}
+              className={`motion-focus min-h-10 flex-1 rounded-full px-3 text-sm font-semibold transition-colors ${
+                tab === entry.key ? 'bg-content-primary text-content-inverse' : 'text-content-secondary hover:text-content-primary'
+              }`}
+            >
+              {entry.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       {release ? (
-        <DistributionSection release={release} />
+        tab === 'stores' ? (
+          <DistributionSection release={release} />
+        ) : (
+          <SmartLinkSection
+            key={tab}
+            releaseId={release.id}
+            part={tab === 'numbers' ? 'numbers' : 'link'}
+            onOpenLink={() => pickTab('link')}
+          />
+        )
       ) : loading ? (
         <div className="mt-8 h-64 animate-pulse border border-stroke-default bg-bg-surface" aria-busy="true" />
       ) : (

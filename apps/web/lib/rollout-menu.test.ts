@@ -273,7 +273,7 @@ describe('what each row does', () => {
       metadata: 'Fill in details',
       coverart: 'Add cover art',
       files: 'Add files',
-      capture: 'Pre-save link',
+      capture: 'Smart link',
     });
   });
 });

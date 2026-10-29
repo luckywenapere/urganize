@@ -17,6 +17,8 @@ import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbo
 import { TaskMemberSelect } from '@/components/tasks/TaskMemberSelect';
 import { TaskPersonSelect } from '@/components/tasks/TaskPersonSelect';
 import { EditorialPitchPanel } from '@/components/tasks/EditorialPitchPanel';
+import { SmartLinkTaskPanel } from '@/components/tasks/SmartLinkTaskPanel';
+import { isSmartLinkTask } from '@/lib/smart-link-task';
 import { FindSomeoneRow } from '@/components/directory/FindSomeoneRow';
 import { isEditorialPitchTask } from '@/lib/editorial-pitch';
 import { showEditorialPitch } from '@/lib/release-out';
@@ -753,6 +755,9 @@ export function TaskDetailView({
           {isEditorialPitchTask(task.templateTaskId) && showEditorialPitch(releaseDateForPhase) ? (
             <EditorialPitchPanel key={task.id} taskId={task.id} releaseId={task.releaseId ?? null} />
           ) : null}
+
+          {/* The smart link task opens the link itself (#850, 2026-10-29). */}
+          {task.releaseId && isSmartLinkTask(task) ? <SmartLinkTaskPanel key={task.id} releaseId={task.releaseId} /> : null}
 
           {/* Notes stay out of the way until they exist (2026-09-05). This was
               a 120px box that rendered even when empty, which is most of the

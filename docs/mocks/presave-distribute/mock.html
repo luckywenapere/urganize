@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pre-save in Distribute</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web dark theme (same as docs/mocks/next-record-v2). */
+  :root {
+    --bg:#0c0c0d; --card:#171719; --elev:#1b1b1e; --line:rgba(242,242,240,.07); --line2:#2e2e32;
+    --text:#f2f2f0; --sec:#929291; --ter:#6a6a69; --brand:#7fd99a; --warn:#f0b95c;
+    --board:#e9e3d7; --board-text:#1a1611; --board-sec:#5c544a;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--board-text); padding:32px 16px 64px; }
+  p { margin:0; }
+  .intro { max-width:900px; margin:0 auto 28px; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; margin:0 0 6px; }
+  .intro p { color:var(--board-sec); }
+  .board { display:flex; flex-wrap:wrap; gap:28px; justify-content:center; }
+  .col { width:360px; max-width:100%; }
+  .tag { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin-bottom:6px; }
+  .why { font-size:13px; color:var(--board-sec); margin-bottom:12px; min-height:78px; }
+  .phone { background:var(--bg); color:var(--text); border-radius:28px; padding:18px 16px 16px; min-height:720px; display:flex; flex-direction:column; }
+  .ser { font-family:'Young Serif', serif; font-weight:400; }
+  .mono { font-family:'JetBrains Mono', monospace; }
+  .mu { color:var(--sec); } .ter { color:var(--ter); }
+  .crumb { font-size:13px; color:var(--sec); margin-bottom:12px; display:flex; align-items:center; gap:10px; }
+  .back { width:34px; height:34px; border-radius:50%; border:1px solid var(--line2); display:grid; place-items:center; color:var(--sec); flex:none; }
+  .eyebrow { font-size:11px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--ter); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-top:12px; }
+  .meta { font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--sec); }
+  .row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--line); }
+  .row:first-child { border-top:0; }
+  .btn { display:flex; align-items:center; justify-content:center; min-height:44px; border-radius:999px; font-weight:600; font-size:14px; margin-top:12px; }
+  .green { background:var(--brand); color:var(--bg); }
+  .outline { border:1px solid var(--line2); color:var(--text); }
+  .chip { font-size:11px; font-weight:600; border:1px solid var(--line2); border-radius:999px; padding:3px 9px; color:var(--sec); white-space:nowrap; }
+  .chip.ok { border-color:rgba(127,217,154,.45); color:var(--brand); }
+  .chip.warn { border-color:rgba(240,185,92,.5); color:var(--warn); }
+  .live { display:inline-flex; align-items:center; gap:6px; background:rgba(127,217,154,.15); color:var(--brand); border-radius:999px; padding:3px 10px; font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; }
+  .live i { width:6px; height:6px; border-radius:50%; background:var(--brand); }
+  .cov { width:44px; height:44px; border-radius:10px; flex:none; }
+  .lr { display:flex; gap:12px; align-items:center; min-width:0; }
+  .tick { width:20px; height:20px; border-radius:50%; border:1.5px solid var(--line2); flex:none; }
+  .tick.done { background:var(--brand); border-color:var(--brand); }
+  .tabs { display:flex; gap:4px; background:var(--elev); border-radius:999px; padding:4px; margin-top:14px; }
+  .tabs span { flex:1; text-align:center; font-size:13px; font-weight:600; padding:7px 0; border-radius:999px; color:var(--sec); }
+  .tabs span.on { background:var(--text); color:var(--bg); }
+  .urlbox { display:flex; align-items:center; gap:8px; border:1px solid var(--line2); border-radius:12px; padding:8px 10px; margin-top:12px; background:var(--bg); }
+  .urlbox .mono { flex:1; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .stat { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+  .stat div { background:var(--elev); border-radius:12px; padding:10px 12px; }
+  .stat b { display:block; font-family:'Young Serif', serif; font-weight:400; font-size:24px; line-height:1.2; }
+  .bar { height:6px; border-radius:3px; background:#2e2e32; margin-top:6px; }
+  .bar i { display:block; height:6px; border-radius:3px; background:var(--brand); }
+  .note { font-size:12px; color:var(--sec); text-align:center; margin-top:10px; }
+  .new { outline:2px dashed rgba(127,217,154,.55); outline-offset:3px; }
+  .spacer { flex:1; }
+  .assume { max-width:900px; margin:32px auto 0; font-size:13px; color:var(--board-sec); }
+  .assume b { color:var(--board-text); }
+  .assume li { margin:4px 0; }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Pre-save, in two places</h1>
+  <p>Dashed outline = new. Everything else is what the app shows today. Issue #850.</p>
+</div>
+
+<div class="board">
+
+  <!-- 1. Plan task -->
+  <div class="col">
+    <div class="tag">1 · In every plan</div>
+    <p class="why">Every new plan gets "Set up and share your pre-save link", like it always gets "Send the song to your distributor". Due 2 weeks before release day. Tapping it opens the link.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">&larr;</span><span>Ada · <b style="color:var(--text)">Midnight Drive</b></span></div>
+      <div class="ser" style="font-size:22px">This week</div>
+      <div class="card" style="padding:4px 14px">
+        <div class="row"><div class="lr"><span class="tick done"></span><div><div>Send the song to your distributor</div><div class="mu" style="font-size:12px">Done · Mon 2 Nov</div></div></div></div>
+        <div class="row new" style="border-radius:8px"><div class="lr"><span class="tick"></span><div><div>Set up and share your pre-save link</div><div class="mu" style="font-size:12px">Due Mon 9 Nov · You</div></div></div><span class="chip ok">Link ready</span></div>
+        <div class="row"><div class="lr"><span class="tick"></span><div><div>Pitch to Spotify editorial</div><div class="mu" style="font-size:12px">Due Wed 11 Nov · Tobi</div></div></div></div>
+        <div class="row"><div class="lr"><span class="tick"></span><div><div>Post the cover reveal</div><div class="mu" style="font-size:12px">Due Fri 13 Nov · Ada</div></div></div></div>
+      </div>
+
+      <div class="eyebrow" style="margin-top:20px">Task open</div>
+      <div class="card new">
+        <div style="font-weight:600">Set up and share your pre-save link</div>
+        <p class="mu" style="font-size:13px;margin-top:4px">Fans tap once and the song lands in their library on release day. Share it everywhere the artist posts.</p>
+        <div class="urlbox"><span class="mono">altlink.co/ada/midnight-drive</span><span class="mu" style="font-size:13px;font-weight:600">Copy</span></div>
+        <div class="btn green">Share link</div>
+        <div class="btn outline">See pre-save numbers</div>
+      </div>
+      <p class="note">No link yet? The button reads "Finish your details" and opens Metadata. The link makes itself once the song has a UPC or ISRC.</p>
+    </div>
+  </div>
+
+  <!-- 2. Distribute list -->
+  <div class="col">
+    <div class="tag">2 · Distribute tab</div>
+    <p class="why">Each rollout now shows two things: where it is with stores, and its pre-save link. One look tells you what still needs doing.</p>
+    <div class="phone">
+      <div class="ser" style="font-size:26px">Catalogue</div>
+      <div style="display:flex;gap:16px;font-size:14px;margin-top:8px;border-bottom:1px solid var(--line);padding-bottom:8px">
+        <span class="mu">Artists</span><span class="mu">Rollouts</span><span style="font-weight:600;border-bottom:2px solid var(--text);padding-bottom:8px;margin-bottom:-9px">Distribute</span>
+      </div>
+      <p class="mu" style="margin-top:14px;font-size:13px">Send to stores and get fans saving early.</p>
+      <div class="card" style="padding:2px 14px">
+        <div class="row" style="align-items:flex-start">
+          <div class="lr" style="align-items:flex-start"><span class="cov" style="background:linear-gradient(135deg,#3b4a6b,#1d2333)"></span>
+            <div><div style="font-weight:600">Midnight Drive</div><div class="mu" style="font-size:12px">Ada · Nov 20, 2026</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" class="new"><span class="chip ok">Sent to stores</span><span class="chip ok">214 pre-saves</span></div></div></div>
+          <span class="ter">&rsaquo;</span>
+        </div>
+        <div class="row" style="align-items:flex-start">
+          <div class="lr" style="align-items:flex-start"><span class="cov" style="background:linear-gradient(135deg,#6b3b3b,#33201d)"></span>
+            <div><div style="font-weight:600">Lagos Rain</div><div class="mu" style="font-size:12px">Kemi · Dec 4, 2026</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" class="new"><span class="chip warn">2 things to fix</span><span class="chip">No pre-save yet</span></div></div></div>
+          <span class="ter">&rsaquo;</span>
+        </div>
+        <div class="row" style="align-items:flex-start">
+          <div class="lr" style="align-items:flex-start"><span class="cov" style="background:linear-gradient(135deg,#3b6b55,#1d3329)"></span>
+            <div><div style="font-weight:600">Owambe</div><div class="mu" style="font-size:12px">Ada · Oct 9, 2026</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" class="new"><span class="chip ok">Out now</span><span class="chip">1,380 clicks</span></div></div></div>
+          <span class="ter">&rsaquo;</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Release Distribute: pre-save tab -->
+  <div class="col">
+    <div class="tag">3 · Inside a rollout: Pre-save</div>
+    <p class="why">Open a rollout in Distribute and you get three tabs. Stores is today's check and hand-off, unchanged. Pre-save is the same link the rollout menu opens.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">&larr;</span><div><div class="eyebrow">Ada</div><div class="ser" style="font-size:18px;color:var(--text)">Midnight Drive</div></div></div>
+      <div class="tabs new"><span>Stores</span><span class="on">Pre-save</span><span>Numbers</span></div>
+      <div class="card" style="padding:16px">
+        <span class="live"><i></i>Live</span>
+        <div class="ser" style="font-size:26px;margin-top:10px;line-height:1.15">Drops in 22 days</div>
+        <p class="meta" style="margin-top:6px">Fri Nov 20 · Midnight Lagos</p>
+        <div class="urlbox"><span class="mono">altlink.co/ada/midnight-drive</span><span class="mu" style="font-size:13px;font-weight:600">Copy</span></div>
+        <div class="btn green">Share link</div>
+      </div>
+      <div class="card">
+        <div class="meta">Fan emails</div>
+        <div class="row" style="border:0;padding-bottom:0"><span>38 fans left an email</span><span class="mu">Open &rsaquo;</span></div>
+      </div>
+      <div class="spacer"></div>
+      <p class="meta" style="text-align:center;opacity:.55">Powered by Altlink</p>
+    </div>
+  </div>
+
+  <!-- 4. Numbers -->
+  <div class="col">
+    <div class="tag">4 · Inside a rollout: Numbers</div>
+    <p class="why">The Altlink numbers get their own tab: visits, clicks, pre-saves, and which store fans pick. Refreshes every 10 minutes.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">&larr;</span><div><div class="eyebrow">Ada</div><div class="ser" style="font-size:18px;color:var(--text)">Midnight Drive</div></div></div>
+      <div class="tabs"><span>Stores</span><span>Pre-save</span><span class="on">Numbers</span></div>
+      <div class="new" style="border-radius:14px">
+        <div class="stat">
+          <div><span class="meta">Visits</span><b>1,920</b></div>
+          <div><span class="meta">Clicks</span><b>742</b><span class="mu" style="font-size:12px">39% of visits</span></div>
+          <div><span class="meta">Pre-saves</span><b>214</b><span class="mu" style="font-size:12px">11% of visits</span></div>
+          <div><span class="meta">Fan emails</span><b>38</b></div>
+        </div>
+        <div class="card">
+          <div class="meta">Where fans click</div>
+          <div style="margin-top:10px">
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span>Spotify</span><span class="mono mu">371 · 50%</span></div><div class="bar"><i style="width:50%"></i></div>
+          </div>
+          <div style="margin-top:10px">
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span>Apple Music</span><span class="mono mu">193 · 26%</span></div><div class="bar"><i style="width:26%"></i></div>
+          </div>
+          <div style="margin-top:10px">
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span>Audiomack</span><span class="mono mu">104 · 14%</span></div><div class="bar"><i style="width:14%"></i></div>
+          </div>
+          <div style="margin-top:10px">
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span>Boomplay</span><span class="mono mu">74 · 10%</span></div><div class="bar"><i style="width:10%"></i></div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Updated 4 min ago</p>
+      <div class="spacer"></div>
+      <p class="meta" style="text-align:center;opacity:.55">Powered by Altlink</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="assume">
+  <p><b>Measured</b> (read from the code): Altlink gives us totals only: visits, clicks, click rate, pre-saves, top stores. No day-by-day numbers, so no trend chart.</p>
+  <p style="margin-top:6px"><b>Assumed</b> (numbers on screen are made up for the mock):</p>
+  <ul>
+    <li>The task is due 14 days before release day, a week after the distributor task (21 days).</li>
+    <li>Only new plans get the task. Existing rollouts are left alone.</li>
+    <li>The rollout menu's "Pre-save link" stays where it is, so nothing moves for people who already use it.</li>
+  </ul>
+</div>
+
+</body>
+</html>

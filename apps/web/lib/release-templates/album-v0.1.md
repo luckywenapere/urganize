@@ -67,7 +67,7 @@ the album's own 5-week editorial window even opens.
 
 ## Week 13 — Single 1 Ramp (Days 29–35) [offset: -91]
 
-- Set up the single 1 pre-save link — Manager
+- Set up the single 1 smart link — Manager
 - Announce single 1 release date on socials — Artist
 - Single 1 teaser content begins — Marketing Lead
 - Follow up on single 1 curator outreach — Marketing Lead
@@ -105,7 +105,7 @@ the album's own 5-week editorial window even opens.
 
 ## Week 8 — Single 2 Ramp (Days 64–70) [offset: -56]
 
-- Set up the single 2 pre-save link — Manager
+- Set up the single 2 smart link — Manager
 - Announce single 2 release date on socials — Artist
 - Single 2 teaser content begins — Marketing Lead
 - Follow up on single 2 curator outreach — Marketing Lead
@@ -129,7 +129,7 @@ the album's own 5-week editorial window even opens.
 ## Week 5 — Album Editorial & Pre-save (Days 85–91) [offset: -35]
 
 - Confirm the distributor accepted the album with no metadata errors — Manager
-- Set up the album pre-save link — Manager
+- Set up the album smart link — Manager
 - [Conditional] Album pre-save campaign goes live — Manager
 - Identify priority playlists and curators for the album — Marketing Lead
 - Plan the post-release focus tracks — Manager

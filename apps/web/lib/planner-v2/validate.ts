@@ -4,8 +4,9 @@
  * passes these rules. Non-determinism lives in the model; safety lives here.
  *
  *  - dates are offsets from release day, never before today, inside the window
- *  - release day and "send it to the distributor" are always there (not for a
- *    song that is already out, which gets a push plan from today instead)
+ *  - release day, "send it to the distributor" and the smart link are always
+ *    there (not for a song that is already out, which gets a push plan from
+ *    today instead)
  *  - dependencies point at real, earlier tasks, with no cycles
  *  - spend never goes over the budget; ₦0 means no paid task and no paid words
  *  - only the channels the manager picked
@@ -24,7 +25,15 @@ import {
   type Channel,
   type PlannerV2Answers,
 } from './answers';
-import { DISTRIBUTOR_MOVE, PICKABLE_TASK_CHANNELS, RELEASE_DAY_MOVE, type Move, type TaskChannel } from './moves';
+import { isSmartLinkTaskTitle } from '../smart-link-task';
+import {
+  DISTRIBUTOR_MOVE,
+  PICKABLE_TASK_CHANNELS,
+  RELEASE_DAY_MOVE,
+  SMART_LINK_MOVE,
+  type Move,
+  type TaskChannel,
+} from './moves';
 import { LIMITS, type PlanV2, type PlanV2Phase, type PlanV2Task } from './plan';
 
 export const MIN_OFFSET = -120;
@@ -96,7 +105,13 @@ export const isReleaseDayTask = (task: Pick<PlanV2Task, 'offset_days' | 'library
 export const isDistributorTask = (task: Pick<PlanV2Task, 'channel' | 'offset_days'>) =>
   task.channel === 'distribution' && task.offset_days <= 0;
 
+/** The smart link task: ours, or a smart / pre-save link task the model wrote. */
+export const isSmartLinkTask = (task: Pick<PlanV2Task, 'library_id' | 'title' | 'offset_days'>) =>
+  task.offset_days < 0 && (task.library_id === SMART_LINK_MOVE.id || isSmartLinkTaskTitle(task.title));
+
 const needsLaunchTasks = (ctx: PlanV2Context) => ctx.answers.stage !== 'out';
+/** The smart link task needs a day before release day to sit on. */
+const needsSmartLink = (ctx: PlanV2Context) => needsLaunchTasks(ctx) && planWindow(ctx).min < 0;
 /** Release day is required only once there is a release day: an undated
  *  plan gets its release-day push when the date is set. */
 const needsReleaseDay = (ctx: PlanV2Context) => needsLaunchTasks(ctx) && isDated(ctx);
@@ -174,6 +189,9 @@ export function validatePlanV2(plan: PlanV2, ctx: PlanV2Context): PlanV2Issue[] 
     if (!plan.tasks.some(isDistributorTask)) {
       add('missing_distributor', 'There is no task (channel "distribution") sending the song to the distributor before release day.');
     }
+    if (needsSmartLink(ctx) && !plan.tasks.some(isSmartLinkTask)) {
+      add('missing_smart_link', `There is no task before release day to set up and share the smart link (library_id "${SMART_LINK_MOVE.id}").`);
+    }
   }
 
   const spent = plan.tasks.reduce((sum, task) => sum + task.cost_naira, 0);
@@ -218,7 +236,8 @@ function hasCycle(tasks: readonly PlanV2Task[]): boolean {
 }
 
 const isRequired = (task: PlanV2Task, ctx: PlanV2Context) =>
-  needsLaunchTasks(ctx) && ((needsReleaseDay(ctx) && isReleaseDayTask(task)) || isDistributorTask(task));
+  needsLaunchTasks(ctx) &&
+  ((needsReleaseDay(ctx) && isReleaseDayTask(task)) || isDistributorTask(task) || isSmartLinkTask(task));
 
 function moveToTask(move: Move, key: string, offset: number, cost: number): PlanV2Task {
   return {
@@ -294,6 +313,10 @@ export function repairPlanV2(input: PlanV2, ctx: PlanV2Context, menu: readonly M
       const offset = Math.min(0, clamp(DISTRIBUTOR_MOVE.offset_days));
       tasks.push(moveToTask(DISTRIBUTOR_MOVE, nextKey(tasks), offset, 0));
     }
+    if (needsSmartLink(ctx) && !tasks.some(isSmartLinkTask)) {
+      const offset = Math.min(-1, clamp(SMART_LINK_MOVE.offset_days));
+      tasks.push(moveToTask(SMART_LINK_MOVE, nextKey(tasks), offset, 0));
+    }
   }
 
   // 3. Spend: drop the costliest optional paid task until it fits.
@@ -309,7 +332,7 @@ export function repairPlanV2(input: PlanV2, ctx: PlanV2Context, menu: readonly M
     tasks = tasks.filter((task) => task !== paid);
   }
 
-  // Only ONE release-day task and ONE distributor task are protected; a
+  // Only ONE release-day, ONE distributor and ONE smart link task are protected; a
   // playbook can hold several distribution tasks, and the rest obey the pace.
   const protectedKeys = new Set<string>();
   if (needsLaunchTasks(ctx)) {
@@ -317,6 +340,8 @@ export function repairPlanV2(input: PlanV2, ctx: PlanV2Context, menu: readonly M
     const dist = tasks.find(isDistributorTask);
     if (day) protectedKeys.add(day.key);
     if (dist) protectedKeys.add(dist.key);
+    const link = tasks.find(isSmartLinkTask);
+    if (link) protectedKeys.add(link.key);
   }
   const isProtected = (task: PlanV2Task) => protectedKeys.has(task.key);
 
@@ -355,7 +380,7 @@ export function repairPlanV2(input: PlanV2, ctx: PlanV2Context, menu: readonly M
   }
   for (const move of menu) {
     if (tasks.length >= range.min) break;
-    if (move.naira[1] > 0 || move.id === RELEASE_DAY_MOVE.id || move.id === DISTRIBUTOR_MOVE.id) continue;
+    if (move.naira[1] > 0 || [RELEASE_DAY_MOVE.id, DISTRIBUTOR_MOVE.id, SMART_LINK_MOVE.id].includes(move.id)) continue;
     if ((PICKABLE_TASK_CHANNELS as readonly string[]).includes(move.channel) && !picked.has(move.channel)) continue;
     if (ctx.answers.stage === 'out' && !move.push) continue;
     if (tasks.some((task) => task.library_id === move.id)) continue;

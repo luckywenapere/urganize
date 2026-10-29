@@ -79,21 +79,22 @@ export type CreateDecision =
 
 /**
  * Whether a rollout should get its Altlink link now. A future release date makes
- * a pre-save; today or a past date makes a plain smart link (Altlink only takes a
- * future date for a pre-save, so none is sent).
+ * a pre-save, with or without a UPC or ISRC (Altlink takes a pre-save without
+ * one; the code is patched on when it arrives, Oct 29, 2026, #850). Today or a
+ * past date makes a plain smart link, which needs a code to find the stores.
  */
 export function decideCreate(facts: SmartLinkFacts, nowMs: number): CreateDecision {
   if (facts.isTest) return { ready: false, reason: 'test' };
   if (facts.isArchived) return { ready: false, reason: 'archived' };
-  if (!normalizeUpc(facts.upc) && !normalizeIsrc(facts.isrc)) return { ready: false, reason: 'no_code' };
   const title = facts.title?.trim();
   if (!title || title === DEFAULT_RELEASE_TITLE) return { ready: false, reason: 'no_title' };
   if (!facts.artistName?.trim()) return { ready: false, reason: 'no_artist' };
   const day = releaseYmd(facts.releaseDate);
   if (!day) return { ready: false, reason: 'no_date' };
-  return isReleasedOn(day, nowMs)
-    ? { ready: true, type: 'smart_link', releaseDate: null }
-    : { ready: true, type: 'pre_save', releaseDate: day };
+  if (!isReleasedOn(day, nowMs)) return { ready: true, type: 'pre_save', releaseDate: day };
+  // A song already out needs a code: Altlink finds it in the stores by it.
+  if (!normalizeUpc(facts.upc) && !normalizeIsrc(facts.isrc)) return { ready: false, reason: 'no_code' };
+  return { ready: true, type: 'smart_link', releaseDate: null };
 }
 
 // ── Payloads ────────────────────────────────────────────────────────────────

@@ -397,7 +397,7 @@ export const ALBUM_RELEASE_TEMPLATE: Template = {
     // -----------------------------------------------------------------------
     {
       id: 'w13_single_1_presave_setup',
-      title: 'Set up the single 1 pre-save link',
+      title: 'Set up the single 1 smart link',
       description:
         'Build the pre-save now the distributor has accepted. Every name captured here is someone you will ask for an album pre-save in ten weeks.',
       role: 'manager',
@@ -709,7 +709,7 @@ export const ALBUM_RELEASE_TEMPLATE: Template = {
     // -----------------------------------------------------------------------
     {
       id: 'w8_single_2_presave_setup',
-      title: 'Set up the single 2 pre-save link',
+      title: 'Set up the single 2 smart link',
       description:
         'Build the single 2 pre-save and point the single 1 audience at it.',
       role: 'manager',
@@ -913,7 +913,7 @@ export const ALBUM_RELEASE_TEMPLATE: Template = {
     },
     {
       id: 'w5_album_presave_setup',
-      title: 'Set up the album pre-save link',
+      title: 'Set up the album smart link',
       description:
         'Build the album pre-save and point both singles\' audiences at it.',
       role: 'manager',

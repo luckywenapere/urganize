@@ -30,7 +30,7 @@ Default roles: Artist, Manager, Marketing Lead, Designer, Distributor Contact
 - Upload track and metadata to distributor — Manager
 - Upload cover art to distributor — Manager
 - Confirm release date locked at distributor — Manager
-- Set up pre-save link (distributor has now accepted) — Manager
+- Set up smart link (distributor has now accepted) — Manager
 - Begin curator/playlist outreach with private link — Marketing Lead
 
 ## Week 5 — Distribution Confirmation & Editorial Push (Days 22–28) [offset: -35; -33 for +2 day buffer task]

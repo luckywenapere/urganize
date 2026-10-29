@@ -106,7 +106,7 @@ function goodModelPlan(): PlanV2 {
     task({ key: 't5', title: 'Design the T-shirt and cap', channel: 'merch', offset_days: -28, cost_naira: 40_000 }),
     task({ key: 't6', title: 'Pitch 15 playlist curators', channel: 'spotify', offset_days: -21, cost_naira: 20_000 }),
     task({ key: 't7', title: 'Shoot five short videos of the lead track', channel: 'tiktok', offset_days: -14 }),
-    task({ key: 't8', title: 'Post a teaser on TikTok every other day', channel: 'tiktok', offset_days: -7, depends_on: ['t7'] }),
+    task({ key: 't8', title: 'Set up and share your smart link', offset_days: -7, library_id: 'smart_link', depends_on: ['t7'] }),
     task({ key: 't9', title: 'Release day: share the EP everywhere', phase: 'release', offset_days: 0, library_id: 'release_day' }),
     task({ key: 't10', title: 'Open merch orders with the release', phase: 'release', channel: 'merch', offset_days: 0, cost_naira: 30_000, depends_on: ['t5'] }),
     task({ key: 't11', title: 'Thank every playlist that added you', phase: 'post_release', channel: 'spotify', offset_days: 7 }),
@@ -200,6 +200,32 @@ describe('validatePlanV2', () => {
     expect(found).toContain('missing_distributor');
   });
 
+  it('requires the smart link task before release day (#850)', () => {
+    const plan = goodModelPlan();
+    plan.tasks = plan.tasks.filter((t) => t.key !== 't8');
+    expect(codes(plan)).toContain('missing_smart_link');
+  });
+
+  it('counts a pre-save link task the model wrote itself as the smart link task', () => {
+    const plan = goodModelPlan();
+    plan.tasks = plan.tasks.map((t) => (t.key === 't8' ? { ...t, title: 'Set up the pre-save link', library_id: null } : t));
+    expect(codes(plan)).not.toContain('missing_smart_link');
+  });
+
+  it('does not ask for a smart link task when there is no day left before release', () => {
+    const ctx = { ...d1Ctx(), todayYmd: d1Ctx().releaseDate as string };
+    const plan = goodModelPlan();
+    plan.tasks = plan.tasks.filter((t) => t.key !== 't8');
+    expect(codes(plan, ctx)).not.toContain('missing_smart_link');
+  });
+
+  it('does not ask for a smart link task when the song is already out', () => {
+    const ctx = { ...d1Ctx(), answers: { ...d1Ctx().answers, stage: 'out' as const } };
+    const plan = goodModelPlan();
+    plan.tasks = plan.tasks.filter((t) => t.key !== 't8');
+    expect(codes(plan, ctx)).not.toContain('missing_smart_link');
+  });
+
   it('refuses dependencies on later or missing tasks, and loops', () => {
     const plan = goodModelPlan();
     plan.tasks[0] = { ...plan.tasks[0], depends_on: ['t9'] };
@@ -237,6 +263,18 @@ describe('validatePlanV2', () => {
 });
 
 describe('repairPlanV2', () => {
+  it('adds the smart link task when the plan has none, two weeks out', () => {
+    const ctx = d1Ctx();
+    const plan = goodModelPlan();
+    plan.tasks = plan.tasks.filter((t) => t.key !== 't8');
+    const fixed = repairPlanV2(plan, ctx, buildMoveMenu(single, ctx.answers.channels));
+    expect(validatePlanV2(fixed, ctx)).toEqual([]);
+    const link = fixed.tasks.filter((t) => t.library_id === 'smart_link');
+    expect(link).toHaveLength(1);
+    expect(link[0].title).toBe('Set up and share your smart link');
+    expect(link[0].offset_days).toBeLessThan(0);
+  });
+
   it('turns a nearly-right answer into a valid plan', () => {
     const ctx = d1Ctx();
     const plan = goodModelPlan();

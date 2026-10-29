@@ -1,7 +1,8 @@
 'use client';
 
-// The Promote entry "Pre-save link" (Smart link from release day): the Altlink
-// link leads, the fan email page sits under it in a fold. Design signed off in
+// The Promote entry "Smart link" (never "Pre-save link", Oct 29, 2026, #850):
+// the Altlink link leads, the fan email page sits under it in a fold. The
+// Distribute tab shows it in two parts: the link, and its numbers. Design signed off in
 // BUILD-NOTES-ALTLINK.md: one hero sentence per state, one green action, empty
 // blocks never render, pending text quiet. Nothing here creates a link on a tap
 // except "Try again": the server makes it as soon as the rollout is ready.
@@ -51,6 +52,10 @@ type SmartLinkView = {
 type Props = {
   releaseId: string;
   onToast?: (message: string, tone: 'success' | 'error' | 'warning') => void;
+  /** 'all' (the rollout menu), or one Distribute tab: the link, or its numbers. */
+  part?: 'all' | 'link' | 'numbers';
+  /** Numbers tab with no link yet: the way back to the link tab. */
+  onOpenLink?: () => void;
 };
 
 const GREEN_BUTTON =
@@ -92,7 +97,7 @@ function dayLabel(ymd: string | null): string | null {
 }
 
 function dropsLine(days: number | null): string {
-  if (days === null) return 'Pre-save is live.';
+  if (days === null) return 'Smart link is live.';
   if (days <= 0) return 'Drops today.';
   if (days === 1) return 'Drops tomorrow.';
   return `Drops in ${days} days.`;
@@ -116,7 +121,7 @@ async function authedFetch(input: string, init?: RequestInit): Promise<Response>
   });
 }
 
-export function SmartLinkSection({ releaseId, onToast }: Props) {
+export function SmartLinkSection({ releaseId, onToast, part = 'all', onOpenLink }: Props) {
   const { openScene } = useSceneOverlay();
   const [view, setView] = useState<SmartLinkView | null>(null);
   const [canWrite, setCanWrite] = useState(false);
@@ -222,7 +227,7 @@ export function SmartLinkSection({ releaseId, onToast }: Props) {
     if (loadError) {
       return (
         <div className={`${CARD} mt-6 flex items-center justify-between gap-3 p-4`}>
-          <p role="alert" className="text-sm text-content-secondary">Couldn’t load the pre-save link.</p>
+          <p role="alert" className="text-sm text-content-secondary">Couldn’t load the smart link.</p>
           <button type="button" onClick={() => void load()} className={QUIET_BUTTON}>
             Try again
           </button>
@@ -235,6 +240,29 @@ export function SmartLinkSection({ releaseId, onToast }: Props) {
   const hasLink = phase === 'presave' || phase === 'released';
   const hidden = view.notReady === 'test' || view.notReady === 'archived' || view.notReady === 'no_release';
 
+  if (part === 'numbers') {
+    return (
+      <div className="mt-6 space-y-4">
+        {hasLink ? (
+          <LinkNumbers view={view} released={phase === 'released'} />
+        ) : (
+          <section className={`${CARD} flex flex-wrap items-center justify-between gap-3 px-5 py-4`}>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-content-primary">No numbers yet</p>
+              <p className={`mt-1 ${META} opacity-80`}>They start once your smart link is live</p>
+            </div>
+            {onOpenLink ? (
+              <button type="button" onClick={onOpenLink} className={QUIET_BUTTON}>
+                Open smart link
+              </button>
+            ) : null}
+          </section>
+        )}
+        <PoweredByAltlink />
+      </div>
+    );
+  }
+
   return (
     <div className="mt-6 space-y-4">
       {hidden ? null : phase === 'presave' || phase === 'released' ? (
@@ -246,6 +274,7 @@ export function SmartLinkSection({ releaseId, onToast }: Props) {
           onCopy={() => void copy()}
           onShare={() => void share()}
           now={now}
+          showNumbers={part === 'all'}
         />
       ) : phase === 'failed' ? (
         <section className={`${CARD} p-5 sm:p-6`}>
@@ -266,7 +295,7 @@ export function SmartLinkSection({ releaseId, onToast }: Props) {
         <section className={`${CARD} p-5 sm:p-6`} aria-live="polite">
           <div className="flex items-center gap-3">
             <Loader2 className="h-4 w-4 animate-spin text-content-tertiary" />
-            <p className="text-sm text-content-secondary">Making your pre-save link…</p>
+            <p className="text-sm text-content-secondary">Making your smart link…</p>
           </div>
           <Facts facts={view.facts} />
         </section>
@@ -317,7 +346,7 @@ function NotReadyRow({
   return (
     <section className={`${CARD} flex flex-wrap items-center justify-between gap-3 px-5 py-4`}>
       <div className="min-w-0">
-        <p className="text-sm font-semibold text-content-primary">Pre-save link</p>
+        <p className="text-sm font-semibold text-content-primary">Smart link</p>
         <p className={`mt-1 ${META} opacity-80`}>{meta}</p>
       </div>
       {configured && reason === 'no_code' && canWrite ? (
@@ -358,6 +387,7 @@ function LinkCard({
   onCopy,
   onShare,
   now,
+  showNumbers,
 }: {
   view: SmartLinkView;
   phase: 'presave' | 'released';
@@ -366,28 +396,14 @@ function LinkCard({
   onCopy: () => void;
   onShare: () => void;
   now: number;
+  showNumbers: boolean;
 }) {
   const link = view.link!;
   const url = link.url!;
   const shortUrl = url.replace(/^https?:\/\//, '');
-  const stats = view.stats;
-  const presaves = Math.max(stats?.presaves ?? 0, link.presaveSignups);
   const day = dayLabel(releaseDate);
   const released = phase === 'released';
   const platforms = orderPlatforms(link.platforms);
-  const ctr = ctrPercent(stats?.ctr ?? null);
-  const updated = timeLabel(view.statsFetchedAt);
-
-  const rows: { label: string; value: string; meta?: string }[] = released
-    ? [
-        { label: 'Visits', value: (stats?.views ?? 0).toLocaleString('en') },
-        { label: 'Clicks', value: (stats?.clicks ?? 0).toLocaleString('en'), meta: ctr !== null ? `${ctr}% of visits` : undefined },
-      ]
-    : [
-        { label: 'Visits', value: (stats?.views ?? 0).toLocaleString('en') },
-        { label: 'Clicks', value: (stats?.clicks ?? 0).toLocaleString('en') },
-        { label: 'Pre-saves', value: presaves.toLocaleString('en') },
-      ];
 
   return (
     <>
@@ -458,6 +474,31 @@ function LinkCard({
           </section>
         ) : null}
 
+        {showNumbers ? <LinkNumbers view={view} released={released} /> : null}
+      </div>
+    </>
+  );
+}
+
+/** "So far" and "Where fans click": the rollout menu's view, and Distribute's Numbers tab. */
+function LinkNumbers({ view, released }: { view: SmartLinkView; released: boolean }) {
+  const stats = view.stats;
+  const presaves = Math.max(stats?.presaves ?? 0, view.link?.presaveSignups ?? 0);
+  const ctr = ctrPercent(stats?.ctr ?? null);
+  const updated = timeLabel(view.statsFetchedAt);
+  const rows: { label: string; value: string; meta?: string }[] = released
+    ? [
+        { label: 'Visits', value: (stats?.views ?? 0).toLocaleString('en') },
+        { label: 'Clicks', value: (stats?.clicks ?? 0).toLocaleString('en'), meta: ctr !== null ? `${ctr}% of visits` : undefined },
+      ]
+    : [
+        { label: 'Visits', value: (stats?.views ?? 0).toLocaleString('en') },
+        { label: 'Clicks', value: (stats?.clicks ?? 0).toLocaleString('en') },
+        { label: 'Pre-saves', value: presaves.toLocaleString('en') },
+      ];
+
+  return (
+    <>
         <section className={`${CARD} p-5`}>
           <div className="flex items-baseline justify-between gap-3">
             <h4 className={META}>So far</h4>
@@ -476,7 +517,7 @@ function LinkCard({
           </dl>
         </section>
 
-        {released && stats && stats.topPlatforms.length > 0 ? (
+        {stats && stats.topPlatforms.length > 0 ? (
           <section className={`${CARD} p-5 lg:col-span-2`}>
             <h4 className={META}>Where fans click</h4>
             <ul className="mt-3 space-y-3">
@@ -496,7 +537,6 @@ function LinkCard({
             </ul>
           </section>
         ) : null}
-      </div>
     </>
   );
 }

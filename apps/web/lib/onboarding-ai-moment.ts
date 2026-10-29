@@ -185,7 +185,7 @@ const WHY_BY_STAGE: Record<OnboardingStage, { withSpecifics: string; generic: st
   },
   date_set: {
     withSpecifics:
-      "getting your track and metadata to your distributor now locks in your DSP delivery. Everything downstream (editorial pitching, pre-save links, release-day go-live) depends on it.",
+      "getting your track and metadata to your distributor now locks in your DSP delivery. Everything downstream (editorial pitching, smart links, release-day go-live) depends on it.",
     generic:
       'The distributor upload is the central pre-release gate. Every DSP delivery downstream depends on it, and metadata errors only surface after submission. Start it sooner than feels necessary.',
   },

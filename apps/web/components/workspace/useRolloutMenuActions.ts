@@ -37,7 +37,6 @@ import { ROLLOUT_MENU_FLAGS } from '@/lib/rollout-menu-flags';
 import { resolvePanelBody, type SceneName } from '@/lib/scene-cache';
 import { useCanViewSpend } from '@/stores/useSpendAccessStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
-import { isReleasedOn } from '@/lib/altlink/rules';
 import { useSceneOverlay } from './useSceneOverlay';
 
 /**
@@ -151,12 +150,8 @@ export function useRolloutMenuActions({
   // a stale `?scene=…` must not light a row for a scene that is not rendering.
   // `resolvePanelBody` rather than `resolveActiveScene`, so a bare rollout (no
   // `?scene=`) lights Timeline: that is the view it is actually showing.
-  // The Promote row is "Pre-save link" until release day, "Smart link" after.
-  const releaseDate = useReleaseStore(
-    (state) => state.releases.find((release) => release.id === releaseId)?.releaseDate ?? null
-  );
-  const released = isReleasedOn(releaseDate, Date.now());
-  // Distribute, Pitch this! and the Pre-save link all hang off release day, so
+  // The Promote row is always "Smart link", never "Pre-save link" (Oyin, Oct 29, 2026, #850).
+  // Distribute, Pitch this! and the Smart link all hang off release day, so
   // they wait for a date (2026-10-26, declutter). Unknown release: show all.
   const dateMissing = useReleaseStore((state) => {
     const found = state.releases.find((release) => release.id === releaseId);
@@ -180,7 +175,7 @@ export function useRolloutMenuActions({
     variant,
     flags: ROLLOUT_MENU_FLAGS,
     showSpend,
-    captureLabel: released ? 'Smart link' : 'Pre-save link',
+    captureLabel: 'Smart link',
     share,
     changeArtist,
     archive,

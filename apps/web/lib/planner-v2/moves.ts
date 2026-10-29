@@ -276,7 +276,7 @@ export const NIGERIA_PACK: Move[] = [
   },
 ];
 
-/** The two moves every plan for an unreleased song holds. */
+/** The moves every plan for an unreleased song holds. */
 export const RELEASE_DAY_MOVE: Move = {
   id: 'release_day',
   title: 'Release day: share the song everywhere',
@@ -295,6 +295,22 @@ export const DISTRIBUTOR_MOVE: Move = {
   channel: 'distribution',
   role: 'distributor_contact',
   offset_days: -21,
+  naira: [0, 0],
+  wins: [],
+};
+
+/**
+ * The smart link (Altlink, made by itself from the rollout's details): every
+ * plan for an unreleased song holds it, two weeks out (Oyin, Oct 29, 2026,
+ * #850). Always called "smart link", never "pre-save link", in what we write.
+ */
+export const SMART_LINK_MOVE: Move = {
+  id: 'smart_link',
+  title: 'Set up and share your smart link',
+  what: 'Fans save the song now and get it on release day. Share the link everywhere the artist posts.',
+  channel: 'none',
+  role: 'manager',
+  offset_days: -14,
   naira: [0, 0],
   wins: [],
 };
@@ -335,7 +351,7 @@ export function movesFromTemplate(template: Template): Move[] {
 /** The menu for one plan: the Nigeria pack first, then the playbook. */
 export function buildMoveMenu(template: Template, picked: readonly Channel[]): Move[] {
   const allowed = new Set<TaskChannel>([...picked, 'blogs', 'djs', 'shows', 'merch', 'distribution', 'none']);
-  return [RELEASE_DAY_MOVE, DISTRIBUTOR_MOVE, ...NIGERIA_PACK, ...movesFromTemplate(template)].filter((move) =>
+  return [RELEASE_DAY_MOVE, DISTRIBUTOR_MOVE, SMART_LINK_MOVE, ...NIGERIA_PACK, ...movesFromTemplate(template)].filter((move) =>
     allowed.has(move.channel)
   );
 }

@@ -61,6 +61,7 @@ import { planV2Surface, writePlanV2, type PlanV2Source, type WrittenPlanV2 } fro
 import { relativeWhenLabel } from './when';
 import { formatArtistFactsForPlanner } from '../artist-facts';
 import { listArtistFacts } from '../artist-facts-server';
+import { smartLinkWording } from '../smart-link-task';
 
 export const PLAN_V2_TIMEOUT_MS = 38_000;
 export const PLAN_V2_DEADLINE_MS = 52_000;
@@ -228,7 +229,8 @@ export function planV2ToDoc(params: {
       id: keyToId.get(task.key) as string,
       template_task_id: null,
       origin: 'ai',
-      title: task.title,
+      // "Smart link", never "pre-save link" (Oyin, Oct 29, 2026, #850).
+      title: smartLinkWording(task.title),
       why: [task.why, extra].filter(Boolean).join(' ').slice(0, 600),
       phase: derivePlanPhase(task.offset_days),
       offset_days: task.offset_days,

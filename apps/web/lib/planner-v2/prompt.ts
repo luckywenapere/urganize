@@ -35,7 +35,8 @@ Write ONE complete rollout plan as JSON that matches the schema. Plain words a 1
 Rules (code checks every one; a plan that breaks one is rejected):
 - offset_days counts days from release day (0 = release day, negative = before). Never before today's offset. Stay inside the window you are given.
 - now: true only for prep that needs no release date (mastering, artwork, distributor upload, press kit, pitch list). Everything else false.
-- Unless the song is already out: include a task with channel "distribution" that sends the song to the distributor before release day, and (when there is a release date) a release-day task on day 0.
+- Unless the song is already out: include a task with channel "distribution" that sends the song to the distributor before release day, a task (library_id "smart_link") to set up and share the smart link before release day, and (when there is a release date) a release-day task on day 0.
+- Call it the "smart link", never the "pre-save link". Urganize makes it from the rollout's details.
 - When there is no release date yet: plan relative to release day. Lead with prep that can start now. Leave out editorial pitch deadlines, radio/OAP and DJ timing, and release-day or after-release pushes: UrgAns adds those when the date is set.
 - If the song is already out: a push plan only, starting today. No pre-release work.
 - depends_on lists keys of tasks in this plan that happen on the same day or earlier. No loops.

@@ -296,14 +296,17 @@ export async function syncSmartLink(
   }
 }
 
-/** Silent PATCH: a new ISRC, or a different cover. Never shown as an error. */
+/** Silent PATCH: a new UPC or ISRC, or a different cover. Never shown as an error. */
 async function patchIfChanged(
   admin: SupabaseClient,
   client: AltlinkClient,
   row: SmartLinkRow,
   facts: SmartLinkSourceFacts
 ): Promise<SyncOutcome> {
-  const patch: { isrc?: string; artwork_url?: string } = {};
+  const patch: { upc?: string; isrc?: string; artwork_url?: string } = {};
+  // A pre-save can be made before the codes exist, so a UPC may arrive later too.
+  const upcChanged = Boolean(facts.upc) && facts.upc !== normalizeUpc(row.sent_upc);
+  if (upcChanged && facts.upc) patch.upc = facts.upc;
   const isrcChanged = Boolean(facts.isrc) && facts.isrc !== normalizeIsrc(row.sent_isrc);
   if (isrcChanged && facts.isrc) patch.isrc = facts.isrc;
   const artworkChanged = Boolean(facts.artworkAssetId) && facts.artworkAssetId !== row.sent_artwork_asset_id;
@@ -311,7 +314,7 @@ async function patchIfChanged(
     const url = await artworkUrl(admin, facts.artworkAssetId);
     if (url) patch.artwork_url = url;
   }
-  if (!patch.isrc && !patch.artwork_url) return { kind: 'unchanged', row };
+  if (!patch.upc && !patch.isrc && !patch.artwork_url) return { kind: 'unchanged', row };
   try {
     await client.patchLink(row.altlink_link_id as string, patch);
   } catch (error) {
@@ -321,6 +324,7 @@ async function patchIfChanged(
   const saved = await admin
     .from(SMART_LINKS_TABLE)
     .update({
+      ...(patch.upc ? { sent_upc: patch.upc } : {}),
       ...(patch.isrc ? { sent_isrc: patch.isrc } : {}),
       ...(patch.artwork_url ? { sent_artwork_asset_id: facts.artworkAssetId } : {}),
     })

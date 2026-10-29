@@ -55,7 +55,7 @@ Two things, and they are the whole reason an EP needs its own playbook:
 ## Week 10 — Content Production & Pre-save (Days 22–28) [offset: -70]
 
 - EP content shoot executed — Artist
-- Set up the lead single pre-save link — Manager
+- Set up the lead single smart link — Manager
 - [Conditional] Lead single pre-save campaign goes live — Manager
 - EP cover art first draft delivered — Designer
 - Announce the lead single release date on socials — Artist
@@ -103,7 +103,7 @@ Two things, and they are the whole reason an EP needs its own playbook:
 ## Week 4 — EP Pre-save & Editorial (Days 64–70) [offset: -28]
 
 - Confirm the distributor accepted the EP with no metadata errors — Manager
-- Set up the EP pre-save link — Manager
+- Set up the EP smart link — Manager
 - [Conditional] EP pre-save campaign goes live — Manager
 - Begin EP curator outreach with a private link — Marketing Lead
 - [Conditional] Send the EP press release to contacts — Manager

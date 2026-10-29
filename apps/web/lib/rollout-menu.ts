@@ -89,8 +89,8 @@ export type RolloutMenuInput = {
    * leads to a refusal.
    */
   showSpend?: boolean;
-  /** The Promote row's words: "Pre-save link" until release day, "Smart link"
-   *  after (Altlink pilot, Oct 2026: one entry with fan capture). */
+  /** The Promote row's words: "Smart link" (Altlink pilot, Oct 2026: one entry
+   *  with fan capture; never "Pre-save link" since Oct 29, 2026, #850). */
   captureLabel?: string;
 };
 
@@ -188,7 +188,7 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     input.showSpend && !SPEND_CUT ? scene('spend', 'Track spend') : null,
     flags.notes ? note : null,
     input.share ? dialog('share', input.share) : null,
-    flags.capture ? scene('capture', input.captureLabel ?? 'Pre-save link') : null,
+    flags.capture ? scene('capture', input.captureLabel ?? 'Smart link') : null,
     scene('urgans', 'What UrgAns did'),
     input.changeArtist ? dialog('change-artist', input.changeArtist) : null,
     input.archive ? dialog('archive', input.archive) : null,

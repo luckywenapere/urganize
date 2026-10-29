@@ -90,7 +90,7 @@ const SCENE_LABELS: Record<SceneName, string> = {
   // same icon until that icon became a microphone in the same pass.
   calendar: 'Content',
   pitch: 'Pitch this!',
-  capture: 'Pre-save link',
+  capture: 'Smart link',
   coverart: 'Cover art',
   timeline: 'Timeline',
   chat: 'Chat',

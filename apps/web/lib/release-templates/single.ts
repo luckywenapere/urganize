@@ -259,9 +259,9 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
     },
     {
       id: 'w6_setup_presave',
-      title: 'Set up pre-save link',
+      title: 'Set up smart link',
       description:
-        'Generate the pre-save / smart link via Linkfire, Feature.fm, or similar. Distributor acceptance unlocks a working pre-save link.',
+        'Urganize makes the smart link from your rollout details, before the distributor delivers. Check it, then share it so fans can pre-save.',
       role: 'manager',
       type: 'task',
       offset_days: -42,

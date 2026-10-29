@@ -63,10 +63,12 @@ describe('an undated plan', () => {
     expect(planWindow(ctx)).toEqual({ min: -56, max: 42 });
   });
 
-  it('needs the distributor task but not a release-day task, and keeps the pace', () => {
+  it('needs the distributor and smart link tasks but not a release-day task, and keeps the pace', () => {
     const tasks = [
       task({ key: 't1', channel: 'distribution', offset_days: -42, now: true, title: 'Upload to your distributor' }),
-      ...Array.from({ length: 6 }, (_, i) => task({ key: `t${i + 2}`, offset_days: -35 + i * 7, title: `Make content ${i}` })),
+      ...Array.from({ length: 6 }, (_, i) =>
+        task({ key: `t${i + 2}`, offset_days: -35 + i * 7, title: i === 4 ? 'Set up and share your smart link' : `Make content ${i}` })
+      ),
     ];
     const plan = {
       built_for: { summary: 'Playlist adds, ₦0, run by you.', win: 'x', target: null, constraints: [], start_point: 'finished' as const },
