@@ -21,6 +21,7 @@ import {
   type SmartLinkStats,
 } from '@/lib/altlink/rules';
 import { CaptureSection } from './CaptureSection';
+import { PoweredByAltlink } from './PoweredByAltlink';
 
 type SmartLinkView = {
   enabled: boolean;
@@ -541,13 +542,3 @@ function LinkNumbers({ view, released }: { view: SmartLinkView; released: boolea
   );
 }
 
-function PoweredByAltlink() {
-  return (
-    <p className="flex items-center justify-center gap-2 pt-2 font-mono text-[11px] uppercase tracking-[0.14em] text-content-primary opacity-55">
-      <span aria-hidden className="inline-flex h-4 w-4 items-center justify-center rounded border border-current text-[9px]">
-        A
-      </span>
-      Powered by Altlink
-    </p>
-  );
-}

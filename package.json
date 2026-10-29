@@ -1,7 +1,7 @@
 {
   "name": "urganize",
   "description": "Urganize is where music teams plan every release and deliver it on time.",
-  "version": "1.206.1",
+  "version": "1.206.2",
   "private": true,
   "packageManager": "pnpm@10.6.4",
   "workspaces": [
