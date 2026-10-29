@@ -11,6 +11,7 @@ import {
   Plug,
   Search,
   Settings,
+  Users,
   X,
   type LucideProps,
 } from '@/components/icons';
@@ -159,6 +160,10 @@ function MenuBody({
   const subline = [role, workspaceName].filter(Boolean).join(' · ');
   const relationships = areas.find((area) => area.key === 'relationships' && area.live) ?? null;
   const opportunities = areas.find((area) => area.key === 'opportunities') ?? null;
+  // The Team tab (#853). On a phone this sheet is the swipe layout's menu, so
+  // Team needs its row here; it takes the place Connections had (retired the
+  // same day). A view that tucks Team (solo artist) has no team area.
+  const team = areas.find((area) => area.key === 'team') ?? null;
 
   if (view === 'help') {
     return (
@@ -247,6 +252,7 @@ function MenuBody({
             }
           />
         ) : null}
+        {team ? <MenuLink href={team.href} icon={Users} label="Team" onClose={onClose} /> : null}
         <li>
           <button type="button" onClick={onConnections} className={SHEET_ROW}>
             <Plug className="h-[22px] w-[22px] shrink-0 text-content-primary/75" aria-hidden="true" />
