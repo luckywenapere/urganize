@@ -844,6 +844,10 @@ export default function OnboardingPage() {
     if (!joined) {
       track({ name: 'onboarding_music_skipped', properties: {} });
       if (user?.id) writeOnboardingLanding({ userId: user.id, kind: 'skipped', ...(whoFor ? { whoFor } : {}) });
+    } else if (user?.id) {
+      // A Manager who joined comes through here ("Go to Home"), not afterJoin's
+      // straight-home branch, so Home's "You're in {team}" needs its record here too.
+      writeOnboardingLanding({ userId: user.id, kind: 'joined', teamName: selectedTeam?.name || '' });
     }
     await goHome();
   };
@@ -1043,7 +1047,7 @@ export default function OnboardingPage() {
   if (screen === 'team_loading' || screen === 'leaving' || (screen === 'music' && !teamState)) {
     return (
       <OnboardingFrame name={frameName}>
-        <TeamLoadingScreen account={account} />
+        <TeamLoadingScreen account={account} leaving={screen === 'leaving'} />
       </OnboardingFrame>
     );
   }

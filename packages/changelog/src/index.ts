@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.209.3",
+    tag: "Team",
+    date: "October 29, 2026",
+    highlights: [
+      "After you join a team, Home says which team you're in.",
+      "Artists who add a release ready to go are no longer asked for their artist name again.",
+    ],
+  },
+  {
     version: "1.209.2",
     tag: "Account",
     date: "October 29, 2026",

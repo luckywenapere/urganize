@@ -48,19 +48,21 @@ function BottomChip({ account }: { account: Account }) {
 
 // ── Checking ─────────────────────────────────────────────────────────────────
 
-export function TeamLoadingScreen({ account }: { account: Account }) {
+// `leaving`: the hand-off into the app, which can take a few seconds on a slow
+// phone; it must not say it is checking for invites (#854).
+export function TeamLoadingScreen({ account, leaving = false }: { account: Account; leaving?: boolean }) {
   return (
     <Split
       left={
         <>
-          <Heading>Your team</Heading>
-          <Lede>Checking for invites to {account.email}.</Lede>
+          <Heading>{leaving ? 'Opening Urganize' : 'Your team'}</Heading>
+          <Lede>{leaving ? 'Taking you in. One moment.' : `Checking for invites to ${account.email}.`}</Lede>
           <Chips account={account} />
         </>
       }
       right={
         <div className={`${surfaceClass} p-4`} aria-busy="true" aria-live="polite">
-          <span className="sr-only">Checking for invites</span>
+          <span className="sr-only">{leaving ? 'Opening Urganize' : 'Checking for invites'}</span>
           <div className="h-3.5 w-[55%] animate-pulse rounded-full bg-bg-hover" />
           <div className="mt-3 h-3.5 w-[85%] animate-pulse rounded-full bg-bg-hover" />
           <div className="mt-[18px] h-11 animate-pulse rounded-full bg-bg-hover" />

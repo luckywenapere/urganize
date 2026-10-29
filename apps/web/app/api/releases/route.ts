@@ -44,6 +44,7 @@ function sanitizeTextField(value: string, maxLength: number): string {
 }
 import { ensureOwnedWorkspace, loadWorkspaceAccessContext } from '@/lib/tasks-server';
 import { resolveReleaseTeam } from '@/lib/release-team';
+import { rememberOwnArtistName } from '@/lib/onboarding-team-server';
 import { instantiateTemplate } from '@/lib/release-templates/instantiate';
 import {
   CONFIRM_RELEASE_DATE_DESCRIPTION,
@@ -788,6 +789,9 @@ export async function POST(request: NextRequest) {
     }
 
     const releaseId = String(releaseResult.data.id);
+
+    // An artist naming themselves on their first rollout is not asked again (#854).
+    await rememberOwnArtistName(adminClient, auth.user.id, artistName);
 
     // The metadata row and the created event both hang off the new release
     // and not off each other, so they are written together. Errors are read
