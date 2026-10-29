@@ -474,37 +474,57 @@ export async function POST(request: NextRequest) {
     let artistName = artistNameInput || getDefaultArtistName(auth.user);
 
     // Which team this rollout belongs to (#854, lib/release-team.ts): the team
-    // named in the body, else the caller's primary team. In a team someone
-    // else owns, the rollout and a new artist are owned by that team's owner,
-    // so the whole team sees it. Before this, every rollout went to the
-    // caller's own team, which hid a joined Manager's rollouts from the team.
-    // A failed read keeps the old path rather than failing the create.
+    // named in the body, else the team of the artist picked, else the caller's
+    // primary team. Only a Manager (owner/admin) of a team someone else owns
+    // puts a rollout there; then the rollout and a new artist are owned by
+    // that team's owner, so the whole team sees it. Team members and Viewers
+    // keep the old path unless they name a team, which is refused. A failed
+    // read keeps the old path rather than failing the create.
     const requestedWorkspaceId = trimString(body?.workspaceId).slice(0, 100) || null;
     let teamTarget: { workspaceId: string; ownerUserId: string } | null = null;
     try {
+      let artistWorkspaceId: string | null = null;
+      if (artistIdToUse) {
+        const artistTeam = await adminClient
+          .from(ARTISTS_TABLE)
+          .select('workspace_id')
+          .eq('id', artistIdToUse)
+          .maybeSingle();
+        artistWorkspaceId = artistTeam.data?.workspace_id ? String(artistTeam.data.workspace_id) : null;
+      }
       const access = await loadWorkspaceAccessContext(adminClient, auth.user);
       const ownerByWorkspaceId: Record<string, string> = {};
       if (access.primaryWorkspace) ownerByWorkspaceId[access.primaryWorkspace.id] = access.primaryWorkspace.ownerId;
-      if (requestedWorkspaceId && !ownerByWorkspaceId[requestedWorkspaceId]) {
-        const ownerResult = await adminClient
-          .from('workspaces')
-          .select('id,owner_id')
-          .eq('id', requestedWorkspaceId)
-          .maybeSingle();
-        if (ownerResult.data?.owner_id) ownerByWorkspaceId[requestedWorkspaceId] = String(ownerResult.data.owner_id);
+      const candidateIds = [requestedWorkspaceId, artistWorkspaceId].filter(
+        (id): id is string => Boolean(id) && !ownerByWorkspaceId[id as string]
+      );
+      if (candidateIds.length) {
+        const ownerResult = await adminClient.from('workspaces').select('id,owner_id').in('id', candidateIds);
+        for (const row of (ownerResult.data || []) as Array<{ id: string; owner_id: string | null }>) {
+          if (row.owner_id) ownerByWorkspaceId[String(row.id)] = String(row.owner_id);
+        }
       }
       const decision = resolveReleaseTeam({
         userId: auth.user.id,
         requestedWorkspaceId,
-        memberships: access.memberships.map((member) => ({ workspaceId: member.workspaceId, role: member.role })),
+        artistWorkspaceId,
+        artistId: artistIdToUse || null,
+        memberships: access.memberships.map((member) => ({
+          workspaceId: member.workspaceId,
+          role: member.role,
+          status: member.status,
+        })),
         primaryWorkspaceId: access.primaryWorkspaceId,
         ownerByWorkspaceId,
+        artistScopeByWorkspaceId: access.artistScopeByWorkspaceId,
       });
       if (decision.kind === 'refused') {
         return NextResponse.json({ error: decision.message }, { status: decision.status });
       }
       if (decision.kind === 'team') {
         teamTarget = { workspaceId: decision.workspaceId, ownerUserId: ownerByWorkspaceId[decision.workspaceId] };
+        // A teammate scoped to one artist adds rollouts for that artist only.
+        if (decision.artistId) artistIdToUse = decision.artistId;
       }
     } catch (teamError) {
       if (requestedWorkspaceId) {
