@@ -41,6 +41,18 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.209.0",
+    title: "A faster start, with your team",
+    tag: "Team",
+    date: "October 29, 2026",
+    highlights: [
+      "Getting started is now three steps: your account, your team, then your first project.",
+      "If someone already invited you, join their team in one tap. If not, ask them on WhatsApp and we'll pick up the invite.",
+      "Start a project at any stage, even just an idea. No release day needed.",
+      "Managers can now add, plan, rename and re-date rollouts in a team they joined.",
+    ],
+  },
+  {
     version: "1.208.0",
     title: "Your team, in one place",
     tag: "Team",
