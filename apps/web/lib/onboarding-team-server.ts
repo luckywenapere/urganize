@@ -16,6 +16,7 @@ import { ensureOwnedWorkspace, loadProfilesByIds } from './tasks-server';
 import { ARTISTS_TABLE, checkArtistAllowance } from './artists-server';
 import { normalizeReleaseSlug } from './release-ops';
 import { recordLimitHit } from './seats-server';
+import { escapeLike } from './access-gate-server';
 import { addSong, createRecord } from './next-records-server';
 import {
   MAX_TEAM_NAME_LENGTH,
@@ -47,6 +48,9 @@ const fail = (status: number, error: string, limitKey?: string): ServerResult<ne
 type Row = Record<string, unknown>;
 const text = (value: unknown): string => String(value ?? '').trim();
 const emailOf = (user: Pick<User, 'email'>): string => text(user.email).toLowerCase();
+// Invites match on email case-insensitively. The address is escaped first: an
+// unescaped `_` or `%` in a sign-up address is a LIKE wildcard, so
+// "j_hn@acme.com" would match (and could join) an invite sent to john@acme.com.
 const roleOf = (value: unknown): TeamRole => (isTeamRole(value) ? value : 'member');
 
 // ── Read ─────────────────────────────────────────────────────────────────────
@@ -69,7 +73,7 @@ export async function loadOnboardingTeamState(
       ? admin
           .from(MEMBERS)
           .select('id,workspace_id,role,invited_at')
-          .ilike('email', email)
+          .ilike('email', escapeLike(email))
           .eq('status', 'invited')
           .is('user_id', null)
       : Promise.resolve({ data: [], error: null }),
@@ -299,7 +303,7 @@ export async function joinInvitedTeam(
     .from(MEMBERS)
     .select('id,invite_token,invite_expires_at')
     .eq('workspace_id', workspaceId)
-    .ilike('email', email)
+    .ilike('email', escapeLike(email))
     .eq('status', 'invited')
     .is('user_id', null)
     .maybeSingle();
@@ -459,11 +463,20 @@ export async function createOnboardingRecord(
 ): Promise<ServerResult<{ recordId: string; artistId: string; workspaceId: string }>> {
   const team = await resolveWritableTeam(admin, user, input.workspaceId);
   if (!team.ok) return team;
-  const artist = await resolveTeamArtist(admin, team.value, user.id, input);
-  if (!artist.ok) return artist;
-  if (team.value.artistScopeId && team.value.artistScopeId !== artist.value.id) {
+  // A teammate scoped to one artist adds music for that artist only. Checked
+  // BEFORE the artist lookup, which would otherwise add a typed new artist to
+  // the team and only then refuse.
+  const scope = team.value.artistScopeId;
+  if (scope && input.artistId && input.artistId !== scope) {
     return fail(403, 'You can only add music for your artist on this team.');
   }
+  const artist = await resolveTeamArtist(
+    admin,
+    team.value,
+    user.id,
+    scope ? { artistId: scope, artistName: '' } : input
+  );
+  if (!artist.ok) return artist;
 
   const record = await createRecord(admin, {
     workspaceId: team.value.workspaceId,
