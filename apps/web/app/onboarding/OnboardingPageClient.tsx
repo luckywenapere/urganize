@@ -138,7 +138,15 @@ function writeLastChoice(value: 'ask' | 'setup' | null): void {
 }
 
 /** Every onboarding event carries the seconds since onboarding_started (#854 analytics). */
+// onboarding_team_viewed fires once per page life: the check-failed fallback,
+// a late answer and the background re-check can all reach the team screen.
+let teamViewedTracked = false;
+
 function track(event: Parameters<typeof captureAnalyticsEvent>[0]): void {
+  if (event.name === 'onboarding_team_viewed') {
+    if (teamViewedTracked) return;
+    teamViewedTracked = true;
+  }
   const seconds = getOnboardingElapsedSeconds();
   const properties = { ...(event.properties as Record<string, unknown>) };
   if (seconds !== null) properties.seconds_since_start = seconds;
@@ -218,6 +226,9 @@ export default function OnboardingPage() {
     if (isEmailValid(handoff)) {
       setEmail(handoff);
       setEntry('auth');
+      // Part of the form is filled in for them, so the disabled button says
+      // what is still missing from the start ("Add your name.").
+      setAccountTouched(true);
       // Closed sign-up: stop an invite-less email here, before the form.
       void checkEmailAccess(handoff).then((allowed) => {
         if (!allowed) setScreen('invite_only');
@@ -228,6 +239,7 @@ export default function OnboardingPage() {
       if (params.get('change') === '1') {
         if (pending.firstName) setName(pending.firstName);
         setEmail((current) => current || pending.email);
+        setAccountTouched(true);
       } else if (!handoff) {
         setConfirmation({ email: pending.email, sentAt: pending.sentAt, firstName: pending.firstName || '' });
         setScreen('check_inbox');
@@ -709,7 +721,10 @@ export default function OnboardingPage() {
     const submission = buildMusicSubmission(form, lagosToday());
     if (!submission || submit.kind === 'busy') return;
     setSubmit({ kind: 'busy', label: 'Adding…' });
-    const workspaceId = selectedTeam?.workspaceId ?? null;
+    // The team picked, or the one just made/joined when the team list failed
+    // to load: never "no team", which lets the server fall back to the primary
+    // team (a joined team, for someone who also has an invite).
+    const workspaceId = selectedTeam?.workspaceId ?? selectedTeamId ?? null;
     const userId = user?.id ?? '';
     try {
       const token = await getToken();
@@ -938,7 +953,7 @@ export default function OnboardingPage() {
               {accountError?.kind === 'taken' ? (
                 <span className={errorTextClass}>
                   This email already has an account.{' '}
-                  <a href={`/auth?email=${takenEmail}`} className="underline underline-offset-[3px]">
+                  <a href={`/auth?email=${encodeURIComponent(takenEmail)}`} className="underline underline-offset-[3px]">
                     Log in instead
                   </a>
                   .
