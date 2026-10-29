@@ -291,10 +291,10 @@ function LegacyLockedPage() {
                     Subscriptions are managed on the web. Visit{' '}
                     <button
                       type="button"
-                      onClick={() => openExternalUrl('https://my.urganize.app/locked')}
+                      onClick={() => openExternalUrl('https://team.urganize.app/locked')}
                       className="underline text-content-primary hover:text-brand"
                     >
-                      my.urganize.app
+                      team.urganize.app
                     </button>{' '}
                     in your browser to subscribe, or start a free trial below.
                   </p>

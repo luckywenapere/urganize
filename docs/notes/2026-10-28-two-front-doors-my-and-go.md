@@ -1,4 +1,6 @@
-# Two front doors: my.urganize.app and go.urganize.app (2026-10-28, v1.203.0)
+# Two front doors: team.urganize.app and go.urganize.app (2026-10-28, v1.203.0; team since v1.206.3)
+
+**29 Oct, founder call: the main address is team.urganize.app, not my.urganize.app.** my.urganize.app was the main address for one day (v1.203.0 to v1.206.2). It is now an old address like app.urganize.app: it keeps serving the app and hands signed-in people across, because their sessions were saved under my that day. Read every "my.urganize.app" below as team.urganize.app, except where it is named as an old host. `LEGACY_APP_HOSTS` in `lib/app-hosts.ts` lists both old hosts; go.urganize.app now 308s to team. Supabase Site URL, `NEXT_PUBLIC_APP_URL`, the Google origin and the email logo moved to team the same day; the my.urganize.app entries stay.
 
 Founder call, 28 Oct 2026. The product app moves from app.urganize.app to **my.urganize.app**. **go.urganize.app** is a second name for links we hand to other people; Vercel answers it with a 308 to the same path on my.urganize.app. The marketing site stays on urganize.app.
 

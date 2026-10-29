@@ -34,7 +34,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // Ahead of the product pages on purpose: these two exist to be found by
     // people searching the brand to get in, and to be sitelink candidates
     // above Features (founder call, 2026-08-09). They're real pages here
-    // rather than redirects to my.urganize.app because a redirect isn't
+    // rather than redirects to team.urganize.app because a redirect isn't
     // indexable and a subdomain can't be a sitelink of this one.
     {
       url: `${SITE_URL}/login`,

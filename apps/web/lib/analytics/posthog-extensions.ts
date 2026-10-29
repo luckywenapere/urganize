@@ -16,8 +16,8 @@
  * production, same-origin, with the proxy live:
  *
  *     Loading failed for the <script> with source
- *     "https://my.urganize.app/urg-relay/static/posthog-recorder.js?v=1.364.7"
- *     "https://my.urganize.app/urg-relay/static/dead-clicks-autocapture.js?v=1.364.7"
+ *     "https://team.urganize.app/urg-relay/static/posthog-recorder.js?v=1.364.7"
+ *     "https://team.urganize.app/urg-relay/static/dead-clicks-autocapture.js?v=1.364.7"
  *
  * The same session also refused Vercel's own same-origin
  * /_vercel/insights/script.js, which is what proved this is filename matching

@@ -18,7 +18,7 @@ import { WAITLIST_URL } from "@/lib/app-urls";
 // start; it is a second door now, not the only one.
 //
 // Login points at /login on THIS domain rather than jumping straight to
-// my.urganize.app. That costs a returning user one click, bought
+// team.urganize.app. That costs a returning user one click, bought
 // deliberately: sitelinks under the urganize.app result can only be
 // urganize.app pages, so "Log in" can't appear there without a real page
 // here. Keeping this link and the ProductMenu's on the same destination also

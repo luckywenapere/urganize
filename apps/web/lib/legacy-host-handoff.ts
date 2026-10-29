@@ -1,9 +1,10 @@
-// Moving people from app.urganize.app to my.urganize.app without signing them
-// out (2026-10-29). The Supabase session sits in localStorage, which belongs
-// to one origin, so a plain redirect lands every signed-in person on the new
-// host signed out (found when the Vercel 308 went live for a few minutes).
+// Moving people from the old addresses (app.urganize.app, and my.urganize.app,
+// the main address for one day) to team.urganize.app without signing them out
+// (2026-10-29). The Supabase session sits in localStorage, which belongs to
+// one origin, so a plain redirect lands every signed-in person on the new host
+// signed out (found when the Vercel 308 went live for a few minutes).
 //
-// So app.urganize.app keeps serving the app, and the page itself moves people:
+// So the old hosts keep serving the app, and the page itself moves people:
 // - A sign-in link already in flight (an email confirm, a Google return: a
 //   token or an error in the hash, or /auth/callback) is forwarded as it is.
 //   The early script in app/layout.tsx does this before supabase-js can read
@@ -13,10 +14,10 @@
 //   server), which stores it there and opens the page they were on.
 // - A signed-out person goes to the same path on the new host.
 //
-// Once traffic on app.urganize.app has died down, the Vercel domain can be set
-// to a 308 redirect to my.urganize.app and this module deleted.
+// Once traffic on an old host has died down, its Vercel domain can be set to a
+// 308 redirect to team.urganize.app; when both are, delete this module.
 
-import { APP_ORIGIN, LEGACY_APP_HOST } from './app-hosts';
+import { APP_ORIGIN, LEGACY_APP_HOSTS } from './app-hosts';
 import { isSafeNextPath } from './email-confirmation';
 
 export const HANDOFF_PATH = '/auth/handoff';
@@ -73,8 +74,8 @@ export function parseHandoffHash(hash: string): HandoffSession | null {
  * everything else waits for <LegacyHostHandoff>, which can read the session.
  * Mirrors isAuthReturn(); legacy-host-handoff.test.ts holds the two together.
  */
-export const LEGACY_HOST_EARLY_SCRIPT = `(function(){try{var l=window.location;if(l.hostname!==${JSON.stringify(
-  LEGACY_APP_HOST
-)})return;var p=l.pathname;if(p==='/auth/callback'||p.indexOf('/auth/callback/')===0||/(^|[#&])(access_token|error|error_description)=/.test(l.hash)){l.replace(${JSON.stringify(
+export const LEGACY_HOST_EARLY_SCRIPT = `(function(){try{var l=window.location;if(${JSON.stringify(
+  LEGACY_APP_HOSTS
+)}.indexOf(l.hostname)<0)return;var p=l.pathname;if(p==='/auth/callback'||p.indexOf('/auth/callback/')===0||/(^|[#&])(access_token|error|error_description)=/.test(l.hash)){l.replace(${JSON.stringify(
   APP_ORIGIN
 )}+p+l.search+l.hash);}}catch(e){}})();`;

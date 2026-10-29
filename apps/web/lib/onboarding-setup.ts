@@ -3,7 +3,7 @@
  * (/onboarding?setup=1) instead of the app?
  *
  * Why this exists (Oct 14, 2026): a brand-new person who opens
- * my.urganize.app directly lands on /auth. Typing a new email already routes
+ * team.urganize.app directly lands on /auth. Typing a new email already routes
  * them to /onboarding, but "Continue with Google" created the account and
  * dropped them straight into the app, skipping onboarding v2 (plan preview,
  * opt-in, paywall, welcome). The only reroute was the card-trial gate, which is
