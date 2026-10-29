@@ -14,7 +14,7 @@ A copy of the web app on this machine with its own database (Supabase in Docker,
 
 After a fresh `db:local:start` the database is empty: run `pnpm db:local:reset` once.
 
-Local services: Studio http://127.0.0.1:54323, mail catcher (Mailpit) http://127.0.0.1:54324, API http://127.0.0.1:54321, Postgres `postgresql://postgres:postgres@127.0.0.1:54322/postgres`.
+Local services: Studio http://127.0.0.1:54323, mail catcher (Mailpit) http://127.0.0.1:54324, API http://127.0.0.1:54321, Postgres on 127.0.0.1:54322 (the Supabase CLI default login).
 
 Do not run `pnpm dev` (the normal one, on production Supabase) in the same checkout at the same time: both use `apps/web/.next`.
 
