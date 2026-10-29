@@ -37,6 +37,7 @@ import { formatArtistFactsForPrompt } from '@/lib/artist-facts';
 import { listFactsInScope } from '@/lib/artist-facts-server';
 import { listVisibleReleases } from './release-scope';
 import { buildWorkspaceSummary } from './workspace-summary';
+import { loadSmartLinkPromptFacts, smartLinkLine, type SmartLinkPromptFacts } from './smart-link-context';
 import type { ChappiToolContext } from './tool-families/shared';
 
 export type PortableContext = {
@@ -181,6 +182,7 @@ export function formatReleaseContext(input: {
   release: Release;
   tasks: Task[];
   today: string;
+  smartLink?: SmartLinkPromptFacts | null;
 }): string {
   const { release, tasks, today } = input;
 
@@ -234,6 +236,10 @@ export function formatReleaseContext(input: {
     sections.push(`Dated moments:\n${lines.join('\n')}`);
   }
 
+  const smartLink = input.smartLink ? smartLinkLine(input.smartLink, today) : null;
+  if (smartLink) sections.push(`Smart link:
+${smartLink}`);
+
   sections.push(`Today is ${today}.`);
 
   return sections.join('\n\n');
@@ -264,9 +270,12 @@ export async function buildReleaseContext(
     ? await new TaskService(ctx.adminClient).getTasksForUser(ctx.user.id, ctx.workspaceIds)
     : [];
 
+  const tasks = allTasks.filter((task) => task.releaseId === id);
+  const [smartLink] = await loadSmartLinkPromptFacts(ctx.adminClient, [release], tasks);
   return formatReleaseContext({
     release,
-    tasks: allTasks.filter((task) => task.releaseId === id),
+    tasks,
     today: new Date().toISOString().slice(0, 10),
+    smartLink,
   });
 }

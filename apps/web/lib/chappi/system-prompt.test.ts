@@ -123,3 +123,12 @@ describe('the capability list in ROLE', () => {
     expect(stale, `ROLE names tools that no longer exist: ${stale.join(', ')}`).toEqual([]);
   });
 });
+
+describe('smart links (#858)', () => {
+  it('only offers a smart link the context lists, and prompts sharing it before release day', () => {
+    expect(ROLE).toContain('Never offer, promise or make up a smart link');
+    expect(ROLE).toContain('UPC or ISRC');
+    expect(ROLE).toContain('share it now so fans can pre-save');
+    expect(ROLE).toContain('never pre-save link');
+  });
+});
