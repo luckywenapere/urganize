@@ -172,15 +172,25 @@ export function OnboardingTrialSheetHost() {
   );
 }
 
+// The saved landing is used up on first read, but Home can mount twice while it
+// settles (#854: the note flashed away and never came back). Keep the name for
+// the rest of this page visit so a remount still shows it.
+let joinedTeamNameThisVisit: string | null = null;
+
 /** "You're in {team}. Here's what's yours to do." Once, on the first Home visit after joining. */
 export function JoinedTeamNote() {
   const userId = useAuthStore((state) => state.user?.id ?? null);
-  const [teamName, setTeamName] = useState<string | null>(null);
+  const [teamName, setTeamName] = useState<string | null>(joinedTeamNameThisVisit);
 
   useEffect(() => {
+    if (joinedTeamNameThisVisit) {
+      setTeamName(joinedTeamNameThisVisit);
+      return;
+    }
     const landing = readOnboardingLanding(userId);
     if (landing?.kind === 'joined') {
-      setTeamName(landing.teamName || 'the team');
+      joinedTeamNameThisVisit = landing.teamName || 'the team';
+      setTeamName(joinedTeamNameThisVisit);
       clearOnboardingLanding();
     }
   }, [userId]);

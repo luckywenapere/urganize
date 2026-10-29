@@ -494,19 +494,36 @@ export async function createOnboardingRecord(
   });
   if (!song.ok) console.error('[onboarding/music] record saved without its first song', song.error);
 
-  // "Just me, I'm the artist": the artist name they typed is theirs, so the
-  // app does not ask for it again (ArtistNameGate).
-  const profile = await admin.from('profiles').select('role,artist_name').eq('id', user.id).maybeSingle();
-  const profileRow = (profile.data as Row | null) ?? {};
-  if (text(profileRow.role) === 'artist' && !text(profileRow.artist_name)) {
-    await admin
-      .from('profiles')
-      .update({ artist_name: artist.value.name, updated_at: new Date().toISOString() })
-      .eq('id', user.id);
-  }
+  await rememberOwnArtistName(admin, user.id, artist.value.name);
 
   return {
     ok: true,
     value: { recordId: record.value.id, artistId: artist.value.id, workspaceId: team.value.workspaceId },
   };
+}
+
+/**
+ * "Just me, I'm the artist": the artist name they typed is theirs, so the app
+ * does not ask for it again (ArtistNameGate). Used by the record path here and
+ * by POST /api/releases for Ready to release and Already out (#854). Best
+ * effort, never throws.
+ */
+export async function rememberOwnArtistName(
+  admin: SupabaseClient,
+  userId: string,
+  artistName: string
+): Promise<void> {
+  const name = text(artistName);
+  if (!name) return;
+  try {
+    const profile = await admin.from('profiles').select('role,artist_name').eq('id', userId).maybeSingle();
+    const profileRow = (profile.data as Row | null) ?? {};
+    if (text(profileRow.role) !== 'artist' || text(profileRow.artist_name)) return;
+    await admin
+      .from('profiles')
+      .update({ artist_name: name, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+  } catch (error) {
+    console.error('[onboarding] could not save the artist name to the profile', error);
+  }
 }
