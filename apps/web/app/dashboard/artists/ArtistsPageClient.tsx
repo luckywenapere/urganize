@@ -3,14 +3,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, ChevronRight, Plus, Users } from '@/components/icons';
-import { bucketReleases } from '@/lib/artist-overview';
-import { parseReleaseDate } from '@/lib/recap-copy';
+import { ArrowRight, ChevronRight, Disc3, Plus, Users } from '@/components/icons';
 import { ADD_ARTIST_HREF, CATALOGUE_HREF } from '@/lib/shell-nav';
 import { initialsFor } from '@/lib/swipe-nav';
 import { useAuthStore } from '@/lib/auth-store';
-import { artistSummary } from '@/lib/artist-overview';
-import { artistHref, describeArtistCounts, isArtistPageEnabled } from '@/lib/artist-page';
+import { artistsList, describeDaysToGo, type ArtistListRow, type ArtistStatus } from '@/lib/artists-list';
+import { artistHref, isArtistPageEnabled, releaseHref } from '@/lib/artist-page';
+import { lagosToday } from '@/lib/next-records';
+import { captureAnalyticsEvent } from '@/lib/analytics/client';
+import type { ExecutionRelease } from '@/lib/execution-types';
+import { displayReleaseTitle } from '@/types/releases';
+import { useTaskStore } from '@/stores/useTaskStore';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { ArtistsRolloutsSwitch } from '@/components/shell/swipe/ArtistsRolloutsSwitch';
 import { ImportReleasesButton } from '@/components/artists/ImportReleasesDialog';
@@ -52,13 +55,11 @@ export default function ArtistsPageClient({
     void loadCommandCenter();
   }, [loadRoster, loadCommandCenter, router]);
 
-  const cards = useMemo(
-    () =>
-      artists.map((artist) => ({
-        artist,
-        summary: artistSummary(artist.id, releases),
-      })),
-    [artists, releases]
+  const tasks = useTaskStore((state) => state.tasks);
+  const today = lagosToday();
+  const list = useMemo(
+    () => artistsList({ artists, releases, tasks, today }),
+    [artists, releases, tasks, today]
   );
 
   if (!ARTIST_PAGE_ENABLED) return null;
@@ -68,7 +69,7 @@ export default function ArtistsPageClient({
   if (swipe) {
     return (
       <>
-        <SwipeArtists loading={loading} artists={artists} releases={releases} />
+        <SwipeArtists loading={loading} list={list} />
         {opened ? <DuplicateArtistsPrompt /> : null}
       </>
     );
@@ -101,58 +102,32 @@ export default function ArtistsPageClient({
             ))}
           </ul>
         </div>
-      ) : cards.length === 0 ? (
+      ) : list.rows.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-stroke-default p-8 text-center">
           <Users className="mx-auto h-6 w-6 text-content-tertiary" aria-hidden />
           <p className="mt-3 text-sm font-semibold text-content-primary">No artists yet</p>
           <p className="mt-1 text-sm text-content-secondary">Add an artist in Settings and they appear here.</p>
         </div>
       ) : (
-        <div className="section-list-enter overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
-          {/* pl matches the rows below, which leave room for the face. Rollouts
-              only: Planned and Press kit left the table (founder call,
-              2026-10-15), Shows were deleted (Oct 17, 2026); the press kit
-              still lives on each artist's page. */}
-          <div className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1fr)_2rem] gap-4 border-b border-stroke-subtle py-3 pl-[4.25rem] pr-5 text-xs font-medium text-content-tertiary md:grid">
-            <span>Artist</span>
-            <span>Rollouts</span>
-            <span />
+        <div className="section-list-enter">
+          {list.spotlight ? <Spotlight row={list.spotlight} /> : null}
+          <div className={`${list.spotlight ? 'mt-4 ' : ''}overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface`}>
+            {/* The tracklist (#878, mock docs/mocks/artists-list, B): who, what
+                is next, when it drops, what needs doing. Header text lines up
+                with the names and titles, not the faces and covers. */}
+            <div className={`hidden ${ROW_GRID} border-b border-stroke-subtle py-3 pl-[4.75rem] pr-5 text-xs font-medium text-content-tertiary md:grid`}>
+              <span>Artist</span>
+              <span className="pl-14">Next rollout</span>
+              <span>Drops</span>
+              <span>Tasks</span>
+              <span />
+            </div>
+            <ul className="divide-y divide-stroke-subtle">
+              {list.rows.map((row) => (
+                <ArtistRow key={row.artist.id} row={row} setArtistPhoto={setArtistPhoto} />
+              ))}
+            </ul>
           </div>
-          <ul className="divide-y divide-stroke-subtle">
-            {cards.map(({ artist, summary }) => (
-              <li key={artist.id} className="relative">
-                {/* The face is a SIBLING of the row link, laid over it, never
-                    inside it: a button inside an anchor is invalid markup and
-                    its tap would open the artist instead of the file picker. */}
-                <ProfilePhotoPicker
-                  name={artist.name}
-                  photoUrl={artist.photoUrl}
-                  size={40}
-                  signUrl={artistPhotoUrl(artist.id)}
-                  save={(path) => saveArtistPhoto(artist.id, path)}
-                  onChange={(url) => setArtistPhoto(artist.id, url)}
-                  surface="artist_photo"
-                  className="absolute left-5 top-3 z-10"
-                />
-                <Link
-                  href={artistHref(artist.id)}
-                  className="motion-focus grid min-h-16 items-center gap-x-4 gap-y-1 py-3 pl-[4.25rem] pr-5 transition-colors hover:bg-bg-hover/60 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_2rem]"
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate font-display text-base font-semibold text-content-primary">
-                      {artist.name}
-                    </span>
-                    <span className="mt-0.5 block text-xs text-content-secondary md:hidden">
-                      {/* Rollouts only, like the columns (founder call, 2026-10-15). */}
-                      {describeArtistCounts({ ...summary, planned: 0, live: 0 })}
-                    </span>
-                  </span>
-                  <span className="hidden text-sm tabular-nums text-content-primary md:block">{summary.releases}</span>
-                  <ArrowRight className="hidden h-4 w-4 text-content-tertiary md:block" aria-hidden />
-                </Link>
-              </li>
-            ))}
-          </ul>
         </div>
       )}
 
@@ -170,40 +145,297 @@ export default function ArtistsPageClient({
   );
 }
 
-/** "Drops Fri 6 Nov" within a fortnight, "Drops 4 Dec" further out. */
-function describeDrop(value: string | null, now: Date = new Date()): string | null {
-  const date = parseReleaseDate(value);
-  if (!date) return null;
-  const soon = date.getTime() - now.getTime() < 14 * 86_400_000;
-  const text = date.toLocaleDateString('en-GB', soon ? { weekday: 'short', day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short' });
-  return `Drops ${text.replace(',', '')}`;
+type RosterArtist = { id: string; name: string; photoUrl?: string | null };
+type ListRow = ArtistListRow<RosterArtist, ExecutionRelease>;
+type ArtistsListData = { rows: ListRow[]; spotlight: ListRow | null };
+
+// Who, next rollout, drops, tasks, arrow (#878).
+const ROW_GRID = 'grid-cols-[minmax(0,1.3fr)_minmax(0,1.5fr)_7rem_9.5rem_1rem] gap-4';
+
+const STATUS_WORD: Record<ArtistStatus, string> = {
+  rolling_out: 'Rolling out',
+  out_now: 'Out now',
+  quiet: 'Quiet',
+};
+
+const typeLabel = (release: ExecutionRelease) =>
+  release.releaseType === 'ep' ? 'EP' : release.releaseType === 'album' ? 'Album' : 'Single';
+
+/** "Fri 7 Nov", read as a local date like the artist page does. */
+function shortDay(value: string | null): string | null {
+  if (!value) return null;
+  const parsed = new Date(`${value.slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+    .format(parsed)
+    .replace(',', '');
 }
 
-type RosterArtist = { id: string; name: string; photoUrl?: string | null };
-type RosterRelease = { id: string; artistId: string; releaseDate: string | null; status: string; title: string };
+const percent = (row: ListRow) => (row.total > 0 ? Math.round((row.done / row.total) * 100) : 0);
+
+/** A rollout's cover; a flat tile with a disc when it has none (never a
+ *  gradient); a dashed + when there is no rollout at all. `onInk` is the dark
+ *  banner, where the page's own tile colour would glare. */
+function Cover({
+  release,
+  size,
+  onInk = false,
+  className = '',
+}: {
+  release: ExecutionRelease | null;
+  size: number;
+  onInk?: boolean;
+  className?: string;
+}) {
+  const src = release ? release.coverThumbUrl || release.coverArtUrl || null : null;
+  const box = { width: size, height: size };
+  if (src) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt="" style={box} className={`shrink-0 rounded-md object-cover ${className}`} />;
+  }
+  if (!release) {
+    return (
+      <span
+        style={box}
+        className={`grid shrink-0 place-items-center rounded-md border border-dashed border-stroke-strong text-content-tertiary ${className}`}
+        aria-hidden="true"
+      >
+        <Plus className="h-4 w-4" />
+      </span>
+    );
+  }
+  return (
+    <span
+      style={box}
+      className={`grid shrink-0 place-items-center rounded-md ${
+        onInk ? 'bg-[#f5f0e6]/10 text-[#f5f0e6]/45' : 'bg-bg-hover text-content-tertiary'
+      } ${className}`}
+      aria-hidden="true"
+    >
+      <Disc3 style={{ width: Math.round(size * 0.36), height: Math.round(size * 0.36) }} />
+    </span>
+  );
+}
+
+/** Due this week and late as two small pills; nothing when both are zero. */
+function TaskPills({ due, late }: { due: number; late: number }) {
+  if (due === 0 && late === 0) return null;
+  return (
+    <span className="flex flex-wrap gap-1.5">
+      {due > 0 ? (
+        <span className="rounded-full bg-bg-hover px-2 text-xs font-medium leading-5 text-content-secondary">{due} due</span>
+      ) : null}
+      {late > 0 ? (
+        <span className="rounded-full bg-status-error/10 px-2 text-xs font-semibold leading-5 text-status-error">{late} late</span>
+      ) : null}
+    </span>
+  );
+}
+
+/** "21 of 34 tasks done · 3 due this week · 1 late" on the dark banner. */
+function SpotlightFacts({ row, withDone }: { row: ListRow; withDone: boolean }) {
+  const parts = [
+    withDone && row.total > 0 ? `${row.done} of ${row.total} tasks done` : null,
+    row.dueThisWeek > 0 ? `${row.dueThisWeek} due this week` : null,
+  ].filter(Boolean);
+  if (parts.length === 0 && row.late === 0) return null;
+  return (
+    <>
+      {parts.join(' · ')}
+      {row.late > 0 ? (
+        <>
+          {parts.length > 0 ? ' · ' : ''}
+          <span className="font-semibold text-[#f2a7a0]">{row.late} late</span>
+        </>
+      ) : null}
+    </>
+  );
+}
 
 /**
- * The Artists tab in the swipe navigation (URG-380, frame 5): a serif title with
- * one quiet +, a count line whose "in motion" half opens the rollouts list, and
- * one row per artist with their next release and when it drops. Rows, not a
- * card, the same as Home's rows.
+ * The banner on top (#878): the dated rollout that drops soonest across the
+ * roster. The eye lands on the cover, reads the title, then the countdown.
+ * Dark green in both themes, like Spotify's artist banner.
  */
-function SwipeArtists({
-  loading,
-  artists,
-  releases,
+function Spotlight({ row, compact = false }: { row: ListRow; compact?: boolean }) {
+  const release = row.next;
+  if (!release || row.daysToGo === null) return null;
+  const days = row.daysToGo;
+  const bar =
+    row.total > 0 ? (
+      <span className="block h-1 w-full overflow-hidden rounded-full bg-[#f5f0e6]/15">
+        <span className="block h-full rounded-full bg-[#7fd09c]" style={{ width: `${percent(row)}%` }} />
+      </span>
+    ) : null;
+
+  return (
+    <Link
+      href={releaseHref(release.id)}
+      onClick={() => captureAnalyticsEvent({ name: 'artists_list_action', properties: { artist_id: row.artist.id, action: 'spotlight' } })}
+      className={`motion-focus motion-press grid items-center rounded-2xl bg-[#1d2a21] text-[#f5f0e6] ${
+        compact ? 'grid-cols-[72px_minmax(0,1fr)_auto] gap-3 p-4' : 'grid-cols-[136px_minmax(0,1fr)_auto] gap-6 p-6'
+      }`}
+    >
+      <Cover release={release} size={compact ? 72 : 136} onInk className="shadow-[0_8px_24px_rgba(0,0,0,0.25)]" />
+      <span className="min-w-0">
+        <span className="block text-[11px] font-semibold uppercase leading-4 tracking-[0.1em] text-[#f5f0e6]/70">
+          Next drop
+        </span>
+        <span className={`mt-1 block truncate font-display ${compact ? 'text-xl leading-[26px]' : 'text-[32px] leading-10'}`}>
+          {displayReleaseTitle(release.title)}
+        </span>
+        <span className={`mt-1 flex min-w-0 items-center gap-2 text-[#f5f0e6]/70 ${compact ? 'text-[13px]' : 'text-sm'}`}>
+          {compact ? null : row.artist.photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={row.artist.photoUrl} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
+          ) : (
+            <span
+              className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#f5f0e6]/15 text-[10px] font-semibold"
+              aria-hidden="true"
+            >
+              {initialsFor(row.artist.name)}
+            </span>
+          )}
+          <span className="truncate font-semibold text-[#f5f0e6]">{row.artist.name}</span>
+          {compact ? null : <span className="shrink-0">· {typeLabel(release)}</span>}
+        </span>
+        {compact ? null : (
+          <>
+            {bar ? <span className="mt-4 block max-w-[280px]">{bar}</span> : null}
+            <span className="mt-2 block text-[13px] leading-5 text-[#f5f0e6]/70">
+              <SpotlightFacts row={row} withDone />
+            </span>
+          </>
+        )}
+      </span>
+      <span className="flex flex-col items-end text-right">
+        <span
+          className={`font-semibold tabular-nums tracking-[-0.03em] ${compact ? 'text-4xl leading-9' : 'text-[56px] leading-[56px]'}`}
+        >
+          {days}
+        </span>
+        <span className={`text-[#f5f0e6]/70 ${compact ? 'text-xs' : 'text-[13px] leading-5'}`}>
+          {days === 1 ? 'day' : 'days'}
+          {compact ? '' : ` to go · ${shortDay(release.releaseDate) ?? ''}`}
+        </span>
+        {compact ? null : (
+          <span className="mt-4 inline-flex h-9 items-center rounded-full bg-[#f5f0e6] px-4 text-[13px] font-semibold text-[#1d2a21]">
+            Open rollout
+          </span>
+        )}
+      </span>
+      {compact && (bar || row.dueThisWeek > 0 || row.late > 0) ? (
+        <span className="col-span-3">
+          {bar}
+          <span className="mt-1.5 block text-xs text-[#f5f0e6]/70">
+            <SpotlightFacts row={row} withDone={false} />
+          </span>
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
+/** One artist in the tracklist. The face is a sibling over the link, never
+ *  inside it: a button inside an anchor is invalid markup and its tap would
+ *  open the artist instead of the photo picker. */
+function ArtistRow({
+  row,
+  setArtistPhoto,
 }: {
-  loading: boolean;
-  artists: RosterArtist[];
-  releases: RosterRelease[];
+  row: ListRow;
+  setArtistPhoto: (artistId: string, url: string | null) => void;
 }) {
-  const rows = artists.map((artist) => {
-    const mine = releases.filter((release) => release.artistId === artist.id);
-    const buckets = bucketReleases(mine);
-    const next = buckets.planned[0] ?? buckets.live[0] ?? null;
-    return { artist, next, drop: next ? describeDrop(next.releaseDate) : null, motion: buckets.planned.length + buckets.live.length };
-  });
-  const inMotion = rows.reduce((sum, row) => sum + row.motion, 0);
+  const { artist, next } = row;
+  const day = next ? shortDay(next.releaseDate) : null;
+  return (
+    <li className="relative">
+      <ProfilePhotoPicker
+        name={artist.name}
+        photoUrl={artist.photoUrl}
+        size={44}
+        signUrl={artistPhotoUrl(artist.id)}
+        save={(path) => saveArtistPhoto(artist.id, path)}
+        onChange={(url) => setArtistPhoto(artist.id, url)}
+        surface="artist_photo"
+        className="absolute left-5 top-3.5 z-10"
+      />
+      <Link
+        href={artistHref(artist.id)}
+        className={`motion-focus flex min-h-[72px] items-center gap-4 py-3 pl-[4.75rem] pr-5 transition-colors hover:bg-bg-hover/60 md:grid ${ROW_GRID}`}
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-display text-[17px] leading-6 text-content-primary">{artist.name}</span>
+          {/* Narrow screens: the one line carries the next rollout instead. */}
+          <span className="block truncate text-xs leading-4 text-content-secondary md:hidden">
+            {next ? `${displayReleaseTitle(next.title)}${day ? ` · ${day}` : ''}` : 'Nothing planned'}
+          </span>
+          <span
+            className={`hidden text-xs leading-4 md:block ${
+              row.status === 'rolling_out' ? 'font-semibold text-brand' : 'text-content-secondary'
+            }`}
+          >
+            {STATUS_WORD[row.status]}
+          </span>
+        </span>
+        <span className="hidden min-w-0 items-center gap-3 md:flex">
+          <Cover release={next} size={44} />
+          <span className="min-w-0">
+            {next ? (
+              <>
+                <span className="block truncate text-sm font-semibold leading-5 text-content-primary">
+                  {displayReleaseTitle(next.title)}
+                </span>
+                <span className="block text-xs leading-4 text-content-secondary">{typeLabel(next)}</span>
+              </>
+            ) : (
+              <>
+                <span className="block text-sm leading-5 text-content-secondary">Nothing planned</span>
+                <span className="block text-xs font-semibold leading-4 text-brand">Start the next record</span>
+              </>
+            )}
+          </span>
+        </span>
+        <span className="hidden md:block">
+          {day ? (
+            <>
+              <span className="block text-sm font-medium leading-5 text-content-primary">{day}</span>
+              {row.daysToGo !== null ? (
+                <span className="block text-xs leading-4 text-content-secondary">{describeDaysToGo(row.daysToGo)}</span>
+              ) : null}
+            </>
+          ) : (
+            <span className="text-sm text-content-tertiary">Not set</span>
+          )}
+        </span>
+        <span className="hidden flex-col gap-1.5 md:flex">
+          {row.total > 0 ? (
+            <span className="block h-1 w-[120px] overflow-hidden rounded-full bg-bg-hover">
+              <span className="block h-full rounded-full bg-brand" style={{ width: `${percent(row)}%` }} />
+            </span>
+          ) : null}
+          <TaskPills due={row.dueThisWeek} late={row.late} />
+        </span>
+        <span className="flex shrink-0 items-center gap-2">
+          <span className="md:hidden">
+            <TaskPills due={0} late={row.late} />
+          </span>
+          <ArrowRight className="h-4 w-4 text-content-tertiary" aria-hidden />
+        </span>
+      </Link>
+    </li>
+  );
+}
+
+/**
+ * The Artists tab in the swipe navigation (URG-380, frame 5; spotlight #878):
+ * a serif title with one quiet +, a count line whose "rolling out" half opens
+ * the rollouts list, the next drop's banner, then one row per artist with
+ * their next rollout, when it drops, and its cover.
+ */
+function SwipeArtists({ loading, list }: { loading: boolean; list: ArtistsListData }) {
+  const { rows, spotlight } = list;
+  const rolling = rows.filter((row) => row.status === 'rolling_out').length;
 
   return (
     <div className="pb-6">
@@ -249,43 +481,49 @@ function SwipeArtists({
         <>
           <p className="mt-1.5 text-[15px] text-content-primary/55">
             {rows.length} {rows.length === 1 ? 'artist' : 'artists'}
-            {inMotion > 0 ? (
+            {rolling > 0 ? (
               <>
                 {' · '}
                 <Link href={CATALOGUE_HREF} className="motion-focus rounded hover:text-content-primary">
-                  {inMotion} {inMotion === 1 ? 'rollout' : 'rollouts'} in motion
+                  {rolling} rolling out
                 </Link>
               </>
             ) : null}
           </p>
-          <ul className="section-list-enter mt-[18px]">
-            {rows.map(({ artist, next, drop }) => (
-              <li key={artist.id} className="border-b border-content-primary/[0.07] last:border-b-0">
-                <Link
-                  href={artistHref(artist.id)}
-                  className="motion-focus flex min-h-[76px] items-center gap-3.5 px-1.5 py-2"
-                >
-                  {artist.photoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={artist.photoUrl} alt="" className="h-[42px] w-[42px] shrink-0 rounded-full object-cover" />
-                  ) : (
-                    <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-full bg-bg-elevated text-[13.5px] font-semibold text-content-primary/80" aria-hidden="true">
-                      {initialsFor(artist.name)}
+          {spotlight ? (
+            <div className="mt-4">
+              <Spotlight row={spotlight} compact />
+            </div>
+          ) : null}
+          <ul className="section-list-enter mt-2">
+            {rows.map(({ artist, next }) => {
+              const day = next ? shortDay(next.releaseDate) : null;
+              return (
+                <li key={artist.id} className="border-b border-content-primary/[0.07] last:border-b-0">
+                  <Link href={artistHref(artist.id)} className="motion-focus flex min-h-[76px] items-center gap-3.5 px-1.5 py-2">
+                    {artist.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={artist.photoUrl} alt="" className="h-[42px] w-[42px] shrink-0 rounded-full object-cover" />
+                    ) : (
+                      <span
+                        className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-full bg-bg-elevated text-[13.5px] font-semibold text-content-primary/80"
+                        aria-hidden="true"
+                      >
+                        {initialsFor(artist.name)}
+                      </span>
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[16.5px] text-content-primary">{artist.name}</span>
+                      <span className={`mt-0.5 block truncate text-sm ${next ? 'text-content-primary/75' : 'text-content-primary/40'}`}>
+                        {next ? `${displayReleaseTitle(next.title)}${day ? ` · ${day}` : ''}` : 'Nothing planned'}
+                      </span>
                     </span>
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[16.5px] text-content-primary">{artist.name}</span>
-                    <span className={`mt-0.5 block truncate text-sm ${next ? 'text-content-primary/75' : 'text-content-primary/40'}`}>
-                      {next ? next.title : 'No rollout planned'}
-                    </span>
-                  </span>
-                  {next ? (
-                    <span className="shrink-0 font-mono text-xs text-content-primary/50">{drop ?? 'Planning'}</span>
-                  ) : null}
-                  <ChevronRight className="h-[18px] w-[18px] shrink-0 text-content-primary/35" aria-hidden="true" />
-                </Link>
-              </li>
-            ))}
+                    <Cover release={next} size={40} />
+                    <ChevronRight className="h-[18px] w-[18px] shrink-0 text-content-primary/35" aria-hidden="true" />
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </>
       )}

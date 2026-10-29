@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Artists list</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --side-on:#e6e1d6; --card:#faf5ec; --hover:#ebe6dc; --tile:#e3ddd0;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --err:#961a1a; --err-soft:rgba(150,26,26,.08);
+    --ink:#1d2a21; --on-ink:#f5f0e6; --on-ink2:rgba(245,240,230,.72);
+    --board:#d9d5cc; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/20px 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--text); padding:40px 16px 72px; font-variant-numeric:tabular-nums; }
+  p, h1, h2, h3, h4 { margin:0; }
+  .serif { font-family:'Young Serif', serif; font-weight:400; letter-spacing:0; }
+  .sec { color:var(--sec); } .ter { color:var(--ter); } .err { color:var(--err); }
+  .dot::before { content:'·'; margin:0 6px; color:var(--ter); }
+
+  /* Board around the frames */
+  .wrap { max-width:1180px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; line-height:36px; }
+  .intro p { color:var(--board-sec); max-width:760px; margin-top:8px; }
+  .sec-h { margin:56px 0 16px; }
+  .sec-h h2 { font-size:12px; line-height:16px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+  .sec-h h2 em { font-style:normal; color:var(--brand); }
+  .sec-h p { color:var(--board-sec); max-width:760px; margin-top:4px; }
+  .pair { display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start; }
+  .label { font-size:12px; line-height:16px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin-bottom:8px; }
+
+  /* Desktop frame: the real app chrome (logo, centred tabs, search and bell, icon rail). */
+  .desk { flex:1 1 760px; min-width:0; background:var(--bg); border-radius:16px; overflow:hidden; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .bar { height:64px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:0 24px; }
+  .logo { font-family:'Young Serif', serif; font-size:18px; display:flex; align-items:center; gap:8px; }
+  .beta { font:700 10px/16px 'Instrument Sans'; letter-spacing:.06em; padding:0 6px; border-radius:4px; background:var(--brand-soft); color:var(--brand); }
+  .tabs { display:flex; gap:4px; }
+  .tabs span { padding:8px 14px; border-radius:99px; font-size:14px; color:var(--ter); }
+  .tabs span.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .icons { display:flex; gap:12px; justify-content:flex-end; }
+  .icons i { width:36px; height:36px; border-radius:50%; border:1px solid var(--line2); }
+  .body { display:grid; grid-template-columns:64px 1fr; }
+  .rail { display:flex; flex-direction:column; align-items:center; gap:8px; padding-top:8px; }
+  .rail i { width:40px; height:40px; border-radius:12px; display:grid; place-items:center; }
+  .rail i.on { background:var(--side-on); }
+  .rail i::after { content:''; width:16px; height:16px; border-radius:50%; border:1.5px solid var(--sec); }
+  .page { padding:8px 32px 40px 16px; min-width:0; }
+
+  /* Page head: title left, actions right, on one baseline. */
+  .head { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; }
+  .head h3 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; line-height:36px; }
+  .head .count { font-size:14px; line-height:20px; color:var(--sec); margin-top:4px; }
+  .acts { display:flex; gap:8px; }
+  .btn { display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 16px; border-radius:99px; font-weight:600; font-size:13px; background:var(--brand); color:var(--on-ink); white-space:nowrap; }
+  .btn.ghost { background:transparent; color:var(--sec); border:1px solid var(--line2); font-weight:500; }
+  .btn.light { background:var(--on-ink); color:var(--ink); }
+
+  /* Faces and covers. Missing photo or cover = flat tile, never a gradient. */
+  .face { border-radius:50%; flex:none; display:grid; place-items:center; overflow:hidden; background:var(--tile); color:var(--text); font-weight:600; }
+  .face svg, .cv svg { width:100%; height:100%; display:block; }
+  .cv { flex:none; border-radius:6px; overflow:hidden; background:var(--tile); }
+  .cv.add { background:transparent; border:1.5px dashed var(--line2); display:grid; place-items:center; color:var(--ter); font-size:18px; line-height:1; }
+  .chev { width:8px; height:8px; border-top:1.5px solid var(--ter); border-right:1.5px solid var(--ter); transform:rotate(45deg); flex:none; }
+
+  /* Status words, the same three everywhere. */
+  .st { display:inline-flex; align-items:center; gap:6px; font-size:12px; line-height:20px; padding:0 8px; border-radius:99px; background:var(--hover); color:var(--sec); white-space:nowrap; font-weight:500; }
+  .st.go { background:var(--brand-soft); color:var(--brand); font-weight:600; }
+  .st.go::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
+  .st.late { background:var(--err-soft); color:var(--err); font-weight:600; }
+  .prog { height:4px; border-radius:99px; background:var(--hover); overflow:hidden; }
+  .prog i { display:block; height:100%; background:var(--brand); border-radius:99px; }
+
+  /* ===== A: the shelf ===== */
+  .shelf { display:grid; grid-template-columns:repeat(auto-fill, 200px); gap:24px; margin-top:32px; }
+  .tile { display:flex; flex-direction:column; align-items:center; text-align:center; }
+  .ring { width:160px; height:160px; border-radius:50%; border:3px solid transparent; display:grid; place-items:center; }
+  .ring.go { border-color:var(--brand); }
+  .ring .face { width:144px; height:144px; font-size:44px; font-weight:500; }
+  .tile .nm { font-family:'Young Serif', serif; font-size:20px; line-height:28px; margin-top:12px; }
+  .tile .ln { font-size:13px; line-height:20px; color:var(--sec); margin-top:2px; }
+  .tile .ln b { color:var(--brand); font-weight:600; }
+  .next { margin-top:16px; width:100%; height:56px; display:flex; align-items:center; gap:12px; padding:0 12px 0 8px; border-radius:12px; background:var(--card); border:1px solid var(--line); text-align:left; }
+  .next .cv { width:40px; height:40px; }
+  .next b { display:block; font-size:13px; line-height:18px; font-weight:600; }
+  .next div > span { display:block; font-size:12px; line-height:16px; color:var(--sec); }
+  .tile.add .ring { border:1.5px dashed var(--line2); width:160px; height:160px; color:var(--brand); font-size:36px; font-weight:300; }
+  .tile.add .nm { font-family:'Instrument Sans'; font-size:14px; font-weight:600; color:var(--sec); }
+
+  /* ===== B: spotlight and list ===== */
+  .spot { margin-top:24px; background:var(--ink); color:var(--on-ink); border-radius:16px; padding:24px; display:grid; grid-template-columns:136px minmax(0,1fr) auto; gap:24px; align-items:center; }
+  .spot .cv { width:136px; height:136px; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.25); }
+  .eyebrow { font-size:11px; line-height:16px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--on-ink2); }
+  .spot h4 { font-family:'Young Serif', serif; font-weight:400; font-size:32px; line-height:40px; margin-top:4px; }
+  .by { display:flex; align-items:center; gap:8px; margin-top:4px; font-size:14px; color:var(--on-ink2); }
+  .by .face { width:24px; height:24px; }
+  .by b { color:var(--on-ink); font-weight:600; }
+  .spot .prog { background:rgba(245,240,230,.16); margin-top:16px; width:280px; max-width:100%; }
+  .spot .prog i { background:#7fd09c; }
+  .spot .sm { font-size:13px; line-height:20px; color:var(--on-ink2); margin-top:8px; }
+  .spot .sm .err2 { color:#f2a7a0; font-weight:600; }
+  .cd { text-align:right; display:flex; flex-direction:column; align-items:flex-end; }
+  .cd b { font-size:56px; line-height:56px; font-weight:600; letter-spacing:-.03em; }
+  .cd span { font-size:13px; line-height:20px; color:var(--on-ink2); }
+  .cd .btn { margin-top:16px; }
+
+  .tbl { margin-top:24px; }
+  .tbl .hd, .tbl .r { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1.5fr) 112px 148px 8px; gap:16px; align-items:center; padding:0 16px; }
+  .tbl .hd { font-size:12px; line-height:16px; color:var(--ter); padding-bottom:8px; border-bottom:1px solid var(--line); }
+  .tbl .r { height:72px; border-bottom:1px solid var(--line); }
+  .tbl .r:last-child { border-bottom:0; }
+  .cell { display:flex; align-items:center; gap:12px; min-width:0; }
+  .cell .face { width:44px; height:44px; font-size:15px; }
+  .cell .cv { width:44px; height:44px; }
+  .cell b { display:block; font-weight:600; font-size:14px; line-height:20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cell .nm { font-family:'Young Serif', serif; font-weight:400; font-size:17px; line-height:24px; }
+  .cell div > span { display:block; font-size:12px; line-height:16px; color:var(--sec); }
+  .two b { display:block; font-weight:500; font-size:14px; line-height:20px; }
+  .two span { display:block; font-size:12px; line-height:16px; color:var(--sec); }
+  .todo { display:flex; flex-direction:column; gap:6px; }
+  .todo .row { display:flex; gap:6px; }
+  .link, .cell div > span.link { color:var(--brand); font-weight:600; }
+
+  /* ===== C: library cards ===== */
+  .chips { display:flex; gap:8px; margin-top:24px; flex-wrap:wrap; }
+  .chip { height:32px; display:inline-flex; align-items:center; gap:6px; padding:0 14px; border-radius:99px; background:var(--hover); font-size:13px; font-weight:500; }
+  .chip i { font-style:normal; color:var(--ter); }
+  .chip.on { background:var(--text); color:var(--bg); font-weight:600; }
+  .chip.on i { color:rgba(245,240,230,.65); }
+  .lib { margin-top:16px; display:flex; flex-direction:column; gap:12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 20px 16px 16px; display:grid; grid-template-columns:72px minmax(0,1fr) auto 8px; gap:20px; align-items:center; }
+  .card .face { width:72px; height:72px; font-size:24px; }
+  .card .nm { font-family:'Young Serif', serif; font-size:20px; line-height:28px; }
+  .card .ln { font-size:13px; line-height:20px; color:var(--sec); }
+  .card .tags { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  .covers { display:flex; gap:8px; align-items:center; }
+  .covers .cv { width:64px; height:64px; }
+  .covers .more { width:64px; height:64px; border-radius:6px; background:var(--hover); display:grid; place-items:center; font-size:13px; font-weight:600; color:var(--sec); }
+
+  /* Phone frame: the swipe Artists tab (switch first, big serif title, 16px gutters). */
+  .phone { width:360px; flex:none; background:var(--bg); border-radius:32px; padding:16px 16px 24px; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .sbar { height:24px; display:flex; justify-content:space-between; font-size:12px; font-weight:600; padding:0 8px; }
+  .sw { display:inline-flex; gap:2px; padding:3px; border-radius:99px; background:var(--hover); margin-top:12px; }
+  .sw span { padding:6px 14px; border-radius:99px; font-size:13px; color:var(--sec); }
+  .sw span.on { background:var(--card); color:var(--text); font-weight:600; box-shadow:0 1px 2px rgba(26,22,17,.08); }
+  .ph-t { font-family:'Young Serif', serif; font-size:40px; line-height:44px; margin-top:12px; }
+  .ph-c { font-size:15px; line-height:20px; color:var(--sec); margin-top:6px; }
+  .prow { display:flex; align-items:center; gap:12px; height:72px; border-bottom:1px solid var(--line); }
+  .prow:last-child { border-bottom:0; }
+  .prow .face { width:44px; height:44px; font-size:15px; }
+  .prow .t { flex:1; min-width:0; }
+  .prow .t b { display:block; font-size:16px; line-height:22px; font-weight:500; }
+  .prow .t > span { display:block; font-size:13px; line-height:18px; color:var(--sec); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .prow .cv { width:40px; height:40px; }
+
+  .notes { margin-top:48px; padding:20px 24px; border-radius:16px; background:rgba(245,240,230,.6); color:var(--board-sec); }
+  .notes b { color:var(--text); }
+  .notes li { margin-top:4px; }
+  .notes ul { margin:8px 0 0; padding-left:18px; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- Stand-ins for real images, drawn flat. In the app these are the real photo and real cover art. -->
+  <symbol id="dorian" viewBox="0 0 100 100"><rect width="100" height="100" fill="#cfc6b6"/><circle cx="50" cy="41" r="17" fill="#3a2a22"/><path d="M16 100c4-22 18-33 34-33s30 11 34 33z" fill="#1d1d1f"/></symbol>
+  <symbol id="cov1" viewBox="0 0 100 100"><rect width="100" height="100" fill="#26344d"/><circle cx="68" cy="34" r="16" fill="#e8b24a"/><rect y="70" width="100" height="30" fill="#18233a"/><rect x="12" y="58" width="10" height="12" fill="#18233a"/><rect x="26" y="50" width="12" height="20" fill="#18233a"/><rect x="42" y="56" width="9" height="14" fill="#18233a"/></symbol>
+  <symbol id="cov2" viewBox="0 0 100 100"><rect width="100" height="100" fill="#8a3b2b"/><circle cx="50" cy="50" r="26" fill="none" stroke="#f0d9c4" stroke-width="5"/><circle cx="50" cy="50" r="6" fill="#f0d9c4"/></symbol>
+  <symbol id="cov3" viewBox="0 0 100 100"><rect width="100" height="100" fill="#3f5a3a"/><path d="M0 72 30 44l22 20 18-14 30 26v24H0z" fill="#2c4029"/><rect x="14" y="16" width="30" height="4" fill="#d9e3c8"/><rect x="14" y="24" width="18" height="4" fill="#d9e3c8"/></symbol>
+</svg>
+
+<div class="wrap">
+  <div class="intro">
+    <h1>Artists list: three directions</h1>
+    <p>Issue #878. Today the page is a plain table: face, name, a rollout count. Each direction takes a cue from Spotify and adds facts we already keep: the next rollout and its cover, days until it drops, tasks due this week and late. No new tables. Drawn with your real roster, Dorian and T3N. Titles, dates and covers are sample data.</p>
+  </div>
+
+  <!-- ======================== B (shown first: recommended) ======================== -->
+  <div class="sec-h">
+    <h2>B. Spotlight and list <em>· recommended</em></h2>
+    <p>Spotify cue: the big banner at the top of an artist page, then a tracklist. Riff: the banner goes to whichever rollout drops next. The eye lands on the cover, reads the title, then lands on the countdown, then drops to the list. Every row reads left to right in the order a manager asks: who, what is next, when, what needs doing.</p>
+  </div>
+  <div class="pair">
+    <div class="desk">
+      <div class="bar"><span class="logo">Urganize <span class="beta">BETA</span></span><span class="tabs"><span>Home</span><span>UrgAns</span><span class="on">Artists</span><span>Team</span></span><span class="icons"><i></i><i style="border:0"></i></span></div>
+      <div class="body">
+        <div class="rail"><i class="on"></i><i></i></div>
+        <div class="page">
+          <div class="head">
+            <div><h3>Artists</h3><p class="count">2 artists<span class="dot"></span>1 rolling out</p></div>
+            <div class="acts"><span class="btn ghost">Import past rollouts</span><span class="btn">Add artist</span></div>
+          </div>
+
+          <div class="spot">
+            <span class="cv"><svg><use href="#cov1"/></svg></span>
+            <div style="min-width:0">
+              <p class="eyebrow">Next drop</p>
+              <h4>Lagos Nights</h4>
+              <p class="by"><span class="face"><svg><use href="#dorian"/></svg></span><b>Dorian</b><span class="dot"></span>Single</p>
+              <div class="prog"><i style="width:62%"></i></div>
+              <p class="sm">21 of 34 tasks done<span class="dot" style="opacity:.6"></span>3 due this week<span class="dot" style="opacity:.6"></span><span class="err2">1 late</span></p>
+            </div>
+            <div class="cd">
+              <b>9</b><span>days to go<span class="dot" style="opacity:.6"></span>Fri 7 Nov</span>
+              <span class="btn light">Open rollout</span>
+            </div>
+          </div>
+
+          <div class="tbl">
+            <div class="hd"><span style="padding-left:56px">Artist</span><span style="padding-left:56px">Next rollout</span><span>Drops</span><span>Tasks</span><span></span></div>
+            <div class="r">
+              <div class="cell"><span class="face"><svg><use href="#dorian"/></svg></span><div style="min-width:0"><b class="nm">Dorian</b><span><span class="st go" style="padding:0;background:none">Rolling out</span></span></div></div>
+              <div class="cell"><span class="cv"><svg><use href="#cov1"/></svg></span><div style="min-width:0"><b>Lagos Nights</b><span>Single</span></div></div>
+              <div class="two"><b>Fri 7 Nov</b><span>In 9 days</span></div>
+              <div class="todo"><div class="prog" style="width:120px"><i style="width:62%"></i></div><div class="row"><span class="st">3 due</span><span class="st late">1 late</span></div></div>
+              <span class="chev"></span>
+            </div>
+            <div class="r">
+              <div class="cell"><span class="face">T</span><div style="min-width:0"><b class="nm">T3N</b><span>Quiet</span></div></div>
+              <div class="cell"><span class="cv add">+</span><div style="min-width:0"><b style="font-weight:500;color:var(--sec)">Nothing planned</b><span class="link">Start the next record</span></div></div>
+              <div class="two"><b class="ter" style="font-weight:400">Not set</b></div>
+              <div></div>
+              <span class="chev"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="label">B on a phone</p>
+      <div class="phone">
+        <div class="sbar"><span>9:41</span><span>●●●</span></div>
+        <span class="sw"><span class="on">Artists</span><span>Rollouts</span></span>
+        <p class="ph-t">Artists</p>
+        <p class="ph-c">2 artists<span class="dot"></span>1 rolling out</p>
+        <div class="spot" style="grid-template-columns:72px 1fr auto;gap:12px;padding:16px;margin-top:16px">
+          <span class="cv" style="width:72px;height:72px"><svg><use href="#cov1"/></svg></span>
+          <div style="min-width:0">
+            <p class="eyebrow">Next drop</p>
+            <p class="serif" style="font-size:20px;line-height:26px;margin-top:2px">Lagos Nights</p>
+            <p style="font-size:13px;line-height:18px;color:var(--on-ink2)">Dorian</p>
+          </div>
+          <div class="cd"><b style="font-size:36px;line-height:36px">9</b><span style="font-size:12px">days</span></div>
+          <div style="grid-column:1/-1">
+            <div class="prog" style="background:rgba(245,240,230,.16)"><i style="width:62%;background:#7fd09c"></i></div>
+            <p class="sm" style="font-size:12px;margin-top:6px;color:var(--on-ink2)">3 due this week<span class="dot" style="opacity:.6"></span><span style="color:#f2a7a0;font-weight:600">1 late</span></p>
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <div class="prow"><span class="face"><svg><use href="#dorian"/></svg></span><div class="t"><b>Dorian</b><span>Lagos Nights<span class="dot"></span>Fri 7 Nov</span></div><span class="cv"><svg><use href="#cov1"/></svg></span></div>
+          <div class="prow"><span class="face">T</span><div class="t"><b>T3N</b><span class="ter">Nothing planned</span></div><span class="cv add">+</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== A ======================== -->
+  <div class="sec-h">
+    <h2>A. The shelf</h2>
+    <p>Spotify cue: big round artist faces in a grid. Riff: a green ring means that artist is rolling out now, and a small card under each face says what is next. Warmest of the three, faces first. Weaker at 10 or more artists, where you scroll to find who is late.</p>
+  </div>
+  <div class="pair">
+    <div class="desk">
+      <div class="bar"><span class="logo">Urganize <span class="beta">BETA</span></span><span class="tabs"><span>Home</span><span>UrgAns</span><span class="on">Artists</span><span>Team</span></span><span class="icons"><i></i><i style="border:0"></i></span></div>
+      <div class="body">
+        <div class="rail"><i class="on"></i><i></i></div>
+        <div class="page">
+          <div class="head">
+            <div><h3>Artists</h3><p class="count">2 artists<span class="dot"></span>1 rolling out</p></div>
+            <div class="acts"><span class="btn ghost">Import past rollouts</span><span class="btn">Add artist</span></div>
+          </div>
+          <div class="shelf">
+            <div class="tile">
+              <span class="ring go"><span class="face"><svg><use href="#dorian"/></svg></span></span>
+              <p class="nm">Dorian</p>
+              <p class="ln"><b>Rolling out</b><span class="dot"></span>9 days to go</p>
+              <div class="next"><span class="cv"><svg><use href="#cov1"/></svg></span><div style="min-width:0"><b>Lagos Nights</b><span>3 due<span class="dot"></span><span class="err" style="display:inline;font-weight:600">1 late</span></span></div></div>
+            </div>
+            <div class="tile">
+              <span class="ring"><span class="face">T</span></span>
+              <p class="nm">T3N</p>
+              <p class="ln">Quiet</p>
+              <div class="next"><span class="cv add">+</span><div style="min-width:0"><b>Start the next record</b><span>Or plan a rollout</span></div></div>
+            </div>
+            <div class="tile add">
+              <span class="ring">+</span>
+              <p class="nm">Add artist</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="label">A on a phone</p>
+      <div class="phone">
+        <div class="sbar"><span>9:41</span><span>●●●</span></div>
+        <span class="sw"><span class="on">Artists</span><span>Rollouts</span></span>
+        <p class="ph-t">Artists</p>
+        <p class="ph-c">2 artists<span class="dot"></span>1 rolling out</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px">
+          <div class="tile">
+            <span class="ring go" style="width:124px;height:124px"><span class="face" style="width:110px;height:110px"><svg><use href="#dorian"/></svg></span></span>
+            <p class="nm" style="font-size:18px;line-height:24px">Dorian</p>
+            <p class="ln" style="font-size:12px;line-height:16px">Lagos Nights<span class="dot"></span>9 days</p>
+          </div>
+          <div class="tile">
+            <span class="ring" style="width:124px;height:124px"><span class="face" style="width:110px;height:110px;font-size:34px">T</span></span>
+            <p class="nm" style="font-size:18px;line-height:24px">T3N</p>
+            <p class="ln" style="font-size:12px;line-height:16px">Quiet</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== C ======================== -->
+  <div class="sec-h">
+    <h2>C. Library cards</h2>
+    <p>Spotify cue: Your Library, filter chips on top and the art on every row. Riff: each artist is a card with their covers lined up on the right, newest first, and status tags under the name. Shows the catalogue best. The next drop is quieter than in B.</p>
+  </div>
+  <div class="pair">
+    <div class="desk">
+      <div class="bar"><span class="logo">Urganize <span class="beta">BETA</span></span><span class="tabs"><span>Home</span><span>UrgAns</span><span class="on">Artists</span><span>Team</span></span><span class="icons"><i></i><i style="border:0"></i></span></div>
+      <div class="body">
+        <div class="rail"><i class="on"></i><i></i></div>
+        <div class="page">
+          <div class="head">
+            <div><h3>Artists</h3><p class="count">2 artists</p></div>
+            <div class="acts"><span class="btn ghost">Import past rollouts</span><span class="btn">Add artist</span></div>
+          </div>
+          <div class="chips"><span class="chip on">All <i>2</i></span><span class="chip">Rolling out <i>1</i></span><span class="chip">Making a record <i>0</i></span><span class="chip">Quiet <i>1</i></span></div>
+          <div class="lib">
+            <div class="card">
+              <span class="face"><svg><use href="#dorian"/></svg></span>
+              <div style="min-width:0">
+                <p class="nm">Dorian</p>
+                <p class="ln">Lagos Nights drops Fri 7 Nov<span class="dot"></span>in 9 days</p>
+                <div class="tags"><span class="st go">Rolling out</span><span class="st">3 due this week</span><span class="st late">1 late</span></div>
+              </div>
+              <div class="covers"><span class="cv"><svg><use href="#cov1"/></svg></span><span class="cv"><svg><use href="#cov2"/></svg></span><span class="cv"><svg><use href="#cov3"/></svg></span></div>
+              <span class="chev"></span>
+            </div>
+            <div class="card">
+              <span class="face">T</span>
+              <div style="min-width:0">
+                <p class="nm">T3N</p>
+                <p class="ln">Nothing planned yet</p>
+                <div class="tags"><span class="st">Quiet</span></div>
+              </div>
+              <div class="covers"><span class="cv add" style="width:64px;height:64px">+</span></div>
+              <span class="chev"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="label">C on a phone</p>
+      <div class="phone">
+        <div class="sbar"><span>9:41</span><span>●●●</span></div>
+        <span class="sw"><span class="on">Artists</span><span>Rollouts</span></span>
+        <p class="ph-t">Artists</p>
+        <div class="chips" style="margin-top:12px"><span class="chip on">All <i>2</i></span><span class="chip">Rolling out <i>1</i></span><span class="chip">Quiet <i>1</i></span></div>
+        <div class="lib">
+          <div class="card" style="grid-template-columns:52px 1fr;gap:12px;padding:12px">
+            <span class="face" style="width:52px;height:52px"><svg><use href="#dorian"/></svg></span>
+            <div style="min-width:0"><p class="nm" style="font-size:18px;line-height:24px">Dorian</p><p class="ln">Lagos Nights<span class="dot"></span>9 days<span class="dot"></span><span class="err" style="font-weight:600">1 late</span></p></div>
+            <div class="covers" style="grid-column:2"><span class="cv" style="width:48px;height:48px"><svg><use href="#cov1"/></svg></span><span class="cv" style="width:48px;height:48px"><svg><use href="#cov2"/></svg></span><span class="cv" style="width:48px;height:48px"><svg><use href="#cov3"/></svg></span></div>
+          </div>
+          <div class="card" style="grid-template-columns:52px 1fr;gap:12px;padding:12px">
+            <span class="face" style="width:52px;height:52px;font-size:18px">T</span>
+            <div style="min-width:0"><p class="nm" style="font-size:18px;line-height:24px">T3N</p><p class="ln">Nothing planned yet</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <b>The same in all three</b>
+    <ul>
+      <li>One status word per artist, always the same three: Rolling out (green), Making a record, Quiet. Red is only for late tasks.</li>
+      <li>A missing photo or cover is a flat tile, never a gradient. Tapping a face still changes the photo.</li>
+      <li>"Import past rollouts" moves up beside "Add artist", so the top right holds every action.</li>
+      <li>Task counts are what the viewer can see, the same rule as the artist page.</li>
+    </ul>
+  </div>
+</div>
+
+</body>
+</html>

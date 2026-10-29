@@ -474,6 +474,8 @@ export interface AnalyticsEventPropertiesMap {
      *  the Up next card and the New record button. */
     action: 'open_epk' | 'open_release' | 'new_rollout' | 'up_next' | 'new_record';
   };
+  /** The Artists list's Next drop banner (#878): a tap opens that rollout. */
+  artists_list_action: { artist_id: string; action: 'spotlight' };
   /**
    * The posting plan (2026-10-27): posts per artist, between releases. Added
    * against marked done is the whole question. Ids and counts only, never the
