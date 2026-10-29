@@ -465,8 +465,10 @@ export interface AnalyticsEventPropertiesMap {
   };
   artist_page_action: {
     artist_id: string;
-    /** open_epk stopped firing Oct 17, 2026 (Press kit bar removed). */
-    action: 'open_epk' | 'open_release' | 'new_rollout';
+    /** open_epk stopped firing Oct 17, 2026 (Press kit bar removed).
+     *  up_next and new_record came with the page redesign (#866): taps on
+     *  the Up next card and the New record button. */
+    action: 'open_epk' | 'open_release' | 'new_rollout' | 'up_next' | 'new_record';
   };
   /**
    * The posting plan (2026-10-27): posts per artist, between releases. Added

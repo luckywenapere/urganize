@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   LIVE_WINDOW_DAYS,
   artistSummary,
+  artistUpNext,
   bucketReleases,
   splitTeamByArtistScope,
 } from './artist-overview';
@@ -117,5 +118,71 @@ describe('splitTeamByArtistScope', () => {
   it('treats a member with no scope row as seeing everything', () => {
     const { everyone } = splitTeamByArtistScope([{ id: 'zz', name: 'New' }], new Map(), 'a1');
     expect(everyone.map((m) => m.id)).toEqual(['zz']);
+  });
+});
+
+describe('artistUpNext', () => {
+  const TODAY = '2026-10-29';
+  const empty = { planned: [], live: [], past: [] };
+  const release = (id: string, releaseDate: string | null) => ({ id, artistId: 'a1', title: id, releaseDate, status: 'draft' });
+  const record = (id: string, songCount: number, doneCount: number) => ({ id, title: id, songCount, doneCount });
+  const task = (releaseId: string, dueDate: string | null, status = 'todo') => ({ releaseId, dueDate, status });
+
+  it('puts the nearest planned rollout first, with days to go, tasks due this week and late ones', () => {
+    const gidi = release('gidi', '2026-11-14');
+    const next = artistUpNext({
+      buckets: { ...empty, planned: [gidi, release('later', '2026-12-20')] },
+      records: [record('kunu', 1, 0)],
+      tasks: [
+        task('gidi', '2026-10-27'),
+        task('gidi', '2026-10-28', 'done'),
+        task('gidi', '2026-10-29'),
+        task('gidi', '2026-11-04'),
+        task('gidi', '2026-11-05'),
+        task('later', '2026-10-01'),
+      ],
+      today: TODAY,
+    });
+    expect(next).toEqual({ kind: 'rollout', release: gidi, daysToGo: 16, dueThisWeek: 2, late: 1 });
+  });
+
+  it('gives a rollout with no date no countdown', () => {
+    const next = artistUpNext({ buckets: { ...empty, planned: [release('x', null)] }, records: [], tasks: [], today: TODAY });
+    expect(next).toMatchObject({ kind: 'rollout', daysToGo: null });
+  });
+
+  it('falls back to a release that is just out while it still has open tasks', () => {
+    const out = release('out', '2026-10-20');
+    const next = artistUpNext({
+      buckets: { ...empty, live: [out] },
+      records: [],
+      tasks: [task('out', '2026-10-25'), task('out', '2026-11-02'), task('out', '2026-10-21', 'done')],
+      today: TODAY,
+    });
+    expect(next).toEqual({ kind: 'out', release: out, openTasks: 2, late: 1 });
+  });
+
+  it('skips a just-out release with nothing left to do and points at the record being made', () => {
+    const next = artistUpNext({
+      buckets: { ...empty, live: [release('out', '2026-10-20')] },
+      records: [record('empty', 0, 0), record('kunu', 3, 1)],
+      tasks: [task('out', '2026-10-21', 'done')],
+      today: TODAY,
+    });
+    expect(next).toEqual({ kind: 'record', record: record('kunu', 3, 1), step: 'finish' });
+  });
+
+  it('says to plan the rollout once every song on a record is done', () => {
+    const next = artistUpNext({ buckets: empty, records: [record('kunu', 2, 2)], tasks: [], today: TODAY });
+    expect(next).toMatchObject({ kind: 'record', step: 'plan' });
+  });
+
+  it('asks for the first song when the only records are empty', () => {
+    const next = artistUpNext({ buckets: empty, records: [record('untitled', 0, 0)], tasks: [], today: TODAY });
+    expect(next).toMatchObject({ kind: 'record', step: 'add_songs' });
+  });
+
+  it('asks to start a record when there is nothing at all', () => {
+    expect(artistUpNext({ buckets: empty, records: [], tasks: [], today: TODAY })).toEqual({ kind: 'start' });
   });
 });

@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Artist page</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --side:#f0ebe1; --card:#faf5ec; --hover:#ebe6dc; --tile:#e6e0d3;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.09);
+    --board:#d9d5cc; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--text); padding:32px 16px 64px; }
+  p,h1,h2,h3 { margin:0; }
+  .serif { font-family:'Young Serif', serif; font-weight:400; }
+  .mono { font-family:'Space Mono', monospace; letter-spacing:0; }
+  .wrap { max-width:1180px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif', serif; font-size:28px; margin-bottom:6px; }
+  .intro p { color:var(--board-sec); max-width:720px; }
+  .sec-h { margin:40px 0 12px; }
+  .sec-h h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:4px; }
+  .sec-h p { color:var(--board-sec); }
+
+  /* ---------- page parts (shared by phone and desktop) ---------- */
+  .back { width:36px; height:36px; border-radius:50%; border:1px solid var(--line2); display:grid; place-items:center; color:var(--sec); }
+  .who { display:flex; gap:18px; align-items:center; }
+  .photo { width:88px; height:88px; border-radius:22px; background:var(--tile); display:grid; place-items:center; font-family:'Young Serif', serif; font-size:34px; color:var(--sec); position:relative; flex:none; }
+  .photo .cam { position:absolute; right:-4px; bottom:-4px; width:28px; height:28px; border-radius:50%; background:var(--card); border:1px solid var(--line2); display:grid; place-items:center; color:var(--sec); }
+  .name { font-family:'Young Serif', serif; font-size:40px; line-height:1.05; }
+  .status { margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { font-size:12px; padding:3px 10px; border-radius:99px; background:var(--hover); color:var(--sec); white-space:nowrap; }
+  .chip.on { background:var(--brand-soft); color:var(--brand); font-weight:600; }
+  .chip.on::before { content:''; display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--brand); margin-right:6px; vertical-align:1px; }
+  .actions { display:flex; gap:8px; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:40px; padding:0 16px; border-radius:99px; font-weight:600; font-size:13.5px; background:var(--brand); color:#f5f0e6; white-space:nowrap; }
+  .btn.ghost { background:transparent; color:var(--text); border:1px solid var(--line2); }
+  .link { color:var(--brand); font-weight:600; font-size:13px; white-space:nowrap; }
+
+  /* Up next: the one sentence a manager opens this page for. */
+  .next { background:var(--card); border:1px solid var(--line); border-left:3px solid var(--brand); border-radius:14px; padding:14px 16px; display:flex; gap:14px; align-items:center; }
+  .next .k { font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--brand); font-weight:700; }
+  .next .t { font-size:15px; font-weight:600; margin-top:2px; }
+  .next .s { font-size:13px; color:var(--sec); }
+  .count { text-align:center; flex:none; padding-right:4px; }
+  .count b { display:block; font-family:'Young Serif', serif; font-size:30px; line-height:1; color:var(--brand); font-weight:400; }
+  .count span { font-size:11px; color:var(--ter); }
+
+  /* Music: one timeline, a song moves down it. */
+  .h2 { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+  .h2 h2 { font-family:'Young Serif', serif; font-weight:400; font-size:22px; }
+  .stage { position:relative; padding-left:26px; }
+  .stage::before { content:''; position:absolute; left:6px; top:22px; bottom:-6px; width:1.5px; background:var(--line2); }
+  .stage:last-child::before { display:none; }
+  .stage .dot { position:absolute; left:0; top:5px; width:13px; height:13px; border-radius:50%; border:1.5px solid var(--ter); background:var(--bg); }
+  .stage.live .dot { border-color:var(--brand); background:var(--brand); box-shadow:0 0 0 4px var(--brand-soft); }
+  .stage.done .dot { border-color:var(--text); background:var(--text); }
+  .stage-h { display:flex; justify-content:space-between; align-items:baseline; }
+  .stage-h .l { font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; color:var(--sec); }
+  .stage-h .l span { color:var(--ter); font-weight:400; margin-left:6px; }
+  .rows { margin:10px 0 24px; display:flex; flex-direction:column; gap:2px; }
+  .row { display:flex; align-items:center; gap:12px; padding:8px; margin:0 -8px; border-radius:12px; }
+  .row:hover { background:var(--hover); }
+  .cover { width:48px; height:48px; border-radius:8px; flex:none; position:relative; overflow:hidden; }
+  .cover.c1 { background:#244b3b; } .cover.c2 { background:#7a3b22; } .cover.c3 { background:#2c3a5c; } .cover.c4 { background:#5a4a2a; }
+  .cover.blank { background:transparent; border:1.5px dashed var(--line2); }
+  .cover::after { content:''; position:absolute; inset:14px; border-radius:50%; border:1px solid rgba(245,240,230,.25); }
+  .cover.blank::after { display:none; }
+  .row .m { min-width:0; flex:1; }
+  .row .t { font-weight:600; font-size:14.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .t span { font-weight:400; color:var(--sec); }
+  .row .s { font-size:12.5px; color:var(--sec); }
+  .row .s.mono { font-size:11px; color:var(--ter); }
+  .row .r { flex:none; text-align:right; font-size:12px; color:var(--sec); }
+  .row .r b { display:block; font-family:'Space Mono', monospace; font-size:12px; color:var(--text); }
+  .songs { display:flex; gap:3px; margin-top:6px; }
+  .songs i { width:16px; height:4px; border-radius:2px; background:var(--line2); }
+  .songs i.d { background:var(--brand); }
+  .bar { height:4px; border-radius:2px; background:var(--line2); margin-top:6px; width:140px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:var(--brand); border-radius:2px; }
+  .chev { color:var(--ter); flex:none; }
+  .quiet { margin:8px 0 24px; font-size:13px; color:var(--ter); }
+  .quiet .link { margin-left:6px; }
+  .sl { font-size:11.5px; padding:4px 10px; border-radius:99px; border:1px solid var(--line2); color:var(--sec); white-space:nowrap; }
+
+  /* Side cards: quieter, no borders fighting the timeline. */
+  .side { background:var(--card); border-radius:16px; padding:16px; }
+  .side h3 { font-family:'Young Serif', serif; font-weight:400; font-size:17px; }
+  .side .sub { font-size:12.5px; color:var(--sec); margin-top:2px; }
+  .post { display:flex; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); }
+  .post:first-of-type { border-top:0; }
+  .day { width:42px; text-align:center; flex:none; }
+  .day span { display:block; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ter); }
+  .day b { font-family:'Young Serif', serif; font-weight:400; font-size:20px; line-height:1.1; }
+  .fact { padding:10px 0; border-top:1px solid var(--line); }
+  .fact:first-of-type { border-top:0; }
+  .fact .k { font-family:'Space Mono', monospace; font-size:10px; text-transform:uppercase; color:var(--ter); }
+  .fact p { font-size:14px; font-weight:600; }
+  .empty { font-size:13px; color:var(--ter); margin-top:10px; }
+  .side .foot { margin-top:12px; }
+
+  /* ---------- desktop frame ---------- */
+  .desk { background:var(--bg); border-radius:18px; overflow:hidden; display:grid; grid-template-columns:64px 1fr; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .rail { background:var(--side); border-right:1px solid var(--line); padding:18px 0; display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .rail i { width:36px; height:36px; border-radius:10px; display:block; }
+  .rail i::after { content:''; display:block; width:16px; height:16px; margin:10px; border-radius:4px; border:1.5px solid var(--sec); opacity:.5; }
+  .rail i.on { background:var(--hover); }
+  .dmain { padding:28px 40px 40px; }
+  .dhead { display:flex; justify-content:space-between; align-items:flex-end; gap:24px; margin-top:20px; }
+  .dgrid { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:40px; margin-top:24px; align-items:start; }
+  .dside { display:flex; flex-direction:column; gap:14px; }
+
+  /* ---------- phone frame ---------- */
+  .phones { display:flex; gap:28px; flex-wrap:wrap; }
+  .phone { width:375px; background:var(--bg); border-radius:36px; padding:16px 16px 28px; box-shadow:0 12px 32px rgba(26,22,17,.12); border:8px solid #1a1611; }
+  .phone .who { gap:14px; }
+  .phone .photo { width:72px; height:72px; border-radius:18px; font-size:28px; }
+  .phone .name { font-size:32px; }
+  .phone .actions { margin-top:16px; }
+  .phone .actions .btn { flex:1; }
+  .phone .next { margin-top:18px; }
+  .phone .music { margin-top:26px; }
+  .phone .side { margin-top:14px; }
+  .cap { font-size:12.5px; color:var(--board-sec); margin-top:10px; max-width:375px; }
+
+  /* ---------- notes ---------- */
+  .notes { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; }
+  .note { background:var(--card); border-radius:14px; padding:16px 18px; }
+  .note h3 { font-size:12px; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
+  .note ol, .note ul { margin:0; padding-left:18px; color:var(--sec); }
+  .note li { margin:5px 0; }
+  .note li b { color:var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="intro">
+    <h1>Artist page, calmer</h1>
+    <p>Today the page is five boxes of the same weight, so nothing leads. The add icon looks like an AI sparkle. And one artist's music lives in three places (In the making, Rollouts, Catalogue). This mock fixes all three. Issue #866.</p>
+  </div>
+
+  <!-- ===================== PHONE ===================== -->
+  <div class="sec-h">
+    <h2>1 · Phone, T3N as it is today</h2>
+    <p>Same data as your screenshot: one record in the making, an untitled one, no rollout yet.</p>
+  </div>
+  <div class="phones">
+    <div>
+      <div class="phone">
+        <div class="back">←</div>
+        <div class="who" style="margin-top:18px">
+          <div class="photo">T<span class="cam"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span></div>
+          <div>
+            <h1 class="name">T3N</h1>
+            <div class="status"><span class="chip on">Making Kunu</span><span class="chip">No rollout yet</span></div>
+          </div>
+        </div>
+        <div class="actions">
+          <span class="btn">New record</span>
+          <span class="btn ghost">Plan a rollout</span>
+        </div>
+
+        <div class="next">
+          <div style="flex:1">
+            <p class="k">Up next</p>
+            <p class="t">Finish Kunu's song</p>
+            <p class="s">0 of 1 song done. Plan its rollout when it's ready.</p>
+          </div>
+          <span class="chev">›</span>
+        </div>
+
+
+        <div class="music">
+          <div class="h2"><h2>Music</h2></div>
+          <div style="margin-top:14px">
+            <div class="stage live">
+              <span class="dot"></span>
+              <div class="stage-h"><p class="l">In the making<span>2</span></p></div>
+              <div class="rows">
+                <div class="row">
+                  <div class="cover c1"></div>
+                  <div class="m"><p class="t">Kunu <span>· Single</span></p><p class="s">0 of 1 song done</p><div class="songs"><i></i></div></div>
+                  <span class="chev">›</span>
+                </div>
+                <div class="row">
+                  <div class="cover blank"></div>
+                  <div class="m"><p class="t" style="color:var(--sec)">Untitled record</p><p class="s">Add the first song</p></div>
+                  <span class="chev">›</span>
+                </div>
+              </div>
+            </div>
+            <div class="stage">
+              <span class="dot"></span>
+              <div class="stage-h"><p class="l">Rolling out</p></div>
+              <p class="quiet">Nothing rolling out.<span class="link">Plan one</span></p>
+            </div>
+            <div class="stage">
+              <span class="dot"></span>
+              <div class="stage-h"><p class="l">Out now</p></div>
+              <p class="quiet">No releases here yet.<span class="link">Bring in past releases</span></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="side">
+          <h3>Posting plan</h3>
+          <p class="sub">Keep T3N seen between releases.</p>
+          <p class="empty">Nothing planned this week.</p>
+          <div class="foot"><span class="link">Plan posts</span></div>
+        </div>
+      </div>
+      <p class="cap">One column, thumb order: who, what to do, the music, then the posting plan.</p>
+    </div>
+
+    <!-- Phone with a live rollout, to show Up next doing its real job -->
+    <div>
+      <div class="phone">
+        <div class="back">←</div>
+        <div class="who" style="margin-top:18px">
+          <div class="photo" style="background:#3a2e26;color:#f5f0e6">A</div>
+          <div>
+            <h1 class="name">Ayra Vee</h1>
+            <div class="status"><span class="chip on">Rolling out Gidi</span><span class="chip">1 in the making</span></div>
+          </div>
+        </div>
+        <div class="actions">
+          <span class="btn">New record</span>
+          <span class="btn ghost">Plan a rollout</span>
+        </div>
+
+        <div class="next">
+          <div class="count"><b>16</b><span>days</span></div>
+          <div style="flex:1">
+            <p class="k">Up next</p>
+            <p class="t">Gidi drops Fri 14 Nov</p>
+            <p class="s">3 tasks due this week, 1 late</p>
+          </div>
+          <span class="chev">›</span>
+        </div>
+
+
+
+        <div class="music">
+          <div class="h2"><h2>Music</h2></div>
+          <div style="margin-top:14px">
+            <div class="stage">
+              <span class="dot"></span>
+              <div class="stage-h"><p class="l">In the making<span>1</span></p></div>
+              <div class="rows">
+                <div class="row">
+                  <div class="cover c3"></div>
+                  <div class="m"><p class="t">Night Market <span>· EP</span></p><p class="s">2 of 5 songs done · next session Tue</p><div class="songs"><i class="d"></i><i class="d"></i><i></i><i></i><i></i></div></div>
+                  <span class="chev">›</span>
+                </div>
+              </div>
+            </div>
+            <div class="stage live">
+              <span class="dot"></span>
+              <div class="stage-h"><p class="l">Rolling out<span>1</span></p></div>
+              <div class="rows">
+                <div class="row">
+                  <div class="cover c2"></div>
+                  <div class="m"><p class="t">Gidi <span>· Single</span></p><p class="s">24 of 64 tasks done</p><div class="bar"><i style="width:38%"></i></div></div>
+                  <div class="r"><b>14 NOV</b>16 days</div>
+                </div>
+              </div>
+            </div>
+            <div class="stage done">
+              <span class="dot"></span>
+              <div class="stage-h"><p class="l">Out now<span>3</span></p></div>
+              <div class="rows">
+                <div class="row">
+                  <div class="cover c4"></div>
+                  <div class="m"><p class="t">Lekki Lights <span>· Single, 2026</span></p><p class="s mono">UPC 1984 2201 9932</p></div>
+                  <span class="sl">Copy link</span>
+                </div>
+                <div class="row">
+                  <div class="cover c1"></div>
+                  <div class="m"><p class="t">Oya <span>· Single, 2025</span></p><p class="s mono">ISRC NGA3K2500041</p></div>
+                  <span class="sl">Smart link</span>
+                </div>
+              </div>
+              <p class="quiet" style="margin-top:-14px">Show all 3</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="cap">When a rollout is live, Up next becomes the countdown.</p>
+    </div>
+
+  </div>
+
+  <!-- ===================== DESKTOP ===================== -->
+  <div class="sec-h">
+    <h2>2 · Desktop</h2>
+    <p>Music gets the wide column. The posting plan sits in a quiet side column.</p>
+  </div>
+  <div class="desk">
+    <div class="rail"><i class="on"></i><i></i><span style="flex:1"></span><i></i></div>
+    <div class="dmain">
+      <div class="back">←</div>
+      <div class="dhead">
+        <div class="who">
+          <div class="photo" style="background:#3a2e26;color:#f5f0e6">A</div>
+          <div>
+            <h1 class="name">Ayra Vee</h1>
+            <div class="status"><span class="chip on">Rolling out Gidi</span><span class="chip">1 in the making</span><span class="chip">3 out now</span></div>
+          </div>
+        </div>
+        <div class="actions"><span class="btn">New record</span><span class="btn ghost">Plan a rollout</span></div>
+      </div>
+
+      <div class="dgrid">
+        <div>
+          <div class="next">
+            <div class="count"><b>16</b><span>days</span></div>
+            <div style="flex:1">
+              <p class="k">Up next</p>
+              <p class="t">Gidi drops Fri 14 Nov</p>
+              <p class="s">3 tasks due this week, 1 late. Press photos are with Tolu.</p>
+            </div>
+            <span class="link">Open rollout →</span>
+          </div>
+
+          <div style="margin-top:30px">
+            <div class="h2"><h2>Music</h2><span class="link">Bring in past releases</span></div>
+            <div style="margin-top:16px">
+              <div class="stage">
+                <span class="dot"></span>
+                <div class="stage-h"><p class="l">In the making<span>1</span></p></div>
+                <div class="rows">
+                  <div class="row">
+                    <div class="cover c3"></div>
+                    <div class="m"><p class="t">Night Market <span>· EP</span></p><p class="s">2 of 5 songs done · next session Tue 4 Nov</p><div class="songs"><i class="d"></i><i class="d"></i><i></i><i></i><i></i></div></div>
+                    <span class="chev">›</span>
+                  </div>
+                </div>
+              </div>
+              <div class="stage live">
+                <span class="dot"></span>
+                <div class="stage-h"><p class="l">Rolling out<span>1</span></p></div>
+                <div class="rows">
+                  <div class="row">
+                    <div class="cover c2"></div>
+                    <div class="m"><p class="t">Gidi <span>· Single</span></p><p class="s">24 of 64 tasks done</p><div class="bar" style="width:200px"><i style="width:38%"></i></div></div>
+                    <div class="r"><b>FRI 14 NOV</b>in 16 days</div>
+                    <span class="chev">›</span>
+                  </div>
+                </div>
+              </div>
+              <div class="stage done">
+                <span class="dot"></span>
+                <div class="stage-h"><p class="l">Out now<span>3</span></p></div>
+                <div class="rows">
+                  <div class="row">
+                    <div class="cover c4"></div>
+                    <div class="m"><p class="t">Lekki Lights <span>· Single, 2026</span></p><p class="s mono">UPC 1984 2201 9932 · ISRC NGA3K2600017</p></div>
+                    <span class="sl">Copy link</span>
+                  </div>
+                  <div class="row">
+                    <div class="cover c1"></div>
+                    <div class="m"><p class="t">Oya <span>· Single, 2025</span></p><p class="s mono">ISRC NGA3K2500041</p></div>
+                    <span class="sl">Smart link</span>
+                  </div>
+                  <div class="row">
+                    <div class="cover c3"></div>
+                    <div class="m"><p class="t">First Light <span>· EP, 2024</span></p><p class="s mono">Codes not found yet</p></div>
+                    <span class="sl">Add code</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dside">
+          <div class="side">
+            <h3>Posting plan</h3>
+            <p class="sub">This week, 1 of 3 posted</p>
+            <div style="margin-top:8px">
+              <div class="post"><div class="day"><span>Thu</span><b>30</b></div><div><p style="font-weight:600">Gidi teaser clip</p><p style="font-size:12.5px;color:var(--sec)">Instagram · Tolu</p></div></div>
+              <div class="post"><div class="day"><span>Sat</span><b>1</b></div><div><p style="font-weight:600">Studio photo dump</p><p style="font-size:12.5px;color:var(--sec)">TikTok · Ayra</p></div></div>
+            </div>
+            <div class="foot"><span class="link">Plan posts</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== WHY ===================== -->
+  <div class="sec-h">
+    <h2>3 · Why it's laid out this way</h2>
+    <p>No click data yet, so the order is our prediction. What to measure is in the last box.</p>
+  </div>
+  <div class="notes">
+    <div class="note">
+      <h3>PM: what goes where</h3>
+      <ol>
+        <li><b>Status before content.</b> A manager running five artists opens this page to answer "where is T3N at?". Two chips under the name answer that before any scrolling.</li>
+        <li><b>New record first.</b> Between releases, the next record is the work. Plan a rollout sits beside it.</li>
+        <li><b>Up next is the one action.</b> The countdown when a rollout is live, otherwise the record to finish.</li>
+        <li><b>One Music section.</b> A song moves from In the making to Rolling out to Out now. Three separate cards made people ask "is Kunu a rollout or not?".</li>
+        <li><b>Posting plan goes quiet.</b> Side column on desktop, bottom on phone. What UrgAns knows is gone from the page.</li>
+      </ol>
+    </div>
+    <div class="note">
+      <h3>Designer: how it looks</h3>
+      <ul>
+        <li><b>Fewer boxes.</b> Music sits on the page, not in a card, so the timeline line can run through it.</li>
+        <li><b>A timeline with a lit stage.</b> The green dot marks where the artist is now, like a record moving through a pressing plant.</li>
+        <li><b>Words on buttons.</b> The add icon (a cross through a diamond) read as an AI sparkle.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h3>Engineer: what changes in code</h3>
+      <ul>
+        <li>Rewrite <span class="mono">ArtistPageClient.tsx</span> layout. Same data: records, rollouts, catalogue, posts. No new API, no migration.</li>
+        <li>Rows from the three music cards move into one Music section. Smart link, add code and cover edit keep working.</li>
+        <li>Imported catalogue rows and past rollouts both land in Out now.</li>
+        <li>Measure: taps on Up next and on New record from this page, before and after.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</body>
+</html>

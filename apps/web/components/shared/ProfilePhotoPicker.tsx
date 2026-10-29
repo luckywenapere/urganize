@@ -48,6 +48,9 @@ type Props = {
    *  the photo's bottom-right corner, shown on hover, removes it (artist
    *  page, 2026-10-15). */
   overlayRemove?: boolean;
+  /** A small neutral camera chip instead of the green badge, for a page where
+   *  the badge would be the loudest thing on it (artist page, #866). */
+  quietBadge?: boolean;
   className?: string;
 };
 
@@ -62,6 +65,7 @@ export function ProfilePhotoPicker({
   surface,
   showActions = false,
   overlayRemove = false,
+  quietBadge = false,
   className = '',
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -170,7 +174,7 @@ export function ProfilePhotoPicker({
     }
   };
 
-  const badge = Math.max(18, Math.round(size * 0.36));
+  const badge = quietBadge ? 28 : Math.max(18, Math.round(size * 0.36));
 
   return (
     <div className={`inline-flex flex-col items-start ${className}`}>
@@ -202,10 +206,14 @@ export function ProfilePhotoPicker({
         {!photoUrl && !busy ? (
           <span
             aria-hidden
-            className="absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full border-2 border-bg-surface bg-brand text-content-inverse"
+            className={
+              quietBadge
+                ? 'absolute -bottom-1 -right-1 flex items-center justify-center rounded-full border border-stroke-strong bg-bg-surface text-content-secondary'
+                : 'absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full border-2 border-bg-surface bg-brand text-content-inverse'
+            }
             style={{ width: badge, height: badge }}
           >
-            <Camera style={{ width: badge * 0.55, height: badge * 0.55 }} />
+            <Camera style={{ width: badge * (quietBadge ? 0.5 : 0.55), height: badge * (quietBadge ? 0.5 : 0.55) }} />
           </span>
         ) : null}
       </button>

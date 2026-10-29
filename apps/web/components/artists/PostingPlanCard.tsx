@@ -271,7 +271,7 @@ export function PostingPlanCard({ artistId, artistName }: { artistId: string; ar
   }[tab];
 
   return (
-    <section className="rounded-xl border border-stroke-default bg-bg-surface p-4" aria-labelledby="posting-plan-title">
+    <section className="rounded-2xl bg-bg-surface p-4" aria-labelledby="posting-plan-title">
       <h2 id="posting-plan-title" className="font-display text-base font-semibold text-content-primary">
         Posting plan
       </h2>

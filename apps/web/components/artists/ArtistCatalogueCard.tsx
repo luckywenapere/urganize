@@ -12,7 +12,6 @@ import {
   type Catalogue,
   type CatalogueRow,
 } from '@/lib/artist-import/client';
-import { ImportReleasesButton } from './ImportReleasesDialog';
 import { kindLabel } from './ImportParts';
 import { PoweredByAltlink } from '@/components/releases/PoweredByAltlink';
 
@@ -27,7 +26,7 @@ const secondaryButton =
 const smallButton =
   'motion-focus motion-press inline-flex min-h-9 items-center rounded-full border border-stroke-default px-3.5 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-50';
 
-/** Shared with ArtistFactsCard, the other card on the artist page. */
+/** The notices this list opens. */
 export function Modal({ titleId, children, onClose }: { titleId: string; children: React.ReactNode; onClose: () => void }) {
   useEffect(() => lockBodyScroll(), []);
   useEffect(() => {
@@ -176,11 +175,12 @@ function AddCode({ artistId, row, onSaved }: { artistId: string; row: CatalogueR
 
 /**
  * The artist's past releases, with their UPC and ISRC and a Grab a smart link on each
- * (2026-10-26, founder approved the mock). Always drawn, so the Import button
- * is where the artist is. A link is made only after a notice, and a team can
+ * (2026-10-26, founder approved the mock). Since #866 these are rows in the
+ * artist page's "Out now" stage; the page holds the Import button and the
+ * empty line, so this draws nothing until there is a row (`onCount` says how many). A link is made only after a notice, and a team can
  * make a limited number a day (lib/artist-import/codes.ts).
  */
-export function ArtistCatalogueCard({ artistId, artistName }: { artistId: string; artistName: string }) {
+export function ArtistCatalogueCard({ artistId, onCount }: { artistId: string; onCount?: (count: number) => void }) {
   const [data, setData] = useState<Catalogue>({ releases: [], cap: null, codesPending: 0 });
   const [showAll, setShowAll] = useState(false);
   const [confirming, setConfirming] = useState<CatalogueRow | null>(null);
@@ -248,35 +248,21 @@ export function ArtistCatalogueCard({ artistId, artistName }: { artistId: string
   };
 
   const rows = data.releases;
+  useEffect(() => {
+    onCount?.(rows.length);
+  }, [onCount, rows.length]);
   const visible = showAll ? rows : rows.slice(0, SHOWN_AT_FIRST);
 
   return (
-    <section className="rounded-xl border border-stroke-default bg-bg-surface p-4">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="font-display text-base font-semibold text-content-primary">Catalogue</h2>
-        <ImportReleasesButton
-          from="artist"
-          initialQuery={artistName}
-          className="motion-focus motion-press inline-flex min-h-9 items-center rounded-full border border-stroke-default px-3.5 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
-        >
-          Import past rollouts
-        </ImportReleasesButton>
-      </div>
-      {rows.length === 0 ? (
-        <p className="mt-2 text-sm text-content-tertiary">No releases yet. Bring them in from their public profile.</p>
-      ) : (
+    <>
+      {rows.length === 0 ? null : (
         <>
-          {data.cap ? (
-            <p className="mt-1 text-xs text-content-tertiary">
-              Links made today: {data.cap.used} of {data.cap.limit}
-            </p>
-          ) : null}
-          <ul className="mt-3 divide-y divide-stroke-subtle">
+          <ul className="space-y-0.5">
             {visible.map((row) => {
               const hasCode = Boolean(row.upc || row.isrc);
               const lookingUp = !hasCode && row.source === 'deezer' && !row.codes_checked_at;
               return (
-                <li key={row.id} className="flex items-center gap-3 py-2.5">
+                <li key={row.id} className="-mx-2 flex items-center gap-3 rounded-xl px-2 py-2">
                   {row.cover_url ? (
                     // eslint-disable-next-line @next/next/no-img-element -- remote cover, never stored by us
                     <img src={row.cover_url} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-lg bg-bg-elevated object-cover" />
@@ -342,6 +328,11 @@ export function ArtistCatalogueCard({ artistId, artistName }: { artistId: string
               {showAll ? 'Show fewer' : `Show all ${rows.length}`}
             </button>
           ) : null}
+          {data.cap ? (
+            <p className="mt-2 text-xs text-content-tertiary">
+              Links made today: {data.cap.used} of {data.cap.limit}
+            </p>
+          ) : null}
           {/* The links are Altlink's, so their credit sits under the list (#852). */}
           {rows.some((row) => row.link?.url) ? <PoweredByAltlink className="mt-3" /> : null}
         </>
@@ -358,6 +349,6 @@ export function ArtistCatalogueCard({ artistId, artistName }: { artistId: string
         />
       ) : null}
       {capLimit !== null ? <CapNotice limit={capLimit} onClose={() => setCapLimit(null)} /> : null}
-    </section>
+    </>
   );
 }

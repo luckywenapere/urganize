@@ -108,3 +108,74 @@ export function splitTeamByArtistScope<T extends { id: string }>(
   }
   return { scoped, everyone };
 }
+
+/** What a task needs for Up next: which rollout, whether it is done, its day. */
+export type UpNextTask = { releaseId: string | null; status: string; dueDate: string | null };
+
+/** What a record in the making needs for Up next. */
+export type UpNextRecord = { id: string; title: string; songCount: number; doneCount: number };
+
+export type ArtistUpNext<R, C> =
+  | { kind: 'rollout'; release: R; daysToGo: number | null; dueThisWeek: number; late: number }
+  | { kind: 'out'; release: R; openTasks: number; late: number }
+  | { kind: 'record'; record: C; step: 'add_songs' | 'finish' | 'plan' }
+  | { kind: 'start' };
+
+const dayNumber = (value: string): number | null => {
+  const parsed = Date.parse(`${value.slice(0, 10)}T00:00:00Z`);
+  return Number.isFinite(parsed) ? Math.round(parsed / DAY_MS) : null;
+};
+
+/**
+ * The one thing the artist page leads with (2026-10-29, #866, mock
+ * docs/mocks/artist-page). The nearest planned rollout wins; then a release
+ * that is just out but still has work open; then the record being made; else
+ * a nudge to start one. `today` is a YYYY-MM-DD day (Lagos on the page).
+ */
+export function artistUpNext<R extends OverviewRelease, C extends UpNextRecord>({
+  buckets,
+  records,
+  tasks,
+  today,
+}: {
+  buckets: ReleaseBuckets<R>;
+  records: C[];
+  tasks: UpNextTask[];
+  today: string;
+}): ArtistUpNext<R, C> {
+  const todayN = dayNumber(today) ?? 0;
+  const openFor = (releaseId: string) =>
+    tasks.filter((task) => task.releaseId === releaseId && task.status !== 'done');
+  const isLate = (task: UpNextTask) => {
+    const due = task.dueDate ? dayNumber(task.dueDate) : null;
+    return due !== null && due < todayN;
+  };
+
+  const planned = buckets.planned[0];
+  if (planned) {
+    const open = openFor(planned.id);
+    const date = planned.releaseDate ? dayNumber(planned.releaseDate) : null;
+    return {
+      kind: 'rollout',
+      release: planned,
+      daysToGo: date === null ? null : date - todayN,
+      dueThisWeek: open.filter((task) => {
+        const due = task.dueDate ? dayNumber(task.dueDate) : null;
+        return due !== null && due >= todayN && due < todayN + 7;
+      }).length,
+      late: open.filter(isLate).length,
+    };
+  }
+
+  for (const release of buckets.live) {
+    const open = openFor(release.id);
+    if (open.length > 0) return { kind: 'out', release, openTasks: open.length, late: open.filter(isLate).length };
+  }
+
+  const unfinished = records.find((record) => record.songCount > 0 && record.doneCount < record.songCount);
+  if (unfinished) return { kind: 'record', record: unfinished, step: 'finish' };
+  const ready = records.find((record) => record.songCount > 0);
+  if (ready) return { kind: 'record', record: ready, step: 'plan' };
+  if (records[0]) return { kind: 'record', record: records[0], step: 'add_songs' };
+  return { kind: 'start' };
+}
