@@ -1,4 +1,4 @@
-# Smart link in every plan and in Distribute (2026-10-29, v1.205.0, no flag)
+# Smart link in every plan and in Distribute (2026-10-29, v1.206.0, no flag)
 
 GitHub #850. Mocks approved by Oyin: `docs/mocks/presave-distribute/mock.html`, with two changes he asked for on approval: call it "smart link", never "pre-save link", and make it without a UPC or ISRC.
 

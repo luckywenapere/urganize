@@ -33,6 +33,7 @@ import { RolloutIdeasCard } from './RolloutIdeasCard';
 import { isRolloutIdeasEnabled } from '@/lib/rollout-ideas';
 import { RolloutNextMoves } from '@/components/next-moves/RolloutNextMoves';
 import { requestEditorialPitchBackfill } from '@/lib/editorial-pitch-client';
+import { requestDistributionPrepSync } from '@/lib/distribution-prep-tasks-client';
 import { daysToRelease, isEditorialPitchTask, pitchWindowState } from '@/lib/editorial-pitch';
 import { DeleteReleaseDialog } from './DeleteReleaseDialog';
 import type { ReleaseCardData } from './catalogue-types';
@@ -739,6 +740,22 @@ export function WorkspaceView() {
       if (changed) void loadCommandCenter({ force: true });
     });
   }, [pitchBackfillReleaseId, loadCommandCenter]);
+
+  // The check before distribution as plan tasks (#851): added, dated and ticked
+  // by the server. Asked when the rollout opens, when its date changes, and when
+  // a scene closes (where the genre, credits and artwork get filled in).
+  const prepSyncReleaseId =
+    scopedReleaseSlim && !scopedReleaseSlim.isTest && isReleaseActive(scopedReleaseSlim.status)
+      ? scopedReleaseSlim.id
+      : null;
+  const prepSyncReleaseDate = scopedReleaseSlim?.releaseDate ?? null;
+  const sceneIsOpen = Boolean(activeScene);
+  useEffect(() => {
+    if (!prepSyncReleaseId || sceneIsOpen) return;
+    void requestDistributionPrepSync(prepSyncReleaseId).then((changed) => {
+      if (changed) void loadCommandCenter({ force: true });
+    });
+  }, [prepSyncReleaseId, prepSyncReleaseDate, sceneIsOpen, loadCommandCenter]);
 
   // The jobs on this release nobody is on yet (the directory's role gaps,
   // 2026-09-05). Owner-only, like the other release-row affordances here:

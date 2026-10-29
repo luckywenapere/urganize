@@ -41,7 +41,7 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.205.0",
+    version: "1.206.0",
     title: "Your smart link, in every plan and in Distribute",
     tag: "Rollouts",
     date: "October 29, 2026",
@@ -50,6 +50,16 @@ export const changelog: Release[] = [
       "Your smart link is made before you have a UPC or ISRC, so fans can pre-save sooner.",
       "Distribute now has three tabs for each rollout: Stores, Smart link and Numbers. Numbers shows visits, clicks, pre-saves and which stores fans pick.",
       "The Distribute list shows where each rollout is with stores and how its link is doing.",
+    ],
+  },
+  {
+    version: "1.205.0",
+    title: "Getting ready for the stores is part of your plan",
+    tag: "Rollouts",
+    date: "October 29, 2026",
+    highlights: [
+      "Genre, credits and cover art are now tasks in your plan, each with a due date. They tick off by themselves when they're done.",
+      "No release date yet? The tasks wait with no date and get one when you set it.",
     ],
   },
   {
