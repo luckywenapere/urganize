@@ -8,7 +8,7 @@
 // starts at /onboarding. Pointing a "Sign up" CTA at /auth would land people
 // on a form that has no way to create an account.
 
-export const APP_ORIGIN = "https://my.urganize.app";
+export const APP_ORIGIN = "https://team.urganize.app";
 
 /** Existing customers signing in. */
 export const APP_LOGIN_URL = `${APP_ORIGIN}/auth`;

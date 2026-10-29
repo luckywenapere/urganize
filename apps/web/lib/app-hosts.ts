@@ -1,18 +1,20 @@
-// The product app's two front doors (2026-10-29, founder call). See
+// The product app's front doors. See
 // docs/notes/2026-10-28-two-front-doors-my-and-go.md.
 //
-// my.urganize.app is where the app lives. go.urganize.app is the name we put
-// on links people hand to someone else (a team invite, a press kit, a profile);
-// Vercel answers it with a 308 to the same path on my.urganize.app.
-// app.urganize.app is the old address: it still serves the app so signed-in
-// people can be moved across with their session (lib/legacy-host-handoff.ts),
-// because a Supabase session is kept in localStorage, which is per origin.
+// team.urganize.app is where the app lives (founder call, 29 Oct 2026; it was
+// my.urganize.app for one day). go.urganize.app is the name we put on links
+// people hand to someone else (a team invite, a press kit, a profile); Vercel
+// answers it with a 308 to the same path on team.urganize.app.
+// app.urganize.app and my.urganize.app are old addresses: they still serve the
+// app so signed-in people can be moved across with their session
+// (lib/legacy-host-handoff.ts), because a Supabase session is kept in
+// localStorage, which is per origin.
 
-export const APP_ORIGIN = 'https://my.urganize.app';
+export const APP_ORIGIN = 'https://team.urganize.app';
 export const SHARE_ORIGIN = 'https://go.urganize.app';
-export const LEGACY_APP_HOST = 'app.urganize.app';
+export const LEGACY_APP_HOSTS: readonly string[] = ['app.urganize.app', 'my.urganize.app'];
 
-const PRODUCT_HOSTS = new Set(['my.urganize.app', 'go.urganize.app', LEGACY_APP_HOST]);
+const PRODUCT_HOSTS = new Set(['team.urganize.app', 'go.urganize.app', ...LEGACY_APP_HOSTS]);
 
 function hostOf(origin: string): string {
   try {
@@ -39,5 +41,5 @@ export function currentShareOrigin(): string {
 }
 
 export function isLegacyAppHost(hostname: string): boolean {
-  return hostname.trim().toLowerCase() === LEGACY_APP_HOST;
+  return LEGACY_APP_HOSTS.includes(hostname.trim().toLowerCase());
 }

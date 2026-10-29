@@ -8,7 +8,7 @@ import { isSafeNextPath } from '@/lib/email-confirmation';
 import { parseHandoffHash } from '@/lib/legacy-host-handoff';
 
 /**
- * Where app.urganize.app sends a signed-in visitor (lib/legacy-host-handoff.ts):
+ * Where an old host (app. or my.urganize.app) sends a signed-in visitor (lib/legacy-host-handoff.ts):
  * stores the session it was handed and opens the page they were on. Unlike
  * /auth/callback this is not a new sign-in, so it runs none of the sign-up,
  * invite or onboarding steps.

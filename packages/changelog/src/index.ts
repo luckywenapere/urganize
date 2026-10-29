@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.206.3",
+    tag: "Account",
+    date: "October 29, 2026",
+    highlights: [
+      "Urganize now lives at team.urganize.app. The old addresses take you there, and you stay signed in.",
+    ],
+  },
+  {
     version: "1.206.2",
     tag: "Rollouts",
     date: "October 29, 2026",

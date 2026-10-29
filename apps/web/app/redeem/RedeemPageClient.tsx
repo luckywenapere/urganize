@@ -11,7 +11,7 @@ import { errorMessage } from '@/lib/errors';
 
 // /redeem — the single, linkable surface for partnership promo codes.
 // Reachable any time (active trial or expired), so a shareable link like
-// my.urganize.app/redeem?code=SSS0709 works even though a fresh signup
+// team.urganize.app/redeem?code=SSS0709 works even though a fresh signup
 // already holds a 28-day trial and would otherwise never see /locked.
 //
 // Copy leads with what's LIVE today (templates, workspace, tasks, files,

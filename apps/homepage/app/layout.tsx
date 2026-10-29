@@ -245,14 +245,14 @@ export default function RootLayout({
       <head>
         <meta name="apple-mobile-web-app-title" content="Urganize" />
 
-        {/* The header's Login / Start-free links leave for my.urganize.app —
+        {/* The header's Login / Start-free links leave for team.urganize.app —
             a different origin, so the visitor pays a fresh DNS lookup, TCP
             handshake and TLS negotiation before the app's first byte moves.
             On a high-latency mobile link that's several round trips of dead
             time. Opening the connection now, while they're still reading,
             means the click starts at the request rather than at DNS. */}
-        <link rel="preconnect" href="https://my.urganize.app" />
-        <link rel="dns-prefetch" href="https://my.urganize.app" />
+        <link rel="preconnect" href="https://team.urganize.app" />
+        <link rel="dns-prefetch" href="https://team.urganize.app" />
 
         {/* Resolves and applies the visitor's theme before first paint, so
             there's no flash of the wrong theme. Falls back to system
