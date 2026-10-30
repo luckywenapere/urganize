@@ -30,6 +30,8 @@ import {
 import { currentShareOrigin } from '@/lib/app-hosts';
 import { BriefBoard } from './BriefBoard';
 import { BriefPresent } from './BriefPresent';
+import { BriefGuestShare } from './BriefGuestShare';
+import { useAuthStore } from '@/lib/auth-store';
 import { BriefAvatar, briefAccessToken, briefCall } from './brief-shared';
 
 /**
@@ -146,13 +148,17 @@ function ShareSheet({
   onClose,
   onChange,
   onToast,
+  onGuestsChanged,
 }: {
   brief: BriefPayload;
   onClose: () => void;
   onChange: (share: BriefPayload['share']) => void;
   onToast: Props['onToast'];
+  /** A person was shared with or removed (#897 phase 6): read the brief again. */
+  onGuestsChanged: () => void;
 }) {
   const [saving, setSaving] = useState(false);
+  const senderName = useAuthStore((state) => state.user?.name ?? '').split(' ')[0] || 'Your team';
   const canToggle = brief.viewer.canManageShare;
   const enabled = brief.share.enabled;
 
@@ -216,6 +222,9 @@ function ShareSheet({
         <button type="button" onClick={copy} className={`${PRIMARY} mt-[18px]`}>
           {BRIEF_COPY.copyLink}
         </button>
+      ) : null}
+      {canToggle ? (
+        <BriefGuestShare brief={brief} senderName={senderName} onChanged={onGuestsChanged} onToast={onToast} />
       ) : null}
     </Sheet>
   );
@@ -1179,6 +1188,7 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
           onToast={onToast}
           onClose={() => setSheet(null)}
           onChange={(share) => patch((current) => ({ ...current, share }))}
+          onGuestsChanged={() => void load()}
         />
       ) : null}
       <UrgansLockedSheet

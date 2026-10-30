@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Share the brief with a person</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme. */
+  :root {
+    --bg:#f5f0e6; --card:#faf5ec; --hover:#ebe6dc; --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --err:#961a1a; --board:#d9d5cc; --board-sec:#4f4a42; --p2:#c4612a; --wa:#1f8f4e;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--text); padding:32px 16px 72px; }
+  p { margin:0; }
+  .wrap { max-width:1180px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; margin:0 0 6px; }
+  .intro p, .sec-h p { color:var(--board-sec); max-width:820px; }
+  .sec-h { margin:40px 0 12px; }
+  .sec-h h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:0 0 4px; }
+  .row { display:flex; gap:28px; flex-wrap:wrap; align-items:flex-start; }
+  .cap { font-size:12.5px; color:var(--board-sec); margin-top:10px; max-width:420px; }
+  .mono { font-family:'JetBrains Mono', monospace; letter-spacing:0; }
+  .serif { font-family:'Young Serif', serif; font-weight:400; }
+
+  /* The sheet */
+  .sheet { width:420px; background:var(--bg); border-radius:22px; box-shadow:0 18px 40px rgba(26,22,17,.16); padding:22px; }
+  .sheet h3 { font-family:'Young Serif', serif; font-weight:400; font-size:20px; margin:0; }
+  .sheet .sub { color:var(--sec); font-size:13.5px; margin-top:2px; }
+  .sect { margin-top:18px; padding-top:16px; border-top:1px solid var(--line); }
+  .lbl { font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ter); }
+  .toggle { display:flex; align-items:center; justify-content:space-between; min-height:44px; }
+  .sw { width:44px; height:26px; border-radius:99px; background:var(--brand); position:relative; }
+  .sw:after { content:''; position:absolute; right:3px; top:3px; width:20px; height:20px; border-radius:50%; background:#0c0c0d; }
+  .field { width:100%; border:1px solid var(--line2); background:#fff; border-radius:10px; padding:9px 12px; font-size:14px; margin-top:8px; color:var(--text); }
+  .field.ph { color:var(--ter); }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .piece { display:flex; align-items:center; gap:10px; padding:9px 2px; border-bottom:1px solid var(--line); font-size:14px; }
+  .piece:last-child { border-bottom:0; }
+  .box { width:18px; height:18px; border-radius:5px; border:1.5px solid var(--line2); flex:none; display:grid; place-items:center; }
+  .box.on { background:var(--brand); border-color:var(--brand); color:#fff; font-size:12px; }
+  .piece .due { margin-left:auto; font:12px 'JetBrains Mono'; color:var(--ter); }
+  .piece .who { font-size:12px; color:var(--ter); }
+  .note { font-size:12.5px; color:var(--ter); margin-top:10px; }
+  .btn { display:flex; align-items:center; justify-content:center; gap:8px; height:46px; border-radius:14px; background:var(--brand); color:#f5f0e6; font-weight:600; font-size:14.5px; margin-top:14px; }
+  .btn.ghost { background:var(--card); color:var(--text); border:1px solid var(--line2); }
+  .btn.wa { background:var(--wa); }
+  .guestrow { display:flex; align-items:center; gap:10px; padding:8px 0; font-size:13.5px; }
+  .av { width:28px; height:28px; border-radius:50%; display:grid; place-items:center; font-size:10px; font-weight:700; background:#9ab8f0; color:#0c0c0d; flex:none; }
+  .tag { font-size:10.5px; font-weight:600; padding:1px 7px; border-radius:99px; border:1px solid var(--line2); color:var(--sec); }
+  .tag.ok { border-color:rgba(20,100,58,.35); color:var(--brand); background:var(--brand-soft); }
+  .x { margin-left:auto; color:var(--ter); font-size:12.5px; text-decoration:underline; text-underline-offset:3px; }
+  .ready { background:var(--brand-soft); border:1px solid rgba(20,100,58,.3); border-radius:14px; padding:14px; margin-top:14px; }
+  .linkbox { display:flex; align-items:center; gap:8px; border:1px solid var(--line2); background:#fff; border-radius:10px; padding:8px 10px; margin-top:10px; font:12px 'JetBrains Mono'; color:var(--sec); }
+  .linkbox span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+
+  /* Phone */
+  .phone { width:340px; height:700px; border:8px solid #1a1611; border-radius:36px; overflow:hidden; position:relative; background:var(--bg); }
+  .phone.dark { background:#0c0c0d; color:#f5f0e6; }
+  .ph-body { padding:18px 16px 120px; height:100%; overflow:hidden; }
+  .from { display:flex; align-items:center; gap:10px; font-size:13.5px; color:var(--sec); }
+  .dark .from { color:rgba(245,240,230,.7); }
+  .rec { margin-top:14px; display:flex; gap:12px; align-items:center; }
+  .cov { width:64px; height:64px; border-radius:10px; background:var(--p2); flex:none; }
+  .part { margin-top:16px; border-radius:14px; border:1px solid var(--line2); background:var(--card); padding:4px 12px; }
+  .dark .part { background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.12); }
+  .prow { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); }
+  .dark .prow { border-color:rgba(255,255,255,.1); }
+  .prow:last-child { border-bottom:0; }
+  .prow small { display:block; font-size:12px; color:var(--ter); }
+  .dark .prow small { color:rgba(245,240,230,.55); }
+  .prow .d { margin-left:auto; text-align:right; font:12px 'JetBrains Mono'; color:var(--ter); }
+  .dark .prow .d { color:rgba(245,240,230,.6); }
+  .idea { margin-top:16px; }
+  .idea h4 { font-family:'Young Serif'; font-weight:400; font-size:22px; line-height:1.15; margin:6px 0 6px; }
+  .idea p { font-size:13.5px; color:var(--sec); }
+  .dark .idea p { color:rgba(245,240,230,.7); }
+  .sws { display:flex; gap:6px; margin-top:12px; }
+  .sws i { flex:1; height:34px; border-radius:7px; display:block; }
+  .join { position:absolute; left:0; right:0; bottom:0; padding:12px 16px 22px; background:linear-gradient(to top, var(--bg) 75%, rgba(245,240,230,0)); }
+  .dark .join { background:linear-gradient(to top, #0c0c0d 75%, rgba(12,12,13,0)); }
+  .join .btn { margin:0; }
+  .join p { text-align:center; font-size:12px; color:var(--ter); margin-top:8px; }
+  .dark .join p { color:rgba(245,240,230,.55); }
+  .pin { display:inline-grid; place-items:center; width:20px; height:20px; border-radius:50%; background:var(--text); color:#f5f0e6; font:600 11px 'Instrument Sans'; margin-right:6px; vertical-align:-4px; }
+  .decide { margin-top:36px; background:var(--bg); border-radius:16px; padding:20px 24px; }
+  .decide h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:0 0 10px; }
+  .decide li { margin:6px 0; color:var(--sec); }
+  .decide li b { color:var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <h1>Share the brief with a person</h1>
+    <p>For the videographer, the designer or the PR person who is not on the team. You pick what they are making; they get a link that shows the brief and their part. When they join they can mark their part done, see only this rollout, and take no paid seat.</p>
+  </div>
+
+  <div class="sec-h"><h2>1 · In Share: add a person</h2><p>The view link stays as it is. Below it, a new part: who, how to reach them, and what they are making. The pieces come from What we're making.</p></div>
+  <div class="row">
+    <div>
+      <div class="sheet">
+        <h3>Share the brief</h3>
+        <p class="sub">Send the brief to people who are not on the team.</p>
+        <div class="sect">
+          <div class="toggle"><span>View link</span><span class="sw"></span></div>
+          <p class="note" style="margin-top:0">Anyone with the link can read the brief. They can't change anything.</p>
+        </div>
+        <div class="sect">
+          <span class="lbl">Share with a person</span>
+          <div class="two">
+            <div class="field">Tolu</div>
+            <div class="field ph">Email (optional)</div>
+          </div>
+          <p class="lbl" style="margin-top:14px">Their part</p>
+          <div class="piece"><span class="box on">✓</span>Visualiser<span class="due">Mon 2 Nov</span></div>
+          <div class="piece"><span class="box on">✓</span>Teaser cuts × 3<span class="due">Mon 2 Nov</span></div>
+          <div class="piece"><span class="box"></span>Press photo<span class="who">Ada</span><span class="due">Fri 6 Nov</span></div>
+          <div class="piece"><span class="box"></span>Release day posts<span class="due">Sun 29 Nov</span></div>
+          <div class="btn">Make Tolu's link</div>
+          <p class="note">Guests are free: up to 5 on a rollout. 1 of 5 used.</p>
+        </div>
+        <div class="sect">
+          <span class="lbl">Guests on this rollout</span>
+          <div class="guestrow"><span class="av">KE</span>Kemi<span class="tag ok">Joined</span><span style="color:var(--ter);font-size:12.5px">Lyric cards</span><span class="x">Remove</span></div>
+        </div>
+      </div>
+      <p class="cap"><span class="pin">1</span>A piece someone already has (Press photo is Ada's) can still be picked; joining moves it to the guest. No email is fine: the link is sent by you, on WhatsApp or anywhere.</p>
+    </div>
+
+    <div>
+      <div class="sheet">
+        <h3>Tolu's link is ready</h3>
+        <p class="sub">It opens the brief and Tolu's part. It works for 30 days.</p>
+        <div class="ready">
+          <div class="linkbox"><span>app.urganize.app/invite/7f3k…</span><b style="color:var(--brand)">Copy</b></div>
+          <div class="btn wa">Send on WhatsApp</div>
+          <div class="btn ghost" style="margin-top:8px">Copy the link</div>
+          <p class="note">With an email, Urganize also sends it: "Oyin shared the brief for First Light with you."</p>
+        </div>
+        <div class="btn ghost">Done</div>
+      </div>
+      <p class="cap"><span class="pin">2</span>Send on WhatsApp opens WhatsApp with the link and one line already written; you pick the chat and press send.</p>
+    </div>
+  </div>
+
+  <div class="sec-h"><h2>2 · What Tolu opens</h2><p>The approved shared-link screen. It follows the phone's light or dark setting. Tolu can read everything before joining.</p></div>
+  <div class="row">
+    <div>
+      <div class="phone">
+        <div class="ph-body">
+          <div class="from"><span class="av" style="background:#7fd99a">OY</span>Oyin shared the brief for First Light with you.</div>
+          <div class="rec"><span class="cov"></span><div><div class="mono" style="font-size:11px;color:var(--ter);letter-spacing:.14em">TEST ARTIST · SINGLE</div><div class="serif" style="font-size:24px">First Light</div><div class="mono" style="font-size:11px;color:var(--ter)">OUT SUN 29 NOV</div></div></div>
+          <p class="lbl" style="margin-top:18px">Your part</p>
+          <div class="part">
+            <div class="prow"><span>Visualiser<small>15s loop · 9:16 · golden hour</small></span><span class="d">3 days<br>Mon 2 Nov</span></div>
+            <div class="prow"><span>Teaser cuts × 3<small>10s each · from the visualiser</small></span><span class="d">3 days<br>Mon 2 Nov</span></div>
+          </div>
+          <div class="idea"><p class="lbl">The idea</p><h4>Tell the truth, then dance about it.</h4><p>A bright, close record about saying the hard thing first. Warm and handmade, never like an ad.</p></div>
+          <div class="sws"><i style="background:#e9a53c"></i><i style="background:#c4612a"></i><i style="background:#3a2417"></i><i style="background:#d98c79"></i><i style="background:#f2e2c2"></i></div>
+        </div>
+        <div class="join"><div class="btn">Join to mark your part done</div><p>Free for guests. You only see this rollout.</p></div>
+      </div>
+      <p class="cap">Light phone.</p>
+    </div>
+    <div>
+      <div class="phone dark">
+        <div class="ph-body">
+          <div class="from"><span class="av" style="background:#7fd99a">OY</span>Oyin shared the brief for First Light with you.</div>
+          <div class="rec"><span class="cov"></span><div><div class="mono" style="font-size:11px;opacity:.6;letter-spacing:.14em">TEST ARTIST · SINGLE</div><div class="serif" style="font-size:24px">First Light</div><div class="mono" style="font-size:11px;opacity:.6">OUT SUN 29 NOV</div></div></div>
+          <p class="lbl" style="margin-top:18px;color:rgba(245,240,230,.55)">Your part</p>
+          <div class="part">
+            <div class="prow"><span>Visualiser<small>15s loop · 9:16 · golden hour</small></span><span class="d">3 days<br>Mon 2 Nov</span></div>
+            <div class="prow"><span>Teaser cuts × 3<small>10s each · from the visualiser</small></span><span class="d">3 days<br>Mon 2 Nov</span></div>
+          </div>
+          <div class="idea"><p class="lbl" style="color:rgba(245,240,230,.55)">The idea</p><h4>Tell the truth, then dance about it.</h4><p>A bright, close record about saying the hard thing first.</p></div>
+        </div>
+        <div class="join"><div class="btn">Join to mark your part done</div><p>Free for guests. You only see this rollout.</p></div>
+      </div>
+      <p class="cap">Dark phone: the same page.</p>
+    </div>
+    <div>
+      <div class="phone">
+        <div class="ph-body">
+          <div class="from" style="justify-content:space-between"><span style="font-weight:600;color:var(--text)">‹ First Light</span><span class="tag">Guest</span></div>
+          <p class="lbl" style="margin-top:18px">Your part</p>
+          <div class="part">
+            <div class="prow"><span class="box on">✓</span><span style="text-decoration:line-through;color:var(--ter)">Visualiser<small>Done today</small></span><span class="d">Mon 2 Nov</span></div>
+            <div class="prow"><span class="box"></span><span>Teaser cuts × 3<small>10s each · from the visualiser</small></span><span class="d">Mon 2 Nov</span></div>
+          </div>
+          <div class="idea"><p class="lbl">The idea</p><h4>Tell the truth, then dance about it.</h4><p>A bright, close record about saying the hard thing first. Warm and handmade, never like an ad.</p></div>
+          <p class="note" style="margin-top:18px">You can mark your own part done. The rest of the brief and the plan are view only.</p>
+        </div>
+      </div>
+      <p class="cap"><span class="pin">3</span>After joining: Tolu lands on the brief with a tick box on each of their pieces, and nothing else to change.</p>
+    </div>
+  </div>
+
+  <div class="decide">
+    <h2>What it does, in one place</h2>
+    <ul>
+      <li><b>Who can share:</b> the rollout's owner and team admins, like the view link.</li>
+      <li><b>The guest:</b> a team guest limited to this one rollout. They read the brief and the plan, and can only mark their own activities done (your call, 31 Oct).</li>
+      <li><b>Seats:</b> guests invited from a brief take no paid seat, up to 5 per rollout (your call, 31 Oct). A 6th is refused with a plain message.</li>
+      <li><b>Their part:</b> the pieces picked are assigned to them when they join, so the owner and due date stay in the plan.</li>
+      <li><b>Removing a guest</b> takes away their access; their activities stay in the plan, unassigned.</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

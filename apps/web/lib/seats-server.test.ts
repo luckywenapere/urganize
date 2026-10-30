@@ -4,11 +4,12 @@ import { countTeamSeats } from './seats-server';
 
 /** Minimal stub of the one query shape countTeamSeats builds. */
 function stubClient(result: { count?: number | null; error?: { message: string } } | 'throw') {
-  const neq = vi.fn(() => (result === 'throw' ? Promise.reject(new Error('boom')) : Promise.resolve(result)));
+  const or = vi.fn(() => (result === 'throw' ? Promise.reject(new Error('boom')) : Promise.resolve(result)));
+  const neq = vi.fn(() => ({ or }));
   const eq = vi.fn(() => ({ neq }));
   const select = vi.fn(() => ({ eq }));
   const from = vi.fn(() => ({ select }));
-  return { client: { from } as unknown as SupabaseClient, from, select, eq, neq };
+  return { client: { from } as unknown as SupabaseClient, from, select, eq, neq, or };
 }
 
 describe('countTeamSeats', () => {
@@ -25,6 +26,12 @@ describe('countTeamSeats', () => {
     expect(stub.from).toHaveBeenCalledWith('workspace_members');
     expect(stub.eq).toHaveBeenCalledWith('workspace_id', 'ws-1');
     expect(stub.neq).toHaveBeenCalledWith('status', 'removed');
+  });
+
+  it('leaves out guests invited from a brief (Oyin, 31 Oct 2026)', async () => {
+    const stub = stubClient({ count: 0 });
+    await countTeamSeats(stub.client, 'ws-1');
+    expect(stub.or).toHaveBeenCalledWith('brief_release_id.is.null,role.neq.guest');
   });
 
   it('asks for a head-only exact count, not the rows', async () => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Plus } from '@/components/icons';
+import { Check, Loader2, Plus } from '@/components/icons';
 import { formatBriefDay, type BriefPayload } from '@/lib/release-brief';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { BriefAvatar, briefCall } from './brief-shared';
@@ -101,6 +101,25 @@ export function BriefPiecesCard({
   onToast: Toast;
 }) {
   const [adding, setAdding] = useState(false);
+  const [ticking, setTicking] = useState<string | null>(null);
+  // Mark your own piece done (or open again). Status only, so a guest may too.
+  const tick = async (taskId: string, done: boolean) => {
+    setTicking(taskId);
+    const status = done ? 'done' : 'todo';
+    const result = await briefCall<{ task: unknown }>(`/api/tasks/${encodeURIComponent(taskId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+    setTicking(null);
+    if (!result.ok) {
+      onToast(result.error, 'error');
+      return;
+    }
+    useTaskStore.setState((state) => ({
+      tasks: state.tasks.map((task) => (task.id === taskId ? { ...task, status } : task)),
+    }));
+    onRefresh();
+  };
   // A brief cached before this card existed has no pieces yet.
   const { items, done, total, late } = brief.board.pieces ?? { items: [], done: 0, total: 0, late: 0 };
 
@@ -145,7 +164,24 @@ export function BriefPiecesCard({
         <ul className="mt-3 grid gap-x-6 sm:grid-cols-2">
           {items.map((piece) => (
             <li key={piece.id} className="flex min-w-0 items-center gap-3 border-b border-stroke-subtle py-2.5 last:border-b-0 sm:[&:nth-last-child(2):nth-child(odd)]:border-b-0">
-              <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 rounded-full ${DOT[piece.state]}`} />
+              {piece.assigneeId && piece.assigneeId === brief.viewer.id ? (
+                // Your own piece: tick it here. A guest can change only this (Oyin, 31 Oct 2026, #897).
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={piece.state === 'done'}
+                  aria-label={`Mark ${piece.title} ${piece.state === 'done' ? 'not done' : 'done'}`}
+                  disabled={ticking === piece.id}
+                  onClick={() => void tick(piece.id, piece.state !== 'done')}
+                  className={`motion-focus grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[5px] border-[1.5px] disabled:opacity-60 ${
+                    piece.state === 'done' ? 'border-brand bg-brand text-content-inverse' : 'border-stroke-strong hover:border-brand'
+                  }`}
+                >
+                  {piece.state === 'done' ? <Check className="h-3 w-3" aria-hidden="true" /> : null}
+                </button>
+              ) : (
+                <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 rounded-full ${DOT[piece.state]}`} />
+              )}
               <span className="min-w-0 flex-1">
                 <span className={`block truncate text-[14px] font-medium ${piece.state === 'done' ? 'text-content-tertiary line-through' : 'text-content-primary'}`}>
                   {piece.title}

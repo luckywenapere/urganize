@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.225.0",
+    title: "Share the brief with a person",
+    tag: "Team",
+    date: "October 31, 2026",
+    highlights: [
+      "Share the brief with someone outside the team, like a videographer. Pick their part, then send the link on WhatsApp or by email.",
+      "They see the brief and their part, and when they join they can mark it done. Guests are free, up to 5 on a rollout.",
+    ],
+  },
+  {
     version: "1.224.0",
     title: "UrgAns starts the board",
     tag: "AI",
