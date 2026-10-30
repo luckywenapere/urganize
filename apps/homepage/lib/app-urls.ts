@@ -24,5 +24,8 @@ export const APP_SIGNUP_URL = `${APP_ORIGIN}/onboarding`;
  */
 export const WAITLIST_URL = "/#waitlist";
 
+/** Curator application form, the target of the urganize.app/curator short link. */
+export const APP_CURATOR_APPLY_URL = `${APP_ORIGIN}/curator/apply`;
+
 /** Password reset, linked from /login so users don't bounce off the app. */
 export const APP_PASSWORD_RESET_URL = `${APP_ORIGIN}/auth/forgot-password`;
