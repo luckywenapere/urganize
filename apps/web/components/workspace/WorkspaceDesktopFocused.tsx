@@ -11,7 +11,7 @@ import type { Release } from '@/types/releases';
 import type { Task } from '@/lib/tasks';
 import { TasksPanel } from './TasksPanel';
 import { RolloutTabs } from './RolloutTabs';
-import { PlanMenuPill } from './PlanMenuPill';
+import { PlanMenuPillDock } from './PlanMenuPill';
 import { BriefBackButton, BriefEntryButton } from './BriefEntry';
 import { usePlanMenuFold } from '@/stores/usePlanMenuFold';
 import type { ReleaseCardData } from './catalogue-types';
@@ -289,13 +289,10 @@ export function WorkspaceDesktopFocused({
           shadow as it locks. It sits outside the header block above, so it can
           stick for the whole page and not only inside that block. */}
       <div ref={tabsSentinelRef} aria-hidden="true" className="-mb-4 h-0" />
-      {/* Folded (#898), the pill holds the tabs' place, under the top bar the
-          whole way down, so the menu is one tap away mid-plan too. */}
-      {menuFolded && !focus ? (
-        <div className="pointer-events-none sticky top-[80px] z-20 -mb-2 flex h-[26px] justify-center">
-          <PlanMenuPill />
-        </div>
-      ) : null}
+      {/* Folded (#898), the pill floats 34 above the bottom of the screen
+          (#926), centred on the plan, so the menu is one tap away mid-plan
+          too without covering the top of the plan. */}
+      {menuFolded && !focus ? <PlanMenuPillDock anchorClassName="-mb-4" /> : null}
       <div
         data-stuck={tabsStuck ? '' : undefined}
         className={`${menuFolded || focus ? 'hidden' : ''} sticky top-[72px] z-20 -mx-8 border-b border-stroke-subtle bg-bg-base px-8 pb-2 pt-0 transition-[padding,box-shadow] duration-200 ease-out data-[stuck]:pt-2 data-[stuck]:shadow-[0_8px_16px_-12px_rgb(0_0_0/0.6)]`}

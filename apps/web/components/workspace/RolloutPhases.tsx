@@ -173,7 +173,7 @@ export function RolloutPhaseHeader({
         onClick={onToggle}
         aria-expanded={isOpen}
         aria-controls={controlsId}
-        className={`motion-focus flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-hover ${
+        className={`motion-focus flex min-h-[55px] w-full items-center gap-[13px] px-4 py-2 text-left transition-colors hover:bg-bg-hover ${
           isOpen ? 'border-b border-stroke-subtle' : ''
         }`}
       >

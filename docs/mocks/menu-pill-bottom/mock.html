@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Menu pill at the bottom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --card:#faf5ec; --hover:#ebe6dc;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --board:#d9d5cc; --board-sec:#4f4a42; --guide:#c2410c;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--text); padding:32px 16px 64px; }
+  p { margin:0; }
+  .wrap { max-width:1160px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; margin:0 0 6px; }
+  .intro p, .sec-h p { color:var(--board-sec); max-width:720px; }
+  .sec-h { margin:36px 0 12px; }
+  .sec-h h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:0 0 4px; }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:21px; }
+  @media (max-width:900px) { .pair { grid-template-columns:1fr; } }
+  .cap { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--board-sec); margin:0 0 8px; }
+  .toggle { margin:0 0 12px; display:inline-flex; gap:8px; align-items:center; font-size:13px; color:var(--board-sec); }
+
+  /* Computer frame */
+  .desk { position:relative; background:var(--bg); border-radius:18px; overflow:hidden; box-shadow:0 12px 32px rgba(26,22,17,.10); height:420px; }
+  .topbar { height:44px; border-bottom:1px solid var(--line); display:flex; align-items:center; padding:0 21px; }
+  .logo { font-family:'Young Serif', serif; font-size:15px; }
+  .page { padding:0 21px; }
+  .crumb { display:flex; align-items:center; gap:8px; font-size:13px; }
+  .crumb .c { color:var(--ter); }
+  .crumb b { font-size:13px; }
+  .crumb .draft { font-size:10.5px; padding:1px 8px; border-radius:99px; background:var(--brand-soft); color:var(--brand); font-weight:600; }
+  .ph { border:1px solid var(--line); background:var(--card); border-radius:10px; display:flex; align-items:center; gap:13px; padding:0 13px; }
+  .ph .n { width:96px; flex:none; font-size:12px; line-height:1.3; }
+  .ph .n b { display:block; font-size:12.5px; }
+  .ph .n span { color:var(--ter); font-size:10.5px; }
+  .ph .bar { flex:1; height:4px; border-radius:2px; background:var(--hover); position:relative; overflow:hidden; }
+  .ph .bar i { position:absolute; inset:0 auto 0 0; background:var(--brand); }
+  .ph .k { font-size:11px; color:var(--ter); white-space:nowrap; }
+  .ph.now { border-color:rgba(20,100,58,.4); }
+  .links { display:flex; justify-content:center; gap:21px; font-size:11.5px; color:var(--ter); }
+
+  /* Before: today's sizes, pill under the top bar */
+  .before .crumb { height:40px; }
+  .before .pill { margin:4px auto 10px; }
+  .before .ph { height:46px; margin-bottom:9px; }
+  .before .links { margin-top:14px; }
+
+  /* After: every size and gap on 8 / 13 / 21 / 34 / 55 */
+  .after .crumb { height:55px; }
+  .after .ph { height:55px; margin-bottom:13px; }
+  .after .links { margin-top:21px; }
+
+  .pill { display:flex; width:max-content; align-items:center; gap:6px; height:26px; padding:0 12px 0 10px; border-radius:99px; background:var(--card); border:1px solid var(--line2); box-shadow:0 2px 8px rgba(26,22,17,.08); font:600 12px 'Instrument Sans', sans-serif; color:var(--sec); }
+  .pill svg { width:12px; height:12px; }
+  /* The new pill: 34 tall, 89 wide (Fibonacci, so its sides are in the golden
+     ratio squared), floating 34 above the bottom edge. */
+  .float { position:absolute; left:50%; bottom:34px; transform:translateX(-50%); height:34px; width:89px; justify-content:center; padding:0; font-size:12.5px; box-shadow:0 8px 21px -8px rgba(26,22,17,.28), 0 1px 3px rgba(26,22,17,.08); }
+  .phone .float { bottom:calc(55px + 21px); }
+
+  /* Guides */
+  .g { display:none; }
+  .show-guides .g { display:block; }
+  .gl { position:absolute; left:0; right:0; border-top:1px dashed var(--guide); opacity:.7; }
+  .gt { position:absolute; font:500 10px 'JetBrains Mono', monospace; color:var(--guide); background:var(--bg); padding:0 4px; }
+  .gv { position:absolute; width:0; border-left:1px dashed var(--guide); }
+
+  /* Phone frame */
+  .phone { position:relative; width:300px; height:560px; margin:0 auto; background:var(--bg); border-radius:34px; overflow:hidden; box-shadow:0 12px 32px rgba(26,22,17,.10); border:8px solid #1a1611; }
+  .phone .page { padding:13px 13px 0; }
+  .phone .slim { display:flex; align-items:center; gap:8px; height:44px; font-size:14px; font-weight:600; }
+  .phone .slim .back { color:var(--ter); font-size:18px; }
+  .phone .slim .ct { margin-left:auto; color:var(--ter); font-size:12px; font-weight:500; }
+  .task { display:flex; gap:8px; align-items:center; height:55px; border-bottom:1px solid var(--line); font-size:13px; }
+  .task i { width:13px; height:13px; border-radius:50%; border:1.5px solid var(--line2); flex:none; }
+  .task span { color:var(--ter); font-size:11px; margin-left:auto; }
+  .tabbar { position:absolute; left:0; right:0; bottom:0; height:55px; border-top:1px solid var(--line); background:var(--card); display:flex; justify-content:space-around; align-items:center; font-size:11px; color:var(--ter); }
+  .tabbar b { color:var(--text); }
+  .fade { position:absolute; left:0; right:0; bottom:55px; height:89px; background:linear-gradient(to bottom, transparent, var(--bg)); pointer-events:none; }
+
+  ul.notes { margin:13px 0 0; padding-left:18px; color:var(--board-sec); }
+  ul.notes li { margin:0 0 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <h1>Menu pill at the bottom, page on the golden ratio</h1>
+    <p>Issue #926. When the plan menu is folded, the Menu pill floats at the bottom centre instead of sitting under the top bar. Every size and gap on the page moves onto the golden scale: 8, 13, 21, 34, 55, 89 (each about 1.618 times the one before).</p>
+  </div>
+
+  <div class="sec-h">
+    <h2>Computer</h2>
+    <p>Left is today. Right is the proposal.</p>
+  </div>
+  <label class="toggle"><input type="checkbox" id="guides" checked /> Show the measurements</label>
+  <div class="pair" id="frames">
+    <div>
+      <p class="cap">Today</p>
+      <div class="desk before">
+        <div class="topbar"><span class="logo">Urganize</span></div>
+        <div class="page">
+          <div class="crumb"><span class="c">Home ›</span><b>Honest</b><span class="c">Dorian</span><span class="draft">Draft</span></div>
+          <div class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>Menu</div>
+          <div class="ph"><div class="n"><b>Pre-release</b><span>18 Sept – 4 Dec</span></div><div class="bar"><i style="width:100%"></i></div><div class="k">17/17 done</div></div>
+          <div class="ph now"><div class="n"><b>Release</b><span>6 Nov – 7 Nov</span></div><div class="bar"></div><div class="k">0/3 done</div></div>
+          <div class="ph"><div class="n"><b>Post-release</b><span>21 Nov – 28 Nov</span></div><div class="bar"></div><div class="k">0/3 done</div></div>
+          <div class="links"><span>Show all 23 activities</span><span>Show cancelled · 1</span></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="cap">Proposal</p>
+      <div class="desk after">
+        <div class="topbar"><span class="logo">Urganize</span></div>
+        <div class="page">
+          <div class="crumb"><span class="c">Home ›</span><b>Honest</b><span class="c">Dorian</span><span class="draft">Draft</span></div>
+          <div class="ph"><div class="n"><b>Pre-release</b><span>18 Sept – 4 Dec</span></div><div class="bar"><i style="width:100%"></i></div><div class="k">17/17 done</div></div>
+          <div class="ph now"><div class="n"><b>Release</b><span>6 Nov – 7 Nov</span></div><div class="bar"></div><div class="k">0/3 done</div></div>
+          <div class="ph"><div class="n"><b>Post-release</b><span>21 Nov – 28 Nov</span></div><div class="bar"></div><div class="k">0/3 done</div></div>
+          <div class="links"><span>Show all 23 activities</span><span>Show cancelled · 1</span></div>
+        </div>
+        <div class="pill float"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m18 15-6-6-6 6"/></svg>Menu</div>
+        <!-- guides -->
+        <div class="g">
+          <div class="gt" style="top:56px;right:8px">title line 55</div>
+          <div class="gl" style="top:352px"></div>
+          <div class="gt" style="top:338px;left:8px">pill 34 × 89</div>
+          <div class="gv" style="left:50%;bottom:0;height:34px;margin-left:56px"></div>
+          <div class="gt" style="bottom:10px;left:calc(50% + 60px)">34</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <ul class="notes">
+    <li><b>Pill:</b> 34 tall and 89 wide, floating 34 above the bottom edge, centred on the plan. It has a soft shadow so it reads as floating. The arrow points up, since the menu opens above.</li>
+    <li><b>Title line:</b> 55 tall (today about 40), so the page breathes under the top bar now the pill no longer sits there.</li>
+    <li><b>Phase cards:</b> 55 tall with 13 between them (today 62 and 12).</li>
+    <li><b>Links under the cards:</b> 21 below the last card, 21 apart.</li>
+    <li>The pull-to-open still works: as you pull at the top, the pill grows and turns green, same as today.</li>
+  </ul>
+
+  <div class="sec-h">
+    <h2>Phone</h2>
+    <p>The pill floats 21 above the bottom bar (which is 55 tall). The slim title line stays at the top; the pill no longer sits under it. Tapping the pill scrolls to the top and opens the menu, same as today.</p>
+  </div>
+  <div class="phone">
+    <div class="page">
+      <div class="slim"><span class="back">‹</span>Honest<span class="ct">17 of 23</span></div>
+      <div class="task"><i></i>Pitch to Spotify editorial<span>6 Nov</span></div>
+      <div class="task"><i></i>Release day posts<span>7 Nov</span></div>
+      <div class="task"><i></i>Send the press kit<span>7 Nov</span></div>
+      <div class="task"><i></i>Thank-you post<span>21 Nov</span></div>
+      <div class="task"><i></i>Playlist follow-ups<span>24 Nov</span></div>
+      <div class="task"><i></i>Recap for the team<span>28 Nov</span></div>
+      <div class="task"><i></i>Plan the next single<span>28 Nov</span></div>
+    </div>
+    <div class="fade"></div>
+    <div class="pill float"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m18 15-6-6-6 6"/></svg>Menu</div>
+    <div class="tabbar"><b>Artists</b><span>UrgAns</span><span>Team</span></div>
+  </div>
+</div>
+<script>
+  const box = document.getElementById('guides');
+  const sync = () => document.body.classList.toggle('show-guides', box.checked);
+  box.addEventListener('change', sync); sync();
+</script>
+</body>
+</html>

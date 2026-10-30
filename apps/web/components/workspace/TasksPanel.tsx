@@ -701,7 +701,10 @@ export function TasksPanel({
           activity buckets do; the pills stay put either way — the desktop
           header row above, the mobile rows above and below — so the scene
           switcher never disappears (founder call, 2026-08-05). */}
-      <div data-morph-scene="" className="flex min-h-0 flex-1 flex-col pb-4">
+      {/* Folded, the Menu pill floats over the bottom of the screen (#926):
+          89 of room (pill 34, its 34 off the edge, 21 of air) keeps the last
+          row clear of it. */}
+      <div data-morph-scene="" className={`flex min-h-0 flex-1 flex-col ${menuFolded ? 'pb-[89px]' : 'pb-4'}`}>
       {/* Above the body rather than inside the buckets, so it survives the
           timeline taking the main view — see `bodyIsMainView`. Deliberately
           NOT shown over the named scenes: a "Plan the rollout" card on top of
@@ -712,7 +715,8 @@ export function TasksPanel({
       {sceneContent ? (
         sceneContent
       ) : (
-      <div className="space-y-3">
+      <div className="space-y-[13px]">
+        {/* 13 between the rows, on the golden scale (#926). */}
         {scopedRelease && tasks.length > 0 && !simple && !(menuFolded && !plan.filtering) ? (
           <PlanListControls
             plan={plan}
