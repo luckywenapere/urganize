@@ -55,6 +55,7 @@ function TabAction({ action }: { action: ShellSubTabAction | null }) {
   // A page that owns its own create modal (WorkspaceView on Rollouts) claims
   // the press, so exactly one modal opens; otherwise the shell's one does.
   const createHandler = useShellStore((state) => state.createHandler);
+  const openAddArtist = useShellStore((state) => state.openAddArtist);
   if (!action) return null;
   if (action.href) {
     return (
@@ -66,7 +67,9 @@ function TabAction({ action }: { action: ShellSubTabAction | null }) {
   return (
     <button
       type="button"
-      onClick={() => (createHandler ? createHandler() : openCreate())}
+      onClick={() =>
+        action.press === 'addArtist' ? openAddArtist() : createHandler ? createHandler() : openCreate()
+      }
       aria-label={action.label}
       title={action.label}
       className={ACTION_CLASS}

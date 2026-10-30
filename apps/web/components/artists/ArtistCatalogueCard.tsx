@@ -10,8 +10,11 @@ import {
   requestCatalogueLink,
   saveReleaseCode,
   type Catalogue,
+  type CatalogueProfile,
   type CatalogueRow,
 } from '@/lib/artist-import/client';
+import { isNewRelease } from '@/lib/artist-import/summary';
+import { lagosToday } from '@/lib/next-records';
 import { kindLabel } from './ImportParts';
 import { PoweredByAltlink } from '@/components/releases/PoweredByAltlink';
 
@@ -180,8 +183,17 @@ function AddCode({ artistId, row, onSaved }: { artistId: string; row: CatalogueR
  * empty line, so this draws nothing until there is a row (`onCount` says how many). A link is made only after a notice, and a team can
  * make a limited number a day (lib/artist-import/codes.ts).
  */
-export function ArtistCatalogueCard({ artistId, onCount }: { artistId: string; onCount?: (count: number) => void }) {
-  const [data, setData] = useState<Catalogue>({ releases: [], cap: null, codesPending: 0 });
+export function ArtistCatalogueCard({
+  artistId,
+  onCount,
+  onProfile,
+}: {
+  artistId: string;
+  onCount?: (count: number) => void;
+  /** The linked streaming profile once the first read answers (#882). */
+  onProfile?: (profile: CatalogueProfile | null) => void;
+}) {
+  const [data, setData] = useState<Catalogue>({ releases: [], cap: null, codesPending: 0, profile: null, loaded: false });
   const [showAll, setShowAll] = useState(false);
   const [confirming, setConfirming] = useState<CatalogueRow | null>(null);
   const [working, setWorking] = useState(false);
@@ -249,9 +261,13 @@ export function ArtistCatalogueCard({ artistId, onCount }: { artistId: string; o
 
   const rows = data.releases;
   useEffect(() => {
-    onCount?.(rows.length);
-  }, [onCount, rows.length]);
+    if (data.loaded) onCount?.(rows.length);
+  }, [onCount, rows.length, data.loaded]);
+  useEffect(() => {
+    if (data.loaded) onProfile?.(data.profile);
+  }, [onProfile, data.profile, data.loaded]);
   const visible = showAll ? rows : rows.slice(0, SHOWN_AT_FIRST);
+  const today = lagosToday();
 
   return (
     <>
@@ -272,7 +288,14 @@ export function ArtistCatalogueCard({ artistId, onCount }: { artistId: string; o
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-content-primary">{row.title}</p>
+                    <p className="flex min-w-0 items-center gap-2 text-sm font-semibold text-content-primary">
+                      <span className="truncate">{row.title}</span>
+                      {isNewRelease(row.release_date, today) ? (
+                        <span className="shrink-0 rounded bg-brand/10 px-1.5 text-[10.5px] font-bold uppercase leading-4 tracking-[0.06em] text-brand">
+                          New
+                        </span>
+                      ) : null}
+                    </p>
                     <p className="truncate text-xs text-content-secondary">
                       {kindLabel(row.kind)}
                       {row.release_date ? `, ${row.release_date.slice(0, 4)}` : ''}

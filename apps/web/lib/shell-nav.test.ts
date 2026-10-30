@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ADD_ARTIST_HREF,
   activeMobileTab,
   activeShellArea,
   buildMobileTabs,
@@ -137,13 +136,9 @@ describe('shell nav', () => {
   it('gives each Artists-section tab its own action, drawn by the tab row (tab jump fix, Oct 18, 2026)', () => {
     const area = buildShellAreas(ALL_ON).find((a) => a.key === 'catalogue')!;
     const action = (key: string) => area.subTabs.find((t) => t.key === key)!.action;
-    // Add artist opens Settings -> Artists & brand at its add field, over the
+    // Add artist opens the Add an artist sheet (search first, #882), over the
     // Artists page itself, so the tab under it does not change.
-    expect(action('artists')).toEqual({ label: 'Add artist', href: ADD_ARTIST_HREF });
-    const url = new URL(ADD_ARTIST_HREF, 'https://app.urganize.app');
-    expect(url.pathname).toBe('/dashboard/artists');
-    expect(url.searchParams.get('settings')).toBe('artists');
-    expect(url.searchParams.get('section')).toBe('artists');
+    expect(action('artists')).toEqual({ label: 'Add artist', press: 'addArtist' });
     expect(action('releases')).toEqual({ label: 'New rollout', press: 'openCreate' });
     // Notes keeps the slot's space with no button.
     expect(action('notes')).toBeNull();

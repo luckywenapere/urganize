@@ -149,11 +149,13 @@ export default function TeamPageClient() {
           <h1 className="font-display text-[32px] leading-[1.1] text-content-primary md:text-[26px]">{TEAM_COPY.title}</h1>
           <p className="mt-1 truncate text-[13px] text-content-secondary">{header}</p>
         </div>
+        {/* Phone only: on a computer the "Invite someone" card in the grid is
+            the one way in (founder call, 2026-10-30, two buttons for one job). */}
         {canManage ? (
           <button
             type="button"
             onClick={() => setInviting(true)}
-            className="motion-focus motion-press inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-brand px-4 text-sm font-semibold text-content-inverse"
+            className="motion-focus motion-press inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-brand px-4 text-sm font-semibold text-content-inverse md:hidden"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
             {TEAM_COPY.invite}

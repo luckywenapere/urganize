@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Loader2 } from '@/components/icons';
 import { TeamLoginsSection } from '@/components/team/TeamLoginsSection';
+import { TEAM_LOGINS_ENABLED } from '@/lib/team-logins';
 import type { TeamPageResponse } from '@/lib/team-page';
 
 const box = 'rounded-2xl border border-stroke-default bg-bg-surface p-4 sm:p-5';
@@ -103,7 +104,9 @@ export function WorkspacePanel({
         </p>
       </section>
 
-      {viewer.canManage ? (
+      {/* Only when team logins are on: with them off the box drew empty
+          (founder, 2026-10-30). */}
+      {viewer.canManage && TEAM_LOGINS_ENABLED ? (
         <section className={`${box} md:col-span-2 [&_section]:py-0 [&_section]:before:hidden [&_section]:after:hidden`}>
           <TeamLoginsSection />
         </section>
