@@ -387,7 +387,7 @@ export async function runDraftDirectoryBio(params: {
 }
 
 export type BriefDraftResult =
-  | { ok: true; actionId: string; idea: string }
+  | { ok: true; actionId: string; idea: string; headline: string; feelsLike: string[] }
   | { ok: false; status: number; error: string; planRequired?: boolean };
 
 /**
@@ -418,13 +418,17 @@ export async function runDraftBrief(params: { releaseId: string }): Promise<Brie
         planRequired: payload.reason === 'plan_required',
       };
     }
-    const output = (payload.output || {}) as { idea?: unknown };
+    const output = (payload.output || {}) as { idea?: unknown; feel?: { headline?: unknown; feelsLike?: unknown } };
     const idea = typeof output.idea === 'string' ? output.idea : '';
+    const headline = typeof output.feel?.headline === 'string' ? output.feel.headline : '';
+    const feelsLike = Array.isArray(output.feel?.feelsLike)
+      ? output.feel.feelsLike.filter((word): word is string => typeof word === 'string')
+      : [];
     const actionId = typeof payload.actionId === 'string' ? payload.actionId : '';
     if (!idea || !actionId) {
       return { ok: false, status: 502, error: 'UrgAns could not write that just now. Try again.' };
     }
-    return { ok: true, actionId, idea };
+    return { ok: true, actionId, idea, headline, feelsLike };
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       return { ok: false, status: 504, error: 'That took too long. Nothing was changed. Try again.' };

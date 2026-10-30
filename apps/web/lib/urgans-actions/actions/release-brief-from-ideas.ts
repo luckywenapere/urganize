@@ -6,7 +6,7 @@ import { createUsageCollector, sumTokens } from '@/lib/credits/embedded';
 import { buildBriefFromIdeasMessages, parseBriefFromIdeas, type BriefFromIdeas } from '@/lib/idea-round';
 import { canUserRunIdeaRound, readIdeaRound } from '@/lib/idea-round-server';
 import { URGANS_ACTOR_LABEL } from '@/lib/release-brief';
-import { BRIEF_DECISIONS_TABLE, BRIEFS_TABLE, recordBriefRevision } from '@/lib/release-brief-server';
+import { BRIEF_DECISIONS_TABLE, BRIEFS_TABLE, fillBriefFeelFromUrgans, recordBriefRevision } from '@/lib/release-brief-server';
 import { loadIdeaNotes } from '@/lib/rollout-ideas-server';
 import type { UrgansActionDefinition } from '../types';
 
@@ -44,7 +44,7 @@ export const releaseBriefFromIdeasAction: UrgansActionDefinition<Input, Output, 
   label: 'Write the brief from the ideas',
   objectTypes: ['release'],
   access: 'team_write',
-  promptVersion: 'release-brief-from-ideas-v1',
+  promptVersion: 'release-brief-from-ideas-v2',
   oneShot: true,
 
   async execute({ admin, objectId, actor, ownerUserId }) {
@@ -145,6 +145,8 @@ export const releaseBriefFromIdeasAction: UrgansActionDefinition<Input, Output, 
     if (!keptIdea) {
       await recordBriefRevision(admin, { releaseId: objectId, block: 'idea', actorId: actor.id, actorLabel: URGANS_ACTOR_LABEL });
     }
+    // The first board (#897 phase 5): the one-line idea and the mood words, where still empty.
+    await fillBriefFeelFromUrgans(admin, { releaseId: objectId, feel: brief.feel, actorId: actor.id });
 
     const trace = routed as RoutingTrace | null;
     return {

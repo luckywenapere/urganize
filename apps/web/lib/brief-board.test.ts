@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   BOARD_WORD_MAX,
+  BOARD_HEADLINE_MAX,
   briefButtonLine,
+  feelFromModel,
   briefCountdown,
   briefProgress,
   momentsTrack,
@@ -204,5 +206,36 @@ describe('briefButtonLine', () => {
 
   it('is empty when there is nothing written', () => {
     expect(briefButtonLine({ headline: '', idea: '' })).toBe('');
+  });
+});
+
+describe('feelFromModel', () => {
+  it('takes the one-line idea and the words', () => {
+    expect(
+      feelFromModel({ headline: '  "Tell the truth, then dance."  ', feels_like: ['Sunlit', 'close', 'Unpolished', 'Joyful'], not_this: ['glossy', 'club lights'] })
+    ).toEqual({ headline: 'Tell the truth, then dance.', feelsLike: ['Sunlit', 'close', 'Unpolished', 'Joyful'], notThis: ['glossy', 'club lights'] });
+  });
+
+  it('keeps what is usable from bad output', () => {
+    const feel = feelFromModel({
+      headline: 'x'.repeat(300),
+      feels_like: 'warm, handmade, warm, a very long phrase that is not a word at all',
+      not_this: [4, null, 'Neon.', '#hashtag'],
+    });
+    expect(feel.headline.length).toBeLessThanOrEqual(BOARD_HEADLINE_MAX);
+    expect(feel.feelsLike).toEqual(['warm', 'handmade']);
+    expect(feel.notThis).toEqual(['Neon', 'hashtag']);
+  });
+
+  it('caps the lists at four and three, and gives empty fields for nothing', () => {
+    const feel = feelFromModel({ feelsLike: ['a1', 'b1', 'c1', 'd1', 'e1'], notThis: ['x1', 'y1', 'z1', 'w1'] });
+    expect(feel.feelsLike).toHaveLength(4);
+    expect(feel.notThis).toHaveLength(3);
+    expect(feelFromModel(null)).toEqual({ headline: '', feelsLike: [], notThis: [] });
+    expect(feelFromModel({ headline: 42 })).toEqual({ headline: '', feelsLike: [], notThis: [] });
+  });
+
+  it('keeps a headline to its first line', () => {
+    expect(feelFromModel({ headline: 'First line\nSecond line' }).headline).toBe('First line');
   });
 });

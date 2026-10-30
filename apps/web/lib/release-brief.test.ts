@@ -6,6 +6,7 @@ import {
   SHARE_TOKEN_LENGTH,
   canManageBriefShare,
   cleanBriefDraft,
+  parseBriefDraft,
   buildBriefPlanSeed,
   deriveBriefDates,
   deriveBriefPeople,
@@ -309,5 +310,24 @@ describe('buildBriefPlanSeed', () => {
     expect(buildBriefPlanSeed(null, ['Slow burn, late night.'])?.idea).toBe('Slow burn, late night.');
     const seed = buildBriefPlanSeed({ built_for: { summary: 'Built for Audiomack.' } }, ['Slow burn.', 'Hazy video.']);
     expect(seed?.idea).toBe('Slow burn. Hazy video. Built for Audiomack.');
+  });
+});
+
+describe('parseBriefDraft', () => {
+  it('reads the first board from JSON', () => {
+    const draft = parseBriefDraft('```json\n{"headline":"Tell the truth.","idea":"A warm record.","feels_like":["Sunlit"],"not_this":["Glossy"]}\n```');
+    expect(draft).toEqual({ idea: 'A warm record.', feel: { headline: 'Tell the truth.', feelsLike: ['Sunlit'], notThis: ['Glossy'] } });
+  });
+
+  it('takes plain text as the idea when the model ignored the format', () => {
+    expect(parseBriefDraft('A late-night song. Warm.')).toEqual({
+      idea: 'A late-night song. Warm.',
+      feel: { headline: '', feelsLike: [], notThis: [] },
+    });
+  });
+
+  it('is null with no idea at all', () => {
+    expect(parseBriefDraft('   ')).toBeNull();
+    expect(parseBriefDraft('{"headline":"Only a line"}')).toBeNull();
   });
 });

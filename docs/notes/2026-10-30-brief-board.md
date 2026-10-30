@@ -159,3 +159,12 @@ Oyin, after v1.217.0: the plan should lead and the brief should be a button insi
 - **Present:** `components/releases/BriefPresent.tsx`, a full-screen dark layer (requests browser full screen where allowed; leaving full screen leaves Present). It takes keys first, so Esc closes Present and never also closes the brief. Present and the Seen line sit beside Share on the board's header.
 - **Verified locally:** Present opened on the idea, PageDown, arrows, End and PageUp moved correctly, it stopped at the last screen, Esc closed it and stayed on the brief; the view was recorded; with a temporary second team member the line read "Seen the brief: 1 of 2", then "Everyone has seen the brief" (the member was removed after). A first version looked the owner up by `owner_user_id`, which the workspaces table does not have; caught in this check and fixed.
 - **Not yet:** UrgAns first board (5), share with a person (6).
+
+## Phase 5: delivered (v1.224.0, 2026-10-31)
+
+- **Write from the ideas** (`release.brief_from_ideas`, prompt v2): the model is also asked for `headline` (one line, under 12 words), `feels_like` (up to 4) and `not_this` (up to 3). `parseBriefFromIdeas` returns them as `feel` through `feelFromModel` (`lib/brief-board.ts`, tested), which is lenient: a comma string is read as a list, punctuation and markdown marks are stripped, long phrases and repeats are dropped, a broken field becomes empty, and nothing in it can fail a run.
+- **Draft with UrgAns** (`release.draft_brief`, prompt v3): now asks for JSON with the same fields; `parseBriefDraft` reads JSON, or plain text as the idea alone from a model that ignored the format, and returns null for JSON with no idea (never saves raw JSON as the brief). The draft preview shows the one-line idea and the feels-like words; Keep saves them too.
+- **Saving:** `fillBriefFeelFromUrgans` writes only the fields nobody has written, with a 'feel' history row labelled UrgAns. The palette is not asked of the model: From the cover reads it from the art.
+- **Look:** an empty Look card shows four dashed photo spots (Light, Styling, Places, People), each opening the photo picker.
+- **Verified:** parser tests (good, broken and plain-text output), the UrgAns action tests, the type check. Locally: the four spots render and open the picker. **Not verified:** a live UrgAns run, because the local app has no AI key; the first real run in production is the check.
+- **Not yet:** share with a person (6), which needs the two guest decisions above.

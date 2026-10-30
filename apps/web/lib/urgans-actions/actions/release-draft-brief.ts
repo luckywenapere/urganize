@@ -2,8 +2,9 @@ import { isAiConfigured } from '@/lib/ai/provider';
 import { generateRoutedPlainText } from '@/lib/ai/routed';
 import { legacyModelFor, summarizeTrace, type RoutingTrace } from '@/lib/ai/model-router';
 import { createUsageCollector, sumTokens } from '@/lib/credits/embedded';
-import { buildBriefDraftMessages, cleanBriefDraft, URGANS_ACTOR_LABEL } from '@/lib/release-brief';
-import { BRIEFS_TABLE, loadPlanSeed, saveBriefIdea } from '@/lib/release-brief-server';
+import type { BriefFeel } from '@/lib/brief-board';
+import { buildBriefDraftMessages, parseBriefDraft, URGANS_ACTOR_LABEL } from '@/lib/release-brief';
+import { BRIEFS_TABLE, fillBriefFeelFromUrgans, loadPlanSeed, saveBriefIdea } from '@/lib/release-brief-server';
 import type { UrgansActionDefinition } from '../types';
 
 /**
@@ -32,7 +33,8 @@ const DEADLINE_MS = 52_000;
 const TIMEOUT_MS = 20_000;
 
 type Input = Record<string, never>;
-type Output = { idea: string };
+/** The idea, and since #897 phase 5 the one-line idea and the mood words. */
+type Output = { idea: string; feel?: Omit<BriefFeel, 'palette'> };
 type Result = { idea: string; updatedAt: string };
 
 const asRow = (value: unknown): Record<string, unknown> =>
@@ -46,7 +48,7 @@ export const releaseDraftBriefAction: UrgansActionDefinition<Input, Output, Resu
   label: 'Draft the brief',
   objectTypes: ['release'],
   access: 'team_write',
-  promptVersion: 'release-draft-brief-v2',
+  promptVersion: 'release-draft-brief-v3',
 
   async execute({ admin, objectId }) {
     if (!isAiConfigured()) return { ok: false, status: 503, error: NOT_CONFIGURED };
@@ -112,8 +114,8 @@ export const releaseDraftBriefAction: UrgansActionDefinition<Input, Output, Resu
       };
     }
 
-    const idea = cleanBriefDraft(raw);
-    if (!idea) {
+    const draft = parseBriefDraft(raw);
+    if (!draft) {
       return {
         ok: false,
         status: 502,
@@ -126,7 +128,7 @@ export const releaseDraftBriefAction: UrgansActionDefinition<Input, Output, Resu
     const trace = routed as RoutingTrace | null;
     return {
       ok: true,
-      output: { idea },
+      output: { idea: draft.idea, feel: draft.feel },
       inputSummary: {
         taskCount: taskTitles.length,
         hasGenre: Boolean(genre),
@@ -157,6 +159,8 @@ export const releaseDraftBriefAction: UrgansActionDefinition<Input, Output, Resu
       actorLabel: URGANS_ACTOR_LABEL,
     });
     if (!saved.ok) return { ok: false, status: saved.status, error: saved.error };
+    // The one-line idea and the mood words go on the board too, where they are still empty.
+    if (output.feel) await fillBriefFeelFromUrgans(admin, { releaseId: objectId, feel: output.feel, actorId: actor.id });
     return { ok: true, result: saved.value };
   },
 

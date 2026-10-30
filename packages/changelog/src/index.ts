@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.224.0",
+    title: "UrgAns starts the board",
+    tag: "AI",
+    date: "October 31, 2026",
+    highlights: [
+      "When UrgAns writes the brief, it now fills the idea in one line and how it should feel, not just the story.",
+      "An empty Look card shows spots for the photos to add: light, styling, places and people.",
+    ],
+  },
+  {
     version: "1.223.0",
     title: "Present the brief",
     tag: "Rollouts",
