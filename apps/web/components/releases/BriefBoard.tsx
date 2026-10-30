@@ -1,9 +1,19 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { Loader2, Pencil, Plus, X } from '@/components/icons';
 import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react';
+import { Check, LayoutGrid, Loader2, Pencil, Plus, RotateCcw, X } from '@/components/icons';
+import {
+  BOARD_COLUMNS,
   BOARD_PALETTE_MAX,
   BOARD_HEADLINE_MAX,
   boardPhoneOrder,
@@ -13,9 +23,18 @@ import {
   normalizeHex,
   swatchInk,
   type BoardCardKey,
+  type BoardPlacement,
   type BriefFeel,
   type BriefFeelPatch,
 } from '@/lib/brief-board';
+import {
+  layoutPhoneOrder,
+  moveBoardCard,
+  nudgeBoardCard,
+  resolveBoardLayout,
+  type BoardLayout,
+  type NudgeDirection,
+} from '@/lib/brief-board-layout';
 import {
   formatBriefDay,
   initialsFor,
@@ -32,7 +51,9 @@ import { BriefAvatar, briefCall } from './brief-shared';
  * the idea and how it should feel on top, the look and sound next, then the
  * work. A wide board places cards by `boardPlacements`; a narrow one (a phone,
  * or a squeezed panel) stacks them in `boardPhoneOrder`. Rows size to their
- * content in this phase; leads drag and resize in phase 1b.
+ * content. The rollout's owner and team admins can arrange it (phase 1b):
+ * drag a card, pull its corner, or use the arrow keys; the board saves where
+ * each card sits, and a phone reads an arranged board top to bottom.
  *
  * The scene still owns loading, the idea's autosave, the ideas round and the
  * sheets. It hands the pieces it already renders (the idea field, decisions,
@@ -98,6 +119,102 @@ async function saveFeel(releaseId: string, patch: BriefFeelPatch) {
     body: JSON.stringify(patch),
   });
 }
+
+async function saveLayout(releaseId: string, layout: BoardLayout) {
+  const cards = (Object.keys(layout) as BoardCardKey[]).map((key) => ({ key, ...layout[key]! }));
+  return briefCall<{ layout: BoardLayout }>(`/api/releases/${encodeURIComponent(releaseId)}/brief/layout`, {
+    method: 'PUT',
+    body: JSON.stringify({ cards }),
+  });
+}
+
+async function resetLayout(releaseId: string) {
+  return briefCall<{ layout: null }>(`/api/releases/${encodeURIComponent(releaseId)}/brief/layout`, {
+    method: 'DELETE',
+  });
+}
+
+const CARD_NAMES: Record<BoardCardKey, string> = {
+  cover: 'Cover',
+  idea: 'Idea',
+  countdown: 'Countdown',
+  feels: 'Feels like',
+  palette: 'Colours',
+  look: 'Look',
+  sound: 'Sound and links',
+  decisions: 'Decided',
+  settle: 'To settle',
+  moments: 'Key moments',
+  people: 'Who’s on what',
+  side: 'Notes',
+};
+
+const ARROWS: Record<string, NudgeDirection> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+
+/** Row tops and heights of the grid as drawn, so a drag maps the pointer to a row. */
+function gridRows(grid: HTMLElement): { tops: number[]; heights: number[]; gap: number } {
+  const style = getComputedStyle(grid);
+  const gap = parseFloat(style.rowGap) || 0;
+  const heights = style.gridTemplateRows.split(' ').map((value) => parseFloat(value)).filter((value) => !Number.isNaN(value));
+  const tops: number[] = [];
+  let cursor = 0;
+  for (const height of heights) {
+    tops.push(cursor);
+    cursor += height + gap;
+  }
+  return { tops, heights, gap };
+}
+
+/** The 1-based row whose top is nearest `px` from the grid's top; past the last row is one more. */
+function rowAt(rows: { tops: number[]; heights: number[] }, px: number): number {
+  let best = 0;
+  rows.tops.forEach((top, index) => {
+    if (Math.abs(top - px) < Math.abs(rows.tops[best] - px)) best = index;
+  });
+  const last = rows.tops.length - 1;
+  if (last >= 0 && px > rows.tops[last] + rows.heights[last] / 2) return last + 2;
+  return best + 1;
+}
+
+/** Cards slide to their new place instead of jumping (skipped when the device asks for less motion). */
+function useSlide(grid: React.RefObject<HTMLDivElement | null>, signature: string) {
+  const before = useRef(new Map<string, DOMRect>());
+  useLayoutEffect(() => {
+    const node = grid.current;
+    if (!node) return;
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const next = new Map<string, DOMRect>();
+    node.querySelectorAll<HTMLElement>('[data-card]').forEach((card) => {
+      const key = card.dataset.card as string;
+      const rect = card.getBoundingClientRect();
+      next.set(key, rect);
+      const old = before.current.get(key);
+      if (still || !old || card.dataset.dragging === 'true') return;
+      const dx = old.left - rect.left;
+      const dy = old.top - rect.top;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+      card.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }], {
+        duration: 180,
+        easing: 'cubic-bezier(0.2, 0, 0, 1)',
+      });
+    });
+    before.current = next;
+  }, [grid, signature]);
+}
+
+type Drag = {
+  key: BoardCardKey;
+  mode: 'move' | 'resize';
+  startX: number;
+  startY: number;
+  from: BoardPlacement;
+  base: BoardLayout;
+  colWidth: number;
+  rows: { tops: number[]; heights: number[]; gap: number };
+  /** The card's top and bottom in grid pixels when the drag began. */
+  top: number;
+  bottom: number;
+};
 
 // ── Cards ───────────────────────────────────────────────────────────────────
 
@@ -813,7 +930,124 @@ export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props)
   if (slots.side) cards.side = <SlotCard label={slots.side.label}>{slots.side.body}</SlotCard>;
 
   const present = new Set(Object.entries(cards).filter(([, node]) => node).map(([key]) => key as BoardCardKey));
-  const placements = boardPlacements(present);
+  const stored = brief.board.layout;
+  const resolved = stored ? resolveBoardLayout(stored, present) : boardPlacements(present);
+  const [preview, setPreview] = useState<BoardLayout | null>(null);
+  const [arrangeOn, setArranging] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [draggingKey, setDraggingKey] = useState<BoardCardKey | null>(null);
+  const drag = useRef<Drag | null>(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The layout waiting to save, and the last one the server has, to fall back to.
+  const pending = useRef<{ layout: BoardLayout; fallback: BoardLayout | null } | null>(null);
+  const placements = preview ?? resolved;
+  const canArrange = brief.board.canArrange && wide;
+  const signature = JSON.stringify(placements);
+  useSlide(gridRef, signature);
+  const names = { ...CARD_NAMES, side: slots.side?.label ?? CARD_NAMES.side };
+
+  // A board too narrow to arrange is never in arrange mode.
+  const arranging = arrangeOn && canArrange;
+  // Leaving the board with a move still waiting sends it now rather than dropping it.
+  const releaseId = brief.releaseId;
+  useEffect(
+    () => () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      if (pending.current) void saveLayout(releaseId, pending.current.layout);
+    },
+    [releaseId]
+  );
+
+  const setStored = (layout: BoardLayout | null) =>
+    onPatch((current) => ({ ...current, board: { ...current.board, layout } }));
+
+  /** Show the new layout now; save it a moment later, so a run of arrow keys is one save. */
+  const commit = (next: BoardLayout) => {
+    if (JSON.stringify(next) === JSON.stringify(resolved)) return;
+    // A run of moves falls back to where the board was before the run, not one step back.
+    pending.current = { layout: next, fallback: pending.current ? pending.current.fallback : stored };
+    setStored(next);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      const job = pending.current;
+      pending.current = null;
+      saveTimer.current = null;
+      if (!job) return;
+      const result = await saveLayout(releaseId, job.layout);
+      if (!result.ok) {
+        setStored(job.fallback);
+        onToast(result.error, 'error');
+      }
+    }, 350);
+  };
+
+  const reset = async () => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    pending.current = null;
+    setBusy(true);
+    const result = await resetLayout(brief.releaseId);
+    setBusy(false);
+    if (!result.ok) {
+      onToast(result.error, 'error');
+      return;
+    }
+    setStored(null);
+    onToast('The board is back to how it started.', 'success');
+  };
+
+  const startDrag = (event: ReactPointerEvent<HTMLElement>, key: BoardCardKey, mode: Drag['mode']) => {
+    const grid = gridRef.current;
+    const from = placements[key];
+    if (!grid || !from || event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const rows = gridRows(grid);
+    const gap = parseFloat(getComputedStyle(grid).columnGap) || 0;
+    const colWidth = (grid.getBoundingClientRect().width + gap) / BOARD_COLUMNS;
+    const top = rows.tops[from.y - 1] ?? 0;
+    const lastRow = Math.min(from.y + from.h - 2, rows.tops.length - 1);
+    const bottom = (rows.tops[lastRow] ?? 0) + (rows.heights[lastRow] ?? 0);
+    setDraggingKey(key);
+    drag.current = { key, mode, startX: event.clientX, startY: event.clientY, from, base: placements, colWidth, rows, top, bottom };
+  };
+
+  const moveDrag = (event: ReactPointerEvent<HTMLElement>) => {
+    const current = drag.current;
+    if (!current) return;
+    const dx = event.clientX - current.startX;
+    const dy = event.clientY - current.startY;
+    const cols = Math.round(dx / current.colWidth);
+    const { from } = current;
+    let to: BoardPlacement;
+    if (current.mode === 'move') {
+      to = { ...from, x: from.x + cols, y: rowAt(current.rows, current.top + dy) };
+    } else {
+      const bottomRow = rowAt(current.rows, current.bottom + dy + current.rows.gap / 2) - 1;
+      to = { ...from, w: from.w + cols, h: Math.max(1, bottomRow - from.y + 1) };
+    }
+    setPreview(moveBoardCard(current.base, current.key, to));
+  };
+
+  const endDrag = () => {
+    if (!drag.current) return;
+    drag.current = null;
+    setDraggingKey(null);
+    if (preview) commit(preview);
+    setPreview(null);
+  };
+
+  const nudge = (event: ReactKeyboardEvent<HTMLElement>, key: BoardCardKey) => {
+    const direction = ARROWS[event.key];
+    if (event.key === 'Escape') {
+      setArranging(false);
+      return;
+    }
+    if (!direction) return;
+    event.preventDefault();
+    commit(nudgeBoardCard(placements, key, direction, event.shiftKey));
+  };
 
   return (
     <div
@@ -829,22 +1063,96 @@ export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props)
         // stack, so a computer never flashes the wrong layout.
         <div className="min-h-[420px]" aria-busy="true" />
       ) : wide ? (
-        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(12, minmax(0, 1fr))' }}>
-          {Object.entries(placements).map(([key, spot]) => {
-            const style: CSSProperties = {
-              gridColumn: `${spot.x} / span ${spot.w}`,
-              gridRow: `${spot.y} / span ${spot.h}`,
-            };
-            return (
-              <div key={key} className="flex min-w-0 flex-col [&>*]:flex-1" style={style}>
-                {cards[key as BoardCardKey]}
-              </div>
-            );
-          })}
-        </div>
+        <>
+          {canArrange ? (
+            <div className="mb-3 flex min-h-9 flex-wrap items-center justify-end gap-2">
+              {arranging ? (
+                <>
+                  <p className="mr-auto text-[13px] text-content-secondary">
+                    Drag a card to move it. Pull its corner to resize. Arrow keys work too.
+                  </p>
+                  {stored ? (
+                    <button
+                      type="button"
+                      onClick={() => void reset()}
+                      disabled={busy}
+                      className="motion-focus motion-press inline-flex h-9 items-center gap-1.5 rounded-full border border-stroke-strong px-3.5 text-[13px] font-semibold text-content-primary transition-colors hover:bg-bg-hover disabled:opacity-60"
+                    >
+                      {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RotateCcw className="h-4 w-4" aria-hidden="true" />}
+                      Reset
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setArranging(false)}
+                    className="motion-focus motion-press inline-flex h-9 items-center gap-1.5 rounded-full bg-brand px-3.5 text-[13px] font-semibold text-content-inverse transition-colors hover:bg-brand-hover"
+                  >
+                    <Check className="h-4 w-4" aria-hidden="true" />
+                    Done
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setArranging(true)}
+                  className="motion-focus motion-press inline-flex h-9 items-center gap-1.5 rounded-full border border-stroke-strong bg-bg-surface px-3.5 text-[13px] font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+                >
+                  <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+                  Arrange
+                </button>
+              )}
+            </div>
+          ) : null}
+          <div ref={gridRef} className="grid gap-4" style={{ gridTemplateColumns: 'repeat(12, minmax(0, 1fr))' }}>
+            {(Object.entries(placements) as [BoardCardKey, BoardPlacement][]).map(([key, spot]) => {
+              const style: CSSProperties = {
+                gridColumn: `${spot.x} / span ${spot.w}`,
+                gridRow: `${spot.y} / span ${spot.h}`,
+              };
+              const dragging = draggingKey === key;
+              return (
+                <div
+                  key={key}
+                  data-card={key}
+                  data-dragging={dragging ? 'true' : undefined}
+                  className={`relative flex min-w-0 flex-col [&>*:first-child]:flex-1 ${dragging ? 'z-20' : ''}`}
+                  style={style}
+                >
+                  {cards[key]}
+                  {arranging ? (
+                    // While arranging, the card's own buttons and fields rest:
+                    // this layer takes the pointer and the keys.
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Move ${names[key]}. Arrow keys move it, shift and arrow keys resize it.`}
+                      onPointerDown={(event) => startDrag(event, key, 'move')}
+                      onPointerMove={moveDrag}
+                      onPointerUp={endDrag}
+                      onPointerCancel={endDrag}
+                      onKeyDown={(event) => nudge(event, key)}
+                      className={`absolute inset-0 cursor-grab touch-none rounded-2xl border-2 border-dashed outline-none transition-colors focus-visible:border-brand focus-visible:bg-brand/5 active:cursor-grabbing ${
+                        dragging ? 'border-brand bg-brand/10 shadow-lg' : 'border-brand/40 bg-bg-surface/10 hover:bg-brand/5'
+                      }`}
+                    >
+                      <span
+                        aria-hidden="true"
+                        onPointerDown={(event) => startDrag(event, key, 'resize')}
+                        onPointerMove={moveDrag}
+                        onPointerUp={endDrag}
+                        onPointerCancel={endDrag}
+                        className="absolute bottom-1 right-1 h-6 w-6 cursor-nwse-resize touch-none rounded-br-xl border-b-[3px] border-r-[3px] border-brand"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </>
       ) : (
         <div className="flex flex-col gap-3">
-          {boardPhoneOrder(present).map((key) => (
+          {(stored ? layoutPhoneOrder(resolved) : boardPhoneOrder(present)).map((key) => (
             <div key={key} className="min-w-0">
               {cards[key]}
             </div>

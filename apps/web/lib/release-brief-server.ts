@@ -10,7 +10,8 @@
 
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 
-import { briefProgress, type BriefFeel, type BriefFeelPatch } from '@/lib/brief-board';
+import { briefProgress, type BoardCardKey, type BriefFeel, type BriefFeelPatch } from '@/lib/brief-board';
+import { isBoardCardKey, type BoardLayout } from '@/lib/brief-board-layout';
 import { loadCoverArtUrls } from '@/lib/cover-art';
 import { isMissingTableError } from '@/lib/promo-channels';
 import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
@@ -49,6 +50,7 @@ export const BRIEFS_TABLE = 'release_briefs';
 export const BRIEF_REFERENCES_TABLE = 'release_brief_references';
 export const BRIEF_DECISIONS_TABLE = 'release_brief_decisions';
 export const BRIEF_REVISIONS_TABLE = 'release_brief_revisions';
+export const BRIEF_CARDS_TABLE = 'release_brief_cards';
 
 /** Two edits to the same block by the same person this close together are one
  *  history row: the Idea autosaves as you type, and thirty "edited Idea" rows
@@ -249,7 +251,7 @@ export async function loadBriefPayload(
   }
 ): Promise<BriefResult<BriefPayload>> {
   const { releaseId } = input;
-  const [briefRead, referencesRead, decisionsRead, revisionsRead, tasks, notes, canManageShare, planSeed, covers] =
+  const [briefRead, referencesRead, decisionsRead, revisionsRead, tasks, notes, canManageShare, planSeed, covers, layout] =
     await Promise.all([
       readBriefRow(admin, releaseId),
       readReferences(admin, releaseId),
@@ -273,6 +275,7 @@ export async function loadBriefPayload(
       loadCoverArtUrls(admin, [{ id: releaseId, artwork_asset_id: input.artworkAssetId }], { thumbs: false }).catch(
         () => new Map<string, { url: string }>()
       ),
+      readBoardLayout(admin, releaseId),
     ]);
 
   if (!briefRead.ok) return briefRead;
@@ -350,6 +353,8 @@ export async function loadBriefPayload(
         today,
         progress: briefProgress(tasks, today),
         feel: brief?.feel ?? { headline: '', feelsLike: [], notThis: [], palette: [] },
+        layout,
+        canArrange: canManageShare,
       },
     },
   };
@@ -456,6 +461,48 @@ export async function saveBriefFeel(
   if (error) return failure(error, 'Could not save the look and feel.');
   await recordBriefRevision(admin, { releaseId: input.releaseId, block: 'feel', actorId: input.actorId });
   return { ok: true, value: input.patch };
+}
+
+// ── Board layout (#897 phase 1b) ────────────────────────────────────────────
+
+/** The stored card places, or null when the board still uses the default. A failed read shows the default. */
+async function readBoardLayout(admin: SupabaseClient, releaseId: string): Promise<BoardLayout | null> {
+  const { data, error } = await admin
+    .from(BRIEF_CARDS_TABLE)
+    .select('card_key,x,y,w,h')
+    .eq('release_id', releaseId)
+    .neq('kind', 'note');
+  if (error || !data || data.length === 0) return null;
+  const layout: BoardLayout = {};
+  for (const row of (data as unknown[]).map(asRow)) {
+    if (!isBoardCardKey(row.card_key)) continue;
+    layout[row.card_key] = { x: Number(row.x), y: Number(row.y), w: Number(row.w), h: Number(row.h) };
+  }
+  return Object.keys(layout).length ? layout : null;
+}
+
+/** Save the whole board in one upsert, so a push-down never leaves half the cards moved. */
+export async function saveBoardLayout(
+  admin: SupabaseClient,
+  input: { releaseId: string; layout: BoardLayout; actorId: string }
+): Promise<BriefResult<BoardLayout>> {
+  const rows = (Object.keys(input.layout) as BoardCardKey[]).map((key) => ({
+    release_id: input.releaseId,
+    card_key: key,
+    kind: key,
+    ...input.layout[key]!,
+    created_by: input.actorId,
+  }));
+  const { error } = await admin.from(BRIEF_CARDS_TABLE).upsert(rows, { onConflict: 'release_id,card_key' });
+  if (error) return failure(error, 'Could not save the board.');
+  return { ok: true, value: input.layout };
+}
+
+/** Back to the default layout. Notes (phase 2) keep their rows. */
+export async function resetBoardLayout(admin: SupabaseClient, releaseId: string): Promise<BriefResult<null>> {
+  const { error } = await admin.from(BRIEF_CARDS_TABLE).delete().eq('release_id', releaseId).neq('kind', 'note');
+  if (error) return failure(error, 'Could not reset the board.');
+  return { ok: true, value: null };
 }
 
 export async function addBriefReference(

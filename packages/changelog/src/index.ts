@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.219.0",
+    title: "Arrange the brief",
+    tag: "Rollouts",
+    date: "October 30, 2026",
+    highlights: [
+      "Owners and admins can now arrange the brief. Tap Arrange, then drag a card to move it or pull its corner to make it bigger.",
+      "Reset puts the board back the way it started. On a phone, the brief reads in the order you set.",
+    ],
+  },
+  {
     version: "1.218.0",
     title: "More room for your plan",
     tag: "Rollouts",
