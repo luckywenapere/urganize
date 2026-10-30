@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.225.2",
+    tag: "Rollouts",
+    date: "October 31, 2026",
+    highlights: [
+      "On your phone, when you swipe a plan up, the slim bar at the top no longer lets the plan show through above it.",
+    ],
+  },
+  {
     version: "1.225.1",
     tag: "Team",
     date: "October 31, 2026",
