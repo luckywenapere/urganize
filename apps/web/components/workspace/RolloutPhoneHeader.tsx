@@ -75,14 +75,21 @@ export function RolloutPhoneHeader({
   // Folded (#898): a small swipe up the plan swaps this header for one slim
   // line (back, title, count) and the Menu pill, held under the top bar.
   const folded = usePlanMenuFold((state) => state.folded);
-  const [topBarHeight, setTopBarHeight] = useState(0);
+  // Where the top bar ends on screen right now, not its height: on a phone the
+  // top bar scrolls away with a rollout, and a header held its height down
+  // left a strip the plan showed through (founder screenshot, Oct 31, 2026).
+  const [topBarBottom, setTopBarBottom] = useState(0);
   useEffect(() => {
     if (!folded) return;
     const bar = document.querySelector<HTMLElement>('[data-swipe-topbar]');
-    const measure = () => setTopBarHeight(bar ? bar.getBoundingClientRect().height : 0);
+    const measure = () => setTopBarBottom(bar ? Math.max(0, Math.round(bar.getBoundingClientRect().bottom)) : 0);
     measure();
+    window.addEventListener('scroll', measure, { passive: true });
     window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('scroll', measure);
+      window.removeEventListener('resize', measure);
+    };
   }, [folded]);
 
   useEffect(() => {
@@ -144,8 +151,10 @@ export function RolloutPhoneHeader({
     return (
       <div
         data-rollout-phone-folded-header
-        style={{ top: topBarHeight }}
-        className="sticky z-20 mb-3 bg-bg-base pb-1"
+        // Held at the very top and padded down to the top bar (or the status
+        // bar once it has gone), so nothing scrolls past above it.
+        style={{ paddingTop: `max(${topBarBottom}px, env(safe-area-inset-top, 0px))` }}
+        className="sticky top-0 z-20 -mx-4 mb-3 bg-bg-base px-4 pb-1"
       >
         <div className="flex h-11 items-center gap-1">
           <SlimTitle title={title} done={done} total={total} backLabel={backLabel} onBack={onBack} />

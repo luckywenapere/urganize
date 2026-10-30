@@ -12,3 +12,7 @@ Opening: a pull of 70px past the top that started at the top (momentum running i
 Pieces: rule `lib/plan-menu-fold.ts` (tested), store `stores/usePlanMenuFold.ts`, passive window listeners `components/workspace/usePlanMenuFoldGestures.ts` (turned on from WorkspaceView; off under the phone search, the rotate prompt, a scene, or a new rollout id, and turning off unfolds), pill `PlanMenuPill.tsx`. Gestures that start in a field, dialog or sheet are ignored.
 
 Thresholds are first guesses, not tuned on a real phone. Verified with simulated wheel and touch in the local app (desktop 1400 wide and mobile 375).
+
+## Fix: the strip above the folded phone header (2026-10-31, v1.225.2)
+
+The folded header stuck at `top: <top bar height>`, but on a phone the swipe top bar scrolls away with a rollout, so the plan showed through a strip above it (founder screenshot). It now sticks at `top: 0` and pads down to where the top bar ends on screen right now (read on scroll), or to the safe area once the bar has gone, and covers the page gutter (`-mx-4 px-4`). Not checked on a real phone.
