@@ -16,7 +16,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { isIOSApp } from '@/lib/platform';
-import { HOME_PATH } from '@/lib/home-path';
+import { isHomeLocation } from '@/lib/home-path';
 import {
   PLAN_LANDED_EVENT,
   clearOnboardingLanding,
@@ -73,7 +73,7 @@ export function OnboardingTrialSheetHost() {
     const tick = () => {
       const releaseId = readReleaseParam();
       const place = {
-        onHome: pathname === HOME_PATH,
+        onHome: isHomeLocation(pathname, window.location.search),
         releaseId: pathname === '/dashboard' ? releaseId : null,
         onRecord: RECORD_PATH.test(pathname || ''),
       };

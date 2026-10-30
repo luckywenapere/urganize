@@ -1,19 +1,21 @@
 /**
- * Where the crash screen's "Back to your rollouts" goes (2026-10-09).
+ * Where the crash screen's "Back to Home" goes (2026-10-09, updated
+ * 2026-10-30).
  *
- * It used to go to HOME_PATH, which is /dashboard/home since Home became the
- * landing page. So when Home itself was the page that broke, the way out led
- * straight back into the same crash, and so on. The button promises rollouts,
- * so it goes to the catalogue (/dashboard), which is where the rollouts are.
+ * It goes to Home, /dashboard, the artist list (the Rollouts list that used to
+ * live there was turned off on Oct 30, 2026). A crashed rollout
+ * (/dashboard?release=) goes there too: the list is a different page.
  *
- * The one page that cannot be sent there is the catalogue itself, for the same
- * reason; a crash there goes to Artists instead. Any other page goes to the
- * catalogue. Pure, so both directions are tested.
+ * The one page that cannot be sent there is Home itself, or the way out leads
+ * straight back into the same crash; a crash there goes to Team instead. Pure,
+ * so every direction is tested.
  */
 export const ERROR_BACK_PATH = '/dashboard';
-export const ERROR_BACK_FALLBACK_PATH = '/dashboard/artists';
+export const ERROR_BACK_FALLBACK_PATH = '/dashboard/team';
 
-export function errorBackHref(pathname: string | null | undefined): string {
+export function errorBackHref(pathname: string | null | undefined, search?: string | null): string {
   const path = (pathname || '').split(/[?#]/)[0].replace(/\/+$/, '') || '/';
-  return path === ERROR_BACK_PATH ? ERROR_BACK_FALLBACK_PATH : ERROR_BACK_PATH;
+  if (path !== ERROR_BACK_PATH) return ERROR_BACK_PATH;
+  const onRollout = Boolean(new URLSearchParams(search || '').get('release'));
+  return onRollout ? ERROR_BACK_PATH : ERROR_BACK_FALLBACK_PATH;
 }

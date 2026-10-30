@@ -44,14 +44,29 @@ describe('tabs and areas', () => {
     expect(swipeTabForPath('/dashboard/home')).toBeNull();
     expect(swipeTabForPath('/dashboard/team')).toBe('team');
     expect(swipeTabForPath('/dashboard/urgans/')).toBe('urgans');
+    // Home, the artist list, moved to /dashboard (Oct 30, 2026); the old
+    // address still shows it.
+    expect(swipeTabForPath('/dashboard')).toBe('artists');
+    expect(swipeTabForPath('/dashboard/')).toBe('artists');
     expect(swipeTabForPath('/dashboard/artists')).toBe('artists');
+    expect(swipeTabForPath('/dashboard/abc')).toBeNull();
     expect(swipeTabForPath('/dashboard/artists/abc')).toBeNull();
-    expect(swipeTabForPath('/dashboard')).toBeNull();
+  });
+
+  it('reads /dashboard?release= as a rollout pushed over Home, not as the Artists tab', () => {
+    expect(swipeTabForPath('/dashboard', '?release=r1')).toBeNull();
+    expect(swipeTabForPath('/dashboard', 'release=r1&scene=brief')).toBeNull();
+    expect(swipeTabForPath('/dashboard', new URLSearchParams('release=r1'))).toBeNull();
+    expect(swipeTabForPath('/dashboard', '?settings=team')).toBe('artists');
+    expect(swipeTabForPath('/dashboard', '')).toBe('artists');
+    expect(swipeAreaForPath('/dashboard', '?release=r1')).toBe('artists');
   });
 
   it('lights Artists on catalogue screens and nothing on settings', () => {
     expect(swipeAreaForPath('/dashboard')).toBe('artists');
     expect(swipeAreaForPath('/dashboard/artists/abc')).toBe('artists');
+    expect(swipeAreaForPath('/dashboard/abc')).toBe('artists');
+    expect(swipeAreaForPath('/dashboard/abc/records/r1')).toBe('artists');
     expect(swipeAreaForPath('/dashboard/releases/x')).toBe('artists');
     expect(swipeAreaForPath('/dashboard/opportunities')).toBeNull();
   });

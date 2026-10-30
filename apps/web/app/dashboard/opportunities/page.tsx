@@ -11,6 +11,6 @@ export const metadata: Metadata = {
 
 export default function OpportunitiesPage() {
   // Paused Oct 27, 2026 (lib/paused-features.ts): an old link lands on Home.
-  if (!isOpportunitiesEnabled()) redirect('/dashboard/artists');
+  if (!isOpportunitiesEnabled()) redirect('/dashboard');
   return <OpportunitiesPageClient />;
 }

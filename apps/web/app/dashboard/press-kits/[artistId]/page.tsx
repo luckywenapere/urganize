@@ -5,5 +5,5 @@ import { redirect } from 'next/navigation';
 // the fallback. PressKitPageClient is kept, unlinked.
 export default async function PressKitPage({ params }: { params: Promise<{ artistId: string }> }) {
   const { artistId } = await params;
-  redirect(`/dashboard/artists/${encodeURIComponent(artistId)}`);
+  redirect(`/dashboard/${encodeURIComponent(artistId)}`);
 }

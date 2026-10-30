@@ -119,7 +119,7 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
     pages.push({
       key: 'artists',
       label: 'Artists',
-      href: '/dashboard/artists',
+      href: '/dashboard',
       // The press kit words moved to Pitch this! (Oct 17, 2026), where the
       // artist's bio and contact are edited now.
       keywords: ['artist', 'roster', 'act', 'catalogue', 'catalog'],

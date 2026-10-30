@@ -3,7 +3,7 @@ import { CURATOR_HOME_PATH, HOME_PATH, resolveHomePath } from './home-path';
 
 describe('HOME_PATH', () => {
   it('is Artists since Home left the menu (2026-10-29, #876)', () => {
-    expect(HOME_PATH).toBe('/dashboard/artists');
+    expect(HOME_PATH).toBe('/dashboard');
   });
 });
 

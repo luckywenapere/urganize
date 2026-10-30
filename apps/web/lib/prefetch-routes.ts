@@ -76,7 +76,7 @@ export function buildPrefetchRoutes({ hasCuratorProfile }: PrefetchAudience): st
   // landing destination (HOME_PATH), so it is the single most likely page a
   // signed-in account reaches right after the three base routes above warm.
   if (HOME_ENABLED) routes.push('/dashboard/home');
-  if (ARTIST_PAGE_ENABLED) routes.push('/dashboard/artists');
+  if (ARTIST_PAGE_ENABLED) routes.push('/dashboard');
   routes.push('/dashboard/team');
   if (NOTES_ENABLED) routes.push('/dashboard/notes');
   // Pitching left the nav (founder, 2026-10-15) and lives inside each

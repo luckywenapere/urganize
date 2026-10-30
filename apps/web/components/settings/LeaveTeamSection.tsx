@@ -58,7 +58,7 @@ export function LeaveTeamSection() {
       return;
     }
     // A full load, so every cached list forgets the team they just left.
-    window.location.assign('/dashboard/artists');
+    window.location.assign('/dashboard');
   };
 
   return (

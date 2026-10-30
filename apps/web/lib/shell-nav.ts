@@ -12,6 +12,7 @@
 
 import { TEAM_HREF } from './team-page';
 import { isOpportunitiesEnabled, isRelationshipsFlagOn } from './paused-features';
+import { artistIdFromPath } from './artist-page';
 
 export type ShellAreaKey =
   | 'urgans'
@@ -91,11 +92,16 @@ export function readShellFlags(): ShellFlags {
 
 /** Home left the menu (founder, 2026-10-29, #876). Its old address now opens
  *  Artists, so anything still pointing here lands where the menu starts. */
-export const HOME_HREF = '/dashboard/artists';
+export const HOME_HREF = '/dashboard';
 export const URGANS_HREF = '/dashboard/urgans';
+/** /dashboard with ?release=<id> is a rollout. Without it, it was the Rollouts
+ *  list until Oct 30, 2026, and is now the artist list (founder: "disable
+ *  rollouts", each rollout opens from its artist's page). */
 export const CATALOGUE_HREF = '/dashboard';
 export const DISTRIBUTE_HREF = '/dashboard/distribute';
-export const ARTISTS_HREF = '/dashboard/artists';
+/** The artist list, Home's one page, at /dashboard since Oct 30, 2026 (it was
+ *  /dashboard/artists, which still shows the list for old Android apps). */
+export const ARTISTS_HREF = '/dashboard';
 /** The Team tab (issue #853, 2026-10-29): who is on the team, when they were
  *  last in, their tasks, and the workspace's settings. */
 export { TEAM_HREF };
@@ -106,27 +112,30 @@ export { TEAM_HREF };
 export const CATALOGUE_LABEL = 'Home';
 
 export function buildShellAreas(flags: ShellFlags): ShellArea[] {
-  // Artists first and the section's landing, Rollouts second (founder call,
-  // 2026-10-17: "change the title from Catalogue to Artist then make the artist
-  // page be the first on the list of menu and first to load"). The routes did
-  // not move: /dashboard is still Rollouts, so every rollout link keeps working.
+  // Artists is the section's landing (founder call, 2026-10-17). Since Oct 30,
+  // 2026 it is the only tab, so visibleSubTabs draws no tab row at all.
   const catalogueTabs: ShellSubTab[] = [];
   if (flags.artistPage) {
     catalogueTabs.push({
       key: 'artists',
       label: 'Artists',
       href: ARTISTS_HREF,
-      isActive: (p) => startsWithPath(p, ARTISTS_HREF),
+      isActive: (p) => p === ARTISTS_HREF || startsWithPath(p, '/dashboard/artists') || artistIdFromPath(p) !== null,
       action: { label: 'Add artist', press: 'addArtist' },
     });
+  } else {
+    // The Rollouts list was turned off on Oct 30, 2026 (founder): Home is the
+    // artist list alone, with no tab row, and a rollout opens from its artist's
+    // page. It stays only for a build without the artist page, where it is
+    // the one list there is.
+    catalogueTabs.push({
+      key: 'releases',
+      label: 'Rollouts',
+      href: CATALOGUE_HREF,
+      isActive: (p) => p === '/dashboard' || startsWithPath(p, '/dashboard/releases'),
+      action: { label: 'New rollout', press: 'openCreate' },
+    });
   }
-  catalogueTabs.push({
-    key: 'releases',
-    label: 'Rollouts',
-    href: CATALOGUE_HREF,
-    isActive: (p) => p === '/dashboard' || startsWithPath(p, '/dashboard/releases'),
-    action: { label: 'New rollout', press: 'openCreate' },
-  });
   // Distribute left the tab row (founder call, 2026-10-15): it is reached from
   // inside each rollout (its Distribute scene). /dashboard/distribute still
   // lights Catalogue, so an old link lands somewhere that makes sense.
@@ -178,6 +187,7 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
         p === '/dashboard' ||
         startsWithPath(p, '/dashboard/releases') ||
         startsWithPath(p, '/dashboard/artists') ||
+        artistIdFromPath(p) !== null ||
         startsWithPath(p, DISTRIBUTE_HREF) ||
         startsWithPath(p, '/dashboard/notes'),
     },
@@ -313,7 +323,10 @@ export function shellSideMenu(areas: ShellArea[], pathname: string): SideMenu | 
     active: tab.isActive(pathname),
   }));
   if (pages.length === 0) return null;
-  if (pages.length === 1 && area.key !== 'catalogue') return null;
+  // Catalogue kept its one-row menu when Rollouts was its only page. Artists
+  // alone is Home, which shows no menu and no title (Oct 30, 2026, founder:
+  // "remove the title artist").
+  if (pages.length === 1 && !(area.key === 'catalogue' && pages[0].key === 'releases')) return null;
   return { area, pages };
 }
 

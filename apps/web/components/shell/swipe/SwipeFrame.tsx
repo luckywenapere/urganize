@@ -59,7 +59,10 @@ export function SwipeFrame({
   showHelp: boolean;
 }) {
   const pathname = usePathname();
-  const tab = swipeTabForPath(pathname);
+  // /dashboard is the Artists tab; /dashboard?release=<id> is a rollout, a
+  // pushed page drawn over it (Oct 30, 2026: the artist list moved to /dashboard).
+  const searchParams = useSearchParams();
+  const tab = swipeTabForPath(pathname, searchParams);
   const onTab = tab !== null;
   const loadNeedsYou = useNeedsYouStore((state) => state.load);
 

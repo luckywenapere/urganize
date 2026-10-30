@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { AlertCircle, CalendarDays } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
@@ -12,6 +12,8 @@ import { formatArtistName } from '@/lib/release-execution';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { useKnownReleaseCount } from '@/components/loading/known-counts';
 import { WorkspaceView } from '@/components/workspace/WorkspaceView';
+import ArtistsPageClient from './artists/ArtistsPageClient';
+import { isArtistPageEnabled } from '@/lib/artist-page';
 
 // Feature flag — when 'true', /dashboard renders the consolidated workspace
 // (releases + tasks side by side) in place of the legacy greeting/cards layout.
@@ -31,7 +33,15 @@ function formatDate(value: string | null): string | null {
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(parsed);
 }
 
+// The Rollouts list is off (Oct 30, 2026, founder: "disable rollouts").
+// /dashboard is now Home, the artist list, and a rollout opens from its
+// artist's page at /dashboard?release=<id>, which is unchanged. A build without
+// the artist page keeps the old list, the only list it has.
 export default function DashboardPage() {
+  const releaseId = useSearchParams().get('release');
+  if (WORKSPACE_ENABLED && !releaseId && isArtistPageEnabled()) {
+    return <ArtistsPageClient />;
+  }
   if (WORKSPACE_ENABLED) {
     return <WorkspaceView />;
   }

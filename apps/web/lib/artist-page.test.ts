@@ -29,7 +29,7 @@ describe('isArtistPageEnabled', () => {
 describe('links', () => {
   it('opens a release in the catalogue and an artist on its own page', () => {
     expect(releaseHref('r 1')).toBe('/dashboard?release=r%201');
-    expect(artistHref('a/1')).toBe('/dashboard/artists/a%2F1');
+    expect(artistHref('a/1')).toBe('/dashboard/a%2F1');
   });
 });
 
