@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.216.1",
+    tag: "Rollouts",
+    date: "October 30, 2026",
+    highlights: [
+      "On an artist page, the Altlink credit is now a small line under your songs that says it makes the smart links.",
+    ],
+  },
+  {
     version: "1.216.0",
     title: "Add an artist, bring their music",
     tag: "Rollouts",
