@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.229.0",
+    title: "Add your photo",
+    tag: "Team",
+    date: "October 31, 2026",
+    highlights: [
+      "Add your photo when you set up your team, or right after you join one. Your team sees your face instead of your initials.",
+      "Change or remove it any time in Settings, under Profile.",
+    ],
+  },
+  {
     version: "1.228.0",
     title: "Say no to advice",
     tag: "App",
