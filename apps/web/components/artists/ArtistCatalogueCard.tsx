@@ -351,13 +351,10 @@ export function ArtistCatalogueCard({
               {showAll ? 'Show fewer' : `Show all ${rows.length}`}
             </button>
           ) : null}
-          {data.cap ? (
-            <p className="mt-2 text-xs text-content-tertiary">
-              Links made today: {data.cap.used} of {data.cap.limit}
-            </p>
-          ) : null}
-          {/* The links are Altlink's, so their credit sits under the list (#852). */}
-          {rows.some((row) => row.link?.url) ? <PoweredByAltlink className="mt-3" /> : null}
+          {/* The links are Altlink's, so their credit is one small line under the
+              list that names the job (#852, #889). The daily count left the page
+              (#889): the limit pop-up says it when it is reached. */}
+          {rows.some((row) => row.link?.url) ? <PoweredByAltlink variant="line" className="mt-3" /> : null}
         </>
       )}
 
