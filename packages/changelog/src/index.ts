@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.216.3",
+    tag: "Rollouts",
+    date: "October 30, 2026",
+    highlights: [
+      "Bringing in an artist's older songs is a one-time step for music out before Urganize. New songs come through your rollouts.",
+      "On an artist's page, Out now has a Bring them in button where the older songs would go.",
+    ],
+  },
+  {
     version: "1.216.2",
     tag: "App",
     date: "October 30, 2026",

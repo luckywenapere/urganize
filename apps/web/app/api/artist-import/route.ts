@@ -22,7 +22,6 @@ export async function POST(request: NextRequest) {
     id?: unknown;
     name?: unknown;
     artistId?: unknown;
-    sync?: unknown;
   } | null;
   const name = typeof body?.name === 'string' ? body.name.trim() : '';
   if (!body || !isImportProvider(body.provider) || !isSafeSourceId(body.id) || !name) {
@@ -65,7 +64,6 @@ export async function POST(request: NextRequest) {
       sourceId: body.id,
       name,
       artistId,
-      sync: body.sync !== false,
     });
     if (!outcome.ok) {
       const status = outcome.reason === 'artist_limit' ? 403 : outcome.reason === 'source_unreachable' ? 502 : 500;

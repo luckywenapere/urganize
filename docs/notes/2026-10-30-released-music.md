@@ -2,6 +2,16 @@
 
 Oyin said the "Import past rollouts" button under the Artists list "looks off" and "doesn't work that way": old music is not a rollout, and it belongs to one artist. Mock approved the same day: `docs/mocks/catalogue-import/mock.html`.
 
+## Changed the same day (v1.216.3, #890, founder)
+
+Oyin rejected the "new drops come in by themselves" idea and the sentence under Out now: the point is songs out BEFORE Urganize, brought in once; new songs should come through rollouts in Urganize, never be pulled in from streaming. Mock approved: `docs/mocks/one-time-import/mock.html`.
+
+- The daily check (`syncArtistCatalogue`, `isCatalogueSyncDue`) and the check screen's "new releases by themselves" box are removed. The import now writes `catalogue_sync = false`; the columns stay. A saved profile now just means "brought in already".
+- Out now: nothing out at all shows one card, "Songs out before Urganize?" with Bring them in. Rollouts out but no older songs shows one dashed slot the size of a song row, "Older songs, From before Urganize". Neither shows once a profile is saved or older songs exist. The "From Deezer · Change profile" line and the "New drops do not come in" sentence are gone.
+- Check screen button: "Add Dorian and 14 releases"; from an artist page, "Bring in 14 releases".
+
+Read the bullets below as the v1.216.0 history; where they mention syncing, that is gone.
+
 ## What changed
 
 - **Add artist starts with a search.** The + beside the Artists tabs (desktop) and on the phone header opens `AddArtistDialog` (`components/artists/AddArtistDialog.tsx`), mounted once by `AppShell` as `AddArtistHost` and opened through `useShellStore.openAddArtist`. The tab action is `press: 'addArtist'` (the old Settings link `ADD_ARTIST_HREF` is gone). Search, choose, one check screen (photo, first covers, count, latest, first year, a "new releases by themselves" box), then Add. A new artist opens on their page. "Not on streaming yet? Add by name" posts to `/api/workspace/artists` as Settings did. The look-alike question from #865 stays ("Is this Dorian?").

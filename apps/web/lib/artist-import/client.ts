@@ -17,8 +17,8 @@ export type CatalogueRow = {
 
 export type LinkCap = { allowed: boolean; limit: number; used: number; remaining: number };
 
-/** The streaming profile an artist's music comes from (#882); null when none is linked. */
-export type CatalogueProfile = { source: 'deezer' | 'itunes'; sync: boolean; syncedAt: string | null };
+/** The streaming profile an artist's older music came from (#882); null until brought in. */
+export type CatalogueProfile = { source: 'deezer' | 'itunes'; syncedAt: string | null };
 
 export type Catalogue = {
   releases: CatalogueRow[];
@@ -112,8 +112,6 @@ export async function saveArtistImport(input: {
   name: string;
   /** A roster artist to put the releases on, instead of matching by name. */
   artistId?: string;
-  /** Keep checking this profile for new drops (#882). Default on. */
-  sync?: boolean;
 }): Promise<SavedImport> {
   try {
     const token = await getAccessToken();

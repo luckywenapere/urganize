@@ -31,8 +31,6 @@ export async function importArtistCatalogue(
     sourceId: string;
     name: string;
     artistId?: string;
-    /** Check this profile for new drops from now on (#882). Default on. */
-    sync?: boolean;
   }
 ): Promise<ImportOutcome> {
   const name = input.name.trim().slice(0, 120);
@@ -101,27 +99,28 @@ export async function importArtistCatalogue(
     artistId,
     provider: input.provider,
     sourceId: input.sourceId,
-    sync: input.sync !== false,
   });
   return { ok: true, artistId, artistName, added, total: releases.length, createdArtist };
 }
 
 /**
- * The artist remembers the profile their music came from, so new drops can be
- * checked for later, and takes its photo when they have none yet (#882). The
+ * The artist remembers the profile their older music came from, which also
+ * marks the one-time bring-in as done (#890: no later checks for new drops;
+ * new songs come through rollouts), and takes its photo when they have none
+ * yet (#882). The
  * photo is copied into our bucket like an uploaded one; a failure leaves the
  * initials tile and never fails the import.
  */
 async function rememberStreamingProfile(
   adminClient: SupabaseClient,
-  input: { artistId: string; provider: ImportProvider; sourceId: string; sync: boolean }
+  input: { artistId: string; provider: ImportProvider; sourceId: string }
 ): Promise<void> {
   const { error } = await adminClient
     .from(ARTISTS_TABLE)
     .update({
       streaming_source: input.provider,
       streaming_source_id: input.sourceId,
-      catalogue_sync: input.sync,
+      catalogue_sync: false,
       catalogue_synced_at: new Date().toISOString(),
     })
     .eq('id', input.artistId);
@@ -147,63 +146,11 @@ async function rememberStreamingProfile(
   }
 }
 
-/** How long a checked profile waits before it is checked for new drops again. */
-export const CATALOGUE_SYNC_EVERY_MS = 20 * 60 * 60 * 1000;
-
+/** The streaming profile an artist's older music came from (#882). */
 export type StreamingProfile = {
   source: ImportProvider;
-  sync: boolean;
   syncedAt: string | null;
 };
-
-/** Pure: whether a profile is due a check for new drops. */
-export function isCatalogueSyncDue(profile: StreamingProfile | null, now: Date = new Date()): boolean {
-  if (!profile || !profile.sync) return false;
-  if (!profile.syncedAt) return true;
-  const last = Date.parse(profile.syncedAt);
-  return !Number.isFinite(last) || now.getTime() - last >= CATALOGUE_SYNC_EVERY_MS;
-}
-
-/**
- * Checks a remembered profile for new drops and saves them (#882). The row is
- * claimed first by moving its stamp, so two people opening the artist at once
- * make one call to the music service. Runs after the reply; never throws.
- */
-export async function syncArtistCatalogue(adminClient: SupabaseClient, artistId: string): Promise<void> {
-  try {
-    const cutoff = new Date(Date.now() - CATALOGUE_SYNC_EVERY_MS).toISOString();
-    const claimed = await adminClient
-      .from(ARTISTS_TABLE)
-      .update({ catalogue_synced_at: new Date().toISOString() })
-      .eq('id', artistId)
-      .eq('catalogue_sync', true)
-      .not('streaming_source_id', 'is', null)
-      .or(`catalogue_synced_at.is.null,catalogue_synced_at.lt.${cutoff}`)
-      .select('id,workspace_id,owner_user_id,streaming_source,streaming_source_id')
-      .maybeSingle();
-    const row = claimed.data as {
-      workspace_id: string;
-      owner_user_id: string;
-      streaming_source: ImportProvider;
-      streaming_source_id: string;
-    } | null;
-    if (!row) return;
-    const releases = await fetchImportReleases(row.streaming_source, row.streaming_source_id);
-    if (releases === null) {
-      // Unreachable: let the next visit try again.
-      await adminClient.from(ARTISTS_TABLE).update({ catalogue_synced_at: null }).eq('id', artistId);
-      return;
-    }
-    await saveCatalogueRows(adminClient, {
-      workspaceId: row.workspace_id,
-      artistId,
-      userId: row.owner_user_id,
-      releases,
-    });
-  } catch (error) {
-    console.warn('[artist-import] sync failed:', error instanceof Error ? error.message : error);
-  }
-}
 
 /** Rows newly added (existing ones are refreshed, not counted), or null on a write error. */
 async function saveCatalogueRows(
