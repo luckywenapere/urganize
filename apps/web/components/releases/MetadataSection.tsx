@@ -20,6 +20,7 @@ import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { MetadataFieldsSkeleton, ShareLinkCardSkeleton } from '@/components/loading/ReleaseSectionSkeletons';
 import type { ReleaseMetadataSnapshot } from '@/lib/release-ops';
 import { describeSplitTotal, formatPercent, splitTotalIsOff } from '@/lib/credit-split-totals';
+import { useDistributionStatus } from './useDistributionStatus';
 import {
   metadataFieldElementId,
   metadataStepElementId,
@@ -177,8 +178,8 @@ const COUNTED_METADATA_FIELDS = [
   'cLine',
 ] as const satisfies readonly (keyof MetadataFormState)[];
 
-function splitTotalTone(total: number): string {
-  return splitTotalIsOff(total) ? 'text-status-warning' : 'text-content-secondary';
+function splitTotalTone(total: number, left = false): string {
+  return splitTotalIsOff(total) && !left ? 'text-status-warning' : 'text-content-secondary';
 }
 
 /** Whether a split total needs a flag on the collapsed Step 3 chip is
@@ -555,9 +556,14 @@ export function MetadataSection({
   );
   const hasAnySongwriterSplit = submissions.some((item) => item.songwriterSplit !== null);
   const hasAnyMasterSplit = submissions.some((item) => item.masterSplit !== null);
+  // "Leave splits" on the rollout (#919) quiets the warning colour here too,
+  // so the same advice does not stay up in a second place.
+  const { data: distribution } = useDistributionStatus(releaseId);
+  const splitsLeft = Boolean(distribution?.skippedWarnings?.includes('splits_not_100'));
   const splitsNeedAttention =
-    (hasAnySongwriterSplit && splitTotalIsOff(totalSongwriterSplit)) ||
-    (hasAnyMasterSplit && splitTotalIsOff(totalMasterSplit));
+    !splitsLeft &&
+    ((hasAnySongwriterSplit && splitTotalIsOff(totalSongwriterSplit)) ||
+      (hasAnyMasterSplit && splitTotalIsOff(totalMasterSplit)));
 
   // "N of 9 filled in" — derived from COUNTED_METADATA_FIELDS so the count and
   // the total can never disagree when a field is added.
@@ -1019,12 +1025,12 @@ export function MetadataSection({
                     {(hasAnySongwriterSplit || hasAnyMasterSplit) && (
                       <div className="flex flex-col gap-2 border border-stroke-default bg-bg-surface p-4 text-sm sm:flex-row sm:items-center sm:gap-6">
                         {hasAnySongwriterSplit && (
-                          <p className={splitTotalTone(totalSongwriterSplit)}>
+                          <p className={splitTotalTone(totalSongwriterSplit, splitsLeft)}>
                             {describeSplitTotal('Writing shares', totalSongwriterSplit)}
                           </p>
                         )}
                         {hasAnyMasterSplit && (
-                          <p className={splitTotalTone(totalMasterSplit)}>
+                          <p className={splitTotalTone(totalMasterSplit, splitsLeft)}>
                             {describeSplitTotal('Recording shares', totalMasterSplit)}
                           </p>
                         )}

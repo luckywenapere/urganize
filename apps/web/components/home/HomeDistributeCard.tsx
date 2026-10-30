@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
+import { useHiddenNudge } from '@/lib/hidden-nudges';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { createPostHogEvent } from '@/lib/analytics/shared';
 import {
@@ -45,8 +46,13 @@ export function HomeDistributeCard() {
     };
   }, [userId]);
 
+  // "Not now" puts the upgrade offer away for 30 days in this browser. The
+  // Distribute button for teams that have it is a way in, not an offer, and stays.
+  const [offerHidden, hideOffer] = useHiddenNudge('home-distribute-upgrade', 30);
+
   const view = decideDistributeCard(access);
   if (view === 'hidden') return null;
+  if (view === 'upgrade' && offerHidden) return null;
 
   const upgrade = () => {
     captureAnalyticsEvent(
@@ -84,6 +90,13 @@ export function HomeDistributeCard() {
             className={`${buttonClass} bg-brand text-content-inverse hover:bg-brand-hover`}
           >
             {COPY.upgradeAction}
+          </button>
+          <button
+            type="button"
+            onClick={hideOffer}
+            className="motion-focus mt-1 flex h-11 w-full items-center justify-center rounded-full text-sm font-medium text-content-secondary hover:text-content-primary"
+          >
+            {COPY.notNow}
           </button>
         </>
       ) : (

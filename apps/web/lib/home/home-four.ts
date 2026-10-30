@@ -166,6 +166,7 @@ export const HOME_FOUR_COPY = {
   startTitle: 'Start the next one early.',
   startLine: 'Sessions, songwriting, mix and master.',
   startAction: 'Start the next rollout',
+  notNow: 'Not now',
   grantsFit: (n: number) => (n === 1 ? '1 new grant fits your team' : `${n} new grants fit your team`),
   loadFailed: "Home didn't load.",
   loadFailedLine: 'Your rollouts are safe.',

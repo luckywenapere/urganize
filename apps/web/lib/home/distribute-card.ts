@@ -22,6 +22,8 @@ export const HOME_DISTRIBUTE_COPY = {
   title: 'Get your music to Spotify, Apple Music, Audiomack and more',
   upgradeLine: 'Comes with the Manager plan.',
   upgradeAction: 'Upgrade to Manager',
+  // The offer can be put away for a month (founder, Oct 31, 2026, #919).
+  notNow: 'Not now',
   distributeAction: 'Distribute',
 } as const;
 

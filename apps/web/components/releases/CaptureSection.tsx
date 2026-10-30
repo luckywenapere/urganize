@@ -413,7 +413,7 @@ export function CaptureSection({ releaseId, onToast, embedded = false, quiet = f
               onChange={setField}
               onBlur={flush}
             />
-            <CaptureChecklist readiness={readiness} />
+            <CaptureChecklist releaseId={releaseId} readiness={readiness} />
           </div>
 
           <div className="mt-8 border-t border-stroke-subtle pt-6">

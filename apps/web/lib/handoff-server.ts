@@ -322,7 +322,11 @@ function detailFor(
   const writing = sumSplits(facts.credits.map((credit) => credit.songwriterSplit));
   const master = sumSplits(facts.credits.map((credit) => credit.masterSplit));
   let splits: 'ok' | 'none' | number = 'none';
-  if (writing.answered && splitTotalIsOff(writing.total)) splits = writing.total;
+  // "Leave splits" (#919): the team has looked at the totals and kept them, so
+  // the row reads as settled instead of a warning that never goes.
+  const splitsLeft = (facts.skippedWarnings ?? []).includes('splits_not_100');
+  if (splitsLeft && (writing.answered || master.answered)) splits = 'ok';
+  else if (writing.answered && splitTotalIsOff(writing.total)) splits = writing.total;
   else if (master.answered && splitTotalIsOff(master.total)) splits = master.total;
   else if (writing.answered || master.answered) splits = 'ok';
   return {

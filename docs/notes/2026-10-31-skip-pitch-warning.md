@@ -12,3 +12,11 @@ Founder: "Release day is under 35 days away. That's tight for a Spotify pitch." 
 ## Keep date (2026-10-31, v1.226.1)
 
 `release_date_tight` ("Stores can take up to 14 working days...", or the date has passed) is skippable too: "Keep date", toast "Got it. Keeping this date." Same column and route; no new SQL.
+
+## No advice that feels compulsory (2026-10-31, v1.228.0, #919)
+
+- **Every distribution warning is skippable now**: "Keep title" (`feat_in_title`, `title_all_caps`), "Leave splits" (`splits_not_100`). A test fails if a new warning is added without an entry in `SKIPPABLE_WARNINGS`. Errors never.
+- **Leave splits reaches the other split surfaces**: the handoff row reads the splits as settled (`lib/handoff-server.ts`), and Metadata's "check the shares" and warning colour go quiet (it reads `skippedWarnings`, now on the distribution payload).
+- **Other nags, kept in this browser** (`lib/hidden-nudges.ts`, localStorage `urganize.hidden.*`, optional days): Home's "Upgrade to Manager" card and "Start the next one early." (Not now, 30 days); "Set your release date" when nothing is blocked (Not now, per rollout; the version that builds the plan stays); the pinned "Confirm your release date" (Unpin); Smart link checklist suggestions (Skip, per rollout; blockers stay); plan "N suggested" items (No thanks).
+- **Left alone on purpose**: cover art stores will reject, the "Start here" tag, billing strips, the press kit page's "questions left" and "release landed" proposals (that page has redirected to Artists since 17 Oct, so nobody sees them).
+- **Known gap, not live**: a distributor rejection would show for good (`loadRejections` has no resolved filter). Nothing records rejections yet.
