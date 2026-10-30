@@ -105,7 +105,7 @@ export function buildMobileMenu(audience: MobileMenuAudience): MobileMenuGroup[]
   // Pitching left the menus (founder, 2026-10-15): it lives inside each
   // rollout, as its Pitch tab.
   if (flags.artists) {
-    work.push({ key: 'artists', label: 'Artists', href: '/dashboard/artists', icon: 'artists' });
+    work.push({ key: 'artists', label: 'Artists', href: '/dashboard', icon: 'artists' });
   }
   // Press kits left Oct 17, 2026 (founder approved "cuts-3"). This module has
   // had no callers since the phone More sheet moved to lib/shell-nav.ts.

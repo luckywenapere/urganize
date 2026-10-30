@@ -4,9 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, ChevronRight, Disc3, Plus, Users } from '@/components/icons';
-import { CATALOGUE_HREF } from '@/lib/shell-nav';
-import { useShellStore } from '@/stores/useShellStore';
 import { initialsFor } from '@/lib/swipe-nav';
+import { ArtistsListSkeleton } from '@/components/loading/ArtistsListSkeleton';
 import { useAuthStore } from '@/lib/auth-store';
 import { artistsList, describeDaysToGo, type ArtistListRow, type ArtistStatus } from '@/lib/artists-list';
 import { artistHref, isArtistPageEnabled, releaseHref } from '@/lib/artist-page';
@@ -16,7 +15,6 @@ import type { ExecutionRelease } from '@/lib/execution-types';
 import { displayReleaseTitle } from '@/types/releases';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
-import { ArtistsRolloutsSwitch } from '@/components/shell/swipe/ArtistsRolloutsSwitch';
 import { DuplicateArtistsPrompt } from '@/components/artists/DuplicateArtistsPrompt';
 import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
@@ -84,24 +82,7 @@ export default function ArtistsPageClient({
       <div className="pt-5 sm:pt-6" />
 
       {loading ? (
-        // The list's own shape (tab jump fix, Oct 18, 2026): one card, three
-        // 64px rows with the face and the name, so nothing moves when it lands.
-        <div
-          className="overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface"
-          aria-busy="true"
-        >
-          <ul className="divide-y divide-stroke-subtle">
-            {[0, 1, 2].map((key) => (
-              <li key={key} className="flex h-16 items-center gap-4 pl-5 pr-5">
-                <span className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-bg-hover" />
-                <span className="min-w-0 flex-1 space-y-1.5">
-                  <span className="block h-4 w-32 animate-pulse rounded bg-bg-hover" />
-                  <span className="block h-3 w-16 animate-pulse rounded bg-bg-hover md:hidden" />
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <ArtistsListSkeleton />
       ) : list.rows.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-stroke-default p-8 text-center">
           <Users className="mx-auto h-6 w-6 text-content-tertiary" aria-hidden />
@@ -418,35 +399,21 @@ function ArtistRow({
 
 /**
  * The Artists tab in the swipe navigation (URG-380, frame 5; spotlight #878):
- * a serif title with one quiet +, a count line whose "rolling out" half opens
- * the rollouts list, the next drop's banner, then one row per artist with
- * their next rollout, when it drops, and its cover.
+ * the next drop's banner, then one row per artist with their next rollout,
+ * when it drops, and its cover. The title, its + and the count line above
+ * were removed on Oct 30, 2026 (founder).
  */
 function SwipeArtists({ loading, list }: { loading: boolean; list: ArtistsListData }) {
   const { rows, spotlight } = list;
-  const openAddArtist = useShellStore((state) => state.openAddArtist);
-  const rolling = rows.filter((row) => row.status === 'rolling_out').length;
 
   return (
     <div className="pb-6">
-      {/* The switch comes first, where the Rollouts page draws it, so it stays
-          still when you move between the two (switch jump fix, Oct 24, 2026). */}
-      <ArtistsRolloutsSwitch current="artists" />
-      <div className="mt-3 flex items-end justify-between">
-        <h1 className="font-display text-[40px] leading-[1.1] tracking-[-0.3px] text-content-primary">Artists</h1>
-        <div className="mb-1 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => openAddArtist()}
-            aria-label="Add artist"
-            className="hit-44 relative motion-focus motion-press grid h-9 w-9 place-items-center rounded-full border border-content-primary/[0.14] text-content-primary/70 hover:text-content-primary"
-          >
-            <Plus className="h-[18px] w-[18px]" aria-hidden="true" />
-          </button>
-          {/* The phone's bell moved here from Home (2026-10-29, #876). Phone
-              only and hidden in the swipe nav, as it was on Home. */}
-          <HomeBell />
-        </div>
+      {/* No title, no add button and no count line (Oct 30, 2026, founder:
+          "remove this entire section"). Artists are added from Settings. The
+          phone's bell stays (moved here from Home, 2026-10-29, #876); it is
+          phone only and hidden in the swipe nav, so this row is often empty. */}
+      <div className="flex justify-end">
+        <HomeBell />
       </div>
       {loading ? (
         <ul className="mt-[18px]" aria-busy="true">
@@ -464,17 +431,6 @@ function SwipeArtists({ loading, list }: { loading: boolean; list: ArtistsListDa
         </div>
       ) : (
         <>
-          <p className="mt-1.5 text-[15px] text-content-primary/55">
-            {rows.length} {rows.length === 1 ? 'artist' : 'artists'}
-            {rolling > 0 ? (
-              <>
-                {' · '}
-                <Link href={CATALOGUE_HREF} className="motion-focus rounded hover:text-content-primary">
-                  {rolling} rolling out
-                </Link>
-              </>
-            ) : null}
-          </p>
           {spotlight ? (
             <div className="mt-4">
               <Spotlight row={spotlight} compact />

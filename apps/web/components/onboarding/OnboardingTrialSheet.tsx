@@ -16,7 +16,8 @@ import { useAuthStore } from '@/lib/auth-store';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { isIOSApp } from '@/lib/platform';
-import { HOME_PATH } from '@/lib/home-path';
+import { isHomeLocation } from '@/lib/home-path';
+import { isRecordPath } from '@/lib/artist-page';
 import {
   PLAN_LANDED_EVENT,
   clearOnboardingLanding,
@@ -27,7 +28,6 @@ import {
 } from '@/lib/onboarding-landing';
 import { Sheet, primaryButtonClass, textLinkClass } from './OnboardingFrame';
 
-const RECORD_PATH = /^\/dashboard\/artists\/[^/]+\/records\/[^/]+$/;
 const TICK_MS = 1000;
 
 function readReleaseParam(): string | null {
@@ -73,9 +73,9 @@ export function OnboardingTrialSheetHost() {
     const tick = () => {
       const releaseId = readReleaseParam();
       const place = {
-        onHome: pathname === HOME_PATH,
+        onHome: isHomeLocation(pathname, window.location.search),
         releaseId: pathname === '/dashboard' ? releaseId : null,
-        onRecord: RECORD_PATH.test(pathname || ''),
+        onRecord: isRecordPath(pathname),
       };
       const placeKey = `${pathname}|${place.releaseId ?? ''}`;
       if (placeKey !== placeKeyRef.current) {

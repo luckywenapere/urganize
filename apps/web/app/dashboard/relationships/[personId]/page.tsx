@@ -9,6 +9,6 @@ export const metadata: Metadata = {
 
 export default function RelationshipPage() {
   // Paused Oct 27, 2026 (lib/paused-features.ts): an old link lands on Home.
-  if (!isRelationshipsFlagOn()) redirect('/dashboard/artists');
+  if (!isRelationshipsFlagOn()) redirect('/dashboard');
   return <RelationshipPageClient />;
 }

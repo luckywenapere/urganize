@@ -263,7 +263,7 @@ describe('buildAppPages — the artist pages', () => {
       NEXT_PUBLIC_FEATURE_WORKSPACE: 'true',
     });
     const page = buildAppPages({ hasCuratorProfile: false }).find((p) => p.key === 'artists');
-    expect(page?.href).toBe('/dashboard/artists');
+    expect(page?.href).toBe('/dashboard');
     for (const query of ['roster', 'catalogue']) {
       expect(matchesSearchTerms(appPageHaystack(page!), parseSearchTerms(query))).toBe(true);
     }

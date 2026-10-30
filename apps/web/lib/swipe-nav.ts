@@ -12,6 +12,7 @@
 // /workspace/work/nav-swipe-mocks/notes.md, copied, never re-tuned by eye.
 
 import { URGANS_HREF, ARTISTS_HREF, TEAM_HREF, CATALOGUE_LABEL } from './shell-nav';
+import { artistIdFromPath } from './artist-page';
 
 export type SwipeTabKey = 'artists' | 'urgans' | 'team';
 
@@ -67,11 +68,28 @@ export function readSwipeNavQuery(value: string | null | undefined): boolean | n
   return null;
 }
 
-/** Which tab a path is, or null for a pushed screen (a rollout, settings…). */
-export function swipeTabForPath(pathname: string | null | undefined): SwipeTabKey | null {
+/** The query string of the page, or anything with a `get` (URLSearchParams,
+ *  Next's ReadonlyURLSearchParams). */
+type SearchLike = string | { get: (name: string) => string | null } | null | undefined;
+
+/** True when the address opens a rollout: /dashboard?release=<id>. Since
+ *  Oct 30, 2026 /dashboard alone is the artist list, so the path cannot tell
+ *  the two apart; the query does. */
+export function opensRollout(search: SearchLike): boolean {
+  if (!search) return false;
+  const params = typeof search === 'string' ? new URLSearchParams(search) : search;
+  return Boolean(params.get('release'));
+}
+
+/** Which tab a path is, or null for a pushed screen (a rollout, settings…).
+ *  Pass the query too: /dashboard is the Artists tab, but /dashboard?release=
+ *  is a rollout pushed over it. */
+export function swipeTabForPath(pathname: string | null | undefined, search?: SearchLike): SwipeTabKey | null {
   if (!pathname) return null;
   const path = pathname.replace(/\/+$/, '') || '/';
-  if (path === ARTISTS_HREF) return 'artists';
+  if (path === ARTISTS_HREF) return opensRollout(search) ? null : 'artists';
+  // The old address still shows the list (for Android apps built before the move).
+  if (path === '/dashboard/artists') return 'artists';
   if (path === URGANS_HREF) return 'urgans';
   if (path === TEAM_HREF) return 'team';
   return null;
@@ -82,14 +100,15 @@ export function swipeTabForPath(pathname: string | null | undefined): SwipeTabKe
  * Artists covers the catalogue (rollouts, an artist's page); everything else
  * (settings, relationships, opportunities) lights nothing.
  */
-export function swipeAreaForPath(pathname: string | null | undefined): SwipeTabKey | null {
-  const tab = swipeTabForPath(pathname);
+export function swipeAreaForPath(pathname: string | null | undefined, search?: SearchLike): SwipeTabKey | null {
+  const tab = swipeTabForPath(pathname, search);
   if (tab) return tab;
   if (!pathname) return null;
   if (
     pathname === '/dashboard' ||
     pathname.startsWith('/dashboard/releases') ||
     pathname.startsWith('/dashboard/artists') ||
+    artistIdFromPath(pathname) !== null ||
     pathname.startsWith('/dashboard/distribute')
   ) {
     return 'artists';

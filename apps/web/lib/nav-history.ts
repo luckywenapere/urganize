@@ -101,6 +101,10 @@ export function readPreviousLocation(): string | null {
 // scene special case. See WorkspaceView's `goBack` for the reasoning; git
 // history has the resolver if a smart destination is ever wanted again.
 //
+// (Oct 30, 2026: the arrow reads readPreviousLocation once more, only to
+// step back instead of replace when the page before is the very artist it
+// returns to; the destination stays fixed. See rolloutBackStepsBack.)
+//
 // SETTINGS IS THE ONLY CONSUMER LEFT, and it is a genuinely different button:
 // Settings is a place you visit from somewhere, so returning to that somewhere
 // is the whole point of it (founder request, 2026-07-23). It guards only

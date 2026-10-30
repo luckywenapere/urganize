@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 // Deep import (URG-314): the package barrel would pull every ui component into
 // every route's first load, and this boundary is on the shared chain.
 import { Button } from '@urganize/ui/Button';
@@ -33,6 +33,7 @@ export default function AppError({
   reset: () => void;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   // One report per crash. Without the guard a re-render (a theme change, a
   // resize that re-runs a layout hook) would re-fire the event and make one
   // broken page look like many in PostHog.
@@ -77,14 +78,13 @@ export default function AppError({
           <Button type="button" onClick={() => reset()}>
             Try again
           </Button>
-          {/* The catalogue, not Home: Home is the landing page, so linking
-              there made a crash on Home loop back into itself
-              (lib/error-back-link.ts). */}
+          {/* Home, or Team when Home itself crashed, so the way out never
+              loops back into the crash (lib/error-back-link.ts). */}
           <Link
-            href={errorBackHref(pathname)}
+            href={errorBackHref(pathname, searchParams?.toString())}
             className="inline-flex min-h-11 items-center justify-center border border-stroke-default bg-bg-surface px-5 text-sm font-medium text-content-secondary transition-colors duration-fast ease-standard hover:bg-bg-hover hover:text-content-primary"
           >
-            Back to your rollouts
+            Back to Home
           </Link>
         </div>
 

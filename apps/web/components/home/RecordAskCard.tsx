@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowUp } from '@/components/icons';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
+import { recordHref } from '@/lib/artist-page';
 import { lagosToday, MAX_DATE_HINT, MAX_IDEA } from '@/lib/next-records';
 import {
   RECORD_ASK_COPY,
@@ -57,7 +58,7 @@ function WhatsNext({ ask }: { ask: WhatsNextAsk }) {
     }
     captureAnalyticsEvent({ name: 'record_started', properties: { artist_id: ask.artistId, source: 'home_ask' } });
     captureAnalyticsEvent({ name: 'record_ask_answered', properties: { kind: 'whats_next', answer: 'started' } });
-    router.push(`/dashboard/artists/${ask.artistId}/records/${result.value.id}`);
+    router.push(recordHref(ask.artistId, result.value.id));
   };
 
   const snooze = async () => {

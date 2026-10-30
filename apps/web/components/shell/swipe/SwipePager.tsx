@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import {
   SWIPE_TABS,
   clampDrag,
@@ -54,10 +54,12 @@ function pagingFrozen(target: EventTarget | null): boolean {
  */
 export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> }) {
   const pathname = usePathname();
-  const routeTab = swipeTabForPath(pathname) ?? 'artists';
+  // The query too: /dashboard is Artists, /dashboard?release= a rollout over it.
+  const searchParams = useSearchParams();
+  const routeTab = swipeTabForPath(pathname, searchParams) ?? 'artists';
   // Paging is for the three tab pages only; an artist or rollout page opened from
   // a tab is a detail screen and a sideways drag there must not switch tabs.
-  const onTabPage = swipeTabForPath(pathname) !== null;
+  const onTabPage = swipeTabForPath(pathname, searchParams) !== null;
   const onTabPageRef = useRef(onTabPage);
   useEffect(() => {
     onTabPageRef.current = onTabPage;

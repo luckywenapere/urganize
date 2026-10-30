@@ -10,10 +10,9 @@
 // UrgAns hears about it, and the tool checks again on every call.
 
 import { isUuid } from '@/lib/next-records';
+import { RECORD_PATH } from '@/lib/artist-page';
 
 export const RECORD_CAPTURE_PLACEHOLDER = 'Tell UrgAns what happened…';
-
-const RECORD_PATH = /^\/dashboard\/artists\/[^/]+\/records\/([^/?#]+)\/?$/;
 
 /** The record id when the page is a record page, else null. */
 export function recordIdFromPath(pathname: string | null | undefined): string | null {

@@ -20,7 +20,9 @@ import { PolicyUpdateStrip } from '@/components/app/PolicyUpdateStrip';
 import { OfflineBanner } from '@/components/app/OfflineBanner';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
-import { HOME_PATH } from '@/lib/home-path';
+import { isHomeLocation } from '@/lib/home-path';
+import { useReleaseParamStore } from '@/stores/useReleaseParamStore';
+import { ReleaseParamSync } from './ReleaseParamSync';
 import { RootShellSkeleton } from '@/components/loading/RootShellSkeleton';
 import { WorkspacePageErrorBoundary } from '@/components/app/WorkspacePageErrorBoundary';
 import { ChappiHistoryBridge } from '@/components/chappi/ChappiHistoryBridge';
@@ -80,6 +82,9 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
   const isAuthLoading = useAuthStore((state) => state.isLoading);
   const user = useAuthStore((state) => state.user);
   const pathname = usePathname();
+  // Home and a rollout share /dashboard since Oct 30, 2026; ?release= tells
+  // them apart (read through a store: useSearchParams here would fail the build).
+  const releaseParam = useReleaseParamStore((state) => state.releaseId);
   const swipeNav = useSwipeNav();
   useEffect(() => {
     startSwipeNav();
@@ -104,7 +109,7 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
   // Home also clears the UrgAns box pinned above the bar (2026-10-07).
   const mainPaddingClass = isChappiRoute
     ? 'chappi-main-padding-nav'
-    : pathname === HOME_PATH
+    : isHomeLocation(pathname, releaseParam ? `release=${releaseParam}` : '')
       ? 'home-main-padding'
       : 'mobile-nav-clearance';
 
@@ -112,6 +117,7 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
     return (
       <>
         {CHAT_HISTORY_ENABLED ? <ChappiHistoryBridge /> : null}
+        <ReleaseParamSync />
         <SwipeFrame userName={workspaceUserName} showHelp={showHelpMenu}>
           {children}
         </SwipeFrame>
@@ -122,6 +128,7 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
   return (
     <>
       {CHAT_HISTORY_ENABLED ? <ChappiHistoryBridge /> : null}
+      <ReleaseParamSync />
       {showWorkspaceChrome ? (
         // PAGE WIDTH SOURCE OF TRUTH.
         // The inner mx-auto max-w-[1440px] wrapper below is the ONLY place

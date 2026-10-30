@@ -32,6 +32,10 @@ type WorkspaceDesktopFocusedProps = {
   /** What the crumb announces. Computed by the caller, because only it knows
    * whether the next press closes a scene or leaves the rollout. */
   closeLabel?: string;
+  /** The crumb's visible word: the artist the arrow returns to, or Home
+   *  (Oct 30, 2026). When it is the artist, the separate artist name after
+   *  the title is dropped so the name is not said twice. */
+  crumbLabel?: string;
   /** Opens Quick Create for this rollout. Passed ONLY while the main view is
    * what is showing: a scene has taken the panel otherwise, and "add an
    * activity" pointed at nothing on screen is noise. Absent, no button. */
@@ -112,6 +116,7 @@ export function WorkspaceDesktopFocused({
   card,
   onClose,
   closeLabel,
+  crumbLabel,
   onNewActivity,
   onAddIdea,
   share,
@@ -179,21 +184,25 @@ export function WorkspaceDesktopFocused({
           <button
             type="button"
             onClick={onClose}
-            aria-label={closeLabel ?? 'Back to all rollouts'}
+            aria-label={closeLabel ?? 'Back to Home'}
             className="motion-focus shrink-0 rounded-md hover:text-content-primary"
           >
-            Rollouts
+            {crumbLabel ?? 'Home'}
           </button>
         ) : (
-          <span className="shrink-0">Rollouts</span>
+          <span className="shrink-0">{crumbLabel ?? 'Home'}</span>
         )}
         <ChevronRight className="h-3.5 w-3.5 shrink-0 text-content-tertiary" aria-hidden="true" />
         <span className="min-w-0 truncate font-semibold text-content-primary">{card.release.title}</span>
       </nav>
-      <span className="h-[21px] w-px shrink-0 bg-stroke-subtle" aria-hidden="true" />
-      <span className="min-w-0 max-w-[14rem] truncate text-sm text-content-secondary">
-        {scopedRelease.artistName || 'Unassigned artist'}
-      </span>
+      {crumbLabel && crumbLabel === scopedRelease.artistName ? null : (
+        <>
+          <span className="h-[21px] w-px shrink-0 bg-stroke-subtle" aria-hidden="true" />
+          <span className="min-w-0 max-w-[14rem] truncate text-sm text-content-secondary">
+            {scopedRelease.artistName || 'Unassigned artist'}
+          </span>
+        </>
+      )}
       <span
         className={`inline-flex shrink-0 items-center gap-1.5 h-[21px] rounded-full px-2 text-xs font-medium ${STATUS_TONE[statusGroup(status)]}`}
       >

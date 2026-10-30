@@ -21,7 +21,7 @@ describe('displayReleaseTitle', () => {
   });
   it('is used where lists show a rollout name', () => {
     for (const file of [
-      ['app', 'dashboard', 'artists', '[artistId]', 'ArtistPageClient.tsx'],
+      ['app', 'dashboard', '[artistId]', 'ArtistPageClient.tsx'],
       ['components', 'settings', 'ReleasesSection.tsx'],
       ['lib', 'home', 'releases.ts'],
     ]) {

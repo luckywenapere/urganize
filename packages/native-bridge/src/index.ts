@@ -601,8 +601,12 @@ export function createShellDispatcher(deps: {
 export type AndroidBackAction = 'go-back' | 'go-home' | 'exit';
 
 /** Where Android back lands. Must equal `HOME_PATH` in apps/web/lib/home-path.ts
- * (a web test holds the two together). */
-export const SHELL_HOME_PATH = '/dashboard/artists';
+ * (a web test holds the two together). Home moved from /dashboard/artists to
+ * /dashboard on Oct 30, 2026; /dashboard?release=<id> is a rollout, not Home. */
+export const SHELL_HOME_PATH = '/dashboard';
+/** Home's old address, which still shows the artist list (apps built before
+ *  the move send Back there). Back leaves the app from it too. */
+const OLD_SHELL_HOME_PATH = '/dashboard/artists';
 
 /** Pages Android Back sends to Home even when history exists (tab roots and the paywall flow).
  *  Home is Artists since 2026-10-29 (#876); /dashboard/home only redirects there. */
@@ -630,7 +634,8 @@ export function decideAndroidBack(url: string | null | undefined, canGoBack = fa
   }
   if (parsed.searchParams.has('settings')) return 'go-back';
   const path = parsed.pathname.replace(/\/+$/, '') || '/';
-  if (path === SHELL_HOME_PATH) return 'exit';
+  if (path === OLD_SHELL_HOME_PATH) return 'exit';
+  if (path === SHELL_HOME_PATH && !parsed.searchParams.get('release')) return 'exit';
   // A page below a tab (a rollout, an artist, a person, onboarding's steps)
   // goes back ONE level through the page's own history, which the web app
   // keeps in order (tabs replace, flow exits replace). The tab roots and the

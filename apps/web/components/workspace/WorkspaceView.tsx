@@ -1,9 +1,11 @@
 'use client';
 
-import { ArtistsRolloutsSwitch } from '@/components/shell/swipe/ArtistsRolloutsSwitch';
 import { countProgress } from '@/lib/task-progress';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { artistHref, isArtistPageEnabled, rolloutBackStepsBack } from '@/lib/artist-page';
+import { readPreviousLocation } from '@/lib/nav-history';
+import { rememberScene } from '@/lib/scene-memory';
 import dynamic from 'next/dynamic';
 import { AlertCircle } from '@/components/icons';
 import { RolloutPhoneHeader } from './RolloutPhoneHeader';
@@ -1579,7 +1581,12 @@ export function WorkspaceView() {
     // Reports `nav_stalled` if the address has not changed 1.5s from now, so a
     // back tap that looks dead (PostHog rage clicks, 2026-10-03) says whether
     // the router was slow or stuck. Does nothing to the click itself.
-    watchNavigationStall('release_back_arrow', '/dashboard');
+    // Back to the artist the rollout belongs to: the Rollouts list is off
+    // (Oct 30, 2026) and rollouts open from their artist's page. Home when
+    // the artist is not known.
+    const artistId = scopedReleaseSlim?.artistId;
+    const toPath = artistId && isArtistPageEnabled() ? artistHref(artistId) : null;
+    watchNavigationStall('release_back_arrow', toPath ?? '/dashboard');
     // The fifth "leave this release for the catalog" surface. It does not call
     // leaveReleaseForCatalog(), because setScope's `forgetScene` already does
     // the scene half properly (it knows the OUTGOING release without re-reading
@@ -1587,7 +1594,15 @@ export function WorkspaceView() {
     // keeps this exit from being undone by the lone-release auto-scope on the
     // next mount or refresh.
     markCatalogRequested();
-    setScope(null, { forgetScene: true });
+    // Opened from that artist's page: step back to it instead of stacking a
+    // second copy in history (the destination is the same page either way).
+    // Never a bare back(): only when the page before is that exact artist.
+    if (toPath && scopedReleaseId && rolloutBackStepsBack(readPreviousLocation(), toPath, window.history.length)) {
+      rememberScene(scopedReleaseId, null);
+      window.history.back();
+      return;
+    }
+    setScope(null, { forgetScene: true, ...(toPath ? { toPath } : {}) });
   };
 
   // The brief on the whole screen (#902): its one way back is to the plan (the
@@ -1610,7 +1625,8 @@ export function WorkspaceView() {
   // a screen reader needs. A constant also keeps this out of the class of bugs
   // where a label is derived from storage during render and disagrees between
   // the server and the client.
-  const backLabel = 'Back to all rollouts';
+  const backToArtist = Boolean(scopedReleaseSlim?.artistId && scopedReleaseSlim.artistName && isArtistPageEnabled());
+  const backLabel = backToArtist ? `Back to ${scopedReleaseSlim?.artistName}` : 'Back to Home';
 
   // ONE skeleton, rendered here (not as a route-segment Suspense fallback).
   // SSR serializes the skeleton into the HTML response; hydration re-renders
@@ -1679,7 +1695,6 @@ export function WorkspaceView() {
           heading at all. A scoped rollout is named by the topbar and its own
           header, so this is only for the catalog at rest. */}
       {!scopedReleaseId ? <h1 className="sr-only">Rollouts</h1> : null}
-      {!scopedReleaseId ? <ArtistsRolloutsSwitch current="rollouts" swipeOnly /> : null}
       {/* Mobile gutter comes from AppShell's <main> (px-4). Layering another
           px-4 here on mobile compounded to 32px each side, eating content
           area on phones where TasksPanel fills the screen full-width. The
@@ -1868,6 +1883,7 @@ export function WorkspaceView() {
                 deleteRollout={deleteAction}
                 onClose={goBack}
                 closeLabel={backLabel}
+                crumbLabel={backToArtist ? scopedReleaseSlim?.artistName : 'Home'}
                 // Only while the main view is showing, as the "New activity"
                 // pill always was: a scene has taken the panel otherwise.
                 onNewActivity={
