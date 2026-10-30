@@ -191,7 +191,7 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
     // sessions view (UrgansSessionsLayout).
     {
       key: 'urgans',
-      label: 'UrgAns',
+      label: 'Assistant',
       href: URGANS_HREF,
       live: true,
       subTabs: [],
@@ -268,7 +268,7 @@ export function buildMobileTabs(areas?: ShellArea[]): MobileTab[] {
   const catalogueHref = areas?.find((area) => area.key === 'catalogue')?.href ?? CATALOGUE_HREF;
   const tabs: MobileTab[] = [
     { key: 'catalogue', label: CATALOGUE_LABEL, href: catalogueHref, area: 'catalogue' },
-    { key: 'urgans', label: 'UrgAns', href: URGANS_HREF, area: 'urgans' },
+    { key: 'urgans', label: 'Assistant', href: URGANS_HREF, area: 'urgans' },
   ];
   if (!areas || areas.some((area) => area.key === 'team')) {
     tabs.push({ key: 'team', label: 'Team', href: TEAM_HREF, area: 'team' });

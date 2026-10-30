@@ -19,7 +19,7 @@ export type SwipeTab = { key: SwipeTabKey; label: string; href: string };
 
 export const SWIPE_TABS: readonly SwipeTab[] = [
   { key: 'artists', label: 'Artists', href: ARTISTS_HREF },
-  { key: 'urgans', label: 'UrgAns', href: URGANS_HREF },
+  { key: 'urgans', label: 'Assistant', href: URGANS_HREF },
   { key: 'team', label: 'Team', href: TEAM_HREF },
 ];
 
