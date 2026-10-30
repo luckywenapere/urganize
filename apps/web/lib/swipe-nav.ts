@@ -11,14 +11,15 @@
 // unit tested without a DOM. The numbers are the approved motion spec in
 // /workspace/work/nav-swipe-mocks/notes.md, copied, never re-tuned by eye.
 
-import { URGANS_HREF, ARTISTS_HREF, TEAM_HREF } from './shell-nav';
+import { URGANS_HREF, ARTISTS_HREF, TEAM_HREF, CATALOGUE_LABEL } from './shell-nav';
 
 export type SwipeTabKey = 'artists' | 'urgans' | 'team';
 
 export type SwipeTab = { key: SwipeTabKey; label: string; href: string };
 
 export const SWIPE_TABS: readonly SwipeTab[] = [
-  { key: 'artists', label: 'Artists', href: ARTISTS_HREF },
+  // The same word as the classic menu (Home since Oct 30, 2026, #886, #892).
+  { key: 'artists', label: CATALOGUE_LABEL, href: ARTISTS_HREF },
   { key: 'urgans', label: 'Assistant', href: URGANS_HREF },
   { key: 'team', label: 'Team', href: TEAM_HREF },
 ];
@@ -143,6 +144,8 @@ export function swipeBackAction(
 
 /** The browser tab title for a swipe tab, in the same shape the pages' own metadata gives. */
 export function swipeDocumentTitle(key: SwipeTabKey): string {
+  // The Artists page keeps its own name in the browser tab; the menu word is Home.
+  if (key === 'artists') return 'Artists | Urganize';
   const tab = SWIPE_TABS.find((entry) => entry.key === key);
   return `${tab ? tab.label : 'Artists'} | Urganize`;
 }
