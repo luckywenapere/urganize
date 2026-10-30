@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowUpRight, Check, Loader2, Lock, X } from '@/components/icons';
+import { ArrowUpRight, Check, Loader2, Lock, Play, X } from '@/components/icons';
 import { VoicePill } from '@/components/workspace/VoicePill';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { briefToPlanNotes, ideaSourceLabel } from '@/lib/idea-round';
@@ -29,6 +29,7 @@ import {
 } from '@/lib/release-brief';
 import { currentShareOrigin } from '@/lib/app-hosts';
 import { BriefBoard } from './BriefBoard';
+import { BriefPresent } from './BriefPresent';
 import { BriefAvatar, briefAccessToken, briefCall } from './brief-shared';
 
 /**
@@ -603,6 +604,8 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
   const [settling, setSettling] = useState(false);
   const [locked, setLocked] = useState<string | null>(null);
   const [sheet, setSheet] = useState<'history' | 'share' | null>(null);
+  // Present (#897 phase 4): the brief as screens for a room.
+  const [presenting, setPresenting] = useState(false);
   const ideaRef = useRef<HTMLTextAreaElement | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedIdea = useRef('');
@@ -922,6 +925,33 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
     </button>
   );
 
+  const presentButton = (
+    <button
+      type="button"
+      onClick={() => setPresenting(true)}
+      className="motion-focus motion-press inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-stroke-strong bg-bg-surface px-3.5 text-[13px] font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+    >
+      <Play className="h-4 w-4" aria-hidden="true" />
+      Present
+    </button>
+  );
+
+  // Seen the brief (#897 phase 4): who on the team has opened it.
+  const seen = brief.board.seen;
+  const seenLine =
+    seen && seen.line ? (
+      <span className="flex items-center gap-2" title={seen.people.map((person) => person.name).join(', ')}>
+        <span className="flex">
+          {seen.people.slice(0, 4).map((person, index) => (
+            <span key={person.userId} className={index > 0 ? '-ml-1.5 rounded-full ring-2 ring-bg-base' : 'rounded-full ring-2 ring-bg-base'}>
+              <Avatar label={person.initials} colorKey={person.userId} size={22} />
+            </span>
+          ))}
+        </span>
+        <span className="font-mono text-[11px] text-content-tertiary">{seen.line}</span>
+      </span>
+    ) : null;
+
   const header = (
     <div className={board ? 'flex flex-wrap items-center justify-between gap-x-4 gap-y-2' : ''}>
       {board ? null : (
@@ -967,7 +997,14 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
       ) : board ? (
         <span />
       ) : null}
-      {board ? shareButton : null}
+      {board ? (
+        <span className="flex flex-wrap items-center gap-3">
+          {seenLine}
+          {presentButton}
+          {shareButton}
+        </span>
+      ) : null}
+      {presenting ? <BriefPresent brief={brief} idea={idea} onClose={() => setPresenting(false)} /> : null}
     </div>
   );
 

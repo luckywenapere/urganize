@@ -150,3 +150,12 @@ Oyin, after v1.217.0: the plan should lead and the brief should be a button insi
 - **UI:** `components/releases/BriefPiecesCard.tsx`, a full-width card between To settle and Key moments (after Decided on a phone); `components/tasks/BriefToggleRow.tsx`, the On the brief switch in an activity's details. The switch keeps its own saved value, because the detail panel holds a copy of the task.
 - **Verified locally:** the empty state; + Piece made an activity with its spec and showed it; the switch put an activity on and took it off (saved each time); the card ordered a dated piece before an undated one.
 - **Not yet:** Present and Seen (4), UrgAns first board (5), share with a person (6).
+
+## Phase 4: delivered (v1.223.0, 2026-10-31)
+
+- **Data:** `20261031000000_brief_views.sql`, applied to production 2026-10-31 (a new table, nothing backed up). `release_brief_views (release_id, user_id, seen_at)`, one row per person per rollout, moved forward on every open. RLS on, no policies, explicit grants.
+- **Rules:** `lib/brief-present.ts` (tested): `presentSlides` (Idea always; Look, Sound, Making, Dates only with something on them), `presentKeyAction` (arrows, space, Enter, and the Page Up / Page Down a clicker sends; Home, End; Esc closes), `stepSlide` (stops at the ends), `briefSeen` (the team who opened it, newest first; "Seen the brief: n of m", "Everyone has seen the brief", nothing for a team of one).
+- **Seen:** `GET /brief` records the view first, so the count includes the reader. The team is the active, non-guest members of the rollout owner's workspace (`workspaces.owner_id`). Rollout-limited members are counted even if they cannot see this rollout; worth tightening if teams use those limits.
+- **Present:** `components/releases/BriefPresent.tsx`, a full-screen dark layer (requests browser full screen where allowed; leaving full screen leaves Present). It takes keys first, so Esc closes Present and never also closes the brief. Present and the Seen line sit beside Share on the board's header.
+- **Verified locally:** Present opened on the idea, PageDown, arrows, End and PageUp moved correctly, it stopped at the last screen, Esc closed it and stayed on the brief; the view was recorded; with a temporary second team member the line read "Seen the brief: 1 of 2", then "Everyone has seen the brief" (the member was removed after). A first version looked the owner up by `owner_user_id`, which the workspaces table does not have; caught in this check and fixed.
+- **Not yet:** UrgAns first board (5), share with a person (6).

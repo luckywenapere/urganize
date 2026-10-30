@@ -20,10 +20,11 @@ import {
 } from '@/lib/brief-board-layout';
 import { mayChangeBriefItem } from '@/lib/brief-media';
 import { briefPieces, withBriefShow } from '@/lib/brief-pieces';
+import { briefSeen, type BriefSeen } from '@/lib/brief-present';
 import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-constants';
 import { loadCoverArtUrls } from '@/lib/cover-art';
 import { isMissingTableError } from '@/lib/promo-channels';
-import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
+import { loadWorkspaceAccessContext, loadWorkspaceMembers } from '@/lib/tasks-server';
 import {
   BRIEF_BLOCKS,
   MAX_NOTES,
@@ -290,7 +291,7 @@ export async function loadBriefPayload(
   }
 ): Promise<BriefResult<BriefPayload>> {
   const { releaseId } = input;
-  const [briefRead, referencesRead, decisionsRead, revisionsRead, tasks, notes, canManageShare, planSeed, covers, board] =
+  const [briefRead, referencesRead, decisionsRead, revisionsRead, tasks, notes, canManageShare, planSeed, covers, board, seen] =
     await Promise.all([
       readBriefRow(admin, releaseId),
       readReferences(admin, releaseId),
@@ -315,6 +316,7 @@ export async function loadBriefPayload(
         () => new Map<string, { url: string }>()
       ),
       readBoard(admin, releaseId),
+      loadBriefSeen(admin, { releaseId, releaseOwnerId: input.releaseOwnerId, viewerId: input.user.id }),
     ]);
 
   if (!briefRead.ok) return briefRead;
@@ -396,6 +398,7 @@ export async function loadBriefPayload(
         layout: board.layout,
         canArrange: canManageShare,
         stickies: board.stickies.map((sticky) => ({ ...sticky, authorName: nameOf(sticky.createdBy) })),
+        seen,
         pieces: (() => {
           const list = briefPieces(tasks, today);
           return {
@@ -603,6 +606,61 @@ export async function resetBoardLayout(admin: SupabaseClient, releaseId: string)
   const { error } = await admin.from(BRIEF_CARDS_TABLE).delete().eq('release_id', releaseId).neq('kind', 'note');
   if (error) return failure(error, 'Could not reset the board.');
   return { ok: true, value: null };
+}
+
+// ── Seen the brief (#897 phase 4) ───────────────────────────────────────────
+
+export const BRIEF_VIEWS_TABLE = 'release_brief_views';
+
+/** Note that this person opened the brief now. Best effort: a failed write never fails the read. */
+export async function recordBriefView(admin: SupabaseClient, input: { releaseId: string; userId: string }): Promise<void> {
+  try {
+    await admin
+      .from(BRIEF_VIEWS_TABLE)
+      .upsert({ release_id: input.releaseId, user_id: input.userId, seen_at: new Date().toISOString() }, { onConflict: 'release_id,user_id' });
+  } catch {
+    // The brief still loads; the count is just one short until the next open.
+  }
+}
+
+const NOBODY_SEEN: BriefSeen = { people: [], total: 0, line: '' };
+
+/**
+ * Who on the rollout's team has opened its brief: the active, non-guest
+ * members of the owner's workspace. Never throws; a failure shows no line.
+ */
+async function loadBriefSeen(
+  admin: SupabaseClient,
+  input: { releaseId: string; releaseOwnerId: string; viewerId: string }
+): Promise<BriefSeen> {
+  try {
+    const { data: workspace } = await admin
+      .from('workspaces')
+      .select('id')
+      .eq('owner_id', input.releaseOwnerId)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    const workspaceId = workspace ? text(asRow(workspace).id) : '';
+    if (!workspaceId) return NOBODY_SEEN;
+    const members = await loadWorkspaceMembers(admin, workspaceId, input.viewerId);
+    const team = new Map<string, { userId: string; name: string; initials: string }>();
+    for (const member of members) {
+      if (member.status !== 'active' || member.role === 'guest' || !member.userId) continue;
+      team.set(member.userId, { userId: member.userId, name: member.name, initials: member.initials });
+    }
+    if (team.size === 0) return NOBODY_SEEN;
+    const { data: views } = await admin
+      .from(BRIEF_VIEWS_TABLE)
+      .select('user_id,seen_at')
+      .eq('release_id', input.releaseId);
+    return briefSeen(
+      [...team.values()],
+      ((views || []) as unknown[]).map(asRow).map((row) => ({ userId: text(row.user_id), seenAt: text(row.seen_at) }))
+    );
+  } catch {
+    return NOBODY_SEEN;
+  }
 }
 
 // ── What we're making (#897 phase 3) ────────────────────────────────────────
