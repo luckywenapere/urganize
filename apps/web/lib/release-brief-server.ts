@@ -10,7 +10,7 @@
 
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 
-import { briefProgress, type BoardCardKey, type BriefFeel, type BriefFeelPatch } from '@/lib/brief-board';
+import { briefButtonLine, briefProgress, type BoardCardKey, type BriefFeel, type BriefFeelPatch } from '@/lib/brief-board';
 import { isBoardCardKey, type BoardLayout } from '@/lib/brief-board-layout';
 import { loadCoverArtUrls } from '@/lib/cover-art';
 import { isMissingTableError } from '@/lib/promo-channels';
@@ -461,6 +461,24 @@ export async function saveBriefFeel(
   if (error) return failure(error, 'Could not save the look and feel.');
   await recordBriefRevision(admin, { releaseId: input.releaseId, block: 'feel', actorId: input.actorId });
   return { ok: true, value: input.patch };
+}
+
+// ── The plan's Brief button (#902) ─────────────────────────────────────────
+
+/** Just enough for the plan's Brief button: the line under the word, and whether anything is written. */
+export async function loadBriefSummary(
+  admin: SupabaseClient,
+  releaseId: string
+): Promise<BriefResult<{ line: string; written: boolean }>> {
+  const { data, error } = await admin
+    .from(BRIEFS_TABLE)
+    .select('idea,headline')
+    .eq('release_id', releaseId)
+    .maybeSingle();
+  if (error) return failure(error, 'Could not load the brief.');
+  const row = data ? asRow(data) : {};
+  const line = briefButtonLine({ headline: text(row.headline), idea: text(row.idea) });
+  return { ok: true, value: { line, written: line.length > 0 } };
 }
 
 // ── Board layout (#897 phase 1b) ────────────────────────────────────────────

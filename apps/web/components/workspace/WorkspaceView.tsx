@@ -55,6 +55,7 @@ import { usePlanMenuFoldGestures } from './usePlanMenuFoldGestures';
 import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
+import { BriefBackButton, BriefEntryCard, useEscapeToPlan } from './BriefEntry';
 import { useReleaseScope } from './useReleaseScope';
 import { useReleaseSetupPrompt } from './useReleaseSetupPrompt';
 import { scopedRolloutIntakePrefill } from '@/lib/planner-intake-steps';
@@ -85,7 +86,6 @@ import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { isReleaseActive } from '@/lib/release-activity';
 import { isRecapEligible as isRecapEligibleForRelease } from '@/lib/recap-eligibility';
 import { onlyPreProductionWork } from '@/lib/pre-production';
-import { useLandsOnBrief } from './useLandsOnBrief';
 import { isReviewDue } from '@/lib/release-review';
 import { ReleaseReview } from '@/components/between-releases/ReleaseReview';
 import { findRoleGaps } from '@/lib/role-gaps';
@@ -262,8 +262,7 @@ export function WorkspaceView() {
   // shows a "turn your phone" screen when the timeline is asked for, and a
   // rollout with no pick yet opens on the list there.
   const upright = useNarrowPortrait() && !isDesktopViewport;
-  const landsOnBrief = useLandsOnBrief(scopedReleaseId);
-  const resolvedBody = resolvePanelBody(urlScene, scopedHasNoDate, landsOnBrief);
+  const resolvedBody = resolvePanelBody(urlScene, scopedHasNoDate);
   const panelBody =
     activeScene === null && isPlanView(resolvedBody)
       ? pickPlanView({
@@ -1591,6 +1590,13 @@ export function WorkspaceView() {
     setScope(null, { forgetScene: true });
   };
 
+  // The brief on the whole screen (#902): its one way back is to the plan (the
+  // main view), by the button, Esc, or the browser's back button (opening a
+  // scene adds a history entry).
+  const briefOpen = panelBody === 'brief' && Boolean(scopedReleaseSlim);
+  const planBuilt = scopedTasks.length > 0 && !onlyPreProductionWork(scopedTasks);
+  useEscapeToPlan(briefOpen, closeScene);
+
   const handleMobileBack = () => {
     goBack();
     if (typeof window !== 'undefined') {
@@ -1773,6 +1779,14 @@ export function WorkspaceView() {
                     phase counts live in Work the plan and on the computer.
                     The check before distribution is one divider row right
                     under the meta line, on the timeline and Activities alike. */}
+                {briefOpen ? (
+                  <div className="mb-4 flex items-center gap-3">
+                    <BriefBackButton label={planBuilt ? 'Plan' : 'Ideas'} onBack={closeScene} />
+                    <p className="min-w-0 truncate text-sm text-content-secondary">
+                      <span className="font-semibold text-content-primary">{scopedReleaseSlim.title}</span> · Brief
+                    </p>
+                  </div>
+                ) : (
                 <RolloutPhoneHeader
                   releaseId={scopedReleaseSlim.id}
                   coverUrl={scopedCoverUrl}
@@ -1791,6 +1805,14 @@ export function WorkspaceView() {
                   onAddIdea={addIdea && scopedReleaseSlim.releaseDate && !onlyPreProductionWork(scopedTasks) ? addIdea : undefined}
                   below={
                     <>
+                      {/* The brief's door on a phone (#902): a card under the title. */}
+                      {bodyIsMainView && planBuilt ? (
+                        <BriefEntryCard
+                          releaseId={scopedReleaseSlim.id}
+                          title={scopedReleaseSlim.title}
+                          coverUrl={scopedCoverUrl}
+                        />
+                      ) : null}
                       {isDesktopViewport ? null : distributionStatusStrip}
                       {newReleaseGuideBanner}
                       {isDesktopViewport ? null : landedBanner}
@@ -1799,6 +1821,7 @@ export function WorkspaceView() {
                     </>
                   }
                 />
+                )}
                 <TasksPanel
                   id={TASKS_PANEL_ID}
                   tasks={scopedTasks}
@@ -1869,8 +1892,10 @@ export function WorkspaceView() {
                 panelActivitiesFooter={roleGapsFooter}
                 panelBannerReplacesEmptyState={bannerReplacesEmptyState}
                 pageScroll={scopedTasks.length === 0 && !simplePlanView}
+                briefOpen={briefOpen}
+                onCloseBrief={closeScene}
                 simpleSide={
-                  simplePlanView && isDesktopViewport ? (
+                  simplePlanView && isDesktopViewport && !briefOpen ? (
                     <>
                       {setReleaseDateBanner}
                       {ideasBanner}

@@ -97,7 +97,7 @@ Free drawing, an infinite canvas, live cursors, audio uploads, a budget card, co
 - **UI:** Arrange (wide board, leads only) puts a dashed layer over each card that takes the pointer and the keys, so card buttons rest while arranging; a corner handle resizes. Saves 350 ms after the last change, so a run of arrow keys is one request; a failed save puts the board back and says why. Cards slide to their new place (Web Animations), skipped under reduced motion. A phone reads an arranged board top to bottom, then left to right.
 - **Not done from the plan:** long-press to reorder on a phone. Arranging stays a computer task; a phone shows the order set there.
 
-## Plan first, brief as a button (proposed 2026-10-30, Oyin's note, not built)
+## Plan first, brief as a button (built 2026-10-30, v1.220.0, #902)
 
 Oyin, after v1.217.0: the plan should lead and the brief should be a button inside Work the plan that opens the brief bigger, until you go back to the plan. This reverses the "Brief opens first" call from the morning of the same day, for rollouts that have a plan.
 
@@ -121,3 +121,12 @@ Oyin, after v1.217.0: the plan should lead and the brief should be a button insi
 **Scope (one small PR, before phase 2):** landing back to the plan once a plan exists (step 4), the Brief button in the plan header, the focus view, the one-time brief at step 3, the menu order. No data changes. Needs a mock and Oyin's yes first.
 
 **Measure:** taps on the Brief button, time in the focus view, Back taps vs other exits.
+
+### What was built (v1.220.0)
+
+- **Landing:** the v1.217.0 rule is gone (`useLandsOnBrief` deleted, `resolvePanelBody` back to two arguments), so a rollout opens on its plan again. Menu order is back to the plan views first (`RELEASE_MENU_ORDER`, `buildRolloutMenu`), with a dated comment.
+- **Computer:** `BriefEntryButton` (`components/workspace/BriefEntry.tsx`) sits on the page bar line beside the done count, for any rollout with a plan (dated or not). It reads `GET /api/releases/[id]/brief/summary` (`loadBriefSummary`, `briefButtonLine`: the one-line idea, else the story's first sentence, cut to 80; "Write the brief" when empty). The tab row drops Read the brief; it moves to the ··· menu (`RolloutTabs`).
+- **Focus:** `WorkspaceDesktopFocused` takes `briefOpen` and `onCloseBrief`: the crumb becomes Back to the plan (Back to the ideas before a plan), and the tabs, the plan's tools, the Menu pill, the banners and the no-date side column step aside. `useEscapeToPlan` closes it on Esc unless a field or dialog has focus, or the board's arrange mode took the key (`BriefBoard` now calls preventDefault on its Esc). Opening a scene pushes history, so the browser's back button also returns to the plan.
+- **Phone:** `BriefEntryCard` under the title on the plan; with the brief open, the rollout header is replaced by a Plan back button and the title. The swipe from the left edge is the phone's own back gesture (history), not app code.
+- **Not built from the mock:** the rollout does not keep opening on an unapproved brief before a plan exists. That needs the round state at landing, which is fetched, so the page would jump from the ideas to the brief. What already holds the step: closing the round opens the brief, the brief shows Approve and build the plan, and the ideas card shows Read the brief until then.
+- **Verified locally** (1440 wide and 375): lands on the plan, the Brief button and phone card, open, Back to the plan, Esc, Esc in arrange mode stays, browser back, Read the brief from the ··· menu. After the restart the local app's offline service worker served a stale chunk (a deleted module); unregistering it fixed that, not a code issue.

@@ -512,19 +512,6 @@ describe('the brief scene (URG-281, 2026-10-16)', () => {
     expect(mod.resolveActiveScene('brief')).toBe('brief');
   });
 
-  it('is where a rollout with a plan and a date lands (#897)', async () => {
-    const mod = await loadResolver(true);
-    expect(mod.resolvePanelBody(null, false, true)).toBe('brief');
-    // No plan yet: the main view holds the doors to building one.
-    expect(mod.resolvePanelBody(null, false, false)).toBe(mod.resolveMainView());
-    // No date: Work the plan, where the date is set.
-    expect(mod.resolvePanelBody(null, true, true)).toBe('activities');
-    // Asking for a scene still opens it.
-    expect(mod.resolvePanelBody('timeline', false, true)).toBe('timeline');
-    // Brief switched off: the old landing.
-    expect((await loadResolver(false)).resolvePanelBody(null, false, true)).not.toBe('brief');
-  });
-
   it('fetches for itself, so it is never cached or persisted', async () => {
     const mod = await loadResolver(true);
     expect(mod.isCacheableScene('brief')).toBe(false);

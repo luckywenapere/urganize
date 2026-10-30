@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BOARD_WORD_MAX,
+  briefButtonLine,
   briefCountdown,
   briefProgress,
   momentsTrack,
@@ -182,5 +183,26 @@ describe('board layout', () => {
   it('reads top to bottom on a phone: the record, where we are, the idea, then the look', () => {
     expect(boardPhoneOrder(all).slice(0, 4)).toEqual(['cover', 'countdown', 'idea', 'settle']);
     expect(boardPhoneOrder(new Set<BoardCardKey>(['look', 'cover']))).toEqual(['cover', 'look']);
+  });
+});
+
+describe('briefButtonLine', () => {
+  it('uses the one-line idea first', () => {
+    expect(briefButtonLine({ headline: 'Tell the truth.', idea: 'A long story.' })).toBe('Tell the truth.');
+  });
+
+  it('falls back to the first sentence of the story', () => {
+    expect(briefButtonLine({ headline: '', idea: 'Warm and handmade. Then more.' })).toBe('Warm and handmade.');
+    expect(briefButtonLine({ headline: '  ', idea: '\n First line\nsecond line' })).toBe('First line');
+  });
+
+  it('shortens a long sentence', () => {
+    const line = briefButtonLine({ headline: '', idea: 'word '.repeat(40) });
+    expect(line.length).toBeLessThanOrEqual(80);
+    expect(line.endsWith('…')).toBe(true);
+  });
+
+  it('is empty when there is nothing written', () => {
+    expect(briefButtonLine({ headline: '', idea: '' })).toBe('');
   });
 });

@@ -1041,6 +1041,8 @@ export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props)
   const nudge = (event: ReactKeyboardEvent<HTMLElement>, key: BoardCardKey) => {
     const direction = ARROWS[event.key];
     if (event.key === 'Escape') {
+      // Esc leaves arrange mode only; it must not also close the brief (#902).
+      event.preventDefault();
       setArranging(false);
       return;
     }

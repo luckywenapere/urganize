@@ -12,6 +12,7 @@ import type { Task } from '@/lib/tasks';
 import { TasksPanel } from './TasksPanel';
 import { RolloutTabs } from './RolloutTabs';
 import { PlanMenuPill } from './PlanMenuPill';
+import { BriefBackButton, BriefEntryButton } from './BriefEntry';
 import { usePlanMenuFold } from '@/stores/usePlanMenuFold';
 import type { ReleaseCardData } from './catalogue-types';
 import type { RolloutMenuDialogInput } from './useRolloutMenuActions';
@@ -67,6 +68,13 @@ type WorkspaceDesktopFocusedProps = {
    * panel sit side by side, so the planner card below is never squeezed out.
    */
   pageScroll?: boolean;
+  /**
+   * The brief is open (#902): it takes the whole page. The tabs, the plan's
+   * tools and the banners step aside, and the crumb becomes one way back.
+   */
+  briefOpen?: boolean;
+  /** Closes the brief, back to the plan (the main view). */
+  onCloseBrief?: () => void;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -116,12 +124,16 @@ export function WorkspaceDesktopFocused({
   panelBannerReplacesEmptyState,
   simpleSide,
   pageScroll = false,
+  briefOpen = false,
+  onCloseBrief,
 }: WorkspaceDesktopFocusedProps) {
   // Cancelled work is out of both numbers (URG-389).
   const { done: tasksDone, total: tasksTotal } = countProgress(scopedTasks);
   // A fresh rollout (no release day yet, or only the seeded pre-production
   // starters) shows no count and no New activity (2026-10-26, declutter).
   const hasPlan = Boolean(card.release.releaseDate) && !onlyPreProductionWork(scopedTasks);
+  // Any plan, dated or not, has a brief to open from it (#902).
+  const planBuilt = scopedTasks.length > 0 && !onlyPreProductionWork(scopedTasks);
   // A small swipe down the plan folds the tabs and tools away (#898); the
   // gestures run in WorkspaceView, which knows when the plan is showing.
   const menuFolded = usePlanMenuFold((state) => state.folded);
@@ -149,7 +161,18 @@ export function WorkspaceDesktopFocused({
     tasksTotal,
   });
 
-  const crumb = (
+  // The brief on the whole screen (#902): one way back, then what you are reading.
+  const focus = briefOpen && onCloseBrief;
+  const briefCrumb = focus ? (
+    <div className="flex min-w-0 items-center gap-[13px]">
+      <BriefBackButton label={planBuilt ? 'Back to the plan' : 'Back to the ideas'} onBack={onCloseBrief} />
+      <p className="min-w-0 truncate text-[15px] text-content-secondary">
+        <span className="font-semibold text-content-primary">{card.release.title}</span> · Brief
+      </p>
+    </div>
+  ) : null;
+
+  const crumb = briefCrumb ?? (
     <div className="flex min-w-0 items-center gap-[13px]">
       <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[15px] text-content-secondary">
         {onClose ? (
@@ -180,7 +203,7 @@ export function WorkspaceDesktopFocused({
     </div>
   );
 
-  const actions = (
+  const actions = focus ? null : (
     <div className="flex shrink-0 items-center gap-[13px]">
       {/* A hairline between the plan's tools and the page's own, shown only
           when the tools are on the line: 13 + 1 + 13 sits on the line's
@@ -198,6 +221,15 @@ export function WorkspaceDesktopFocused({
           </span>
           <ReleaseDeliveredMark total={tasksTotal} done={tasksDone} />
         </div>
+      ) : null}
+      {/* The brief's door (#902): on the line that never folds, so it is there
+          the whole way down the plan. */}
+      {planBuilt ? (
+        <BriefEntryButton
+          releaseId={scopedRelease.id}
+          title={card.release.title}
+          coverUrl={card.coverThumbUrl ?? card.coverArtUrl}
+        />
       ) : null}
       {onAddIdea && hasPlan ? (
         <button
@@ -241,7 +273,7 @@ export function WorkspaceDesktopFocused({
             in a header under it are gone: the crumb already names the
             rollout, and the cover and date live in their own scenes. */}
         {crumbSlot ? createPortal(crumb, crumbSlot) : null}
-        {endSlot ? createPortal(actions, endSlot) : null}
+        {endSlot && actions ? createPortal(actions, endSlot) : null}
         {!crumbSlot || !endSlot ? (
           <div className="flex h-14 items-center gap-3">
             {crumbSlot ? null : crumb}
@@ -259,14 +291,14 @@ export function WorkspaceDesktopFocused({
       <div ref={tabsSentinelRef} aria-hidden="true" className="-mb-4 h-0" />
       {/* Folded (#898), the pill holds the tabs' place, under the top bar the
           whole way down, so the menu is one tap away mid-plan too. */}
-      {menuFolded ? (
+      {menuFolded && !focus ? (
         <div className="pointer-events-none sticky top-[80px] z-20 -mb-2 flex h-[26px] justify-center">
           <PlanMenuPill />
         </div>
       ) : null}
       <div
         data-stuck={tabsStuck ? '' : undefined}
-        className={`${menuFolded ? 'hidden' : ''} sticky top-[72px] z-20 -mx-8 border-b border-stroke-subtle bg-bg-base px-8 pb-2 pt-0 transition-[padding,box-shadow] duration-200 ease-out data-[stuck]:pt-2 data-[stuck]:shadow-[0_8px_16px_-12px_rgb(0_0_0/0.6)]`}
+        className={`${menuFolded || focus ? 'hidden' : ''} sticky top-[72px] z-20 -mx-8 border-b border-stroke-subtle bg-bg-base px-8 pb-2 pt-0 transition-[padding,box-shadow] duration-200 ease-out data-[stuck]:pt-2 data-[stuck]:shadow-[0_8px_16px_-12px_rgb(0_0_0/0.6)]`}
       >
         <RolloutTabs
           releaseId={scopedRelease.id}
@@ -287,7 +319,7 @@ export function WorkspaceDesktopFocused({
               : 'flex min-w-0 flex-1 flex-col'
         }
       >
-        {simpleSide ? null : pageScroll ? (
+        {simpleSide || focus ? null : pageScroll ? (
           <div className="order-1 grid grid-cols-2 items-start gap-4 [&>*:only-child]:col-span-2">{banner}</div>
         ) : (
           banner
