@@ -4,6 +4,7 @@ import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-constants';
 import { IN_LIST_CHUNK, inChunks, readAllPages, type PageResult } from '@/lib/paged-rows';
 import { TASK_ATTACHMENTS_BUCKET } from '@/lib/tasks-server';
 import { withThumbPaths } from '@/lib/image-thumb';
+import { listAccountPhotoObjects } from '@/lib/account-photo-server';
 
 // Storage objects don't cascade with the DB rows deleted below, so they are
 // enumerated and removed first. Unlike the per-release DELETE, a storage
@@ -159,6 +160,13 @@ async function removeUserStorageObjects(supabaseAdmin: SupabaseClient, userId: s
   logQueryError('artist photos', artistPhotoResult.error);
   for (const row of artistPhotoResult.data ?? []) {
     collectPath(RELEASE_ASSETS_BUCKET, row.photo_path);
+  }
+
+  // Your account photo (2026-10-30): everything under account/<uid>/photo/,
+  // listed from storage rather than read off the row, so a replaced photo
+  // whose removal failed goes too. Thumbs are listed with their originals.
+  for (const path of await listAccountPhotoObjects(supabaseAdmin, userId)) {
+    collectPath(RELEASE_ASSETS_BUCKET, path);
   }
 
   for (const [bucket, paths] of pathsByBucket) {

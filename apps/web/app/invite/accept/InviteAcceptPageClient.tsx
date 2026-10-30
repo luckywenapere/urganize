@@ -43,6 +43,9 @@ import { MIN_PASSWORD_LENGTH, PASSWORD_LENGTH_HINT } from '@/lib/password-rules'
 import { clearPendingConfirmation, firstNameOf, writePendingConfirmation } from '@/lib/email-confirmation';
 import { CheckInbox } from '@/components/auth/EmailConfirmation';
 import { useConfirmationPickup } from '@/components/auth/useConfirmationPickup';
+import { InvitePhotoStep, markInvitePhotoSeen, readInvitePhotoSeen } from '@/components/onboarding/InvitePhotoStep';
+import { isAccountPhotoEnabled, shouldOfferInvitePhoto } from '@/lib/account-photo';
+import { readAccountPhotoWithSuggestion, useAccountPhotoStore } from '@/stores/useAccountPhotoStore';
 
 // Profile role for invited teammates. 'artist-team' positions them as a
 // member of someone else's team — matches the standalone signup vocabulary
@@ -231,6 +234,39 @@ export default function InviteAcceptPageClient({
     }
   }, [token]);
 
+  // 2b. After joining: the photo step (NEXT_PUBLIC_FEATURE_PROFILE_PHOTO), once,
+  //     only for someone with no photo, then the same redirect as always.
+  //     Flag off, it is exactly the old router.replace(afterJoinPath).
+  const [photoStep, setPhotoStep] = useState<{ userId: string; googleSuggestionUrl: string | null } | null>(null);
+  const finishJoin = useCallback(async () => {
+    if (!isAccountPhotoEnabled()) {
+      router.replace(afterJoinPath);
+      return;
+    }
+    try {
+      const { data } = await supabase.auth.getSession();
+      const userId = data.session?.user?.id;
+      if (!userId || readInvitePhotoSeen(userId)) {
+        router.replace(afterJoinPath);
+        return;
+      }
+      // Never hold the join up for long: no answer in 5s, go in.
+      const info = await Promise.race([
+        readAccountPhotoWithSuggestion(),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+      ]);
+      if (info?.photoUrl) useAccountPhotoStore.getState().setPhoto(userId, info.photoUrl);
+      if (!info || !shouldOfferInvitePhoto({ enabled: true, hasPhoto: Boolean(info.photoUrl), seen: false })) {
+        router.replace(afterJoinPath);
+        return;
+      }
+      markInvitePhotoSeen(userId);
+      setPhotoStep({ userId, googleSuggestionUrl: info.googleSuggestionUrl });
+    } catch {
+      router.replace(afterJoinPath);
+    }
+  }, [afterJoinPath, router]);
+
   // 3. Post-OAuth resume — if we set the marker before redirecting to
   //    Google and the user is now authenticated, accept the invite.
   useEffect(() => {
@@ -252,13 +288,13 @@ export default function InviteAcceptPageClient({
       const result = await acceptInvite();
       if (result.ok) {
         setSuccessMessage('Joined! Taking you in…');
-        router.replace(afterJoinPath);
+        void finishJoin();
       } else {
         setError(result.message || 'Could not accept invite.');
         setIsSubmitting(false);
       }
     })();
-  }, [acceptInvite, authLoading, isAuthenticated, loadState.kind, router, token]);
+  }, [acceptInvite, authLoading, finishJoin, isAuthenticated, loadState.kind, router, token]);
 
   // 4. Sub-flow handlers
   const handleEmailPasswordSignup = async (event: React.FormEvent) => {
@@ -307,7 +343,7 @@ export default function InviteAcceptPageClient({
         );
       }
       setSuccessMessage('Joined! Taking you in…');
-      router.replace(afterJoinPath);
+      void finishJoin();
     } catch (signupError) {
       setError(errorMessage(signupError, 'Could not finish signup.'));
       setIsSubmitting(false);
@@ -319,8 +355,12 @@ export default function InviteAcceptPageClient({
     void (async () => {
       const result = await acceptInvite();
       clearPendingConfirmation();
-      router.replace(result.ok ? afterJoinPath : selfPath);
-      if (!result.ok) setConfirmation(null);
+      if (result.ok) {
+        void finishJoin();
+        return;
+      }
+      router.replace(selfPath);
+      setConfirmation(null);
     })();
   });
 
@@ -353,7 +393,7 @@ export default function InviteAcceptPageClient({
     const result = await acceptInvite();
     if (result.ok) {
       setSuccessMessage('Joined! Taking you in…');
-      router.replace(afterJoinPath);
+      void finishJoin();
     } else {
       setError(result.message || 'Could not accept invite.');
       setIsSubmitting(false);
@@ -386,6 +426,18 @@ export default function InviteAcceptPageClient({
     if (!isAuthenticated || !user?.email || !metadata?.invitedEmail) return false;
     return user.email.trim().toLowerCase() !== metadata.invitedEmail.trim().toLowerCase();
   }, [isAuthenticated, metadata, user?.email]);
+
+  if (photoStep) {
+    return (
+      <InvitePhotoStep
+        userId={photoStep.userId}
+        name={user?.name || name.trim() || user?.email || email}
+        teamName={displayWorkspace}
+        googleSuggestionUrl={photoStep.googleSuggestionUrl}
+        onDone={() => router.replace(afterJoinPath)}
+      />
+    );
+  }
 
   if (confirmation) {
     return (

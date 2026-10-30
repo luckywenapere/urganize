@@ -42,7 +42,7 @@ export async function loadTeamPage(adminClient: SupabaseClient, user: User, now:
   const canManage = canManageTeam(viewerRole);
 
   const [members, scopeResult, presence, artists, tasks, tier] = await Promise.all([
-    loadWorkspaceMembers(adminClient, workspaceId, user.id),
+    loadWorkspaceMembers(adminClient, workspaceId, user.id, { withPhotos: true }),
     adminClient.from('workspace_members').select('id,artist_scope_id,release_scope_ids').eq('workspace_id', workspaceId),
     loadTeamPresenceMembers(adminClient, user, workspaceId, now),
     listWorkspaceArtists(adminClient, workspaceId),

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import type { WorkspaceMember } from '@/types/auth';
+import { withoutSignedPhotos } from '@/lib/account-photo';
 import {
   SETTINGS_CACHE_VERSION,
   TEAMMATES_CACHE_KEY,
@@ -66,7 +67,7 @@ export function useTeammates(userId: string, accessToken: string): TeammatesStat
       if (userId) {
         writePersistedState<TeammatesCache>(TEAMMATES_CACHE_KEY, SETTINGS_CACHE_VERSION, {
           userId,
-          members: next,
+          members: withoutSignedPhotos(next),
         });
       }
     },
@@ -97,7 +98,7 @@ export function useTeammates(userId: string, accessToken: string): TeammatesStat
         if (userId) {
           writePersistedState<TeammatesCache>(TEAMMATES_CACHE_KEY, SETTINGS_CACHE_VERSION, {
             userId,
-            members: payload.members,
+            members: withoutSignedPhotos(payload.members),
           });
         }
       }

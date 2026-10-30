@@ -20,7 +20,7 @@ export async function loadTeamPresenceMembers(
 ): Promise<TeamPresenceMember[]> {
   if (!workspaceId) return [];
   try {
-    const members = (await loadWorkspaceMembers(adminClient, workspaceId, user.id)).filter(
+    const members = (await loadWorkspaceMembers(adminClient, workspaceId, user.id, { withPhotos: true })).filter(
       (member) => member.status === 'active' && member.userId && !member.isCurrentUser
     );
     if (members.length === 0) return [];

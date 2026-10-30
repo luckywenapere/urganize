@@ -12,6 +12,7 @@ import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { installLinkStallWatchdog } from '@/lib/nav-stall-watch';
 import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
 import { NavigationTracker } from '@/components/app/NavigationTracker';
+import { AccountPhotoSync } from '@/components/shared/AccountPhoto';
 import { PresenceBeacon } from '@/components/app/PresenceBeacon';
 import { ToastProvider } from '@/components/shared/ToastProvider';
 import { buildCreatedRolloutIntake } from '@/lib/release-draft-discard';
@@ -472,6 +473,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     {/* The "last seen" ping behind /admin/metrics' online-now and active-people
         counts. Signed-in users only; renders nothing. */}
     <PresenceBeacon />
+    {/* Your account photo (NEXT_PUBLIC_FEATURE_PROFILE_PHOTO): fetched on
+        sign-in and on focus; renders nothing, inert with the flag off. */}
+    <AccountPhotoSync />
     {/* Card-before-trial's in-session gate: the auth-store bounce only fires
         on full page loads, and both signup funnels finish with client-side
         navigations — this routes a cardTrialRequired account to /start-trial

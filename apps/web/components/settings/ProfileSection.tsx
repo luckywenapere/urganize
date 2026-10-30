@@ -7,6 +7,7 @@ import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
 import { saveButtonVisible } from '@/lib/settings-dirty';
 import { useReportDirty } from './useReportDirty';
+import { AccountPhotoSettings } from './AccountPhotoSettings';
 
 /**
  * Calls the store's `updateProfileName` action, which patches `user`
@@ -52,6 +53,8 @@ export function ProfileSection() {
   return (
     <section id="name" className={`${panelClass} scroll-mt-4`}>
       <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Your details</h2>
+      {/* Your photo saves on its own, not with the Save below (flag-gated). */}
+      <AccountPhotoSettings userId={user.id} name={user.name || user.email} />
       <div className="space-y-4">
         <label className="block">
           <span className="mb-1 block text-sm text-content-secondary">Name</span>

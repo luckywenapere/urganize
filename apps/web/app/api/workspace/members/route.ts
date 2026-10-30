@@ -24,7 +24,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Team not found.' }, { status: 404 });
     }
 
-    const members = await loadWorkspaceMembers(adminClient, access.primaryWorkspaceId, auth.user.id);
+    const members = await loadWorkspaceMembers(adminClient, access.primaryWorkspaceId, auth.user.id, {
+      withPhotos: true,
+    });
 
     // Seat ceiling, so Settings can say "3 of 4" rather than letting the
     // manager discover the limit by being refused. Resolved here rather than
