@@ -53,6 +53,10 @@
  * TasksPanel's own comments at the time he gave them.
  */
 export const RELEASE_MENU_ORDER = [
+  // The brief leads since 2026-10-30 (#897, founder: "this is the home where
+  // people come to"). It is the board a rollout with a plan opens on, so it is
+  // the row you press to come home; the two plan views follow.
+  'brief',
   // (Until 2026-09-15 a 'plan' entry led this list, conditional and
   // self-removing while a release had no activities. The review scene it
   // opened is gone: the plan is built straight into activities from the
@@ -74,13 +78,8 @@ export const RELEASE_MENU_ORDER = [
   // the timeline flag either way, because with that flag off the timeline is
   // unavailable AND the buckets are already the default, so neither belongs.
   'activities',
-  // The release brief (URG-281, 2026-10-16): the idea, references, dates,
-  // who's on what and the decisions, on one page the team reads instead of
-  // scrolling WhatsApp. Straight after the two main views because it is the
-  // page a teammate opens to get up to speed before working the plan, and it
-  // takes the slot release chat is leaving (founder requirement: "no net new
-  // tab"). A reasoned placement, not a measured one.
-  'brief',
+  // (The release brief sat here from 2026-10-16 to 2026-10-30, after the two
+  // main views; it now leads the list, above.)
   // The rollout's own chat thread (Release & Task Chat, Phase 1). Ranked
   // second, ahead of the other promoted tabs, because it is the raw
   // coordination surface the PRD built this feature to replace WhatsApp

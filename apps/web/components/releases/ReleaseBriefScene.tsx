@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
@@ -14,7 +13,6 @@ import { isCreditsEnabled } from '@/lib/credits/config';
 import { embeddedCostLine } from '@/lib/credits/copy';
 import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
-import { supabase } from '@/lib/supabase/client';
 import { applyRunAction, discardRunAction, runBriefFromIdeas, runDraftBrief } from '@/lib/urgans-actions/client';
 import {
   BRIEF_BLOCK_LABELS,
@@ -26,13 +24,12 @@ import {
   formatHistoryTime,
   formatShortDay,
   isBriefEmpty,
-  referenceColor,
-  referenceDisplayTitle,
   type BriefDecision,
   type BriefPayload,
-  type BriefReference,
 } from '@/lib/release-brief';
 import { currentShareOrigin } from '@/lib/app-hosts';
+import { BriefBoard } from './BriefBoard';
+import { BriefAvatar, briefAccessToken, briefCall } from './brief-shared';
 
 /**
  * The release brief scene (URG-281): one page per rollout for the whole team.
@@ -69,7 +66,6 @@ type LoadState =
 type Draft = { actionId: string; idea: string };
 
 const IDEA_SAVE_DELAY_MS = 800;
-const AVATAR_COLORS = ['#7fd99a', '#e7c27d', '#9ab8f0', '#f0a39a', '#c5a3f0', '#8fd3d1'];
 
 const LIST = 'overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface';
 const ROW_DIVIDER = 'border-t border-stroke-default first:border-t-0';
@@ -77,64 +73,10 @@ const PRIMARY =
   'motion-focus motion-press inline-flex h-12 w-full items-center justify-center rounded-full bg-brand px-5 text-[15px] font-semibold text-content-inverse transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60';
 const SECONDARY =
   'motion-focus motion-press inline-flex h-11 w-full items-center justify-center rounded-full border border-stroke-strong px-5 text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover disabled:opacity-60';
-const FIELD =
-  'w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2.5 text-[16px] text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none lg:text-sm';
 
-async function authHeaders(): Promise<Record<string, string> | null> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const token = session?.access_token || '';
-  return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : null;
-}
-
-async function accessToken(): Promise<string> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  return session?.access_token || '';
-}
-
-async function call<T>(url: string, init: RequestInit): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
-  const headers = await authHeaders();
-  if (!headers) return { ok: false, error: 'Your session expired. Sign in again.' };
-  try {
-    const response = await fetch(url, { ...init, headers });
-    const payload = (await response.json().catch(() => ({}))) as T & { error?: string };
-    if (!response.ok) return { ok: false, error: payload.error || 'Something went wrong. Try again.' };
-    return { ok: true, data: payload };
-  } catch {
-    return { ok: false, error: 'Could not reach Urganize. Check your connection.' };
-  }
-}
-
-function avatarColor(key: string): string {
-  let hash = 0;
-  for (const char of key) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
-}
-
-function Avatar({ label, colorKey, urgans = false }: { label: string; colorKey: string; urgans?: boolean }) {
-  if (urgans) {
-    return (
-      <span
-        aria-hidden="true"
-        className="grid h-[26px] w-[26px] shrink-0 place-items-center rounded-full border border-brand/40 bg-bg-surface font-display text-[13px] text-brand"
-      >
-        u
-      </span>
-    );
-  }
-  return (
-    <span
-      aria-hidden="true"
-      className="grid h-[26px] w-[26px] shrink-0 place-items-center rounded-full text-[9.5px] font-bold text-[#0c0c0d]"
-      style={{ background: avatarColor(colorKey) }}
-    >
-      {label}
-    </span>
-  );
-}
+const call = briefCall;
+const accessToken = briefAccessToken;
+const Avatar = BriefAvatar;
 
 /** A block's small grey label, with an optional action on the right. */
 function BlockLabel({ children, action }: { children: ReactNode; action?: ReactNode }) {
@@ -320,12 +262,12 @@ function PeopleBlock({ brief }: { brief: BriefPayload }) {
   );
 }
 
-function NotesBlock({ brief }: { brief: BriefPayload }) {
+function NotesBlock({ brief, bare = false }: { brief: BriefPayload; bare?: boolean }) {
   if (brief.notes.length === 0) return null;
   return (
     <section>
-      <BlockLabel>Notes</BlockLabel>
-      <ul className={LIST}>
+      {bare ? null : <BlockLabel>Notes</BlockLabel>}
+      <ul className={bare ? '' : LIST}>
         {brief.notes.map((note) => (
           <li key={note.id} className={`px-3.5 py-3 ${ROW_DIVIDER}`}>
             <p className="whitespace-pre-line text-sm text-content-primary">{note.body}</p>
@@ -352,181 +294,19 @@ function RemoveButton({ label, onClick }: { label: string; onClick: () => void }
   );
 }
 
-function ReferencesBlock({
-  brief,
-  onAdded,
-  onRemoved,
-  onToast,
-}: {
-  brief: BriefPayload;
-  onAdded: (reference: BriefReference) => void;
-  onRemoved: (id: string) => void;
-  onToast: Props['onToast'];
-}) {
-  const [adding, setAdding] = useState(false);
-  const [url, setUrl] = useState('');
-  const [title, setTitle] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const images = brief.references.filter((reference) => reference.kind === 'image');
-  const links = brief.references.filter((reference) => reference.kind === 'link');
-  const mayRemove = (reference: BriefReference) =>
-    brief.viewer.canEdit && (reference.createdBy === brief.viewer.id || brief.viewer.canManageShare);
-
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!url.trim() || saving) return;
-    setSaving(true);
-    const result = await call<{ reference: BriefReference }>(
-      `/api/releases/${encodeURIComponent(brief.releaseId)}/brief/references`,
-      { method: 'POST', body: JSON.stringify({ url, title }) }
-    );
-    setSaving(false);
-    if (!result.ok) {
-      onToast(result.error, 'error');
-      return;
-    }
-    onAdded(result.data.reference);
-    setUrl('');
-    setTitle('');
-    setAdding(false);
-  };
-
-  const remove = async (reference: BriefReference) => {
-    const result = await call<{ id: string }>(
-      `/api/releases/${encodeURIComponent(brief.releaseId)}/brief/references/${encodeURIComponent(reference.id)}`,
-      { method: 'DELETE' }
-    );
-    if (!result.ok) {
-      onToast(result.error, 'error');
-      return;
-    }
-    onRemoved(reference.id);
-  };
-
-  if (brief.references.length === 0 && !adding && !brief.viewer.canEdit) return null;
-
-  return (
-    <section>
-      <BlockLabel
-        action={
-          brief.viewer.canEdit && !adding ? (
-            <button
-              type="button"
-              onClick={() => setAdding(true)}
-              className="motion-focus text-[12px] font-medium text-content-secondary transition-colors hover:text-content-primary"
-            >
-              + Add
-            </button>
-          ) : null
-        }
-      >
-        References
-      </BlockLabel>
-
-      {adding ? (
-        <form onSubmit={submit} className="mb-2 space-y-2 rounded-2xl border border-stroke-default bg-bg-surface p-3.5">
-          <input
-            autoFocus
-            type="url"
-            inputMode="url"
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-            placeholder="Paste a link or an image link"
-            aria-label="Link"
-            className={FIELD}
-          />
-          <input
-            type="text"
-            value={title}
-            maxLength={120}
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder="Caption (optional)"
-            aria-label="Caption"
-            className={FIELD}
-          />
-          <div className="flex gap-2 pt-1">
-            <button type="submit" disabled={!url.trim() || saving} className={`${PRIMARY} h-10 text-sm`}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : 'Add'}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAdding(false);
-                setUrl('');
-                setTitle('');
-              }}
-              className={`${SECONDARY} h-10`}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      ) : null}
-
-      {images.length > 0 ? (
-        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5">
-          {images.map((reference) => (
-            <div key={reference.id} className="group relative shrink-0">
-              <a href={reference.url} target="_blank" rel="noreferrer noopener" title={reference.title ?? undefined}>
-                <img
-                  src={reference.url}
-                  alt={reference.title || 'Reference image'}
-                  className="h-24 w-24 rounded-xl border border-stroke-default bg-bg-surface object-cover"
-                  loading="lazy"
-                />
-              </a>
-              {mayRemove(reference) ? (
-                <span className="absolute right-1 top-1 rounded-full bg-black/60 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
-                  <RemoveButton label="Remove image" onClick={() => remove(reference)} />
-                </span>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      {links.length > 0 ? (
-        <ul className={`${LIST} ${images.length > 0 ? 'mt-2' : ''}`}>
-          {links.map((reference) => (
-            <li key={reference.id} className={`flex min-h-12 items-center gap-3 px-3.5 text-sm ${ROW_DIVIDER}`}>
-              <span
-                aria-hidden="true"
-                className="h-5 w-5 shrink-0 rounded-md"
-                style={{ background: referenceColor(reference.url) }}
-              />
-              <a
-                href={reference.url}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="min-w-0 flex-1 truncate text-content-primary hover:underline"
-              >
-                {referenceDisplayTitle(reference)}
-              </a>
-              <span className="shrink-0 font-mono text-[11px] text-content-tertiary">{reference.source}</span>
-              {mayRemove(reference) ? <RemoveButton label="Remove link" onClick={() => remove(reference)} /> : null}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      {brief.references.length === 0 && !adding ? (
-        <p className="text-sm text-content-tertiary">Links and images that show the look and sound.</p>
-      ) : null}
-    </section>
-  );
-}
-
 function DecisionsBlock({
   brief,
   onAdded,
   onRemoved,
   onToast,
+  bare = false,
 }: {
   brief: BriefPayload;
   onAdded: (decision: BriefDecision) => void;
   onRemoved: (id: string) => void;
   onToast: Props['onToast'];
+  /** Inside a board card: no label, no frame. */
+  bare?: boolean;
 }) {
   const [value, setValue] = useState('');
   const [saving, setSaving] = useState(false);
@@ -598,8 +378,8 @@ function DecisionsBlock({
 
   return (
     <section>
-      <BlockLabel>Decisions</BlockLabel>
-      <div className={LIST}>
+      {bare ? null : <BlockLabel>Decisions</BlockLabel>}
+      <div className={bare ? '' : LIST}>
         {brief.decisions.map((decision) => (
           <div key={decision.id} className={`flex items-start gap-2 px-3.5 py-3 ${ROW_DIVIDER}`}>
             <div className="min-w-0 flex-1">
@@ -706,13 +486,13 @@ function ToSettleBlock({
 }
 
 /** Everyone's ideas, with who said them and the recording (2026-10-27). */
-function IdeasBlock({ brief }: { brief: BriefPayload }) {
+function IdeasBlock({ brief, bare = false }: { brief: BriefPayload; bare?: boolean }) {
   const ideas = brief.ideas ?? [];
   if (!brief.round || ideas.length === 0) return null;
   return (
     <section>
-      <BlockLabel>Ideas</BlockLabel>
-      <ul className={LIST}>
+      {bare ? null : <BlockLabel>Ideas</BlockLabel>}
+      <ul className={bare ? '' : LIST}>
         {ideas.map((idea) => (
           <li key={idea.id} className={`flex gap-3 px-3.5 py-3 ${ROW_DIVIDER}`}>
             <Avatar label={idea.initials} colorKey={idea.authorName} />
@@ -734,6 +514,7 @@ function IdeaBlock({
   onBlur,
   textareaRef,
   readOnly = false,
+  bare = false,
 }: {
   idea: string;
   onChange: (value: string) => void;
@@ -741,18 +522,40 @@ function IdeaBlock({
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   /** An approved brief is locked (2026-10-27). */
   readOnly?: boolean;
+  /** Inside the board's idea card, which has its own label. */
+  bare?: boolean;
 }) {
   // Grow with the text, so the idea reads as a paragraph rather than a box.
+  // Again when its width changes: the board can lay the card out again (a
+  // wider or narrower panel), and a height taken at another width cut the
+  // idea to one line. The ref is shared with the scene, so the textarea it
+  // points at can change without `idea` changing: check on every render.
+  const observed = useRef<{ node: HTMLTextAreaElement; observer: ResizeObserver } | null>(null);
   useEffect(() => {
     const node = textareaRef.current;
     if (!node) return;
-    node.style.height = '0px';
-    node.style.height = `${node.scrollHeight}px`;
-  }, [idea, textareaRef]);
+    const fit = () => {
+      node.style.height = '0px';
+      node.style.height = `${node.scrollHeight}px`;
+    };
+    fit();
+    if (observed.current?.node === node) return;
+    observed.current?.observer.disconnect();
+    let lastWidth = node.clientWidth;
+    const observer = new ResizeObserver(() => {
+      // Only a width change: our own height change must not loop.
+      if (node.clientWidth === lastWidth) return;
+      lastWidth = node.clientWidth;
+      fit();
+    });
+    observer.observe(node);
+    observed.current = { node, observer };
+  });
+  useEffect(() => () => observed.current?.observer.disconnect(), []);
 
   return (
     <section>
-      <BlockLabel>Idea</BlockLabel>
+      {bare ? null : <BlockLabel>Idea</BlockLabel>}
       <textarea
         ref={textareaRef}
         value={idea}
@@ -761,7 +564,7 @@ function IdeaBlock({
         onChange={(event) => onChange(event.target.value)}
         onBlur={onBlur}
         readOnly={readOnly}
-        placeholder="The story, the sound, the look and the feel."
+        placeholder={bare ? 'The story behind it, in a few sentences.' : 'The story, the sound, the look and the feel.'}
         aria-label="Idea"
         className="block w-full resize-none overflow-hidden bg-transparent text-[16px] leading-[1.55] text-content-primary placeholder:text-content-tertiary focus:outline-none"
       />
@@ -1042,6 +845,8 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
   const brief = lockedBrief ? { ...state.brief, viewer: { ...state.brief.viewer, canEdit: false } } : state.brief;
   const empty = isBriefEmpty({ ...brief, idea }) && !writing;
   const showChrome = !empty && !draft;
+  // The filled brief is a board; the empty and draft states stay one column.
+  const board = showChrome;
   const editedAgo = formatEditedAgo(brief.updatedAt);
   const ideaCount = brief.ideas?.length ?? 0;
 
@@ -1106,23 +911,26 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
       </div>
     ) : null;
 
+  const shareButton = (
+    <button
+      type="button"
+      onClick={() => setSheet('share')}
+      className="motion-focus motion-press inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-brand px-3.5 text-[13px] font-semibold text-content-inverse transition-colors hover:bg-brand-hover"
+    >
+      <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+      Share
+    </button>
+  );
+
   const header = (
-    <div>
-      <div className="flex items-start justify-between gap-3">
-        <p className={titleClass}>Brief</p>
-        {showChrome ? (
-          <button
-            type="button"
-            onClick={() => setSheet('share')}
-            aria-label={BRIEF_COPY.shareTitle}
-            className="motion-focus motion-press grid h-9 w-9 shrink-0 place-items-center rounded-full border border-stroke-strong text-content-primary transition-colors hover:bg-bg-hover lg:h-10 lg:w-10"
-          >
-            <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-          </button>
-        ) : null}
-      </div>
+    <div className={board ? 'flex flex-wrap items-center justify-between gap-x-4 gap-y-2' : ''}>
+      {board ? null : (
+        <div className="flex items-start justify-between gap-3">
+          <p className={titleClass}>Brief</p>
+        </div>
+      )}
       {showChrome && lockedBrief && round ? (
-        <p className="mt-2 flex flex-wrap items-center gap-1 font-mono text-[11px] text-content-tertiary">
+        <p className={`${board ? '' : 'mt-2 '}flex flex-wrap items-center gap-1 font-mono text-[11px] text-content-tertiary`}>
           <Lock className="h-3 w-3" aria-hidden="true" />
           Approved{round.approvedByName ? ` by ${round.approvedByName}` : ''} · {formatShortDay(round.approvedAt)}
           {round.version > 1 ? ` · Version ${round.version}` : ''} ·{' '}
@@ -1135,7 +943,7 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
           </button>
         </p>
       ) : showChrome && round?.state === 'closed' && ideaCount > 0 ? (
-        <p className="mt-2 font-mono text-[11px] text-content-tertiary">
+        <p className={`${board ? '' : 'mt-2 '}font-mono text-[11px] text-content-tertiary`}>
           From {ideaCount === 1 ? '1 idea' : `${ideaCount} ideas`} · not approved ·{' '}
           <button
             type="button"
@@ -1146,7 +954,7 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
           </button>
         </p>
       ) : showChrome && brief.updatedByName && editedAgo ? (
-        <p className="mt-2 font-mono text-[11px] text-content-tertiary">
+        <p className={`${board ? '' : 'mt-2 '}font-mono text-[11px] text-content-tertiary`}>
           Edited by {brief.updatedByName} · {editedAgo} ·{' '}
           <button
             type="button"
@@ -1156,26 +964,26 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
             History
           </button>
         </p>
+      ) : board ? (
+        <span />
       ) : null}
+      {board ? shareButton : null}
     </div>
   );
 
-  const references = (
-    <ReferencesBlock
-      brief={brief}
-      onToast={onToast}
-      onAdded={(reference) => {
-        patch((current) => ({ ...current, references: [...current.references, reference] }));
-        void refresh();
-      }}
-      onRemoved={(id) => {
-        patch((current) => ({ ...current, references: current.references.filter((r) => r.id !== id) }));
-        void refresh();
-      }}
+  const ideaBlock = (
+    <IdeaBlock
+      idea={idea}
+      onChange={changeIdea}
+      onBlur={() => void flushIdea()}
+      textareaRef={ideaRef}
+      readOnly={lockedBrief}
+      bare
     />
   );
-  const decisions = (
+  const bareDecisions = (
     <DecisionsBlock
+      bare
       brief={brief}
       onToast={onToast}
       onAdded={(decision) => {
@@ -1186,15 +994,6 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
         patch((current) => ({ ...current, decisions: current.decisions.filter((d) => d.id !== id) }));
         void refresh();
       }}
-    />
-  );
-  const ideaBlock = (
-    <IdeaBlock
-      idea={idea}
-      onChange={changeIdea}
-      onBlur={() => void flushIdea()}
-      textareaRef={ideaRef}
-      readOnly={lockedBrief}
     />
   );
   const toSettle = <ToSettleBlock brief={brief} onSettle={(id, option) => void settle(id, option)} settlingId={settlingId} />;
@@ -1299,44 +1098,34 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
         <PeopleBlock brief={brief} />
       </div>
     );
-  } else if (isDesktop) {
-    // Idea round order (2026-10-27): what to read and settle on the left, the
-    // ideas it came from and the derived blocks on the right.
-    body = (
-      <div className="flex gap-7">
-        <div className="min-w-0 flex-[1.4]">
-          {ideaBlock}
-          {toSettle}
-          {decisions}
-          {references}
-          {newVersionButton}
-        </div>
-        <div className="min-w-0 flex-1">
-          <IdeasBlock brief={brief} />
-          <DatesBlock brief={brief} />
-          <PeopleBlock brief={brief} />
-          <NotesBlock brief={brief} />
-        </div>
-      </div>
-    );
   } else {
+    // The board (#897): the filled brief, on a computer and a phone alike.
+    const hasIdeas = (brief.ideas?.length ?? 0) > 0 && Boolean(brief.round);
     body = (
-      <>
-        {ideaBlock}
-        {toSettle}
-        {decisions}
-        {references}
-        <IdeasBlock brief={brief} />
-        <DatesBlock brief={brief} />
-        <PeopleBlock brief={brief} />
-        <NotesBlock brief={brief} />
-        {newVersionButton}
-      </>
+      <div className="mt-4">
+        <BriefBoard
+          brief={brief}
+          onToast={onToast}
+          onPatch={patch}
+          onRefresh={() => void refresh()}
+          slots={{
+            idea: ideaBlock,
+            decisions: bareDecisions,
+            settle: round && round.toSettle.length > 0 ? toSettle : null,
+            side: hasIdeas
+              ? { label: 'Ideas', body: <IdeasBlock brief={brief} bare /> }
+              : brief.notes.length > 0
+                ? { label: 'Notes', body: <NotesBlock brief={brief} bare /> }
+                : null,
+            footer: newVersionButton,
+          }}
+        />
+      </div>
     );
   }
 
   return (
-    <div className="pb-10 lg:max-w-[860px]">
+    <div className={`pb-10 ${board ? 'lg:max-w-[1240px]' : 'lg:max-w-[860px]'}`}>
       {header}
       {roundCard}
       {body}

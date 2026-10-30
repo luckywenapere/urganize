@@ -6,7 +6,7 @@ describe('the rollout menu groups (2026-10-14 declutter)', () => {
     const groups = groupRolloutMenu(RELEASE_MENU_ORDER.map((key) => ({ key })));
     expect(groups.map((g) => g.label)).toEqual(['Plan', 'Release', 'Promote', null]);
     expect(groups.flatMap((g) => g.entries).length).toBe(RELEASE_MENU_ORDER.length);
-    expect(groups[0].entries.map((e) => e.key)).toEqual(['timeline', 'activities', 'brief', 'chat', 'calendar', 'spend', 'note']);
+    expect(groups[0].entries.map((e) => e.key)).toEqual(['brief', 'timeline', 'activities', 'chat', 'calendar', 'spend', 'note']);
     expect(groups[1].entries.map((e) => e.key)).toEqual(['coverart', 'metadata', 'distribute', 'files']);
     expect(groups[2].entries.map((e) => e.key)).toEqual(['pitch', 'pitchkit', 'promo', 'share', 'capture']);
     expect(groups[3].entries.map((e) => e.key)).toEqual(['change-artist', 'archive', 'delete']);

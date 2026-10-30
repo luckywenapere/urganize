@@ -86,7 +86,7 @@ const SCENE_ROWS: ReleaseMenuKey[] = [
   'metadata',
   'distribute',
   'files',
-  'capture',
+  'capture',
 ];
 
 
@@ -136,7 +136,7 @@ describe('buildRolloutMenu', () => {
     expect(keysOf(build({ flags: allOff, showSpend: false }))).toEqual([
       'distribute',
       'promo',
-      'share',
+      'share',
       'change-artist',
       'archive',
       'delete',
@@ -330,10 +330,10 @@ describe('purity', () => {
 });
 
 describe('the Read the brief row (URG-281)', () => {
-  it('sits right after Work the plan and opens the brief scene', () => {
+  it('leads the list, since the brief is the rollout’s home (#897), and opens the brief scene', () => {
     const entries = build();
     const keys = keysOf(entries);
-    expect(keys.indexOf('brief')).toBe(keys.indexOf('activities') + 1);
+    expect(keys[0]).toBe('brief');
     const row = entries.find((entry) => entry.key === 'brief');
     expect(row?.label).toBe('Read the brief');
     expect(row?.target).toEqual({ kind: 'scene', scene: 'brief' });
