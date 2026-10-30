@@ -16,7 +16,6 @@ export const TEAM_HREF = '/dashboard/team';
 export const TEAM_COPY = {
   title: 'Team',
   people: 'People',
-  workspace: 'Settings',
   invite: 'Invite',
   inviteSomeone: 'Invite someone',
   nothingAssigned: 'Nothing assigned',

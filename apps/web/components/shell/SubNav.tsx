@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Plus } from '@/components/icons';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { NAV_TIP_TOUCH_CLASS, useNavTip } from './useNavTip';
 import { activeShellArea, visibleSubTabs, type ShellSubTabAction } from '@/lib/shell-nav';
@@ -37,7 +38,9 @@ export const SUBNAV_SLOT_TOOLS = 'subnav-slot-tools';
 export const SUBNAV_SLOT_PHONE_END = 'subnav-slot-phone-end';
 
 /** A plain plus. The stamped Plus (components/icons) reads as a crosshair at
- *  16px (Oyin approved the plain one for this button, Oct 18, 2026). */
+ *  16px (Oyin approved the plain one for this button, Oct 18, 2026). Add
+ *  artist uses the stamped one at 18px since Oct 31, 2026 (Oyin), matching
+ *  the + on the Artists page itself; New rollout keeps the plain one. */
 function PlainPlus() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
@@ -74,7 +77,7 @@ function TabAction({ action }: { action: ShellSubTabAction | null }) {
       title={action.label}
       className={ACTION_CLASS}
     >
-      <PlainPlus />
+      {action.press === 'addArtist' ? <Plus className="h-[18px] w-[18px]" aria-hidden="true" /> : <PlainPlus />}
     </button>
   );
 }
