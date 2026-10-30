@@ -66,14 +66,12 @@ export function Modal({ titleId, children, onClose }: { titleId: string; childre
 /** What the notice says before a link is made, and the count it uses. */
 function LinkNotice({
   row,
-  remaining,
   working,
   error,
   onConfirm,
   onClose,
 }: {
   row: CatalogueRow;
-  remaining: number | null;
   working: boolean;
   error: string;
   onConfirm: () => void;
@@ -87,40 +85,39 @@ function LinkNotice({
       <p className="mt-2 text-sm leading-6 text-content-secondary">
         This makes a public smart link on Altlink that fans can open to stream or save the release. Anyone with the link can see it.
       </p>
-      <ul className="mt-3 list-disc space-y-1 pl-5 text-sm leading-6 text-content-secondary">
-        <li>
-          {remaining === null
-            ? 'It uses 1 of your links for today.'
-            : `It uses 1 of your links for today. ${remaining} left.`}
-        </li>
-        <li>Altlink makes the link, so we cannot edit or delete it from here.</li>
-      </ul>
+      {/* The daily limit stays internal (#895): no count here or anywhere on the page. */}
+      <p className="mt-3 text-sm leading-6 text-content-secondary">
+        Altlink makes the link, so we cannot edit or delete it from here.
+      </p>
       {error ? (
         <p role="alert" className="mt-3 text-sm text-status-error">
           {error}
         </p>
       ) : null}
-      <div className="mt-5 flex justify-end gap-3">
-        <button type="button" onClick={onClose} disabled={working} className={secondaryButton}>
-          Cancel
-        </button>
-        <button type="button" onClick={onConfirm} disabled={working} className={primaryButton}>
-          {working ? 'Getting your smart link…' : 'Grab a smart link'}
-        </button>
+      {/* Altlink's credit lives here, where it makes the link (#895). */}
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+        <PoweredByAltlink variant="line" />
+        <div className="ml-auto flex gap-3">
+          <button type="button" onClick={onClose} disabled={working} className={secondaryButton}>
+            Cancel
+          </button>
+          <button type="button" onClick={onConfirm} disabled={working} className={primaryButton}>
+            {working ? 'Getting your smart link…' : 'Grab a smart link'}
+          </button>
+        </div>
       </div>
     </Modal>
   );
 }
 
-function CapNotice({ limit, onClose }: { limit: number; onClose: () => void }) {
+function CapNotice({ onClose }: { onClose: () => void }) {
   return (
     <Modal titleId="link-cap-title" onClose={onClose}>
       <h2 id="link-cap-title" className="font-display text-xl font-semibold text-content-primary">
-        That is {limit} links for today
+        That is all the links for today
       </h2>
       <p className="mt-2 text-sm leading-6 text-content-secondary">
-        Each team can make {limit} links a day for now. Your count resets at midnight Lagos time. Everything else on the
-        release still works.
+        You can make more after midnight Lagos time. Everything else on the release still works.
       </p>
       <div className="mt-5 flex justify-end">
         <button type="button" onClick={onClose} className={primaryButton}>
@@ -198,7 +195,7 @@ export function ArtistCatalogueCard({
   const [confirming, setConfirming] = useState<CatalogueRow | null>(null);
   const [working, setWorking] = useState(false);
   const [noticeError, setNoticeError] = useState('');
-  const [capLimit, setCapLimit] = useState<number | null>(null);
+  const [capHit, setCapHit] = useState(false);
   const [justCopied, setJustCopied] = useState('');
   const polls = useRef(0);
 
@@ -241,7 +238,7 @@ export function ArtistCatalogueCard({
     }
     if (result.reason === 'cap') {
       setConfirming(null);
-      setCapLimit(result.cap?.limit ?? data.cap?.limit ?? 10);
+      setCapHit(true);
       captureAnalyticsEvent({ name: 'catalogue_link_cap_hit', properties: {} });
       load();
       return;
@@ -351,24 +348,19 @@ export function ArtistCatalogueCard({
               {showAll ? 'Show fewer' : `Show all ${rows.length}`}
             </button>
           ) : null}
-          {/* The links are Altlink's, so their credit is one small line under the
-              list that names the job (#852, #889). The daily count left the page
-              (#889): the limit pop-up says it when it is reached. */}
-          {rows.some((row) => row.link?.url) ? <PoweredByAltlink variant="line" className="mt-3" /> : null}
         </>
       )}
 
       {confirming ? (
         <LinkNotice
           row={confirming}
-          remaining={data.cap ? data.cap.remaining : null}
           working={working}
           error={noticeError}
           onConfirm={() => void confirmLink()}
           onClose={() => (working ? undefined : setConfirming(null))}
         />
       ) : null}
-      {capLimit !== null ? <CapNotice limit={capLimit} onClose={() => setCapLimit(null)} /> : null}
+      {capHit ? <CapNotice onClose={() => setCapHit(false)} /> : null}
     </>
   );
 }

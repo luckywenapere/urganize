@@ -4,10 +4,10 @@
 // (.partner-logo-invert in globals.css); Oyin approved the mock
 // docs/mocks/powered-by-altlink on Oct 29, 2026.
 //
-// The "line" variant (#889, mock docs/mocks/altlink-credit-placement, option A):
-// on the Artists page the credit is one small left-aligned line inside the
-// Out now list that names the job ("Smart links powered by"), so it reads as
-// the links' credit, never as the page's maker.
+// The "line" variant (#895, Oyin Oct 30, 2026): small and left-aligned, for the
+// "Grab a smart link" dialog on an artist page, the moment Altlink does its
+// work. It is not shown on the page itself, so it never reads as the page's
+// maker (#889).
 
 export const ALTLINK_HOME_URL = 'https://altlink.co';
 
@@ -21,7 +21,7 @@ export function PoweredByAltlink({ className = '', variant = 'centred' }: { clas
           : `flex items-center justify-center gap-2 pt-2 text-[13px] text-content-secondary ${className}`
       }
     >
-      {line ? 'Smart links powered by' : 'powered by'}
+      powered by
       <a
         href={ALTLINK_HOME_URL}
         target="_blank"
