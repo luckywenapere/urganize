@@ -448,11 +448,16 @@ export interface AnalyticsEventPropertiesMap {
   rollout_first_steps_dismissed: { release_id: string; done: number; total: number };
   /** A face was added or swapped on the roster or a directory record (2026-10-11). */
   profile_photo_saved: {
-    surface: 'workspace_logo' | 'curator_photo' | 'artist_photo' | 'person_photo';
-    replaced: boolean;
+    surface: 'workspace_logo' | 'curator_photo' | 'artist_photo' | 'person_photo' | 'account_photo';
+    replaced?: boolean;
+    /** Your own account photo (2026-10-30): where it was added and how. */
+    place?: 'onboarding_team' | 'invite_accept' | 'settings';
+    source?: 'upload' | 'google';
   };
+  /** The invitee photo step was left with Skip (2026-10-30). */
+  account_photo_skipped: { place: 'invite_accept'; had_google: boolean };
   asset_upload_failed: {
-    surface: 'workspace_logo' | 'curator_photo' | 'artist_photo' | 'person_photo';
+    surface: 'workspace_logo' | 'curator_photo' | 'artist_photo' | 'person_photo' | 'account_photo';
     step: 1 | 2 | 3;
     status?: number;
     reason: string;

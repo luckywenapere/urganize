@@ -11,6 +11,7 @@
 
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Logo, LogoIcon } from '@urganize/ui/Logo';
+import { MyFace } from '@/components/shared/AccountPhoto';
 
 export const primaryButtonClass =
   'motion-press inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-full bg-brand px-5 text-[15px] font-semibold text-content-inverse transition-colors duration-fast ease-standard hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-bg-hover disabled:text-content-tertiary';
@@ -73,7 +74,7 @@ export function TopBar({ name }: { name?: string | null }) {
         <span>Urganize</span>
       </div>
       <Logo size="sm" priority className="hidden opacity-95 lg:flex" />
-      {name ? <Avatar name={name} /> : null}
+      {name ? <MyFace size={32} fallback={<Avatar name={name} />} /> : null}
     </header>
   );
 }
@@ -147,7 +148,7 @@ export function AccountChip({
         place === 'top' ? 'mt-5 hidden md:flex' : 'mt-7 flex border-t border-stroke-control pt-4 md:hidden'
       }`}
     >
-      <Avatar name={name || email} />
+      <MyFace size={32} fallback={<Avatar name={name || email} />} />
       <span className="min-w-0 truncate text-content-primary">{email}</span>
       <button type="button" onClick={onLogout} className={`ml-auto shrink-0 ${textLinkClass} text-content-secondary`}>
         {logoutLabel}

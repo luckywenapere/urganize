@@ -14,6 +14,7 @@ import {
   X,
   type LucideProps,
 } from '@/components/icons';
+import { MyFace } from '@/components/shared/AccountPhoto';
 import { useAuthStore } from '@/lib/auth-store';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { useHomeStore } from '@/stores/useHomeStore';
@@ -34,10 +35,11 @@ export function useNewOpportunities(): number {
   );
 }
 
-/** The green avatar: initials, with a small cream dot while something in the menu is new. */
+/** The green avatar: initials (or your photo, NEXT_PUBLIC_FEATURE_PROFILE_PHOTO),
+ *  with a small cream dot while something in the menu is new. */
 export function AvatarFace({ size = 32, dot = false }: { size?: number; dot?: boolean }) {
   const name = useAuthStore((state) => state.user?.name || state.user?.email || '');
-  return (
+  const initials = (
     <span
       className="relative inline-grid shrink-0 place-items-center rounded-full bg-brand font-bold text-content-inverse"
       style={{ width: size, height: size, fontSize: Math.round(size * 0.39), letterSpacing: '0.2px' }}
@@ -49,6 +51,12 @@ export function AvatarFace({ size = 32, dot = false }: { size?: number; dot?: bo
       ) : null}
     </span>
   );
+  // Same 9px dot and 2px bg-base ring on a photo, drawn above the hairline.
+  const photoDot = dot ? (
+    <span className="absolute -right-px -top-px z-[2] h-[9px] w-[9px] rounded-full bg-content-primary ring-2 ring-bg-base" />
+  ) : null;
+  // With the flag off (or no photo) this is exactly the initials face above.
+  return <MyFace size={size} fallback={initials} overlay={photoDot} />;
 }
 
 /**

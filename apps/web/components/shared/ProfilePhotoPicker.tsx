@@ -1,20 +1,12 @@
 'use client';
 
-import { useRef, useState } from 'react';
 import { Camera, Loader2, Trash2 } from '@/components/icons';
-import { supabase } from '@/lib/supabase/client';
-import { captureAnalyticsEvent, createPostHogEvent } from '@/lib/analytics';
-import { prepareAvatarImage } from '@/lib/downscale-image';
-import { uploadThumb } from '@/lib/image-thumb-client';
-import {
-  buildUploadFailureReport,
-  formatUploadFailureCode,
-  type UploadStep,
-  type UploadSurface,
-} from '@/lib/upload-failure-report';
+import { captureAnalyticsEvent } from '@/lib/analytics';
+import type { UploadSurface } from '@/lib/upload-failure-report';
 import { PROFILE_PHOTO_MIME_TYPES } from '@/lib/profile-photo';
 import { ProfileFace } from './ProfileFace';
 import { PhotoCropDialog } from './PhotoCropDialog';
+import { usePhotoUpload } from './usePhotoUpload';
 
 /**
  * A face you can tap to change. Used on the Artists list, the artist page and
@@ -28,7 +20,9 @@ import { PhotoCropDialog } from './PhotoCropDialog';
  *
  * The upload is the three-step flow the workspace logo and curator photo use:
  * sign (POST `signUrl`) → PUT the bytes to storage → `save(path)`. A failure
- * says which step broke and carries a pasteable code, same as those.
+ * says which step broke and carries a pasteable code, same as those. The
+ * mechanics live in usePhotoUpload (2026-10-30), which the account photo
+ * surfaces share.
  */
 
 type Props = {
@@ -68,111 +62,21 @@ export function ProfilePhotoPicker({
   quietBadge = false,
   className = '',
 }: Props) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [cropping, setCropping] = useState<File | null>(null);
-
-  const pick = () => {
-    if (!busy) inputRef.current?.click();
-  };
-
-  // Shrink first (a phone original can be past what a browser will decode),
-  // then hand it to the crop step. 2048px leaves room to zoom in sharply.
-  const choose = async (file: File) => {
-    setError('');
-    setBusy(true);
-    try {
-      const prepared = await prepareAvatarImage(file, 2048);
-      if (!prepared) {
-        setError('Could not read that image. Try a JPEG.');
-        return;
+  const { bindInput, ...photo } = usePhotoUpload({
+    signUrl,
+    save,
+    surface,
+    onSaved: (url, { removed }) => {
+      onChange(url);
+      if (!removed) {
+        captureAnalyticsEvent({
+          name: 'profile_photo_saved',
+          properties: { surface, replaced: Boolean(photoUrl) },
+        });
       }
-      setCropping(prepared.file);
-    } finally {
-      setBusy(false);
-      if (inputRef.current) inputRef.current.value = '';
-    }
-  };
-
-  /** `body` is the cropped square, already small. */
-  const upload = async (body: File) => {
-    setError('');
-    setBusy(true);
-    let step: UploadStep = 1;
-    let status: number | undefined;
-    try {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) throw new Error('Sign in again to change the photo.');
-
-      const signResponse = await fetch(signUrl, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file_name: body.name, mime_type: body.type, file_size: body.size }),
-      });
-      const signed = (await signResponse.json().catch(() => null)) as {
-        upload_url?: string;
-        storage_path?: string;
-        thumb_upload_url?: string | null;
-        error?: string;
-      } | null;
-      if (!signResponse.ok || !signed?.upload_url || !signed.storage_path) {
-        status = signResponse.status;
-        throw new Error(signed?.error || 'Could not start the upload.');
-      }
-
-      step = 2;
-      // The 384px display copy rides alongside (lib/image-thumb-client.ts):
-      // best effort, never fails the save, and lands before it so the
-      // roster reload reads it.
-      const thumbDone = uploadThumb(signed.thumb_upload_url, body);
-      const put = await fetch(signed.upload_url, {
-        method: 'PUT',
-        headers: { 'Content-Type': body.type },
-        body,
-      });
-      if (!put.ok) {
-        status = put.status;
-        throw new Error('The upload did not finish.');
-      }
-
-      await thumbDone;
-      step = 3;
-      onChange(await save(signed.storage_path));
-      captureAnalyticsEvent({ name: 'profile_photo_saved', properties: { surface, replaced: Boolean(photoUrl) } });
-    } catch (uploadError) {
-      const code = formatUploadFailureCode({ surface, step, status });
-      const detail = uploadError instanceof Error ? uploadError.message : 'Could not save the photo.';
-      setError(`${detail} (${code})`);
-      captureAnalyticsEvent(
-        createPostHogEvent(
-          'asset_upload_failed',
-          buildUploadFailureReport({
-            surface,
-            step,
-            status,
-            message: uploadError instanceof Error ? uploadError.message : null,
-          })
-        )
-      );
-    } finally {
-      setBusy(false);
-      if (inputRef.current) inputRef.current.value = '';
-    }
-  };
-
-  const remove = async () => {
-    setError('');
-    setBusy(true);
-    try {
-      onChange(await save(null));
-    } catch (removeError) {
-      setError(removeError instanceof Error ? removeError.message : 'Could not remove the photo.');
-    } finally {
-      setBusy(false);
-    }
-  };
+    },
+  });
+  const { busy } = photo;
 
   const badge = quietBadge ? 28 : Math.max(18, Math.round(size * 0.36));
 
@@ -185,7 +89,7 @@ export function ProfilePhotoPicker({
           // Rows wrap their content in links; the face must never navigate.
           event.preventDefault();
           event.stopPropagation();
-          pick();
+          photo.pick();
         }}
         disabled={busy}
         aria-label={photoUrl ? `Change ${name}'s photo` : `Add a photo of ${name}`}
@@ -223,7 +127,7 @@ export function ProfilePhotoPicker({
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
-            void remove();
+            void photo.remove();
           }}
           aria-label={`Remove ${name}'s photo`}
           title="Remove photo"
@@ -237,22 +141,19 @@ export function ProfilePhotoPicker({
       </div>
 
       <input
-        ref={inputRef}
+        ref={bindInput}
         type="file"
         accept={PROFILE_PHOTO_MIME_TYPES.join(',')}
         className="hidden"
         onClick={(event) => event.stopPropagation()}
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file) void choose(file);
-        }}
+        onChange={photo.onFileChange}
       />
 
       {showActions ? (
         <div className="mt-2 flex items-center gap-3 text-xs">
           <button
             type="button"
-            onClick={pick}
+            onClick={photo.pick}
             disabled={busy}
             className="motion-focus min-h-8 font-semibold text-brand hover:underline disabled:opacity-60"
           >
@@ -261,7 +162,7 @@ export function ProfilePhotoPicker({
           {photoUrl ? (
             <button
               type="button"
-              onClick={() => void remove()}
+              onClick={() => void photo.remove()}
               disabled={busy}
               className="motion-focus min-h-8 text-content-secondary hover:underline disabled:opacity-60"
             >
@@ -271,21 +172,13 @@ export function ProfilePhotoPicker({
         </div>
       ) : null}
 
-      {cropping ? (
-        <PhotoCropDialog
-          file={cropping}
-          name={name}
-          onCancel={() => setCropping(null)}
-          onConfirm={(cropped) => {
-            setCropping(null);
-            void upload(cropped);
-          }}
-        />
+      {photo.cropping ? (
+        <PhotoCropDialog file={photo.cropping} name={name} onCancel={photo.cancelCrop} onConfirm={photo.confirmCrop} />
       ) : null}
 
-      {error ? (
+      {photo.error ? (
         <p role="alert" className="mt-1 max-w-[16rem] text-xs text-status-error">
-          {error}
+          {photo.error}
         </p>
       ) : null}
     </div>

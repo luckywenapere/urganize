@@ -69,10 +69,20 @@ function isSelectable(member: WorkspaceMember): boolean {
 }
 
 function MemberAvatar({ member }: { member: WorkspaceMember }) {
+  // A photo that fails to load (an expired signed link) falls back to the
+  // initials, keyed by url so a fresh link gets a fresh try.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const photo = member.avatarUrl && failedUrl !== member.avatarUrl ? member.avatarUrl : null;
   return (
     <span className="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-bg-elevated text-[10px] font-semibold text-content-primary">
-      {member.avatarUrl ? (
-        <ThumbImage src={member.avatarUrl} width={24} height={24} className="h-full w-full object-cover" />
+      {photo ? (
+        <ThumbImage
+          src={photo}
+          width={24}
+          height={24}
+          className="h-full w-full object-cover"
+          onError={() => setFailedUrl(photo)}
+        />
       ) : (
         getInitials(member.name || member.email)
       )}

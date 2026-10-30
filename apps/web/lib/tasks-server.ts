@@ -56,6 +56,8 @@ import { isAppAccessAllowed } from '@/lib/access-gate-server';
 import { isEditorialPitchTask, isPitchReminderType } from '@/lib/editorial-pitch';
 import { dropRowsOfDeletedReleases, findDeletedReleaseIds } from '@/lib/rollout-trash-server';
 import { APP_ORIGIN, shareOrigin } from '@/lib/app-hosts';
+import { isAccountPhotoEnabled } from '@/lib/account-photo';
+import { loadAccountPhotoUrls } from '@/lib/account-photo-server';
 
 export const WORKSPACES_TABLE = 'workspaces';
 export const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
@@ -1269,7 +1271,11 @@ export async function loadWorkspaceAccessContext(
 export async function loadWorkspaceMembers(
   adminClient: SupabaseClient,
   workspaceId: string,
-  currentUserId: string
+  currentUserId: string,
+  /** Sign each member's account photo (one profiles read, one batched
+   *  signing call). Only for screens that draw faces: the Team page, team
+   *  presence, the members list and a rollout's board. */
+  options: { withPhotos?: boolean } = {}
 ): Promise<WorkspaceMember[]> {
   const result = await adminClient
     .from(WORKSPACE_MEMBERS_TABLE)
@@ -1288,7 +1294,20 @@ export async function loadWorkspaceMembers(
     rows.map((row) => row.user_id || '').filter(Boolean)
   );
 
-  return rows.map((row) => toWorkspaceMember(row, workspaceId, profileById, currentUserId));
+  const members = rows.map((row) => toWorkspaceMember(row, workspaceId, profileById, currentUserId));
+  // Account photos (NEXT_PUBLIC_FEATURE_PROFILE_PHOTO): one profiles read and
+  // one batched signing call for the whole team. Never throws; flag off, no
+  // read at all and every avatarUrl stays null as before.
+  if (options.withPhotos && isAccountPhotoEnabled()) {
+    const photoByUserId = await loadAccountPhotoUrls(
+      adminClient,
+      members.map((member) => member.userId || '').filter(Boolean)
+    );
+    for (const member of members) {
+      if (member.userId) member.avatarUrl = photoByUserId.get(member.userId) ?? null;
+    }
+  }
+  return members;
 }
 
 function toTaskGroup(row: TaskGroupRow, taskCount = 0): TaskGroup {
@@ -1773,7 +1792,7 @@ export async function resolveReleaseTaskWorkspace(
       artistName: release.artist_name,
     },
     workspaceId: releaseWorkspaceId,
-    members: await loadWorkspaceMembers(adminClient, releaseWorkspaceId, user.id),
+    members: await loadWorkspaceMembers(adminClient, releaseWorkspaceId, user.id, { withPhotos: true }),
   };
 }
 
