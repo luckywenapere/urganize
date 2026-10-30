@@ -20,6 +20,7 @@ import { EditorialPitchPanel } from '@/components/tasks/EditorialPitchPanel';
 import { SmartLinkTaskPanel } from '@/components/tasks/SmartLinkTaskPanel';
 import { isSmartLinkTask } from '@/lib/smart-link-task';
 import { FindSomeoneRow } from '@/components/directory/FindSomeoneRow';
+import { BriefToggleRow } from './BriefToggleRow';
 import { isEditorialPitchTask } from '@/lib/editorial-pitch';
 import { showEditorialPitch } from '@/lib/release-out';
 import { ShareLoginActions } from '@/components/team/ShareLoginActions';
@@ -739,6 +740,15 @@ export function TaskDetailView({
             releaseId={task.releaseId ?? null}
             templateTaskId={task.templateTaskId}
             status={task.status}
+            rowClassName={DETAIL_ROW_CLASS}
+            iconClassName={DETAIL_ICON_CLASS}
+          />
+
+          {/* What we're making on the brief (#897 phase 3). */}
+          <BriefToggleRow
+            taskId={task.id}
+            releaseId={task.releaseId ?? null}
+            onBrief={task.onBrief}
             rowClassName={DETAIL_ROW_CLASS}
             iconClassName={DETAIL_ICON_CLASS}
           />

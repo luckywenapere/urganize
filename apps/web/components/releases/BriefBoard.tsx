@@ -44,6 +44,7 @@ import {
   useBriefImageUploads,
   useFileDrop,
 } from './BriefBoardMedia';
+import { BriefPiecesCard } from './BriefPiecesCard';
 import {
   formatBriefDay,
   initialsFor,
@@ -153,6 +154,7 @@ const CARD_NAMES: Record<BoardCardKey, string> = {
   sound: 'Sound and links',
   decisions: 'Decided',
   settle: 'To settle',
+  pieces: 'What we’re making',
   moments: 'Key moments',
   people: 'Who’s on what',
   side: 'Notes',
@@ -1052,6 +1054,8 @@ export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props)
   }
   // Notes stay open after the brief is approved: the team keeps talking on the board.
   const canNote = brief.viewer.canEdit || brief.round?.state === 'approved';
+  // What we're making (#897 phase 3): read from the plan; + Piece adds to it.
+  cards.pieces = <BriefPiecesCard brief={brief} canAdd={canNote} onRefresh={onRefresh} onToast={onToast} />;
   const [composing, setComposing] = useState(false);
 
   const present = new Set((Object.keys(cards) as BoardKey[]).filter((key) => cards[key]));

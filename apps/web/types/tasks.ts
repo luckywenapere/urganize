@@ -189,6 +189,9 @@ export interface Task {
    * playbook step it was, so the right follow-up can be offered (see
    * lib/cover-art-tasks.ts). */
   templateTaskId: string | null;
+  /** Shows in the brief's What we're making (#897 phase 3): a playbook piece
+   * step, a planner deliverable, or a person's choice. Set by the server. */
+  onBrief?: boolean;
   /** How many days the playbook expects this activity to run, from
    * metadata.template.duration_days. Null for anything the playbooks did not
    * generate — a manager-added or planner-added activity — and for rows that

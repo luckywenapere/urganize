@@ -19,6 +19,7 @@
 
 import type { BriefFeel, BriefProgress } from '@/lib/brief-board';
 import type { BoardLayout, NoteKey } from '@/lib/brief-board-layout';
+import type { BriefPiece } from '@/lib/brief-pieces';
 import { readPlanKey } from '@/lib/plan-focus';
 import { channelLabel, type Channel } from '@/lib/planner-v2/answers';
 import { readUndatedTaskMeta, relativeWhenLabel } from '@/lib/planner-v2/when';
@@ -93,6 +94,13 @@ export type BriefBoardFacts = {
   canArrange: boolean;
   /** Sticky notes, oldest first; their places are in `layout`. */
   stickies: BriefSticky[];
+  /** What we're making (#897 phase 3): the pieces, with who has each. */
+  pieces: {
+    items: (BriefPiece & { assigneeName: string | null; assigneeInitials: string | null })[];
+    done: number;
+    total: number;
+    late: number;
+  };
 };
 
 export type BriefReference = {
@@ -397,6 +405,8 @@ export type BriefTaskRow = {
   assigned_to_user_id: string | null;
   metadata: unknown;
   position?: number | null;
+  /** The task's notes; the first line is a piece's one-line spec (#897 phase 3). */
+  description?: string | null;
 };
 
 

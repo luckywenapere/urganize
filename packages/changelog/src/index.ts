@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.222.0",
+    title: "What we're making",
+    tag: "Rollouts",
+    date: "October 30, 2026",
+    highlights: [
+      "The brief now lists what the rollout makes, like cover art, teasers and the press release, with who has each one, when it is due and if it is late.",
+      "Tap + Piece to add one to the plan, or turn on On the brief in any activity.",
+    ],
+  },
+  {
     version: "1.221.0",
     title: "Photos and notes on the brief",
     tag: "Rollouts",
