@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.215.0",
+    title: "Talk to the assistant again",
+    tag: "AI",
+    date: "October 30, 2026",
+    highlights: [
+      "Voice input is back. Tap the mic and speak to the assistant instead of typing.",
+      "The first item in the menu now says Home.",
+    ],
+  },
+  {
     version: "1.214.2",
     tag: "Team",
     date: "October 30, 2026",
