@@ -51,6 +51,7 @@ import { fadeInScreen } from '@/components/motion/MainMorph';
 import { resolveActiveScene, resolvePanelBody } from '@/lib/scene-cache';
 import { useScenePrefetch } from './useScenePrefetch';
 import { useIsDesktopViewport } from './useIsDesktopViewport';
+import { usePlanMenuFoldGestures } from './usePlanMenuFoldGestures';
 import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
@@ -1242,6 +1243,18 @@ export function WorkspaceView() {
       !testReleaseBanner &&
       panelBody === 'activities' &&
       scopedTasks.length > 0
+  );
+  // A small swipe down the plan folds its menu away (#898): only while a dated
+  // plan is what shows, never under the phone's search or the rotate prompt.
+  const phoneSearchOpen = useRolloutPhoneChrome((state) => state.searchOpen);
+  usePlanMenuFoldGestures(
+    Boolean(scopedReleaseSlim?.releaseDate) &&
+      bodyIsMainView &&
+      scopedTasks.length > 0 &&
+      !simplePlanView &&
+      !showRotatePrompt &&
+      !(phoneSearchOpen && !isDesktopViewport),
+    scopedReleaseSlim?.id ?? null
   );
   const bannerParts = [releaseReviewCard, pinnedConfirmDateCard, otherActivitiesBanner].filter(Boolean);
   const activitiesBannerNode =

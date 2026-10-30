@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Plan menu fold</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --side:#f0ebe1; --card:#faf5ec; --hover:#ebe6dc;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --err:#961a1a; --board:#d9d5cc; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--text); padding:32px 16px 64px; }
+  p { margin:0; }
+  .wrap { max-width:1160px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; margin:0 0 6px; }
+  .intro p, .sec-h p { color:var(--board-sec); }
+  .sec-h { margin:36px 0 12px; }
+  .sec-h h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:0 0 4px; }
+  .mono { font-family:'JetBrains Mono', monospace; }
+
+  /* Desktop frame */
+  .desk { background:var(--bg); border-radius:18px; overflow:hidden; box-shadow:0 12px 32px rgba(26,22,17,.10); height:560px; display:flex; flex-direction:column; }
+  .topbar { display:flex; align-items:center; justify-content:space-between; padding:14px 24px; border-bottom:1px solid var(--line); flex:none; }
+  .logo { font-family:'Young Serif', serif; font-size:18px; }
+  .nav { display:flex; gap:4px; }
+  .nav span { padding:6px 14px; border-radius:99px; color:var(--sec); font-size:13.5px; }
+  .nav span.on { background:var(--hover); color:var(--text); font-weight:600; }
+
+  .page { flex:1; min-height:0; display:flex; flex-direction:column; padding:14px 28px 0; }
+  .title { display:flex; align-items:center; gap:10px; flex:none; height:36px; }
+  .title .crumb { color:var(--ter); }
+  .title b { font-size:16px; }
+  .title .draft { font-size:11.5px; padding:1px 8px; border-radius:99px; background:var(--brand-soft); color:var(--brand); font-weight:600; }
+  .title .sp { flex:1; }
+  .dots { color:var(--ter); letter-spacing:2px; }
+
+  /* The part that folds */
+  .fold { display:grid; grid-template-rows:1fr; transition:grid-template-rows .26s cubic-bezier(.2,.8,.2,1), opacity .2s; flex:none; }
+  .fold > .inner { overflow:hidden; min-height:0; }
+  .folded .fold { grid-template-rows:0fr; opacity:0; }
+  .tools { display:flex; gap:8px; align-items:center; padding:8px 0; flex-wrap:wrap; }
+  .chip { display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:0 12px; border-radius:99px; border:1px solid var(--line2); font-size:13px; font-weight:600; white-space:nowrap; }
+  .chip.green { border-color:rgba(20,100,58,.35); color:var(--brand); background:var(--brand-soft); }
+  .chip.solid { background:var(--brand); color:#f5f0e6; border-color:transparent; }
+  .tools .sp { flex:1; }
+  .count { color:var(--ter); font-size:13px; }
+  .tabs { display:flex; gap:4px; padding:6px 0 10px; border-bottom:1px solid var(--line); }
+  .tabs span { padding:6px 12px; border-radius:8px; color:var(--sec); font-size:13.5px; }
+  .tabs span.on { background:var(--hover); color:var(--text); font-weight:600; }
+  .phases { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:12px 0 6px; }
+  .ph { border:1px solid var(--line); background:var(--card); border-radius:10px; padding:8px 10px; font-size:12.5px; display:flex; gap:8px; align-items:center; }
+  .ph b { font-size:12.5px; }
+  .ph .bar { flex:1; height:4px; border-radius:2px; background:var(--hover); position:relative; overflow:hidden; }
+  .ph .bar i { position:absolute; inset:0 auto 0 0; background:var(--brand); border-radius:2px; }
+  .ph.now { border-color:rgba(20,100,58,.4); }
+  .ph.late { border-color:rgba(150,26,26,.35); color:var(--err); }
+
+  /* The reopen pill: lives in the title row's lower edge, only when folded */
+  .pillrow { height:0; position:relative; flex:none; transition:height .26s cubic-bezier(.2,.8,.2,1); }
+  .folded .pillrow { height:32px; }
+  .reopen { position:absolute; left:50%; top:2px; transform:translate(-50%,-6px); opacity:0; pointer-events:none; display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 12px 0 10px; border-radius:99px; background:var(--card); border:1px solid var(--line2); box-shadow:0 2px 8px rgba(26,22,17,.08); font:600 12px 'Instrument Sans', sans-serif; color:var(--sec); cursor:pointer; transition:opacity .2s, transform .2s; z-index:3; }
+  .reopen:hover { color:var(--text); }
+  .reopen svg { width:12px; height:12px; }
+  .folded .reopen { opacity:1; transform:translate(-50%, calc(var(--pull,0) * 8px)) scale(calc(1 + var(--pull,0) * .12)); pointer-events:auto; transition:opacity .2s, transform .12s; }
+  .folded .reopen { color:color-mix(in srgb, var(--brand) calc(var(--pull,0) * 100%), var(--sec)); border-color:color-mix(in srgb, var(--brand) calc(var(--pull,0) * 60%), var(--line2)); }
+
+  /* Timeline: scrolls on its own both ways */
+  .tl { flex:1; min-height:0; overflow:auto; border-top:1px solid var(--line); margin-top:4px; overscroll-behavior:contain; }
+  .tl-grid { width:1400px; position:relative; padding-bottom:20px; }
+  .wk { display:grid; grid-template-columns:200px repeat(12,100px); font:500 11px 'JetBrains Mono', monospace; color:var(--ter); position:sticky; top:0; background:var(--bg); z-index:2; border-bottom:1px solid var(--line); }
+  .wk span { padding:8px 6px; }
+  .wk span.rel { color:var(--brand); font-weight:600; }
+  .row { display:grid; grid-template-columns:200px 1fr; height:32px; align-items:center; }
+  .row .lab { font-size:12.5px; color:var(--sec); padding-left:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; position:sticky; left:0; background:var(--bg); z-index:1; height:100%; display:flex; align-items:center; }
+  .row.grp .lab { color:var(--text); font-weight:600; }
+  .row .track { position:relative; height:100%; }
+  .dot { position:absolute; top:50%; width:10px; height:10px; border-radius:50%; transform:translate(-50%,-50%); border:1.5px solid var(--ter); }
+  .dot.done { background:var(--brand); border-color:var(--brand); }
+  .dia { position:absolute; top:50%; width:10px; height:10px; transform:translate(-50%,-50%) rotate(45deg); background:var(--brand); }
+  .span { position:absolute; top:50%; height:4px; border-radius:2px; background:var(--hover); transform:translateY(-50%); }
+  .today { position:absolute; top:0; bottom:0; width:1px; background:var(--text); left:calc(200px + 610px); z-index:0; }
+  .relline { position:absolute; top:0; bottom:0; width:1px; background:var(--brand); left:calc(200px + 700px); z-index:0; }
+
+  /* Phone frame */
+  .pair { display:flex; gap:24px; flex-wrap:wrap; }
+  .phone { width:340px; height:640px; background:var(--bg); border-radius:36px; border:8px solid #1a1611; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 12px 32px rgba(26,22,17,.12); }
+  .phone .page { padding:14px 14px 0; }
+  .phone .title b { font-family:'Young Serif', serif; font-weight:400; font-size:20px; }
+  .phone .tools { gap:6px; }
+  .phone .chip { min-height:30px; font-size:12px; padding:0 10px; }
+  .phone .tabs { overflow:hidden; }
+  .phone .tabs span { font-size:12.5px; padding:5px 9px; white-space:nowrap; }
+  .phone .phases { grid-template-columns:1fr 1fr; }
+  .phone .tl-grid { width:900px; }
+  .phone .wk { grid-template-columns:130px repeat(12,64px); }
+  .phone .row { grid-template-columns:130px 1fr; }
+  .phone .today { left:calc(130px + 390px); }
+  .phone .relline { left:calc(130px + 448px); }
+
+  .note { margin-top:12px; color:var(--board-sec); font-size:13px; }
+  .note li { margin:3px 0; }
+  .hint { display:inline-block; margin-top:8px; font-size:12px; color:var(--board-sec); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <h1>Fold the plan menu with a small swipe</h1>
+    <p>Try it: scroll or swipe up a little inside either frame and the toolbar, tabs and phase cards fold away. To bring them back, scroll to the top of the plan and keep pulling, or tap the pill. The timeline keeps scrolling the whole time.</p>
+  </div>
+
+  <div class="sec-h"><h2>Computer</h2><p>Trackpad or mouse wheel. The title line stays; everything under it folds.</p></div>
+  <div class="desk" data-frame>
+    <div class="topbar"><span class="logo">Urganize</span><div class="nav"><span class="on">Home</span><span>Assistant</span><span>Team</span></div><span style="width:80px"></span></div>
+    <div class="page">
+      <div class="title"><span class="crumb">Rollouts ›</span><b>Honest</b><span class="crumb">Dorian</span><span class="draft">Draft</span><span class="sp"></span><span class="dots">•••</span></div>
+      <div class="pillrow"><button class="reopen" data-reopen><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 4.5 6 7.5 9 4.5"/></svg>Menu</button></div>
+      <div class="fold"><div class="inner">
+        <div class="tools"><span class="chip">☰ ▤</span><span class="chip">⚙</span><span class="chip green">Hide done · 14</span><span class="chip">Select</span><span class="sp"></span><span class="count">14 of 23 done</span><span class="chip">Add idea</span><span class="chip solid">+ New activity</span></div>
+        <div class="tabs"><span class="on">Work the plan</span><span>Read the brief</span><span>Distribute now</span><span>Pitch this!</span></div>
+        <div class="phases">
+          <div class="ph"><b>Pre-release</b><span class="bar"><i style="width:82%"></i></span>14/17</div>
+          <div class="ph now"><b>Release</b><span class="bar"></span>0/3</div>
+          <div class="ph"><b>Post-release</b><span class="bar"></span>0/3</div>
+          <div class="ph late">● Handoff · 0 of 2 sent</div>
+        </div>
+      </div></div>
+      <div class="tl" data-tl><div class="tl-grid" data-grid></div></div>
+    </div>
+  </div>
+
+  <div class="sec-h"><h2>Phone</h2><p>Left: open. Right: folded after a small swipe up. Both frames work; try the right one.</p></div>
+  <div class="pair">
+    <div class="phone" data-frame data-phone data-static-open></div>
+    <div class="phone" data-frame data-phone data-start-folded></div>
+  </div>
+
+  <ul class="note">
+    <li>Folding: a swipe or scroll of about 6px down the plan is enough.</li>
+    <li>Scrolling back up the plan does not open it. Reach the top, then keep pulling down: the pill grows and turns green, and the menu opens at about 70px.</li>
+    <li>Phone only: a hard flick down (about 1,600px a second, over 40px) opens it from anywhere. A normal scroll is well under that.</li>
+    <li>Computer: no speed rule. A mouse wheel sends the same step however hard you spin it, so speed can't be read properly there. Pull at the top, or tap the pill.</li>
+    <li>Tap the pill to open, any time.</li>
+    <li>Nothing changes while you are typing in the timeline search or a sheet is open.</li>
+  </ul>
+</div>
+
+<script>
+  const tasks = [
+    ['g','Pre-release','14/15'],['t','Finalize split sheets',0,'done'],['t','Book studio mix',1,'done'],['t','Artwork brief',1.6,'done'],['t','Distributor upload',3,'done'],['t','Pitch to editorial',4.5],
+    ['g','Release','0/3'],['m','Release day: monitor DSPs',7],['m','Release day: post drop',7],['t','Compile first-week stats',7.2],
+    ['g','Post-release','0/3'],['t','Review Spotify for Artists',9],['t','Decide on next release',10],['t','Document lessons learned',10],
+    ['t','Thank-you posts',8],['t','Playlist follow-ups',8.5],['t','Fan capture review',9.5],['t','Budget wrap',11],
+  ];
+  function buildGrid(el, labW, colW) {
+    const wk = ['W7','W6','W5','W4','W3','W2','W1','RELEASE','+1','+2','+3','+4'];
+    let h = '<div class="wk"><span></span>' + wk.map(w => `<span class="${w==='RELEASE'?'rel':''}">${w}</span>`).join('') + '</div>';
+    h += '<div style="position:relative"><div class="today"></div><div class="relline"></div>';
+    for (const t of tasks) {
+      if (t[0]==='g') { h += `<div class="row grp"><div class="lab">⌄ ${t[1]} <span style="margin-left:auto;padding-right:8px;font-weight:400;color:var(--ter)">${t[2]}</span></div><div class="track"></div></div>`; continue; }
+      const x = t[2]*colW + colW/2;
+      const mark = t[0]==='m' ? `<i class="dia" style="left:${x}px"></i>` : `<i class="dot ${t[3]||''}" style="left:${x}px"></i>`;
+      h += `<div class="row"><div class="lab">${t[1]}</div><div class="track">${mark}</div></div>`;
+    }
+    el.innerHTML = h + '</div>';
+  }
+
+  const deskPage = document.querySelector('.desk .page').outerHTML;
+  document.querySelectorAll('[data-phone]').forEach(p => {
+    p.innerHTML = deskPage.replace('<span class="crumb">Rollouts ›</span>','<span class="crumb">‹</span>').replace('<span class="crumb">Dorian</span>','');
+  });
+  document.querySelectorAll('[data-grid]').forEach(g => {
+    const phone = g.closest('[data-phone]');
+    buildGrid(g, phone ? 130 : 200, phone ? 64 : 100);
+  });
+
+  // Folding is easy: a small move down the plan hides the menu.
+  // Opening is deliberate: the plan must already be at the top, then a pull
+  // past it. On a phone, a hard flick toward the top also opens it.
+  const HIDE_PX = 6;          // move this far down the plan and the menu folds
+  const PULL_OPEN_PX = 70;    // pull this far past the top to open
+  const GESTURE_GAP_MS = 180; // a wheel pause this long starts a new gesture
+  const FLICK_PX_PER_MS = 1.6;// finger speed that counts as a hard flick (about 1,600px a second)
+  const FLICK_MIN_PX = 40;    // and it has to travel at least this far
+  const atTop = tl => tl.scrollTop <= 1;
+
+  document.querySelectorAll('[data-frame]').forEach(frame => {
+    if (frame.hasAttribute('data-start-folded')) frame.classList.add('folded');
+    if (frame.hasAttribute('data-static-open')) return;
+    const tl = frame.querySelector('[data-tl]');
+    const pill = frame.querySelector('[data-reopen]');
+    const isFolded = () => frame.classList.contains('folded');
+    const pullProgress = p => pill.style.setProperty('--pull', p);
+    const set = folded => { frame.classList.toggle('folded', folded); pullProgress(0); };
+    pill.addEventListener('click', () => set(false));
+
+    // Wheel and trackpad. Speed is not trusted here: a mouse wheel sends the
+    // same size step however hard you spin it, and trackpad momentum keeps
+    // sending steps after the fingers lift. So the only way back is a pull
+    // at the top, and only a pull that STARTED at the top, so momentum that
+    // runs into the top does not count.
+    let hideAcc = 0, pullAcc = 0, lastWheel = 0, gestureStartedAtTop = false;
+    frame.addEventListener('wheel', e => {
+      if (Math.abs(e.deltaY) < Math.abs(e.deltaX)) return; // sideways timeline drag leaves it alone
+      const now = performance.now();
+      if (now - lastWheel > GESTURE_GAP_MS) { gestureStartedAtTop = atTop(tl); pullAcc = 0; hideAcc = 0; }
+      lastWheel = now;
+      if (e.deltaY > 0) {
+        pullAcc = 0; pullProgress(0);
+        hideAcc += e.deltaY;
+        if (!isFolded() && hideAcc > HIDE_PX) set(true);
+      } else if (isFolded() && gestureStartedAtTop && atTop(tl)) {
+        pullAcc -= e.deltaY;
+        pullProgress(Math.min(1, pullAcc / PULL_OPEN_PX));
+        if (pullAcc >= PULL_OPEN_PX) set(false);
+      }
+    }, { passive: true });
+
+    // Touch. Here the finger's speed can be measured properly, from the last
+    // few move events, so a hard flick toward the top opens it from anywhere.
+    let y0 = null, x0 = null, lastY = 0, startedAtTop = false, samples = [];
+    frame.addEventListener('touchstart', e => {
+      y0 = lastY = e.touches[0].clientY; x0 = e.touches[0].clientX;
+      startedAtTop = atTop(tl); samples = [{ y: y0, t: performance.now() }];
+    }, { passive: true });
+    frame.addEventListener('touchmove', e => {
+      if (y0 === null) return;
+      const y = e.touches[0].clientY, dx = x0 - e.touches[0].clientX;
+      const t = performance.now();
+      samples.push({ y, t }); samples = samples.filter(s => t - s.t < 100);
+      if (Math.abs(y0 - y) < Math.abs(dx)) return;
+      if (y0 - y > HIDE_PX && !isFolded()) set(true);              // finger moved up the screen
+      if (isFolded() && startedAtTop && atTop(tl)) {                 // pulling down past the top
+        const pulled = y - y0;
+        pullProgress(Math.max(0, Math.min(1, pulled / PULL_OPEN_PX)));
+        if (pulled >= PULL_OPEN_PX) set(false);
+      }
+      lastY = y;
+    }, { passive: true });
+    frame.addEventListener('touchend', () => {
+      if (y0 !== null && isFolded() && samples.length > 1) {
+        const a = samples[0], b = samples[samples.length - 1];
+        const speed = (b.y - a.y) / Math.max(1, b.t - a.t); // positive = finger moving down
+        if (speed >= FLICK_PX_PER_MS && lastY - y0 >= FLICK_MIN_PX) set(false);
+      }
+      if (isFolded()) pullProgress(0);
+      y0 = null;
+    }, { passive: true });
+  });
+</script>
+</body>
+</html>
