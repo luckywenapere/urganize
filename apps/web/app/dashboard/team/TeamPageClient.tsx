@@ -6,9 +6,7 @@ import { authHeaders, readError } from '@/components/press-kits/press-kit-client
 import { TeamSheet } from '@/components/team/TeamSheet';
 import { TeamAvatar } from '@/components/team/TeamAvatar';
 import { PersonPanel } from '@/components/team/PersonPanel';
-import { WorkspacePanel } from '@/components/team/WorkspacePanel';
 import { AccessPicker, accessBody, isAccessChoiceReady, type AccessChoice } from '@/components/team/AccessPicker';
-import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { isOnline } from '@/lib/presence';
 import { teamPresenceLabel } from '@/lib/home/team-presence';
 import {
@@ -22,25 +20,22 @@ import {
   type TeamPerson,
 } from '@/lib/team-page';
 
-type Segment = 'people' | 'workspace';
-
 /**
  * The Team tab (issue #853, founder approved mocks docs/mocks/team-tab, round
- * 3). People: the team as centred cards on a computer and a list on a phone,
- * each person opening their tasks beside it. Workspace: name, seats, invite
- * links, leave. Everyone on the team sees it; managers also get Invite,
- * Remove and Change role or access.
+ * 3): the team as centred cards on a computer and a list on a phone, each
+ * person opening their tasks beside it. Everyone on the team sees it; managers
+ * also get Invite, Remove and Change role or access. The Settings segment was
+ * removed (founder, 2026-10-30): team name is in Settings → Artists & brand,
+ * Leave is in Settings → Security & account, seats are in the header line.
  */
 export default function TeamPageClient() {
   const [data, setData] = useState<TeamPageResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [segment, setSegment] = useState<Segment>('people');
   const [openId, setOpenId] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
-  const setIdentityName = useWorkspaceIdentityStore((state) => state.setName);
 
   const load = useCallback(async () => {
     const headers = await authHeaders();
@@ -82,30 +77,6 @@ export default function TeamPageClient() {
         : '',
     [data, people, now]
   );
-
-  const rename = async (name: string): Promise<string | null> => {
-    const headers = await authHeaders();
-    if (!headers) return 'Sign in again to save.';
-    const response = await fetch('/api/team', { method: 'PATCH', headers, body: JSON.stringify({ name }) });
-    if (!response.ok) return readError(response, 'Could not rename the team.');
-    setIdentityName(name);
-    setData((current) => (current ? { ...current, workspace: { ...current.workspace, name } } : current));
-    return null;
-  };
-
-  const leave = async (): Promise<string | null> => {
-    const headers = await authHeaders();
-    if (!headers) return 'Sign in again to leave.';
-    const response = await fetch('/api/team/leave', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ workspaceId: data?.workspace.id }),
-    });
-    if (!response.ok) return readError(response, 'Could not leave the team.');
-    // A full load, so every cached list forgets the team they just left.
-    window.location.assign('/dashboard/artists');
-    return null;
-  };
 
   const remove = async (person: TeamPerson): Promise<string | null> => {
     const headers = await authHeaders();
@@ -163,103 +134,78 @@ export default function TeamPageClient() {
         ) : null}
       </div>
 
-      <div
-        role="tablist"
-        aria-label="Team"
-        className="mt-5 flex w-full gap-0.5 rounded-xl bg-bg-hover p-[3px] md:inline-flex md:w-auto"
-      >
-        {(['people', 'workspace'] as const).map((key) => (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={segment === key}
-            onClick={() => setSegment(key)}
-            className={`motion-focus flex-1 rounded-lg px-4 py-1.5 text-[13px] md:flex-none ${
-              segment === key ? 'bg-bg-surface font-semibold text-content-primary shadow-sm' : 'text-content-secondary'
-            }`}
-          >
-            {key === 'people' ? TEAM_COPY.people : TEAM_COPY.workspace}
-          </button>
-        ))}
-      </div>
-
-      {segment === 'workspace' ? (
-        <WorkspacePanel data={data} onRename={rename} onLeave={leave} />
-      ) : (
-        <>
-          {/* Computer: the team laid out as centred cards. */}
-          <ul className="mt-4 hidden grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3.5 md:grid" aria-label="People on the team">
-            {active.map((person) => (
-              <li key={person.memberId}>
-                <PersonCard person={person} now={now} onOpen={() => setOpenId(person.memberId)} />
-              </li>
-            ))}
-            {waiting.map((person) => (
-              <li key={person.memberId}>
-                <WaitingCard person={person} canManage={canManage} onOpen={() => setOpenId(person.memberId)} />
-              </li>
-            ))}
-            {canManage && seatsLeft !== 0 ? (
-              <li>
-                <button
-                  type="button"
-                  onClick={() => setInviting(true)}
-                  className="motion-focus motion-press flex h-full min-h-[262px] w-full flex-col items-center justify-center rounded-2xl border-[1.5px] border-dashed border-stroke-control text-center text-content-secondary"
-                >
-                  <span className="grid h-11 w-11 place-items-center rounded-full border-[1.5px] border-dashed border-stroke-control text-brand">
-                    <Plus className="h-5 w-5" aria-hidden="true" />
-                  </span>
-                  <span className="mt-2.5 text-sm font-semibold text-content-primary">{TEAM_COPY.inviteSomeone}</span>
-                  {seatsLeft !== null ? (
-                    <span className="text-[12.5px]">{seatsLeft === 1 ? '1 seat left' : `${seatsLeft} seats left`}</span>
-                  ) : null}
-                </button>
-              </li>
-            ) : null}
-          </ul>
-
-          {/* Phone: a list shows the whole team without scrolling. */}
-          <ul className="mt-3 md:hidden" aria-label="People on the team">
-            {active.map((person) => (
-              <li key={person.memberId} className="border-t border-stroke-default first:border-t-0">
-                <PersonRow person={person} now={now} onOpen={() => setOpenId(person.memberId)} />
-              </li>
-            ))}
-          </ul>
-          {waiting.length ? (
-            <div className="md:hidden">
-              <p className="mt-2 border-t border-stroke-default py-2.5 text-[11px] font-medium uppercase tracking-[0.08em] text-content-tertiary">
-                {TEAM_COPY.waiting} · {waiting.length}
-              </p>
-              <ul>
-                {waiting.map((person) => (
-                  <li key={person.memberId}>
-                    <button
-                      type="button"
-                      onClick={() => setOpenId(person.memberId)}
-                      className="motion-focus flex w-full items-center gap-3 py-2.5 text-left"
-                    >
-                      <TeamAvatar initials={person.initials} avatarUrl={null} online={false} size="sm" pending />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm text-content-primary">{person.email}</span>
-                        <span className="block text-xs text-content-secondary">{TEAM_ROLE_LABEL[person.role]} · invited</span>
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
+      <>
+        {/* Computer: the team laid out as centred cards. */}
+        <ul className="mt-4 hidden grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3.5 md:grid" aria-label="People on the team">
+          {active.map((person) => (
+            <li key={person.memberId}>
+              <PersonCard person={person} now={now} onOpen={() => setOpenId(person.memberId)} />
+            </li>
+          ))}
+          {waiting.map((person) => (
+            <li key={person.memberId}>
+              <WaitingCard person={person} canManage={canManage} onOpen={() => setOpenId(person.memberId)} />
+            </li>
+          ))}
+          {canManage && seatsLeft !== 0 ? (
+            <li>
+              <button
+                type="button"
+                onClick={() => setInviting(true)}
+                className="motion-focus motion-press flex h-full min-h-[262px] w-full flex-col items-center justify-center rounded-2xl border-[1.5px] border-dashed border-stroke-control text-center text-content-secondary"
+              >
+                <span className="grid h-11 w-11 place-items-center rounded-full border-[1.5px] border-dashed border-stroke-control text-brand">
+                  <Plus className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span className="mt-2.5 text-sm font-semibold text-content-primary">{TEAM_COPY.inviteSomeone}</span>
+                {seatsLeft !== null ? (
+                  <span className="text-[12.5px]">{seatsLeft === 1 ? '1 seat left' : `${seatsLeft} seats left`}</span>
+                ) : null}
+              </button>
+            </li>
           ) : null}
+        </ul>
 
-          {active.length <= 1 && !waiting.length ? (
-            <div className="mt-6 rounded-2xl border border-dashed border-stroke-control p-6 text-center md:hidden">
-              <Users className="mx-auto h-6 w-6 text-content-tertiary" aria-hidden="true" />
-              <p className="mt-2 text-sm text-content-secondary">It is just you for now.</p>
-            </div>
-          ) : null}
-        </>
-      )}
+        {/* Phone: a list shows the whole team without scrolling. */}
+        <ul className="mt-3 md:hidden" aria-label="People on the team">
+          {active.map((person) => (
+            <li key={person.memberId} className="border-t border-stroke-default first:border-t-0">
+              <PersonRow person={person} now={now} onOpen={() => setOpenId(person.memberId)} />
+            </li>
+          ))}
+        </ul>
+        {waiting.length ? (
+          <div className="md:hidden">
+            <p className="mt-2 border-t border-stroke-default py-2.5 text-[11px] font-medium uppercase tracking-[0.08em] text-content-tertiary">
+              {TEAM_COPY.waiting} · {waiting.length}
+            </p>
+            <ul>
+              {waiting.map((person) => (
+                <li key={person.memberId}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenId(person.memberId)}
+                    className="motion-focus flex w-full items-center gap-3 py-2.5 text-left"
+                  >
+                    <TeamAvatar initials={person.initials} avatarUrl={null} online={false} size="sm" pending />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm text-content-primary">{person.email}</span>
+                      <span className="block text-xs text-content-secondary">{TEAM_ROLE_LABEL[person.role]} · invited</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {active.length <= 1 && !waiting.length ? (
+          <div className="mt-6 rounded-2xl border border-dashed border-stroke-control p-6 text-center md:hidden">
+            <Users className="mx-auto h-6 w-6 text-content-tertiary" aria-hidden="true" />
+            <p className="mt-2 text-sm text-content-secondary">It is just you for now.</p>
+          </div>
+        ) : null}
+      </>
 
       {open ? (
         <TeamSheet title={open.name} hideTitle onClose={() => setOpenId(null)}>
@@ -419,7 +365,6 @@ function TeamSkeleton() {
   return (
     <div aria-busy="true">
       <div className="mt-2 h-4 w-56 animate-pulse rounded bg-bg-hover" />
-      <div className="mt-5 h-9 w-full animate-pulse rounded-xl bg-bg-hover md:w-52" />
       <div className="mt-4 hidden grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3.5 md:grid">
         {[0, 1, 2, 3].map((key) => (
           <div key={key} className="flex min-h-[262px] flex-col items-center rounded-2xl border border-stroke-default bg-bg-surface p-4">

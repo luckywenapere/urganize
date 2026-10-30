@@ -2,6 +2,8 @@
 
 import { useWorkspaceIdentityStore } from "@/stores/useWorkspaceIdentityStore";
 import { isBrandColorsEnabled } from "@/lib/social-share-colors";
+import { TEAM_LOGINS_ENABLED } from "@/lib/team-logins";
+import { TeamLoginsSection } from "@/components/team/TeamLoginsSection";
 import { BrandColorsSection } from "../BrandColorsSection";
 import { WorkspaceArtistSection } from "../WorkspaceArtistSection";
 import { WorkspaceIdentitySection } from "../WorkspaceIdentitySection";
@@ -75,6 +77,9 @@ export function ArtistsBrandSegment({
             />
           </div>
         )}
+        {/* Invite links came back here from the Team tab's Settings segment
+            when it was removed (founder, 2026-10-30). */}
+        {TEAM_LOGINS_ENABLED ? <TeamLoginsSection /> : null}
       </SettingsGroup>
 
       <SettingsGroup title="Artists" defaultOpen>

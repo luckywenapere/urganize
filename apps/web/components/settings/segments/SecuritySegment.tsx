@@ -5,6 +5,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { canDeleteRollouts } from '@/lib/settings-nav';
 import { DataExportSection } from '../DataExportSection';
 import { DeleteAccountSection } from '../DeleteAccountSection';
+import { LeaveTeamSection } from '../LeaveTeamSection';
 import { ReleasesSection } from '../ReleasesSection';
 import { SecuritySection } from '../SecuritySection';
 
@@ -17,7 +18,8 @@ import { SecuritySection } from '../SecuritySection';
  *
  * Every irreversible action in Settings lives in the one clearly separated block
  * at the bottom: deleting rollouts (the only place a real one can be deleted,
- * URG-163) and deleting the account. Nothing destructive sits beside an everyday
+ * URG-163), leaving a team you joined (moved from the Team tab, 2026-10-30) and
+ * deleting the account. Nothing destructive sits beside an everyday
  * setting any more. Log out is not here; it is pinned to the foot of the pop-up's
  * list so it is one tap from any segment.
  */
@@ -37,6 +39,7 @@ function SecuritySegmentView() {
         </p>
         <div className="mt-2 divide-y divide-stroke-subtle">
           {canDeleteRollouts(role) ? <ReleasesSection /> : null}
+          <LeaveTeamSection />
           <DeleteAccountSection />
         </div>
       </div>

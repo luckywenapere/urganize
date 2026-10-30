@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.225.1",
+    tag: "Team",
+    date: "October 31, 2026",
+    highlights: [
+      "The Team page now just shows your people. Change your team name in Settings, under Artists & brand. Leave a team in Settings, under Security & account.",
+      "The Add artist button on your phone now has the same + as the rest of the app.",
+    ],
+  },
+  {
     version: "1.225.0",
     title: "Share the brief with a person",
     tag: "Team",
