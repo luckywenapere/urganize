@@ -307,3 +307,21 @@ const PHONE_ORDER: BoardCardKey[] = [
 export function boardPhoneOrder(present: Set<BoardCardKey>): BoardCardKey[] {
   return PHONE_ORDER.filter((key) => present.has(key));
 }
+
+// ── The plan's Brief button (#902) ──────────────────────────────────────────
+
+const BUTTON_LINE_MAX = 80;
+
+/**
+ * The line under "Brief" on the plan's button: the one-line idea, else the
+ * first sentence (or line) of the story, cut to fit. Empty when nothing is
+ * written yet, and the button says "Write the brief" instead.
+ */
+export function briefButtonLine(input: { headline: string; idea: string }): string {
+  const headline = input.headline.trim();
+  const source = headline || input.idea.trim().split('\n')[0].trim();
+  if (!source) return '';
+  const sentence = headline ? source : (source.match(/^.*?[.!?](?=\s|$)/)?.[0] ?? source);
+  if (sentence.length <= BUTTON_LINE_MAX) return sentence;
+  return `${sentence.slice(0, BUTTON_LINE_MAX - 1).trimEnd()}…`;
+}

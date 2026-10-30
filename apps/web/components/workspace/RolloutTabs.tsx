@@ -97,14 +97,20 @@ export function RolloutTabs({
     );
   }
 
+  // The brief is not a tab on the computer (#902, 2026-10-30): its door is the
+  // Brief button on the plan's title line, and it opens on the whole screen.
+  // It stays reachable from the overflow menu.
+  const tabs = places.filter((action) => action.key !== 'brief');
+  const more = [...places.filter((action) => action.key === 'brief'), ...dialogs];
+
   return (
     <nav aria-label="Rollout" data-tour="rollout-menu" className="flex items-center gap-1">
       <ScrollRow>
-        {places.map((action) => (
+        {tabs.map((action) => (
           <Tab key={action.key} action={action} />
         ))}
       </ScrollRow>
-      {dialogs.length > 0 ? <OverflowMenu actions={dialogs} /> : null}
+      {more.length > 0 ? <OverflowMenu actions={more} /> : null}
     </nav>
   );
 }

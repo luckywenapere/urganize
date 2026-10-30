@@ -19,9 +19,9 @@ describe('RELEASE_MENU_ORDER', () => {
    */
   it('is the documented sequence', () => {
     expect([...RELEASE_MENU_ORDER]).toEqual([
-      'brief',
       'timeline',
       'activities',
+      'brief',
       'chat',
       'calendar',
       'coverart',

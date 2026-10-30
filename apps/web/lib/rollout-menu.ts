@@ -161,9 +161,9 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
         };
 
   const entries: (RolloutMenuEntry | null)[] = [
-    flags.releaseBrief ? scene('brief', 'Read the brief') : null,
     flags.timeline ? scene('timeline', 'See the timeline') : null,
     flags.timeline ? scene('activities', 'Work the plan') : null,
+    flags.releaseBrief ? scene('brief', 'Read the brief') : null,
     flags.releaseChat ? scene('chat', 'Talk to the team') : null,
     flags.contentCalendar ? scene('calendar', 'Plan content') : null,
     // Release prep in the order the work happens (2026-10-16).
