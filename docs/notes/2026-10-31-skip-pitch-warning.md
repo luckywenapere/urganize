@@ -8,3 +8,7 @@ Founder: "Release day is under 35 days away. That's tight for a Spotify pitch." 
 - **Fails open to showing:** the skipped list is its own read in `loadDistributionFacts`; if it fails (or the column is not there yet) the warning just shows again.
 - **No undo yet.** To bring it back, remove the code from the column. Moving the release day does not clear a skip.
 - Not checked in a browser: the session had no local app and no production access.
+
+## Keep date (2026-10-31, v1.226.1)
+
+`release_date_tight` ("Stores can take up to 14 working days...", or the date has passed) is skippable too: "Keep date", toast "Got it. Keeping this date." Same column and route; no new SQL.

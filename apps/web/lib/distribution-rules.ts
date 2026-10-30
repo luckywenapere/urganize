@@ -128,6 +128,8 @@ export type DistributionFacts = {
  */
 export const SKIPPABLE_WARNINGS: Readonly<Record<string, { label: string; done: string }>> = {
   pitch_window_tight: { label: 'Skip pitch', done: 'Got it. No Spotify pitch for this one.' },
+  // Moving the date is the fix; keeping it is the team's call (Oct 31, 2026).
+  release_date_tight: { label: 'Keep date', done: 'Got it. Keeping this date.' },
 };
 
 export function isSkippableWarning(code: string): boolean {

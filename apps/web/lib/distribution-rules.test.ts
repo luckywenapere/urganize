@@ -234,9 +234,13 @@ describe('the rules, one at a time (each has a failing case and a passing case)'
     expect(fired('pitch_window_tight', { releaseDate: '2026-11-12', skippedWarnings: ['pitch_window_tight'] })).toHaveLength(0);
     // Only skippable codes count: a skip cannot hide another warning or an error.
     expect(
-      fired('release_date_tight', { releaseDate: '2026-10-20', skippedWarnings: ['release_date_tight'] })
+      fired('title_all_caps', { title: 'LAGOS NIGHTS', skippedWarnings: ['title_all_caps'] })
     ).toHaveLength(1);
     expect(fired('missing_title', { title: '', skippedWarnings: ['missing_title'] })).toHaveLength(1);
+  });
+
+  it('release_date_tight: a team that chose to keep the date stops seeing it', () => {
+    expect(fired('release_date_tight', { releaseDate: '2026-10-20', skippedWarnings: ['release_date_tight'] })).toHaveLength(0);
   });
 
   it('release_date_tight: a date inside three weeks, or one that has passed, gets a word', () => {
