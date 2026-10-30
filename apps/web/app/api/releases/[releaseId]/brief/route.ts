@@ -6,7 +6,7 @@ import {
 } from '@/lib/release-access-server';
 import { parseIdea } from '@/lib/release-brief';
 import { parseBriefFeel } from '@/lib/brief-board';
-import { loadBriefPayload, saveBriefFeel, saveBriefIdea } from '@/lib/release-brief-server';
+import { loadBriefPayload, recordBriefView, saveBriefFeel, saveBriefIdea } from '@/lib/release-brief-server';
 import { briefLockedFailure, loadBriefRoundExtras } from '@/lib/idea-round-server';
 import { badRequest, briefDisabled, briefFailure, missingReleaseId, notConfigured } from './_shared';
 
@@ -46,6 +46,10 @@ export async function GET(
 
   const access = await ensureReleaseTeamReadAccess(admin, releaseId, auth.user);
   if ('error' in access) return access.error;
+
+  // Opening the brief counts as seeing it (#897 phase 4), before the read, so
+  // the count includes the person reading.
+  await recordBriefView(admin, { releaseId, userId: auth.user.id });
 
   const loaded = await loadBriefPayload(admin, {
     releaseId,

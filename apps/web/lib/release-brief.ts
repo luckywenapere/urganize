@@ -20,6 +20,7 @@
 import type { BriefFeel, BriefProgress } from '@/lib/brief-board';
 import type { BoardLayout, NoteKey } from '@/lib/brief-board-layout';
 import type { BriefPiece } from '@/lib/brief-pieces';
+import type { BriefSeen } from '@/lib/brief-present';
 import { readPlanKey } from '@/lib/plan-focus';
 import { channelLabel, type Channel } from '@/lib/planner-v2/answers';
 import { readUndatedTaskMeta, relativeWhenLabel } from '@/lib/planner-v2/when';
@@ -101,6 +102,8 @@ export type BriefBoardFacts = {
     total: number;
     late: number;
   };
+  /** Who on the team has opened the brief (#897 phase 4). */
+  seen: BriefSeen;
 };
 
 export type BriefReference = {
