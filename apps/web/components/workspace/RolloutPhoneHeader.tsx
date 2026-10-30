@@ -5,6 +5,8 @@ import { ChevronLeft, Menu, Search, Sparkles } from '@/components/icons';
 import { ArtistFace } from '@/components/shared/ArtistFace';
 import { rolloutMetaLine } from '@/lib/release-timeline';
 import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
+import { usePlanMenuFold } from '@/stores/usePlanMenuFold';
+import { PlanMenuPill } from './PlanMenuPill';
 import type { PlanView } from '@/lib/plan-view';
 import { PlanViewToggle } from './PlanViewToggle';
 import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
@@ -70,6 +72,18 @@ export function RolloutPhoneHeader({
   const setMenuOpen = useRolloutPhoneChrome((state) => state.setMenuOpen);
   const headerRef = useRef<HTMLDivElement | null>(null);
   const [scrolledPast, setScrolledPast] = useState(false);
+  // Folded (#898): a small swipe up the plan swaps this header for one slim
+  // line (back, title, count) and the Menu pill, held under the top bar.
+  const folded = usePlanMenuFold((state) => state.folded);
+  const [topBarHeight, setTopBarHeight] = useState(0);
+  useEffect(() => {
+    if (!folded) return;
+    const bar = document.querySelector<HTMLElement>('[data-swipe-topbar]');
+    const measure = () => setTopBarHeight(bar ? bar.getBoundingClientRect().height : 0);
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [folded]);
 
   useEffect(() => {
     const node = headerRef.current;
@@ -125,6 +139,23 @@ export function RolloutPhoneHeader({
       </button>
     </div>
   );
+
+  if (folded) {
+    return (
+      <div
+        data-rollout-phone-folded-header
+        style={{ top: topBarHeight }}
+        className="sticky z-20 mb-3 bg-bg-base pb-1"
+      >
+        <div className="flex h-11 items-center gap-1">
+          <SlimTitle title={title} done={done} total={total} backLabel={backLabel} onBack={onBack} />
+        </div>
+        <div className="flex justify-center">
+          <PlanMenuPill toTop />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -194,26 +225,48 @@ export function RolloutPhoneHeader({
           className="fixed inset-x-0 top-0 z-30 border-b border-stroke-subtle bg-bg-base/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur lg:hidden"
         >
           <div className="mx-auto flex h-14 w-full items-center gap-1 px-4 sm:px-5 md:px-6">
-            <button
-              type="button"
-              onClick={onBack}
-              aria-label={backLabel}
-              className="motion-focus motion-press -ml-3 grid h-11 w-11 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
-            >
-              <ChevronLeft className="h-6 w-6" aria-hidden="true" />
-            </button>
-            <p className="flex min-w-0 flex-1 items-baseline gap-2">
-              <span className="truncate font-display text-xl font-semibold text-content-primary">{title}</span>
-              {total > 0 ? (
-                <span className="shrink-0 font-mono text-xs tabular-nums text-content-tertiary">
-                  {done}/{total}
-                </span>
-              ) : null}
-            </p>
+            <SlimTitle title={title} done={done} total={total} backLabel={backLabel} onBack={onBack} />
             {icons(false)}
           </div>
         </div>
       ) : null}
+    </>
+  );
+}
+
+/** The way back, the title and the count on one slim line: the scrolled bar
+ *  and the folded header (#898) share it. */
+function SlimTitle({
+  title,
+  done,
+  total,
+  backLabel,
+  onBack,
+}: {
+  title: string;
+  done: number;
+  total: number;
+  backLabel: string;
+  onBack: () => void;
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onBack}
+        aria-label={backLabel}
+        className="motion-focus motion-press -ml-3 grid h-11 w-11 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+      >
+        <ChevronLeft className="h-6 w-6" aria-hidden="true" />
+      </button>
+      <p className="flex min-w-0 flex-1 items-baseline gap-2">
+        <span className="truncate font-display text-xl font-semibold text-content-primary">{title}</span>
+        {total > 0 ? (
+          <span className="shrink-0 font-mono text-xs tabular-nums text-content-tertiary">
+            {done}/{total}
+          </span>
+        ) : null}
+      </p>
     </>
   );
 }

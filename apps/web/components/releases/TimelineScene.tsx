@@ -47,6 +47,7 @@ import {
   withShowCancelled,
 } from '@/lib/plan-focus';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { usePlanMenuFold } from '@/stores/usePlanMenuFold';
 import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { TASKS_CHANGED_EVENT } from '@/components/tasks/TaskUIProvider';
@@ -247,6 +248,7 @@ export function TimelineScene({
   phone = false,
 }: TimelineSceneProps) {
   const phoneSearchOpen = useRolloutPhoneChrome((state) => state.searchOpen);
+  const menuFolded = usePlanMenuFold((state) => state.folded);
   const setPhoneSearchOpen = useRolloutPhoneChrome((state) => state.setSearchOpen);
   // The plan tools sit in the page bar (or the full-screen bar) on a computer,
   // so their in-page row is empty there and must not keep its gap.
@@ -556,8 +558,9 @@ export function TimelineScene({
           </div>
 
           {/* One line on a computer (2026-10-16): the three phases as compact
-              chips, and the distribution check beside them when it is up. */}
-          <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center">
+              chips, and the distribution check beside them when it is up.
+              They fold away with the plan menu (#898). */}
+          <div className={`mb-4 flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center ${menuFolded ? 'hidden' : 'flex'}`}>
             <div className="min-w-0 lg:flex-1">
               <RolloutPhaseStrip phases={phaseSummaries} releaseDate={release.releaseDate ?? null} compact />
             </div>

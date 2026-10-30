@@ -47,6 +47,7 @@ import {
 } from './useRolloutMenuActions';
 import { TASKS_PILL_DOCK_OFFSET_CLASS } from './tasks-pill-dock';
 import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
+import { usePlanMenuFold } from '@/stores/usePlanMenuFold';
 
 // (The per-feature switches for the rollout's surfaces — Metadata, Content,
 // Files, Song, Cover art, Fan capture, Timeline, Chat, Notes, Pitching — used
@@ -526,6 +527,9 @@ export function TasksPanel({
   // (Oct 18, 2026); the floating "Rollout menu" pill that used to open it is
   // gone. The state lives in a store because the header is WorkspaceView's.
   const phoneMenuOpen = useRolloutPhoneChrome((state) => state.menuOpen);
+  // A folded plan menu (#898) takes the list's search and Group by row with
+  // it, unless a search or filter is on: a quietly narrowed list looks broken.
+  const menuFolded = usePlanMenuFold((state) => state.folded);
   const setPhoneMenuOpen = useRolloutPhoneChrome((state) => state.setMenuOpen);
   const moreMenuListId = useId();
 
@@ -711,7 +715,7 @@ export function TasksPanel({
         sceneContent
       ) : (
       <div className="space-y-3">
-        {scopedRelease && tasks.length > 0 && !simple ? (
+        {scopedRelease && tasks.length > 0 && !simple && !(menuFolded && !plan.filtering) ? (
           <PlanListControls
             plan={plan}
             phoneSearchOnly
@@ -727,7 +731,7 @@ export function TasksPanel({
         ) : null}
         {/* Below lg Group by keeps its own row; on a computer it is on the
             page bar line with the other plan tools (2026-10-15). */}
-        {scopedRelease && tasks.length > 0 && !simple ? (
+        {scopedRelease && tasks.length > 0 && !simple && !(menuFolded && !plan.filtering) ? (
           <div className="flex items-center justify-between gap-3 lg:hidden">
             {groupByControl(false)}
             {selectControl(false)}

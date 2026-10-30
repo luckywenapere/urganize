@@ -3661,3 +3661,11 @@ html[data-theme='light'] .ec-surface {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* A folded plan menu (#898): the page bar keeps the rollout's name and drops
+   its tools (count, view switch, Hide done, Select, Add idea, New activity).
+   The attribute is set by usePlanMenuFoldGestures only while a plan shows. */
+html[data-plan-menu='folded'] #subnav-slot-tools,
+html[data-plan-menu='folded'] #subnav-slot-end {
+  display: none;
+}

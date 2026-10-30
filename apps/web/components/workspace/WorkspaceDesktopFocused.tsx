@@ -11,6 +11,8 @@ import type { Release } from '@/types/releases';
 import type { Task } from '@/lib/tasks';
 import { TasksPanel } from './TasksPanel';
 import { RolloutTabs } from './RolloutTabs';
+import { PlanMenuPill } from './PlanMenuPill';
+import { usePlanMenuFold } from '@/stores/usePlanMenuFold';
 import type { ReleaseCardData } from './catalogue-types';
 import type { RolloutMenuDialogInput } from './useRolloutMenuActions';
 import { displayStatus, statusGroup } from '@/lib/catalogue-table';
@@ -120,6 +122,9 @@ export function WorkspaceDesktopFocused({
   // A fresh rollout (no release day yet, or only the seeded pre-production
   // starters) shows no count and no New activity (2026-10-26, declutter).
   const hasPlan = Boolean(card.release.releaseDate) && !onlyPreProductionWork(scopedTasks);
+  // A small swipe down the plan folds the tabs and tools away (#898); the
+  // gestures run in WorkspaceView, which knows when the plan is showing.
+  const menuFolded = usePlanMenuFold((state) => state.folded);
   const crumbSlot = usePageBarCrumbSlot(true);
   const endSlot = usePageBarEndSlot(true);
   // True once the tab row has scrolled up to the top bar and is holding there.
@@ -252,9 +257,16 @@ export function WorkspaceDesktopFocused({
           shadow as it locks. It sits outside the header block above, so it can
           stick for the whole page and not only inside that block. */}
       <div ref={tabsSentinelRef} aria-hidden="true" className="-mb-4 h-0" />
+      {/* Folded (#898), the pill holds the tabs' place, under the top bar the
+          whole way down, so the menu is one tap away mid-plan too. */}
+      {menuFolded ? (
+        <div className="pointer-events-none sticky top-[80px] z-20 -mb-2 flex h-[26px] justify-center">
+          <PlanMenuPill />
+        </div>
+      ) : null}
       <div
         data-stuck={tabsStuck ? '' : undefined}
-        className="sticky top-[72px] z-20 -mx-8 border-b border-stroke-subtle bg-bg-base px-8 pb-2 pt-0 transition-[padding,box-shadow] duration-200 ease-out data-[stuck]:pt-2 data-[stuck]:shadow-[0_8px_16px_-12px_rgb(0_0_0/0.6)]"
+        className={`${menuFolded ? 'hidden' : ''} sticky top-[72px] z-20 -mx-8 border-b border-stroke-subtle bg-bg-base px-8 pb-2 pt-0 transition-[padding,box-shadow] duration-200 ease-out data-[stuck]:pt-2 data-[stuck]:shadow-[0_8px_16px_-12px_rgb(0_0_0/0.6)]`}
       >
         <RolloutTabs
           releaseId={scopedRelease.id}
