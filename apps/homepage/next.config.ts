@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { APP_CURATOR_APPLY_URL, WAITLIST_URL } from "./lib/app-urls";
 
 const nextConfig: NextConfig = {
   async headers() {
@@ -32,6 +33,20 @@ const nextConfig: NextConfig = {
       {
         source: "/for-labels",
         destination: "/pricing",
+        permanent: false,
+      },
+      // Short links printed on the end card of the walkthrough videos (#908),
+      // so they must keep working for as long as the videos circulate.
+      // /curator is the curator video's link to the application form;
+      // /pitch is the team video's link to the waitlist.
+      {
+        source: "/curator",
+        destination: APP_CURATOR_APPLY_URL,
+        permanent: false,
+      },
+      {
+        source: "/pitch",
+        destination: WAITLIST_URL,
         permanent: false,
       },
     ];
