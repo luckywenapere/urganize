@@ -18,7 +18,7 @@
  */
 
 import type { BriefFeel, BriefProgress } from '@/lib/brief-board';
-import type { BoardLayout } from '@/lib/brief-board-layout';
+import type { BoardLayout, NoteKey } from '@/lib/brief-board-layout';
 import { readPlanKey } from '@/lib/plan-focus';
 import { channelLabel, type Channel } from '@/lib/planner-v2/answers';
 import { readUndatedTaskMeta, relativeWhenLabel } from '@/lib/planner-v2/when';
@@ -91,6 +91,8 @@ export type BriefBoardFacts = {
   layout: BoardLayout | null;
   /** Team owner or admin, or the rollout's owner: may move and resize cards. */
   canArrange: boolean;
+  /** Sticky notes, oldest first; their places are in `layout`. */
+  stickies: BriefSticky[];
 };
 
 export type BriefReference = {
@@ -102,6 +104,8 @@ export type BriefReference = {
   source: string;
   createdBy: string | null;
   createdAt: string;
+  /** A photo uploaded to the brief (#897 phase 2); `url` is then a signed link that expires. */
+  uploaded: boolean;
 };
 
 export type BriefDecision = {
@@ -260,7 +264,22 @@ export function normalizeReferenceUrl(raw: string): string | null {
   }
 }
 
-export type ReferenceDraft = { kind: 'link' | 'image'; url: string; title: string | null };
+export type ReferenceDraft = {
+  kind: 'link' | 'image';
+  url: string;
+  title: string | null;
+  /** An uploaded photo's place in storage; its url is then empty. */
+  storagePath?: string | null;
+};
+
+/** A sticky note on the board (#897 phase 2). */
+export type BriefSticky = {
+  id: string;
+  key: NoteKey;
+  text: string;
+  authorName: string;
+  createdBy: string | null;
+};
 
 export function parseReference(body: unknown): Parsed<ReferenceDraft> {
   const input = (body || {}) as { url?: unknown; title?: unknown };

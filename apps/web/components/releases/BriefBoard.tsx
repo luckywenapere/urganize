@@ -11,13 +11,12 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
-import { Check, LayoutGrid, Loader2, Pencil, Plus, RotateCcw, X } from '@/components/icons';
+import { Check, LayoutGrid, Loader2, NotebookPen, Pencil, Plus, RotateCcw, X } from '@/components/icons';
 import {
   BOARD_COLUMNS,
   BOARD_PALETTE_MAX,
   BOARD_HEADLINE_MAX,
   boardPhoneOrder,
-  boardPlacements,
   briefCountdown,
   momentsTrack,
   normalizeHex,
@@ -28,13 +27,23 @@ import {
   type BriefFeelPatch,
 } from '@/lib/brief-board';
 import {
+  isNoteKey,
   layoutPhoneOrder,
   moveBoardCard,
   nudgeBoardCard,
   resolveBoardLayout,
+  type BoardKey,
   type BoardLayout,
   type NudgeDirection,
 } from '@/lib/brief-board-layout';
+import {
+  CaptionEditor,
+  NoteComposer,
+  readCoverPalette,
+  StickyCard,
+  useBriefImageUploads,
+  useFileDrop,
+} from './BriefBoardMedia';
 import {
   formatBriefDay,
   initialsFor,
@@ -203,7 +212,7 @@ function useSlide(grid: React.RefObject<HTMLDivElement | null>, signature: strin
 }
 
 type Drag = {
-  key: BoardCardKey;
+  key: BoardKey;
   mode: 'move' | 'resize';
   startX: number;
   startY: number;
@@ -483,12 +492,35 @@ function PaletteCard({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [reading, setReading] = useState(false);
   const canEdit = brief.viewer.canEdit;
+  const coverUrl = brief.board.coverUrl;
 
   const open = () => {
     setDraft(palette.length ? palette : ['#']);
     setEditing(true);
   };
+  // The cover's colours (#897 phase 2), read in the browser and put in the
+  // editor, so the team checks them before they are saved.
+  const fromCover = async () => {
+    if (!coverUrl || reading) return;
+    setReading(true);
+    const picked = await readCoverPalette(coverUrl, BOARD_PALETTE_MAX - 1);
+    setReading(false);
+    if (!picked) {
+      onToast('Could not read the cover’s colours. Add them by hand.', 'warning');
+      return;
+    }
+    setDraft(picked);
+    setEditing(true);
+  };
+  const coverButton =
+    canEdit && coverUrl ? (
+      <button type="button" onClick={() => void fromCover()} disabled={reading} className={`${LINK_BUTTON} inline-flex items-center gap-1 disabled:opacity-60`}>
+        {reading ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : null}
+        From the cover
+      </button>
+    ) : null;
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     const cleaned = draft.map((hex) => hex.trim()).filter((hex) => hex && hex !== '#');
@@ -560,11 +592,14 @@ function PaletteCard({
               </div>
             );
           })}
-          {draft.length < BOARD_PALETTE_MAX ? (
-            <button type="button" onClick={() => setDraft((list) => [...list, '#'])} className={`${LINK_BUTTON} inline-flex items-center gap-1`}>
-              <Plus className="h-3.5 w-3.5" aria-hidden="true" /> Add a colour
-            </button>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-4">
+            {draft.length < BOARD_PALETTE_MAX ? (
+              <button type="button" onClick={() => setDraft((list) => [...list, '#'])} className={`${LINK_BUTTON} inline-flex items-center gap-1`}>
+                <Plus className="h-3.5 w-3.5" aria-hidden="true" /> Add a colour
+              </button>
+            ) : null}
+            {coverButton}
+          </div>
           <div className="flex gap-2 pt-1">
             <button type="submit" disabled={saving} className="motion-focus inline-flex h-9 items-center rounded-full bg-brand px-4 text-[13px] font-semibold text-content-inverse disabled:opacity-60">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : 'Save'}
@@ -587,9 +622,12 @@ function PaletteCard({
           ))}
         </div>
       ) : canEdit ? (
-        <button type="button" onClick={open} className="motion-focus mt-3 text-left text-[13.5px] text-content-tertiary hover:text-content-primary">
-          + The colours of this rollout, so every post matches.
-        </button>
+        <div className="mt-3 flex flex-col items-start gap-2">
+          <button type="button" onClick={open} className="motion-focus text-left text-[13.5px] text-content-tertiary hover:text-content-primary">
+            + The colours of this rollout, so every post matches.
+          </button>
+          {coverButton}
+        </div>
       ) : (
         <EmptyLine>Not set yet.</EmptyLine>
       )}
@@ -669,50 +707,114 @@ function useReferenceActions(brief: BriefPayload, onPatch: Props['onPatch'], onR
 function LookCard({ brief, wide, onPatch, onRefresh, onToast }: { brief: BriefPayload; wide: boolean } & Pick<Props, 'onPatch' | 'onRefresh' | 'onToast'>) {
   const images = brief.references.filter((reference) => reference.kind === 'image');
   const [adding, setAdding] = useState(false);
+  const [captioning, setCaptioning] = useState<string | null>(null);
   const { mayRemove, added, remove } = useReferenceActions(brief, onPatch, onRefresh, onToast);
   const canEdit = brief.viewer.canEdit;
   const shown = images.slice(0, 5);
+  const fileInput = useRef<HTMLInputElement | null>(null);
+  const { uploading, upload } = useBriefImageUploads(brief, added, onToast);
+  const drop = useFileDrop(canEdit, (files) => void upload(files));
+  const captioned = (id: string, title: string | null) =>
+    onPatch((current) => ({
+      ...current,
+      references: current.references.map((reference) => (reference.id === id ? { ...reference, title } : reference)),
+    }));
+  // Controls show on hover on a computer, always on a phone (no hover there).
+  const reveal = wide ? 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100' : 'opacity-100';
 
   const tile = (reference: BriefReference, className: string) => (
     <figure key={reference.id} className={`group relative m-0 min-h-0 overflow-hidden rounded-[10px] bg-bg-hover ${className}`}>
       <a href={reference.url} target="_blank" rel="noreferrer noopener" className="block h-full w-full">
-        <img src={reference.url} alt={reference.title || 'Look reference'} loading="lazy" className="h-full w-full object-cover" />
+        {reference.url ? (
+          <img src={reference.url} alt={reference.title || 'Look reference'} loading="lazy" className="h-full w-full object-cover" />
+        ) : null}
       </a>
-      {reference.title ? (
+      {captioning === reference.id ? (
+        <CaptionEditor
+          brief={brief}
+          reference={reference}
+          onToast={onToast}
+          onClose={() => setCaptioning(null)}
+          onSaved={(title) => captioned(reference.id, title)}
+        />
+      ) : reference.title ? (
         <figcaption className="pointer-events-none absolute inset-x-2 bottom-2">
           <span className="inline-block max-w-full truncate rounded-md bg-bg-surface/95 px-2 py-[3px] text-[12px] font-medium text-content-primary shadow-sm">
             {reference.title}
           </span>
         </figcaption>
       ) : null}
-      {mayRemove(reference) ? (
-        <button
-          type="button"
-          onClick={() => void remove(reference)}
-          aria-label="Remove image"
-          className="motion-focus absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full bg-black/60 text-white opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100"
-        >
-          <X className="h-3.5 w-3.5" aria-hidden="true" />
-        </button>
+      {mayRemove(reference) && captioning !== reference.id ? (
+        <span className={`absolute right-1.5 top-1.5 flex gap-1 transition ${reveal}`}>
+          <button
+            type="button"
+            onClick={() => setCaptioning(reference.id)}
+            aria-label={reference.title ? 'Edit caption' : 'Add a caption'}
+            className="motion-focus grid h-7 w-7 place-items-center rounded-full bg-black/60 text-white"
+          >
+            <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => void remove(reference)}
+            aria-label="Remove image"
+            className="motion-focus grid h-7 w-7 place-items-center rounded-full bg-black/60 text-white"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </span>
       ) : null}
     </figure>
   );
 
   return (
-    <section aria-label="Look" className={`${CARD} flex flex-col p-3.5`}>
+    <section
+      aria-label="Look"
+      {...drop.handlers}
+      className={`${CARD} flex flex-col p-3.5 ${drop.over ? 'ring-2 ring-brand ring-offset-2 ring-offset-bg-sidebar' : ''}`}
+    >
+      <input
+        ref={fileInput}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        multiple
+        hidden
+        onChange={(event) => {
+          const files = Array.from(event.target.files ?? []);
+          event.target.value = '';
+          if (files.length) void upload(files);
+        }}
+      />
       <div className="px-1">
         <CardLabel
           action={
             canEdit && !adding ? (
-              <button type="button" onClick={() => setAdding(true)} className={LINK_BUTTON}>
-                + Add
-              </button>
+              <span className="flex items-center gap-3">
+                {uploading ? (
+                  <span className="inline-flex items-center gap-1.5 text-[12.5px] text-content-tertiary">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                    Adding {uploading}
+                  </span>
+                ) : (
+                  <button type="button" onClick={() => fileInput.current?.click()} className={LINK_BUTTON}>
+                    + Photo
+                  </button>
+                )}
+                <button type="button" onClick={() => setAdding(true)} className={LINK_BUTTON}>
+                  + Link
+                </button>
+              </span>
             ) : null
           }
         >
           Look
         </CardLabel>
       </div>
+      {drop.over ? (
+        <p className="pointer-events-none absolute inset-0 z-10 grid place-items-center rounded-2xl bg-bg-surface/85 text-[14px] font-semibold text-brand">
+          Drop photos to add them
+        </p>
+      ) : null}
       {adding ? (
         <div className="px-1">
           <AddLinkForm
@@ -730,7 +832,11 @@ function LookCard({ brief, wide, onPatch, onRefresh, onToast }: { brief: BriefPa
       ) : null}
       {shown.length === 0 ? (
         <div className="px-1">
-          <EmptyLine>{canEdit ? 'Links to images that show the look: light, styling, places, people.' : 'No images yet.'}</EmptyLine>
+          <EmptyLine>
+            {canEdit
+              ? `Photos that show the look: light, styling, places, people. ${wide ? 'Drop them here, or add a photo or a link.' : 'Add a photo or a link.'}`
+              : 'No images yet.'}
+          </EmptyLine>
         </div>
       ) : wide ? (
         <div
@@ -914,7 +1020,7 @@ export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props)
     return true;
   };
 
-  const cards: Partial<Record<BoardCardKey, ReactNode>> = {
+  const cards: Partial<Record<BoardKey, ReactNode>> = {
     cover: <CoverCard brief={brief} wide={wide} />,
     idea: <IdeaCard brief={brief} ideaField={slots.idea} onPatch={onPatch} onRefresh={onRefresh} onToast={onToast} />,
     countdown: <CountdownCard brief={brief} />,
@@ -929,13 +1035,34 @@ export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props)
   if (slots.settle) cards.settle = <div className="min-w-0">{slots.settle}</div>;
   if (slots.side) cards.side = <SlotCard label={slots.side.label}>{slots.side.body}</SlotCard>;
 
-  const present = new Set(Object.entries(cards).filter(([, node]) => node).map(([key]) => key as BoardCardKey));
+  // Sticky notes (#897 phase 2) are cards too, keyed 'note:<id>'.
+  const stickies = brief.board.stickies ?? [];
+  const patchStickies = (update: (list: typeof stickies) => typeof stickies) =>
+    onPatch((current) => ({ ...current, board: { ...current.board, stickies: update(current.board.stickies ?? []) } }));
+  for (const sticky of stickies) {
+    cards[sticky.key] = (
+      <StickyCard
+        brief={brief}
+        sticky={sticky}
+        onToast={onToast}
+        onSaved={(text) => patchStickies((list) => list.map((item) => (item.id === sticky.id ? { ...item, text } : item)))}
+        onRemoved={() => patchStickies((list) => list.filter((item) => item.id !== sticky.id))}
+      />
+    );
+  }
+  // Notes stay open after the brief is approved: the team keeps talking on the board.
+  const canNote = brief.viewer.canEdit || brief.round?.state === 'approved';
+  const [composing, setComposing] = useState(false);
+
+  const present = new Set((Object.keys(cards) as BoardKey[]).filter((key) => cards[key]));
   const stored = brief.board.layout;
-  const resolved = stored ? resolveBoardLayout(stored, present) : boardPlacements(present);
+  const resolved = resolveBoardLayout(stored, present);
+  // Only a lead's own arranging counts as an arranged board; notes alone do not.
+  const arranged = Boolean(stored && Object.keys(stored).some((key) => !isNoteKey(key)));
   const [preview, setPreview] = useState<BoardLayout | null>(null);
   const [arrangeOn, setArranging] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [draggingKey, setDraggingKey] = useState<BoardCardKey | null>(null);
+  const [draggingKey, setDraggingKey] = useState<BoardKey | null>(null);
   const drag = useRef<Drag | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -946,6 +1073,14 @@ export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props)
   const signature = JSON.stringify(placements);
   useSlide(gridRef, signature);
   const names = { ...CARD_NAMES, side: slots.side?.label ?? CARD_NAMES.side };
+  const nameOf = (key: BoardKey) => (isNoteKey(key) ? 'note' : names[key]);
+  // Photos dropped anywhere on the board go to Look.
+  const addReference = (reference: BriefReference) => {
+    onPatch((current) => ({ ...current, references: [...current.references, reference] }));
+    onRefresh();
+  };
+  const boardUploads = useBriefImageUploads(brief, addReference, onToast);
+  const boardDrop = useFileDrop(brief.viewer.canEdit && wide, (files) => void boardUploads.upload(files));
 
   // A board too narrow to arrange is never in arrange mode.
   const arranging = arrangeOn && canArrange;
@@ -996,7 +1131,7 @@ export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props)
     onToast('The board is back to how it started.', 'success');
   };
 
-  const startDrag = (event: ReactPointerEvent<HTMLElement>, key: BoardCardKey, mode: Drag['mode']) => {
+  const startDrag = (event: ReactPointerEvent<HTMLElement>, key: BoardKey, mode: Drag['mode']) => {
     const grid = gridRef.current;
     const from = placements[key];
     if (!grid || !from || event.button !== 0) return;
@@ -1038,7 +1173,7 @@ export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props)
     setPreview(null);
   };
 
-  const nudge = (event: ReactKeyboardEvent<HTMLElement>, key: BoardCardKey) => {
+  const nudge = (event: ReactKeyboardEvent<HTMLElement>, key: BoardKey) => {
     const direction = ARROWS[event.key];
     if (event.key === 'Escape') {
       // Esc leaves arrange mode only; it must not also close the brief (#902).
@@ -1054,7 +1189,8 @@ export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props)
   return (
     <div
       ref={boardRef}
-      className="rounded-[20px] bg-bg-sidebar p-3 sm:p-4"
+      {...boardDrop.handlers}
+      className={`relative rounded-[20px] bg-bg-sidebar p-3 sm:p-4 ${boardDrop.over ? 'ring-2 ring-brand' : ''}`}
       style={{
         backgroundImage: 'radial-gradient(rgb(var(--color-stroke) / 0.11) 1px, transparent 1.2px)',
         backgroundSize: '20px 20px',
@@ -1066,14 +1202,20 @@ export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props)
         <div className="min-h-[420px]" aria-busy="true" />
       ) : wide ? (
         <>
-          {canArrange ? (
+          {canArrange || canNote ? (
             <div className="mb-3 flex min-h-9 flex-wrap items-center justify-end gap-2">
+              {boardUploads.uploading ? (
+                <span className="mr-auto inline-flex items-center gap-1.5 text-[13px] text-content-secondary">
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  Adding {boardUploads.uploading} to Look
+                </span>
+              ) : null}
               {arranging ? (
                 <>
                   <p className="mr-auto text-[13px] text-content-secondary">
                     Drag a card to move it. Pull its corner to resize. Arrow keys work too.
                   </p>
-                  {stored ? (
+                  {arranged ? (
                     <button
                       type="button"
                       onClick={() => void reset()}
@@ -1094,19 +1236,47 @@ export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props)
                   </button>
                 </>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => setArranging(true)}
-                  className="motion-focus motion-press inline-flex h-9 items-center gap-1.5 rounded-full border border-stroke-strong bg-bg-surface px-3.5 text-[13px] font-semibold text-content-primary transition-colors hover:bg-bg-hover"
-                >
-                  <LayoutGrid className="h-4 w-4" aria-hidden="true" />
-                  Arrange
-                </button>
+                <>
+                  {canNote ? (
+                    <button
+                      type="button"
+                      onClick={() => setComposing(true)}
+                      className="motion-focus motion-press inline-flex h-9 items-center gap-1.5 rounded-full border border-stroke-strong bg-bg-surface px-3.5 text-[13px] font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+                    >
+                      <NotebookPen className="h-4 w-4" aria-hidden="true" />
+                      Note
+                    </button>
+                  ) : null}
+                  {canArrange ? (
+                    <button
+                      type="button"
+                      onClick={() => setArranging(true)}
+                      className="motion-focus motion-press inline-flex h-9 items-center gap-1.5 rounded-full border border-stroke-strong bg-bg-surface px-3.5 text-[13px] font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+                    >
+                      <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+                      Arrange
+                    </button>
+                  ) : null}
+                </>
               )}
             </div>
           ) : null}
+          {composing ? (
+            <div className="mb-4 flex justify-end">
+              <NoteComposer
+                brief={brief}
+                onToast={onToast}
+                onCancel={() => setComposing(false)}
+                onAdded={(sticky) => {
+                  patchStickies((list) => [...list, sticky]);
+                  setComposing(false);
+                  onRefresh();
+                }}
+              />
+            </div>
+          ) : null}
           <div ref={gridRef} className="grid gap-4" style={{ gridTemplateColumns: 'repeat(12, minmax(0, 1fr))' }}>
-            {(Object.entries(placements) as [BoardCardKey, BoardPlacement][]).map(([key, spot]) => {
+            {(Object.entries(placements) as [BoardKey, BoardPlacement][]).map(([key, spot]) => {
               const style: CSSProperties = {
                 gridColumn: `${spot.x} / span ${spot.w}`,
                 gridRow: `${spot.y} / span ${spot.h}`,
@@ -1127,7 +1297,7 @@ export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props)
                     <div
                       role="button"
                       tabIndex={0}
-                      aria-label={`Move ${names[key]}. Arrow keys move it, shift and arrow keys resize it.`}
+                      aria-label={`Move ${nameOf(key)}. Arrow keys move it, shift and arrow keys resize it.`}
                       onPointerDown={(event) => startDrag(event, key, 'move')}
                       onPointerMove={moveDrag}
                       onPointerUp={endDrag}
@@ -1154,11 +1324,40 @@ export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props)
         </>
       ) : (
         <div className="flex flex-col gap-3">
-          {(stored ? layoutPhoneOrder(resolved) : boardPhoneOrder(present)).map((key) => (
+          {(arranged
+            ? layoutPhoneOrder(resolved)
+            : [
+                ...boardPhoneOrder(new Set([...present].filter((key): key is BoardCardKey => !isNoteKey(key)))),
+                ...stickies.map((sticky) => sticky.key),
+              ]
+          ).map((key) => (
             <div key={key} className="min-w-0">
               {cards[key]}
             </div>
           ))}
+          {canNote ? (
+            composing ? (
+              <NoteComposer
+                brief={brief}
+                onToast={onToast}
+                onCancel={() => setComposing(false)}
+                onAdded={(sticky) => {
+                  patchStickies((list) => [...list, sticky]);
+                  setComposing(false);
+                  onRefresh();
+                }}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setComposing(true)}
+                className="motion-focus motion-press inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-dashed border-stroke-strong text-[14px] font-semibold text-content-secondary"
+              >
+                <NotebookPen className="h-4 w-4" aria-hidden="true" />
+                Add a note
+              </button>
+            )
+          ) : null}
         </div>
       )}
       {slots.footer ? <div className="mt-4">{slots.footer}</div> : null}

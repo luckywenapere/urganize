@@ -7,7 +7,25 @@
 import type { Parsed } from '@/lib/release-brief';
 import { BOARD_COLUMNS, boardPlacements, type BoardCardKey, type BoardPlacement } from '@/lib/brief-board';
 
-export type BoardLayout = Partial<Record<BoardCardKey, BoardPlacement>>;
+/** A sticky note's place on the board (phase 2): 'note:' and the note's id. */
+export type NoteKey = `note:${string}`;
+/** Any card a board can hold: the fixed cards and the sticky notes. */
+export type BoardKey = BoardCardKey | NoteKey;
+
+export type BoardLayout = Partial<Record<BoardKey, BoardPlacement>>;
+
+/** How many sticky notes one brief holds. */
+export const BOARD_NOTES_MAX = 30;
+/** A new note's width, in columns. */
+const NOTE_W = 3;
+
+export function noteKey(id: string): NoteKey {
+  return `note:${id}`;
+}
+
+export function isNoteKey(value: unknown): value is NoteKey {
+  return typeof value === 'string' && /^note:[0-9a-f-]{8,64}$/.test(value);
+}
 
 /** The tallest a card can be, in board rows. */
 export const BOARD_CARD_MAX_H = 4;
@@ -43,8 +61,8 @@ const MIN_W: Record<BoardCardKey, number> = {
   side: 3,
 };
 
-export function boardCardMinW(key: BoardCardKey): number {
-  return MIN_W[key];
+export function boardCardMinW(key: BoardKey): number {
+  return isNoteKey(key) ? 2 : MIN_W[key];
 }
 
 export function isBoardCardKey(value: unknown): value is BoardCardKey {
@@ -52,8 +70,8 @@ export function isBoardCardKey(value: unknown): value is BoardCardKey {
 }
 
 /** Whole cells, at least the card's narrowest, inside the 12 columns. */
-export function clampPlacement(key: BoardCardKey, p: BoardPlacement): BoardPlacement {
-  const w = Math.min(BOARD_COLUMNS, Math.max(MIN_W[key], Math.round(p.w)));
+export function clampPlacement(key: BoardKey, p: BoardPlacement): BoardPlacement {
+  const w = Math.min(BOARD_COLUMNS, Math.max(boardCardMinW(key), Math.round(p.w)));
   const h = Math.min(BOARD_CARD_MAX_H, Math.max(1, Math.round(p.h)));
   const x = Math.min(BOARD_COLUMNS + 1 - w, Math.max(1, Math.round(p.x)));
   const y = Math.max(1, Math.round(p.y));
@@ -69,8 +87,8 @@ function overlaps(a: BoardPlacement, b: BoardPlacement): boolean {
  * lands on, then falls up until it meets a card. Falling stops at the first
  * card in the way, so a card never jumps over one placed before it.
  */
-function settle(order: { key: BoardCardKey; p: BoardPlacement }[]): BoardLayout {
-  const placed: { key: BoardCardKey; p: BoardPlacement }[] = [];
+function settle(order: { key: BoardKey; p: BoardPlacement }[]): BoardLayout {
+  const placed: { key: BoardKey; p: BoardPlacement }[] = [];
   for (const card of order) {
     const p = { ...card.p };
     for (let hit = placed.find((other) => overlaps(p, other.p)); hit; hit = placed.find((other) => overlaps(p, other.p))) {
@@ -87,24 +105,43 @@ function settle(order: { key: BoardCardKey; p: BoardPlacement }[]): BoardLayout 
 const byPosition = (a: { p: BoardPlacement }, b: { p: BoardPlacement }) => a.p.y - b.p.y || a.p.x - b.p.x;
 
 /**
- * The layout a board shows: the stored places of the cards that are there,
- * new cards added at the bottom at their default width, then settled. With
- * nothing stored it is the default layout, untouched.
+ * The layout a board shows. Fixed cards: their stored places, with new ones
+ * added at the bottom at their default width, or the default layout when none
+ * is stored. Sticky notes: their stored places, new ones at the bottom. Then
+ * everything is settled. With nothing stored and no notes it is the default
+ * layout, untouched.
  */
-export function resolveBoardLayout(stored: BoardLayout | null, present: Set<BoardCardKey>): BoardLayout {
-  const fallback = boardPlacements(present);
-  const storedKeys = stored ? (Object.keys(stored) as BoardCardKey[]).filter((key) => present.has(key)) : [];
-  if (storedKeys.length === 0) return fallback;
+export function resolveBoardLayout(stored: BoardLayout | null, present: Set<BoardKey>): BoardLayout {
+  const fixed = new Set([...present].filter((key): key is BoardCardKey => !isNoteKey(key)));
+  const notes = [...present].filter(isNoteKey);
+  const fallback = boardPlacements(fixed);
+  const storedFixed = stored ? [...fixed].filter((key) => stored[key]) : [];
+  if (storedFixed.length === 0 && notes.length === 0) return fallback;
 
-  const cards = storedKeys.map((key) => ({ key, p: clampPlacement(key, stored![key]!) })).sort(byPosition);
+  const cards: { key: BoardKey; p: BoardPlacement }[] =
+    storedFixed.length === 0
+      ? (Object.keys(fallback) as BoardCardKey[]).map((key) => ({ key, p: fallback[key]! }))
+      : storedFixed.map((key) => ({ key, p: clampPlacement(key, stored![key]!) }));
   let bottom = cards.reduce((max, card) => Math.max(max, card.p.y + card.p.h), 1);
-  for (const key of BOARD_CARD_KEYS) {
-    if (!present.has(key) || storedKeys.includes(key)) continue;
-    const base = fallback[key] ?? { x: 1, y: 1, w: BOARD_COLUMNS, h: 1 };
-    cards.push({ key, p: clampPlacement(key, { ...base, x: 1, y: bottom }) });
-    bottom += base.h;
+  if (storedFixed.length > 0) {
+    for (const key of BOARD_CARD_KEYS) {
+      if (!fixed.has(key) || storedFixed.includes(key)) continue;
+      const base = fallback[key] ?? { x: 1, y: 1, w: BOARD_COLUMNS, h: 1 };
+      cards.push({ key, p: clampPlacement(key, { ...base, x: 1, y: bottom }) });
+      bottom += base.h;
+    }
   }
-  return settle(cards);
+  const placedNotes = notes.filter((key) => stored?.[key]);
+  for (const key of placedNotes) cards.push({ key, p: clampPlacement(key, stored![key]!) });
+  bottom = cards.reduce((max, card) => Math.max(max, card.p.y + card.p.h), 1);
+  notes
+    .filter((key) => !stored?.[key])
+    .forEach((key, index) => {
+      const x = 1 + (index * NOTE_W) % BOARD_COLUMNS;
+      const row = Math.floor((index * NOTE_W) / BOARD_COLUMNS);
+      cards.push({ key, p: { x, y: bottom + row, w: NOTE_W, h: 1 } });
+    });
+  return settle(cards.sort(byPosition));
 }
 
 /**
@@ -112,12 +149,12 @@ export function resolveBoardLayout(stored: BoardLayout | null, present: Set<Boar
  * pushed down. Moving down past a card puts it below that card; moving up
  * puts it above.
  */
-export function moveBoardCard(layout: BoardLayout, key: BoardCardKey, to: BoardPlacement): BoardLayout {
+export function moveBoardCard(layout: BoardLayout, key: BoardKey, to: BoardPlacement): BoardLayout {
   const from = layout[key];
   if (!from) return layout;
   const target = clampPlacement(key, to);
   const lead = target.y > from.y ? 0.5 : -0.5;
-  const cards = (Object.keys(layout) as BoardCardKey[]).map((other) => ({
+  const cards = (Object.keys(layout) as BoardKey[]).map((other) => ({
     key: other,
     p: other === key ? target : layout[other]!,
     sort: other === key ? target.y + lead : layout[other]!.y,
@@ -129,7 +166,7 @@ export function moveBoardCard(layout: BoardLayout, key: BoardCardKey, to: BoardP
 export type NudgeDirection = 'up' | 'down' | 'left' | 'right';
 
 /** The keyboard way to arrange: arrows move a card one cell, shift and arrows resize it. */
-export function nudgeBoardCard(layout: BoardLayout, key: BoardCardKey, direction: NudgeDirection, resize: boolean): BoardLayout {
+export function nudgeBoardCard(layout: BoardLayout, key: BoardKey, direction: NudgeDirection, resize: boolean): BoardLayout {
   const p = layout[key];
   if (!p) return layout;
   const dx = direction === 'left' ? -1 : direction === 'right' ? 1 : 0;
@@ -137,7 +174,7 @@ export function nudgeBoardCard(layout: BoardLayout, key: BoardCardKey, direction
   if (resize) return moveBoardCard(layout, key, { ...p, w: p.w + dx, h: p.h + dy });
   // Down moves below the next card in the way, not just one row.
   if (dy === 1) {
-    const below = (Object.keys(layout) as BoardCardKey[])
+    const below = (Object.keys(layout) as BoardKey[])
       .filter((other) => other !== key)
       .map((other) => layout[other]!)
       .filter((other) => other.y >= p.y + p.h && other.x < p.x + p.w && p.x < other.x + other.w)
@@ -149,8 +186,8 @@ export function nudgeBoardCard(layout: BoardLayout, key: BoardCardKey, direction
 }
 
 /** One column on a phone once a board is arranged: top to bottom, then left to right. */
-export function layoutPhoneOrder(layout: BoardLayout): BoardCardKey[] {
-  return (Object.keys(layout) as BoardCardKey[])
+export function layoutPhoneOrder(layout: BoardLayout): BoardKey[] {
+  return (Object.keys(layout) as BoardKey[])
     .map((key) => ({ key, p: layout[key]! }))
     .sort(byPosition)
     .map((card) => card.key);
@@ -162,13 +199,15 @@ const isCell = (value: unknown, min: number, max: number): value is number =>
 /** `PUT /brief/layout` body: `{ cards: [{ key, x, y, w, h }] }`, the whole board at once. */
 export function parseBoardLayout(body: unknown): Parsed<BoardLayout> {
   const cards = (body as { cards?: unknown } | null)?.cards;
-  if (!Array.isArray(cards) || cards.length === 0 || cards.length > BOARD_CARD_KEYS.length) {
+  if (!Array.isArray(cards) || cards.length === 0 || cards.length > BOARD_CARD_KEYS.length + BOARD_NOTES_MAX) {
     return { ok: false, error: 'Send the board’s cards.' };
   }
   const out: BoardLayout = {};
   for (const raw of cards) {
     const card = raw as Record<string, unknown> | null;
-    if (!card || !isBoardCardKey(card.key)) return { ok: false, error: 'That card is not on the brief.' };
+    if (!card || !(isBoardCardKey(card.key) || isNoteKey(card.key))) {
+      return { ok: false, error: 'That card is not on the brief.' };
+    }
     if (out[card.key]) return { ok: false, error: 'A card is on the board twice.' };
     const { x, y, w, h } = card;
     if (!isCell(w, 1, BOARD_COLUMNS) || !isCell(x, 1, BOARD_COLUMNS + 1 - (w as number)) || !isCell(y, 1, 200) || !isCell(h, 1, BOARD_CARD_MAX_H)) {
