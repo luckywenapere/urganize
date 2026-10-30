@@ -498,43 +498,57 @@ export default function ArtistPageClient() {
                   <ul className="space-y-0.5">{buckets.past.map((release) => releaseRow(release, false))}</ul>
                 ) : null}
                 <ArtistCatalogueCard artistId={artist.id} onCount={setCatalogueCount} onProfile={setStreamingProfile} />
-                {/* Where the released music comes from (#882, mock
-                    docs/mocks/catalogue-import): a linked profile says so and
-                    can be changed; with none, one card finds it. */}
-                {streamingProfile ? (
-                  <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-xs text-content-tertiary">
-                    <span className="h-1.5 w-1.5 rounded-full bg-status-success" aria-hidden="true" />
-                    From {streamingProfile.source === 'deezer' ? 'Deezer' : 'Apple Music'}
-                    {streamingProfile.sync ? ' · new drops come in by themselves' : ''}
-                    {' · '}
-                    <button type="button" onClick={findOnStreaming} className="font-semibold text-brand hover:underline underline-offset-2">
-                      Change profile
-                    </button>
-                  </p>
-                ) : streamingProfile === null && catalogueCount !== null && (catalogueCount > 0 || buckets.past.length > 0) ? (
-                  <Quiet>
-                    New drops do not come in by themselves yet.
-                    <button type="button" onClick={findOnStreaming} className={inlineLink}>
-                      Find on streaming
-                    </button>
-                  </Quiet>
-                ) : streamingProfile === null && catalogueCount === 0 && buckets.past.length === 0 ? (
-                  <div className="mt-1 flex flex-wrap items-center gap-4 rounded-2xl border border-dashed border-stroke-control p-4">
-                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-bg-hover text-brand" aria-hidden="true">
-                      <Disc3 className="h-5 w-5" />
+                {/* Songs out before Urganize come in once (#890, mock
+                    docs/mocks/one-time-import). Nothing out yet: one card where
+                    the music will be. Rollouts out but no older songs: one empty
+                    slot the size of a song row. Once brought in (a profile is
+                    saved) or any older songs are there, neither shows again. */}
+                {streamingProfile === null && catalogueCount === 0 && buckets.past.length === 0 ? (
+                  <div className="mt-1 flex flex-wrap items-center gap-4 rounded-2xl border border-dashed border-stroke-control p-4 sm:p-5">
+                    <span className="flex shrink-0" aria-hidden="true">
+                      {[0.45, 0.7, 1].map((opacity, index) => (
+                        <span
+                          key={opacity}
+                          className={`grid h-11 w-11 place-items-center rounded-lg border border-stroke-strong bg-bg-surface text-content-tertiary shadow-sm ${index ? '-ml-3.5' : ''}`}
+                          style={{ opacity }}
+                        >
+                          {index === 2 ? <Disc3 className="h-4 w-4" /> : null}
+                        </span>
+                      ))}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-content-primary">Bring in {artist.name}&rsquo;s released music</p>
-                      <p className="mt-0.5 text-[13px] text-content-secondary">
-                        Find them on Deezer or Apple Music. New drops show up by themselves after that.
-                      </p>
+                      <p className="text-[15px] font-semibold text-content-primary">Songs out before Urganize?</p>
+                      <p className="mt-0.5 text-[13px] text-content-secondary">Bring in what {artist.name} already released, once.</p>
                     </div>
                     <button
                       type="button"
                       onClick={findOnStreaming}
-                      className="motion-focus motion-press inline-flex min-h-10 items-center rounded-full bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+                      className="motion-focus motion-press inline-flex min-h-9 items-center rounded-full bg-brand px-4 text-[13px] font-semibold text-content-inverse hover:bg-brand-hover"
                     >
-                      Find on streaming
+                      Bring them in
+                    </button>
+                  </div>
+                ) : streamingProfile === null && catalogueCount === 0 ? (
+                  <div className="-mx-2 flex items-center gap-3 rounded-xl px-2 py-2">
+                    <span
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-md border-[1.5px] border-dashed border-stroke-control text-brand"
+                      aria-hidden="true"
+                    >
+                      {/* A plain plus: the icon set's Plus draws a sparkle. */}
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M12 5v14M5 12h14" />
+                      </svg>
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-content-primary">Older songs</p>
+                      <p className="text-xs text-content-secondary">From before Urganize</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={findOnStreaming}
+                      className="motion-focus motion-press inline-flex min-h-9 shrink-0 items-center rounded-full border border-stroke-strong px-3.5 text-[13px] font-semibold text-content-primary hover:bg-bg-hover"
+                    >
+                      Bring them in
                     </button>
                   </div>
                 ) : null}

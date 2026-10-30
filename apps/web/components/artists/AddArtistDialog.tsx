@@ -60,9 +60,10 @@ async function addByName(name: string): Promise<{ id: string } | { error: string
 /**
  * Adding an artist starts with a search (2026-10-30, #882, founder approved
  * mock docs/mocks/catalogue-import). Pick the profile, look at what comes with
- * it, then one tap adds the artist with their photo and released music, and
- * remembers the profile so new drops come in by themselves. Opened with
- * `artistId`, the same steps link a profile to an artist already on the roster.
+ * it, then one tap adds the artist with their photo and the music they put out
+ * before Urganize. A one-time bring-in (#890): new songs come through
+ * rollouts, never pulled in later. Opened with `artistId`, the same steps bring
+ * older songs onto an artist already on the roster.
  */
 export function AddArtistDialog({
   initialQuery = '',
@@ -86,7 +87,6 @@ export function AddArtistDialog({
   const [picked, setPicked] = useState<ImportArtistCandidate | null>(null);
   const [onto, setOnto] = useState<RosterArtist | null>(null);
   const [releases, setReleases] = useState<ImportRelease[] | null>(null);
-  const [sync, setSync] = useState(true);
   const [saving, setSaving] = useState(false);
   // A profile that looks like someone already on the roster ("Babyboy Dorian"
   // and "Dorian", #865) waits here for the answer.
@@ -177,7 +177,6 @@ export function AddArtistDialog({
       id: picked.id,
       name: picked.name,
       artistId: targetId ?? undefined,
-      sync,
     });
     if (!saved.ok) {
       setSaving(false);
@@ -218,11 +217,15 @@ export function AddArtistDialog({
   if (typeof document === 'undefined') return null;
 
   const summary = releases ? describeImportedMusic(releases) : null;
+  // The button says what it brings: "Add Dorian and 14 releases" (#890).
+  const count = releases && releases.length > 0 ? ` and ${releases.length} ${releases.length === 1 ? 'release' : 'releases'}` : '';
   const addLabel = linking
-    ? `Add to ${artistName ?? 'this artist'}`
+    ? releases && releases.length > 0
+      ? `Bring in ${releases.length} ${releases.length === 1 ? 'release' : 'releases'}`
+      : `Link to ${artistName ?? 'this artist'}`
     : onto
       ? `Add to ${onto.name}`
-      : `Add ${picked?.name ?? 'artist'}`;
+      : `Add ${picked?.name ?? 'artist'}${count}`;
 
   return createPortal(
     <div
@@ -240,12 +243,12 @@ export function AddArtistDialog({
         {phase === 'search' ? (
           <>
             <h2 id="add-artist-title" className="font-display text-2xl text-content-primary">
-              {linking ? `Find ${artistName ?? 'them'} on streaming` : 'Add an artist'}
+              {linking ? `Bring in ${artistName ?? 'their'}’s older songs` : 'Add an artist'}
             </h2>
             <p className="mt-1 text-sm leading-6 text-content-secondary">
               {linking
-                ? 'Pick their profile and their released music comes in.'
-                : 'Find them on streaming and their released music comes with them.'}
+                ? 'Pick their profile to bring in what they released before Urganize.'
+                : 'Find them on streaming to bring in what they released before Urganize.'}
             </p>
             <input
               type="text"
@@ -379,7 +382,7 @@ export function AddArtistDialog({
                   </div>
                 ) : (
                   <p className="mt-4 text-sm text-content-secondary">
-                    No releases came up for them yet. You can still add them, and new drops come in later.
+                    No releases came up for them. You can still add them.
                   </p>
                 )}
                 {summary && releases.length > 0 ? (
@@ -392,15 +395,6 @@ export function AddArtistDialog({
               </>
             )}
 
-            <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-[13px] leading-5 text-content-secondary">
-              <input
-                type="checkbox"
-                checked={sync}
-                onChange={(event) => setSync(event.target.checked)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-[rgb(var(--color-brand))]"
-              />
-              Add new releases by themselves when {picked.name} drops them.
-            </label>
 
             {error ? (
               <p role="alert" className="mt-3 text-sm text-status-error">
