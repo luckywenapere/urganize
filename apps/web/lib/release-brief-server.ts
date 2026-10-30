@@ -10,8 +10,16 @@
 
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 
-import { briefButtonLine, briefProgress, type BoardCardKey, type BriefFeel, type BriefFeelPatch } from '@/lib/brief-board';
-import { isBoardCardKey, type BoardLayout } from '@/lib/brief-board-layout';
+import { briefButtonLine, briefProgress, type BriefFeel, type BriefFeelPatch } from '@/lib/brief-board';
+import {
+  BOARD_NOTES_MAX,
+  isBoardCardKey,
+  isNoteKey,
+  noteKey,
+  type BoardLayout,
+} from '@/lib/brief-board-layout';
+import { mayChangeBriefItem } from '@/lib/brief-media';
+import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-constants';
 import { loadCoverArtUrls } from '@/lib/cover-art';
 import { isMissingTableError } from '@/lib/promo-channels';
 import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
@@ -121,7 +129,27 @@ function toReference(row: Record<string, unknown>): BriefReference {
     source: referenceSource(url),
     createdBy: textOrNull(row.created_by),
     createdAt: text(row.created_at),
+    uploaded: Boolean(textOrNull(row.storage_path)),
   };
+}
+
+// Uploaded photos are private; each read signs them for an hour, like the cover art.
+const BRIEF_IMAGE_LINK_SECONDS = 60 * 60;
+
+async function signUploads(admin: SupabaseClient, rows: Record<string, unknown>[]): Promise<Map<string, string>> {
+  const paths = rows.map((row) => textOrNull(row.storage_path)).filter((path): path is string => Boolean(path));
+  if (paths.length === 0) return new Map();
+  try {
+    const { data } = await admin.storage.from(RELEASE_ASSETS_BUCKET).createSignedUrls(paths, BRIEF_IMAGE_LINK_SECONDS);
+    return new Map(
+      (data ?? [])
+        .filter((item) => item.path && item.signedUrl)
+        .map((item) => [item.path as string, item.signedUrl as string])
+    );
+  } catch {
+    // A photo that cannot be signed shows as missing; the brief still loads.
+    return new Map();
+  }
 }
 
 type BriefRow = {
@@ -166,13 +194,22 @@ async function readBriefRow(admin: SupabaseClient, releaseId: string): Promise<B
 async function readReferences(admin: SupabaseClient, releaseId: string): Promise<BriefResult<BriefReference[]>> {
   const { data, error } = await admin
     .from(BRIEF_REFERENCES_TABLE)
-    .select('id,kind,url,title,position,created_by,created_at')
+    .select('id,kind,url,title,position,created_by,created_at,storage_path')
     .eq('release_id', releaseId)
     .order('position', { ascending: true })
     .order('created_at', { ascending: true })
     .limit(MAX_REFERENCES);
   if (error) return failure(error, 'Could not load the references.');
-  return { ok: true, value: ((data || []) as unknown[]).map((row) => toReference(asRow(row))) };
+  const rows = ((data || []) as unknown[]).map(asRow);
+  const signed = await signUploads(admin, rows);
+  return {
+    ok: true,
+    value: rows.map((row) => {
+      const reference = toReference(row);
+      const path = textOrNull(row.storage_path);
+      return path ? { ...reference, url: signed.get(path) ?? '' } : reference;
+    }),
+  };
 }
 
 async function readTasks(admin: SupabaseClient, releaseId: string): Promise<BriefTaskRow[]> {
@@ -251,7 +288,7 @@ export async function loadBriefPayload(
   }
 ): Promise<BriefResult<BriefPayload>> {
   const { releaseId } = input;
-  const [briefRead, referencesRead, decisionsRead, revisionsRead, tasks, notes, canManageShare, planSeed, covers, layout] =
+  const [briefRead, referencesRead, decisionsRead, revisionsRead, tasks, notes, canManageShare, planSeed, covers, board] =
     await Promise.all([
       readBriefRow(admin, releaseId),
       readReferences(admin, releaseId),
@@ -275,7 +312,7 @@ export async function loadBriefPayload(
       loadCoverArtUrls(admin, [{ id: releaseId, artwork_asset_id: input.artworkAssetId }], { thumbs: false }).catch(
         () => new Map<string, { url: string }>()
       ),
-      readBoardLayout(admin, releaseId),
+      readBoard(admin, releaseId),
     ]);
 
   if (!briefRead.ok) return briefRead;
@@ -291,6 +328,7 @@ export async function loadBriefPayload(
     ...tasks.map((task) => task.assigned_to_user_id || ''),
     ...decisionRows.map((row) => text(row.created_by)),
     ...revisionRows.map((row) => text(row.actor_id)),
+    ...board.stickies.map((sticky) => sticky.createdBy || ''),
     brief?.updatedBy || '',
   ]);
   const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
@@ -353,8 +391,9 @@ export async function loadBriefPayload(
         today,
         progress: briefProgress(tasks, today),
         feel: brief?.feel ?? { headline: '', feelsLike: [], notThis: [], palette: [] },
-        layout,
+        layout: board.layout,
         canArrange: canManageShare,
+        stickies: board.stickies.map((sticky) => ({ ...sticky, authorName: nameOf(sticky.createdBy) })),
       },
     },
   };
@@ -483,20 +522,35 @@ export async function loadBriefSummary(
 
 // ── Board layout (#897 phase 1b) ────────────────────────────────────────────
 
-/** The stored card places, or null when the board still uses the default. A failed read shows the default. */
-async function readBoardLayout(admin: SupabaseClient, releaseId: string): Promise<BoardLayout | null> {
+type StickyRow = { id: string; key: ReturnType<typeof noteKey>; text: string; createdBy: string | null };
+
+/**
+ * The stored card places (null when nothing is stored, so the board uses the
+ * default) and the sticky notes, oldest first. A failed read shows the default
+ * board with no notes.
+ */
+async function readBoard(
+  admin: SupabaseClient,
+  releaseId: string
+): Promise<{ layout: BoardLayout | null; stickies: StickyRow[] }> {
   const { data, error } = await admin
     .from(BRIEF_CARDS_TABLE)
-    .select('card_key,x,y,w,h')
+    .select('id,card_key,kind,x,y,w,h,payload,created_by,created_at')
     .eq('release_id', releaseId)
-    .neq('kind', 'note');
-  if (error || !data || data.length === 0) return null;
+    .order('created_at', { ascending: true });
+  if (error || !data || data.length === 0) return { layout: null, stickies: [] };
   const layout: BoardLayout = {};
+  const stickies: StickyRow[] = [];
   for (const row of (data as unknown[]).map(asRow)) {
-    if (!isBoardCardKey(row.card_key)) continue;
-    layout[row.card_key] = { x: Number(row.x), y: Number(row.y), w: Number(row.w), h: Number(row.h) };
+    const key = row.card_key;
+    if (!isBoardCardKey(key) && !isNoteKey(key)) continue;
+    layout[key] = { x: Number(row.x), y: Number(row.y), w: Number(row.w), h: Number(row.h) };
+    if (isNoteKey(key)) {
+      const payload = (row.payload ?? {}) as { text?: unknown };
+      stickies.push({ id: text(row.id), key, text: text(payload.text), createdBy: textOrNull(row.created_by) });
+    }
   }
-  return Object.keys(layout).length ? layout : null;
+  return { layout: Object.keys(layout).length ? layout : null, stickies };
 }
 
 /** Save the whole board in one upsert, so a push-down never leaves half the cards moved. */
@@ -504,13 +558,25 @@ export async function saveBoardLayout(
   admin: SupabaseClient,
   input: { releaseId: string; layout: BoardLayout; actorId: string }
 ): Promise<BriefResult<BoardLayout>> {
-  const rows = (Object.keys(input.layout) as BoardCardKey[]).map((key) => ({
-    release_id: input.releaseId,
-    card_key: key,
-    kind: key,
-    ...input.layout[key]!,
-    created_by: input.actorId,
-  }));
+  // A note in the layout must still exist: a move saved after someone deleted
+  // the note would otherwise bring it back empty.
+  const { data: noteRows, error: noteError } = await admin
+    .from(BRIEF_CARDS_TABLE)
+    .select('card_key')
+    .eq('release_id', input.releaseId)
+    .eq('kind', 'note');
+  if (noteError) return failure(noteError, 'Could not save the board.');
+  const liveNotes = new Set(((noteRows || []) as unknown[]).map((row) => text(asRow(row).card_key)));
+  // Only the place is written: a note keeps its text and its author.
+  const rows = (Object.keys(input.layout) as (keyof BoardLayout)[])
+    .filter((key) => isBoardCardKey(key) || liveNotes.has(key))
+    .map((key) => ({
+      release_id: input.releaseId,
+      card_key: key,
+      kind: isNoteKey(key) ? 'note' : key,
+      ...input.layout[key]!,
+    }));
+  if (rows.length === 0) return { ok: true, value: input.layout };
   const { error } = await admin.from(BRIEF_CARDS_TABLE).upsert(rows, { onConflict: 'release_id,card_key' });
   if (error) return failure(error, 'Could not save the board.');
   return { ok: true, value: input.layout };
@@ -521,6 +587,85 @@ export async function resetBoardLayout(admin: SupabaseClient, releaseId: string)
   const { error } = await admin.from(BRIEF_CARDS_TABLE).delete().eq('release_id', releaseId).neq('kind', 'note');
   if (error) return failure(error, 'Could not reset the board.');
   return { ok: true, value: null };
+}
+
+// ── Sticky notes (#897 phase 2) ─────────────────────────────────────────────
+
+/** Add a note at the bottom of the board. Anyone on the team who can edit. */
+export async function addBriefSticky(
+  admin: SupabaseClient,
+  input: { releaseId: string; text: string; actorId: string }
+): Promise<BriefResult<StickyRow>> {
+  const { count, error: countError } = await admin
+    .from(BRIEF_CARDS_TABLE)
+    .select('id', { count: 'exact', head: true })
+    .eq('release_id', input.releaseId)
+    .eq('kind', 'note');
+  if (countError) return failure(countError, 'Could not add the note.');
+  if ((count ?? 0) >= BOARD_NOTES_MAX) {
+    return { ok: false, status: 400, error: `A brief holds up to ${BOARD_NOTES_MAX} notes.` };
+  }
+  const id = crypto.randomUUID();
+  const key = noteKey(id);
+  // y 200 is the floor: the board settles a new note up to the first free row.
+  const { error } = await admin.from(BRIEF_CARDS_TABLE).insert({
+    id,
+    release_id: input.releaseId,
+    card_key: key,
+    kind: 'note',
+    x: 1,
+    y: 200,
+    w: 3,
+    h: 1,
+    payload: { text: input.text },
+    created_by: input.actorId,
+  });
+  if (error) return failure(error, 'Could not add the note.');
+  return { ok: true, value: { id, key, text: input.text, createdBy: input.actorId } };
+}
+
+async function ownedSticky(
+  admin: SupabaseClient,
+  input: { releaseId: string; noteId: string; user: User; releaseOwnerId: string }
+): Promise<BriefResult<null>> {
+  const { data, error } = await admin
+    .from(BRIEF_CARDS_TABLE)
+    .select('id,release_id,kind,created_by')
+    .eq('id', input.noteId)
+    .maybeSingle();
+  if (error) return failure(error, 'Could not find the note.');
+  const row = data ? asRow(data) : null;
+  if (!row || text(row.release_id) !== input.releaseId || row.kind !== 'note') {
+    return { ok: false, status: 404, error: 'Not found.' };
+  }
+  const own = text(row.created_by) === input.user.id;
+  const isLead = own ? false : await canUserManageBriefShare(admin, input.releaseOwnerId, input.user);
+  if (!mayChangeBriefItem({ createdBy: textOrNull(row.created_by), userId: input.user.id, isLead })) {
+    return { ok: false, status: 403, error: 'Only the person who wrote the note can change it.' };
+  }
+  return { ok: true, value: null };
+}
+
+export async function setBriefStickyText(
+  admin: SupabaseClient,
+  input: { releaseId: string; noteId: string; text: string; user: User; releaseOwnerId: string }
+): Promise<BriefResult<{ id: string; text: string }>> {
+  const allowed = await ownedSticky(admin, input);
+  if (!allowed.ok) return allowed;
+  const { error } = await admin.from(BRIEF_CARDS_TABLE).update({ payload: { text: input.text } }).eq('id', input.noteId);
+  if (error) return failure(error, 'Could not save the note.');
+  return { ok: true, value: { id: input.noteId, text: input.text } };
+}
+
+export async function deleteBriefSticky(
+  admin: SupabaseClient,
+  input: { releaseId: string; noteId: string; user: User; releaseOwnerId: string }
+): Promise<BriefResult<{ id: string }>> {
+  const allowed = await ownedSticky(admin, input);
+  if (!allowed.ok) return allowed;
+  const { error } = await admin.from(BRIEF_CARDS_TABLE).delete().eq('id', input.noteId);
+  if (error) return failure(error, 'Could not remove the note.');
+  return { ok: true, value: { id: input.noteId } };
 }
 
 export async function addBriefReference(
@@ -542,14 +687,19 @@ export async function addBriefReference(
       kind: input.draft.kind,
       url: input.draft.url,
       title: input.draft.title,
+      storage_path: input.draft.storagePath ?? null,
       position: count ?? 0,
       created_by: input.actorId,
     })
-    .select('id,kind,url,title,position,created_by,created_at')
+    .select('id,kind,url,title,position,created_by,created_at,storage_path')
     .single();
   if (error || !data) return failure(error, 'Could not add the reference.');
   await recordBriefRevision(admin, { releaseId: input.releaseId, block: 'references', actorId: input.actorId });
-  return { ok: true, value: toReference(asRow(data)) };
+  const row = asRow(data);
+  const signed = await signUploads(admin, [row]);
+  const reference = toReference(row);
+  const path = textOrNull(row.storage_path);
+  return { ok: true, value: path ? { ...reference, url: signed.get(path) ?? '' } : reference };
 }
 
 /**
@@ -588,11 +738,40 @@ async function deleteOwnedRow(
   return { ok: true, value: { id: input.rowId } };
 }
 
-export function deleteBriefReference(
+export async function deleteBriefReference(
   admin: SupabaseClient,
   input: { releaseId: string; rowId: string; user: User; releaseOwnerId: string }
 ) {
-  return deleteOwnedRow(admin, { ...input, table: BRIEF_REFERENCES_TABLE, block: 'references' });
+  const { data } = await admin.from(BRIEF_REFERENCES_TABLE).select('storage_path').eq('id', input.rowId).maybeSingle();
+  const path = data ? textOrNull(asRow(data).storage_path) : null;
+  const deleted = await deleteOwnedRow(admin, { ...input, table: BRIEF_REFERENCES_TABLE, block: 'references' });
+  // The photo goes with its row. Best effort: a file left behind costs storage, not correctness.
+  if (deleted.ok && path) await admin.storage.from(RELEASE_ASSETS_BUCKET).remove([path]).catch(() => undefined);
+  return deleted;
+}
+
+/** Change a picture's or link's caption: whoever added it, or a lead. */
+export async function setBriefReferenceCaption(
+  admin: SupabaseClient,
+  input: { releaseId: string; rowId: string; caption: string; user: User; releaseOwnerId: string }
+): Promise<BriefResult<{ id: string; title: string | null }>> {
+  const { data, error } = await admin
+    .from(BRIEF_REFERENCES_TABLE)
+    .select('id,release_id,created_by')
+    .eq('id', input.rowId)
+    .maybeSingle();
+  if (error) return failure(error, 'Could not save the caption.');
+  const row = data ? asRow(data) : null;
+  if (!row || text(row.release_id) !== input.releaseId) return { ok: false, status: 404, error: 'Not found.' };
+  const isLead = text(row.created_by) === input.user.id ? false : await canUserManageBriefShare(admin, input.releaseOwnerId, input.user);
+  if (!mayChangeBriefItem({ createdBy: textOrNull(row.created_by), userId: input.user.id, isLead })) {
+    return { ok: false, status: 403, error: 'Only the person who added it can change the caption.' };
+  }
+  const title = input.caption || null;
+  const { error: updateError } = await admin.from(BRIEF_REFERENCES_TABLE).update({ title }).eq('id', input.rowId);
+  if (updateError) return failure(updateError, 'Could not save the caption.');
+  await recordBriefRevision(admin, { releaseId: input.releaseId, block: 'references', actorId: input.user.id });
+  return { ok: true, value: { id: input.rowId, title } };
 }
 
 export function deleteBriefDecision(

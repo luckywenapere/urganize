@@ -9,6 +9,7 @@ import {
   nudgeBoardCard,
   parseBoardLayout,
   resolveBoardLayout,
+  type BoardKey,
   type BoardLayout,
 } from './brief-board-layout';
 
@@ -28,7 +29,7 @@ const present = (keys: BoardCardKey[] = ALL) => new Set(keys);
 
 /** No two cards share a cell, and every card fits inside the 12 columns. */
 function expectSound(layout: BoardLayout) {
-  const entries = Object.entries(layout) as [BoardCardKey, NonNullable<BoardLayout[BoardCardKey]>][];
+  const entries = Object.entries(layout) as [BoardKey, NonNullable<BoardLayout[BoardCardKey]>][];
   for (const [, p] of entries) {
     expect(p.x).toBeGreaterThanOrEqual(1);
     expect(p.x + p.w).toBeLessThanOrEqual(BOARD_COLUMNS + 1);
@@ -179,5 +180,42 @@ describe('parseBoardLayout', () => {
     expect(parseBoardLayout({ cards: [{ key: 'idea', x: 10, y: 1, w: 6, h: 1 }] }).ok).toBe(false);
     expect(parseBoardLayout({ cards: [] }).ok).toBe(false);
     expect(parseBoardLayout(null).ok).toBe(false);
+  });
+});
+
+describe('sticky notes on the board', () => {
+  const a = 'note:0b7c1d2e-aaaa-4bbb-8ccc-000000000001' as const;
+  const b = 'note:0b7c1d2e-aaaa-4bbb-8ccc-000000000002' as const;
+
+  it('puts new notes under the default board, side by side', () => {
+    const layout = resolveBoardLayout(null, new Set([...ALL, a, b]));
+    const defaults = boardPlacements(present());
+    const bottom = Math.max(...Object.values(defaults).map((p) => p!.y + p!.h));
+    expect(layout.cover).toEqual(defaults.cover);
+    expect(layout[a]!.y).toBe(bottom);
+    expect(layout[b]!.y).toBe(bottom);
+    expect(layout[b]!.x).toBeGreaterThan(layout[a]!.x);
+    expectSound(layout);
+  });
+
+  it('keeps a note where it was put', () => {
+    const layout = resolveBoardLayout(
+      { idea: { x: 1, y: 1, w: 8, h: 1 }, [a]: { x: 9, y: 1, w: 4, h: 1 } },
+      new Set<BoardKey>(['idea', a])
+    );
+    expect(layout[a]).toEqual({ x: 9, y: 1, w: 4, h: 1 });
+    expectSound(layout);
+  });
+
+  it('moves like any card, and can be narrow', () => {
+    const start = resolveBoardLayout(null, new Set([...ALL, a]));
+    const moved = moveBoardCard(start, a, { x: 1, y: 1, w: 1, h: 1 });
+    expect(moved[a]).toEqual({ x: 1, y: 1, w: 2, h: 1 });
+    expectSound(moved);
+  });
+
+  it('is accepted in a saved layout; a made-up key is not', () => {
+    expect(parseBoardLayout({ cards: [{ key: a, x: 1, y: 1, w: 3, h: 1 }] }).ok).toBe(true);
+    expect(parseBoardLayout({ cards: [{ key: 'note:../../x', x: 1, y: 1, w: 3, h: 1 }] }).ok).toBe(false);
   });
 });
