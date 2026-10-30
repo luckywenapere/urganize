@@ -155,7 +155,9 @@ export function tuckedFeatures(view: RoleView): readonly RoleViewFeature[] {
 /** shell-nav sub-tab keys to the feature they are. */
 const TAB_FEATURE: Record<string, RoleViewFeature> = {
   releases: 'rollouts',
-  artists: 'artists',
+  // The artist list is Home since Oct 30, 2026 (the Rollouts list was turned
+  // off), and Home is never tucked, so no view can leave Home empty.
+  artists: 'home',
   'press-kits': 'press_kits',
   notes: 'notes',
   people: 'people',

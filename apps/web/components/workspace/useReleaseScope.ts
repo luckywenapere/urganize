@@ -62,6 +62,12 @@ export type SetScopeOptions = {
    * see decideIncomingScene for why absent and null differ.
    */
   scene?: SceneName | null;
+  /**
+   * Leaving a release (releaseId null): land on this path instead of staying
+   * on /dashboard. The back arrow passes the artist's page (Oct 30, 2026): the
+   * Rollouts list at /dashboard is off and a rollout opens from its artist.
+   */
+  toPath?: string;
 };
 
 export type ReleaseScope = {
@@ -138,7 +144,8 @@ export function useReleaseScope(): ReleaseScope {
         params.delete(SCOPE_PARAM);
       }
       const query = params.toString();
-      const url = `${pathname ?? ''}${query ? `?${query}` : ''}`;
+      const base = !releaseId && options?.toPath ? options.toPath : pathname ?? '';
+      const url = `${base}${query ? `?${query}` : ''}`;
       if (options?.push) {
         router.push(url, { scroll: false });
       } else {

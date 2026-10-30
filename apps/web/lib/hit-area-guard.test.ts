@@ -12,7 +12,6 @@ const FILES = [
   'components/home/v2/OneThing.tsx',
   'components/chappi/ChappiAttachMenu.tsx',
   'components/tasks/TaskCompletionCheckbox.tsx',
-  'app/dashboard/artists/ArtistsPageClient.tsx',
   'components/workspace/TasksPanel.tsx',
   'app/dashboard/directory/DirectoryPageClient.tsx',
   'components/pitching/PitchComposer.tsx',

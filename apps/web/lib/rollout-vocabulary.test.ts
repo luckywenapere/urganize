@@ -56,7 +56,7 @@ const GUARDED_FILES = [
   'lib/coming-soon.ts',
   'lib/shell-nav.ts',
   'app/dashboard/artists/ArtistsPageClient.tsx',
-  'app/dashboard/artists/[artistId]/ArtistPageClient.tsx',
+  'app/dashboard/[artistId]/ArtistPageClient.tsx',
   'lib/artist-page.ts',
   'app/dashboard/relationships/RelationshipsPageClient.tsx',
   'app/dashboard/relationships/[personId]/RelationshipPageClient.tsx',

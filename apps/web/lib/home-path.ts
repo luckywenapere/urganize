@@ -45,7 +45,9 @@
 //
 // 2026-10-29 (founder, #876): Home left the menu and Artists is the front
 // door. /dashboard/home itself redirects to Artists for old links.
-export const HOME_PATH = '/dashboard/artists';
+// 2026-10-30 (founder): the artist list moved to /dashboard (the Rollouts list
+// was turned off), so Home has no "artists" in its address.
+export const HOME_PATH = '/dashboard';
 
 /** Where a curator-only account lands. That surface has no team chrome at all. */
 export const CURATOR_HOME_PATH = '/curator';
@@ -70,4 +72,12 @@ export const CURATOR_HOME_PATH = '/curator';
  */
 export function resolveHomePath(role?: string | null): string {
   return String(role || '').trim().toLowerCase() === 'curator' ? CURATOR_HOME_PATH : HOME_PATH;
+}
+
+/** True on Home, the artist list. Since 2026-10-30 Home and a rollout share
+ *  the path /dashboard, so the query decides: ?release=<id> is a rollout. */
+export function isHomeLocation(pathname: string | null | undefined, search?: string | null): boolean {
+  const path = (pathname || '').replace(/\/+$/, '') || '/';
+  if (path !== HOME_PATH) return false;
+  return !new URLSearchParams(search || '').get('release');
 }

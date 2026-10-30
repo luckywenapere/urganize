@@ -4,8 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, ChevronRight, Disc3, Plus, Users } from '@/components/icons';
-import { CATALOGUE_HREF } from '@/lib/shell-nav';
-import { useShellStore } from '@/stores/useShellStore';
 import { initialsFor } from '@/lib/swipe-nav';
 import { useAuthStore } from '@/lib/auth-store';
 import { artistsList, describeDaysToGo, type ArtistListRow, type ArtistStatus } from '@/lib/artists-list';
@@ -16,7 +14,6 @@ import type { ExecutionRelease } from '@/lib/execution-types';
 import { displayReleaseTitle } from '@/types/releases';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
-import { ArtistsRolloutsSwitch } from '@/components/shell/swipe/ArtistsRolloutsSwitch';
 import { DuplicateArtistsPrompt } from '@/components/artists/DuplicateArtistsPrompt';
 import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
@@ -418,35 +415,21 @@ function ArtistRow({
 
 /**
  * The Artists tab in the swipe navigation (URG-380, frame 5; spotlight #878):
- * a serif title with one quiet +, a count line whose "rolling out" half opens
- * the rollouts list, the next drop's banner, then one row per artist with
- * their next rollout, when it drops, and its cover.
+ * the next drop's banner, then one row per artist with their next rollout,
+ * when it drops, and its cover. The title, its + and the count line above
+ * were removed on Oct 30, 2026 (founder).
  */
 function SwipeArtists({ loading, list }: { loading: boolean; list: ArtistsListData }) {
   const { rows, spotlight } = list;
-  const openAddArtist = useShellStore((state) => state.openAddArtist);
-  const rolling = rows.filter((row) => row.status === 'rolling_out').length;
 
   return (
     <div className="pb-6">
-      {/* The switch comes first, where the Rollouts page draws it, so it stays
-          still when you move between the two (switch jump fix, Oct 24, 2026). */}
-      <ArtistsRolloutsSwitch current="artists" />
-      <div className="mt-3 flex items-end justify-between">
-        <h1 className="font-display text-[40px] leading-[1.1] tracking-[-0.3px] text-content-primary">Artists</h1>
-        <div className="mb-1 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => openAddArtist()}
-            aria-label="Add artist"
-            className="hit-44 relative motion-focus motion-press grid h-9 w-9 place-items-center rounded-full border border-content-primary/[0.14] text-content-primary/70 hover:text-content-primary"
-          >
-            <Plus className="h-[18px] w-[18px]" aria-hidden="true" />
-          </button>
-          {/* The phone's bell moved here from Home (2026-10-29, #876). Phone
-              only and hidden in the swipe nav, as it was on Home. */}
-          <HomeBell />
-        </div>
+      {/* No title, no add button and no count line (Oct 30, 2026, founder:
+          "remove this entire section"). Artists are added from Settings. The
+          phone's bell stays (moved here from Home, 2026-10-29, #876); it is
+          phone only and hidden in the swipe nav, so this row is often empty. */}
+      <div className="flex justify-end">
+        <HomeBell />
       </div>
       {loading ? (
         <ul className="mt-[18px]" aria-busy="true">
@@ -464,17 +447,6 @@ function SwipeArtists({ loading, list }: { loading: boolean; list: ArtistsListDa
         </div>
       ) : (
         <>
-          <p className="mt-1.5 text-[15px] text-content-primary/55">
-            {rows.length} {rows.length === 1 ? 'artist' : 'artists'}
-            {rolling > 0 ? (
-              <>
-                {' · '}
-                <Link href={CATALOGUE_HREF} className="motion-focus rounded hover:text-content-primary">
-                  {rolling} rolling out
-                </Link>
-              </>
-            ) : null}
-          </p>
           {spotlight ? (
             <div className="mt-4">
               <Spotlight row={spotlight} compact />

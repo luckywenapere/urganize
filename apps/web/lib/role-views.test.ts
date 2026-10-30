@@ -96,7 +96,7 @@ describe('the defaults every view keeps', () => {
       }
       const shown = destinations(view(v).filter((area) => area.key !== 'more'));
       expect(shown).toEqual(
-        expect.arrayContaining(['urgans', 'catalogue/releases', 'catalogue/notes'])
+        expect.arrayContaining(['urgans', 'catalogue/artists', 'catalogue/notes'])
       );
     }
   });
@@ -135,9 +135,10 @@ describe('the nav filter, per view', () => {
 
   it('Solo artist tucks Artists, Team, Directory and People', () => {
     const list = view('solo_artist');
-    expect(more(list)).toEqual(['artists', 'team', 'directory', 'people']);
+    // The Artists tab is Home since Oct 30, 2026, so it is never tucked.
+    expect(more(list)).toEqual(['team', 'directory', 'people']);
     const catalogue = list.find((a) => a.key === 'catalogue')!;
-    expect(catalogue.subTabs.map((t) => t.key)).toEqual(['releases', 'notes']);
+    expect(catalogue.subTabs.map((t) => t.key)).toEqual(['artists', 'notes']);
     // Relationships lost every tab, so it moved under More whole.
     expect(list.some((a) => a.key === 'relationships')).toBe(false);
   });
@@ -145,7 +146,7 @@ describe('the nav filter, per view', () => {
   it('Artist team tucks Artists, People, Directory and Opportunities', () => {
     const list = view('artist_team');
     expect(list.map((a) => a.key)).toEqual(['catalogue', 'urgans', 'team', 'more']);
-    expect(more(list)).toEqual(['artists', 'directory', 'people', 'opportunities']);
+    expect(more(list)).toEqual(['directory', 'people', 'opportunities']);
   });
 
   it('removes nothing: every destination is in the menu or under More', () => {
@@ -159,11 +160,11 @@ describe('the nav filter, per view', () => {
 
   it('a deep link to a tucked page lights More, not the area it came from', () => {
     const list = view('solo_artist');
-    expect(activeShellArea(list, '/dashboard/artists')?.key).toBe('more');
-    expect(activeShellArea(list, '/dashboard/artists/abc')?.key).toBe('more');
     expect(activeShellArea(list, '/dashboard/directory')?.key).toBe('more');
+    expect(activeMobileTab(list, '/dashboard/directory')).toBe('more');
+    // Home, the artist list, and an artist's page stay in Home.
     expect(activeShellArea(list, '/dashboard')?.key).toBe('catalogue');
-    expect(activeMobileTab(list, '/dashboard/artists')).toBe('more');
+    expect(activeShellArea(list, '/dashboard/abc')?.key).toBe('catalogue');
   });
 
   it("hands the phone's More sheet the tucked pages after the areas it already lists", () => {

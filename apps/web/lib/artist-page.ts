@@ -12,8 +12,49 @@ export const isArtistPageEnabled = (): boolean =>
 export const releaseHref = (releaseId: string): string =>
   `/dashboard?release=${encodeURIComponent(releaseId)}`;
 
+/** An artist's page sits straight under /dashboard (Oct 30, 2026, founder:
+ *  Home is the artist list, with no "artists" in the address). The old
+ *  /dashboard/artists/<id> addresses redirect here (next.config.js). */
 export const artistHref = (artistId: string): string =>
-  `/dashboard/artists/${encodeURIComponent(artistId)}`;
+  `/dashboard/${encodeURIComponent(artistId)}`;
+
+/** Every folder under app/dashboard. /dashboard/<x> is that page when x is one
+ *  of these, and an artist's page otherwise. lib/dashboard-sections.test.ts
+ *  holds this list to the folders on disk, so a new page cannot be read as an
+ *  artist. */
+export const DASHBOARD_SECTIONS: readonly string[] = [
+  'artists',
+  'audience',
+  'cancel',
+  'chappi',
+  'credits',
+  'directory',
+  'distribute',
+  'front-desk',
+  'home',
+  'notes',
+  'opportunities',
+  'pitching',
+  'press-kits',
+  'relationships',
+  'releases',
+  'settings',
+  'tasks',
+  'team',
+  'trash',
+  'urgans',
+];
+
+/** The artist whose page (or record) a path is, or null for any other page. */
+export function artistIdFromPath(pathname: string | null | undefined): string | null {
+  const match = /^\/dashboard\/([^/?#]+)/.exec(pathname ?? '');
+  if (!match || DASHBOARD_SECTIONS.includes(match[1])) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return null;
+  }
+}
 
 /** A record in the making, under its artist in Catalogue (2026-10-27). */
 export const recordHref = (artistId: string, recordId: string): string =>

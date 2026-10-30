@@ -32,6 +32,7 @@ import {
   X,
 } from '@/components/icons';
 import { usePathname } from 'next/navigation';
+import { useReleaseParamStore } from '@/stores/useReleaseParamStore';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import {
   clearDeferredShare,
@@ -40,7 +41,7 @@ import {
   readFirstSessionRecord,
   readFirstSessionTabId,
 } from '@/lib/first-session';
-import { HOME_PATH } from '@/lib/home-path';
+import { isHomeLocation } from '@/lib/home-path';
 import { useAuthStore } from '@/lib/auth-store';
 import { isBodyScrollLocked, lockBodyScroll } from '@/lib/body-scroll-lock';
 import { openExternalUrl } from '@/lib/external-link';
@@ -219,7 +220,8 @@ function pickDeferredFirstShare(userId: string | null, onHome: boolean): string 
  */
 function useDeferredFirstShareOffer() {
   const pathname = usePathname();
-  const onHome = pathname === HOME_PATH;
+  const releaseParam = useReleaseParamStore((state) => state.releaseId);
+  const onHome = isHomeLocation(pathname, releaseParam ? `release=${releaseParam}` : '');
   const userId = useAuthStore((state) => state.user?.id ?? null);
   useEffect(() => {
     if (!onHome) return;
@@ -241,7 +243,7 @@ function useDeferredFirstShareOffer() {
       // every offer back, this one included.
       if (isInFirstSession()) return;
       const currentUserId = useAuthStore.getState().user?.id ?? null;
-      const releaseId = pickDeferredFirstShare(currentUserId, window.location.pathname === HOME_PATH);
+      const releaseId = pickDeferredFirstShare(currentUserId, isHomeLocation(window.location.pathname, window.location.search));
       if (!releaseId) return;
       // Both records go once one offer is made: the person gets one offer.
       clearDeferredShare();

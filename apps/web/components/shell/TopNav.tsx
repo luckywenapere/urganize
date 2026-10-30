@@ -113,7 +113,7 @@ export function TopNav() {
             stamps (those all went 2026-08-16). Desktop only, like the mark. */}
         <div className="hidden shrink-0 items-center gap-2 justify-self-start lg:inline-flex">
           <Link
-            href="/dashboard/artists"
+            href="/dashboard"
             aria-label="Urganize, Artists"
             className="motion-focus inline-flex rounded-md transition-opacity hover:opacity-80"
           >

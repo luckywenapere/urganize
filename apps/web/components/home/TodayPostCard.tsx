@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
-import { isArtistPageEnabled } from '@/lib/artist-page';
+import { artistHref, isArtistPageEnabled } from '@/lib/artist-page';
 import { PLATFORM_LABELS, nextDayWords } from '@/lib/posting-plan';
 import {
   POSTING_PLAN_CHANGED_EVENT,
@@ -112,7 +112,7 @@ export function TodayPostCard() {
       </dl>
       {first ? (
         <Link
-          href={`/dashboard/artists/${first.artistId}`}
+          href={artistHref(first.artistId)}
           className="motion-focus mt-3 inline-block text-sm text-content-secondary underline underline-offset-4"
         >
           Open {first.artistName}&apos;s posting plan

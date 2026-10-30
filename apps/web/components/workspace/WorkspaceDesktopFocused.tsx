@@ -179,13 +179,13 @@ export function WorkspaceDesktopFocused({
           <button
             type="button"
             onClick={onClose}
-            aria-label={closeLabel ?? 'Back to all rollouts'}
+            aria-label={closeLabel ?? 'Back to Home'}
             className="motion-focus shrink-0 rounded-md hover:text-content-primary"
           >
-            Rollouts
+            Home
           </button>
         ) : (
-          <span className="shrink-0">Rollouts</span>
+          <span className="shrink-0">Home</span>
         )}
         <ChevronRight className="h-3.5 w-3.5 shrink-0 text-content-tertiary" aria-hidden="true" />
         <span className="min-w-0 truncate font-semibold text-content-primary">{card.release.title}</span>

@@ -27,16 +27,18 @@ const lit = (path: string, flags: ShellFlags = ALL_ON) =>
 
 describe('the desktop side menu: the open area\u2019s pages (URG-254, founder call 2026-10-14)', () => {
   it('lists the Catalogue\u2019s pages as parents, the one on screen lit', () => {
-    expect(labels('/dashboard')).toEqual(['Artists', 'Rollouts', 'Notes']);
+    expect(labels('/dashboard')).toEqual(['Artists', 'Notes']);
     // Distribute left the menu (2026-10-15); its old page lights nothing.
     expect(lit('/dashboard/distribute')).toEqual([]);
-    expect(lit('/dashboard')).toEqual(['releases']);
+    expect(lit('/dashboard')).toEqual(['artists']);
+    expect(lit('/dashboard/abc')).toEqual(['artists']);
     expect(lit('/dashboard/artists')).toEqual(['artists']);
     expect(lit('/dashboard/notes')).toEqual(['notes']);
   });
 
-  it('keeps Rollouts lit inside a rollout, where its menu nests', () => {
-    expect(lit('/dashboard/releases/abc')).toEqual(['releases']);
+  it('draws no Home side menu once Artists is its only page (Oct 30, 2026)', () => {
+    expect(labels('/dashboard', { ...ALL_ON, notes: false })).toBeNull();
+    expect(labels('/dashboard/abc', { ...ALL_ON, notes: false })).toBeNull();
   });
 
   it('lists Relationships\u2019 pages with the labels from shell-nav (no new words)', () => {
@@ -69,7 +71,7 @@ describe('the desktop page bar title', () => {
     const on = buildShellAreas(ALL_ON);
     expect(shellPageTitle(on, '/dashboard/team')).toBe('Team');
     expect(shellPageTitle(on, '/dashboard/notes')).toBe('Notes');
-    expect(shellPageTitle(on, '/dashboard')).toBe('Rollouts');
+    expect(shellPageTitle(on, '/dashboard')).toBe('Artists');
     expect(shellPageTitle(on, '/dashboard/pitching')).toBeNull();
     expect(shellPageTitle(buildShellAreas(ALL_OFF), '/dashboard')).toBe('Rollouts');
     expect(shellPageTitle(on, '/dashboard/distribute')).toBe('Home');

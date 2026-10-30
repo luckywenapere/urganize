@@ -82,20 +82,24 @@ describe('shell nav', () => {
     expect(buildShellAreas(ALL_OFF).find((a) => a.key === 'relationships')).toBeUndefined();
   });
 
-  it('catalogue always has Rollouts and adds only the tabs whose page opens', () => {
+  it('catalogue is the artist list, with Rollouts only when the artist page is off (Oct 30, 2026)', () => {
     const labels = (flags: ShellFlags) =>
       buildShellAreas(flags)
         .find((a) => a.key === 'catalogue')!
         .subTabs.map((t) => t.label);
     expect(labels(ALL_OFF)).toEqual(['Rollouts']);
-    expect(labels(ALL_ON)).toEqual(['Artists', 'Rollouts', 'Notes']);
+    expect(labels(ALL_ON)).toEqual(['Artists', 'Notes']);
+    expect(labels({ ...ALL_ON, notes: false })).toEqual(['Artists']);
   });
 
   it('shows the sub-tab row only when there is a choice', () => {
     const areas = buildShellAreas(ALL_OFF);
     expect(visibleSubTabs(activeShellArea(areas, '/dashboard/team'))).toEqual([]);
     const on = buildShellAreas(ALL_ON);
-    expect(visibleSubTabs(activeShellArea(on, '/dashboard')).length).toBe(3);
+    expect(visibleSubTabs(activeShellArea(on, '/dashboard')).length).toBe(2);
+    // Artists alone: no tab row at all (founder, Oct 30, 2026).
+    const artistsOnly = buildShellAreas({ ...ALL_ON, notes: false });
+    expect(visibleSubTabs(activeShellArea(artistsOnly, '/dashboard'))).toEqual([]);
     expect(visibleSubTabs(null)).toEqual([]);
   });
 
@@ -106,6 +110,8 @@ describe('shell nav', () => {
     expect(at('/dashboard/team')).toBe('team');
     expect(at('/dashboard')).toBe('catalogue');
     expect(at('/dashboard/artists/abc')).toBe('catalogue');
+    expect(at('/dashboard/abc')).toBe('catalogue');
+    expect(at('/dashboard/abc/records/r1')).toBe('catalogue');
     expect(at('/dashboard/distribute')).toBe('catalogue');
     expect(at('/dashboard/notes')).toBe('catalogue');
     expect(at('/dashboard/directory')).toBe('relationships');
@@ -121,14 +127,16 @@ describe('shell nav', () => {
 
   it('does not treat a longer path that merely starts with the same letters as a match', () => {
     const areas = buildShellAreas(ALL_ON);
-    expect(activeShellArea(areas, '/dashboard/showsomething')).toBeNull();
-    expect(activeShellArea(areas, '/dashboard/homepage')).toBeNull();
+    expect(activeShellArea(areas, '/dashboardx')).toBeNull();
+    expect(activeShellArea(areas, '/dashboard/teamwork')?.key).not.toBe('team');
+    expect(activeShellArea(areas, '/dashboard/urgansx')?.key).not.toBe('urgans');
   });
 
   it('lights the matching sub-tab', () => {
     const area = buildShellAreas(ALL_ON).find((a) => a.key === 'catalogue')!;
     const lit = (p: string) => area.subTabs.filter((t) => t.isActive(p)).map((t) => t.key);
-    expect(lit('/dashboard')).toEqual(['releases']);
+    expect(lit('/dashboard')).toEqual(['artists']);
+    expect(lit('/dashboard/abc')).toEqual(['artists']);
     expect(lit('/dashboard/artists')).toEqual(['artists']);
     expect(lit('/dashboard/notes')).toEqual(['notes']);
   });
@@ -139,7 +147,7 @@ describe('shell nav', () => {
     // Add artist opens the Add an artist sheet (search first, #882), over the
     // Artists page itself, so the tab under it does not change.
     expect(action('artists')).toEqual({ label: 'Add artist', press: 'addArtist' });
-    expect(action('releases')).toEqual({ label: 'New rollout', press: 'openCreate' });
+    expect(area.subTabs.some((t) => t.key === 'releases')).toBe(false);
     // Notes keeps the slot's space with no button.
     expect(action('notes')).toBeNull();
     // With the artist page off, Rollouts alone still carries New rollout.
@@ -151,7 +159,7 @@ describe('shell nav', () => {
     expect(buildMobileTabs().map((t) => t.key)).toEqual(['catalogue', 'urgans', 'team']);
     expect(buildMobileTabs().map((t) => t.label)).toEqual(['Home', 'Assistant', 'Team']);
     // The Artists tab lands on Artists when the artist page is on, Rollouts when it is off.
-    expect(buildMobileTabs(buildShellAreas(ALL_ON))[0].href).toBe('/dashboard/artists');
+    expect(buildMobileTabs(buildShellAreas(ALL_ON))[0].href).toBe('/dashboard');
     expect(buildMobileTabs(buildShellAreas(ALL_OFF))[0].href).toBe('/dashboard');
     // A role view that tucks Team leaves it off the bar.
     const noTeam = buildShellAreas(ALL_OFF).filter((a) => a.key !== 'team');

@@ -118,16 +118,20 @@ const nextConfig = {
       { source: '/urgans', destination: '/dashboard/urgans', permanent: false },
       { source: '/urgans/s/:id', destination: '/dashboard/urgans?s=:id', permanent: false },
       { source: '/urgans/m/:id', destination: '/dashboard/urgans?m=:id', permanent: false },
-      { source: '/artists', destination: '/dashboard/artists', permanent: false },
-      { source: '/artists/:id', destination: '/dashboard/artists/:id', permanent: false },
+      { source: '/artists', destination: '/dashboard', permanent: false },
+      { source: '/artists/:id', destination: '/dashboard/:id', permanent: false },
+      // An artist's page moved from /dashboard/artists/<id> to /dashboard/<id>
+      // (Oct 30, 2026, founder). Old links, emails and bookmarks follow. The
+      // bare /dashboard/artists is not redirected: see its page.tsx.
+      { source: '/dashboard/artists/:path+', destination: '/dashboard/:path+', permanent: false },
       { source: '/dashboard/shows', destination: '/dashboard', permanent: false },
       { source: '/dashboard/shows/:path*', destination: '/dashboard', permanent: false },
       // The standalone press kit is hidden (Oct 17, 2026, founder approved
       // "cuts-3"): the list goes to Artists, an artist's kit to that artist.
       // The bio and contact are edited in a rollout's Pitch this!. Public
       // /k links and the press-kit API are untouched.
-      { source: '/dashboard/press-kits', destination: '/dashboard/artists', permanent: false },
-      { source: '/dashboard/press-kits/:artistId', destination: '/dashboard/artists/:artistId', permanent: false },
+      { source: '/dashboard/press-kits', destination: '/dashboard', permanent: false },
+      { source: '/dashboard/press-kits/:artistId', destination: '/dashboard/:artistId', permanent: false },
     ];
   },
   // The recap card renderer reads static font binaries off disk at request
