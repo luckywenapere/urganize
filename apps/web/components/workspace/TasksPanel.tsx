@@ -27,6 +27,7 @@ import { orderForThumb } from '@/lib/release-menu';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { resolvePanelBody } from '@/lib/scene-cache';
+import { useLandsOnBrief } from './useLandsOnBrief';
 import { useSceneOverlay } from './useSceneOverlay';
 import { PlanViewToggle } from './PlanViewToggle';
 import { PlanListControls, PlanShowAllToggle, usePlanList } from './PlanListControls';
@@ -332,8 +333,9 @@ export function TasksPanel({
    * and the timeline's own empty states are text with no button, so a dateless
    * release would have read "Set a release date first" with nothing to tap.
    */
+  const landsOnBrief = useLandsOnBrief(scopedRelease?.id);
   const bodyIsMainView = (() => {
-    const body = resolvePanelBody(urlScene);
+    const body = resolvePanelBody(urlScene, !scopedRelease?.releaseDate && Boolean(scopedRelease), landsOnBrief);
     return body === 'activities' || body === 'timeline';
   })();
 

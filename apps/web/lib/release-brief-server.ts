@@ -10,6 +10,8 @@
 
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 
+import { briefProgress, type BriefFeel, type BriefFeelPatch } from '@/lib/brief-board';
+import { loadCoverArtUrls } from '@/lib/cover-art';
 import { isMissingTableError } from '@/lib/promo-channels';
 import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
 import {
@@ -126,12 +128,16 @@ type BriefRow = {
   updatedAt: string | null;
   shareToken: string | null;
   shareEnabled: boolean;
+  feel: BriefFeel;
 };
+
+const textList = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
 
 async function readBriefRow(admin: SupabaseClient, releaseId: string): Promise<BriefResult<BriefRow | null>> {
   const { data, error } = await admin
     .from(BRIEFS_TABLE)
-    .select('idea,updated_by,updated_at,share_token,share_enabled')
+    .select('idea,updated_by,updated_at,share_token,share_enabled,headline,feels_like,not_this,palette')
     .eq('release_id', releaseId)
     .maybeSingle();
   if (error) return failure(error, 'Could not load the brief.');
@@ -145,6 +151,12 @@ async function readBriefRow(admin: SupabaseClient, releaseId: string): Promise<B
       updatedAt: textOrNull(row.updated_at),
       shareToken: textOrNull(row.share_token),
       shareEnabled: row.share_enabled === true,
+      feel: {
+        headline: text(row.headline),
+        feelsLike: textList(row.feels_like),
+        notThis: textList(row.not_this),
+        palette: textList(row.palette),
+      },
     },
   };
 }
@@ -226,10 +238,18 @@ export async function loadPlanSeed(admin: SupabaseClient, releaseId: string): Pr
 
 export async function loadBriefPayload(
   admin: SupabaseClient,
-  input: { releaseId: string; releaseOwnerId: string; releaseDate: string | null; user: User }
+  input: {
+    releaseId: string;
+    releaseOwnerId: string;
+    releaseDate: string | null;
+    title: string;
+    artistName: string;
+    artworkAssetId: string | null;
+    user: User;
+  }
 ): Promise<BriefResult<BriefPayload>> {
   const { releaseId } = input;
-  const [briefRead, referencesRead, decisionsRead, revisionsRead, tasks, notes, canManageShare, planSeed] =
+  const [briefRead, referencesRead, decisionsRead, revisionsRead, tasks, notes, canManageShare, planSeed, covers] =
     await Promise.all([
       readBriefRow(admin, releaseId),
       readReferences(admin, releaseId),
@@ -249,6 +269,10 @@ export async function loadBriefPayload(
       readNotes(admin, releaseId),
       canUserManageBriefShare(admin, input.releaseOwnerId, input.user),
       loadPlanSeed(admin, releaseId),
+      // A missing cover never fails the brief; the board shows an initials tile.
+      loadCoverArtUrls(admin, [{ id: releaseId, artwork_asset_id: input.artworkAssetId }], { thumbs: false }).catch(
+        () => new Map<string, { url: string }>()
+      ),
     ]);
 
   if (!briefRead.ok) return briefRead;
@@ -300,6 +324,7 @@ export async function loadBriefPayload(
   // "Edited by" is the newest history row, so an UrgAns draft that was kept
   // reads "Edited by UrgAns" exactly as the history does.
   const latest = revisions[0];
+  const today = briefToday();
 
   return {
     ok: true,
@@ -310,13 +335,22 @@ export async function loadBriefPayload(
       updatedByName: latest?.actorName ?? (brief?.updatedBy ? nameOf(brief.updatedBy) : null),
       references: referencesRead.value,
       decisions,
-      dates: deriveBriefDates({ tasks, releaseDate: input.releaseDate, today: briefToday() }),
+      dates: deriveBriefDates({ tasks, releaseDate: input.releaseDate, today }),
       people: deriveBriefPeople({ tasks, profiles }),
       notes,
       revisions,
       planSeed,
       share: { enabled: brief?.shareEnabled ?? false, token: brief?.shareEnabled ? brief.shareToken : null },
       viewer: { id: input.user.id, canEdit: true, canManageShare },
+      board: {
+        title: input.title || 'Untitled',
+        artistName: input.artistName,
+        coverUrl: covers.get(releaseId)?.url ?? null,
+        releaseDate: input.releaseDate,
+        today,
+        progress: briefProgress(tasks, today),
+        feel: brief?.feel ?? { headline: '', feelsLike: [], notThis: [], palette: [] },
+      },
     },
   };
 }
@@ -402,6 +436,26 @@ export async function saveBriefIdea(
     actorLabel: input.actorLabel ?? null,
   });
   return { ok: true, value: { idea: input.idea, updatedAt } };
+}
+
+/** Save any of the board's look-and-feel fields (#897). History reads "Look and feel". */
+export async function saveBriefFeel(
+  admin: SupabaseClient,
+  input: { releaseId: string; patch: BriefFeelPatch; actorId: string }
+): Promise<BriefResult<BriefFeelPatch>> {
+  const row: Record<string, unknown> = {
+    release_id: input.releaseId,
+    updated_by: input.actorId,
+    updated_at: new Date().toISOString(),
+  };
+  if (input.patch.headline !== undefined) row.headline = input.patch.headline;
+  if (input.patch.feelsLike !== undefined) row.feels_like = input.patch.feelsLike;
+  if (input.patch.notThis !== undefined) row.not_this = input.patch.notThis;
+  if (input.patch.palette !== undefined) row.palette = input.patch.palette;
+  const { error } = await admin.from(BRIEFS_TABLE).upsert(row, { onConflict: 'release_id' });
+  if (error) return failure(error, 'Could not save the look and feel.');
+  await recordBriefRevision(admin, { releaseId: input.releaseId, block: 'feel', actorId: input.actorId });
+  return { ok: true, value: input.patch };
 }
 
 export async function addBriefReference(

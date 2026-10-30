@@ -36,6 +36,7 @@ import { ROLLOUT_MENU_FLAGS } from '@/lib/rollout-menu-flags';
 import { resolvePanelBody, type SceneName } from '@/lib/scene-cache';
 import { useCanViewSpend } from '@/stores/useSpendAccessStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
+import { useLandsOnBrief } from './useLandsOnBrief';
 import { useSceneOverlay } from './useSceneOverlay';
 import { useSmartLinkReady } from '@/components/releases/useSmartLinkReady';
 import { captureRowLabel } from '@/lib/smart-link-task';
@@ -159,7 +160,8 @@ export function useRolloutMenuActions({
     return Boolean(found) && !found?.releaseDate;
   });
   // A rollout with no date lands on Work the plan, so that row is the lit one.
-  const activeScene = resolvePanelBody(urlScene, dateMissing);
+  const landsOnBrief = useLandsOnBrief(releaseId);
+  const activeScene = resolvePanelBody(urlScene, dateMissing, landsOnBrief);
   const NEEDS_DATE: ReadonlyArray<ReleaseMenuKey> = ['distribute', 'pitch', 'capture'];
 
   const toggle = (scene: SceneName, id: string) => {

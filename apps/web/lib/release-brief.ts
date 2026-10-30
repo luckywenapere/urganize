@@ -17,6 +17,7 @@
  *    the plan.
  */
 
+import type { BriefFeel, BriefProgress } from '@/lib/brief-board';
 import { readPlanKey } from '@/lib/plan-focus';
 import { channelLabel, type Channel } from '@/lib/planner-v2/answers';
 import { readUndatedTaskMeta, relativeWhenLabel } from '@/lib/planner-v2/when';
@@ -38,13 +39,14 @@ export const MAX_NOTES = 10;
 
 // ── Blocks and copy ──────────────────────────────────────────────────────────
 
-export const BRIEF_BLOCKS = ['idea', 'references', 'decisions'] as const;
+export const BRIEF_BLOCKS = ['idea', 'references', 'decisions', 'feel'] as const;
 export type BriefBlock = (typeof BRIEF_BLOCKS)[number];
 
 export const BRIEF_BLOCK_LABELS: Record<BriefBlock, string> = {
   idea: 'Idea',
   references: 'References',
   decisions: 'Decisions',
+  feel: 'Look and feel',
 };
 
 export function isBriefBlock(value: unknown): value is BriefBlock {
@@ -73,6 +75,18 @@ export const BRIEF_COPY = {
 } as const;
 
 // ── Shapes the API answers with ─────────────────────────────────────────────
+
+export type BriefBoardFacts = {
+  title: string;
+  artistName: string;
+  /** Signed link to the cover art, or null when there is none. */
+  coverUrl: string | null;
+  releaseDate: string | null;
+  /** Lagos today, YYYY-MM-DD, so the page and the server agree on what is late. */
+  today: string;
+  progress: BriefProgress;
+  feel: BriefFeel;
+};
 
 export type BriefReference = {
   id: string;
@@ -151,6 +165,8 @@ export type BriefPayload = {
   round?: BriefRound | null;
   /** Everyone's ideas, once the round is closed (or all of them for the owner). */
   ideas?: BriefIdea[];
+  /** What the board shows around the blocks (#897): the record, the look and feel, live progress. */
+  board: BriefBoardFacts;
 };
 
 export type BriefRound = {

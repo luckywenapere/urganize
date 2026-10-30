@@ -84,6 +84,7 @@ import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { isReleaseActive } from '@/lib/release-activity';
 import { isRecapEligible as isRecapEligibleForRelease } from '@/lib/recap-eligibility';
 import { onlyPreProductionWork } from '@/lib/pre-production';
+import { useLandsOnBrief } from './useLandsOnBrief';
 import { isReviewDue } from '@/lib/release-review';
 import { ReleaseReview } from '@/components/between-releases/ReleaseReview';
 import { findRoleGaps } from '@/lib/role-gaps';
@@ -260,7 +261,8 @@ export function WorkspaceView() {
   // shows a "turn your phone" screen when the timeline is asked for, and a
   // rollout with no pick yet opens on the list there.
   const upright = useNarrowPortrait() && !isDesktopViewport;
-  const resolvedBody = resolvePanelBody(urlScene, scopedHasNoDate);
+  const landsOnBrief = useLandsOnBrief(scopedReleaseId);
+  const resolvedBody = resolvePanelBody(urlScene, scopedHasNoDate, landsOnBrief);
   const panelBody =
     activeScene === null && isPlanView(resolvedBody)
       ? pickPlanView({

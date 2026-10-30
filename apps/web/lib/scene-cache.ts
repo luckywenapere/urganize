@@ -218,9 +218,18 @@ export function resolvePanelBody(
   /** The rollout has no release day. Its timeline has nothing to draw, so it
    *  lands on Work the plan (2026-10-26). An explicit `?scene=timeline` still
    *  opens the timeline. */
-  dateless = false
+  dateless = false,
+  /** The rollout has a plan, so it opens on its brief board (#897,
+   *  2026-10-30, founder: the brief is the rollout's home). Without a plan, or
+   *  without a date, it keeps its old landing: those views hold the only doors
+   *  to building the plan and setting the day. */
+  landsOnBrief = false
 ): SceneName | ReleaseMainView {
-  return resolveActiveScene(rawParam) ?? (dateless ? 'activities' : resolveMainView());
+  const asked = resolveActiveScene(rawParam);
+  if (asked) return asked;
+  if (dateless) return 'activities';
+  if (landsOnBrief && RELEASE_BRIEF_ENABLED) return 'brief';
+  return resolveMainView();
 }
 
 /** Within this window a cached scene is served with NO network call at all.
