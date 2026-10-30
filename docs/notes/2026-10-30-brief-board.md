@@ -88,3 +88,36 @@ Free drawing, an infinite canvas, live cursors, audio uploads, a budget card, co
 - **Landing:** `resolvePanelBody(raw, dateless, landsOnBrief)`. A rollout lands on the brief when it has a plan and a release day (`useLandsOnBrief`); with no plan or no date it keeps its old landing, because those views hold the only doors to building the plan and setting the day. WorkspaceView, TasksPanel and the rollout menu all pass the same answer. The workspace skeleton cannot know about the plan, so it still reserves the plan shape for a moment.
 - **Menu:** Read the brief leads `RELEASE_MENU_ORDER` and the rollout menu.
 - **Not yet:** drag and resize (1b), uploads and notes (2), What we're making (3), Present and Seen (4), UrgAns first board (5), share with a person (6).
+
+## Phase 1b: delivered (v1.219.0, 2026-10-30)
+
+- **Data:** `20261030200000_brief_board_cards.sql`, applied to production 2026-10-30 (a new table, nothing backed up). `release_brief_cards` holds one row per placed card: `card_key` (the card's name now, `note:<id>` for phase 2 notes), `kind`, `x`, `y`, `w`, `h`, `payload`. Unique `(release_id, card_key)` is what the one-request upsert conflicts on. RLS on, no policies, explicit grants.
+- **Rules:** `lib/brief-board-layout.ts` (tested): `clampPlacement` (whole cells, a narrowest width per card, at most 4 rows tall, inside 12 columns), `moveBoardCard` (the cards a drop lands on are pushed down, then everything falls up; moving down past a card puts it after that card), `nudgeBoardCard` (arrows move one cell, shift and arrows resize, down passes only the next card), `resolveBoardLayout` (stored places for the cards that are there, new cards added at the bottom, nothing stored means the default), `layoutPhoneOrder`, `parseBoardLayout`.
+- **API:** `PUT /api/releases/[id]/brief/layout { cards }` saves the whole board; `DELETE` resets it. Rollout owner or team owner/admin only (`canUserManageBriefShare`), 403 otherwise. The approve lock does not apply: arranging changes how the brief looks, not what it says. `GET /brief` adds `board.layout` and `board.canArrange`.
+- **UI:** Arrange (wide board, leads only) puts a dashed layer over each card that takes the pointer and the keys, so card buttons rest while arranging; a corner handle resizes. Saves 350 ms after the last change, so a run of arrow keys is one request; a failed save puts the board back and says why. Cards slide to their new place (Web Animations), skipped under reduced motion. A phone reads an arranged board top to bottom, then left to right.
+- **Not done from the plan:** long-press to reorder on a phone. Arranging stays a computer task; a phone shows the order set there.
+
+## Plan first, brief as a button (proposed 2026-10-30, Oyin's note, not built)
+
+Oyin, after v1.217.0: the plan should lead and the brief should be a button inside Work the plan that opens the brief bigger, until you go back to the plan. This reverses the "Brief opens first" call from the morning of the same day, for rollouts that have a plan.
+
+**The flow, end to end:**
+
+| Where the rollout is | What it opens on | Where the brief is |
+|---|---|---|
+| 1. New, no idea yet | The idea screen ("What's the idea?") | Not yet: there is nothing to read |
+| 2. Ideas round open | The ideas round | Not yet |
+| 3. Round closed, UrgAns wrote the brief | **The brief**, once, so the owner reads and approves it. Approve builds the plan | It is the step |
+| 4. Plan built (most of a rollout's life) | **Work the plan** | A Brief button in the plan's header (cover thumbnail plus the one-line idea), opening the brief in focus |
+| 5. Released, recap | The recap, as today | Brief button stays in the plan header |
+| A person opening a brief link, a guest (phase 6), Present (phase 4) | The brief, alone | It is the page |
+
+**Focus view:** the brief takes the whole content area: the rollout's top menu and side rail tuck away, the board gets the full width, and a "Back to the plan" button sits top left (Esc and the browser's back button do the same). It is its own URL (`?view=brief`), so a link, a notification about a decision, or a refresh lands back in it. Present (phase 4) starts from here.
+
+**Phone:** the Brief button sits in the plan header too and opens the brief full screen with a back arrow; swiping back returns to the plan.
+
+**Menu:** "Read the brief" leaves the first slot (Work the plan leads again) and stays in the ... menu so it can still be found.
+
+**Scope (one small PR, before phase 2):** landing back to the plan once a plan exists (step 4), the Brief button in the plan header, the focus view, the one-time brief at step 3, the menu order. No data changes. Needs a mock and Oyin's yes first.
+
+**Measure:** taps on the Brief button, time in the focus view, Back taps vs other exits.

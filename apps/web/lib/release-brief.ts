@@ -18,6 +18,7 @@
  */
 
 import type { BriefFeel, BriefProgress } from '@/lib/brief-board';
+import type { BoardLayout } from '@/lib/brief-board-layout';
 import { readPlanKey } from '@/lib/plan-focus';
 import { channelLabel, type Channel } from '@/lib/planner-v2/answers';
 import { readUndatedTaskMeta, relativeWhenLabel } from '@/lib/planner-v2/when';
@@ -86,6 +87,10 @@ export type BriefBoardFacts = {
   today: string;
   progress: BriefProgress;
   feel: BriefFeel;
+  /** Where a lead put each card, or null for the default layout (#897 phase 1b). */
+  layout: BoardLayout | null;
+  /** Team owner or admin, or the rollout's owner: may move and resize cards. */
+  canArrange: boolean;
 };
 
 export type BriefReference = {
