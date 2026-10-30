@@ -132,7 +132,18 @@ describe('parseBriefFromIdeas', () => {
         { body: 'Under 300k.', source: null },
       ],
       toSettle: [{ id: 's1', question: 'Radio?', options: [{ text: 'Radio', by: ['Oyin'] }, { text: 'Skip', by: ['Kemi'] }] }],
+      feel: { headline: '', feelsLike: [], notThis: [] },
     });
+  });
+  it('reads the first board: the one-line idea and the mood words', () => {
+    const raw = '{"idea":"A warm record.","headline":"Tell the truth, then dance.","feels_like":["Sunlit","Close"],"not_this":["Glossy"]}';
+    expect(parseBriefFromIdeas(raw)?.feel).toEqual({ headline: 'Tell the truth, then dance.', feelsLike: ['Sunlit', 'Close'], notThis: ['Glossy'] });
+  });
+  it('still writes the brief when the mood words come back broken', () => {
+    const raw = '{"idea":"A warm record.","headline":7,"feels_like":"warm, handmade","not_this":{}}';
+    const brief = parseBriefFromIdeas(raw);
+    expect(brief?.idea).toBe('A warm record.');
+    expect(brief?.feel).toEqual({ headline: '', feelsLike: ['warm', 'handmade'], notThis: [] });
   });
   it('is null without an idea or valid JSON', () => {
     expect(parseBriefFromIdeas('no json here')).toBeNull();

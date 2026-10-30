@@ -17,7 +17,7 @@
  *    the plan.
  */
 
-import type { BriefFeel, BriefProgress } from '@/lib/brief-board';
+import { feelFromModel, type BriefFeel, type BriefProgress } from '@/lib/brief-board';
 import type { BoardLayout, NoteKey } from '@/lib/brief-board-layout';
 import type { BriefPiece } from '@/lib/brief-pieces';
 import type { BriefSeen } from '@/lib/brief-present';
@@ -746,12 +746,37 @@ export function buildBriefDraftMessages(context: BriefDraftContext): { role: 'sy
     {
       role: 'system',
       content:
-        'You write the Idea paragraph of a music release brief: the internal creative direction a team reads before they work. ' +
-        'Write 2 or 3 short sentences in plain, warm English: what the song is, how it should feel, and one line on how the rollout should carry that feel. ' +
-        'Use only the facts given. Never invent names, places, numbers, features or quotes. No hashtags, no emojis, no markdown, no lists, no headings.',
+        'You write the first board of a music release brief: the internal creative direction a team reads before they work. ' +
+        'Reply with JSON only, no markdown: {"headline": string, "idea": string, "feels_like": [string], "not_this": [string]}. ' +
+        '"headline": the idea in one short line the team can repeat, under 12 words, no quote marks. ' +
+        '"idea": 2 or 3 short sentences in plain, warm English: what the song is, how it should feel, and one line on how the rollout should carry that feel. ' +
+        '"feels_like": up to 4 single words or two-word phrases for the mood. "not_this": up to 3 for what to avoid. Leave a list empty when the facts do not say. ' +
+        'Use only the facts given. Never invent names, places, numbers, features or quotes. No hashtags, no emojis.',
     },
     { role: 'user', content: facts.join('\n') },
   ];
+}
+
+/**
+ * The draft from the model (#897 phase 5): JSON with the idea, the one-line
+ * idea and the mood words, or, from a model that ignored the format, plain
+ * text as the idea alone. Null when there is no idea.
+ */
+export function parseBriefDraft(raw: string): { idea: string; feel: Omit<BriefFeel, 'palette'> } | null {
+  const start = raw.indexOf('{');
+  const end = raw.lastIndexOf('}');
+  if (start >= 0 && end > start) {
+    try {
+      const parsed = JSON.parse(raw.slice(start, end + 1)) as Record<string, unknown>;
+      const idea = typeof parsed.idea === 'string' ? cleanBriefDraft(parsed.idea) : null;
+      // JSON with no idea is no draft: never save the raw JSON as the brief.
+      return idea ? { idea, feel: feelFromModel(parsed) } : null;
+    } catch {
+      // Not JSON after all: read it as the paragraph below.
+    }
+  }
+  const idea = cleanBriefDraft(raw);
+  return idea ? { idea, feel: { headline: '', feelsLike: [], notThis: [] } } : null;
 }
 
 /** The model's text as a clean paragraph, or null if nothing usable came back. */

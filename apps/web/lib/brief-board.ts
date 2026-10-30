@@ -327,3 +327,55 @@ export function briefButtonLine(input: { headline: string; idea: string }): stri
   if (sentence.length <= BUTTON_LINE_MAX) return sentence;
   return `${sentence.slice(0, BUTTON_LINE_MAX - 1).trimEnd()}…`;
 }
+
+// ── UrgAns's first board (#897 phase 5) ─────────────────────────────────────
+
+/** How many words UrgAns puts in Feels like and Not this. */
+export const MODEL_FEELS_MAX = 4;
+export const MODEL_NOT_THIS_MAX = 3;
+
+function modelWords(value: unknown, max: number): string[] {
+  // A list, or a comma-separated string from a model that ignored the format.
+  const raw = Array.isArray(value) ? value : typeof value === 'string' ? value.split(',') : [];
+  const seen = new Set<string>();
+  const words: string[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== 'string') continue;
+    const word = entry
+      .replace(/[#*_"“”]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/[.,;:!]+$/, '');
+    // A word, or two or three: a long phrase is not a mood word.
+    if (!word || word.length > BOARD_WORD_MAX) continue;
+    const key = word.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    words.push(word);
+    if (words.length >= max) break;
+  }
+  return words;
+}
+
+/**
+ * The look and feel from UrgAns's JSON, lenient: whatever is usable is kept,
+ * anything else is dropped, and nothing here ever fails a run. Accepts
+ * snake_case or camelCase keys.
+ */
+export function feelFromModel(parsed: unknown): Omit<BriefFeel, 'palette'> {
+  const input = parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {};
+  const headline =
+    typeof input.headline === 'string'
+      ? input.headline
+          .split('\n')[0]
+          .replace(/^["“'\s]+|["”'\s]+$/g, '')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, BOARD_HEADLINE_MAX)
+      : '';
+  return {
+    headline,
+    feelsLike: modelWords(input.feels_like ?? input.feelsLike, MODEL_FEELS_MAX),
+    notThis: modelWords(input.not_this ?? input.notThis, MODEL_NOT_THIS_MAX),
+  };
+}

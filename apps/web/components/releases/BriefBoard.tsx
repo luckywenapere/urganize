@@ -706,6 +706,14 @@ function useReferenceActions(brief: BriefPayload, onPatch: Props['onPatch'], onR
   return { mayRemove, added, remove };
 }
 
+// What a team usually pins to set the look; the empty Look card offers one spot for each.
+const LOOK_SPOTS = [
+  { label: 'Light', hint: 'The time of day, the colour of it' },
+  { label: 'Styling', hint: 'What the artist wears' },
+  { label: 'Places', hint: 'Where it is shot' },
+  { label: 'People', hint: 'Faces, crowd, the mood' },
+];
+
 function LookCard({ brief, wide, onPatch, onRefresh, onToast }: { brief: BriefPayload; wide: boolean } & Pick<Props, 'onPatch' | 'onRefresh' | 'onToast'>) {
   const images = brief.references.filter((reference) => reference.kind === 'image');
   const [adding, setAdding] = useState(false);
@@ -833,13 +841,29 @@ function LookCard({ brief, wide, onPatch, onRefresh, onToast }: { brief: BriefPa
         </div>
       ) : null}
       {shown.length === 0 ? (
-        <div className="px-1">
-          <EmptyLine>
-            {canEdit
-              ? `Photos that show the look: light, styling, places, people. ${wide ? 'Drop them here, or add a photo or a link.' : 'Add a photo or a link.'}`
-              : 'No images yet.'}
-          </EmptyLine>
-        </div>
+        canEdit ? (
+          // Empty photo spots that say what to drop in (#897 phase 5), so a
+          // new board looks ready for pictures rather than broken. Each one
+          // opens the photo picker; dropping anywhere on Look works too.
+          <div className={wide ? 'mt-2.5 grid min-h-[220px] flex-1 grid-cols-4 gap-2' : '-mr-3.5 mt-2.5 flex gap-2 overflow-x-auto pb-1 pr-3.5'}>
+            {LOOK_SPOTS.map((spot) => (
+              <button
+                key={spot.label}
+                type="button"
+                onClick={() => fileInput.current?.click()}
+                className={`motion-focus flex flex-col items-start justify-end gap-0.5 rounded-[10px] border-2 border-dashed border-stroke-strong p-3 text-left transition-colors hover:border-brand hover:bg-brand/5 ${wide ? '' : 'h-[150px] w-[130px] shrink-0'}`}
+              >
+                <Plus className="mb-auto h-4 w-4 text-content-tertiary" aria-hidden="true" />
+                <span className="text-[13px] font-semibold text-content-primary">{spot.label}</span>
+                <span className="text-[12px] leading-snug text-content-tertiary">{spot.hint}</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="px-1">
+            <EmptyLine>No images yet.</EmptyLine>
+          </div>
+        )
       ) : wide ? (
         <div
           className="mt-2.5 grid min-h-[300px] flex-1 gap-2"

@@ -64,7 +64,7 @@ type LoadState =
   | { status: 'error' }
   | { status: 'ready'; brief: BriefPayload };
 
-type Draft = { actionId: string; idea: string };
+type Draft = { actionId: string; idea: string; headline: string; feelsLike: string[] };
 
 const IDEA_SAVE_DELAY_MS = 800;
 
@@ -696,7 +696,7 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
       else onToast(result.error, 'error');
       return;
     }
-    setDraft({ actionId: result.actionId, idea: result.idea });
+    setDraft({ actionId: result.actionId, idea: result.idea, headline: result.headline, feelsLike: result.feelsLike });
   };
 
   const keepDraft = async () => {
@@ -1043,7 +1043,13 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
       <div className={isDesktop ? 'max-w-[560px]' : ''}>
         <div className="mt-6 rounded-2xl border border-brand/30 bg-brand/5 p-4">
           <p className="text-[13px] font-semibold text-content-primary">{BRIEF_COPY.drafted}</p>
+          {draft.headline ? (
+            <p className="mt-2.5 font-display text-[22px] leading-tight text-content-primary">{draft.headline}</p>
+          ) : null}
           <p className="mt-2.5 text-[15px] leading-[1.55] text-content-primary">{draft.idea}</p>
+          {draft.feelsLike.length ? (
+            <p className="mt-2 text-[13px] text-content-secondary">Feels like: {draft.feelsLike.join(', ')}</p>
+          ) : null}
           <div className="mt-4 flex gap-2">
             <button type="button" onClick={keepDraft} disabled={settling} className={`${PRIMARY} h-11 flex-1 text-sm`}>
               {settling ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : 'Keep'}

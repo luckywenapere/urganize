@@ -14,6 +14,7 @@
  */
 
 import { MAX_DECISION_LENGTH, MAX_IDEA_LENGTH } from '@/lib/release-brief';
+import { feelFromModel, type BriefFeel } from '@/lib/brief-board';
 
 /** ON unless set to 'false', like every flag shipped on since 2026-10. */
 export function isIdeaRoundEnabled(): boolean {
@@ -162,6 +163,8 @@ export type BriefFromIdeas = {
   idea: string;
   decisions: { body: string; source: string | null }[];
   toSettle: ToSettleItem[];
+  /** The first board (#897 phase 5): the one-line idea and the mood words. Empty when the model gave none. */
+  feel: Omit<BriefFeel, 'palette'>;
 };
 
 const MAX_IDEAS_IN_PROMPT = 30;
@@ -185,8 +188,10 @@ export function buildBriefFromIdeasMessages(
       role: 'system',
       content:
         'You merge a music team\'s ideas for one release into a brief the team will approve before any plan is made. ' +
-        'Reply with JSON only, no markdown: {"idea": string, "decisions": [{"body": string, "from": string}], "to_settle": [{"question": string, "options": [{"text": string, "by": [string]}]}]}. ' +
+        'Reply with JSON only, no markdown: {"headline": string, "idea": string, "feels_like": [string], "not_this": [string], "decisions": [{"body": string, "from": string}], "to_settle": [{"question": string, "options": [{"text": string, "by": [string]}]}]}. ' +
+        '"headline": the idea in one short line the team can repeat, under 12 words, no quote marks. ' +
         '"idea": 2 to 4 short plain sentences: the goal and how the rollout should carry it, using what the ideas agree on. ' +
+        '"feels_like": up to 4 single words or two-word phrases for the mood the ideas describe (like Sunlit, Close, Unpolished). "not_this": up to 3 for what the ideas say to avoid. Leave a list empty when the ideas say nothing about it. ' +
         '"decisions": one-line facts the ideas agree on or only one person raised and nobody contradicted (budget, day of the week, a channel, a video). "from" is the name of who said it. At most 6. ' +
         '"to_settle": every place two people want different things. Never pick a side: write a short question and each side as an option with the names of who wants it. At most 5. Leave it empty when nobody disagrees. ' +
         'Use only what the ideas say. Never invent names, numbers, places or plans. No emojis. Plain words a 10 year old understands.',
@@ -221,7 +226,7 @@ export function parseBriefFromIdeas(raw: string, knownAuthors: readonly string[]
     .filter((decision) => decision.body)
     .slice(0, 6);
   const toSettle = parseToSettle(parsed.to_settle ?? parsed.toSettle).map((item, index) => ({ ...item, id: `s${index + 1}` }));
-  return { idea, decisions, toSettle };
+  return { idea, decisions, toSettle, feel: feelFromModel(parsed) };
 }
 
 /** "Kemi's idea" for a decision's source line. */

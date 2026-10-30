@@ -502,6 +502,44 @@ export async function saveBriefIdea(
 }
 
 /** Save any of the board's look-and-feel fields (#897). History reads "Look and feel". */
+/**
+ * UrgAns's first board (#897 phase 5): fill the one-line idea and the mood
+ * words, but only the ones nobody has written yet. Records a 'feel' history
+ * row labelled UrgAns when anything was filled. Best effort.
+ */
+export async function fillBriefFeelFromUrgans(
+  admin: SupabaseClient,
+  input: { releaseId: string; feel: Omit<BriefFeel, 'palette'>; actorId: string }
+): Promise<boolean> {
+  try {
+    const { data } = await admin
+      .from(BRIEFS_TABLE)
+      .select('headline,feels_like,not_this')
+      .eq('release_id', input.releaseId)
+      .maybeSingle();
+    const row = data ? asRow(data) : {};
+    const empty = (value: unknown) => !value || (Array.isArray(value) && value.length === 0) || value === '';
+    const patch: Record<string, unknown> = {};
+    if (input.feel.headline && empty(row.headline)) patch.headline = input.feel.headline;
+    if (input.feel.feelsLike.length && empty(row.feels_like)) patch.feels_like = input.feel.feelsLike;
+    if (input.feel.notThis.length && empty(row.not_this)) patch.not_this = input.feel.notThis;
+    if (Object.keys(patch).length === 0) return false;
+    const { error } = await admin
+      .from(BRIEFS_TABLE)
+      .upsert({ release_id: input.releaseId, ...patch }, { onConflict: 'release_id' });
+    if (error) return false;
+    await recordBriefRevision(admin, {
+      releaseId: input.releaseId,
+      block: 'feel',
+      actorId: input.actorId,
+      actorLabel: URGANS_ACTOR_LABEL,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function saveBriefFeel(
   admin: SupabaseClient,
   input: { releaseId: string; patch: BriefFeelPatch; actorId: string }
