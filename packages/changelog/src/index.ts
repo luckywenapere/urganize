@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.214.2",
+    tag: "Team",
+    date: "October 30, 2026",
+    highlights: [
+      "Tasks you tick off stay done. The distributor tasks no longer come back as late when your files are not in Urganize.",
+    ],
+  },
+  {
     version: "1.214.1",
     tag: "AI",
     date: "October 30, 2026",

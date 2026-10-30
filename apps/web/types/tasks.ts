@@ -114,6 +114,19 @@ export const TASK_STATUS_OPTIONS = [
 
 export type TaskStatus = (typeof TASK_STATUS_OPTIONS)[number];
 
+/**
+ * The one rule for "this task is closed" (#883). Done and cancelled are the
+ * only closed statuses; every other status (blocked and in review included)
+ * is still owed. Once a task is closed anywhere, nothing lists it as open or
+ * late, and nothing in the app reopens it on its own: only a person does.
+ */
+export const CLOSED_TASK_STATUSES = ['done', 'cancelled'] as const satisfies readonly TaskStatus[];
+
+export function isTaskClosed(status: unknown): boolean {
+  const value = String(status ?? '').trim().toLowerCase();
+  return (CLOSED_TASK_STATUSES as readonly string[]).includes(value);
+}
+
 export const TASK_PRIORITY_OPTIONS = ['urgent', 'high', 'medium', 'low', 'none'] as const;
 
 export type TaskPriority = (typeof TASK_PRIORITY_OPTIONS)[number];

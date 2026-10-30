@@ -19,6 +19,7 @@ import { TaskService } from '@/lib/services/task-service';
 import { listVisibleReleases } from '../release-scope';
 import { assistantReleaseStatus } from '../release-status';
 import { apiError, callInternalApi, fail, type ChappiTool } from './shared';
+import { isTaskClosed } from '@/types/tasks';
 
 const DEFAULT_COMPARE_LIMIT = 5;
 
@@ -95,7 +96,7 @@ export type TeamWorkloadResult = {
 };
 
 function isOpen(status: string): boolean {
-  return status !== 'done' && status !== 'cancelled';
+  return !isTaskClosed(status);
 }
 
 export function computeTeamWorkload(

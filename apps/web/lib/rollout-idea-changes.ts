@@ -14,6 +14,7 @@ import { daysBetween } from './planner-v2/answers';
 import { LIMITS } from './planner-v2/plan';
 import { MIN_OFFSET, POST_WINDOW_DAYS, UNDATED_MIN_OFFSET } from './planner-v2/validate';
 import { relativeWhenLabel } from './planner-v2/when';
+import { isTaskClosed } from '@/types/tasks';
 
 export const MAX_IDEA_ADDS = 5;
 export const MAX_IDEA_MOVES = 3;
@@ -44,8 +45,7 @@ export type IdeaChangeView = {
   moves: Array<IdeaMove & { title: string; fromWhen: string; when: string }>;
 };
 
-const CLOSED = new Set(['done', 'cancelled']);
-export const isOpenStatus = (status: string): boolean => !CLOSED.has(String(status || '').toLowerCase());
+export const isOpenStatus = (status: string): boolean => !isTaskClosed(status);
 
 /** The offsets a new or moved task may land on. */
 export function changeWindow(ctx: ChangeContext): { min: number; max: number } {

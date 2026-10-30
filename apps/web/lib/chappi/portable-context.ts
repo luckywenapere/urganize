@@ -25,7 +25,7 @@ import { TaskService } from '@/lib/services/task-service';
 import { isEventMilestone } from '@/lib/tasks';
 import type { Release } from '@/types/releases';
 import { assistantReleaseStatus, dayToDate } from './release-status';
-import type { Task } from '@/types/tasks';
+import { isTaskClosed, type Task } from '@/types/tasks';
 import {
   formatTeamBriefForPrompt,
   isTeamBriefEnabled,
@@ -144,7 +144,7 @@ export async function loadTeamBriefBlock(
 /** Titles listed before a section switches to a bare count. */
 const MAX_TITLES = 8;
 
-const isOpen = (task: Task): boolean => task.status !== 'done' && task.status !== 'cancelled';
+const isOpen = (task: Task): boolean => !isTaskClosed(task.status);
 
 /**
  * How far off the release is, in words.

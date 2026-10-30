@@ -18,6 +18,7 @@ import { TaskService } from '@/lib/services/task-service';
 import { ReleaseService } from '@/lib/services/release-service';
 import type { ActivityLogEntry, CommandCenterData, ExecutionTask } from '@/lib/execution-types';
 import type { Timings } from '@/lib/server-timing';
+import { isTaskClosed } from '@/types/tasks';
 
 type WorkspaceAccessContext = Awaited<ReturnType<typeof loadWorkspaceAccessContext>>;
 
@@ -147,7 +148,7 @@ export async function loadCommandCenterData(
   }
 
   let todaysDirective: ExecutionTask | null = null;
-  const incompleteTasks = tasks.filter((t) => t.status !== 'done' && t.status !== 'cancelled');
+  const incompleteTasks = tasks.filter((t) => !isTaskClosed(t.status));
 
   if (incompleteTasks.length > 0) {
     const now = new Date();

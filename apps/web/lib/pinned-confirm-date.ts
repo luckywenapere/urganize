@@ -17,6 +17,8 @@
  * session record's rollout, lib/first-session.ts). Pure, so vitest holds it.
  */
 
+import { isTaskClosed } from '@/types/tasks';
+
 /** The task id the start-from-scratch seed carries (see app/api/releases). */
 export const ONBOARDING_CONFIRM_DATE_TASK_ID = 'onboarding_confirm_release_date';
 export const ONBOARDING_BLANK_TEMPLATE_ID = 'onboarding_blank_v1';
@@ -46,7 +48,6 @@ export function isConfirmReleaseDateTask(task: Pick<PinnableTask, 'title' | 'tem
   return TITLE_FALLBACK.test(task.title.trim());
 }
 
-const CLOSED = new Set(['done', 'cancelled']);
 
 /**
  * The task to pin, or null. Only for a new user's onboarding rollout, and only
@@ -58,7 +59,7 @@ export function findPinnedConfirmDateTask<T extends PinnableTask>(input: {
   isNewUserRollout: boolean;
 }): T | null {
   if (!input.isNewUserRollout) return null;
-  return input.tasks.find((task) => !CLOSED.has(task.status) && isConfirmReleaseDateTask(task)) ?? null;
+  return input.tasks.find((task) => !isTaskClosed(task.status) && isConfirmReleaseDateTask(task)) ?? null;
 }
 
 /** The one activity a start-from-scratch onboarding rollout begins with. Its

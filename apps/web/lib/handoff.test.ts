@@ -152,10 +152,19 @@ describe('status', () => {
     ).toBe('approved');
   });
 
-  it('drops to Missing when the file breaks after approval or sending', () => {
-    expect(deriveHandoffStatus({ uploaded: false, record: approved, fingerprint: 'asset-1', task: { status: 'done' } })).toBe(
+  it('drops to Missing when the file breaks after approval', () => {
+    expect(deriveHandoffStatus({ uploaded: false, record: approved, fingerprint: 'asset-1', task: { status: 'todo' } })).toBe(
       'missing'
     );
+  });
+
+  it('stays sent once ticked, even when the file is not in Urganize (#883)', () => {
+    expect(deriveHandoffStatus({ uploaded: false, record: EMPTY_ITEM_RECORD, fingerprint: null, task: { status: 'done' } })).toBe(
+      'sent'
+    );
+    expect(
+      deriveHandoffStatus({ uploaded: false, record: EMPTY_ITEM_RECORD, fingerprint: null, task: null, sentWithoutTask: true })
+    ).toBe('sent');
   });
 
   it('a replaced file needs a fresh approval', () => {
@@ -258,7 +267,7 @@ describe('task sync', () => {
           { item: 'cover_art', uploaded: false, sentBeforeTask: true, ownerUserId: 'o', task: null },
         ],
       }).map((op) => (op.kind === 'insert' ? op.done : null))
-    ).toEqual([true, false]);
+    ).toEqual([true, true]);
   });
 
   it('makes nothing without a release day', () => {
@@ -285,19 +294,17 @@ describe('task sync', () => {
     ).toEqual([{ kind: 'update', item: 'master', taskId: 't1', patch: { due_date: null } }]);
   });
 
-  it('reopens a sent task whose file has broken, and keeps a good one done', () => {
-    expect(
-      planHandoffTaskSync({
-        dueDate: '2026-10-30',
-        items: [{ item: 'cover_art', uploaded: false, ownerUserId: 'o', task: task({ status: 'done' }) }],
-      })
-    ).toEqual([{ kind: 'update', item: 'cover_art', taskId: 't1', patch: { status: 'todo', completed_at: null } }]);
-    expect(
-      planHandoffTaskSync({
-        dueDate: '2026-10-30',
-        items: [{ item: 'cover_art', uploaded: true, ownerUserId: 'o', task: task({ status: 'done' }) }],
-      })
-    ).toEqual([]);
+  it('never reopens a ticked or cancelled task, file or no file (#883)', () => {
+    for (const status of ['done', 'cancelled']) {
+      for (const uploaded of [true, false]) {
+        expect(
+          planHandoffTaskSync({
+            dueDate: '2026-10-30',
+            items: [{ item: 'cover_art', uploaded, ownerUserId: 'o', task: task({ status }) }],
+          })
+        ).toEqual([]);
+      }
+    }
   });
 });
 

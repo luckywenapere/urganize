@@ -22,6 +22,7 @@ import {
   isFlagGateOff,
   type ChappiTool,
 } from './shared';
+import { isTaskClosed } from '@/types/tasks';
 
 export const CORE_TOOLS: ChappiTool[] = [
   {
@@ -120,7 +121,7 @@ export const CORE_TOOLS: ChappiTool[] = [
       const tasks = ctx.workspaceIds.length
         ? await new TaskService(ctx.adminClient).getTasksForUser(ctx.user.id, ctx)
         : [];
-      const incomplete = tasks.filter((t) => t.status !== 'done' && t.status !== 'cancelled');
+      const incomplete = tasks.filter((t) => !isTaskClosed(t.status));
       const todayStr = new Date().toISOString().slice(0, 10);
       const overdue = incomplete.find((t) => t.dueDate && t.dueDate < todayStr);
       const dueToday = incomplete.find((t) => t.dueDate === todayStr);

@@ -53,6 +53,7 @@ import { buildReleaseSummary } from '@/lib/home/releases';
 import { buildPlacements } from '@/lib/home/placements';
 import { LABEL_ROSTER_GAP_DAYS } from '@/lib/home/config';
 import type { HomePayload } from '@/lib/home/types';
+import { isTaskClosed } from '@/types/tasks';
 
 type WorkspaceAccessContext = Awaited<ReturnType<typeof loadWorkspaceAccessContext>>;
 
@@ -270,7 +271,7 @@ export async function loadHomeData(
     tasksByRelease.set(task.releaseId, list);
   }
   const hasOpenTasks = (releaseId: string) =>
-    (tasksByRelease.get(releaseId) ?? []).some((task) => task.status !== 'done' && task.status !== 'cancelled');
+    (tasksByRelease.get(releaseId) ?? []).some((task) => !isTaskClosed(task.status));
 
   const inFlightReleasesYouRun = releasesYouRun.filter((release) =>
     isReleaseInFlight(release, hasOpenTasks(release.id), now)
