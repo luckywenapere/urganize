@@ -1,9 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import { AlertCircle, AlertTriangle } from '@/components/icons';
 import { useSceneOverlay } from '@/components/workspace/useSceneOverlay';
 import { fixDestinationFor, type FixAvailability } from '@/lib/distribution-fix';
-import type { DistributionIssue } from '@/lib/distribution-rules';
+import { SKIPPABLE_WARNINGS, isSkippableWarning, type DistributionIssue } from '@/lib/distribution-rules';
 import type { DistributionRejection } from '@/lib/distribution-server';
 
 // Read here, not passed in: they are the same inlined flags the rollout menu
@@ -30,6 +31,9 @@ type DistributionIssueListProps = {
    * its header, since nothing above it names it.
    */
   skipFirstHeading?: boolean;
+  /** Skip a warning the team has chosen to let go (SKIPPABLE_WARNINGS). Passed
+   *  only where a skip can be saved; without it there is no Skip button. */
+  onSkip?: (code: string) => Promise<void>;
 };
 
 /**
@@ -47,8 +51,10 @@ export function DistributionIssueList({
   onOpenDetails,
   onChangeArtist,
   skipFirstHeading = false,
+  onSkip,
 }: DistributionIssueListProps) {
   const { openScene } = useSceneOverlay();
+  const [skipping, setSkipping] = useState<string | null>(null);
 
   const availability: FixAvailability = {
     ...SCENE_FLAGS,
@@ -72,6 +78,7 @@ export function DistributionIssueList({
     <ul className="divide-y divide-stroke-subtle border border-stroke-default bg-bg-surface">
       {issues.map((issue, index) => {
         const canFix = fixDestinationFor(issue.fieldPath, availability) !== null;
+        const canSkip = tone === 'warning' && Boolean(onSkip) && isSkippableWarning(issue.code);
         return (
           <li key={`${issue.code}-${index}`} className="flex items-start gap-3 px-4 py-3">
             {tone === 'error' ? (
@@ -88,6 +95,24 @@ export function DistributionIssueList({
                 className="motion-focus -my-2 inline-flex h-10 min-w-14 shrink-0 items-center justify-center self-center rounded-lg border border-stroke-control px-3 text-xs font-semibold text-brand transition-colors hover:bg-brand/10"
               >
                 Fix
+              </button>
+            ) : null}
+            {canSkip ? (
+              <button
+                type="button"
+                disabled={skipping === issue.code}
+                onClick={async () => {
+                  setSkipping(issue.code);
+                  try {
+                    await onSkip?.(issue.code);
+                  } finally {
+                    setSkipping(null);
+                  }
+                }}
+                aria-label={`${SKIPPABLE_WARNINGS[issue.code].label}: ${issue.message}`}
+                className="motion-focus -my-2 inline-flex h-10 shrink-0 items-center justify-center self-center rounded-lg px-3 text-xs font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary disabled:opacity-55"
+              >
+                {SKIPPABLE_WARNINGS[issue.code].label}
               </button>
             ) : null}
           </li>

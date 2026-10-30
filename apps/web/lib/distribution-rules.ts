@@ -116,7 +116,23 @@ export type DistributionFacts = {
     songwriterSplit: number | null;
     masterSplit: number | null;
   }>;
+  /** releases.skipped_distribution_warnings: warnings the team chose to skip.
+   *  Only codes in SKIPPABLE_WARNINGS are honoured. Absent reads as none. */
+  skippedWarnings?: readonly string[];
 };
+
+/**
+ * Warnings a team may skip for one rollout, with the button's words (founder,
+ * Oct 31, 2026: a tight pitch window is advice, not a must, so the team can say
+ * "we've missed it" and stop seeing it). Errors can never be skipped.
+ */
+export const SKIPPABLE_WARNINGS: Readonly<Record<string, { label: string; done: string }>> = {
+  pitch_window_tight: { label: 'Skip pitch', done: 'Got it. No Spotify pitch for this one.' },
+};
+
+export function isSkippableWarning(code: string): boolean {
+  return Object.prototype.hasOwnProperty.call(SKIPPABLE_WARNINGS, code);
+}
 
 export type DistributionCheckContext = {
   /** Read once by the caller and passed in, so a test can pin it. */
@@ -343,7 +359,9 @@ export function checkDistributionFacts(
   };
   const errors: DistributionIssue[] = [];
   const warnings: DistributionIssue[] = [];
+  const skipped = new Set((facts.skippedWarnings ?? []).filter(isSkippableWarning));
   for (const rule of DISTRIBUTION_RULES) {
+    if (rule.level === 'warning' && skipped.has(rule.code)) continue;
     for (const message of rule.check(facts, resolved)) {
       const issue: DistributionIssue = { code: rule.code, message, fieldPath: rule.fieldPath };
       (rule.level === 'error' ? errors : warnings).push(issue);

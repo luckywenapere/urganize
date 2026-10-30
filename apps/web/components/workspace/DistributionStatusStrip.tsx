@@ -3,7 +3,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { prefersReducedMotion } from '@/lib/morph';
 import { DistributionIssueList, DistributionRejectionList } from '@/components/releases/DistributionIssueList';
-import { useDistributionStatus } from '@/components/releases/useDistributionStatus';
+import { distributionAuthHeaders, useDistributionStatus } from '@/components/releases/useDistributionStatus';
+import { useToast } from '@/components/shared/ToastProvider';
+import { SKIPPABLE_WARNINGS } from '@/lib/distribution-rules';
 import { issuesLeftOnRollout } from '@/lib/distribution-prep-tasks';
 import { HandoffChip } from './HandoffChip';
 
@@ -62,7 +64,37 @@ export function DistributionStatusStrip({
 }: DistributionStatusStripProps) {
   // The phone row is seeded from this session's last open answer, so it is
   // there on the first frame when the person comes back to the rollout.
-  const { data, seeded } = useDistributionStatus(releaseId, { seed: row });
+  const { data, setData, seeded } = useDistributionStatus(releaseId, { seed: row });
+  const { pushToast } = useToast();
+
+  // "Skip pitch" and the like (Oct 31, 2026): saved on the rollout, so it is
+  // gone for the whole team, then dropped from what is on screen.
+  const skip = async (code: string) => {
+    const headers = await distributionAuthHeaders();
+    if (!headers) {
+      pushToast('Your session expired. Sign in again.', 'error');
+      return;
+    }
+    try {
+      const response = await fetch(`/api/releases/${releaseId}/distribution/skip`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ code }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        pushToast(String(body?.error || 'Could not skip it. Try again.'), 'error');
+        return;
+      }
+    } catch {
+      pushToast('Could not reach the server. Check your connection and try again.', 'error');
+      return;
+    }
+    setData((current) =>
+      current ? { ...current, warnings: current.warnings.filter((issue) => issue.code !== code) } : current
+    );
+    pushToast(SKIPPABLE_WARNINGS[code]?.done ?? 'Skipped.', 'success');
+  };
 
   // THE COMPUTER'S LINE IS THE HANDOFF NOW (URG-322, 2026-10-16). The one 36px
   // line beside the timeline's phases shows the handoff chip ("Handoff · 0 of 3
@@ -106,6 +138,7 @@ export function DistributionStatusStrip({
           warnings={left.warnings}
           onOpenDetails={onOpenDetails}
           onChangeArtist={onChangeArtist}
+          onSkip={skip}
           skipFirstHeading
         />
       ) : null}

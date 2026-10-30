@@ -111,6 +111,7 @@ export async function loadDistributionFacts(
   }
 
   const metadata = (metadataResult.data as Record<string, unknown> | null) ?? null;
+  const skippedWarnings = await loadSkippedWarnings(admin, releaseId);
 
   return {
     title: typeof release.title === 'string' ? release.title : '',
@@ -125,7 +126,47 @@ export async function loadDistributionFacts(
       songwriterSplit: asNumber(row.songwriter_split),
       masterSplit: asNumber(row.master_split),
     })),
+    skippedWarnings,
   };
+}
+
+/**
+ * The warnings this team skipped on this rollout. Its own read, and a failed
+ * one answers "none" rather than failing the check: a skip only hides advice,
+ * so losing it shows a warning again, never hides an error (and the check keeps
+ * working in the window before the column's migration is applied).
+ */
+async function loadSkippedWarnings(admin: SupabaseClient, releaseId: string): Promise<string[]> {
+  const { data, error } = await admin
+    .from('releases')
+    .select('skipped_distribution_warnings')
+    .eq('id', releaseId)
+    .maybeSingle();
+  if (error) return [];
+  const list = (data as { skipped_distribution_warnings?: unknown } | null)?.skipped_distribution_warnings;
+  return Array.isArray(list) ? list.filter((code): code is string => typeof code === 'string') : [];
+}
+
+/** Add one warning code to the rollout's skipped list. Returns whether it saved. */
+export async function skipDistributionWarning(
+  admin: SupabaseClient,
+  releaseId: string,
+  code: string
+): Promise<boolean> {
+  const { data, error } = await admin
+    .from('releases')
+    .select('skipped_distribution_warnings')
+    .eq('id', releaseId)
+    .maybeSingle();
+  if (error) return false;
+  const current = (data as { skipped_distribution_warnings?: unknown } | null)?.skipped_distribution_warnings;
+  const list = Array.isArray(current) ? current.filter((item): item is string => typeof item === 'string') : [];
+  if (list.includes(code)) return true;
+  const { error: updateError } = await admin
+    .from('releases')
+    .update({ skipped_distribution_warnings: [...list, code] })
+    .eq('id', releaseId);
+  return !updateError;
 }
 
 /**
