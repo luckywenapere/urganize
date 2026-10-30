@@ -19,6 +19,7 @@ import {
   type BoardLayout,
 } from '@/lib/brief-board-layout';
 import { mayChangeBriefItem } from '@/lib/brief-media';
+import { briefPieces, withBriefShow } from '@/lib/brief-pieces';
 import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-constants';
 import { loadCoverArtUrls } from '@/lib/cover-art';
 import { isMissingTableError } from '@/lib/promo-channels';
@@ -215,7 +216,7 @@ async function readReferences(admin: SupabaseClient, releaseId: string): Promise
 async function readTasks(admin: SupabaseClient, releaseId: string): Promise<BriefTaskRow[]> {
   const { data, error } = await admin
     .from('tasks')
-    .select('id,title,status,due_date,assigned_to_user_id,metadata,position')
+    .select('id,title,status,due_date,assigned_to_user_id,metadata,position,description')
     .eq('release_id', releaseId);
   if (error || !data) return [];
   return (data as unknown[]).map((row) => {
@@ -228,6 +229,7 @@ async function readTasks(admin: SupabaseClient, releaseId: string): Promise<Brie
       assigned_to_user_id: textOrNull(r.assigned_to_user_id),
       metadata: r.metadata ?? null,
       position: typeof r.position === 'number' ? r.position : 0,
+      description: textOrNull(r.description),
     };
   });
 }
@@ -394,6 +396,20 @@ export async function loadBriefPayload(
         layout: board.layout,
         canArrange: canManageShare,
         stickies: board.stickies.map((sticky) => ({ ...sticky, authorName: nameOf(sticky.createdBy) })),
+        pieces: (() => {
+          const list = briefPieces(tasks, today);
+          return {
+            ...list,
+            items: list.items.map((piece) => {
+              const profile = piece.assigneeId ? profileById.get(piece.assigneeId) : undefined;
+              return {
+                ...piece,
+                assigneeName: profile ? nameOf(piece.assigneeId) : null,
+                assigneeInitials: profile ? initialsFor(profile.name, profile.email) : null,
+              };
+            }),
+          };
+        })(),
       },
     },
   };
@@ -587,6 +603,25 @@ export async function resetBoardLayout(admin: SupabaseClient, releaseId: string)
   const { error } = await admin.from(BRIEF_CARDS_TABLE).delete().eq('release_id', releaseId).neq('kind', 'note');
   if (error) return failure(error, 'Could not reset the board.');
   return { ok: true, value: null };
+}
+
+// ── What we're making (#897 phase 3) ────────────────────────────────────────
+
+/** Put a task on the brief's What we're making, or take it off. The task must be this rollout's. */
+export async function setTaskOnBrief(
+  admin: SupabaseClient,
+  input: { releaseId: string; taskId: string; show: boolean }
+): Promise<BriefResult<{ id: string; show: boolean }>> {
+  const { data, error } = await admin.from('tasks').select('id,release_id,metadata').eq('id', input.taskId).maybeSingle();
+  if (error) return failure(error, 'Could not update the activity.');
+  const row = data ? asRow(data) : null;
+  if (!row || text(row.release_id) !== input.releaseId) return { ok: false, status: 404, error: 'Not found.' };
+  const { error: updateError } = await admin
+    .from('tasks')
+    .update({ metadata: withBriefShow(row.metadata, input.show) })
+    .eq('id', input.taskId);
+  if (updateError) return failure(updateError, 'Could not update the activity.');
+  return { ok: true, value: { id: input.taskId, show: input.show } };
 }
 
 // ── Sticky notes (#897 phase 2) ─────────────────────────────────────────────

@@ -45,6 +45,7 @@ import { writePlannerPending } from '../release-planner-pending';
 import { writeTemplatePending } from '../release-template-pending';
 import { writePlannedByUrgans } from '../release-planned-by-urgans';
 import { loadPastAssignments } from '../task-owners-server';
+import { DELIVERABLE_MOVES, DELIVERABLE_TAG } from '../brief-pieces';
 import { proposeTaskOwners } from '../task-owners';
 import type { WorkspaceMember } from '@/types/auth';
 import {
@@ -225,6 +226,8 @@ export function planV2ToDoc(params: {
     const tags = [...(TAG_FOR_CHANNEL[task.channel] ?? ['marketing']), `channel:${task.channel}`];
     if (task.offset_days === 0 && task.phase === 'release') tags.push('release_day');
     if (task.cost_naira > 0) tags.push('paid');
+    // A move that makes something shows on the brief's What we're making (#897 phase 3).
+    if (task.library_id && DELIVERABLE_MOVES.has(task.library_id)) tags.push(DELIVERABLE_TAG);
     return {
       id: keyToId.get(task.key) as string,
       template_task_id: null,

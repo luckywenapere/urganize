@@ -204,6 +204,7 @@ export type BoardCardKey =
   | 'sound'
   | 'decisions'
   | 'settle'
+  | 'pieces'
   | 'moments'
   | 'people'
   | 'side';
@@ -277,7 +278,7 @@ export function boardPlacements(present: Set<BoardCardKey>): Partial<Record<Boar
   }
 
   // Band 3: the work.
-  for (const key of ['settle', 'moments'] as const) {
+  for (const key of ['settle', 'pieces', 'moments'] as const) {
     if (!present.has(key)) continue;
     out[key] = { x: 1, y, w: BOARD_COLUMNS, h: 1 };
     y += 1;
@@ -298,6 +299,7 @@ const PHONE_ORDER: BoardCardKey[] = [
   'look',
   'sound',
   'decisions',
+  'pieces',
   'moments',
   'people',
   'side',
