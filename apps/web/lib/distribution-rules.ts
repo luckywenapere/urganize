@@ -124,12 +124,20 @@ export type DistributionFacts = {
 /**
  * Warnings a team may skip for one rollout, with the button's words (founder,
  * Oct 31, 2026: a tight pitch window is advice, not a must, so the team can say
- * "we've missed it" and stop seeing it). Errors can never be skipped.
+ * "we've missed it" and stop seeing it). Every warning is here, and a test holds
+ * that a new one is too. Errors can never be skipped.
  */
 export const SKIPPABLE_WARNINGS: Readonly<Record<string, { label: string; done: string }>> = {
   pitch_window_tight: { label: 'Skip pitch', done: 'Got it. No Spotify pitch for this one.' },
   // Moving the date is the fix; keeping it is the team's call (Oct 31, 2026).
   release_date_tight: { label: 'Keep date', done: 'Got it. Keeping this date.' },
+  // The rest of the warnings followed the same day (founder: nothing that is
+  // only advice should feel compulsory). Stores may still push back on a title
+  // styled this way, and splits that miss 100 still need sorting with the
+  // distributor; the team decides.
+  feat_in_title: { label: 'Keep title', done: 'Got it. Keeping the title as it is.' },
+  title_all_caps: { label: 'Keep title', done: 'Got it. Keeping the title as it is.' },
+  splits_not_100: { label: 'Leave splits', done: 'Got it. Leaving the splits as they are.' },
 };
 
 export function isSkippableWarning(code: string): boolean {

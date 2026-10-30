@@ -6,14 +6,16 @@ import { ChevronDown, Plus } from '@/components/icons';
 import { getAccessToken } from '@/components/content-calendar/get-access-token';
 import { TASKS_CHANGED_EVENT } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
+import { hideNudge, useHiddenNudgeSet } from '@/lib/hidden-nudges';
 import { ROLLOUT_PHASE_LABELS, ROLLOUT_PHASE_ORDER, type RolloutPhase } from '@/lib/rollout-phases';
 import type { Task } from '@/types/tasks';
 
 /**
  * A smaller plan's suggestions (URG-318): the work the plan kept but did not
  * make an activity of, offered as a quiet "N suggested" row. Open it and tap +
- * to add one with its date and owner. Only plans built since 2026-10-16 have
- * any; everywhere else this renders nothing.
+ * to add one with its date and owner, or "No thanks" to drop it (founder,
+ * Oct 31, 2026, #919; kept in this browser, so the count goes down). Only plans
+ * built since 2026-10-16 have any; everywhere else this renders nothing.
  */
 
 export type PlanSuggestionItem = {
@@ -127,8 +129,15 @@ export function usePlanSuggestions(releaseId: string | null, tasks: Task[]): Pla
     if (!releaseId || !isCorePlan) return;
     void load(releaseId);
   }, [releaseId, isCorePlan, count, load]);
-  return isCorePlan && items ? items : [];
+  const all = isCorePlan && items ? items : [];
+  const [declined] = useHiddenNudgeSet(
+    declinedPrefix(releaseId ?? ''),
+    all.map((item) => item.id)
+  );
+  return declined.size ? all.filter((item) => !declined.has(item.id)) : all;
 }
+
+const declinedPrefix = (releaseId: string) => `plan-suggestion:${releaseId}:`;
 
 function formatDue(ymd: string | null): string {
   if (!ymd) return '';
@@ -157,6 +166,15 @@ function SuggestionRow({ releaseId, item }: { releaseId: string; item: PlanSugge
         className="motion-focus motion-press flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-stroke-strong text-content-primary transition-colors hover:border-brand hover:text-brand disabled:opacity-50"
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        onClick={() => hideNudge(`${declinedPrefix(releaseId)}${item.id}`)}
+        disabled={busy}
+        aria-label={`No thanks: ${item.title}`}
+        className="motion-focus -mr-2 inline-flex h-8 shrink-0 items-center rounded-lg px-2 text-xs font-medium text-content-secondary hover:text-content-primary disabled:opacity-50"
+      >
+        No thanks
       </button>
     </li>
   );

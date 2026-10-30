@@ -2,6 +2,7 @@
 
 import { AlertTriangle, Check, Info } from '@/components/icons';
 import type { CaptureReadiness } from '@/lib/capture-playbook';
+import { useHiddenNudgeSet } from '@/lib/hidden-nudges';
 
 /**
  * The capture playbook's verdict on the page being edited (2026-08-14).
@@ -15,15 +16,23 @@ import type { CaptureReadiness } from '@/lib/capture-playbook';
  * Failing rules sort to the top, because a checklist whose actionable items
  * are scattered among ten green ticks is a checklist nobody reads. Within each
  * group the playbook's own order of consequence is preserved.
+ *
+ * A suggestion can be skipped (founder, Oct 31, 2026, #919): it drops off the
+ * list for this rollout in this browser. Blockers cannot be skipped.
  */
 
 type CaptureChecklistProps = {
+  releaseId: string;
   readiness: CaptureReadiness;
 };
 
-export function CaptureChecklist({ readiness }: CaptureChecklistProps) {
+export function CaptureChecklist({ releaseId, readiness }: CaptureChecklistProps) {
   const { results, passedCount, totalCount, blockers, isSendReady } = readiness;
-  const outstanding = results.filter((rule) => !rule.passed);
+  const [skipped, skip] = useHiddenNudgeSet(
+    `capture-suggestion:${releaseId}:`,
+    results.filter((rule) => rule.severity === 'suggestion').map((rule) => rule.id)
+  );
+  const outstanding = results.filter((rule) => !rule.passed && !skipped.has(rule.id));
   const done = results.filter((rule) => rule.passed);
 
   return (
@@ -72,8 +81,16 @@ export function CaptureChecklist({ readiness }: CaptureChecklistProps) {
               <div className="min-w-0">
                 <p className="text-xs leading-relaxed text-content-secondary">{rule.fix}</p>
                 {rule.severity === 'suggestion' ? (
-                  <span className="mt-0.5 inline-block text-[10px] uppercase tracking-wide text-content-tertiary">
-                    Optional
+                  <span className="mt-0.5 flex items-center gap-2">
+                    <span className="text-[10px] uppercase tracking-wide text-content-tertiary">Optional</span>
+                    <button
+                      type="button"
+                      onClick={() => skip(rule.id)}
+                      aria-label={`Skip: ${rule.fix}`}
+                      className="motion-focus -my-2 inline-flex h-8 items-center rounded px-1.5 text-[11px] font-semibold text-content-secondary hover:text-content-primary"
+                    >
+                      Skip
+                    </button>
                   </span>
                 ) : null}
               </div>

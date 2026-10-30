@@ -37,6 +37,9 @@ export type DistributionPayload = DistributionCheckResult & {
   rejections: DistributionRejection[];
   /** When this rollout's team last opened the partner's sign-up, or null. */
   lastHandoffAt: string | null;
+  /** Warnings the team skipped (already left out of `warnings`), so a scene
+   *  can quiet its own version of the same advice (the split totals, #919). */
+  skippedWarnings: string[];
 };
 
 const asText = (value: unknown): string | null =>
@@ -229,13 +232,14 @@ export async function loadDistributionPayload(
   releaseId: string,
   now: Date = new Date()
 ): Promise<DistributionPayload | null> {
-  const [check, rejections, lastHandoffAt] = await Promise.all([
+  const [check, rejections, lastHandoffAt, skippedWarnings] = await Promise.all([
     checkReleaseForDistribution(admin, releaseId, now),
     loadRejections(admin, releaseId),
     loadLastHandoff(admin, releaseId),
+    loadSkippedWarnings(admin, releaseId),
   ]);
   if (!check) return null;
-  return { ...check, rejections, lastHandoffAt };
+  return { ...check, rejections, lastHandoffAt, skippedWarnings };
 }
 
 export async function workspaceIdOf(admin: SupabaseClient, ownerUserId: string): Promise<string | null> {

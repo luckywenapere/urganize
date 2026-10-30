@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.228.0",
+    title: "Say no to advice",
+    tag: "App",
+    date: "October 31, 2026",
+    highlights: [
+      "Every tip in the app can now be put away. Tap Not now, Skip, No thanks or Unpin and it goes.",
+      "On the check before distribution, you can keep your title or leave your splits as they are.",
+    ],
+  },
+  {
     version: "1.227.0",
     title: "Home is your artists",
     tag: "App",

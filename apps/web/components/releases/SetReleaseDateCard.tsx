@@ -5,6 +5,7 @@ import { Loader2 } from '@/components/icons';
 import { Button } from '@urganize/ui';
 import { scheduleRelease } from '@/lib/schedule-release-client';
 import { DEFAULT_RELEASE_TITLE, isDefaultReleaseTitle, type DbReleaseType } from '@/types/releases';
+import { useHiddenNudge } from '@/lib/hidden-nudges';
 
 function formatYmdLocal(date: Date): string {
   const year = date.getFullYear();
@@ -49,8 +50,9 @@ type SetReleaseDateCardProps = {
  *   - otherwise: nothing is blocked, so a quiet neutral row, "Unlocks calendar
  *     and due dates".
  *
- * Deliberately not dismissible: in the pending case it is the only route to
- * the plan.
+ * Not dismissible in the pending case: it is the only route to the plan.
+ * The quiet case has "Not now" (founder, Oct 31, 2026, #919): a date is
+ * optional there, so it hides for this rollout in this browser.
  */
 export function SetReleaseDateCard({
   releaseId,
@@ -60,6 +62,7 @@ export function SetReleaseDateCard({
   onAddActivity,
 }: SetReleaseDateCardProps) {
   const [isPicking, setIsPicking] = useState(false);
+  const [notNow, hideRow] = useHiddenNudge(`set-release-date:${releaseId}`);
   const [releaseDate, setReleaseDate] = useState('');
   const [title, setTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -116,6 +119,8 @@ export function SetReleaseDateCard({
     setIsSaving(false);
   };
 
+  if (notNow && !templatePending) return null;
+
   return (
     <div className="mb-4">
       <form
@@ -153,6 +158,15 @@ export function SetReleaseDateCard({
             >
               Pick date
             </Button>
+          ) : null}
+          {!isPicking && !templatePending ? (
+            <button
+              type="button"
+              onClick={hideRow}
+              className="motion-focus -mr-2 inline-flex h-9 shrink-0 items-center rounded-lg px-2 text-xs font-medium text-content-secondary hover:text-content-primary"
+            >
+              Not now
+            </button>
           ) : null}
         </div>
 

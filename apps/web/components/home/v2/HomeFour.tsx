@@ -13,6 +13,7 @@ import {
 } from '@/lib/home/home-four';
 import type { HomePayload } from '@/lib/home/types';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
+import { useHiddenNudge } from '@/lib/hidden-nudges';
 import { useHomeFocusData } from '../useHomeFocusData';
 import { useHomeNextMoves } from '../useHomeNextMoves';
 import { ManagerNewView } from '../ManagerNewView';
@@ -80,6 +81,10 @@ function ReleaseHome({ home, viewerId }: { home: HomePayload; viewerId: string }
  */
 function StartNextCard() {
   const [open, setOpen] = useState(false);
+  // "Not now" for 30 days in this browser (founder, Oct 31, 2026, #919): it is
+  // advice, and the Artists page still starts a rollout any time.
+  const [hidden, hide] = useHiddenNudge('home-start-next', 30);
+  if (hidden && !open) return null;
   return (
     <section className="rounded-[20px] border border-stroke-default bg-bg-surface p-5" data-home-block="start-next">
       <span className="inline-flex h-6 items-center rounded-full border border-stroke-default px-2.5 text-[11px] font-semibold text-content-secondary">
@@ -96,6 +101,13 @@ function StartNextCard() {
         className="motion-focus motion-press mt-4 flex h-12 w-full items-center justify-center rounded-full bg-brand text-[15px] font-semibold text-content-inverse hover:bg-brand-hover"
       >
         {HOME_FOUR_COPY.startAction}
+      </button>
+      <button
+        type="button"
+        onClick={hide}
+        className="motion-focus mt-1 flex h-11 w-full items-center justify-center rounded-full text-sm font-medium text-content-secondary hover:text-content-primary"
+      >
+        {HOME_FOUR_COPY.notNow}
       </button>
       {open ? <StartNextSheet defaultArtistId={null} source="home" onClose={() => setOpen(false)} /> : null}
     </section>
@@ -137,7 +149,7 @@ function BetweenHome({ home }: { home: HomePayload; onNewRollout: () => void }) 
           <ReleaseReviewCard />
         </div>
       </Fenced>
-      <div className="mt-6">
+      <div className="mt-6 empty:hidden">
         {/* The next-record ask (2026-10-27) asks the same question as Start
             the next one, so it takes that card's place: one card at a time. */}
         {home.recordAsk ? (

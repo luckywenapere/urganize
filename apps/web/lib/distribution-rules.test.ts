@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DISTRIBUTION_RULES,
+  SKIPPABLE_WARNINGS,
   PITCH_WINDOW_WARNING_DAYS,
   checkDistributionFacts,
   type DistributionCheckContext,
@@ -233,9 +234,7 @@ describe('the rules, one at a time (each has a failing case and a passing case)'
   it('pitch_window_tight: a team that skipped it stops seeing it', () => {
     expect(fired('pitch_window_tight', { releaseDate: '2026-11-12', skippedWarnings: ['pitch_window_tight'] })).toHaveLength(0);
     // Only skippable codes count: a skip cannot hide another warning or an error.
-    expect(
-      fired('title_all_caps', { title: 'LAGOS NIGHTS', skippedWarnings: ['title_all_caps'] })
-    ).toHaveLength(1);
+    expect(fired('title_all_caps', { title: 'LAGOS NIGHTS', skippedWarnings: ['pitch_window_tight'] })).toHaveLength(1);
     expect(fired('missing_title', { title: '', skippedWarnings: ['missing_title'] })).toHaveLength(1);
   });
 
@@ -274,6 +273,12 @@ describe('levels, copy and order', () => {
     const byCode = new Map(DISTRIBUTION_RULES.map((rule) => [rule.code, rule.level]));
     for (const code of errorCodes) expect(byCode.get(code), code).toBe('error');
     for (const code of warningCodes) expect(byCode.get(code), code).toBe('warning');
+  });
+
+  it('lets a team skip every warning and no error', () => {
+    for (const rule of DISTRIBUTION_RULES) {
+      expect(rule.code in SKIPPABLE_WARNINGS, rule.code).toBe(rule.level === 'warning');
+    }
   });
 
   it('keeps every code in the list once', () => {

@@ -1185,6 +1185,7 @@ export function WorkspaceView() {
 
   const pinnedConfirmDateCard = pinnedConfirmDateTask && !firstStepsUp ? (
     <PinnedConfirmDateCard
+      taskId={pinnedConfirmDateTask.id}
       title={pinnedConfirmDateTask.title}
       dueDate={pinnedConfirmDateTask.dueDate ?? null}
       onOpen={() => openTask(pinnedConfirmDateTask.id)}
