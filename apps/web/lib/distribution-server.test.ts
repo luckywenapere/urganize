@@ -67,7 +67,15 @@ describe('loadDistributionFacts', () => {
       explicit: false,
       artwork: { mimeType: 'image/jpeg', width: 3000, height: 3000 },
       credits: [{ roles: ['songwriter'], songwriterSplit: 100, masterSplit: 100 }],
+      skippedWarnings: [],
     });
+  });
+
+  it('reads the warnings the team skipped', async () => {
+    const db = completeDb();
+    (db.releases[0] as Record<string, unknown>).skipped_distribution_warnings = ['pitch_window_tight'];
+    const facts = await loadDistributionFacts(makeClient(db).client, 'rel-1');
+    expect(facts?.skippedWarnings).toEqual(['pitch_window_tight']);
   });
 
   it('reads an explicit flag that was never answered as unset, not as false', async () => {

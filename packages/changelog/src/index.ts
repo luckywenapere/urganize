@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.226.0",
+    title: "Skip the Spotify pitch",
+    tag: "Rollouts",
+    date: "October 31, 2026",
+    highlights: [
+      "Missed the time for a Spotify pitch? Tap Skip pitch and the warning goes away for your whole team on that rollout.",
+    ],
+  },
+  {
     version: "1.225.2",
     tag: "Rollouts",
     date: "October 31, 2026",

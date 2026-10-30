@@ -230,6 +230,15 @@ describe('the rules, one at a time (each has a failing case and a passing case)'
     expect(fired('pitch_window_tight', { releaseDate: null })).toHaveLength(0);
   });
 
+  it('pitch_window_tight: a team that skipped it stops seeing it', () => {
+    expect(fired('pitch_window_tight', { releaseDate: '2026-11-12', skippedWarnings: ['pitch_window_tight'] })).toHaveLength(0);
+    // Only skippable codes count: a skip cannot hide another warning or an error.
+    expect(
+      fired('release_date_tight', { releaseDate: '2026-10-20', skippedWarnings: ['release_date_tight'] })
+    ).toHaveLength(1);
+    expect(fired('missing_title', { title: '', skippedWarnings: ['missing_title'] })).toHaveLength(1);
+  });
+
   it('release_date_tight: a date inside three weeks, or one that has passed, gets a word', () => {
     expect(fired('release_date_tight', { releaseDate: '2026-10-20' })[0].message).toMatch(/14 working days/);
     expect(fired('release_date_tight', { releaseDate: '2026-09-01' })[0].message).toMatch(/passed/);
