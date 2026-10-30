@@ -14,7 +14,7 @@
 import { countProgress } from '@/lib/task-progress';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Release } from '@/types/releases';
-import type { Task } from '@/types/tasks';
+import { isTaskClosed, type Task } from '@/types/tasks';
 import { assistantReleaseStatus, dayToDate } from './release-status';
 import { formatSmartLinksSection, loadSmartLinkPromptFacts, type SmartLinkPromptFacts } from './smart-link-context';
 import type { ChappiToolContext } from './tool-families/shared';
@@ -31,7 +31,7 @@ const MAX_OVERDUE = 8;
 
 /** A task nobody has finished and nobody has cancelled. Matches get_dashboard's
  *  existing definition rather than inventing a second one. */
-const isOpen = (task: Task): boolean => task.status !== 'done' && task.status !== 'cancelled';
+const isOpen = (task: Task): boolean => !isTaskClosed(task.status);
 
 export type SnapshotMember = {
   userId: string | null;

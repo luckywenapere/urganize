@@ -20,6 +20,7 @@
 import { readPlanKey } from '@/lib/plan-focus';
 import { channelLabel, type Channel } from '@/lib/planner-v2/answers';
 import { readUndatedTaskMeta, relativeWhenLabel } from '@/lib/planner-v2/when';
+import { isTaskClosed } from '@/types/tasks';
 
 // ── Limits ───────────────────────────────────────────────────────────────────
 
@@ -358,7 +359,6 @@ export type BriefTaskRow = {
   position?: number | null;
 };
 
-const CLOSED_STATUSES = new Set(['done', 'cancelled']);
 
 function isMilestoneMetadata(metadata: unknown): boolean {
   if (!metadata || typeof metadata !== 'object') return false;
@@ -480,7 +480,7 @@ export function deriveBriefPeople(input: {
   const groups = new Map<string, BriefTaskRow[]>();
   for (const task of input.tasks) {
     const assignee = task.assigned_to_user_id;
-    if (!assignee || CLOSED_STATUSES.has(String(task.status || ''))) continue;
+    if (!assignee || isTaskClosed(task.status)) continue;
     const list = groups.get(assignee) ?? [];
     list.push(task);
     groups.set(assignee, list);

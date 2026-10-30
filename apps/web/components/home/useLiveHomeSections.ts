@@ -8,6 +8,7 @@ import { buildArtistChips } from '@/lib/home/artists';
 import { buildYourTasks, buildWaitingOnOthers } from '@/lib/home/tasks';
 import { buildReleaseSummary } from '@/lib/home/releases';
 import type { HomeArtistChip, HomeReleaseSummary, HomeWaitingTask, HomeYourTasks } from '@/lib/home/types';
+import { isTaskClosed } from '@/types/tasks';
 
 /**
  * Recomputes the LIVE parts of Home — the parts a task tick changes on the
@@ -60,7 +61,7 @@ export function useLiveHomeSections(
     const releaseIdsYouRun = new Set(releasesYouRun.map((release) => release.id));
 
     const hasOpenTasks = (releaseId: string) =>
-      (tasksByRelease.get(releaseId) ?? []).some((task) => task.status !== 'done' && task.status !== 'cancelled');
+      (tasksByRelease.get(releaseId) ?? []).some((task) => !isTaskClosed(task.status));
 
     const inFlightReleasesYouRun = releasesYouRun.filter((release) =>
       isReleaseInFlight(release, hasOpenTasks(release.id), now)

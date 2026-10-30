@@ -10,6 +10,7 @@
 // the notes or the plan's tasks change (the fingerprint), not when a task is done.
 
 import type { AiMessage } from './ai/provider';
+import { isTaskClosed } from '@/types/tasks';
 
 export type RolloutBrief = {
   goal: string;
@@ -34,7 +35,6 @@ export type BriefTask = {
 
 export type NextUpItem = { title: string; owner: string | null };
 
-const CLOSED = new Set(['done', 'cancelled']);
 
 /** The next open tasks: earliest due first, undated ones in plan order after them. */
 export function nextUp(tasks: ReadonlyArray<BriefTask>, count = NEXT_UP_COUNT): NextUpItem[] {
@@ -43,7 +43,7 @@ export function nextUp(tasks: ReadonlyArray<BriefTask>, count = NEXT_UP_COUNT): 
     return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
   };
   return tasks
-    .filter((task) => !CLOSED.has(String(task.status || '').toLowerCase()) && task.taskType !== 'event_milestone')
+    .filter((task) => !isTaskClosed(task.status) && task.taskType !== 'event_milestone')
     .slice()
     .sort((a, b) => time(a) - time(b) || a.position - b.position)
     .slice(0, count)

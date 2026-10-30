@@ -9,7 +9,9 @@
  *   - approvals   releases.metadata.handoff[item] = { approvedAt, approvedBy, approvedFor, ... }
  *   - sent        the item's own task (tasks.metadata.handoff_item): done means sent,
  *                 so ticking it off in the activity list and Mark sent are the same act,
- *                 and reopening it there is un-sending. A rollout with no plan yet has
+ *                 and reopening it there is un-sending. Only a person reopens it: the
+ *                 app never does, even when the file is not in Urganize (#883, many
+ *                 teams send from their own files). A rollout with no plan yet has
  *                 no tasks (an empty rollout is how the app offers the planner), so
  *                 until then the sentAt in the record stands in for the task
  *   - dropped     the item's task is cancelled (URG-399 follow-up, Oyin Oct 19, 2026):
@@ -283,8 +285,10 @@ export function deriveHandoffStatus(input: {
 }): HandoffStatus {
   // Dropped first: a cancelled send is not owed, whatever state its file is in.
   if (input.task?.status === 'cancelled') return 'dropped';
-  if (!input.uploaded) return 'missing';
+  // Sent next: the team said it went, so it went, whether or not the file is
+  // in Urganize (#883).
   if (input.task ? input.task.status === 'done' : input.sentWithoutTask) return 'sent';
+  if (!input.uploaded) return 'missing';
   if (input.record.approvedAt && input.record.approvedFor && input.record.approvedFor === input.fingerprint) {
     return 'approved';
   }
@@ -397,7 +401,7 @@ export type HandoffTaskOp =
       kind: 'update';
       item: HandoffItemKey;
       taskId: string;
-      patch: { due_date?: string | null; status?: 'todo'; completed_at?: null };
+      patch: { due_date?: string | null };
     };
 
 /** The timestamp a task's due_date is stored as for a calendar day: midnight
@@ -410,10 +414,10 @@ export const dueDateToTimestamp = (ymd: string): string => `${ymd}T00:00:00.000Z
  *   - no task and a due date: make one, assigned to the row's owner
  *   - the due date moved (lead time or release day changed): move the task
  *   - the release day was taken away: the task loses its date (reminders stop)
- *   - a task marked done whose file or field has since broken: reopen it, so
- *     the reminders start again and the row reads Missing
- * Nothing else is touched: a reassignment or a cancel made on the task itself
- * is the team's call.
+ * Nothing else is touched. A done or cancelled task stays closed: a tick, a
+ * reassignment or a cancel made on the task itself is the team's call. (Until
+ * #883 a done task whose file the app could not see was reopened here, which
+ * undid every tick for teams that send from their own files.)
  */
 export function planHandoffTaskSync(input: {
   dueDate: string | null;
@@ -435,19 +439,15 @@ export function planHandoffTaskSync(input: {
           item: row.item,
           dueDate: input.dueDate,
           assigneeUserId: row.ownerUserId,
-          done: Boolean(row.sentBeforeTask) && row.uploaded,
+          done: Boolean(row.sentBeforeTask),
         });
       }
       continue;
     }
-    const patch: { due_date?: string | null; status?: 'todo'; completed_at?: null } = {};
+    const patch: { due_date?: string | null } = {};
     const currentDay = row.task.dueDate ? row.task.dueDate.slice(0, 10) : null;
     if (input.dueDate && currentDay !== input.dueDate) patch.due_date = dueDateToTimestamp(input.dueDate);
     if (!input.dueDate && currentDay !== null) patch.due_date = null;
-    if (row.task.status === 'done' && !row.uploaded) {
-      patch.status = 'todo';
-      patch.completed_at = null;
-    }
     if (Object.keys(patch).length > 0) ops.push({ kind: 'update', item: row.item, taskId: row.task.id, patch });
   }
   return ops;

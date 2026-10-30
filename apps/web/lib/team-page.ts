@@ -9,6 +9,7 @@
 import { isOnline } from '@/lib/presence';
 import { lagosToday } from '@/lib/next-records';
 import { sortTeamPresence } from '@/lib/home/team-presence';
+import { isTaskClosed } from '@/types/tasks';
 
 export const TEAM_HREF = '/dashboard/team';
 
@@ -117,7 +118,6 @@ export type TeamTaskSummary = {
   tasks: TeamTask[];
 };
 
-const CLOSED = new Set(['done', 'cancelled']);
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
@@ -136,7 +136,7 @@ export function summarizeTasks(tasks: readonly TeamTaskInput[], now: Date): Team
       if (Number.isFinite(at) && at >= weekAgo && at <= now.getTime() + 60_000) doneThisWeek += 1;
       continue;
     }
-    if (CLOSED.has(task.status)) continue;
+    if (isTaskClosed(task.status)) continue;
     open.push({
       id: task.id,
       title: task.title,
