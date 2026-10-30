@@ -6,7 +6,7 @@ import { ArtistFace } from '@/components/shared/ArtistFace';
 import { rolloutMetaLine } from '@/lib/release-timeline';
 import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
 import { usePlanMenuFold } from '@/stores/usePlanMenuFold';
-import { PlanMenuPill } from './PlanMenuPill';
+import { PlanMenuPillDock } from './PlanMenuPill';
 import type { PlanView } from '@/lib/plan-view';
 import { PlanViewToggle } from './PlanViewToggle';
 import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
@@ -159,9 +159,8 @@ export function RolloutPhoneHeader({
         <div className="flex h-11 items-center gap-1">
           <SlimTitle title={title} done={done} total={total} backLabel={backLabel} onBack={onBack} />
         </div>
-        <div className="flex justify-center">
-          <PlanMenuPill toTop />
-        </div>
+        {/* The pill floats at the bottom of the screen (#926). */}
+        <PlanMenuPillDock toTop />
       </div>
     );
   }

@@ -3669,3 +3669,29 @@ html[data-plan-menu='folded'] #subnav-slot-tools,
 html[data-plan-menu='folded'] #subnav-slot-end {
   display: none;
 }
+
+/* The folded menu's pill floats at the bottom (#926), on the golden scale:
+   34 off the bottom edge on a computer, 21 above whatever owns a phone's
+   bottom edge. Bottom bar geometry: top at 4.25rem (BottomBar.tsx), so
+   4.25rem + 21px is 89px. The UrgAns box offsets follow the toasts'
+   (.mobile-nav-raise). */
+.plan-menu-pill-dock {
+  bottom: 34px;
+}
+@media (max-width: 1023px) {
+  .plan-menu-pill-dock {
+    bottom: calc(89px + env(safe-area-inset-bottom, 0px));
+  }
+  :root[data-home-dock] .plan-menu-pill-dock {
+    bottom: calc(4.75rem + 21px + var(--home-dock-height, 3.5rem) + env(safe-area-inset-bottom, 0px));
+  }
+  :root[data-swipe-nav='page'] .plan-menu-pill-dock {
+    bottom: calc(34px + env(safe-area-inset-bottom, 0px));
+  }
+  :root[data-swipe-nav][data-home-dock] .plan-menu-pill-dock {
+    bottom: calc(1.75rem + 13px + var(--home-dock-height, 3.5rem) + env(safe-area-inset-bottom, 0px));
+  }
+  :root[data-keyboard-open='true'] .plan-menu-pill-dock {
+    display: none;
+  }
+}

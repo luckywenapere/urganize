@@ -413,7 +413,7 @@ export function PlanShowAllToggle({
     </span>
   );
   return (
-    <div className="flex flex-wrap items-center justify-center gap-x-1 pt-1" data-plan-quiet-line>
+    <div className="flex flex-wrap items-center justify-center gap-x-1 pt-2" data-plan-quiet-line>
       {showAllLink ? (
         <button
           type="button"

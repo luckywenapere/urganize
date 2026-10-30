@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.229.1",
+    tag: "Rollouts",
+    date: "October 31, 2026",
+    highlights: [
+      "When you fold away a rollout's menu, the Menu button now floats at the bottom of the screen, out of the way of your plan.",
+      "The phase cards on a rollout have a little more room and even spacing.",
+    ],
+  },
+  {
     version: "1.229.0",
     title: "Add your photo",
     tag: "Team",
