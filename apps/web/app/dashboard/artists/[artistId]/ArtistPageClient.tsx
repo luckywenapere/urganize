@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ChevronRight } from '@/components/icons';
+import { ArrowLeft, ChevronRight, Disc3 } from '@/components/icons';
 import { useShellStore } from '@/stores/useShellStore';
 import { useAuthStore } from '@/lib/auth-store';
 // Back goes to the Artists tab, the list of artists (founder, 2026-10-14).
@@ -19,7 +19,7 @@ import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { CoverThumbEditor } from '@/components/artists/CoverThumbEditor';
 import { ArtistCatalogueCard } from '@/components/artists/ArtistCatalogueCard';
-import { ImportReleasesButton } from '@/components/artists/ImportReleasesDialog';
+import type { CatalogueProfile } from '@/lib/artist-import/client';
 import { RecordRows, isUntitledRecord, useArtistRecords } from '@/components/artists/ArtistRecordsCard';
 import type { ExecutionRelease } from '@/lib/execution-types';
 import { displayReleaseTitle } from '@/types/releases';
@@ -215,6 +215,9 @@ export default function ArtistPageClient() {
   const openCreateForArtist = useShellStore((state) => state.openCreateForArtist);
   const { records, starting, error: recordError, start: startRecord } = useArtistRecords(artistId);
   const [catalogueCount, setCatalogueCount] = useState<number | null>(null);
+  // undefined until the catalogue's first read answers; null = no profile linked.
+  const [streamingProfile, setStreamingProfile] = useState<CatalogueProfile | null | undefined>(undefined);
+  const openAddArtist = useShellStore((state) => state.openAddArtist);
   // One quiet line under Rolling out for what a cover upload did (this page has no toasts).
   const [coverNotice, setCoverNotice] = useState<{ message: string; tone: 'success' | 'error' | 'warning' } | null>(null);
   const onCoverToast = useCallback(
@@ -303,6 +306,7 @@ export default function ArtistPageClient() {
     act('new_record');
     void startRecord();
   };
+  const findOnStreaming = () => openAddArtist({ query: artist.name, artistId: artist.id, artistName: artist.name });
   const planRollout = () => {
     act('new_rollout');
     openCreateForArtist(artist.id);
@@ -447,9 +451,6 @@ export default function ArtistPageClient() {
               <h2 id="music-title" className="font-display text-[22px] text-content-primary">
                 Music
               </h2>
-              <ImportReleasesButton from="artist" initialQuery={artist.name} className={inlineLink}>
-                Bring in past rollouts
-              </ImportReleasesButton>
             </div>
             <ol className="mt-4">
               <Stage
@@ -496,14 +497,46 @@ export default function ArtistPageClient() {
                 {buckets.past.length > 0 ? (
                   <ul className="space-y-0.5">{buckets.past.map((release) => releaseRow(release, false))}</ul>
                 ) : null}
-                <ArtistCatalogueCard artistId={artist.id} onCount={setCatalogueCount} />
-                {buckets.past.length === 0 && catalogueCount === 0 ? (
+                <ArtistCatalogueCard artistId={artist.id} onCount={setCatalogueCount} onProfile={setStreamingProfile} />
+                {/* Where the released music comes from (#882, mock
+                    docs/mocks/catalogue-import): a linked profile says so and
+                    can be changed; with none, one card finds it. */}
+                {streamingProfile ? (
+                  <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-xs text-content-tertiary">
+                    <span className="h-1.5 w-1.5 rounded-full bg-status-success" aria-hidden="true" />
+                    From {streamingProfile.source === 'deezer' ? 'Deezer' : 'Apple Music'}
+                    {streamingProfile.sync ? ' · new drops come in by themselves' : ''}
+                    {' · '}
+                    <button type="button" onClick={findOnStreaming} className="font-semibold text-brand hover:underline underline-offset-2">
+                      Change profile
+                    </button>
+                  </p>
+                ) : streamingProfile === null && catalogueCount !== null && (catalogueCount > 0 || buckets.past.length > 0) ? (
                   <Quiet>
-                    Nothing out yet.
-                    <ImportReleasesButton from="artist" initialQuery={artist.name} className={inlineLink}>
-                      Bring in past rollouts
-                    </ImportReleasesButton>
+                    New drops do not come in by themselves yet.
+                    <button type="button" onClick={findOnStreaming} className={inlineLink}>
+                      Find on streaming
+                    </button>
                   </Quiet>
+                ) : streamingProfile === null && catalogueCount === 0 && buckets.past.length === 0 ? (
+                  <div className="mt-1 flex flex-wrap items-center gap-4 rounded-2xl border border-dashed border-stroke-control p-4">
+                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-bg-hover text-brand" aria-hidden="true">
+                      <Disc3 className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-content-primary">Bring in {artist.name}&rsquo;s released music</p>
+                      <p className="mt-0.5 text-[13px] text-content-secondary">
+                        Find them on Deezer or Apple Music. New drops show up by themselves after that.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={findOnStreaming}
+                      className="motion-focus motion-press inline-flex min-h-10 items-center rounded-full bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+                    >
+                      Find on streaming
+                    </button>
+                  </div>
                 ) : null}
               </Stage>
             </ol>

@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Released music</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --side-on:#e6e1d6; --card:#faf5ec; --hover:#ebe6dc; --tile:#e3ddd0;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --err:#961a1a; --board:#d9d5cc; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/20px 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--text); padding:40px 16px 72px; font-variant-numeric:tabular-nums; }
+  p, h1, h2, h3, h4 { margin:0; }
+  .serif { font-family:'Young Serif', serif; font-weight:400; letter-spacing:0; }
+  .sec { color:var(--sec); } .ter { color:var(--ter); }
+  .dot::before { content:'·'; margin:0 6px; color:var(--ter); }
+  .wrap { max-width:1180px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; line-height:36px; }
+  .intro p { color:var(--board-sec); max-width:780px; margin-top:8px; }
+  .intro ol { color:var(--board-sec); max-width:780px; margin:12px 0 0; padding-left:20px; }
+  .intro li { margin-top:4px; }
+  .intro b { color:var(--text); }
+  .sec-h { margin:56px 0 16px; }
+  .sec-h h2 { font-size:12px; line-height:16px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+  .sec-h h2 em { font-style:normal; color:var(--brand); }
+  .sec-h p { color:var(--board-sec); max-width:780px; margin-top:4px; }
+  .row { display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start; }
+  .label { font-size:12px; line-height:16px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin-bottom:8px; }
+  .step { display:inline-grid; place-items:center; width:20px; height:20px; border-radius:50%; background:var(--text); color:var(--bg); font-size:11px; margin-right:6px; }
+
+  .desk { flex:1 1 680px; min-width:0; background:var(--bg); border-radius:16px; overflow:hidden; box-shadow:0 12px 32px rgba(26,22,17,.10); position:relative; }
+  .bar { height:64px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:0 24px; }
+  .logo { font-family:'Young Serif', serif; font-size:18px; }
+  .tabs { display:flex; gap:4px; }
+  .tabs span { padding:8px 14px; border-radius:99px; font-size:14px; color:var(--ter); }
+  .tabs span.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .page { padding:8px 32px 32px 32px; }
+  .ptitle { display:flex; align-items:center; justify-content:space-between; }
+  .ptitle b { font-size:15px; font-weight:600; }
+  .plus { width:36px; height:36px; border-radius:50%; border:1px solid var(--line2); display:grid; place-items:center; font-size:18px; color:var(--sec); }
+  .plus.hot { border-color:var(--brand); color:var(--brand); box-shadow:0 0 0 4px var(--brand-soft); }
+
+  .face { border-radius:50%; flex:none; display:grid; place-items:center; overflow:hidden; background:var(--tile); font-weight:600; }
+  .face svg, .cv svg { width:100%; height:100%; display:block; }
+  .cv { flex:none; border-radius:6px; overflow:hidden; background:var(--tile); }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; height:40px; padding:0 18px; border-radius:99px; font-weight:600; font-size:14px; background:var(--brand); color:#f5f0e6; white-space:nowrap; }
+  .btn.ghost { background:transparent; color:var(--text); border:1px solid var(--line2); }
+  .btn.sm { height:32px; padding:0 14px; font-size:13px; }
+  .link { color:var(--brand); font-weight:600; }
+
+  /* list stub */
+  .list { margin-top:20px; border:1px solid var(--line); border-radius:16px; background:var(--card); }
+  .lr { display:flex; align-items:center; gap:12px; height:64px; padding:0 20px; border-top:1px solid var(--line); }
+  .lr:first-child { border-top:0; }
+  .gone { margin-top:12px; display:flex; justify-content:flex-end; }
+  .gone span { text-decoration:line-through; color:var(--ter); border:1px dashed var(--line2); border-radius:99px; padding:6px 14px; font-size:13px; }
+
+  /* sheet */
+  .scrim { position:absolute; inset:0; background:rgba(26,22,17,.22); }
+  .sheet { position:absolute; top:84px; left:50%; transform:translateX(-50%); width:480px; max-width:calc(100% - 32px); background:var(--card); border-radius:20px; box-shadow:0 24px 48px rgba(26,22,17,.18); padding:24px; }
+  .sheet h3 { font-family:'Young Serif', serif; font-weight:400; font-size:24px; line-height:32px; }
+  .sheet .sub { color:var(--sec); margin-top:4px; }
+  .search { margin-top:16px; height:44px; border-radius:12px; border:1.5px solid var(--brand); background:#fffdf8; display:flex; align-items:center; gap:10px; padding:0 14px; font-size:15px; }
+  .search i { width:14px; height:14px; border-radius:50%; border:2px solid var(--ter); flex:none; }
+  .caret { width:1.5px; height:18px; background:var(--text); margin-left:-8px; }
+  .res { margin-top:8px; }
+  .rr { display:flex; align-items:center; gap:12px; padding:10px 8px; border-radius:12px; }
+  .rr.on { background:var(--hover); }
+  .rr .face { width:44px; height:44px; }
+  .rr b { display:block; font-size:15px; font-weight:600; line-height:20px; }
+  .rr div > span { display:block; font-size:12px; line-height:16px; color:var(--sec); }
+  .rr .go { margin-left:auto; font-size:13px; font-weight:600; color:var(--brand); }
+  .manual { margin-top:12px; padding-top:12px; border-top:1px solid var(--line); font-size:13px; color:var(--sec); }
+
+  /* confirm */
+  .hero { display:flex; align-items:center; gap:16px; margin-top:4px; }
+  .hero .face { width:72px; height:72px; }
+  .strip { display:flex; gap:8px; margin-top:16px; }
+  .strip .cv { width:64px; height:64px; }
+  .strip .more { width:64px; height:64px; border-radius:6px; background:var(--hover); display:grid; place-items:center; font-weight:600; color:var(--sec); font-size:13px; }
+  .facts { margin-top:16px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .fact { background:var(--bg); border-radius:12px; padding:10px 12px; }
+  .fact b { display:block; font-size:18px; line-height:24px; font-weight:600; }
+  .fact span { font-size:12px; color:var(--sec); }
+  .check { display:flex; gap:10px; align-items:flex-start; margin-top:16px; font-size:13px; color:var(--sec); }
+  .check i { width:18px; height:18px; border-radius:5px; background:var(--brand); flex:none; margin-top:1px; position:relative; }
+  .check i::after { content:''; position:absolute; left:6px; top:2px; width:4px; height:9px; border:solid #f5f0e6; border-width:0 2px 2px 0; transform:rotate(45deg); }
+  .acts { display:flex; justify-content:flex-end; gap:8px; margin-top:20px; }
+
+  /* artist page */
+  .ah { display:flex; align-items:center; gap:16px; margin-top:8px; }
+  .ah .face { width:80px; height:80px; }
+  .ah h3 { font-family:'Young Serif', serif; font-weight:400; font-size:30px; line-height:38px; }
+  .chips { display:flex; gap:6px; margin-top:6px; }
+  .chip { font-size:12px; padding:2px 10px; border-radius:99px; background:var(--hover); color:var(--sec); }
+  .chip.on { background:var(--brand-soft); color:var(--brand); font-weight:600; }
+  .music { margin-top:24px; }
+  .mh { display:flex; align-items:baseline; justify-content:space-between; }
+  .mh h4 { font-size:16px; font-weight:600; }
+  .stops { display:flex; gap:20px; margin-top:12px; font-size:13px; color:var(--sec); border-bottom:1px solid var(--line); padding-bottom:10px; }
+  .stops span.on { color:var(--text); font-weight:600; }
+  .stops span.on::before { content:''; display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--brand); margin-right:6px; vertical-align:1px; }
+  .rel { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--line); }
+  .rel .cv { width:44px; height:44px; }
+  .rel b { display:block; font-size:14px; font-weight:600; line-height:20px; }
+  .rel div > span { display:block; font-size:12px; line-height:16px; color:var(--sec); }
+  .rel .r { margin-left:auto; font-size:13px; color:var(--brand); font-weight:600; }
+  .new { display:inline-block; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--brand); background:var(--brand-soft); border-radius:4px; padding:1px 6px; margin-left:8px; vertical-align:2px; }
+  .sync { display:flex; align-items:center; gap:8px; margin-top:12px; font-size:12px; color:var(--ter); }
+  .sync i { width:7px; height:7px; border-radius:50%; background:#2f9a5b; }
+  .empty { margin-top:12px; border:1.5px dashed var(--line2); border-radius:16px; padding:20px; display:flex; align-items:center; gap:16px; }
+  .empty .ic { width:48px; height:48px; border-radius:12px; background:var(--hover); display:grid; place-items:center; color:var(--brand); font-size:20px; flex:none; }
+
+  .phone { width:360px; flex:none; background:var(--bg); border-radius:32px; padding:16px 16px 24px; box-shadow:0 12px 32px rgba(26,22,17,.10); position:relative; overflow:hidden; min-height:640px; }
+  .phone .sheet { position:absolute; top:auto; bottom:0; left:0; transform:none; width:100%; max-width:100%; border-radius:24px 24px 0 0; padding:20px 16px 28px; }
+  .grab { width:40px; height:4px; border-radius:99px; background:var(--line2); margin:0 auto 14px; }
+
+  .notes { margin-top:48px; padding:20px 24px; border-radius:16px; background:rgba(245,240,230,.6); color:var(--board-sec); }
+  .notes b { color:var(--text); }
+  .notes ul { margin:8px 0 0; padding-left:18px; }
+  .notes li { margin-top:4px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="dorian" viewBox="0 0 100 100"><rect width="100" height="100" fill="#cfc6b6"/><circle cx="50" cy="41" r="17" fill="#3a2a22"/><path d="M16 100c4-22 18-33 34-33s30 11 34 33z" fill="#1d1d1f"/></symbol>
+  <symbol id="other" viewBox="0 0 100 100"><rect width="100" height="100" fill="#b9c3c9"/><circle cx="50" cy="41" r="17" fill="#2a2a2a"/><path d="M16 100c4-22 18-33 34-33s30 11 34 33z" fill="#43505a"/></symbol>
+  <symbol id="cov1" viewBox="0 0 100 100"><rect width="100" height="100" fill="#26344d"/><circle cx="68" cy="34" r="16" fill="#e8b24a"/><rect y="70" width="100" height="30" fill="#18233a"/></symbol>
+  <symbol id="cov2" viewBox="0 0 100 100"><rect width="100" height="100" fill="#8a3b2b"/><circle cx="50" cy="50" r="26" fill="none" stroke="#f0d9c4" stroke-width="5"/><circle cx="50" cy="50" r="6" fill="#f0d9c4"/></symbol>
+  <symbol id="cov3" viewBox="0 0 100 100"><rect width="100" height="100" fill="#3f5a3a"/><path d="M0 72 30 44l22 20 18-14 30 26v24H0z" fill="#2c4029"/></symbol>
+  <symbol id="cov4" viewBox="0 0 100 100"><rect width="100" height="100" fill="#5b4a7a"/><rect x="20" y="20" width="60" height="60" fill="none" stroke="#e6dcf2" stroke-width="5"/></symbol>
+</svg>
+
+<div class="wrap">
+  <div class="intro">
+    <h1>Released music: how it comes in</h1>
+    <p>Issue #882. Today "Import past rollouts" sits under the Artists list as a separate job. That's the wrong idea: old music is not a rollout, and it belongs to one artist. The rethink:</p>
+    <ol>
+      <li><b>You find the artist, you don't type them.</b> Adding an artist starts with a search of Deezer and Apple Music. Pick the right one and Urganize brings their photo and every release, marked as already out.</li>
+      <li><b>It stays up to date.</b> Urganize remembers the artist's streaming profile. When they drop something new, it shows up under Out now by itself.</li>
+      <li><b>Released music never counts as a rollout.</b> It doesn't use up plan limits or show up in rollout counts. It just fills the artist's Out now and can get a smart link.</li>
+      <li><b>The button leaves the Artists list.</b> Artists already added by name get one "Find on streaming" card on their own page.</li>
+    </ol>
+    <p style="margin-top:10px">Covers, photos and names are sample data.</p>
+  </div>
+
+  <!-- 1. Add artist -->
+  <div class="sec-h">
+    <h2><span class="step">1</span>Add artist starts with a search <em>· recommended</em></h2>
+    <p>The + beside the tabs opens this, not a name box in Settings. Type a name, see faces and fan counts so you pick the right Dorian. Not on streaming yet? Add them by name.</p>
+  </div>
+  <div class="row">
+    <div class="desk" style="min-height:620px">
+      <div class="bar"><span class="logo">Urganize</span><span class="tabs"><span class="on">Artists</span><span>Assistant</span><span>Team</span></span><span></span></div>
+      <div class="page">
+        <div class="ptitle"><b>Artists</b><span class="plus hot">+</span></div>
+        <div class="list">
+          <div class="lr"><span class="face" style="width:40px;height:40px">T</span><span class="serif" style="font-size:17px">T3N</span></div>
+        </div>
+        <div class="gone"><span>Import past rollouts</span></div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <h3>Add an artist</h3>
+        <p class="sub">Find them on streaming and their released music comes with them.</p>
+        <div class="search"><i></i>Dori<span class="caret"></span></div>
+        <div class="res">
+          <div class="rr on"><span class="face"><svg><use href="#dorian"/></svg></span><div><b>Dorian</b><span>Afrobeats<span class="dot"></span>12.4k fans on Deezer</span></div><span class="go">Choose</span></div>
+          <div class="rr"><span class="face"><svg><use href="#other"/></svg></span><div><b>Dorian Electra</b><span>Pop<span class="dot"></span>180k fans</span></div></div>
+          <div class="rr"><span class="face">D</span><div><b>Dorian Concept</b><span>Electronic<span class="dot"></span>41k fans</span></div></div>
+        </div>
+        <p class="manual">Not on streaming yet? <span class="link">Add "Dori" by name</span></p>
+      </div>
+    </div>
+
+    <div>
+      <p class="label">On a phone</p>
+      <div class="phone">
+        <p class="serif" style="font-size:40px;line-height:44px;margin-top:40px">Artists</p>
+        <div class="scrim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <h3 style="font-size:22px">Add an artist</h3>
+          <div class="search"><i></i>Dori<span class="caret"></span></div>
+          <div class="res">
+            <div class="rr on"><span class="face"><svg><use href="#dorian"/></svg></span><div><b>Dorian</b><span>12.4k fans</span></div><span class="go">Choose</span></div>
+            <div class="rr"><span class="face"><svg><use href="#other"/></svg></span><div><b>Dorian Electra</b><span>180k fans</span></div></div>
+          </div>
+          <p class="manual">Not on streaming yet? <span class="link">Add by name</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Confirm -->
+  <div class="sec-h">
+    <h2><span class="step">2</span>One look before it's added</h2>
+    <p>You see what's coming in, so a wrong pick is easy to catch. One tap adds the artist with their photo and every release, marked as already out.</p>
+  </div>
+  <div class="row">
+    <div class="desk" style="min-height:470px">
+      <div class="bar"><span class="logo">Urganize</span><span class="tabs"><span class="on">Artists</span><span>Assistant</span><span>Team</span></span><span></span></div>
+      <div class="scrim"></div>
+      <div class="sheet" style="top:56px">
+        <div class="hero">
+          <span class="face"><svg><use href="#dorian"/></svg></span>
+          <div><h3>Dorian</h3><p class="sub" style="margin-top:0">Afrobeats<span class="dot"></span>12.4k fans on Deezer</p></div>
+        </div>
+        <div class="strip">
+          <span class="cv"><svg><use href="#cov1"/></svg></span><span class="cv"><svg><use href="#cov2"/></svg></span><span class="cv"><svg><use href="#cov3"/></svg></span><span class="cv"><svg><use href="#cov4"/></svg></span><span class="more">+10</span>
+        </div>
+        <div class="facts">
+          <div class="fact"><b>14</b><span>releases</span></div>
+          <div class="fact"><b>Aug 2026</b><span>latest</span></div>
+          <div class="fact"><b>2019</b><span>first</span></div>
+        </div>
+        <div class="check"><i></i><span>Add new releases by themselves when Dorian drops them.</span></div>
+        <div class="acts"><span class="btn ghost">Back</span><span class="btn">Add Dorian</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Artist page -->
+  <div class="sec-h">
+    <h2><span class="step">3</span>Out now on the artist page</h2>
+    <p>Released music sits under Out now on the artist's page, next to rollouts that have finished. A small line says where it comes from. A new drop appears with a "New" tag. Get link works as it does today.</p>
+  </div>
+  <div class="row">
+    <div class="desk">
+      <div class="bar"><span class="logo">Urganize</span><span class="tabs"><span class="on">Artists</span><span>Assistant</span><span>Team</span></span><span></span></div>
+      <div class="page" style="max-width:720px">
+        <div class="ah">
+          <span class="face"><svg><use href="#dorian"/></svg></span>
+          <div><h3>Dorian</h3><div class="chips"><span class="chip">No rollout yet</span><span class="chip">14 out</span></div></div>
+        </div>
+        <div class="music">
+          <div class="mh"><h4>Music</h4></div>
+          <div class="stops"><span>In the making</span><span>Rolling out</span><span class="on">Out now 14</span></div>
+          <div class="rel"><span class="cv"><svg><use href="#cov1"/></svg></span><div><b>Lagos Nights<span class="new">New</span></b><span>Single<span class="dot"></span>Aug 2026</span></div><span class="r">Get link</span></div>
+          <div class="rel"><span class="cv"><svg><use href="#cov2"/></svg></span><div><b>Ojuelegba Love</b><span>Single<span class="dot"></span>Mar 2026</span></div><span class="r">Get link</span></div>
+          <div class="rel"><span class="cv"><svg><use href="#cov3"/></svg></span><div><b>First EP</b><span>EP<span class="dot"></span>Nov 2025</span></div><span class="r">Get link</span></div>
+          <p class="sync"><i></i>From Deezer<span class="dot"></span>checked today<span class="dot"></span><span class="link">Change profile</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Already added by name -->
+  <div class="sec-h">
+    <h2><span class="step">4</span>Artists you already added by name</h2>
+    <p>T3N was added as a name only. Their Out now shows one card that opens the same search with their name filled in. This is the only other way in, so there's no separate import button anywhere.</p>
+  </div>
+  <div class="row">
+    <div class="desk">
+      <div class="bar"><span class="logo">Urganize</span><span class="tabs"><span class="on">Artists</span><span>Assistant</span><span>Team</span></span><span></span></div>
+      <div class="page" style="max-width:720px">
+        <div class="ah">
+          <span class="face" style="font-size:28px">T</span>
+          <div><h3>T3N</h3><div class="chips"><span class="chip">No rollout yet</span></div></div>
+        </div>
+        <div class="music">
+          <div class="mh"><h4>Music</h4></div>
+          <div class="stops"><span>In the making</span><span>Rolling out</span><span class="on">Out now</span></div>
+          <div class="empty">
+            <span class="ic">♪</span>
+            <div style="flex:1"><b style="font-size:15px">Bring in T3N's released music</b><p class="sec" style="font-size:13px;margin-top:2px">Find T3N on Deezer or Apple Music. New drops show up by themselves after that.</p></div>
+            <span class="btn sm">Find on streaming</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <b>What this changes under the hood</b>
+    <ul>
+      <li>The artist remembers their streaming profile (one new field on artists, no new table). That's what lets new drops come in by themselves: a check at most once a day, when someone opens the artist.</li>
+      <li>Released music stays in its own place, as it does today, so it never counts as a rollout, a plan limit or a scoreboard number.</li>
+      <li>"Import past rollouts" is removed from the Artists list on desktop and phone. The import inside onboarding stays; it's the same search.</li>
+      <li>Not in this mock: a team-wide page of all released music. It could come later as an "Out now" filter under Rollouts.</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

@@ -84,3 +84,27 @@ export async function fetchDeezerCodes(
   }
   return { upc, isrc };
 }
+
+/** Hosts a streaming profile photo may come from. Anything else is ignored. */
+const PHOTO_HOSTS = ['dzcdn.net', 'deezer.com'];
+
+/**
+ * The address of a Deezer artist's large profile photo, read from Deezer by
+ * id so a client never chooses the image (#882). Apple's lookup has no artist
+ * photo, so an Apple profile gives null.
+ */
+export async function fetchImportArtistPhotoUrl(provider: ImportProvider, id: string): Promise<string | null> {
+  if (provider !== 'deezer' || !isSafeSourceId(id)) return null;
+  const json = (await getJson(`https://api.deezer.com/artist/${id}`)) as { picture_xl?: unknown; picture_big?: unknown } | null;
+  const raw = typeof json?.picture_xl === 'string' ? json.picture_xl : typeof json?.picture_big === 'string' ? json.picture_big : '';
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== 'https:') return null;
+    if (!PHOTO_HOSTS.some((host) => url.hostname === host || url.hostname.endsWith(`.${host}`))) return null;
+    // Deezer's placeholder for an artist with no photo has an empty hash.
+    if (url.pathname.includes('/artist//')) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}

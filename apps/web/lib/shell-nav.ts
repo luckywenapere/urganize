@@ -10,7 +10,6 @@
 // both states without stubbing the environment, and `readShellFlags` below is the
 // only place that reads them.
 
-import { buildSettingsUrl } from './settings-nav';
 import { TEAM_HREF } from './team-page';
 import { isOpportunitiesEnabled, isRelationshipsFlagOn } from './paused-features';
 
@@ -44,7 +43,7 @@ export type ShellFlags = {
  *  between tabs. */
 export type ShellSubTabAction =
   | { label: string; href: string; press?: never }
-  | { label: string; press: 'openCreate'; href?: never };
+  | { label: string; press: 'openCreate' | 'addArtist'; href?: never };
 
 export type ShellSubTab = {
   key: string;
@@ -100,13 +99,6 @@ export const ARTISTS_HREF = '/dashboard/artists';
 /** The Team tab (issue #853, 2026-10-29): who is on the team, when they were
  *  last in, their tasks, and the workspace's settings. */
 export { TEAM_HREF };
-/** Add artist: the existing add field in Settings -> Artists & brand (v1 of
- *  the tab action, no sheet of its own), opened over the Artists page so the
- *  tab under it does not change. */
-export const ADD_ARTIST_HREF = buildSettingsUrl(ARTISTS_HREF, '', {
-  segment: 'artists',
-  section: 'artists',
-});
 /** The nav word for the 'catalogue' area (Catalogue until 2026-10-17, then
  * Artist; Artists, plural to match the tab, since later that day; Home since
  * 2026-10-30, #886, founder: "change the label from Artist to Home"). The
@@ -125,7 +117,7 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       label: 'Artists',
       href: ARTISTS_HREF,
       isActive: (p) => startsWithPath(p, ARTISTS_HREF),
-      action: { label: 'Add artist', href: ADD_ARTIST_HREF },
+      action: { label: 'Add artist', press: 'addArtist' },
     });
   }
   catalogueTabs.push({

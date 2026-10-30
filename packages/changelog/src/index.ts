@@ -41,6 +41,18 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.216.0",
+    title: "Add an artist, bring their music",
+    tag: "Rollouts",
+    date: "October 30, 2026",
+    highlights: [
+      "Adding an artist starts with a search. Pick them and their photo and released music come with them.",
+      "New releases show up on the artist's page by themselves.",
+      "Artists you added by name get a Find on streaming button on their page.",
+      "The Team page has one invite button, and no more empty box under Settings.",
+    ],
+  },
+  {
     version: "1.215.0",
     title: "Talk to the assistant again",
     tag: "AI",

@@ -1,7 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { checkArtistAllowance, createWorkspaceArtist, ARTISTS_TABLE } from '@/lib/artists-server';
 import { normalizeReleaseSlug } from '@/lib/release-ops';
-import { fetchImportReleases } from './fetch';
+import { fetchImportArtistPhotoUrl, fetchImportReleases } from './fetch';
+import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-constants';
+import { artistPhotoPathPrefix, isProfilePhotoMimeType, MAX_PROFILE_PHOTO_BYTES } from '@/lib/profile-photo';
 import type { ImportProvider, ImportRelease } from './providers';
 
 export const CATALOGUE_TABLE = 'artist_catalogue_releases';
@@ -29,6 +31,8 @@ export async function importArtistCatalogue(
     sourceId: string;
     name: string;
     artistId?: string;
+    /** Check this profile for new drops from now on (#882). Default on. */
+    sync?: boolean;
   }
 ): Promise<ImportOutcome> {
   const name = input.name.trim().slice(0, 120);
@@ -93,7 +97,112 @@ export async function importArtistCatalogue(
   if (added === null) {
     return { ok: false, reason: 'save_failed', message: 'Could not save the releases.' };
   }
+  await rememberStreamingProfile(adminClient, {
+    artistId,
+    provider: input.provider,
+    sourceId: input.sourceId,
+    sync: input.sync !== false,
+  });
   return { ok: true, artistId, artistName, added, total: releases.length, createdArtist };
+}
+
+/**
+ * The artist remembers the profile their music came from, so new drops can be
+ * checked for later, and takes its photo when they have none yet (#882). The
+ * photo is copied into our bucket like an uploaded one; a failure leaves the
+ * initials tile and never fails the import.
+ */
+async function rememberStreamingProfile(
+  adminClient: SupabaseClient,
+  input: { artistId: string; provider: ImportProvider; sourceId: string; sync: boolean }
+): Promise<void> {
+  const { error } = await adminClient
+    .from(ARTISTS_TABLE)
+    .update({
+      streaming_source: input.provider,
+      streaming_source_id: input.sourceId,
+      catalogue_sync: input.sync,
+      catalogue_synced_at: new Date().toISOString(),
+    })
+    .eq('id', input.artistId);
+  if (error) console.error('[artist-import] could not remember the profile:', error.message);
+
+  const current = await adminClient.from(ARTISTS_TABLE).select('photo_path').eq('id', input.artistId).maybeSingle();
+  if ((current.data as { photo_path?: string | null } | null)?.photo_path) return;
+  try {
+    const url = await fetchImportArtistPhotoUrl(input.provider, input.sourceId);
+    if (!url) return;
+    const response = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    const type = (response.headers.get('content-type') ?? '').split(';')[0].trim();
+    if (!response.ok || !isProfilePhotoMimeType(type)) return;
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.length === 0 || bytes.length > MAX_PROFILE_PHOTO_BYTES) return;
+    const ext = type === 'image/png' ? 'png' : type === 'image/webp' ? 'webp' : 'jpg';
+    const path = `${artistPhotoPathPrefix(input.artistId)}streaming-${Date.now()}.${ext}`;
+    const upload = await adminClient.storage.from(RELEASE_ASSETS_BUCKET).upload(path, bytes, { contentType: type });
+    if (upload.error) return;
+    await adminClient.from(ARTISTS_TABLE).update({ photo_path: path }).eq('id', input.artistId).is('photo_path', null);
+  } catch (error) {
+    console.warn('[artist-import] no photo copied:', error instanceof Error ? error.message : error);
+  }
+}
+
+/** How long a checked profile waits before it is checked for new drops again. */
+export const CATALOGUE_SYNC_EVERY_MS = 20 * 60 * 60 * 1000;
+
+export type StreamingProfile = {
+  source: ImportProvider;
+  sync: boolean;
+  syncedAt: string | null;
+};
+
+/** Pure: whether a profile is due a check for new drops. */
+export function isCatalogueSyncDue(profile: StreamingProfile | null, now: Date = new Date()): boolean {
+  if (!profile || !profile.sync) return false;
+  if (!profile.syncedAt) return true;
+  const last = Date.parse(profile.syncedAt);
+  return !Number.isFinite(last) || now.getTime() - last >= CATALOGUE_SYNC_EVERY_MS;
+}
+
+/**
+ * Checks a remembered profile for new drops and saves them (#882). The row is
+ * claimed first by moving its stamp, so two people opening the artist at once
+ * make one call to the music service. Runs after the reply; never throws.
+ */
+export async function syncArtistCatalogue(adminClient: SupabaseClient, artistId: string): Promise<void> {
+  try {
+    const cutoff = new Date(Date.now() - CATALOGUE_SYNC_EVERY_MS).toISOString();
+    const claimed = await adminClient
+      .from(ARTISTS_TABLE)
+      .update({ catalogue_synced_at: new Date().toISOString() })
+      .eq('id', artistId)
+      .eq('catalogue_sync', true)
+      .not('streaming_source_id', 'is', null)
+      .or(`catalogue_synced_at.is.null,catalogue_synced_at.lt.${cutoff}`)
+      .select('id,workspace_id,owner_user_id,streaming_source,streaming_source_id')
+      .maybeSingle();
+    const row = claimed.data as {
+      workspace_id: string;
+      owner_user_id: string;
+      streaming_source: ImportProvider;
+      streaming_source_id: string;
+    } | null;
+    if (!row) return;
+    const releases = await fetchImportReleases(row.streaming_source, row.streaming_source_id);
+    if (releases === null) {
+      // Unreachable: let the next visit try again.
+      await adminClient.from(ARTISTS_TABLE).update({ catalogue_synced_at: null }).eq('id', artistId);
+      return;
+    }
+    await saveCatalogueRows(adminClient, {
+      workspaceId: row.workspace_id,
+      artistId,
+      userId: row.owner_user_id,
+      releases,
+    });
+  } catch (error) {
+    console.warn('[artist-import] sync failed:', error instanceof Error ? error.message : error);
+  }
 }
 
 /** Rows newly added (existing ones are refreshed, not counted), or null on a write error. */

@@ -1,19 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuthenticatedAdmin, loadWorkspaceAccessContext } from '@/lib/tasks-server';
 import { afterResponse } from '@/lib/after-response';
-import { CATALOGUE_TABLE } from '@/lib/artist-import/server';
+import { ARTISTS_TABLE } from '@/lib/artists-server';
+import { CATALOGUE_TABLE, isCatalogueSyncDue, syncArtistCatalogue, type StreamingProfile } from '@/lib/artist-import/server';
 import { CATALOGUE_LINKS_TABLE, enrichCatalogueCodes, readLinkCap } from '@/lib/artist-import/links-server';
 
 // An artist's imported catalogue, newest first, with each release's codes and
 // link and the team's links left for today. Reading it also finishes the
-// background code lookup when some releases are still waiting for one.
+// background code lookup when some releases are still waiting for one, and
+// checks the artist's streaming profile for new drops at most once a day (#882).
 export async function GET(request: NextRequest, context: { params: Promise<{ artistId: string }> }) {
   const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
   const { artistId } = await context.params;
 
   const access = await loadWorkspaceAccessContext(auth.adminClient, auth.user);
-  if (access.workspaceIds.length === 0) return NextResponse.json({ releases: [], cap: null, codesPending: 0 });
+  if (access.workspaceIds.length === 0) {
+    return NextResponse.json({ releases: [], cap: null, codesPending: 0, profile: null });
+  }
+
+  const artistRow = await auth.adminClient
+    .from(ARTISTS_TABLE)
+    .select('streaming_source,streaming_source_id,catalogue_sync,catalogue_synced_at')
+    .eq('id', artistId)
+    .in('workspace_id', access.workspaceIds)
+    .maybeSingle();
+  const found = artistRow.data as {
+    streaming_source: StreamingProfile['source'] | null;
+    streaming_source_id: string | null;
+    catalogue_sync: boolean | null;
+    catalogue_synced_at: string | null;
+  } | null;
+  const profile: StreamingProfile | null =
+    found?.streaming_source && found.streaming_source_id
+      ? { source: found.streaming_source, sync: found.catalogue_sync !== false, syncedAt: found.catalogue_synced_at }
+      : null;
+  if (isCatalogueSyncDue(profile)) {
+    afterResponse('catalogue sync', () => syncArtistCatalogue(auth.adminClient, artistId));
+  }
 
   const { data, error } = await auth.adminClient
     .from(CATALOGUE_TABLE)
@@ -22,7 +46,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ art
     .in('workspace_id', access.workspaceIds)
     .order('release_date', { ascending: false, nullsFirst: false })
     .limit(200);
-  if (error) return NextResponse.json({ releases: [], cap: null, codesPending: 0 });
+  if (error) return NextResponse.json({ releases: [], cap: null, codesPending: 0, profile });
 
   const rows = (data ?? []) as {
     id: string;
@@ -57,5 +81,6 @@ export async function GET(request: NextRequest, context: { params: Promise<{ art
     }),
     cap,
     codesPending,
+    profile,
   });
 }

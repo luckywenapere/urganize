@@ -142,6 +142,8 @@ export interface AnalyticsEventPropertiesMap {
   artist_import_saved: { provider: string; added: number; created_artist: boolean; onto_match: boolean };
   /** Duplicate artists (#865): the import asked "Add these to X?"; the Artists page offered a pair and how it was answered. */
   artist_import_match_asked: { matches: number };
+  /** Add an artist (#882): added by name only, not found on streaming. */
+  artist_added_by_name: Record<string, never>;
   artist_duplicate_shown: { pairs: number };
   artist_duplicate_answered: { answer: 'join' | 'dismiss' | 'later' };
   /** Catalogue Get link (2026-10-26): a link was made, or the team hit its daily cap. */

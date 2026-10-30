@@ -83,6 +83,11 @@ const PlanChoiceHost = dynamic(
   () => import('@/components/releases/PlanChoiceDialog').then((m) => m.PlanChoiceHost),
   { ssr: false }
 );
+// The Add an artist sheet (#882), opened by the Artists tab's + and the artist page.
+const AddArtistHost = dynamic(
+  () => import('@/components/artists/AddArtistDialog').then((m) => m.AddArtistHost),
+  { ssr: false }
+);
 const CreateReleaseModal = dynamic(
   () => import('@/components/releases/CreateReleaseModal').then((m) => m.CreateReleaseModal),
   { ssr: false }
@@ -629,7 +634,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           It replaced the first-rollout focus (2026-10-24), which locked every
           other area until a rollout existed; see lib/rollout-offer.ts. */}
       {isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
-        <PlanChoiceHost />
+        <>
+          <PlanChoiceHost />
+          <AddArtistHost />
+        </>
       ) : null}
       {/* "Your 3-day trial is on" (#854): once, after the first music, never
           over the planner's questions. Renders nothing until its moment. */}

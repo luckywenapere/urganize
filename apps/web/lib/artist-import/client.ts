@@ -17,9 +17,19 @@ export type CatalogueRow = {
 
 export type LinkCap = { allowed: boolean; limit: number; used: number; remaining: number };
 
-export type Catalogue = { releases: CatalogueRow[]; cap: LinkCap | null; codesPending: number };
+/** The streaming profile an artist's music comes from (#882); null when none is linked. */
+export type CatalogueProfile = { source: 'deezer' | 'itunes'; sync: boolean; syncedAt: string | null };
 
-const EMPTY_CATALOGUE: Catalogue = { releases: [], cap: null, codesPending: 0 };
+export type Catalogue = {
+  releases: CatalogueRow[];
+  cap: LinkCap | null;
+  codesPending: number;
+  profile: CatalogueProfile | null;
+  /** False until the first read answers, so the page can tell empty from loading. */
+  loaded: boolean;
+};
+
+const EMPTY_CATALOGUE: Catalogue = { releases: [], cap: null, codesPending: 0, profile: null, loaded: true };
 
 /** An artist's imported catalogue with codes, links and today's link count. Empty on any failure. */
 export async function fetchArtistCatalogue(artistId: string): Promise<Catalogue> {
@@ -34,6 +44,8 @@ export async function fetchArtistCatalogue(artistId: string): Promise<Catalogue>
       releases: payload.releases ?? [],
       cap: payload.cap ?? null,
       codesPending: payload.codesPending ?? 0,
+      profile: payload.profile ?? null,
+      loaded: true,
     };
   } catch {
     return EMPTY_CATALOGUE;
@@ -100,6 +112,8 @@ export async function saveArtistImport(input: {
   name: string;
   /** A roster artist to put the releases on, instead of matching by name. */
   artistId?: string;
+  /** Keep checking this profile for new drops (#882). Default on. */
+  sync?: boolean;
 }): Promise<SavedImport> {
   try {
     const token = await getAccessToken();

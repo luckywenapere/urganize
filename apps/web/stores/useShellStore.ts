@@ -55,6 +55,11 @@ type ShellStore = {
   openCreate: (plan?: 'template' | 'blank', options?: { origin?: 'choice' | 'hint'; artistId?: string | null }) => void;
   openCreateForArtist: (artistId: string) => void;
   closeCreate: () => void;
+  /** The Add an artist sheet (#882): null when closed. With `artistId` it
+   *  links a streaming profile to that roster artist instead of adding one. */
+  addArtist: { query: string; artistId: string | null; artistName: string | null } | null;
+  openAddArtist: (options?: { query?: string; artistId?: string | null; artistName?: string | null }) => void;
+  closeAddArtist: () => void;
 };
 
 export const useShellStore = create<ShellStore>((set) => ({
@@ -91,6 +96,16 @@ export const useShellStore = create<ShellStore>((set) => ({
   closeCreate: () => set({ createOpen: false, createPlan: null, createOrigin: 'choice', createArtistId: null }),
   openPlanChoice: (options) => set({ planChoiceOpen: true, planChoiceArtistId: options?.artistId ?? null }),
   closePlanChoice: () => set({ planChoiceOpen: false, planChoiceArtistId: null }),
+  addArtist: null,
+  openAddArtist: (options) =>
+    set({
+      addArtist: {
+        query: options?.query ?? '',
+        artistId: options?.artistId ?? null,
+        artistName: options?.artistName ?? null,
+      },
+    }),
+  closeAddArtist: () => set({ addArtist: null }),
 }));
 
 /** Reads the saved choice. Returns undefined when there is none, so a stored
