@@ -33,6 +33,7 @@ import {
   verifyInviteLinkToken,
 } from './invite-link';
 import { checkSeatAllowance, recordLimitHit } from './seats-server';
+import { finishBriefGuestJoin } from './release-brief-guests-server';
 
 const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
 const INVITE_LINKS_TABLE = 'workspace_invite_links';
@@ -403,6 +404,10 @@ export async function claimWorkspaceInvite(
     console.error('[invite-claims] legacy accept update error:', updateResult.error.message);
     return { outcome: 'error' };
   }
+
+  // A guest the brief was shared with (#897 phase 6): their part is assigned
+  // to them now, and a placeholder email becomes theirs. Does nothing otherwise.
+  await finishBriefGuestJoin(admin, { memberId: invite.id, userId, email });
 
   await markInviteeOnboardingComplete(admin, userId);
   return { outcome: 'joined', workspaceId: invite.workspace_id };

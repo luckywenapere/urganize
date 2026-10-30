@@ -25,6 +25,7 @@ import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-constants';
 import { loadCoverArtUrls } from '@/lib/cover-art';
 import { isMissingTableError } from '@/lib/promo-channels';
 import { loadWorkspaceAccessContext, loadWorkspaceMembers } from '@/lib/tasks-server';
+import { listBriefGuests, loadBriefGuestPage, type BriefGuestPage } from '@/lib/release-brief-guests-server';
 import {
   BRIEF_BLOCKS,
   MAX_NOTES,
@@ -105,6 +106,25 @@ export async function canUserManageBriefShare(
   } catch {
     // Fail closed: not being able to read the role means no toggle.
     return false;
+  }
+}
+
+/** Lead (may manage sharing) and guest (read-only but for their part), from one access read. */
+async function briefViewerRights(
+  admin: SupabaseClient,
+  releaseOwnerId: string,
+  user: User
+): Promise<{ canManageShare: boolean; isGuest: boolean }> {
+  if (releaseOwnerId && releaseOwnerId === user.id) return { canManageShare: true, isGuest: false };
+  try {
+    const access = await loadWorkspaceAccessContext(admin, user);
+    const memberRole = access.memberRoleByOwnerId[releaseOwnerId];
+    return {
+      canManageShare: canManageBriefShare({ releaseOwnerId, userId: user.id, memberRole }),
+      isGuest: memberRole === 'guest',
+    };
+  } catch {
+    return { canManageShare: false, isGuest: false };
   }
 }
 
@@ -291,7 +311,7 @@ export async function loadBriefPayload(
   }
 ): Promise<BriefResult<BriefPayload>> {
   const { releaseId } = input;
-  const [briefRead, referencesRead, decisionsRead, revisionsRead, tasks, notes, canManageShare, planSeed, covers, board, seen] =
+  const [briefRead, referencesRead, decisionsRead, revisionsRead, tasks, notes, rights, planSeed, covers, board, seen] =
     await Promise.all([
       readBriefRow(admin, releaseId),
       readReferences(admin, releaseId),
@@ -309,7 +329,7 @@ export async function loadBriefPayload(
         .limit(MAX_REVISIONS),
       readTasks(admin, releaseId),
       readNotes(admin, releaseId),
-      canUserManageBriefShare(admin, input.releaseOwnerId, input.user),
+      briefViewerRights(admin, input.releaseOwnerId, input.user),
       loadPlanSeed(admin, releaseId),
       // A missing cover never fails the brief; the board shows an initials tile.
       loadCoverArtUrls(admin, [{ id: releaseId, artwork_asset_id: input.artworkAssetId }], { thumbs: false }).catch(
@@ -321,6 +341,7 @@ export async function loadBriefPayload(
 
   if (!briefRead.ok) return briefRead;
   if (!referencesRead.ok) return referencesRead;
+  const canManageShare = rights.canManageShare;
   if (decisionsRead.error) return failure(decisionsRead.error, 'Could not load the decisions.');
   if (revisionsRead.error) return failure(revisionsRead.error, 'Could not load the history.');
 
@@ -386,7 +407,7 @@ export async function loadBriefPayload(
       revisions,
       planSeed,
       share: { enabled: brief?.shareEnabled ?? false, token: brief?.shareEnabled ? brief.shareToken : null },
-      viewer: { id: input.user.id, canEdit: true, canManageShare },
+      viewer: { id: input.user.id, canEdit: !rights.isGuest, canManageShare, isGuest: rights.isGuest },
       board: {
         title: input.title || 'Untitled',
         artistName: input.artistName,
@@ -399,6 +420,7 @@ export async function loadBriefPayload(
         canArrange: canManageShare,
         stickies: board.stickies.map((sticky) => ({ ...sticky, authorName: nameOf(sticky.createdBy) })),
         seen,
+        guests: canManageShare ? await listBriefGuests(admin, releaseId) : [],
         pieces: (() => {
           const list = briefPieces(tasks, today);
           return {
@@ -1014,6 +1036,26 @@ export async function loadPublicBrief(token: string): Promise<PublicBriefPayload
       references: referencesRead.ok ? referencesRead.value : [],
       dates: deriveBriefDates({ tasks, releaseDate, today: briefToday() }),
     };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The page a brief guest opens before joining (#897 phase 6): the brief and
+ * their part, by their invite token. No sign-in; null for a link that is
+ * wrong, used, removed or expired, or with the brief switched off.
+ */
+export async function loadBriefGuestInvitePage(token: string): Promise<BriefGuestPage | null> {
+  if (process.env.NEXT_PUBLIC_FEATURE_RELEASE_BRIEF === 'false') return null;
+  try {
+    const admin = publicAdminClient();
+    if (!admin) return null;
+    return await loadBriefGuestPage(admin, token, async (artworkAssetId, releaseId) => {
+      if (!artworkAssetId) return null;
+      const covers = await loadCoverArtUrls(admin, [{ id: releaseId, artwork_asset_id: artworkAssetId }], { thumbs: false });
+      return covers.get(releaseId)?.url ?? null;
+    });
   } catch {
     return null;
   }

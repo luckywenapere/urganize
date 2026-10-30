@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { guestMayChangeTask } from '@/lib/brief-guests';
 import {
   TASK_ATTACHMENTS_TABLE,
   TASK_ATTACHMENTS_BUCKET,
@@ -126,12 +127,16 @@ export async function PATCH(
     const access = await ensureTaskAccess(adminClient, id, auth.user);
     if ('error' in access) return access.error;
 
-    // Guests are read-only (founder decision, 2026-07-23).
-    if (isReadOnlyWorkspaceMember(access.access, access.task.workspace_id)) {
+    let body: unknown = await request.json();
+
+    // Guests are read-only (founder decision, 2026-07-23), with one exception
+    // (Oyin, 31 Oct 2026, #897): the status of an activity assigned to them.
+    if (
+      isReadOnlyWorkspaceMember(access.access, access.task.workspace_id) &&
+      !guestMayChangeTask({ body, assignedTo: access.task.assigned_to_user_id ?? null, userId: auth.user.id })
+    ) {
       return buildReadOnlyResponse();
     }
-
-    let body: unknown = await request.json();
     // `planKey` (URG-258) pins a task to the rollout's short main list, or
     // tucks it behind "Show all". It is not a column: it lives at
     // metadata.planner.key, so it is merged into the row's own metadata here

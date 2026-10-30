@@ -38,7 +38,10 @@ export async function countTeamSeats(
       .from(WORKSPACE_MEMBERS_TABLE)
       .select('id', { count: 'exact', head: true })
       .eq('workspace_id', workspaceId)
-      .neq('status', 'removed');
+      .neq('status', 'removed')
+      // Guests invited from a brief take no paid seat (Oyin, 31 Oct 2026, #897;
+      // capped at 5 per rollout instead, in lib/release-brief-guests-server.ts).
+      .or('brief_release_id.is.null,role.neq.guest');
     if (error) {
       console.error('[seats] could not count team seats:', error.message);
       return null;
@@ -76,9 +79,9 @@ export async function countTeamSeats(
  * every pre-tier plan id all resolve to the uncapped tier, so neither flip capped
  * an existing customer — `entitlements.test.ts` asserts exactly that.
  *
- * The ceiling is read from the tier rather than named here on purpose: Solo's is
- * 2 and Manager's is 4, and hard-coding either would be the third copy of a
- * number that already lives in @urganize/pricing.
+ * The ceiling is read from the tier rather than named here on purpose: the
+ * numbers live in @urganize/pricing (limits.seats), and naming them here made a
+ * copy that went stale (it said Manager was 4 after pricing made it 5).
  */
 export async function checkSeatAllowance(
   client: SupabaseClient,

@@ -21,6 +21,7 @@ import { feelFromModel, type BriefFeel, type BriefProgress } from '@/lib/brief-b
 import type { BoardLayout, NoteKey } from '@/lib/brief-board-layout';
 import type { BriefPiece } from '@/lib/brief-pieces';
 import type { BriefSeen } from '@/lib/brief-present';
+import type { BriefGuest } from '@/lib/release-brief-guests-server';
 import { readPlanKey } from '@/lib/plan-focus';
 import { channelLabel, type Channel } from '@/lib/planner-v2/answers';
 import { readUndatedTaskMeta, relativeWhenLabel } from '@/lib/planner-v2/when';
@@ -104,6 +105,8 @@ export type BriefBoardFacts = {
   };
   /** Who on the team has opened the brief (#897 phase 4). */
   seen: BriefSeen;
+  /** People the brief was shared with (#897 phase 6); only for leads, else empty. */
+  guests: BriefGuest[];
 };
 
 export type BriefReference = {
@@ -180,7 +183,13 @@ export type BriefPayload = {
   /** From the approved plan (planner v2); null when there is none or it has nothing to offer. */
   planSeed: BriefPlanSeed | null;
   share: { enabled: boolean; token: string | null };
-  viewer: { id: string; canEdit: boolean; canManageShare: boolean };
+  viewer: {
+    id: string;
+    canEdit: boolean;
+    canManageShare: boolean;
+    /** A guest of the team (#897 phase 6): reads the brief, ticks only their own part. */
+    isGuest?: boolean;
+  };
   /** The idea round and approval (2026-10-27); absent with the flag off. */
   round?: BriefRound | null;
   /** Everyone's ideas, once the round is closed (or all of them for the owner). */
