@@ -108,8 +108,10 @@ export const ADD_ARTIST_HREF = buildSettingsUrl(ARTISTS_HREF, '', {
   section: 'artists',
 });
 /** The nav word for the 'catalogue' area (Catalogue until 2026-10-17, then
- * Artist; Artists, plural to match the tab, since later that day). */
-export const CATALOGUE_LABEL = 'Artists';
+ * Artist; Artists, plural to match the tab, since later that day; Home since
+ * 2026-10-30, #886, founder: "change the label from Artist to Home"). The
+ * Artists tab inside the section keeps its name. */
+export const CATALOGUE_LABEL = 'Home';
 
 export function buildShellAreas(flags: ShellFlags): ShellArea[] {
   // Artists first and the section's landing, Rollouts second (founder call,
@@ -173,7 +175,7 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
   // Artists, UrgAns, Team (founder, 2026-10-29, #876): Home left the menu.
   return [
     {
-      // Labelled Artists since 2026-10-17 (founder's word); the key stays
+      // Labelled Home since 2026-10-30 (Artists from 2026-10-17); the key stays
       // 'catalogue' so stored state, tours and analytics keep their names.
       key: 'catalogue',
       label: CATALOGUE_LABEL,

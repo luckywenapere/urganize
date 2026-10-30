@@ -152,9 +152,9 @@ describe('shell nav', () => {
     expect(off.subTabs.map((t) => t.action)).toEqual([{ label: 'New rollout', press: 'openCreate' }]);
   });
 
-  it('phone bottom bar is Artists, UrgAns, Team (#876); More holds the rest', () => {
+  it('phone bottom bar is Home, Assistant, Team (#876, #886); More holds the rest', () => {
     expect(buildMobileTabs().map((t) => t.key)).toEqual(['catalogue', 'urgans', 'team']);
-    expect(buildMobileTabs().map((t) => t.label)).toEqual(['Artists', 'Assistant', 'Team']);
+    expect(buildMobileTabs().map((t) => t.label)).toEqual(['Home', 'Assistant', 'Team']);
     // The Artists tab lands on Artists when the artist page is on, Rollouts when it is off.
     expect(buildMobileTabs(buildShellAreas(ALL_ON))[0].href).toBe('/dashboard/artists');
     expect(buildMobileTabs(buildShellAreas(ALL_OFF))[0].href).toBe('/dashboard');
