@@ -177,14 +177,13 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     // stays lit while it is open.
     { ...scene('distribute', 'Distribute now'), isActive: activeScene === 'distribute' || activeScene === 'metadata' },
     flags.files ? scene('files', 'Add files') : null,
-    // ONE row since 2026-10-16 (Pitch this! as one place): the pitch kit and
-    // promo channels live inside it, so "Build your pitch kit" and "Find
-    // promo" are gone from the menu. Old ?scene=pitchkit / ?scene=promo links
-    // open this row (resolveActiveScene). With pitching off, the two old rows
-    // come back so neither feature is stranded.
+    // ONE row since 2026-10-16 (Pitch this! as one place): the pitch kit lives
+    // inside it, so "Build your pitch kit" is gone from the menu. Old
+    // ?scene=pitchkit links open this row (resolveActiveScene). With pitching
+    // off, the kit's own row comes back so it is not stranded. Promo is
+    // hidden everywhere (2026-10-30, #920): no row, whatever the flags say.
     flags.pitching ? scene('pitch', 'Pitch this!') : null,
     !flags.pitching && flags.pitchKit ? scene('pitchkit', 'Build your pitch kit') : null,
-    !flags.pitching ? scene('promo', 'Find promo') : null,
     // Track spend is cut (Oct 16, 2026 brief, URG-319): no row, whatever
     // showSpend says. The spend lines stay in release_spend.
     input.showSpend && !SPEND_CUT ? scene('spend', 'Track spend') : null,

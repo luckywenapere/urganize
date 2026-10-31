@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.229.4",
+    tag: "Pitching",
+    date: "October 31, 2026",
+    highlights: [
+      "Pitch this! is shorter: the Promo list of radio and media channels is gone.",
+    ],
+  },
+  {
     version: "1.229.3",
     tag: "App",
     date: "October 31, 2026",

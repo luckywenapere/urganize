@@ -28,9 +28,7 @@ import { useSceneDataStore } from '@/stores/useSceneDataStore';
 import { MAX_WAITING_PITCHES_PER_RELEASE, countWaitingPitches } from '@/lib/pitching';
 import { CuratorCardListSkeleton } from '@/components/loading/CuratorSkeleton';
 import { CuratorPicker } from './CuratorPicker';
-import { PromoList } from './PromoList';
 import { PitchKitSection, type KitShareState } from '@/components/releases/PitchKitSection';
-import type { Task } from '@/types/tasks';
 import { SentPitchRow } from './SentPitchRow';
 import { EditorialPitchSection } from './EditorialPitchSection';
 import { showEditorialPitch } from '@/lib/release-out';
@@ -66,14 +64,10 @@ const PITCH_KIT_ON = process.env.NEXT_PUBLIC_FEATURE_PITCH_KIT === 'true';
 
 type PitchSceneProps = {
   release: Pick<Release, 'id' | 'title' | 'artistName' | 'releaseDate'>;
-  /** The rollout's activities, so Promo can mark what is already planned. */
-  tasks?: Task[];
-  /** A promo channel was put on the plan; re-read the workspace. */
-  onTaskAdded?: () => void;
   onToast: (message: string, tone: 'success' | 'error' | 'warning') => void;
 };
 
-export function PitchScene({ release, tasks = [], onTaskAdded, onToast }: PitchSceneProps) {
+export function PitchScene({ release, onToast }: PitchSceneProps) {
   const loadScene = useSceneDataStore((state) => state.loadScene);
   const getScene = useSceneDataStore((state) => state.getScene);
   const cached = getScene(release.id, 'pitch');
@@ -116,9 +110,10 @@ export function PitchScene({ release, tasks = [], onTaskAdded, onToast }: PitchS
   const atLimit = waitingCount >= MAX_WAITING_PITCHES_PER_RELEASE;
 
   // 2026-10-16, Pitch this! as one place (founder approved mocks): the kit on
-  // top, then curators, their answers, the editors, and promo. Three tabs
+  // top, then curators, their answers and the editors. Three tabs
   // (Pitch this!, Build your pitch kit, Find promo) became this one, so the
-  // kit link a pitch carries is made on the same screen it is sent from. One
+  // kit link a pitch carries is made on the same screen it is sent from. Promo
+  // was hidden on 2026-10-30 (#920). One
   // accent action on screen at a time: the kit's, until a sheet is open.
   return (
     <div className="mt-6 space-y-10">
@@ -193,8 +188,6 @@ export function PitchScene({ release, tasks = [], onTaskAdded, onToast }: PitchS
       {showEditorialPitch(release.releaseDate) ? (
         <EditorialPitchSection releaseId={release.id} releaseDate={release.releaseDate ?? null} />
       ) : null}
-
-      <PromoList release={release} tasks={tasks} onTaskAdded={onTaskAdded ?? (() => {})} onToast={onToast} />
 
     </div>
   );

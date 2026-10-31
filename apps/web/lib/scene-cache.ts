@@ -170,9 +170,12 @@ export function resolveActiveScene(rawParam: string | null): SceneName | null {
   // Spend is cut (Oct 16, 2026 brief, URG-319): an old ?scene=spend link (the
   // payback email, the Home spend card) lands on the rollout's main view.
   if (scene === 'spend') return null;
-  // Pitch this! holds the kit and promo since 2026-10-16, so their old links
-  // (emails, bookmarks, Plan built's "Find promo") open it.
-  if ((scene === 'pitchkit' || scene === 'promo') && PITCHING_ENABLED) return 'pitch';
+  // Pitch this! holds the kit since 2026-10-16, so its old links open it.
+  if (scene === 'pitchkit' && PITCHING_ENABLED) return 'pitch';
+  // Promo is hidden (2026-10-30, #920): an old ?scene=promo link opens Pitch
+  // this!, or the rollout's main view when pitching is off. The
+  // promo_channels rows stay.
+  if (scene === 'promo') return PITCHING_ENABLED ? 'pitch' : null;
   if (scene === 'brief' && !RELEASE_BRIEF_ENABLED) return null;
   return scene;
 }

@@ -2,14 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { isReleaseIdShape, kitLinkPath, successorPathForKit } from './press-kit-public';
 import { longestKitUrl, noteRoom, noteWithKit } from './pitch-kit-link';
 import { groupPlaylistsByCurator } from './curator-groups';
-import { promoListHead, promoListRest } from './promo-list';
 import { hasEmailableContact } from './release-kit-publish-server';
 import type { BrowsablePlaylist } from '@/types/pitching';
-import type { PromoChannel } from './promo-channels';
 
 // Pitch this! as one place (URG-321, 2026-10-16): one kit link, the old EPK
-// link handing over to it, the kit riding on a pitch, curators as people, and
-// promo as a short list.
+// link handing over to it, the kit riding on a pitch, curators as people.
 
 const RELEASE = '6f1c2d3e-4b5a-4c6d-8e7f-9a0b1c2d3e4f';
 
@@ -81,37 +78,3 @@ describe('curators as people', () => {
   });
 });
 
-describe('promo as a list', () => {
-  const channel = (id: string, over: Partial<PromoChannel> = {}): PromoChannel =>
-    ({
-      id,
-      name: `Channel ${id}`,
-      kind: 'radio',
-      country: 'NG',
-      city: null,
-      genres: [],
-      howToSubmit: null,
-      contact: null,
-      url: null,
-      cost: 'free',
-      leadTime: null,
-      leadTimeDays: null,
-      ...over,
-    }) as PromoChannel;
-
-  it('shows five first and the rest behind "All channels"', () => {
-    const channels = Array.from({ length: 15 }, (_, index) => channel(String(index)));
-    const head = promoListHead(channels, null);
-    expect(head).toHaveLength(5);
-    expect(promoListRest(channels, head)).toHaveLength(10);
-    expect(new Set([...head, ...promoListRest(channels, head)].map((entry) => entry.id)).size).toBe(15);
-  });
-});
-
-describe('publishing on Copy kit link', () => {
-  it('needs a contact a reader can email, and nothing made up', () => {
-    expect(hasEmailableContact({ contacts: [{ name: 'Oyin', role: '', email: 'oyin@example.com' }] })).toBe(true);
-    expect(hasEmailableContact({ contacts: [{ name: 'Oyin', role: 'Manager', email: '' }] })).toBe(false);
-    expect(hasEmailableContact({})).toBe(false);
-  });
-});

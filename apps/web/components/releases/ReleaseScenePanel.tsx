@@ -16,7 +16,6 @@ import { AssetSection } from '@/components/releases/AssetSection';
 import { CoverArtSection } from '@/components/releases/CoverArtSection';
 import { CalendarScene } from '@/components/content-calendar/CalendarScene';
 import { PitchScene } from '@/components/pitching/PitchScene';
-import { PromoChannelsSection } from '@/components/promo/PromoChannelsSection';
 import { TimelineScene } from '@/components/releases/TimelineScene';
 import { ReleaseChatSection } from '@/components/releases/ReleaseChatSection';
 import { PitchKitSection } from '@/components/releases/PitchKitSection';
@@ -66,7 +65,6 @@ const SECTION_SCENES = [
   'pitchkit',
   'distribute',
   'spend',
-  'promo',
   'brief',
 ] as const;
 
@@ -248,12 +246,7 @@ export function ReleaseScenePanel({
       {scene === 'coverart' ? <CoverArtSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'files' ? <AssetSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'pitch' ? (
-        <PitchScene
-          release={release}
-          tasks={tasks}
-          onTaskAdded={onTaskRescheduled ?? (() => {})}
-          onToast={onToast}
-        />
+        <PitchScene release={release} onToast={onToast} />
       ) : null}
       {scene === 'capture' ? <SmartLinkSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'chat' ? <ReleaseChatSection releaseId={release.id} onToast={onToast} /> : null}
@@ -272,15 +265,6 @@ export function ReleaseScenePanel({
           releaseId={release.id}
           releaseTitle={release.title}
           tasks={tasks.map((task) => ({ id: task.id, title: task.title }))}
-          onToast={onToast}
-        />
-      ) : null}
-      {scene === 'promo' ? (
-        <PromoChannelsSection
-          key={release.id}
-          release={release}
-          tasks={tasks}
-          onTaskAdded={onTaskRescheduled ?? (() => {})}
           onToast={onToast}
         />
       ) : null}
