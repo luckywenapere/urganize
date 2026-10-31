@@ -25,17 +25,11 @@ import { FounderBillingAlertEmail } from './templates/FounderBillingAlertEmail';
 //     the two internal founder alerts opt out.
 
 const TEMPLATES_DIR = join(__dirname, 'templates');
-const MARKETING_FOOTER = join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  'homepage',
-  'app',
-  'components',
-  'marketing',
-  'MarketingFooter.tsx'
-);
+const HOMEPAGE = join(__dirname, '..', '..', '..', 'homepage');
+const MARKETING_FOOTER = join(HOMEPAGE, 'app', 'components', 'marketing', 'MarketingFooter.tsx');
+// Since 2026-10-29 the footer (and the header's Community menu) map over this
+// shared list instead of declaring the accounts inline.
+const MARKETING_SOCIALS = join(HOMEPAGE, 'lib', 'socials.ts');
 
 const hrefs = SOCIAL_LINKS.map((link) => link.href);
 
@@ -45,8 +39,13 @@ function expectAllLinks(part: string) {
 
 describe('SOCIAL_LINKS', () => {
   it('is the same list, in the same order, as the marketing site footer', () => {
-    const source = readFileSync(MARKETING_FOOTER, 'utf8');
-    const onSite = [...source.matchAll(/href:\s*"([^"]+)",\s*label:\s*"Urganize on ([^"]+)"/g)].map(
+    // The footer must still render the shared list, or comparing against
+    // that list would prove nothing about the footer.
+    const footer = readFileSync(MARKETING_FOOTER, 'utf8');
+    expect(footer).toContain('from "@/lib/socials"');
+    expect(footer).toMatch(/SOCIAL_LINKS\.map\(/);
+    const source = readFileSync(MARKETING_SOCIALS, 'utf8');
+    const onSite = [...source.matchAll(/href:\s*"([^"]+)",[^{}]*?label:\s*"Urganize on ([^"]+)"/g)].map(
       (match) => ({ href: match[1], label: match[2] })
     );
     // Guards the guard: a footer whose shape changed would otherwise compare

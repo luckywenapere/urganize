@@ -115,8 +115,8 @@ export async function readLinksUsedToday(admin: SupabaseClient, workspaceId: str
   return (made.count ?? 0) + (inFlight.count ?? 0);
 }
 
-export async function readLinkCap(admin: SupabaseClient, workspaceId: string): Promise<LinkCapVerdict> {
-  const [limit, used] = await Promise.all([readDailyLimit(admin), readLinksUsedToday(admin, workspaceId)]);
+export async function readLinkCap(admin: SupabaseClient, workspaceId: string, nowMs: number = Date.now()): Promise<LinkCapVerdict> {
+  const [limit, used] = await Promise.all([readDailyLimit(admin), readLinksUsedToday(admin, workspaceId, nowMs)]);
   return decideLinkCap({ used, limit });
 }
 
@@ -180,7 +180,7 @@ export async function makeCatalogueLink(
 
   if (!isAltlinkEnabled() || (!input.client && !isAltlinkConfigured())) return { kind: 'unavailable' };
 
-  const cap = await readLinkCap(admin, row.workspace_id);
+  const cap = await readLinkCap(admin, row.workspace_id, nowMs);
   if (!cap.allowed) return { kind: 'cap', cap };
 
   let claimId: string;
