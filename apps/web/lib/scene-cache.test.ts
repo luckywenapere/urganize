@@ -328,13 +328,13 @@ describe('resolveActiveScene', () => {
     }
   });
 
-  it('opens Pitch this! for old pitch kit and promo links (2026-10-16)', async () => {
+  it('opens Pitch this! for old pitch kit and promo links (2026-10-16, promo hidden 2026-10-30)', async () => {
     const on = await loadResolver(true);
     expect(on.resolveActiveScene('pitchkit')).toBe('pitch');
     expect(on.resolveActiveScene('promo')).toBe('pitch');
-    // With pitching off, promo keeps its own scene and nothing is stranded.
+    // Promo is hidden (#920): with pitching off, an old link opens the main view.
     const off = await loadResolver(false);
-    expect(off.resolveActiveScene('promo')).toBe('promo');
+    expect(off.resolveActiveScene('promo')).toBeNull();
   });
 
   it('treats the four flag-gated scenes as closed when their flags are off', async () => {

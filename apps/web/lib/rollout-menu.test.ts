@@ -48,12 +48,13 @@ function build(over: Partial<RolloutMenuInput> = {}): RolloutMenuEntry[] {
 
 const keysOf = (entries: RolloutMenuEntry[]) => entries.map((entry) => entry.key);
 
-/** Since 2026-10-16 the pitch kit and promo live inside Pitch this!, so with
- *  pitching on their own rows are not in the menu. */
-const FOLDED_INTO_PITCH: ReleaseMenuKey[] = ['pitchkit', 'promo'];
+/** Since 2026-10-16 the pitch kit lives inside Pitch this!, so with pitching
+ *  on its own row is not in the menu. */
+const FOLDED_INTO_PITCH: ReleaseMenuKey[] = ['pitchkit'];
 /** Fill in details opens from inside Distribute only (2026-10-29, #848), and
- *  the cover is changed on the cover itself, not a row (2026-10-29, #847). */
-const NOT_A_ROW: ReleaseMenuKey[] = ['spend', 'metadata', 'coverart'];
+ *  the cover is changed on the cover itself, not a row (2026-10-29, #847).
+ *  Promo is hidden everywhere (2026-10-30, #920). */
+const NOT_A_ROW: ReleaseMenuKey[] = ['spend', 'metadata', 'coverart', 'promo'];
 const ALL_ON_ORDER = RELEASE_MENU_ORDER.filter((key) => !FOLDED_INTO_PITCH.includes(key) && !NOT_A_ROW.includes(key));
 
 /** Which row each feature switch owns. The mapping is the thing being tested,
@@ -82,11 +83,10 @@ const SCENE_ROWS: ReleaseMenuKey[] = [
   'calendar',
   'pitch',
   'pitchkit',
-  'promo',
   'metadata',
   'distribute',
   'files',
-  'capture',
+  'capture',
 ];
 
 
@@ -121,22 +121,21 @@ describe('buildRolloutMenu', () => {
     expect(keys).not.toContain('promo');
   });
 
-  it('gives the pitch kit and promo their own rows back when pitching is off', () => {
+  it('gives the pitch kit its own row back when pitching is off, never promo', () => {
     const keys = keysOf(build({ flags: { ...ALL_ON, pitching: false } }));
     expect(keys).not.toContain('pitch');
     expect(keys).toContain('pitchkit');
-    expect(keys).toContain('promo');
+    expect(keys).not.toContain('promo');
     expect(keysOf(build({ flags: { ...ALL_ON, pitching: false, pitchKit: false } }))).not.toContain('pitchkit');
   });
 
-  it('is only Promo, Distribute and the dialog rows when every feature is off (neither has a switch)', () => {
+  it('is only Distribute and the dialog rows when every feature is off (Distribute has no switch)', () => {
     const allOff = Object.fromEntries(
       Object.keys(ALL_ON).map((flag) => [flag, false])
     ) as RolloutMenuFlags;
     expect(keysOf(build({ flags: allOff, showSpend: false }))).toEqual([
       'distribute',
-      'promo',
-      'share',
+      'share',
       'change-artist',
       'archive',
       'delete',
