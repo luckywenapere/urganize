@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ArrowUpRight, ChevronLeft, ChevronRight } from '@/components/icons';
 import { briefCall } from '@/components/releases/brief-shared';
 import { RELEASE_BRIEF_ENABLED } from '@/lib/release-brief-flag';
@@ -95,15 +95,44 @@ export function BriefEntryCard({
   releaseId,
   title,
   coverUrl,
+  cover,
 }: {
   releaseId: string;
   title: string;
   coverUrl: string | null | undefined;
+  /** An editable cover in place of the plain thumb (the phone, Oct 31, 2026:
+   *  the slim header has no cover, so the cover is changed here). */
+  cover?: ReactNode;
 }) {
   const { openScene } = useSceneOverlay();
   const summary = useBriefSummary(releaseId);
-  if (!RELEASE_BRIEF_ENABLED) return null;
+  // With the brief off, the cover still needs a home on the phone.
+  if (!RELEASE_BRIEF_ENABLED) return cover ? <div className="mb-4">{cover}</div> : null;
   const line = summary ? (summary.written ? summary.line : 'Write the brief') : '';
+  const body = (
+    <>
+      <span className="flex min-w-0 flex-1 flex-col leading-tight">
+        <span className="text-[14px] font-semibold text-content-primary">Brief</span>
+        <span className="truncate text-[13px] text-content-tertiary">{line || 'Open the brief'}</span>
+      </span>
+      <ChevronRight className="mr-1 h-5 w-5 shrink-0 text-content-tertiary" aria-hidden="true" />
+    </>
+  );
+  if (cover) {
+    // Two taps on one card: the cover edits the cover, the rest opens the brief.
+    return (
+      <div className="mb-4 flex w-full items-center gap-3 rounded-2xl border border-stroke-control bg-bg-surface p-2">
+        {cover}
+        <button
+          type="button"
+          onClick={() => openScene('brief', releaseId)}
+          className="motion-focus motion-press -my-2 -mr-2 flex min-h-[60px] min-w-0 flex-1 touch-manipulation items-center gap-3 rounded-r-2xl py-2 pr-2 text-left transition-colors hover:bg-bg-hover"
+        >
+          {body}
+        </button>
+      </div>
+    );
+  }
   return (
     <button
       type="button"
@@ -111,11 +140,7 @@ export function BriefEntryCard({
       className="motion-focus motion-press mb-4 flex w-full touch-manipulation items-center gap-3 rounded-2xl border border-stroke-control bg-bg-surface p-2 text-left transition-colors hover:bg-bg-hover"
     >
       <CoverThumb coverUrl={coverUrl} title={title} size={44} />
-      <span className="flex min-w-0 flex-1 flex-col leading-tight">
-        <span className="text-[14px] font-semibold text-content-primary">Brief</span>
-        <span className="truncate text-[13px] text-content-tertiary">{line || 'Open the brief'}</span>
-      </span>
-      <ChevronRight className="mr-1 h-5 w-5 shrink-0 text-content-tertiary" aria-hidden="true" />
+      {body}
     </button>
   );
 }

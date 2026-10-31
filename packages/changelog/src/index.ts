@@ -41,6 +41,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.229.2",
+    tag: "Rollouts",
+    date: "October 31, 2026",
+    highlights: [
+      "On your phone, a rollout's top is now one slim line: the name, how much is done, and the menu. It stays put as you scroll.",
+      "The Brief is always one tap away under it, and you change the cover by tapping the cover on the Brief card.",
+      "Add idea, Select and Group by are in the rollout menu now, and the search box above the activities is gone.",
+      "The Team row is gone from the menu under your photo. Team is still a tab at the top.",
+    ],
+  },
+  {
     version: "1.229.1",
     tag: "Rollouts",
     date: "October 31, 2026",

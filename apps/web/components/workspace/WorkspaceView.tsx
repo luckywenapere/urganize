@@ -7,6 +7,7 @@ import { artistHref, isArtistPageEnabled } from '@/lib/artist-page';
 import dynamic from 'next/dynamic';
 import { AlertCircle } from '@/components/icons';
 import { RolloutPhoneHeader } from './RolloutPhoneHeader';
+import { RolloutCoverTile } from './RolloutCoverTile';
 import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
 import { useAuthStore } from '@/lib/auth-store';
 import { isCatalogRequested, markCatalogRequested } from '@/lib/catalog-intent';
@@ -1776,11 +1777,11 @@ export function WorkspaceView() {
           <div className="flex min-h-0 flex-1 flex-col lg:hidden">
             {scopedReleaseId && scopedReleaseSlim ? (
               <>
-                {/* The decluttered phone header (rollout declutter, founder
-                    approved Oct 18, 2026): bare back chevron (always
-                    rendered, so even a one-rollout team can get out), artist
-                    eyebrow and serif title, search and menu icons, then ONE
-                    meta line with the page's one count. The MOTION bar and
+                {/* The slim phone header (founder approved mock, Oct 31,
+                    2026; decluttered first Oct 18): a sticky line with the
+                    back chevron (always rendered, so even a one-rollout team
+                    can get out), the title, the page's one count, search and
+                    menu icons, then the artist and release line. The MOTION bar and
                     the phase line's second count are gone from the phone; the
                     phase counts live in Work the plan and on the computer.
                     The check before distribution is one divider row right
@@ -1795,9 +1796,6 @@ export function WorkspaceView() {
                 ) : (
                 <RolloutPhoneHeader
                   releaseId={scopedReleaseSlim.id}
-                  coverUrl={scopedCoverUrl}
-                  onToast={showHeaderToast}
-                  artistId={scopedReleaseSlim.artistId}
                   artistName={scopedReleaseSlim.artistName}
                   title={scopedReleaseSlim.title}
                   releaseDate={scopedReleaseSlim.releaseDate}
@@ -1808,15 +1806,25 @@ export function WorkspaceView() {
                   showMeta={bodyIsMainView}
                   showSearch={panelBody === 'timeline' && !showRotatePrompt && scopedTasks.length > 0}
                   planView={bodyIsMainView && scopedTasks.length > 0 ? (panelBody as PlanView) : null}
-                  onAddIdea={addIdea && scopedReleaseSlim.releaseDate && !onlyPreProductionWork(scopedTasks) ? addIdea : undefined}
                   below={
                     <>
-                      {/* The brief's door on a phone (#902): a card under the title. */}
-                      {bodyIsMainView && planBuilt ? (
+                      {/* The brief's door on a phone (#902): a card under the
+                          title, always on since the slim header (Oct 31, 2026),
+                          planned or not. Its cover is the phone's cover editor. */}
+                      {bodyIsMainView ? (
                         <BriefEntryCard
                           releaseId={scopedReleaseSlim.id}
                           title={scopedReleaseSlim.title}
                           coverUrl={scopedCoverUrl}
+                          cover={
+                            <RolloutCoverTile
+                              releaseId={scopedReleaseSlim.id}
+                              title={scopedReleaseSlim.title}
+                              coverUrl={scopedCoverUrl}
+                              onToast={showHeaderToast}
+                              size={44}
+                            />
+                          }
                         />
                       ) : null}
                       {isDesktopViewport ? null : distributionStatusStrip}
@@ -1841,6 +1849,7 @@ export function WorkspaceView() {
                   // The desktop copy is mounted too (hidden), and its portalled
                   // sheet stacked a second menu on the phone (Oct 18, 2026).
                   phoneMenu
+                  onAddIdea={addIdea && scopedReleaseSlim.releaseDate && !onlyPreProductionWork(scopedTasks) ? addIdea : undefined}
                   activitiesBanner={activitiesBannerNode}
                   activitiesFooter={roleGapsFooter}
                   bannerReplacesEmptyState={bannerReplacesEmptyState}

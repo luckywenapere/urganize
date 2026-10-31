@@ -10,7 +10,6 @@ import {
   HandshakeLine,
   Search,
   Settings,
-  Users,
   X,
   type LucideProps,
 } from '@/components/icons';
@@ -162,10 +161,8 @@ function MenuBody({
   const subline = [role, workspaceName].filter(Boolean).join(' · ');
   const relationships = areas.find((area) => area.key === 'relationships' && area.live) ?? null;
   const opportunities = areas.find((area) => area.key === 'opportunities') ?? null;
-  // The Team tab (#853). On a phone this sheet is the swipe layout's menu, so
-  // Team needs its row here; it takes the place Connections had (retired the
-  // same day). A view that tucks Team (solo artist) has no team area.
-  const team = areas.find((area) => area.key === 'team') ?? null;
+  // No Team row (founder, Oct 31, 2026): Team is a tab at the top of the
+  // phone already, so the row here was a second door to the same page.
 
   if (view === 'help') {
     return (
@@ -254,7 +251,6 @@ function MenuBody({
             }
           />
         ) : null}
-        {team ? <MenuLink href={team.href} icon={Users} label="Team" onClose={onClose} /> : null}
         <li>
           <button
             type="button"
