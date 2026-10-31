@@ -15,8 +15,10 @@ import { useCoverArtUpload } from '@/components/releases/useCoverArtUpload';
 type Tone = 'success' | 'error' | 'warning';
 
 /**
- * The cover tile beside the phone rollout title (founder approved mock, Oct 24,
- * 2026: "this menu is too crowded", cover art goes on the image slot).
+ * The cover tile on the phone (founder approved mock, Oct 24, 2026: "this
+ * menu is too crowded", cover art goes on the image slot). It sat beside the
+ * rollout title until the slim header (Oct 31, 2026) and sits on the Brief
+ * card now, at 44.
  *
  * Empty: a dashed square with a plus. Tapping it opens the file picker straight
  * away, so adding a cover is one tap. Filled: the cover itself. Tapping it opens
@@ -29,11 +31,13 @@ export function RolloutCoverTile({
   title,
   coverUrl,
   onToast,
+  size = 55,
 }: {
   releaseId: string;
   title: string;
   coverUrl: string | null | undefined;
   onToast: (message: string, tone: Tone) => void;
+  size?: 44 | 55;
 }) {
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
   const setScene = useSceneDataStore((state) => state.setScene);
@@ -110,7 +114,9 @@ export function RolloutCoverTile({
         type="button"
         onClick={onTileClick}
         aria-label={coverUrl ? `Cover art for ${title}. Change or remove` : `Add cover art for ${title}`}
-        className={`motion-focus motion-press relative grid h-[55px] w-[55px] shrink-0 touch-manipulation place-items-center overflow-hidden rounded-[13px] ${
+        className={`motion-focus motion-press relative grid shrink-0 touch-manipulation place-items-center overflow-hidden ${
+          size === 44 ? 'h-11 w-11 rounded-[10px]' : 'h-[55px] w-[55px] rounded-[13px]'
+        } ${
           coverUrl ? 'bg-bg-surface' : 'bg-bg-hover'
         }`}
       >

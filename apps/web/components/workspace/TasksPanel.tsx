@@ -5,7 +5,9 @@ import { createPortal } from 'react-dom';
 import { DialogPanel } from '@/components/shared/DialogPanel';
 import {
   ChevronDown,
+  ListChecks,
   Plus,
+  Sparkles,
   X,
 } from '@/components/icons';
 import {
@@ -266,6 +268,8 @@ type TasksPanelProps = {
    * stray Group by on the page bar beside the timeline's own (2026-10-16).
    */
   pageBarTools?: boolean;
+  /** Opens the idea box; a row in the phone's Rollout menu (Oct 31, 2026). */
+  onAddIdea?: () => void;
   /**
    * Whether this mount owns the phone's Rollout menu sheet. True only on the
    * phone branch's mount in WorkspaceView. WorkspaceDesktopFocused mounts a
@@ -306,6 +310,7 @@ export function TasksPanel({
   simple = false,
   pageBarTools = true,
   phoneMenu = false,
+  onAddIdea,
 }: TasksPanelProps) {
   // openTask opens the global task detail pop-up mounted by TaskUIProvider —
   // this panel stays where it is underneath the modal.
@@ -625,6 +630,47 @@ export function TasksPanel({
     </div>
   );
 
+  // The plan tools in the phone's Rollout menu, at the thumb end (Oct 31,
+  // 2026): Add idea, Select and Group by left the page for the slim header.
+  const listShowing = Boolean(scopedRelease) && tasks.length > 0 && !simple && !sceneContent;
+  const menuToolRow =
+    'motion-focus flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-left text-base text-content-primary transition-colors hover:bg-bg-hover';
+  const menuTools =
+    onAddIdea || listShowing ? (
+      <div className="shrink-0 border-t border-stroke-subtle px-2 pt-1" data-rollout-menu-tools>
+        {onAddIdea ? (
+          <button
+            type="button"
+            className={menuToolRow}
+            onClick={() => {
+              closeMobilePanels();
+              onAddIdea();
+            }}
+          >
+            <Sparkles className="h-5 w-5 shrink-0 text-content-tertiary" aria-hidden="true" />
+            Add idea
+          </button>
+        ) : null}
+        {listShowing && (selectableIds.length > 0 || selecting) ? (
+          <button
+            type="button"
+            className={menuToolRow}
+            aria-pressed={selecting}
+            onClick={() => {
+              closeMobilePanels();
+              if (selecting) exitSelecting();
+              else setSelecting(true);
+            }}
+          >
+            <ListChecks className="h-5 w-5 shrink-0 text-content-tertiary" aria-hidden="true" />
+            {selecting ? 'Stop selecting' : 'Select activities'}
+          </button>
+        ) : null}
+        {listShowing ? <div className="flex min-h-12 items-center px-3 text-base">{groupByControl(false)}</div> : null}
+      </div>
+    ) : null;
+
+
   return (
     // `min-w-0` here is defensive: the panel is rendered both inside the
     // desktop two-pane grid (where the grid item carries min-w-0) AND as a
@@ -717,7 +763,10 @@ export function TasksPanel({
       ) : (
       <div className="space-y-[13px]">
         {/* 13 between the rows, on the golden scale (#926). */}
+        {/* No search row on a phone (founder, Oct 31, 2026): hidden below lg.
+            On a computer the tools still portal up to the page bar. */}
         {scopedRelease && tasks.length > 0 && !simple && !(menuFolded && !plan.filtering) ? (
+          <div className="hidden lg:contents" data-activities-phone-search-hidden>
           <PlanListControls
             plan={plan}
             phoneSearchOnly
@@ -730,15 +779,11 @@ export function TasksPanel({
               </>
             }
           />
-        ) : null}
-        {/* Below lg Group by keeps its own row; on a computer it is on the
-            page bar line with the other plan tools (2026-10-15). */}
-        {scopedRelease && tasks.length > 0 && !simple && !(menuFolded && !plan.filtering) ? (
-          <div className="flex items-center justify-between gap-3 lg:hidden">
-            {groupByControl(false)}
-            {selectControl(false)}
           </div>
         ) : null}
+        {/* Below lg, Group by and Select are in the Rollout menu (slim header,
+            founder approved mock, Oct 31, 2026); on a computer they are on the
+            page bar line with the other plan tools (2026-10-15). */}
         {/* Every rollout at once has no plan tools row, so Select gets its own. */}
         {!scopedRelease && tasks.length > 0 ? (
           <div className="flex justify-end">{selectControl(false)}</div>
@@ -1030,6 +1075,7 @@ export function TasksPanel({
           actions={orderForThumb(moreMenuActions)}
           onSelect={handleMoreMenuSelect}
           onClose={closeMobilePanels}
+          tools={menuTools}
         />
       ) : null}
       {scopedRelease ? <PlanSuggestionToast /> : null}
@@ -1059,6 +1105,7 @@ function RolloutMenuSheet({
   actions,
   onSelect,
   onClose,
+  tools,
 }: {
   /** Sliding away: drawn for its exit, click-through (lib/morph.ts). */
   closing?: boolean;
@@ -1066,6 +1113,8 @@ function RolloutMenuSheet({
   actions: readonly RolloutMenuAction[];
   onSelect: (action: RolloutMenuAction) => void;
   onClose: () => void;
+  /** Add idea, Select and Group by, under the list by the thumb. */
+  tools?: ReactNode;
 }) {
   const listRef = useRef<HTMLUListElement>(null);
   useEffect(() => {
@@ -1139,6 +1188,7 @@ function RolloutMenuSheet({
             </li>
           ))}
         </ul>
+        {tools}
       </DialogPanel>
     </div>,
     document.body

@@ -28,8 +28,8 @@ describe('phone rollout declutter', () => {
   it('keeps one count on the phone: no Motion bar and no phase line on the phone timeline', () => {
     expect(view).toContain('<RolloutPhoneHeader');
     expect(view).not.toMatch(/>\s*Motion\s*</);
-    expect(header).toContain('{rolloutMetaLine(releaseDate)}');
-    expect(header.match(/\{done\}\/\{total\}/g)).toHaveLength(2); // the header and its scrolled form, never both on screen
+    expect(header).toContain('rolloutMetaLine(releaseDate)');
+    expect(header.match(/\{done\}\/\{total\}/g)).toHaveLength(1); // the one slim line, sticky
     // The phase strip only draws off the phone.
     expect(timeline).toMatch(/\{phone \? \([\s\S]*?\) : \([\s\S]*?<RolloutPhaseStrip/);
   });
@@ -37,7 +37,7 @@ describe('phone rollout declutter', () => {
   it('puts search and the menu in the header, and the menu opens the same sheet', () => {
     expect(header).toContain('aria-label="Search activities"');
     expect(header).toContain('aria-label="Rollout menu"');
-    expect(header).toContain("data-tour={tour ? 'rollout-menu' : undefined}");
+    expect(header).toContain('data-tour="rollout-menu"');
     // Mounted through usePresence for its slide down (morph pass, Oct 18, 2026).
     expect(panel).toContain('usePresence(phoneMenu && hasMobileMenu && phoneMenuOpen)');
     expect(panel).toContain('{phoneMenu && hasMobileMenu && menuPresence.mounted ? (');
@@ -75,6 +75,10 @@ describe('phone rollout declutter', () => {
     expect(timeline).toContain('Done earlier</span>');
   });
 
+  it('has no search row above the Activities list on a phone (Oct 31, 2026)', () => {
+    expect(panel).toContain('<div className="hidden lg:contents" data-activities-phone-search-hidden>');
+  });
+
   it('heads weeks with human dates, never an ISO date', () => {
     expect(timeline).toContain('phoneWeekHeading(group.week, releaseDate)');
     expect(timeline).not.toContain('isoForDayOffset(releaseDate, group.week.startDay)');
@@ -98,19 +102,24 @@ describe('phone rollout declutter', () => {
     expect(strip).not.toContain('Before you order distribution');
   });
 
-  it('lays the header out in two rows on golden-ratio steps (mock option A, Oct 26, 2026)', () => {
-    const tile = read('components/workspace/RolloutCoverTile.tsx');
-    // Back and the icons on their own row, then the cover beside the title.
-    const navRow = header.indexOf('mb-[13px] flex items-center justify-between');
-    const back = header.indexOf('aria-label={backLabel}');
-    const titleRow = header.indexOf('flex items-center gap-[13px]');
-    expect(navRow).toBeGreaterThan(-1);
-    expect(back).toBeGreaterThan(navRow);
-    expect(titleRow).toBeGreaterThan(back);
-    // Cover 55 = eyebrow line 21 + title line 34; no dashed line on an empty cover.
-    expect(tile).toContain('h-[55px] w-[55px]');
-    expect(tile).not.toContain('border-dashed');
-    expect(header).toContain('flex h-[21px]');
-    expect(header).toContain('leading-[34px]');
+  it('keeps the header slim: one sticky line, no cover tile, eyebrow or progress bar (founder approved mock, Oct 31, 2026)', () => {
+    expect(header).toContain('<SlimTitle');
+    expect(header).toContain('sticky top-0');
+    expect(header).not.toContain('RolloutCoverTile');
+    expect(header).not.toContain('ArtistFace');
+    expect(header).not.toContain('IntersectionObserver');
+    expect(header).not.toContain('onAddIdea');
+  });
+
+  it('shows the brief card always, with the cover editor on it', () => {
+    expect(view).toMatch(/\{bodyIsMainView \? \(\s*<BriefEntryCard/);
+    expect(view).toMatch(/cover=\{\s*<RolloutCoverTile[\s\S]*?size=\{44\}/);
+  });
+
+  it('moves Add idea, Select and Group by into the Rollout menu on a phone', () => {
+    expect(panel).toContain('tools={menuTools}');
+    expect(panel).toContain('data-rollout-menu-tools');
+    expect(panel).toContain("{listShowing ? <div className=\"flex min-h-12 items-center px-3 text-base\">{groupByControl(false)}</div> : null}");
+    expect(panel).not.toContain('<div className="flex items-center justify-between gap-3 lg:hidden">');
   });
 });
