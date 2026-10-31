@@ -42,7 +42,9 @@ const config: ExpoConfig = {
   // Unchanged from the Capacitor shell: Google sign-in returns here, and the
   // Supabase redirect allowlist already carries com.urganize.app://auth/callback.
   scheme: 'com.urganize.app',
-  orientation: 'portrait',
+  // Turns with the phone (founder, Oct 31, 2026); the page lays itself out
+  // for the width it gets, and the safe area covers every edge (App.tsx).
+  orientation: 'default',
   icon: './assets/icon.png',
   userInterfaceStyle: 'automatic',
   backgroundColor: INK,
