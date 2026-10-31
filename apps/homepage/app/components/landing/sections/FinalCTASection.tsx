@@ -43,7 +43,7 @@ export function FinalCTASection() {
             clear of the header, not hidden behind it (scroll-mt-24 settled it
             flush against the header). */}
         <div id="join" className="scroll-mt-28 text-center">
-          <h2 className={centeredHeadlineClass}>Your next release, on plan.</h2>
+          <h2 className={centeredHeadlineClass}>Take your next release from idea to execution.</h2>
 
           {/* The waitlist form, always open (2026-10-07). */}
           <div className="relative z-[60] mt-10 flex w-full flex-col items-center gap-4">

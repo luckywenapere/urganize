@@ -45,7 +45,7 @@ export function buildShareUrl(origin: string, code: string): string {
 }
 
 export function buildShareMessage(url: string): string {
-  return `I'm on the waitlist for Urganize, where music teams plan every release and deliver it on time. Join with my link and we both move up: ${url}`;
+  return `I'm on the waitlist for Urganize, where music teams manage everything from idea to execution. Join with my link and we both move up: ${url}`;
 }
 
 export function shareLinkLabel(url: string): string {

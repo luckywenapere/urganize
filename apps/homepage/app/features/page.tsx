@@ -13,7 +13,7 @@ import { PageDawn } from "../components/marketing/PageDawn";
 export const metadata: Metadata = buildPageMetadata({
   title: "Music release plan, tasks and press kit",
   description:
-    "Every release, on plan. Add a release and get the plan, week by week to release day, with an owner on every task. Plus UrgAns.",
+    "From idea to execution. Add a release and get the plan, week by week to release day, with an owner on every task. Plus UrgAns.",
   path: "/features",
 });
 

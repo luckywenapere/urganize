@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   ...buildPageMetadata({
     title: "Release planning for AI artists",
     description:
-      "Making the song got fast. The rollout did not. Every release, on plan: add a drop, get the plan week by week to release day and an owner on every activity.",
+      "Making the song got fast. The rollout did not. From idea to execution: add a drop, get the plan week by week to release day and an owner on every activity.",
     path: "/for-ai-artists",
   }),
   robots: { index: false, follow: false },

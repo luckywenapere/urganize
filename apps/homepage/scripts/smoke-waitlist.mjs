@@ -24,10 +24,11 @@ const baseUrl = process.env.WAITLIST_SMOKE_URL ?? "http://localhost:3000";
 // database and a smoke test must not add rows to it.
 //
 // The hero text is matched lower-cased on the founder's short line (the h1
-// since 2026-10-17, and the footer tagline), so a copy pass that rewords
+// since 2026-10-17, and the footer tagline; "From idea to execution." since
+// 2026-10-31, #944), so a copy pass that rewords
 // one sentence does not break the test. If the positioning line ever changes,
 // change this string with it.
-const heroText = "every release, on plan";
+const heroText = "from idea to execution";
 const smokeEmail = "smoke-test@example.com";
 const viewports = [
   { label: "desktop 1280x900", width: 1280, height: 900, mobile: false },
