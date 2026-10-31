@@ -3,6 +3,8 @@ import { FAQ_ITEMS } from "@/content/faq";
 import {
   buildPageMetadata,
   LANDING_DESCRIPTION,
+  LANDING_SHARE_DESCRIPTION,
+  LANDING_SHARE_TITLE,
   LANDING_TITLE,
 } from "@/lib/seo";
 import {
@@ -32,6 +34,9 @@ export const metadata: Metadata = buildPageMetadata({
   title: LANDING_TITLE,
   description: LANDING_DESCRIPTION,
   path: "/",
+  // Link previews say the share card's line (#939); search keeps the above.
+  shareTitle: LANDING_SHARE_TITLE,
+  shareDescription: LANDING_SHARE_DESCRIPTION,
 });
 
 // FAQPage structured data, built from the SAME array FaqSection renders, so

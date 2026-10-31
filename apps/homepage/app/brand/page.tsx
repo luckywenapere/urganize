@@ -85,7 +85,7 @@ const LOGO_DOWNLOADS = [
 ] as const;
 
 const OTHER_ASSETS = [
-  { label: "Social share image (PNG)", href: "/opengraph-image.png", note: "1200×630" },
+  { label: "Social share image (JPG)", href: "/opengraph-image.jpg", note: "1200×630" },
   {
     label: "Product screenshot: rollouts",
     href: "/images/product/workspace-releases.png",

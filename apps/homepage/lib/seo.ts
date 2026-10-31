@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import {
   BRAND_LINE,
   CANONICAL_DESCRIPTION,
-  ONE_LINER,
-  PROMISE_LINE,
+  SHARE_DESCRIPTION,
+  SHARE_HEADLINE,
+  SHARE_TITLE,
 } from "./positioning";
 
 export const SITE_URL = "https://urganize.app";
@@ -15,7 +16,7 @@ const SITE_NAME = "Urganize";
 export const ORGANIZATION_ID = `${SITE_URL}/#organization`;
 
 // The share image, for schemas that want an image URL.
-export const SHARE_IMAGE_URL = `${SITE_URL}/opengraph-image.png`;
+export const SHARE_IMAGE_URL = `${SITE_URL}/opengraph-image.jpg`;
 
 // The landing page's title and description live here, not in the two files
 // that render them: app/layout.tsx needs them for the four JSON-LD schemas
@@ -43,6 +44,11 @@ export const SHARE_IMAGE_URL = `${SITE_URL}/opengraph-image.png`;
 export const LANDING_TITLE = BRAND_LINE;
 export const LANDING_DESCRIPTION = CANONICAL_DESCRIPTION;
 
+// What a shared urganize.app link previews as (#939): the share card's line,
+// while search keeps LANDING_TITLE and LANDING_DESCRIPTION above.
+export const LANDING_SHARE_TITLE = SHARE_TITLE;
+export const LANDING_SHARE_DESCRIPTION = SHARE_DESCRIPTION;
+
 // Absolute, canonical share image. Served as a static asset from public/
 // (NOT the app/opengraph-image.png file convention), so the URL is stable
 // across deploys and always resolves on the public domain. This is the
@@ -55,33 +61,37 @@ export const LANDING_DESCRIPTION = CANONICAL_DESCRIPTION;
 // platforms cache whatever bytes they first fetch at a given image URL and
 // don't reliably refetch on a silent file swap — after URG-149 replaced the
 // PNG, X kept serving its old cached copy at the same unversioned URL.
-// Bump this string every time public/opengraph-image.png changes so the
+// Bump this string every time public/opengraph-image.jpg changes so the
 // URL is new to every platform and the very next fetch pulls fresh bytes,
 // instead of depending on a manual re-scrape request or an unknown TTL.
-const SHARE_IMAGE_VERSION = "2026-10-27-artists-and-teams";
+const SHARE_IMAGE_VERSION = "2026-10-31-idea-to-execution";
 
 const SHARE_IMAGE = {
-  url: `${SITE_URL}/opengraph-image.png?v=${SHARE_IMAGE_VERSION}`,
+  url: `${SITE_URL}/opengraph-image.jpg?v=${SHARE_IMAGE_VERSION}`,
   width: 1200,
   height: 630,
-  // Alt mirrors the text baked into the PNG, and is the ONLY machine-readable
+  // Alt mirrors the text baked into the image, and is the ONLY machine-readable
   // record of what that image says, so a regeneration that skipped this line
   // would leave the two describing different products with nothing to catch
   // it. `apps/web/lib/positioning-guard.test.ts` reads this string for exactly
-  // that reason. It composes from ONE_LINER (the short line, the card's
-  // headline) and PROMISE_LINE (the card's second line since 2026-10-17),
+  // that reason. It composes from SHARE_HEADLINE (the card's headline since
+  // 2026-10-31) and SHARE_DESCRIPTION; from 2026-10-17 it was ONE_LINER and
+  // PROMISE_LINE,
   // so it follows the positioning automatically; the VERSION above does not
   // and has to be bumped by hand whenever the card is regenerated.
   //
   // The generator is `apps/homepage/scripts/generate-og-image.mjs`.
-  // Regenerated 2026-10-19 for the new promise line (URG-400, founder approved);
+  // Regenerated 2026-10-31 for the centred "From idea to execution." card
+  // (#939, founder approved; a JPEG since, see the generator); the alt now
+  // composes from SHARE_HEADLINE and SHARE_DESCRIPTION instead.
+  // Before that, regenerated 2026-10-19 for the new promise line (URG-400, founder approved);
   // 2026-10-17 for "Every release, on plan." (URG-334); on
   // 2026-09-24 for "Everything after the music"; twice on
   // 2026-09-11 for the widened category and the audience narrowing; on
   // 2026-09-09 for the release-to-rollout rename and before that for the
   // first category line. Earlier cards used retired taglines, including a
   // banned container metaphor.
-  alt: `${ONE_LINER} ${PROMISE_LINE}`,
+  alt: `Urganize. ${SHARE_HEADLINE} ${SHARE_DESCRIPTION}`,
 };
 
 // Shared per-page metadata shape (canonical + OG + Twitter) so every
@@ -95,10 +105,19 @@ export function buildPageMetadata({
   description,
   path,
   noIndex = false,
+  shareTitle = title,
+  shareDescription = description,
 }: {
   title: string;
   description: string;
   path: string;
+  /**
+   * What link previews (WhatsApp, X, LinkedIn) show, when it should differ
+   * from the search title and description. The homepage passes the share
+   * lines (#939); every other page shows its own title in its preview.
+   */
+  shareTitle?: string;
+  shareDescription?: string;
   /**
    * Keep this page out of search results. Emits `noindex, follow` — the page
    * still passes link equity onward, it just never appears as a result
@@ -123,8 +142,8 @@ export function buildPageMetadata({
       ? { robots: { index: false, follow: true } }
       : {}),
     openGraph: {
-      title,
-      description,
+      title: shareTitle,
+      description: shareDescription,
       url,
       siteName: SITE_NAME,
       locale: "en_US",
@@ -133,8 +152,8 @@ export function buildPageMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title,
-      description,
+      title: shareTitle,
+      description: shareDescription,
       images: [SHARE_IMAGE.url],
     },
   };
