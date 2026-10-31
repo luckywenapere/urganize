@@ -2,6 +2,8 @@
 
 > Moved out of CLAUDE.md on 2026-10-22 (verbatim). "This file", "above", "below" and "the X section" in here refer to the old single CLAUDE.md: find the named section in docs/notes/README.md.
 
+**The marketing site's own gate (2026-10-31, #947):** `the-urganization` reads `apps/homepage/vercel.json` (Root Directory `apps/homepage` since 2026-10-19), so the root `ignoreCommand` below does NOT apply to it. Its gate is `scripts/vercel-ignore-homepage.sh`: build only with `[deploy]` in the message and a change since the last deploy under `apps/homepage/`, `packages/{pricing,ui,config}` or `pnpm-lock.yaml`; version-only `package.json` lines and `packages/changelog` are ignored. Before that, `"main": false` meant urganize.app never deployed from `main` (2026-10-19 to 2026-10-31), and homepage changes waited for a hand deploy.
+
 **Deploys are opt-in since 2026-10-27:** root `vercel.json` carries `ignoreCommand` so a push to `main` only builds when the commit message contains `[deploy]`, on both projects. See the Deploy Configuration section of CLAUDE.md.
 
 **Hosting:** Vercel, two projects pointing at the same GitHub repo:
