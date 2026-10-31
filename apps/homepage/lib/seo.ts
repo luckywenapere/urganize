@@ -25,9 +25,10 @@ export const SHARE_IMAGE_URL = `${SITE_URL}/opengraph-image.jpg`;
 // each string. Two hardcoded copies of a search snippet is a drift hazard on
 // the one page brand queries land on.
 //
-// TITLE: the brand line, and nothing else: "Urganize: Every release, on
-// plan", the founder's short line after the name (2026-10-17; "Everything
-// after the music" from 2026-09-24). 32 characters,
+// TITLE: the brand line, and nothing else: "Urganize: From idea to
+// execution", the founder's short line after the name (2026-10-31, #944;
+// "Every release, on plan" from 2026-10-17, "Everything after the music"
+// from 2026-09-24). 32 characters,
 // well inside the ~60 Google renders whole. Before this it was "Urganize, AI
 // Music Business Manager" (2026-09-09 to 2026-09-24).
 //

@@ -1,8 +1,8 @@
 # App store listings
 
-Paste-ready listing copy for the Urganize mobile app. Rewritten 2026-10-17
-(URG-344) for the current positioning: every release, on plan. The 2026-09-24
-listing and the 2026-09-09 one, which introduced the product by a category,
+Paste-ready listing copy for the Urganize mobile app. Rewritten 2026-10-31
+(#944) for the current positioning: from idea to execution. The 2026-10-17
+and 2026-09-24 listings and the 2026-09-09 one, which introduced the product by a category,
 are in git history.
 
 **Every string here comes from the same place as the product's own copy.** The
@@ -30,7 +30,7 @@ Urganize
 
 8 characters.
 
-The name is the brand alone. "Urganize: Every release, on plan" is 32
+The name is the brand alone. "Urganize: From idea to execution" is 32
 characters against a hard 30-character cap that both stores enforce. Rather
 than cut the founder's short line to fit, it goes where there is room for it
 whole: the subtitle on the App Store, with the core line as the short
@@ -40,16 +40,16 @@ where a long name is truncated anyway.
 ### Short description (80 characters max)
 
 ```
-Urganize is where music teams plan every release and deliver it on time.
+Urganize is where music teams manage everything from idea to execution.
 ```
 
-72 characters. This is the core line from `positioning.ts` (`CORE_LINE`),
+71 characters. This is the core line from `positioning.ts` (`CORE_LINE`),
 unchanged.
 
 ### Full description (4000 characters max)
 
 ```
-Every release, on plan. Add a release and get the plan, week by week to release day, so your team knows what to do and when. Built for artist managers.
+From idea to execution. Add a release and get the plan, week by week to release day, so your team knows what to do and when. Built for artist managers.
 
 PLAN THE ROLLOUT
 Every release starts with a real plan, not a blank board. Pick what you are putting out and Urganize lays out the whole rollout, sized to the format, with every activity dated around release day. The plans come from playbooks written by working managers, and you can edit or delete anything that does not apply to you.
@@ -130,7 +130,7 @@ Same as Play, for the same reason. See the note under the Play app name above.
 ### Subtitle (30 characters max)
 
 ```
-Every release, on plan.
+From idea to execution.
 ```
 
 23 characters. This is the founder's short line (`SHORT_LINE`), unchanged, and
@@ -139,10 +139,10 @@ Apple's subtitle is the one field on either store that holds it whole.
 ### Promotional text (170 characters max)
 
 ```
-Urganize is where music teams plan every release and deliver it on time.
+Urganize is where music teams manage everything from idea to execution.
 ```
 
-72 characters. This is `SHORT_DESCRIPTION` from `positioning.ts`, which is the
+71 characters. This is `SHORT_DESCRIPTION` from `positioning.ts`, which is the
 core line, unchanged.
 
 ### Description

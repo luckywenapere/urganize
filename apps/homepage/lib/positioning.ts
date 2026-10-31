@@ -14,6 +14,9 @@
  * followed: "Urganize is where music teams plan every release and deliver it
  * on time."
  *
+ * 2026-10-31 (#944): "From idea to execution." and "Urganize is where music
+ * teams manage everything from idea to execution." replaced both.
+ *
  * THIS IS THE MIRROR. The canonical copy, with the full reasoning, is
  * apps/web/lib/positioning.ts. `apps/homepage` cannot import from `apps/web`
  * (separate Next apps, no shared path alias), and a package for eight strings
@@ -28,11 +31,11 @@
  * marketing site and the product two different descriptions.
  */
 
-export const CORE_CLAUSE = 'where music teams plan every release and deliver it on time';
+export const CORE_CLAUSE = 'where music teams manage everything from idea to execution';
 
 export const CORE_LINE = `Urganize is ${CORE_CLAUSE}.`;
 
-export const SHORT_LINE = 'Every release, on plan.';
+export const SHORT_LINE = 'From idea to execution.';
 
 export const PROMISE_LINE = 'Everyone knows their job till drop day. Nobody has to chase anybody.';
 
@@ -47,13 +50,12 @@ export const ONE_LINER = SHORT_LINE;
 export const SHORT_DESCRIPTION = CORE_LINE;
 
 export const CANONICAL_DESCRIPTION =
-  'Every release, on plan. Add a release and everyone knows their job till drop day, ' +
-  'so nobody has to chase anybody. Built for artists and their teams.';
+  `${CORE_LINE} Add a release and everyone knows their job till drop day. ` +
+  'Built for artists and their teams.';
 
-// The link preview (2026-10-31, #939). See the web copy for the note.
-export const SHARE_HEADLINE = 'From idea to execution.';
-export const SHARE_TITLE = `Urganize: ${SHARE_HEADLINE.slice(0, -1)}`;
-export const SHARE_DESCRIPTION =
-  'Urganize is where music teams manage everything from idea to execution.';
+// The link preview (#939, #944). See the web copy for the note.
+export const SHARE_HEADLINE = SHORT_LINE;
+export const SHARE_TITLE = BRAND_LINE;
+export const SHARE_DESCRIPTION = CORE_LINE;
 
 export const URGANS_LINE = 'personal AI for music professionals';

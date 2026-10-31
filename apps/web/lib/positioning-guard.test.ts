@@ -178,6 +178,11 @@ const RETIRED = [
   // 2026-10-17 (URG-344): the 2026-09-24 short line and core line, replaced by
   // "Every release, on plan." and "plan every release and deliver it on time".
   /everything after the music/i,
+  // 2026-10-31 (#944): the 2026-10-17 short line and core line, replaced by
+  // "From idea to execution." and "manage everything from idea to execution".
+  // "On plan" alone stays allowed where it describes a plan.
+  /every release, on plan/i,
+  /plan every release and deliver it on time/i,
 ] as const;
 
 /**
@@ -248,19 +253,22 @@ describe('positioning', () => {
     // release, on plan." and the promise line is the hero's subhead. The core
     // line followed the same day (URG-344): "plan every release and deliver it
     // on time" replaced "do everything after the music is made".
-    expect(CORE_LINE).toBe('Urganize is where music teams plan every release and deliver it on time.');
-    expect(SHORT_LINE).toBe('Every release, on plan.');
+    // Since 2026-10-31 (founder approved, #944): "From idea to execution."
+    // and "manage everything from idea to execution", after the link preview
+    // took them first (#939). The promise line stays as the hero's subhead.
+    expect(CORE_LINE).toBe('Urganize is where music teams manage everything from idea to execution.');
+    expect(SHORT_LINE).toBe('From idea to execution.');
     expect(PROMISE_LINE).toBe('Everyone knows their job till drop day. Nobody has to chase anybody.');
     // 2026-10-27 (founder approved): artists and their teams, not managers
     // alone, so the promise and the long description drop "reminder app".
     // 2026-10-18 (founder approved): the long description leads with artist
     // managers, the buyer, and names them as its own last sentence.
     expect(CANONICAL_DESCRIPTION).toBe(
-      'Every release, on plan. Add a release and everyone knows their job till drop day, ' +
-        'so nobody has to chase anybody. Built for artists and their teams.',
+      'Urganize is where music teams manage everything from idea to execution. ' +
+        'Add a release and everyone knows their job till drop day. Built for artists and their teams.',
     );
     expect(CORE_LINE).toBe(`Urganize is ${CORE_CLAUSE}.`);
-    expect(BRAND_LINE).toBe('Urganize: Every release, on plan');
+    expect(BRAND_LINE).toBe('Urganize: From idea to execution');
     expect(URGANS_LINE).toBe('personal AI for music professionals');
   });
 
@@ -284,14 +292,14 @@ describe('positioning', () => {
     // Every short-form line says the one idea, so no surface can quote a
     // line that forgot it. (The core line keeps its own wording.)
     for (const line of [SHORT_LINE, CANONICAL_DESCRIPTION, BRAND_LINE]) {
-      expect(line.toLowerCase()).toContain('every release, on plan');
+      expect(line.toLowerCase()).toContain('from idea to execution');
     }
     expect(PROMISE_LINE.length).toBeLessThan(80);
   });
 
   it('says the founder\'s link preview line (#939)', () => {
-    // Link previews only (2026-10-31): the share card, og:title and
-    // og:description. Search titles and the homepage still use the lines above.
+    // The share card, og:title and og:description. Their own strings for a day
+    // (#939); since #944 they are the short line, brand line and core line.
     expect(SHARE_HEADLINE).toBe('From idea to execution.');
     expect(SHARE_TITLE).toBe('Urganize: From idea to execution');
     expect(SHARE_DESCRIPTION).toBe(
@@ -400,8 +408,8 @@ describe('positioning', () => {
       const source = readFileSync(path, 'utf8');
       // A page either builds its own metadata or is a nested route that
       // legitimately inherits it. Only the ones that declare a description are
-      // checked, and a declared one has to carry the positioning: "every
-      // release, on plan", in words or through a shared constant.
+      // checked, and a declared one has to carry the positioning: "from idea
+      // to execution" (since #944), in words or through a shared constant.
       //
       // THE DESCRIPTION'S OWN EXPRESSION IS WHAT IS TESTED, not the file. An
       // earlier version scanned the whole source for a constant name and
@@ -414,7 +422,7 @@ describe('positioning', () => {
       if (!declared) continue;
       const expression = declared[1];
       const declaresPositioning =
-        /every release, on plan/i.test(expression) ||
+        /from idea to execution/i.test(expression) ||
         // Composed from the shared constants rather than written out.
         /\b(?:CORE_LINE|CORE_CLAUSE|SHORT_LINE|PROMISE_LINE|SHORT_DESCRIPTION|CANONICAL_DESCRIPTION|ONE_LINER|LANDING_DESCRIPTION)\b/.test(
           expression,

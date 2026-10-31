@@ -17,7 +17,7 @@ import { PageDawn } from "../components/marketing/PageDawn";
 export const metadata: Metadata = buildPageMetadata({
   title: "Release planning for teams running a roster",
   description:
-    "Every release, on plan, across your whole roster. Each release gets the same plan, every activity has an owner and you see where they all stand without chasing anyone.",
+    "From idea to execution, across your whole roster. Each release gets the same plan, every activity has an owner and you see where they all stand without chasing anyone.",
   path: "/for-executives",
 });
 

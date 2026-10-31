@@ -47,8 +47,8 @@
  */
 
 /**
- * The core line without its subject: "where music teams plan every release
- * and deliver it on time". For a sentence that already names Urganize ("Urganize,
+ * The core line without its subject: "where music teams manage everything from
+ * idea to execution". For a sentence that already names Urganize ("Urganize,
  * where music teams...", "Urganize is where music teams...") so a page can say it
  * without repeating the name twice in a row.
  *
@@ -60,8 +60,11 @@
  * approved, URG-344), to follow the homepage v2 hero; it said "do everything
  * after the music is made" from 2026-09-24. "Deliver", never "ship": a
  * release is delivered (URGANS_COPY_RULES and the guard's deliver rule).
+ *
+ * "Manage everything from idea to execution" since 2026-10-31 (founder
+ * approved, #944), after the link preview took it first (#939).
  */
-export const CORE_CLAUSE = 'where music teams plan every release and deliver it on time';
+export const CORE_CLAUSE = 'where music teams manage everything from idea to execution';
 
 /** The core line. Introduces the product anywhere a whole sentence fits. */
 export const CORE_LINE = `Urganize is ${CORE_CLAUSE}.`;
@@ -70,13 +73,15 @@ export const CORE_LINE = `Urganize is ${CORE_CLAUSE}.`;
  * The short line. Page titles, meta titles, tight bios, the share card.
  * "Every release, on plan." since 2026-10-17 (founder approved the homepage
  * v2 hero, URG-334); it was "Everything after the music." from 2026-09-24.
+ * "From idea to execution." since 2026-10-31 (founder approved, #944).
  */
-export const SHORT_LINE = 'Every release, on plan.';
+export const SHORT_LINE = 'From idea to execution.';
 
 /**
  * The promise under the short line: the three steps the homepage then shows
- * as A, B and C. The share card's second line and the homepage subhead.
- * Founder-approved with the homepage v2 hero on 2026-10-17 (URG-334).
+ * as A, B and C. The homepage subhead. Founder-approved with the homepage v2
+ * hero on 2026-10-17 (URG-334), and kept under "From idea to execution." on
+ * 2026-10-31 (#944): it says how the team gets there.
  */
 export const PROMISE_LINE = 'Everyone knows their job till drop day. Nobody has to chase anybody.';
 
@@ -120,21 +125,24 @@ export const SHORT_DESCRIPTION = CORE_LINE;
  * "Release" is the founder's word here and it is right: it is the unit that
  * gets planned and put out, which is the vocabulary rule (rollout is the work,
  * release is the unit).
+ *
+ * Since 2026-10-31 (#944) it opens with the core line, "manage everything from
+ * idea to execution", and keeps the drop-day promise and the audience.
  */
 export const CANONICAL_DESCRIPTION =
-  'Every release, on plan. Add a release and everyone knows their job till drop day, ' +
-  'so nobody has to chase anybody. Built for artists and their teams.';
+  `${CORE_LINE} Add a release and everyone knows their job till drop day. ` +
+  'Built for artists and their teams.';
 
 /**
- * The link preview (2026-10-31, founder approved, #939): the share card's
- * headline and the title and text WhatsApp, X and LinkedIn show under it.
- * Link preview ONLY: search titles, the homepage headline and the lines above
- * stay as they are until the founder moves the rest of the positioning.
+ * The link preview: the share card's headline and the title and text
+ * WhatsApp, X and LinkedIn show under it. They said "From idea to execution"
+ * first (#939) and were their own strings for a day; since the rest of the
+ * positioning followed (#944) they are the short line, the brand line and the
+ * core line, kept as names so the share surfaces read as what they are.
  */
-export const SHARE_HEADLINE = 'From idea to execution.';
-export const SHARE_TITLE = `Urganize: ${SHARE_HEADLINE.slice(0, -1)}`;
-export const SHARE_DESCRIPTION =
-  'Urganize is where music teams manage everything from idea to execution.';
+export const SHARE_HEADLINE = SHORT_LINE;
+export const SHARE_TITLE = BRAND_LINE;
+export const SHARE_DESCRIPTION = CORE_LINE;
 
 /**
  * UrgAns is NOT the product, and this line is the whole of the distinction.

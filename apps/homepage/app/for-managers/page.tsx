@@ -17,7 +17,7 @@ import { PageDawn } from "../components/marketing/PageDawn";
 export const metadata: Metadata = buildPageMetadata({
   title: "Release planning software for artist managers",
   description:
-    "Every release, on plan, for artist managers running more than one artist. Add a release, get the plan and your team knows what to do and when.",
+    "From idea to execution, for artist managers running more than one artist. Add a release, get the plan and your team knows what to do and when.",
   path: "/for-managers",
 });
 

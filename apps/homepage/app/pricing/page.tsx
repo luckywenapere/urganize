@@ -23,7 +23,7 @@ export const metadata: Metadata = buildPageMetadata({
   // The root template adds " | Urganize".
   title: "Pricing for artist managers and their teams",
   description:
-    "Every release, on plan, at one price for your whole team, from a single manager to a full roster. What each plan includes and how to join the waitlist.",
+    "From idea to execution, at one price for your whole team, from a single manager to a full roster. What each plan includes and how to join the waitlist.",
   path: "/pricing",
 });
 

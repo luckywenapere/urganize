@@ -12,7 +12,7 @@ import { PageDawn } from "../components/marketing/PageDawn";
 export const metadata: Metadata = buildPageMetadata({
   title: "Why Urganize over WhatsApp and Google Drive",
   description:
-    "WhatsApp and Google Drive work for one artist and one release. Running more than one? Every release, on plan: a real plan, an owner on every task and status you can see without asking.",
+    "WhatsApp and Google Drive work for one artist and one release. Running more than one? From idea to execution: a real plan, an owner on every task and status you can see without asking.",
   path: "/why-urganize",
 });
 

@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.229.8",
+    tag: "App",
+    date: "October 31, 2026",
+    listed: false,
+    highlights: [
+      "Urganize now says what it is in new words: where music teams manage everything from idea to execution.",
+    ],
+  },
+  {
     version: "1.229.7",
     tag: "App",
     date: "October 31, 2026",
