@@ -72,6 +72,9 @@ describe('boot frame (2026-10-18, double load screen)', () => {
     const layout = read('apps/web/app/layout.tsx');
     expect(layout).toContain("root.setAttribute('data-native-shell', '1')");
     expect(layout).toContain("root.style.setProperty('--boot-ground', ground)");
+    // An app build that does not say its launch colour follows the phone's setting (#932).
+    expect(layout).toContain("window.matchMedia('(prefers-color-scheme: light)').matches");
+    expect(layout).toContain(": phoneLight ? '#f5f0e6' : '#0d120e';");
     expect(layout).toContain("root.style.setProperty('--boot-shift', shift + 'px')");
     const css = read('apps/web/app/globals.css');
     expect(css).toContain('html[data-native-shell] .urg-boot-frame {');

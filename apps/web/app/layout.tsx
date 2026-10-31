@@ -240,9 +240,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   if (!hasInfo && ua.indexOf('UrganizeApp/') === -1) return;
                   var root = document.documentElement;
                   root.setAttribute('data-native-shell', '1');
+                  // Older app builds do not say their launch colour; follow
+                  // the phone's light or dark setting then (#932).
+                  var phoneLight = false;
+                  try { phoneLight = window.matchMedia('(prefers-color-scheme: light)').matches; } catch (e) {}
                   var ground = hasInfo && typeof n.splashBackground === 'string' && /^#[0-9a-f]{6}$/i.test(n.splashBackground)
                     ? n.splashBackground
-                    : '#0d120e';
+                    : phoneLight ? '#f5f0e6' : '#0d120e';
                   root.style.setProperty('--boot-ground', ground);
                   // A light launch ground (phone set to light) needs the dark mark.
                   var lum = parseInt(ground.slice(1, 3), 16) * 0.299 + parseInt(ground.slice(3, 5), 16) * 0.587 + parseInt(ground.slice(5, 7), 16) * 0.114;
