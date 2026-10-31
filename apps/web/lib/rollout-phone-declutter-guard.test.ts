@@ -104,7 +104,10 @@ describe('phone rollout declutter', () => {
 
   it('keeps the header slim: one sticky line, no cover tile, eyebrow or progress bar (founder approved mock, Oct 31, 2026)', () => {
     expect(header).toContain('<SlimTitle');
-    expect(header).toContain('sticky top-0');
+    expect(header).toContain('className="sticky z-20');
+    // Where it sticks is `top`, never padding: padding pushed it a top bar down at rest.
+    expect(header).toContain("style={{ top: `max(${topBarBottom}px, env(safe-area-inset-top, 0px))` }}");
+    expect(header).not.toContain('paddingTop');
     expect(header).not.toContain('RolloutCoverTile');
     expect(header).not.toContain('ArtistFace');
     expect(header).not.toContain('IntersectionObserver');

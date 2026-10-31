@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChevronLeft, Menu, Search } from '@/components/icons';
 import { rolloutMetaLine } from '@/lib/release-timeline';
 import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
@@ -62,10 +62,21 @@ export function RolloutPhoneHeader({
   // Where the top bar ends on screen right now, not its height: on a phone the
   // top bar scrolls away with a rollout, and a header held its height down
   // left a strip the plan showed through (founder screenshot, Oct 31, 2026).
+  // It sets where the line sticks (`top`), never padding: padding pushed the
+  // line a whole top bar down at rest (founder screenshot, Oct 31, 2026).
+  const headerRef = useRef<HTMLDivElement | null>(null);
   const [topBarBottom, setTopBarBottom] = useState(0);
+  const [stuck, setStuck] = useState(false);
   useEffect(() => {
     const bar = document.querySelector<HTMLElement>('[data-swipe-topbar]');
-    const measure = () => setTopBarBottom(bar ? Math.max(0, Math.round(bar.getBoundingClientRect().bottom)) : 0);
+    const measure = () => {
+      setTopBarBottom(bar ? Math.max(0, Math.round(bar.getBoundingClientRect().bottom)) : 0);
+      const node = headerRef.current;
+      if (node) {
+        const stickAt = parseFloat(getComputedStyle(node).top) || 0;
+        setStuck(node.getBoundingClientRect().top <= stickAt + 1 && window.scrollY > 0);
+      }
+    };
     measure();
     window.addEventListener('scroll', measure, { passive: true });
     window.addEventListener('resize', measure);
@@ -84,12 +95,21 @@ export function RolloutPhoneHeader({
   return (
     <>
       <div
+        ref={headerRef}
         data-rollout-phone-header
-        // Held at the very top and padded down to the top bar (or the status
-        // bar once it has gone), so nothing scrolls past above it.
-        style={{ paddingTop: `max(${topBarBottom}px, env(safe-area-inset-top, 0px))` }}
-        className="sticky top-0 z-20 -mx-4 bg-bg-base px-4"
+        // Sticks under the top bar, or under the status bar once the top bar
+        // has scrolled away. Stuck, a strip of page ground fills the space
+        // above it, so nothing scrolls past there.
+        style={{ top: `max(${topBarBottom}px, env(safe-area-inset-top, 0px))` }}
+        className="sticky z-20 -mx-4 bg-bg-base px-4"
       >
+        {stuck ? (
+          <div
+            aria-hidden="true"
+            style={{ height: `max(${topBarBottom}px, env(safe-area-inset-top, 0px))` }}
+            className="pointer-events-none absolute inset-x-0 bottom-full bg-bg-base"
+          />
+        ) : null}
         <div className="flex h-11 items-center gap-1">
           <SlimTitle title={title} done={done} total={total} backLabel={backLabel} onBack={onBack} />
           <div className="flex shrink-0 items-center">
