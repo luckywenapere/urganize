@@ -249,7 +249,7 @@ export type BillingInterval = 'monthly' | 'semiannual' | 'annual';
  *  `subscriptions.plan_version` and `subscription_charges.plan_version`, so a
  *  subscriber's row says which prices they locked in. Bump it on every reprice;
  *  rows written before 2026-10-22 read 'legacy'. */
-export const PRICE_LIST_VERSION = '2026-10-26';
+export const PRICE_LIST_VERSION = '2026-10-31';
 
 export type TierPrice = {
   /** Whole naira, for display copy. */
@@ -442,12 +442,16 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
   // plus their env vars — see the note in apps/web/lib/billing-plans.ts.
   solo: {
     id: 'solo',
-    label: 'Solo',
+    label: 'Emerging',
     // "For an artist and their manager." since 2026-10-17 (founder-approved
     // reprice, strategy doc section 8), when Solo went to two seats. It read
     // "For an independent artist." from 2026-10-02 while Solo was one seat.
     audience: 'For an artist and their manager.',
-    // ₦5,000 since 2026-10-23 (founder approved ~02:00 WAT; no paying Solo
+    // ₦2,600 flat since 2026-10-31 (founder, with the rename to Emerging; no
+    // paying Solo team, so nobody moves). The ₦4,000 starting price is gone.
+    // Card checkout needs ₦2,600 / ₦26,000 Paystack Plans behind the
+    // _PER_MONTH_ / _PER_YEAR_ vars; until then the price check refuses card.
+    // ₦5,000 from 2026-10-23 (founder approved ~02:00 WAT; no paying Solo
     // customer, so no grandfathering). The _PER_MONTH_ / _PER_6_MONTHS_ /
     // _PER_YEAR_ vars point at the ₦5,000 / ₦25,000 / ₦50,000 Plans (monthly
     // and yearly reused from September, 6-month minted that day). Solo
@@ -460,8 +464,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // this, see monthlyPrice. New Paystack Plans were minted at ₦7,500 /
     // ₦75,000 and the _PER_MONTH_ / _PER_YEAR_ vars repointed before this
     // shipped; the ₦5,000 Plans stay in Paystack untouched.
-    monthlyPrice: tierPrice(5_000),
-    introMonthlyPrice: tierPrice(4_000),
+    monthlyPrice: tierPrice(2_600),
     includesDistribution: false,
     urgansMonthlyCredits: 150,
     // TWO seats since 2026-10-17 (founder-approved reprice: "artist +
@@ -475,16 +478,18 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
   },
   manager: {
     id: 'manager',
-    label: 'Manager',
+    label: 'Pro',
     audience: 'For a manager running more than one artist.',
-    // ₦30,000 since 2026-10-22 (founder, no Manager customer had paid yet, so
+    // ₦26,000 flat since 2026-10-31 (founder, with the rename to Pro; no paying
+    // Manager team, so nobody moves). The starting price is gone. Card checkout
+    // needs ₦26,000 / ₦260,000 Paystack Plans behind the vars.
+    // ₦30,000 from 2026-10-22 (founder, no Manager customer had paid yet, so
     // no grandfathering; Plans at ₦30,000 / ₦150,000 / ₦300,000).
     // ₦25,000 from 2026-10-17 (founder approved the reprice that day; it was
     // ₦35,000 earlier the same day and ₦22,000 before that). Monthly only — the
     // yearly price is ten months of this. New ₦25,000 / ₦250,000 Paystack Plans
     // were minted and the vars repointed before this shipped.
-    monthlyPrice: tierPrice(30_000),
-    introMonthlyPrice: tierPrice(26_000),
+    monthlyPrice: tierPrice(26_000),
     includesDistribution: true,
     urgansMonthlyCredits: 660,
     // 3 artists / 5 seats since 2026-10-17 (was 5 artists / 4 seats). Both are
@@ -545,7 +550,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     urgansMonthlyCredits: 1500,
     limits: { artists: null, seats: null, activeReleases: null, urgansMonthlyActions: null },
     perks: [
-      'Everything in Manager',
+      'Everything in Pro',
       'We set your roster up with you',
       'WhatsApp support, answered same day',
     ],
@@ -670,7 +675,7 @@ export function tierFeatures(id: PricingTierId): { heading: string; lines: strin
       ],
     };
   }
-  const below = id === 'manager' ? 'Solo' : id === 'label' ? 'Manager' : 'Label';
+  const below = id === 'manager' ? 'Emerging' : id === 'label' ? 'Pro' : 'Label';
   return { heading: `Everything in ${below}, and:`, lines: highlights };
 }
 

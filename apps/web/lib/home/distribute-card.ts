@@ -24,11 +24,11 @@ export type DistributeCardView = 'hidden' | 'upgrade' | 'ask_admin' | 'distribut
 export const HOME_DISTRIBUTE_COPY = {
   label: 'Distribute',
   title: 'Get your music to Spotify, Apple Music, Audiomack and more',
-  upgradeLine: 'Comes with the Manager plan.',
-  upgradeAction: 'Upgrade to Manager',
+  upgradeLine: 'Comes with the Pro plan.',
+  upgradeAction: 'Upgrade to Pro',
   // The offer can be put away for a month (founder, Oct 31, 2026, #919).
   notNow: 'Not now',
-  askAdminLine: 'Comes with the Manager plan. Your admin can upgrade the team.',
+  askAdminLine: 'Comes with the Pro plan. Your admin can upgrade the team.',
   askAdminAction: 'Ask your admin to upgrade',
   askAdminSent: 'Your admin has been asked',
   askAdminFailed: 'Could not reach your admin. Try again.',

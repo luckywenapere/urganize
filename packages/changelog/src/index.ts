@@ -41,6 +41,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.230.0",
+    title: "New plans: Emerging and Pro",
+    tag: "Account",
+    date: "November 1, 2026",
+    highlights: [
+      "Our plans have new names and prices: Emerging is ₦2,600 a month and Pro is ₦26,000 a month.",
+      "You pick a plan right after you set up your team.",
+      "Find your plan any time under Plan and billing in your profile menu.",
+    ],
+  },
+  {
     version: "1.229.8",
     tag: "App",
     date: "October 31, 2026",

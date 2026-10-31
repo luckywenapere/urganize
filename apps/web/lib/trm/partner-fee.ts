@@ -354,7 +354,7 @@ export function trmLedgerCsv(rows: readonly TrmLedgerCsvRow[]): string {
       [
         row.team_name ?? row.workspace_id ?? '',
         row.charge_reference,
-        row.plan === 'manager' ? 'Manager' : row.plan === 'label' ? 'Label' : row.plan,
+        row.plan === 'manager' ? 'Pro' : row.plan === 'label' ? 'Label' : row.plan,
         TRM_PLAN_LABEL[row.trm_plan] ?? row.trm_plan,
         row.cost_basis === 'percent' ? 'Percent' : 'Fixed',
         row.entry_kind === 'adjustment' ? 'Extra release' : (BILLING_MODE_LABEL[row.billing_mode] ?? row.billing_mode),

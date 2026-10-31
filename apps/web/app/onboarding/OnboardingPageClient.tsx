@@ -83,6 +83,8 @@ import {
   type TeamWhoFor,
 } from '@/lib/onboarding-flow';
 import { writeOnboardingLanding } from '@/lib/onboarding-landing';
+import { TEAM_TRIAL_DAYS } from '@/lib/team-billing';
+import { getTeamAccessClient } from '@/lib/team-billing-client';
 import {
   GoogleMark,
   OnboardingFrame,
@@ -279,6 +281,21 @@ export default function OnboardingPage() {
     [checkAuth, router]
   );
 
+  // Pay first (2026-10-31, founder): a team with no trial and no plan meets the
+  // plan wall before its first project, because saving one needs access.
+  // Paying lands on /checkout/welcome, then home, which brings an unfinished
+  // account back here to the first project.
+  const sendToPlansIfUnpaid = useCallback(async (): Promise<boolean> => {
+    if (TEAM_TRIAL_DAYS > 0) return false;
+    const id = useAuthStore.getState().user?.id;
+    if (!id) return false;
+    const access = await getTeamAccessClient(id, { force: true }).catch(() => null);
+    if (!access || access.hasAccess) return false;
+    setScreen('leaving');
+    router.replace('/locked');
+    return true;
+  }, [router]);
+
   const showScreenFor = useCallback(
     (state: OnboardingTeamState) => {
       setTeamState(state);
@@ -293,6 +310,10 @@ export default function OnboardingPage() {
       }
       if (next === 'music') {
         setSelectedTeamId((current) => current ?? state.ownTeam?.workspaceId ?? state.teams[0]?.workspaceId ?? null);
+        void sendToPlansIfUnpaid().then((sent) => {
+          if (!sent) setScreen('music');
+        });
+        return;
       }
       if (next === 'invites') {
         track({
@@ -305,7 +326,7 @@ export default function OnboardingPage() {
       if (next === 'ask') setAskStartedAt(Date.now());
       setScreen(next);
     },
-    [goHome, router]
+    [goHome, router, sendToPlansIfUnpaid]
   );
 
   /** Signed in: the closed sign-up check, then where they stand. */
@@ -625,6 +646,7 @@ export default function OnboardingPage() {
       if (state) setTeamState(state);
       setSelectedTeamId(payload.workspaceId);
       setJoinedRole(null);
+      if (await sendToPlansIfUnpaid()) return;
       setScreen('music');
     } catch (error) {
       setTeamError(isNetworkError(error) ? 'No connection. Try again.' : errorMessage(error, 'Could not make your team.'));
@@ -642,6 +664,7 @@ export default function OnboardingPage() {
       if (state) setTeamState(state);
       setSelectedTeamId(result.workspaceId);
       setJoinedRole(result.role);
+      if (await sendToPlansIfUnpaid()) return;
       setScreen('music');
       return;
     }

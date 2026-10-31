@@ -7,7 +7,7 @@ describe('notifyAdminSubject', () => {
   });
 
   it('asks for Manager when it comes from the Distribute card', () => {
-    expect(notifyAdminSubject('Bo', 'T', 'distribute')).toBe('Bo asked you to move T to Manager');
-    expect(notifyAdminSubject('', null, 'distribute')).toBe('A teammate asked you to move your team to Manager');
+    expect(notifyAdminSubject('Bo', 'T', 'distribute')).toBe('Bo asked you to move T to Pro');
+    expect(notifyAdminSubject('', null, 'distribute')).toBe('A teammate asked you to move your team to Pro');
   });
 });

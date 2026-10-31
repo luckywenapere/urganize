@@ -9,15 +9,11 @@
 // To add or remove access, edit this list and ship. Lowercase + trimmed
 // comparisons mean casing / accidental whitespace don't break the check.
 
+// Founder's own accounts only since 2026-10-31 (founder: "no more free access to anybody including our team accounts but not my accounts").
 const RAW_ALLOWLIST = [
   'luckydio10@gmail.com',
   'luckywenapere@gmail.com',
-  'aesthetique.toine@gmail.com',
-  'adamukabiru772@gmail.com',
-  'itsderah@gmail.com',
-  'ewaoluwaadenaiye@gmail.com',
-  'officialworldpope@gmail.com',
-  'uzoaruqueen98@gmail.com',
+  'theurganization@gmail.com',
 ];
 
 const normalizeEmail = (value: unknown): string => {

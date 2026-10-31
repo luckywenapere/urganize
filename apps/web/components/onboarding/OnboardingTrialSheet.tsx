@@ -17,6 +17,7 @@ import { usePlannerStore } from '@/stores/usePlannerStore';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { isIOSApp } from '@/lib/platform';
 import { isHomeLocation } from '@/lib/home-path';
+import { TEAM_TRIAL_DAYS } from '@/lib/team-billing';
 import {
   PLAN_LANDED_EVENT,
   clearOnboardingLanding,
@@ -70,6 +71,9 @@ export function OnboardingTrialSheetHost() {
   useEffect(() => {
     if (!landing || open || shownRef.current) return;
     if (landing.kind === 'joined') return;
+    // No trial since 2026-10-31: the team paid before its first project, so
+    // "Your trial is on" would be untrue.
+    if (TEAM_TRIAL_DAYS <= 0) return;
     const tick = () => {
       const releaseId = readReleaseParam();
       const place = {

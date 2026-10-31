@@ -28,11 +28,13 @@
 // flag. Nothing here imports it, and TEAM_TRIAL_DAYS is intentionally not
 // trial-card's TRIAL_DAYS.
 
-/** The team trial length. 3 days, shortened from the original 14-day spec by
- * a founder call on 2026-09-10. Deliberately NOT lib/trial-card.ts's
+/** The team trial length. 0 since 2026-10-31 (founder: no free access, pay
+ * first): a new team is stamped with a trial that has already ended, so it
+ * meets the plan wall straight after "Your team". It was 3 days from
+ * 2026-09-10 (14 in the original spec). Deliberately NOT lib/trial-card.ts's
  * TRIAL_DAYS (28) — that constant belongs to the superseded card-first funnel
  * and is load-bearing copy on other surfaces. */
-export const TEAM_TRIAL_DAYS = 3;
+export const TEAM_TRIAL_DAYS = 0;
 
 /** The trial indicator appears at this many days left or fewer. Calm and
  * non-blocking until then. Shrunk from 10 to 1 alongside the 2026-09-10
@@ -348,7 +350,12 @@ export function resolveTeamAccess(input: {
     };
   }
 
-  if (graceMs > 0 && nowMs < endsMs + graceMs) {
+  // A zero-length trial (a new team since 2026-10-31, pay first) gets no
+  // grace: there is no work in flight to protect, and with grace the team
+  // would get 15 free minutes and skip the plan wall.
+  const startedMs = input.team.trialStartedAt ? Date.parse(input.team.trialStartedAt) : Number.NaN;
+  const hadTrial = !Number.isFinite(startedMs) || endsMs - startedMs > 60_000;
+  if (graceMs > 0 && hadTrial && nowMs < endsMs + graceMs) {
     return {
       state: 'grace',
       hasAccess: true,

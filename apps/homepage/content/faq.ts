@@ -41,7 +41,7 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   },
   {
     question: "Is it for one artist or a roster?",
-    answer: `Both. Solo covers one artist, Manager up to ${managerArtists ?? "three"} and Label has no limit.`,
+    answer: `Both. Emerging covers one artist, Pro up to ${managerArtists ?? "three"} and Label has no limit.`,
   },
   {
     question: "Does it post or distribute for me?",

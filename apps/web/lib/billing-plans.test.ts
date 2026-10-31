@@ -319,14 +319,14 @@ describe('tier plan codes and prices', () => {
 
   it('prices every self-serve tier at both intervals, in kobo', () => {
     // Monthly is the stored figure; yearly is ten months of it, computed.
-    // Solo ₦5,000 since 2026-10-23; Manager ₦30,000 since 2026-10-22 (Label ₦60,000 unchanged).
-    expect(getTierMinorUnit('solo', 'monthly')).toBe(5_000_00);
-    expect(getTierMinorUnit('manager', 'monthly')).toBe(30_000_00);
+    // Emerging (solo) ₦2,600 and Pro (manager) ₦26,000 since 2026-10-31.
+    expect(getTierMinorUnit('solo', 'monthly')).toBe(2_600_00);
+    expect(getTierMinorUnit('manager', 'monthly')).toBe(26_000_00);
     expect(getTierMinorUnit('label', 'monthly')).toBe(100_000_00);
-    expect(getTierMinorUnit('solo', 'annual')).toBe(50_000_00);
-    expect(getTierMinorUnit('manager', 'annual')).toBe(300_000_00);
-    expect(getTierMinorUnit('solo', 'semiannual')).toBe(25_000_00);
-    expect(getTierMinorUnit('manager', 'semiannual')).toBe(150_000_00);
+    expect(getTierMinorUnit('solo', 'annual')).toBe(26_000_00);
+    expect(getTierMinorUnit('manager', 'annual')).toBe(260_000_00);
+    expect(getTierMinorUnit('solo', 'semiannual')).toBe(13_000_00);
+    expect(getTierMinorUnit('manager', 'semiannual')).toBe(130_000_00);
     expect(getTierMinorUnit('label', 'annual')).toBe(1_000_000_00);
   });
 });
@@ -427,7 +427,7 @@ describe('resolveCheckoutPurchase', () => {
       ok: true,
       planId: 'manager',
       planCode: 'PLN_mgr_y',
-      amountMinorUnit: 300_000_00,
+      amountMinorUnit: 260_000_00,
       interval: 'annual',
     });
   });
@@ -462,7 +462,7 @@ describe('resolveCheckoutPurchase', () => {
       ok: true,
       planId: 'manager',
       planCode: 'PLN_mgr_m',
-      amountMinorUnit: 30_000_00,
+      amountMinorUnit: 26_000_00,
       interval: 'monthly',
     });
   });

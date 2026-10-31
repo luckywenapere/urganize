@@ -26,15 +26,15 @@ export function NotifyAdminEmail({ requesterLabel, teamName, activateUrl, ask }:
   // distribution asking the owner to move the team to Manager.
   if (ask === 'distribute') {
     const upgradeLine = team
-      ? `${requester} wants ${team} to get music to Spotify, Apple Music, Audiomack and more. Distribution comes with the Manager plan.`
-      : `${requester} wants your team to get music to Spotify, Apple Music, Audiomack and more. Distribution comes with the Manager plan.`;
+      ? `${requester} wants ${team} to get music to Spotify, Apple Music, Audiomack and more. Distribution comes with the Pro plan.`
+      : `${requester} wants your team to get music to Spotify, Apple Music, Audiomack and more. Distribution comes with the Pro plan.`;
     return (
       <EmailLayout preview={upgradeLine}>
         <Paragraph>Hi,</Paragraph>
         <Paragraph>{upgradeLine}</Paragraph>
         <Paragraph>
           <a href={activateUrl} style={{ color: '#1f7a4d', fontWeight: 600 }}>
-            Upgrade to Manager
+            Upgrade to Pro
           </a>
         </Paragraph>
       </EmailLayout>
@@ -70,8 +70,8 @@ export function notifyAdminSubject(
   const team = teamName?.trim() || null;
   if (ask === 'distribute') {
     return team
-      ? `${requester} asked you to move ${team} to Manager`
-      : `${requester} asked you to move your team to Manager`;
+      ? `${requester} asked you to move ${team} to Pro`
+      : `${requester} asked you to move your team to Pro`;
   }
   return team
     ? `${requester} is waiting on ${team} in Urganize`

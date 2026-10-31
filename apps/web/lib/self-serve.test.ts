@@ -74,21 +74,21 @@ describe('checkout intent', () => {
 
 describe('amounts come from the pricing package', () => {
   it('Manager', () => {
-    expect(periodAmount('manager', 'monthly')).toBe(30_000);
-    expect(periodAmount('manager', 'semiannual')).toBe(150_000);
-    expect(periodAmount('manager', 'annual')).toBe(300_000);
+    expect(periodAmount('manager', 'monthly')).toBe(26_000);
+    expect(periodAmount('manager', 'semiannual')).toBe(130_000);
+    expect(periodAmount('manager', 'annual')).toBe(260_000);
   });
 
   it('Solo', () => {
-    expect(periodAmount('solo', 'monthly')).toBe(5_000);
-    expect(periodAmount('solo', 'semiannual')).toBe(25_000);
-    expect(periodAmount('solo', 'annual')).toBe(50_000);
+    expect(periodAmount('solo', 'monthly')).toBe(2_600);
+    expect(periodAmount('solo', 'semiannual')).toBe(13_000);
+    expect(periodAmount('solo', 'annual')).toBe(26_000);
   });
 
   it('says the price and the saving plainly', () => {
-    expect(periodHeadline('manager', 'monthly')).toBe('₦30,000 a month');
-    expect(periodHeadline('manager', 'semiannual')).toBe('₦150,000 for 6 months');
-    expect(periodHeadline('manager', 'annual')).toBe('₦300,000 a year');
+    expect(periodHeadline('manager', 'monthly')).toBe('₦26,000 a month');
+    expect(periodHeadline('manager', 'semiannual')).toBe('₦130,000 for 6 months');
+    expect(periodHeadline('manager', 'annual')).toBe('₦260,000 a year');
     expect(periodSaving('semiannual')).toBe('One month free');
     expect(periodSaving('monthly')).toBeNull();
   });
@@ -177,10 +177,10 @@ describe('renewal reminders', () => {
 
   it('words the banner', () => {
     expect(renewalBannerText('manager', 3)).toEqual({
-      title: 'Manager ends in 3 days.',
+      title: 'Pro ends in 3 days.',
       body: 'Renew to keep your team working.',
     });
-    expect(renewalBannerText('solo', 1).title).toBe('Solo ends tomorrow.');
+    expect(renewalBannerText('solo', 1).title).toBe('Emerging ends tomorrow.');
   });
 });
 
@@ -281,7 +281,7 @@ describe('email copy', () => {
 
   it('says what a renewal costs and when the plan ends', () => {
     const copy = renewalEmailCopy({ plan: 'manager', expiresAt: '2026-10-24T22:59:00Z', amountNaira: 30000 });
-    expect(copy.subject).toContain('Manager');
+    expect(copy.subject).toContain('Pro');
     expect(copy.body).toContain('30,000');
     expect(copy.body).not.toMatch(/\u2014/);
   });

@@ -55,7 +55,7 @@ export function ChurnPanel({ churn }: { churn: ChurnSummary }) {
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Tile
           label="Paying teams lost"
-          info="Logo churn: paying teams (Manager, Label or Group, not comped) lost in the last full month, out of the paying teams at its start."
+          info="Logo churn: paying teams (Pro, Label or Group, not comped) lost in the last full month, out of the paying teams at its start."
           value={last ? rate(last.logoChurn) : 'No data yet'}
           facts={
             last
@@ -68,7 +68,7 @@ export function ChurnPanel({ churn }: { churn: ChurnSummary }) {
         />
         <Tile
           label="MRR lost"
-          info="Gross MRR churn: the monthly revenue of subscriptions that stopped in the last full month, out of MRR at its start. Solo is included, as in MRR. Yearly plans count as a twelfth."
+          info="Gross MRR churn: the monthly revenue of subscriptions that stopped in the last full month, out of MRR at its start. Emerging is included, as in MRR. Yearly plans count as a twelfth."
           value={last ? rate(last.grossMrrChurn) : 'No data yet'}
           facts={
             last && last.mrrAtStartMinor > 0
