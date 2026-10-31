@@ -131,7 +131,7 @@ const LOADERS: LoaderMap = {
     const m = await import('./NotifyAdminEmail');
     return {
       element: (p) => createElement(m.NotifyAdminEmail, p),
-      subject: (p) => m.notifyAdminSubject(p.requesterLabel, p.teamName),
+      subject: (p) => m.notifyAdminSubject(p.requesterLabel, p.teamName, p.ask),
     };
   },
   pay_link: async () => {

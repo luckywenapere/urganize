@@ -15,7 +15,11 @@
 import type { PricingTierId } from '@urganize/pricing';
 import type { TeamAccessState } from '../team-billing';
 
-export type DistributeCardView = 'hidden' | 'upgrade' | 'distribute';
+/** `ask_admin`: the upgrade offer, seen by a teammate who is not an owner or
+ *  admin. They cannot pay for the team (team checkout refuses them, and the
+ *  self-serve checkout would charge their own account), so they nudge the
+ *  owner instead (founder, Oct 31, 2026). */
+export type DistributeCardView = 'hidden' | 'upgrade' | 'ask_admin' | 'distribute';
 
 export const HOME_DISTRIBUTE_COPY = {
   label: 'Distribute',
@@ -24,6 +28,10 @@ export const HOME_DISTRIBUTE_COPY = {
   upgradeAction: 'Upgrade to Manager',
   // The offer can be put away for a month (founder, Oct 31, 2026, #919).
   notNow: 'Not now',
+  askAdminLine: 'Comes with the Manager plan. Your admin can upgrade the team.',
+  askAdminAction: 'Ask your admin to upgrade',
+  askAdminSent: 'Your admin has been asked',
+  askAdminFailed: 'Could not reach your admin. Try again.',
   distributeAction: 'Distribute',
 } as const;
 
@@ -39,8 +47,21 @@ const DISTRIBUTION_TIERS: ReadonlySet<PricingTierId> = new Set<PricingTierId>(['
  * flash the wrong button.
  */
 export function decideDistributeCard(
-  access: { state: TeamAccessState; tier?: PricingTierId } | null | undefined
+  access:
+    | { state: TeamAccessState; tier?: PricingTierId; isOwnerOrAdmin?: boolean }
+    | null
+    | undefined
 ): DistributeCardView {
+  const view = decideDistributeOffer(access);
+  // Only an owner or admin can pay for the team. Unknown counts as a member,
+  // so nobody is ever sent to a checkout that would charge the wrong account.
+  if (view === 'upgrade' && access?.isOwnerOrAdmin !== true) return 'ask_admin';
+  return view;
+}
+
+function decideDistributeOffer(
+  access: { state: TeamAccessState; tier?: PricingTierId } | null | undefined
+): 'hidden' | 'upgrade' | 'distribute' {
   if (!access) return 'hidden';
   switch (access.state) {
     case 'trial':

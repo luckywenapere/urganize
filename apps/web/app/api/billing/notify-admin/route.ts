@@ -10,6 +10,7 @@ import {
 } from '@/lib/billing-events-server';
 import { isEmailConfigured, sendEmail } from '@/lib/email';
 import { resolveAppBaseUrl } from '@/lib/tasks-server';
+import { checkoutPath } from '@/lib/self-serve';
 
 // POST /api/billing/notify-admin — a walled teammate asking their own admin to
 // activate the plan. One tap, per the spec.
@@ -21,7 +22,8 @@ import { resolveAppBaseUrl } from '@/lib/tasks-server';
 // view it worked, and telling them otherwise would be both confusing and
 // useless.
 //
-// OPEN route: every caller is walled by definition.
+// OPEN route: every caller is walled by definition, except the Distribute
+// card's ask, which comes from a member of a team that still has access.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -37,6 +39,12 @@ export async function POST(request: NextRequest) {
   if (!admin) {
     return NextResponse.json({ error: 'Server is not configured.' }, { status: 500 });
   }
+
+  // `ask: 'distribute'` comes from the Distribute card on Home (2026-10-31): a
+  // teammate on a plan without distribution asking the owner to upgrade. No
+  // body, or anything else, is the wall's "activate the plan" ask.
+  const body = (await request.json().catch(() => null)) as { ask?: unknown } | null;
+  const ask: 'activate' | 'distribute' = body?.ask === 'distribute' ? 'distribute' : 'activate';
 
   const team = await getTeamAccessForUser(auth.user.id, auth.user.email);
   if (!team.primaryWorkspaceId || !team.ownerUserId) {
@@ -80,7 +88,7 @@ export async function POST(request: NextRequest) {
     ownerUserId: team.ownerUserId,
     actorUserId: auth.user.id,
     type: 'notify_admin_sent',
-    metadata: { teamName: team.teamName },
+    metadata: { teamName: team.teamName, ask },
   });
 
   // The email is best-effort: the ask is recorded either way, and the founder's
@@ -98,7 +106,11 @@ export async function POST(request: NextRequest) {
         props: {
           requesterLabel,
           teamName: team.teamName,
-          activateUrl: `${resolveAppBaseUrl()}/locked`,
+          activateUrl:
+            ask === 'distribute'
+              ? `${resolveAppBaseUrl()}${checkoutPath({ plan: 'manager' })}`
+              : `${resolveAppBaseUrl()}/locked`,
+          ask,
         },
         trigger: 'notify_admin_sent',
         recipientUserId: team.ownerUserId,

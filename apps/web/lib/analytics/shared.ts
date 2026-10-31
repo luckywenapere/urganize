@@ -38,7 +38,7 @@ export type TaskCreatedSource = 'quick_create' | 'inline' | 'detail_panel' | 'on
 
 /** Self-serve checkout funnel properties. Every field is optional. */
 export type SelfServeEventProperties = {
-  path?: 'self_serve' | 'concierge' | 'legacy' | null;
+  path?: 'self_serve' | 'concierge' | 'legacy' | 'ask_admin' | null;
   plan?: string | null;
   period?: string | null;
   method?: 'card' | 'transfer' | 'direct_transfer' | null;

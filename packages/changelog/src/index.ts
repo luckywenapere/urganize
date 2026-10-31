@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.229.5",
+    tag: "Team",
+    date: "October 31, 2026",
+    highlights: [
+      "If you are not the team's admin, the Distribute card on Home now lets you ask your admin to upgrade, instead of sending you to pay.",
+    ],
+  },
+  {
     version: "1.229.4",
     tag: "Pitching",
     date: "October 31, 2026",
