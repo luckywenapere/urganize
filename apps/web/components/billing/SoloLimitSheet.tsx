@@ -74,7 +74,7 @@ export function SoloLimitSheet() {
             onClick={upgrade}
             className="min-h-12 rounded-full bg-brand px-5 text-sm font-semibold text-content-inverse"
           >
-            Upgrade to Manager
+            Upgrade to Pro
           </button>
         </div>
       </DialogPanel>

@@ -94,7 +94,7 @@ describe('the plan on the sheet', () => {
 
   it('prices from @urganize/pricing, starting price first', () => {
     const plan = trialSheetPlan('artist');
-    expect(plan.name).toBe('Solo');
+    expect(plan.name).toBe('Emerging');
     expect(plan.price).toMatch(/\/month$/);
     expect(plan.then === null || plan.then.startsWith('for your first')).toBe(true);
   });

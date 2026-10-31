@@ -9,7 +9,7 @@ import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { useOpenSettings } from '@/components/settings/useOpenSettings';
 import { ProfileFace } from '@/components/shared/ProfileFace';
 import { useArtistFilterOptions } from '@/components/shell/useArtistFilter';
-import { Check, Sparkles, Users } from '@/components/icons';
+import { Check, Sparkles, Users, Wallet2 } from '@/components/icons';
 import { useUrgansUsage } from '@/components/app/useUrgansUsage';
 import { useHelpMenuGroups } from '@/components/app/HelpMenu';
 import { useKeepInViewport } from '@/lib/use-keep-in-viewport';
@@ -104,7 +104,9 @@ export function WorkspaceMenu({
   const credits = useUrgansUsage()?.credits ?? null;
   const creditTotal = credits ? Math.max(0, Math.floor(credits.total)) : 0;
   const creditLabel = `${creditTotal.toLocaleString('en')} ${creditTotal === 1 ? 'credit' : 'credits'}`;
-  const creditsIndex = settingsIndex + 1;
+  // "Plan and billing" (2026-10-31, founder: paying must be easy to find).
+  const billingIndex = settingsIndex + 1;
+  const creditsIndex = billingIndex + 1;
   const helpGroups = useHelpMenuGroups();
   const helpItems = showHelp ? helpGroups.flat() : [];
   const helpStart = creditsIndex + (credits ? 1 : 0);
@@ -197,6 +199,11 @@ export function WorkspaceMenu({
   const handleSettings = () => {
     setOpen(false);
     openSettings();
+  };
+
+  const handleBilling = () => {
+    setOpen(false);
+    openSettings({ segment: 'billing' });
   };
 
   const handleSignOut = async () => {
@@ -326,6 +333,19 @@ export function WorkspaceMenu({
           >
             <GearIcon className="h-4 w-4 text-content-tertiary" />
             Settings
+          </button>
+          <button
+            ref={(el) => {
+              itemRefs.current[billingIndex] = el;
+            }}
+            type="button"
+            role="menuitem"
+            onClick={handleBilling}
+            onKeyDown={(event) => handleItemKeyDown(event, billingIndex)}
+            className="motion-focus flex w-full items-center gap-3 px-3 py-2.5 text-sm text-content-primary transition-colors hover:bg-bg-hover focus:bg-bg-hover"
+          >
+            <Wallet2 className="h-4 w-4 text-content-tertiary" aria-hidden="true" />
+            Plan and billing
           </button>
           {credits ? (
             <Link

@@ -86,7 +86,7 @@ export function ScoreboardView({
         </p>
         <p className="mt-1 text-sm text-content-secondary">
           {number.format(board.payingTeams)} paying {board.payingTeams === 1 ? 'team' : 'teams'}{' '}
-          on Manager or Label. A team counts when 2 or more of its members did something in the
+          on Pro or Label. A team counts when 2 or more of its members did something in the
           last 7 days. Counting teams that don&apos;t pay, {number.format(board.weeklyActiveTeams)}{' '}
           {board.weeklyActiveTeams === 1 ? 'team was' : 'teams were'} active this week.
         </p>
@@ -316,7 +316,7 @@ export function ScoreboardView({
         </h2>
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>
-            A paying team has a current Manager or Label subscription. Solo adds to MRR but is
+            A paying team has a current Pro or Label subscription. Emerging adds to MRR but is
             not a team. Free and allowlisted teams are left out.
           </li>
           <li>

@@ -28,7 +28,6 @@ import {
   isConfirmReleaseDateTask,
 } from './pinned-confirm-date';
 import { getAuthoredTemplate } from './release-templates/loader';
-import { TEAM_TRIAL_DAYS } from './team-billing';
 
 // URG-251 (Parts 1, 2, 3, 5) + URG-274, 2026-10-14. Pure rules for the new
 // onboarding flow, plus a few structural checks on the wiring (this repo has no
@@ -256,7 +255,7 @@ describe('paywall (URG-251 Part 3)', () => {
   });
 
   it('states the real trial length, and takes prices from @urganize/pricing', () => {
-    expect(paywallTrialLine(TEAM_TRIAL_DAYS)).toBe('Start your 3-day free trial, cancel anytime.');
+    expect(paywallTrialLine(3)).toBe('Start your 3-day free trial, cancel anytime.');
     // The paywall screen moved to the trial sheet after the first music (#854):
     // no price typed in, and none at all in the iPhone app.
     const ui = code('components/onboarding/OnboardingTrialSheet.tsx');

@@ -264,8 +264,8 @@ describe('what one payment owes TRM', () => {
 
   it('percent basis owes a share of what the team paid, whatever the period', () => {
     const c = config({ costBasis: 'percent', revenueShareBps: 1000 });
-    expect(pay('manager', 'monthly', c)?.owedKobo).toBe(300_000);
-    expect(pay('manager', 'semiannual', c)?.owedKobo).toBe(1_500_000);
+    expect(pay('manager', 'monthly', c)?.owedKobo).toBe(260_000);
+    expect(pay('manager', 'semiannual', c)?.owedKobo).toBe(1_300_000);
     expect(pay('label', 'annual', c)?.owedKobo).toBe(10_000_000);
     expect(pay('label', 'annual', c)?.feeAnnualKobo).toBeNull();
   });
@@ -439,8 +439,8 @@ describe('the Distribute step', () => {
 
   it('offers 6 months first, then a year, each with its saving', () => {
     expect(prepayOffers('manager')).toEqual([
-      { interval: 'semiannual', priceKobo: 15_000_000, savingNaira: 30_000 },
-      { interval: 'annual', priceKobo: 30_000_000, savingNaira: 60_000 },
+      { interval: 'semiannual', priceKobo: 13_000_000, savingNaira: 26_000 },
+      { interval: 'annual', priceKobo: 26_000_000, savingNaira: 52_000 },
     ]);
   });
 });

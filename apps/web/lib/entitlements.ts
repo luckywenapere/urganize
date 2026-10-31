@@ -411,19 +411,19 @@ function soloLimitMessage(key: CountableLimitKey, limit: number): string {
   const artists = manager.limits.artists;
   const seats = manager.limits.seats;
   const both = `${artists === null ? 'unlimited' : artists} artists and ${seats === null ? 'unlimited' : seats} people`;
-  const credit = ' The days left on Solo come off the price.';
+  const credit = ' The days left on Emerging come off the price.';
   switch (key) {
     case 'artists':
-      return `Solo covers ${limit} ${limit === 1 ? 'artist' : 'artists'}. Upgrade to Manager for ${both}${price}.${credit}`;
+      return `Emerging covers ${limit} ${limit === 1 ? 'artist' : 'artists'}. upgrade to Pro for ${both}${price}.${credit}`;
     case 'seats':
-      return `Solo includes ${limit} ${limit === 1 ? 'person' : 'people'}. Upgrade to Manager for ${both}${price}.${credit}`;
+      return `Emerging includes ${limit} ${limit === 1 ? 'person' : 'people'}. upgrade to Pro for ${both}${price}.${credit}`;
     case 'active_releases': {
       const releases = manager.limits.activeReleases;
-      return `Solo covers ${limit} ${limit === 1 ? 'release' : 'releases'} at a time. Archive one you have finished, or upgrade to Manager for ${releases === null ? 'unlimited releases' : `${releases} at a time`}${price}.${credit}`;
+      return `Emerging covers ${limit} ${limit === 1 ? 'release' : 'releases'} at a time. Archive one you have finished, or upgrade to Pro for ${releases === null ? 'unlimited releases' : `${releases} at a time`}${price}.${credit}`;
     }
     case 'urgans_monthly_actions': {
       const actions = manager.limits.urgansMonthlyActions;
-      return `You have used all ${limit} UrgAns actions on your plan this period. Everything else keeps working normally, and these reset when your billing period does. Upgrade to Manager for ${actions === null ? 'unlimited' : `${actions} a month`}.`;
+      return `You have used all ${limit} UrgAns actions on your plan this period. Everything else keeps working normally, and these reset when your billing period does. upgrade to Pro for ${actions === null ? 'unlimited' : `${actions} a month`}.`;
     }
   }
 }

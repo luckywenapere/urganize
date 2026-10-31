@@ -8,9 +8,12 @@ import {
   SALES_CONTACT_EMAIL,
   SALES_WHATSAPP_URL,
   DEFAULT_SELLING_INTERVAL,
+  INTRO_MONTHS,
   formatPlanCyclePrice,
+  getIntroPrice,
   getPlan,
   getTier,
+  getTierPrice,
   isSellableInterval,
   type BillingInterval,
   type PricingTierId,
@@ -537,6 +540,15 @@ export function TeamWall() {
   // iOS, the legacy picker and "nothing to buy" keep the single card below.
   const showCards = isOwner && PRICING_V2 && canCheckOut && !isIOSNativeApp;
   const introMonthsLeft = team?.introMonthsLeft ?? 0;
+  // A team that has never paid (2026-10-31, no trial): this is its first
+  // screen after "Your team", so it reads as a start, not as a lapse.
+  const isFirstPlan =
+    !isUpgradeIntent && !isReadOnlyTeam && team?.state === 'walled' && introMonthsLeft >= INTRO_MONTHS;
+  const anyIntroPrice = offeredTiers.some((tier) => getIntroPrice(tier) !== null);
+  const payLabel = (tier: PricingTierId): string => {
+    const price = getTierPrice(tier, selectedInterval);
+    return price ? `Pay ₦${price.amount.toLocaleString('en-US')} and start` : `Get ${getTier(tier).label}`;
+  };
 
   return (
     <main className="min-h-screen px-4 py-12">
@@ -549,9 +561,11 @@ export function TeamWall() {
               ? 'Your plan'
               : isReadOnlyTeam
                 ? 'Your plan ended'
-                : team?.state === 'walled'
-                  ? 'Your trial has ended'
-                  : 'Your plan'}
+                : isFirstPlan
+                  ? 'Pick a plan to start'
+                  : team?.state === 'walled'
+                    ? 'Your trial has ended'
+                    : 'Your plan'}
           </p>
           <div className={`flex items-center gap-2 ${showCards ? 'justify-center' : ''}`}>
             <h1 className="font-display text-3xl leading-tight text-balance text-content-primary sm:text-4xl">
@@ -559,7 +573,9 @@ export function TeamWall() {
                 ? 'Move up a plan.'
                 : isReadOnlyTeam
                   ? 'Start making changes again.'
-                  : 'Pick up where you left off.'}
+                  : isFirstPlan
+                    ? 'Run your next release like a pro.'
+                    : 'Pick up where you left off.'}
             </h1>
             <HelpTip
               helpKey={isUpgradeIntent ? 'wall.upgrade' : isReadOnlyTeam ? 'wall.readonly' : 'wall.kept'}
@@ -608,7 +624,9 @@ export function TeamWall() {
                       ? BOOK_CALL_LABEL
                       : isUpgradeIntent
                         ? `Move to ${getTier(tier).label}`
-                        : `Get ${getTier(tier).label}`
+                        : isFirstPlan
+                          ? payLabel(tier)
+                          : `Get ${getTier(tier).label}`
                   }
                 />
 
@@ -639,8 +657,8 @@ export function TeamWall() {
                 </p>
                 <p className="text-center text-xs leading-5 text-content-tertiary">
                   Prices in Naira, for your whole team.
-                  {introMonthsLeft > 0 ? ' The first 6 months price is for teams paying for the first time.' : ''}{' '}
-                  Cancel any time.
+                  {anyIntroPrice && introMonthsLeft > 0 ? ' The first 6 months price is for teams paying for the first time.' : ''}{' '}
+                  Card or bank transfer, through Paystack. Cancel any time.
                 </p>
               </div>
             ) : (

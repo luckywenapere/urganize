@@ -122,7 +122,7 @@ export function DistributionPlanCard({ plan, limit = null }: { plan: Distributio
 
   return (
     <div className="border border-stroke-default bg-bg-surface p-4 sm:p-5">
-      <p className="text-[15px] font-semibold text-content-primary">Distribution comes with Manager and Label</p>
+      <p className="text-[15px] font-semibold text-content-primary">Distribution comes with Pro and Label</p>
       <p className="mt-1 text-sm text-content-secondary">Or send it with your own TRM plan.</p>
       <div className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:items-center">
         {plan.canSwitch ? (

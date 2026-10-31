@@ -9,24 +9,21 @@ describe('isAllowlistedEmail', () => {
   it.each([
     'luckydio10@gmail.com',
     'luckywenapere@gmail.com',
-    'aesthetique.toine@gmail.com',
-    'adamukabiru772@gmail.com',
-    'itsderah@gmail.com',
-    'ewaoluwaadenaiye@gmail.com',
-    'officialworldpope@gmail.com',
-    'uzoaruqueen98@gmail.com',
+    'theurganization@gmail.com',
   ])('allows listed address %s', (email) => {
     expect(isAllowlistedEmail(email)).toBe(true);
   });
 
   it('normalizes casing and whitespace', () => {
     expect(isAllowlistedEmail('LUCKYDIO10@GMAIL.COM')).toBe(true);
-    expect(isAllowlistedEmail('  itsderah@gmail.com  ')).toBe(true);
-    expect(isAllowlistedEmail('Itsderah@Gmail.com')).toBe(true);
+    expect(isAllowlistedEmail('  luckywenapere@gmail.com  ')).toBe(true);
+    expect(isAllowlistedEmail('TheUrganization@Gmail.com')).toBe(true);
   });
 
   it('blocks everything not on the list', () => {
     expect(isAllowlistedEmail('random.person@gmail.com')).toBe(false);
+    // Team accounts lost free access on 2026-10-31 (founder).
+    expect(isAllowlistedEmail('itsderah@gmail.com')).toBe(false);
     expect(isAllowlistedEmail('lucky.wenapere@pentagonsecurities.net')).toBe(false);
   });
 

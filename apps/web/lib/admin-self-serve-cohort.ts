@@ -92,8 +92,8 @@ export function cohortCell(teams: CohortTeam[], now: Date): CohortCell {
 }
 
 const PLAN_ROWS: Array<{ key: string; label: string }> = [
-  { key: 'solo', label: 'Solo' },
-  { key: 'manager', label: 'Manager' },
+  { key: 'solo', label: 'Emerging' },
+  { key: 'manager', label: 'Pro' },
   { key: 'label', label: 'Label' },
 ];
 

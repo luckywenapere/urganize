@@ -39,13 +39,12 @@ const trialingTeam: WorkspaceBillingFields = {
 };
 
 describe('team-billing constants', () => {
-  it('pins the team trial at 3 days, distinct from the superseded card flow', () => {
-    expect(TEAM_TRIAL_DAYS).toBe(3);
+  it('gives a new team no trial: pay first (2026-10-31)', () => {
+    expect(TEAM_TRIAL_DAYS).toBe(0);
   });
 
   it('shows the indicator only on the trial\'s final day', () => {
     expect(TEAM_TRIAL_PILL_THRESHOLD_DAYS).toBe(1);
-    expect(TEAM_TRIAL_PILL_THRESHOLD_DAYS).toBeLessThan(TEAM_TRIAL_DAYS);
   });
 
   it('grace is 15 minutes — long enough for an in-flight save, short enough not to be a second trial', () => {
@@ -213,11 +212,29 @@ describe('resolveTeamAccess — migration assignment matrix', () => {
   it('a backfilled unpaid team is trialing with its full 3 days', () => {
     const result = resolveTeamAccess({
       ownerHasAccess: false,
-      team: { ...trialingTeam, trialStartedAt: NOW.toISOString(), trialEndsAt: at(TEAM_TRIAL_DAYS * DAY) },
+      team: { ...trialingTeam, trialStartedAt: NOW.toISOString(), trialEndsAt: at(3 * DAY) },
       now: NOW,
     });
     expect(result.state).toBe('trial');
-    expect(result.trialDaysLeft).toBe(TEAM_TRIAL_DAYS);
+    expect(result.trialDaysLeft).toBe(3);
+  });
+
+  it('a new team stamped with no trial is walled straight away (2026-10-31)', () => {
+    const result = resolveTeamAccess({
+      ownerHasAccess: false,
+      team: { ...trialingTeam, trialStartedAt: NOW.toISOString(), trialEndsAt: at(TEAM_TRIAL_DAYS * DAY) },
+      now: NOW,
+      graceMs: 0,
+    });
+    expect(result.hasAccess).toBe(false);
+    // The server passes the 15-minute grace; a zero-length trial gets none.
+    const withGrace = resolveTeamAccess({
+      ownerHasAccess: false,
+      team: { ...trialingTeam, trialStartedAt: NOW.toISOString(), trialEndsAt: NOW.toISOString() },
+      now: new Date(NOW.getTime() + 1000),
+      graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
+    });
+    expect(withGrace.hasAccess).toBe(false);
   });
 
   it('an unstamped team fails OPEN rather than walling on our own bug', () => {

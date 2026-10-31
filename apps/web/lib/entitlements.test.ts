@@ -225,13 +225,13 @@ describe('tier prices and the sales-led tier', () => {
   // repo has five times advertised one price and charged another. If this fails,
   // the arithmetic moved: mint the Plans and repoint the vars BEFORE shipping it.
   it('resolves the yearly prices to the figures the Plans must be minted at', () => {
-    // Solo ₦5,000 / ₦25,000 / ₦50,000 since 2026-10-23 (Plans in place); 2026-10-22:
-    // Manager ₦30,000 / ₦150,000 / ₦300,000. Mint these Plans and repoint the
-    // PAYSTACK_PLAN_* vars before the push. Label is unchanged (₦600,000 minted).
-    expect(getTierPrice('solo', 'annual')?.amount).toBe(50_000);
-    expect(getTierPrice('manager', 'annual')?.amount).toBe(300_000);
-    expect(getTierPrice('solo', 'semiannual')?.amount).toBe(25_000);
-    expect(getTierPrice('manager', 'semiannual')?.amount).toBe(150_000);
+    // 2026-10-31: Emerging (solo) ₦2,600 / ₦13,000 / ₦26,000 and Pro (manager)
+    // ₦26,000 / ₦130,000 / ₦260,000. Mint these Plans and repoint the
+    // PAYSTACK_PLAN_* vars; until then card checkout refuses. Label is unchanged (₦600,000 minted).
+    expect(getTierPrice('solo', 'annual')?.amount).toBe(26_000);
+    expect(getTierPrice('manager', 'annual')?.amount).toBe(260_000);
+    expect(getTierPrice('solo', 'semiannual')?.amount).toBe(13_000);
+    expect(getTierPrice('manager', 'semiannual')?.amount).toBe(130_000);
     expect(getTierPrice('label', 'annual')?.amount).toBe(1_000_000);
   });
 
@@ -239,13 +239,13 @@ describe('tier prices and the sales-led tier', () => {
     // "/month" and "/year" rather than "/mo" and "/yr": the founder's copy rules
     // ask for fifth-grade readable, and an abbreviation is one more thing to
     // decode. The no-argument call takes the default, which is monthly.
-    expect(formatTierPrice('solo')).toBe('₦5,000/month');
-    expect(formatTierPrice('manager')).toBe('₦30,000/month');
-    expect(formatTierPrice('manager', 'semiannual')).toBe('₦150,000 for 6 months');
+    expect(formatTierPrice('solo')).toBe('₦2,600/month');
+    expect(formatTierPrice('manager')).toBe('₦26,000/month');
+    expect(formatTierPrice('manager', 'semiannual')).toBe('₦130,000 for 6 months');
     // Label keeps its price for teams already on it, but no page shows it.
     expect(formatTierPrice('label')).toBeNull();
-    expect(formatTierPrice('solo', 'annual')).toBe('₦50,000/year');
-    expect(formatTierPrice('manager', 'annual')).toBe('₦300,000/year');
+    expect(formatTierPrice('solo', 'annual')).toBe('₦26,000/year');
+    expect(formatTierPrice('manager', 'annual')).toBe('₦260,000/year');
     expect(formatTierPrice('label', 'annual')).toBeNull();
   });
 
@@ -945,8 +945,8 @@ describe('Solo limits point at Manager (self-serve checkout)', () => {
       expect(verdict.allowed).toBe(false);
       if (verdict.allowed) continue;
       expect(verdict.upgradeTo).toBe('manager');
-      expect(verdict.message.toLowerCase()).toContain('upgrade to manager');
-      expect(verdict.message).toContain('30,000');
+      expect(verdict.message.toLowerCase()).toContain('upgrade to pro');
+      expect(verdict.message).toContain('26,000');
       expect(verdict.message).toContain('come off the price');
       expect(verdict.message).not.toMatch(/\u2014|workspace/i);
     }
