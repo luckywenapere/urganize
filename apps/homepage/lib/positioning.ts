@@ -50,4 +50,10 @@ export const CANONICAL_DESCRIPTION =
   'Every release, on plan. Add a release and everyone knows their job till drop day, ' +
   'so nobody has to chase anybody. Built for artists and their teams.';
 
+// The link preview (2026-10-31, #939). See the web copy for the note.
+export const SHARE_HEADLINE = 'From idea to execution.';
+export const SHARE_TITLE = `Urganize: ${SHARE_HEADLINE.slice(0, -1)}`;
+export const SHARE_DESCRIPTION =
+  'Urganize is where music teams manage everything from idea to execution.';
+
 export const URGANS_LINE = 'personal AI for music professionals';

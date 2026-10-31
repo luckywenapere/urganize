@@ -8,7 +8,7 @@ import { APP_ORIGIN } from '@/lib/app-hosts';
 import { LEGACY_HOST_EARLY_SCRIPT } from '@/lib/legacy-host-handoff';
 import { NavPendingBar } from '@/components/app/NavPendingBar';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
-import { BRAND_LINE, CANONICAL_DESCRIPTION } from '@/lib/positioning';
+import { BRAND_LINE, CANONICAL_DESCRIPTION, SHARE_DESCRIPTION, SHARE_HEADLINE, SHARE_TITLE } from '@/lib/positioning';
 import './globals.css';
 
 // Self-hosted via next/font (preloaded, no third-party request chain). Per
@@ -46,6 +46,18 @@ const appName = 'Urganize';
 // Imported rather than typed out so the app, the marketing site and the share
 // card cannot describe a different product; see lib/positioning.
 const appDescription = CANONICAL_DESCRIPTION;
+
+// The share card (#939). Versioned like the marketing site's (URG-156): chat
+// apps cache the bytes per URL, and the unversioned PNG kept WhatsApp showing
+// a months-old card. Bump with SHARE_IMAGE_VERSION in apps/homepage/lib/seo.ts
+// whenever scripts/generate-og-image.mjs is re-run.
+const SHARE_IMAGE_VERSION = '2026-10-31-idea-to-execution';
+const shareImage = {
+  url: `/opengraph-image.jpg?v=${SHARE_IMAGE_VERSION}`,
+  width: 1200,
+  height: 630,
+  alt: `Urganize. ${SHARE_HEADLINE} ${SHARE_DESCRIPTION}`,
+};
 
 function getMetadataBase() {
   // Production fallback is the CANONICAL domain, never the *.vercel.app
@@ -86,22 +98,17 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     siteName: appName,
-    title: appName,
-    description: appDescription,
-    images: [
-      {
-        url: '/opengraph-image.png',
-        width: 1200,
-        height: 630,
-        alt: `${appName} Open Graph image`,
-      },
-    ],
+    // Link previews say the share card's line (#939); the tab and search
+    // keep BRAND_LINE and the long description above.
+    title: SHARE_TITLE,
+    description: SHARE_DESCRIPTION,
+    images: [shareImage],
   },
   twitter: {
     card: 'summary_large_image',
-    title: appName,
-    description: appDescription,
-    images: ['/opengraph-image.png'],
+    title: SHARE_TITLE,
+    description: SHARE_DESCRIPTION,
+    images: [shareImage.url],
   },
 };
 

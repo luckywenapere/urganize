@@ -126,6 +126,17 @@ export const CANONICAL_DESCRIPTION =
   'so nobody has to chase anybody. Built for artists and their teams.';
 
 /**
+ * The link preview (2026-10-31, founder approved, #939): the share card's
+ * headline and the title and text WhatsApp, X and LinkedIn show under it.
+ * Link preview ONLY: search titles, the homepage headline and the lines above
+ * stay as they are until the founder moves the rest of the positioning.
+ */
+export const SHARE_HEADLINE = 'From idea to execution.';
+export const SHARE_TITLE = `Urganize: ${SHARE_HEADLINE.slice(0, -1)}`;
+export const SHARE_DESCRIPTION =
+  'Urganize is where music teams manage everything from idea to execution.';
+
+/**
  * UrgAns is NOT the product, and this line is the whole of the distinction.
  *
  * It is the AI inside Urganize. When it is asked what it is, it says this.

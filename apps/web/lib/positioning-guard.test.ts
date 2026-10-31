@@ -12,6 +12,9 @@ import {
   CORE_LINE,
   ONE_LINER,
   PROMISE_LINE,
+  SHARE_DESCRIPTION,
+  SHARE_HEADLINE,
+  SHARE_TITLE,
   SHORT_DESCRIPTION,
   SHORT_LINE,
   URGANS_LINE,
@@ -286,6 +289,18 @@ describe('positioning', () => {
     expect(PROMISE_LINE.length).toBeLessThan(80);
   });
 
+  it('says the founder\'s link preview line (#939)', () => {
+    // Link previews only (2026-10-31): the share card, og:title and
+    // og:description. Search titles and the homepage still use the lines above.
+    expect(SHARE_HEADLINE).toBe('From idea to execution.');
+    expect(SHARE_TITLE).toBe('Urganize: From idea to execution');
+    expect(SHARE_DESCRIPTION).toBe(
+      'Urganize is where music teams manage everything from idea to execution.',
+    );
+    // Short enough that WhatsApp and X show the description whole.
+    expect(SHARE_DESCRIPTION.length).toBeLessThan(100);
+  });
+
   it('uses no em dash in the positioning itself', () => {
     for (const line of [
       CORE_CLAUSE,
@@ -298,6 +313,9 @@ describe('positioning', () => {
       SHORT_DESCRIPTION,
       CANONICAL_DESCRIPTION,
       URGANS_LINE,
+      SHARE_HEADLINE,
+      SHARE_TITLE,
+      SHARE_DESCRIPTION,
     ]) {
       expect(line).not.toContain('—');
       expect(line).not.toContain('–');

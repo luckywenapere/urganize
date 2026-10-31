@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.229.7",
+    tag: "App",
+    date: "October 31, 2026",
+    listed: false,
+    highlights: [
+      "Links to Urganize now show a new preview card: from idea to execution.",
+    ],
+  },
+  {
     version: "1.229.6",
     tag: "Rollouts",
     date: "October 31, 2026",
