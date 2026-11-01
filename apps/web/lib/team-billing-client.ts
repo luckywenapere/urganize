@@ -54,6 +54,9 @@ export type TeamAccessClientSnapshot = {
    *  an older server: treat as none, so the wall never shows a price lower than
    *  checkout would charge. */
   introMonthsLeft?: number;
+  /** Payments go through Bachs (2026-11-01): any currency, mobile money,
+   *  crypto. A server fact (the key lives in an env var). */
+  payWithBachs?: boolean;
 };
 
 /** How long a fetched answer is reused. Short in both directions: the wall must
@@ -96,6 +99,7 @@ async function fetchTeamAccess(): Promise<TeamAccessClientSnapshot | null> {
       teamAccess?: Partial<TeamAccessClientSnapshot> | null;
       purchasableTiers?: unknown;
       introMonthsLeft?: unknown;
+      payWithBachs?: unknown;
     };
     const team = payload.teamAccess;
 
@@ -132,6 +136,7 @@ async function fetchTeamAccess(): Promise<TeamAccessClientSnapshot | null> {
       // tell "no tier is chargeable" from "an older server did not say".
       ...(purchasable.length > 0 ? { purchasableTiers: purchasable } : {}),
       introMonthsLeft: Math.max(0, Math.floor(Number(payload.introMonthsLeft) || 0)),
+      payWithBachs: payload.payWithBachs === true,
     };
   } catch {
     // Fail open: null means "we do not know", and every consumer treats that

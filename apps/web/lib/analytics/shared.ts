@@ -41,7 +41,7 @@ export type SelfServeEventProperties = {
   path?: 'self_serve' | 'concierge' | 'legacy' | 'ask_admin' | null;
   plan?: string | null;
   period?: string | null;
-  method?: 'card' | 'transfer' | 'direct_transfer' | null;
+  method?: 'card' | 'transfer' | 'direct_transfer' | 'bachs' | null;
   step?: string | null;
   topic?: string | null;
   kind?: string | null;
