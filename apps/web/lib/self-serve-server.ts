@@ -458,6 +458,9 @@ export async function applyTransferPeriod(
     promoCode?: string | null;
     /** Admin-set end date, for money paid outside Paystack. */
     periodEnd?: Date | null;
+    /** Paid through Bachs (2026-11-01): recorded as its own channel. The
+     *  period still does not renew by itself, so method stays 'transfer'. */
+    channel?: 'bachs';
   }
 ): Promise<{ periodEnd: string; workspaceId: string | null }> {
   const firstPayment = !(await hasPaidBefore(admin, input.userId));
@@ -527,7 +530,7 @@ export async function applyTransferPeriod(
     plan: input.plan,
     source,
     chargedAt: input.now,
-    channel: input.method === 'direct_transfer' ? 'direct_transfer' : 'transfer',
+    channel: input.channel ?? (input.method === 'direct_transfer' ? 'direct_transfer' : 'transfer'),
     interval: input.period,
     planVersion: PRICE_LIST_VERSION,
     intro,

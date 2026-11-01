@@ -20,6 +20,7 @@ const CHANNEL_LABEL: Record<PaymentChannel, string> = {
   card: 'Card',
   transfer: 'Transfer',
   direct_transfer: 'Direct transfer',
+  bachs: 'Bachs',
   other: 'Card (assumed)',
 };
 

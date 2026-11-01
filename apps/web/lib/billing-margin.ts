@@ -5,7 +5,7 @@ import { INTERVAL_MONTHS, type BillingInterval } from '@urganize/pricing';
 // such on the page: Paystack's fee is worked out from its published price, not
 // read from a settlement.
 
-export type PaymentChannel = 'card' | 'transfer' | 'direct_transfer' | 'other';
+export type PaymentChannel = 'card' | 'transfer' | 'direct_transfer' | 'bachs' | 'other';
 
 /**
  * Paystack's charge.success `data.channel` to ours.
@@ -24,7 +24,7 @@ export function mapPaystackChannel(channel: unknown): PaymentChannel {
 }
 
 export function isPaymentChannel(value: unknown): value is PaymentChannel {
-  return value === 'card' || value === 'transfer' || value === 'direct_transfer' || value === 'other';
+  return value === 'card' || value === 'transfer' || value === 'direct_transfer' || value === 'bachs' || value === 'other';
 }
 
 const CARD_PERCENT_BPS = 150; // 1.5%
@@ -33,6 +33,7 @@ const CARD_FLAT_WAIVED_BELOW_KOBO = 2_500_00; // ₦2,500
 const CARD_CAP_KOBO = 2_000_00; // ₦2,000
 const TRANSFER_PERCENT_BPS = 100; // 1%
 const TRANSFER_CAP_KOBO = 300_00; // ₦300
+const BACHS_PERCENT_BPS = 500; // 5%
 
 /** Paystack's fee on one payment, kobo, from its published local price.
  *  'other' is priced as a card, the dearer of the two, so the estimate never
@@ -40,6 +41,11 @@ const TRANSFER_CAP_KOBO = 300_00; // ₦300
 export function estimatePaystackFeeKobo(amountKobo: number, channel: PaymentChannel): number {
   const amount = Math.max(0, Math.round(Number(amountKobo) || 0));
   if (amount === 0 || channel === 'direct_transfer') return 0;
+  // Bachs (2026-11-01): the fee depends on how they paid (Naira card 2%,
+  // transfer 1.5% capped at ₦2,000, mobile money 2 to 3%, dollar card 5% +
+  // 40c, crypto 1.5%). Priced at 5%, the dearest, so the estimate never
+  // flatters the margin.
+  if (channel === 'bachs') return Math.round((amount * BACHS_PERCENT_BPS) / 10_000);
   if (channel === 'transfer') {
     return Math.min(TRANSFER_CAP_KOBO, Math.round((amount * TRANSFER_PERCENT_BPS) / 10_000));
   }

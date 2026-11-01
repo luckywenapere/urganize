@@ -40,6 +40,16 @@ import {
   type PaymentMethodChoice,
 } from '@/lib/self-serve';
 
+/** What Bachs takes (docs.bachs.io, 2026-11-01). Its own page shows the
+ *  amount in the payer's money. */
+const BACHS_WAYS_TO_PAY = [
+  'Bank transfer (₦)',
+  'Naira card',
+  'Mobile money (GH₵, KSh and more)',
+  'Dollar card',
+  'USDT or USDC',
+] as const;
+
 type Options = {
   /** Call-led plans this person may pay for now, as "plan:period": a payment link from the founder, or a renewal. */
   callLedAllowed: string[];
@@ -47,6 +57,8 @@ type Options = {
   /** Starting-price months left (2026-10-26). */
   introMonthsLeft?: number;
   transferAccounts: boolean;
+  /** Bachs (2026-11-01): one Pay button, any currency or way to pay. */
+  payWithBachs?: boolean;
   distributionOn: boolean;
   approved: boolean;
   openInvoice: {
@@ -598,7 +610,10 @@ function CheckoutStep({
 
   const cardPeriods = options?.cardPeriods[intent.plan] ?? [];
   const cardAvailable = cardPeriods.length > 0;
-  const effectiveMethod: PaymentMethodChoice = method === 'card' && options && !cardAvailable ? 'transfer' : method;
+  const bachs = options?.payWithBachs === true;
+  // Bachs offers every period whatever they pay with, as transfer does here.
+  const effectiveMethod: PaymentMethodChoice =
+    bachs || (method === 'card' && options && !cardAvailable) ? 'transfer' : method;
   const periods = useMemo(() => {
     if (changing && current) return [current.period];
     const offered = periodsForMethod(effectiveMethod, cardPeriods);
@@ -672,6 +687,17 @@ function CheckoutStep({
     try {
       const token = await accessToken();
       if (!token) throw new Error('Sign in again to pay.');
+      if (bachs) {
+        const response = await fetch('/api/billing/bachs', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan: intent.plan, period }),
+        });
+        const payload = (await response.json().catch(() => ({}))) as { checkoutUrl?: string; error?: string };
+        if (!response.ok || !payload.checkoutUrl) throw new Error(payload.error || 'Could not start the payment.');
+        window.location.assign(payload.checkoutUrl);
+        return;
+      }
       if (effectiveMethod === 'card') {
         const response = await fetch('/api/billing/start-checkout', {
           method: 'POST',
@@ -757,17 +783,21 @@ function CheckoutStep({
         ? `Upgrade to ${planName(intent.plan)}`
         : `Switch to ${planName(intent.plan)}`
     : busy
-    ? effectiveMethod === 'card'
+    ? bachs
+      ? 'Opening the payment page…'
+      : effectiveMethod === 'card'
       ? 'Opening Paystack…'
       : 'Getting your account number…'
-    : effectiveMethod === 'card'
+    : bachs || effectiveMethod === 'card'
       ? `Pay ${formatNaira(amount)}`
       : 'Get my account number';
   const fineprint = changing
     ? upgrading && current
       ? `The days left on ${planName(current.plan)} come off the price.`
       : 'The change starts when your current period ends.'
-    : effectiveMethod === 'card'
+    : bachs
+      ? 'You see the amount in your own money on the next page. Each payment covers the time you pick, and we remind you before it ends.'
+      : effectiveMethod === 'card'
       ? SELF_SERVE_COPY.cardFine
       : SELF_SERVE_COPY.transferFine;
 
@@ -867,6 +897,19 @@ function CheckoutStep({
               </div>
             ) : (
             <>
+            {bachs ? (
+              <>
+                <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">Pay your way</div>
+                <ul className="grid grid-cols-2 gap-2 text-sm text-content-primary" aria-label="Ways to pay">
+                  {BACHS_WAYS_TO_PAY.map((way) => (
+                    <li key={way} className="rounded-2xl border border-stroke-default px-4 py-3">
+                      {way}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+            <>
             <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">Pay with</div>
             <div role="radiogroup" aria-label="Pay with" className="grid grid-cols-2 gap-2">
               {(
@@ -901,8 +944,10 @@ function CheckoutStep({
                 );
               })}
             </div>
+            </>
+            )}
 
-            {codeOpen ? (
+            {bachs ? null : codeOpen ? (
               <div>
                 <label className="block text-sm text-content-secondary" htmlFor="checkout-code">
                   Code

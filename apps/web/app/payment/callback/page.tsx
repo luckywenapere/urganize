@@ -60,7 +60,7 @@ type VerifyResponse = {
   /** Self-serve checkout (2026-10-22): draws the plain return screens. */
   selfServe?: boolean;
   interval?: string | null;
-  method?: 'card' | 'transfer';
+  method?: 'card' | 'transfer' | 'bachs';
 };
 
 const POLL_INTERVAL_MS = 1_500;
@@ -70,6 +70,8 @@ function PaymentCallbackContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const reference = searchParams.get('reference');
+  // Bachs (2026-11-01): its own status route, which also asks Bachs.
+  const isBachs = searchParams.get('provider') === 'bachs';
   const { checkAuth } = useAuthStore();
 
   const [status, setStatus] = useState<PaymentStatus>('verifying');
@@ -91,10 +93,29 @@ function PaymentCallbackContent() {
     const poll = async (): Promise<void> => {
       if (cancelled) return;
       try {
-        const res = await fetch(`/api/payments/verify?reference=${encodeURIComponent(reference)}`, {
-          cache: 'no-store',
-        });
-        const payload = (await res.json().catch(() => ({}))) as VerifyResponse;
+        let res: Response;
+        let payload: VerifyResponse;
+        if (isBachs) {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData.session?.access_token ?? '';
+          res = await fetch(`/api/billing/bachs?reference=${encodeURIComponent(reference)}`, {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: 'no-store',
+          });
+          const bachs = (await res.json().catch(() => ({}))) as { status?: string; plan?: string; period?: string };
+          payload = {
+            status: bachs.status === 'paid' ? 'success' : 'pending',
+            selfServe: true,
+            plan: bachs.plan ?? null,
+            interval: bachs.period ?? null,
+            method: 'bachs',
+          };
+        } else {
+          res = await fetch(`/api/payments/verify?reference=${encodeURIComponent(reference)}`, {
+            cache: 'no-store',
+          });
+          payload = (await res.json().catch(() => ({}))) as VerifyResponse;
+        }
 
         if (cancelled) return;
         if (payload.selfServe) setResult(payload);
@@ -195,7 +216,7 @@ function PaymentCallbackContent() {
     return () => {
       cancelled = true;
     };
-  }, [checkAuth, reference]);
+  }, [checkAuth, isBachs, reference]);
 
   const isTrialCard = result.plan === TRIAL_CARD_PLAN;
   // Shared with Settings rather than re-deriving here: that helper knows the
@@ -344,7 +365,7 @@ function SelfServeReturn({
   status: PaymentStatus;
   plan: string | null;
   interval: string | null;
-  method: 'card' | 'transfer';
+  method: 'card' | 'transfer' | 'bachs';
   activeUntil: string | null;
   email: string | null;
   onContinue: () => void;
