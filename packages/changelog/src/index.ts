@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.234.1",
+    tag: "App",
+    date: "November 1, 2026",
+    highlights: [
+      "If you are the artist, Home opens your own page.",
+    ],
+  },
+  {
     version: "1.234.0",
     title: "See how it works as you start",
     tag: "Rollouts",
