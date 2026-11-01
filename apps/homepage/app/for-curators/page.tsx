@@ -4,6 +4,7 @@ import {
   PERSONA_HEADLINE_CLASS,
   PersonaValueBlocks,
 } from "../components/landing/PersonaValueBlocks";
+import { ResponsiveProductShot } from "../components/landing/ResponsiveProductShot";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { WaitlistForm } from "../components/landing/WaitlistForm";
@@ -12,6 +13,7 @@ import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { CORE_CLAUSE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { PageDawn } from "../components/marketing/PageDawn";
+import type { ProductShot } from "@/content/product-shots";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "A free song pitch inbox for playlist curators",
@@ -83,11 +85,28 @@ const valueBlocks = [
   },
 ] as const;
 
-// Real product data rendered as type. The marketing-screenshot rule
-// (CLAUDE.md, 2026-06-11) is that a screenshot must show the current app,
-// and when no current screenshot exists we render real product data instead
-// — there is no curator-side screenshot yet, so these are the four actual
-// statuses from PITCH_STATUSES, in the product's own order.
+// The curator inbox still (#959, mock approved by the founder 2026-11-01).
+// It is a drawn picture, not a capture: the pitching flag is off in
+// production, so there is no live curator screen to photograph. Fictional
+// artist (Tobi Rayne), drawn in the app's light and dark tokens so it follows
+// the site's theme toggle. The labels in it are the shipped ones from the
+// curator inbox; if that screen changes, redraw both.
+const curatorInbox: ProductShot = {
+  light: "/images/product/curator-inbox.webp",
+  dark: "/images/product/curator-inbox-dark.webp",
+  width: 2000,
+  height: 1320,
+};
+const curatorInboxPhone: ProductShot = {
+  light: "/images/product/curator-inbox-phone.webp",
+  dark: "/images/product/curator-inbox-phone-dark.webp",
+  width: 716,
+  height: 1660,
+};
+
+// Real product data rendered as type: the four actual statuses from
+// PITCH_STATUSES, in the product's own order. The still under the hero shows
+// one pitch; this block shows the whole set of answers.
 const pitchStatuses = [
   { label: "New", note: "It just landed" },
   { label: "Listened", note: "You heard it" },
@@ -132,11 +151,28 @@ export default function ForCuratorsPage() {
           </PageDawn>
         </SectionShell>
 
+        {/* THE INBOX — the approved curator still. Phone picture below sm,
+            the wide one from sm up (ResponsiveProductShot picks one). */}
+        <SectionShell
+          className="pb-8 pt-0 sm:pb-12 sm:pt-0 lg:pb-16 lg:pt-0"
+          containerClassName="max-w-[64rem] px-6 sm:px-8 lg:px-10"
+        >
+          <div className="mx-auto max-w-[24rem] sm:max-w-none">
+            <ResponsiveProductShot
+              desktop={curatorInbox}
+              phone={curatorInboxPhone}
+              alt="A curator's Pitches inbox in Urganize: a pitch for Slow Burn by Tobi Rayne with a short note and a press kit link, a Listen on Spotify button, Add it and Pass buttons, and the artist's press kit open with it."
+              sizes="(min-width: 1024px) 944px, calc(100vw - 64px)"
+              fetchPriority="auto"
+            />
+          </div>
+        </SectionShell>
+
         {/* VALUE BLOCKS */}
         <PersonaValueBlocks blocks={valueBlocks} />
 
-        {/* THE FOUR ANSWERS — real product data as type, since no curator
-            screenshot exists yet. See the pitchStatuses comment. */}
+        {/* THE FOUR ANSWERS — real product data as type. See the
+            pitchStatuses comment. */}
         <ScrollReveal>
           <SectionShell
             className="py-[60px] lg:py-[80px]"
