@@ -21,6 +21,7 @@
     "@supabase/supabase-js": "^2.90.1",
     "@urganize/changelog": "workspace:*",
     "@urganize/pricing": "workspace:*",
+    "@urganize/stageshow": "workspace:*",
     "@urganize/ui": "workspace:*",
     "@vercel/analytics": "^1.6.1",
     "clsx": "^2.1.1",

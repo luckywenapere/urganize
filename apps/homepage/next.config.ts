@@ -61,7 +61,7 @@ const nextConfig: NextConfig = {
   // @urganize/ui ships TypeScript source (its exports map points at
   // src/index.ts), so it must be transpiled here exactly as apps/web does.
   // The homepage imports only the Chappi mascot from it.
-  transpilePackages: ["@urganize/ui"],
+  transpilePackages: ["@urganize/ui", "@urganize/stageshow"],
   turbopack: {
     // Empty config to silence the warning
   },

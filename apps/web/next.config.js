@@ -53,7 +53,7 @@ const APP_VERSION = require('./package.json').version;
 const SENTRY_ENVIRONMENT = process.env.VERCEL_ENV || 'development';
 
 const nextConfig = {
-  transpilePackages: ['@urganize/ui'],
+  transpilePackages: ['@urganize/ui', '@urganize/stageshow'],
   // Required by the PostHog proxy below: their ingest API is sensitive to the
   // trailing slash, and Next would otherwise 308 it away before the rewrite
   // runs. App-wide cost, measured rather than assumed: a URL typed with a

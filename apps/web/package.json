@@ -21,6 +21,7 @@
     "@urganize/lib": "workspace:*",
     "@urganize/native-bridge": "workspace:*",
     "@urganize/pricing": "workspace:*",
+    "@urganize/stageshow": "workspace:*",
     "@urganize/ui": "workspace:*",
     "@vercel/analytics": "^1.6.1",
     "date-fns": "^4.1.0",
