@@ -22,6 +22,9 @@ import { HomeBell } from '@/components/home/v2/HomeBell';
 import { EMPTY_STATE_ACTION_CLASS } from '@/components/shared/EmptyState';
 import { PlanLoopDemo } from '@/components/artists/PlanLoopDemo';
 import { useShellStore } from '@/stores/useShellStore';
+import { useRoleViewViewer } from '@/components/shell/useShellAreas';
+import { artistHomeId } from '@/lib/artist-home';
+import ArtistPageClient from '@/app/dashboard/[artistId]/ArtistPageClient';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
 
@@ -62,7 +65,20 @@ export default function ArtistsPageClient({
     [artists, releases, tasks, today]
   );
 
+  const viewer = useRoleViewViewer();
+  const ownArtistId = rosterLoaded ? artistHomeId(viewer, artists) : null;
+
   if (!ARTIST_PAGE_ENABLED) return null;
+
+  // The artist sees their own page as Home, not a list of one (2026-11-01).
+  if (ownArtistId) {
+    return (
+      <>
+        <ArtistPageClient artistId={ownArtistId} home />
+        {opened ? <DuplicateArtistsPrompt /> : null}
+      </>
+    );
+  }
 
   const loading = (authLoading || !rosterLoaded) && artists.length === 0;
 
