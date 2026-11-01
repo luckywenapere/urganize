@@ -1,8 +1,25 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { trackEvent } from "@/lib/analytics";
+
+// Loaded on the first open, so the hero's first load carries none of it. The
+// placeholder holds the loop's frame (phone 358x580, desktop 720x440) while
+// the host and its poster arrive.
+//
+// The frame's width is capped by the viewport HEIGHT as well (11rem leaves
+// room for the overlay's padding, the close button above and the video link below; 0.6172 and 1.6364
+// are the phone and desktop aspect ratios), so on a short laptop or a small
+// phone the whole overlay still fits and Close stays on screen.
+const LOOP_FRAME = "mx-auto w-full max-w-[min(358px,calc((100dvh_-_11rem)*0.6172))] sm:max-w-[min(56rem,calc((100dvh_-_11rem)*1.6364))]";
+const DemoLoop = dynamic(() => import("./demo-loop/DemoLoop").then((m) => m.DemoLoop), {
+  ssr: false,
+  loading: () => (
+    <div className={`${LOOP_FRAME} aspect-[358/580] rounded-xl bg-white/5 sm:aspect-[720/440]`} />
+  ),
+});
 
 const VIDEO_ID = "8yDIA3rtC20";
 const START_SECONDS = 0;
@@ -57,12 +74,23 @@ const START_SECONDS = 0;
 // ancestor becomes the containing block for `position: fixed` — a
 // non-portaled overlay would be trapped inside the hero. Safe from a
 // hydration mismatch because the overlay only renders after a click.
+//
+// THE UrgANS LOOP (2026-11-01, #956, founder approved the mock). The overlay
+// now opens on a short in-page loop of UrgAns (demo-loop/DemoLoop.tsx: a
+// manager asks what is open, UrgAns answers and offers to assign the gap, the
+// manager confirms), not on YouTube. The full video is one tap away under it
+// and still mounts its iframe only on that tap. The loop sits here rather than
+// in the hero itself because the hero already plays its own loop (#952) right
+// under this link; two loops on one screen would compete, and a 440px frame
+// here would push the proof line below the fold.
 export function WatchDemo({ variant = "pill" }: { variant?: "pill" | "link" }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [video, setVideo] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
   const openDemo = () => {
+    setVideo(false);
     setIsOpen(true);
     // GA is loaded site-wide (layout.tsx, afterInteractive) — this event is
     // the one signal that says how many visitors actually want the demo.
@@ -137,7 +165,7 @@ export function WatchDemo({ variant = "pill" }: { variant?: "pill" | "link" }) {
               aria-label="Urganize product tour"
               // z-[100] clears the fixed header (z-50) and the hero CTA
               // block (z-[60]).
-              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 px-4"
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 px-4 py-14"
               onClick={() => setIsOpen(false)}
             >
               <div
@@ -163,16 +191,39 @@ export function WatchDemo({ variant = "pill" }: { variant?: "pill" | "link" }) {
                     <path d="M6 6l12 12M18 6L6 18" />
                   </svg>
                 </button>
-                <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
-                  <iframe
-                    className="absolute inset-0 h-full w-full"
-                    src={`https://www.youtube.com/embed/${VIDEO_ID}?start=${START_SECONDS}&autoplay=1`}
-                    title="Urganize product tour"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    referrerPolicy="strict-origin-when-cross-origin"
-                    allowFullScreen
-                  />
-                </div>
+                {video ? (
+                  <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
+                    <iframe
+                      className="absolute inset-0 h-full w-full"
+                      src={`https://www.youtube.com/embed/${VIDEO_ID}?start=${START_SECONDS}&autoplay=1`}
+                      title="Urganize product tour"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      allowFullScreen
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <DemoLoop className={`${LOOP_FRAME} overflow-hidden rounded-xl`} />
+                    <div className="mt-4 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVideo(true);
+                          // This button unmounts with the loop; keep focus in the dialog.
+                          closeRef.current?.focus();
+                          trackEvent("demo_full_video_open", { variant });
+                        }}
+                        className="inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white"
+                      >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                        Watch the full video
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>,
             document.body
