@@ -1,23 +1,33 @@
-import { PRODUCT_SHOTS } from "@/content/product-shots";
+import type { ProductShot } from "@/content/product-shots";
 import { ResponsiveProductShot } from "../ResponsiveProductShot";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
 import { wideContainerClass } from "./shared";
 
-// Real screenshot of the current catalog. Since 2026-09-02 the files are
-// written by scripts/capture-product-shots.mjs (`pnpm --filter
-// @urganize/homepage shots`), light and dark from the same DOM, so the shot
-// follows the site's theme toggle cleanly and retaking is one command when
-// the UI changes — never let marketing imagery lag the product again. The
-// homepage hero uses the same pair (HeroSection, since 2026-09-02); this mount
-// serves the four persona pages.
+// The roster still (#955, mock approved by the founder 2026-11-01). The hero
+// already shows the catalog, so this beat shows the roster instead: four
+// artists at four stages, with one release (Harmattan Gold) opened in place
+// with its stages and next move. It serves the four persona pages.
 //
-// 2026-10-10: it reads PRODUCT_SHOTS.catalog and catalogPhone directly, the
-// way the hero does, instead of the `workspace-releases` files. Those are
-// byte-identical legacy copies the script still writes for old URLs, and they
-// had no phone version, so a phone got the 1920px desktop capture at 0.18x,
-// unreadable. Below sm it is now the phone capture in a 4:5 window onto its
-// top, exactly as in the hero.
+// It is a drawn picture, not a capture: the Current rollout and Stage columns
+// do not exist on the Artists page today, so there is no live screen to
+// photograph. Demo team Northline Music with made-up artists, drawn in the
+// app's light and dark tokens so it follows the site's theme toggle. Below sm
+// it is the phone drawing; from sm up the wide one (ResponsiveProductShot
+// picks one per theme). If the Artists page changes, redraw all four.
+const workspaceRoster: ProductShot = {
+  light: "/images/product/workspace-roster.webp",
+  dark: "/images/product/workspace-roster-dark.webp",
+  width: 2200,
+  height: 1240,
+};
+const workspaceRosterPhone: ProductShot = {
+  light: "/images/product/workspace-roster-phone.webp",
+  dark: "/images/product/workspace-roster-phone-dark.webp",
+  width: 716,
+  height: 896,
+};
+
 export function WorkspaceShotSection() {
   return (
     <ScrollReveal>
@@ -35,13 +45,13 @@ export function WorkspaceShotSection() {
             a fresh founder-supplied count — the numbers here were only ever
             true as of the 2026-08 brief. The /pricing Founding Member claim
             and FinalCTASection's 43% line are separate and untouched. */}
-        <div className="aspect-[4/5] overflow-hidden rounded-xl border border-[color:var(--marketing-border)] sm:aspect-auto">
+        <div className="mx-auto max-w-[24rem] overflow-hidden rounded-xl border border-[color:var(--marketing-border)] sm:max-w-none">
           <ResponsiveProductShot
-            desktop={PRODUCT_SHOTS.catalog}
-            phone={PRODUCT_SHOTS.catalogPhone}
-            alt="The Urganize catalog for a team running several artists: a grid of release cards, each with cover art, a release date and a progress bar counting finished activities against its plan."
+            desktop={workspaceRoster}
+            phone={workspaceRosterPhone}
+            alt="The Urganize Artists page for Northline Music: several artists, each with a current rollout at a different stage, and Harmattan Gold by Kanmi Gold opened in place with its pre-release, release and post-release progress and its next task."
             sizes="(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw"
-            className="h-full w-full object-cover object-top sm:h-auto sm:object-contain"
+            className="h-auto w-full"
             fetchPriority="auto"
           />
         </div>
