@@ -4,6 +4,7 @@ import {
   PERSONA_HEADLINE_CLASS,
   PersonaValueBlocks,
 } from "../components/landing/PersonaValueBlocks";
+import { ResponsiveProductShot } from "../components/landing/ResponsiveProductShot";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { TrialButton } from "../components/landing/TrialButton";
@@ -13,6 +14,7 @@ import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
 import { TESTIMONIALS } from "@/content/testimonials";
 import { PageDawn } from "../components/marketing/PageDawn";
+import type { ProductShot } from "@/content/product-shots";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Release planning for teams running a roster",
@@ -44,6 +46,25 @@ export const metadata: Metadata = buildPageMetadata({
 // of record", fifth-grader readability, no Oxford comma in house copy. The
 // earlier ban on container metaphors is the one rule that flipped, since
 // "from one place" is now the product's own promise.
+// The roster still (#958, mock approved by the founder 2026-11-01). A drawn
+// picture of the Home page as it is today, not a capture: the next drop on
+// top, then one row per artist with the next rollout, its date, progress and
+// what is due or late. Northline Music's artists and titles are made up.
+// Drawn in the app's light and dark tokens so it follows the site's theme
+// toggle; if the Home page changes, redraw both.
+const executiveRoster: ProductShot = {
+  light: "/images/product/executive-roster.webp",
+  dark: "/images/product/executive-roster-dark.webp",
+  width: 2200,
+  height: 1400,
+};
+const executiveRosterPhone: ProductShot = {
+  light: "/images/product/executive-roster-phone.webp",
+  dark: "/images/product/executive-roster-phone-dark.webp",
+  width: 716,
+  height: 1080,
+};
+
 const valueBlocks = [
   {
     kicker: "The plan",
@@ -118,12 +139,30 @@ export default function ForExecutivesPage() {
           </PageDawn>
         </SectionShell>
 
+        {/* THE ROSTER — the approved still. Phone picture below sm, the
+            wide one from sm up (ResponsiveProductShot picks one). */}
+        <SectionShell
+          className="pb-8 pt-0 sm:pb-12 sm:pt-0 lg:pb-16 lg:pt-0"
+          containerClassName="max-w-[64rem] px-6 sm:px-8 lg:px-10"
+        >
+          <div className="mx-auto max-w-[24rem] sm:max-w-none">
+            <ResponsiveProductShot
+              desktop={executiveRoster}
+              phone={executiveRosterPhone}
+              alt="The Urganize Home page for a team running five artists: Harmattan Blue by Ebi Marlow drops in 12 days with 1 task late, and below it one row per artist with the next rollout, its date, progress and what is due or late. Kezia Dune's EP has 2 late."
+              sizes="(min-width: 1024px) 944px, calc(100vw - 64px)"
+              fetchPriority="auto"
+            />
+          </div>
+        </SectionShell>
+
         {/* VALUE BLOCKS */}
         <PersonaValueBlocks blocks={valueBlocks} />
 
         {/* PRODUCT PROOF — the real workspace screenshots, same section the
             homepage and /for-managers use. Marketing screenshots must show
-            the current app (CLAUDE.md); this is the only current one. */}
+            the current app (CLAUDE.md). The roster still above is a drawing;
+            this is the page's real capture. */}
         <WorkspaceShotSection />
 
         {/* THE REST, COMPACTED — same shape as /for-managers: one section,
