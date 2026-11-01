@@ -24,60 +24,6 @@ function Bars({ widths }: { widths: [string, string] }) {
   );
 }
 
-// `phoneSketch`: drawn as grey bars on the phone, where the list is shorter.
-const ARTIST_ROWS = [
-  { name: 'Kanmi Gold', next: 'Love Letters from Yaba · Nov 22' },
-  { name: 'Hadiza Moon', next: 'Sannu Da Zuwa · Apr 4' },
-  { name: 'Lagoon Theory', next: 'Owambe Weather · Oct 24' },
-  { name: 'Temi Ivory', next: 'Ife Mi · Dec 13', phoneSketch: true },
-];
-
-const ARTIST_ROW =
-  'flex min-h-[66px] items-center gap-3.5 border-b border-content-primary/[0.07] px-1.5 sm:min-h-[72px]';
-
-/** Home's artist list once the roster is in, with the next rollout for each. */
-export function ArtistsEmptyPreview() {
-  return (
-    <div>
-      <div className="mb-1.5 flex items-center gap-3.5 rounded-[20px] border border-stroke-default bg-bg-surface p-3.5 sm:px-[18px] sm:py-4">
-        <ProfileFace name="Kanmi Gold" size={42} />
-        <div className="min-w-0">
-          <p className="text-[10.5px] uppercase tracking-[0.08em] text-content-tertiary">Next out</p>
-          <p className="mt-0.5 truncate font-display text-[17px] text-content-primary sm:text-[19px]">
-            Love Letters from Yaba
-          </p>
-          <p className="text-[12.5px] text-content-tertiary sm:text-[13px]">Kanmi Gold · Nov 22</p>
-        </div>
-        <div className="ml-auto hidden w-[140px] sm:block">
-          <span className="block h-1.5 overflow-hidden rounded-full bg-bg-hover">
-            <span className="block h-full w-[78%] rounded-full bg-brand" />
-          </span>
-          <p className="mt-[5px] text-right font-mono text-[11px] text-content-tertiary">14 / 17 done</p>
-        </div>
-      </div>
-      {ARTIST_ROWS.map((row) => (
-        <div key={row.name} className={ARTIST_ROW}>
-          <ProfileFace name={row.name} size={42} />
-          <div className={row.phoneSketch ? 'hidden sm:block' : undefined}>
-            <p className="text-base text-content-primary">{row.name}</p>
-            <p className="mt-0.5 text-[13.5px] text-content-secondary">{row.next}</p>
-          </div>
-          {row.phoneSketch ? (
-            <span className="min-w-0 flex-1 sm:hidden">
-              <Bar width="46%" />
-              <Bar width="62%" className="mt-2" />
-            </span>
-          ) : null}
-        </div>
-      ))}
-      <div className={ARTIST_ROW}>
-        <ProfileFace name="Chioma Vale" size={42} />
-        <Bars widths={['34%', '52%']} />
-      </div>
-    </div>
-  );
-}
-
 const NOTE_ROW = 'border-t border-stroke-default px-3.5 py-2.5 first:border-t-0';
 const NOTE_LIST = 'overflow-hidden rounded-[14px] border border-stroke-default bg-bg-surface';
 const NOTE_EYEBROW = 'mx-0.5 mb-1.5 text-[10.5px] uppercase tracking-[0.08em] text-content-tertiary';

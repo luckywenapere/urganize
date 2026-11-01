@@ -1,0 +1,129 @@
+/* The empty Artists page's plan loop (PlanLoop.tsx, #1007). Every
+   colour is an app token from app/globals.css, so the loop follows the
+   light/dark theme with no second set of rules. Loaded with the loop, never on
+   the first page load. */
+
+.mpl .ss-stage {
+  --ss-font: var(--font-sans);
+  --ss-mono: var(--font-mono);
+  --ss-accent: var(--brand-primary);
+  --ss-accent-soft: var(--brand-primary-muted);
+  --ss-accent-text: var(--brand-primary);
+  --ss-success: var(--brand-primary);
+  --ss-surface: var(--bg-surface);
+  --ss-raised: var(--bg-elevated);
+  --ss-canvas: var(--bg-base);
+  --ss-well: var(--bg-base);
+  --ss-text-strong: var(--text-primary);
+  --ss-text: var(--text-secondary);
+  --ss-text-faint: var(--text-tertiary);
+  --ss-line: var(--border-strong);
+  --ss-ink-1: var(--bg-hover);
+  --ss-ink-2: var(--bg-active);
+  --ss-ink-3: var(--border-strong);
+  --ss-ink-4: var(--border-strong);
+  --ss-fill: var(--bg-active);
+  overflow: hidden;
+  background: var(--bg-surface);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-family: var(--ss-font);
+  letter-spacing: -0.01em;
+}
+
+.mpl-scene {
+  position: absolute;
+  inset: 0;
+  padding: 16px 16px 0;
+  transition: opacity 300ms ease;
+}
+.mpl-scene[data-veil] { opacity: 0; }
+
+/* The UrgAns box */
+.mpl-ask {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 6px 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--bg-base);
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.mpl-ask:not([data-sent]) { border-color: var(--brand-primary); box-shadow: 0 0 0 3px var(--brand-primary-muted); }
+.mpl-ask-who { flex: none; font-size: 11px; font-weight: 600; color: var(--brand-primary); }
+.mpl-ask-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.mpl-ask-ph { color: var(--text-tertiary); }
+.mpl-caret {
+  display: inline-block;
+  width: 1.5px;
+  height: 16px;
+  margin-left: 1px;
+  vertical-align: -3px;
+  background: var(--text-primary);
+}
+.mpl-send {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--text-tertiary);
+  background: var(--bg-active);
+  transition: background 200ms ease, color 200ms ease;
+}
+.mpl-send[data-on] { color: var(--text-inverse); background: var(--brand-primary); }
+
+/* The plan */
+.mpl-plan { margin-top: 6px; }
+.mpl-head {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.mpl-row {
+  display: grid;
+  grid-template-columns: 16px 1fr auto 20px;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+/* A slot shows its outline until it is planned, then its words drop in over it */
+.mpl-slot { position: relative; }
+.mpl-slot--head { height: 32px; }
+.mpl-slot--head > * { position: absolute; left: 8px; bottom: 6px; }
+.mpl-cell { position: relative; display: grid; align-items: center; min-width: 0; }
+.mpl-cell > * { grid-area: 1 / 1; }
+.mpl-cell--date { justify-items: end; }
+.mpl-ghost { transition: opacity 200ms ease; }
+.mpl-real {
+  opacity: 0;
+  transform: translateY(-5px);
+  transition: opacity 260ms ease, transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.mpl-slot[data-on] .mpl-ghost { opacity: 0; }
+.mpl-slot[data-on] .mpl-real { opacity: 1; transform: none; }
+.mpl-check { display: grid; place-items: center; width: 16px; height: 16px; transition: opacity 200ms ease; }
+.mpl-slot:not([data-on]) .mpl-check { opacity: 0.5; }
+.mpl-title { font-size: 13px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mpl-date { font-family: var(--ss-mono); font-size: 11px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+
+/* Owners: flat initials tiles, one muted colour each */
+.mpl .mpl-owner { color: #fff; }
+.mpl .mpl-owner--ada { background: #14643a !important; }
+.mpl .mpl-owner--tobi { background: #8a5a2b !important; }
+.mpl .mpl-owner--kemi { background: #3d5a73 !important; }
