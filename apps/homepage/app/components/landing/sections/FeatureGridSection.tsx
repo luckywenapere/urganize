@@ -1,6 +1,9 @@
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
+import { FeatureBentoPlay } from "./FeatureBentoPlay";
+import { HandoffPicture, OpportunityPicture, PitchPicture } from "./FeatureBentoPictures";
 import { centeredHeadlineClass, wideContainerClass } from "./shared";
+import "./feature-bento.css";
 
 // Everything else a release needs, as tiles (2026-09-02). Each names a
 // surface that is switched ON in production — press kit, shows with DJ packs,
@@ -31,7 +34,8 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 // press kit on a phone — the outward-facing link competitors lack — stands
 // for the whole group. That page is dark-locked, so one capture serves both
 // themes.
-// HOMEPAGE V2 (2026-10-17, URG-334): three rows, no cards and no screenshot.
+// HOMEPAGE V2 (2026-10-17, URG-334): three rows, no cards and no screenshot
+// (cards came back as the bento on 2026-11-01, below).
 // Each one serves the release or the gap before the next one. The old tiles
 // (Press kit, Cover art and song files, the playlist-pitch and recap
 // footnote and the press-kit phone capture) came off. The per-release EPK was
@@ -42,20 +46,36 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 // chat, content calendar, spend, UrgAns voice, MCP, notes) stays off this page.
 // Copy rewritten 2026-10-17 for a cold visitor (Oyin): titles say what you
 // get done, no feature names or jargon ("handoff", "metadata").
-const ROWS = [
+//
+// THE BENTO (2026-11-01, #954, founder approved mock v3). The three rows
+// became tiles, each with a small picture of the app drawn in HTML and SVG
+// (FeatureBentoPictures.tsx): still no image requests, so the rule above
+// stands. The pitching tile is the big one. Each tile plays one beat once as
+// it scrolls in (FeatureBentoPlay.tsx, a few hundred bytes, no Stageshow);
+// the end state is the server-rendered default, so no script or reduced
+// motion shows the finished story. Titles stay h3s, run in with their line.
+// The deadline line dropped "The master" (approved 2026-11-01): the app only
+// takes cover art and song details now. Styles in feature-bento.css.
+const TILES = [
   {
+    className: "fb-tile fb-hero",
     title: "Get heard by the people who pick songs.",
     body: "Pitch curators and Spotify and Apple Music editors right from the release, with your kit already attached.",
+    picture: <PitchPicture />,
   },
   {
+    className: "fb-tile",
     title: "Never miss your distributor’s deadline again.",
-    body: "The master, cover art and song details, each with an owner and a date. No last-week hunt for the WAV.",
+    body: "Cover art and song details, each with an owner and a date. No last-week hunt for the WAV.",
+    picture: <HandoffPicture />,
   },
   {
+    className: "fb-tile fb-opp",
     title: "Don’t let the hype die after drop day.",
     body: "Opportunities that fit your music, so the next move is ready before the buzz fades.",
+    picture: <OpportunityPicture />,
   },
-] as const;
+];
 
 export function FeatureGridSection() {
   return (
@@ -68,21 +88,20 @@ export function FeatureGridSection() {
           <h2 className={centeredHeadlineClass}>The jobs that usually slip through the cracks.</h2>
         </div>
 
-        <ul className="mx-auto mt-12 max-w-[56rem] border-t border-[color:var(--marketing-border)]">
-          {ROWS.map((row) => (
-            <li
-              key={row.title}
-              className="grid gap-1 border-b border-[color:var(--marketing-border)] py-6 sm:grid-cols-[18rem_1fr] sm:items-baseline sm:gap-8"
-            >
-              <h3 className="text-[1.2rem] leading-tight text-[var(--marketing-text)]">
-                {row.title}
-              </h3>
-              <p className="text-[1rem] leading-7 text-[var(--marketing-text-muted)]">
-                {row.body}
-              </p>
-            </li>
-          ))}
-        </ul>
+        <div className="fb">
+          <FeatureBentoPlay className="fb-grid">
+            {TILES.map((tile) => (
+              <li key={tile.title} className={tile.className}>
+                <div className="fb-copy">
+                  <h3>{tile.title}</h3> {tile.body}
+                </div>
+                <div className="fb-pic" aria-hidden="true">
+                  {tile.picture}
+                </div>
+              </li>
+            ))}
+          </FeatureBentoPlay>
+        </div>
       </SectionShell>
     </ScrollReveal>
   );
