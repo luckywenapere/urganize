@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.232.0",
+    title: "See what a page looks like when it fills up",
+    tag: "App",
+    date: "November 1, 2026",
+    highlights: [
+      "Empty pages now show a faded picture of the page once it is full, so you know what to add first.",
+    ],
+  },
+  {
     version: "1.231.0",
     title: "Pay your way",
     tag: "Account",
