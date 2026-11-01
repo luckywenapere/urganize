@@ -32,6 +32,22 @@ const INVITE_URL = `${APP_URL}${settingsDeepLink({ segment: 'team', section: 'te
 
 export type OnboardingStepKey = 'day1' | 'day2' | 'day3' | 'day5' | 'day7';
 
+/** One picture of the screen a note talks about (#974, mock approved by the
+ *  founder 2026-11-01). Drawn with Stageshow at 2x (936px) and shown at the
+ *  email's 468px text width. Hosted as a static file on the app, because mail
+ *  clients only show images from a URL. Images are off by default in many
+ *  clients, so the words around it must make sense without it and the alt text
+ *  says what it shows. It links where the note's own link goes. */
+export type OnboardingStill = {
+  src: string;
+  alt: string;
+  href: string;
+  width: number;
+  height: number;
+  /** The paragraph (0-based, after the greeting) it follows. */
+  afterParagraph: number;
+};
+
 export type OnboardingStep = {
   key: OnboardingStepKey;
   /** Day 1 is the signup day. */
@@ -42,6 +58,7 @@ export type OnboardingStep = {
   body: string;
   /** Short label for the admin dashboard. */
   label: string;
+  still?: OnboardingStill;
 };
 
 export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
@@ -76,6 +93,14 @@ When you’re ready, [open Urganize](${APP_URL}).`,
 2. Invite your artist or a teammate. Everyone sees the same plan and knows what’s theirs, so nobody has to chase anyone in a group chat. [Invite someone](${INVITE_URL})
 
 That’s it for today. If anything is unclear, reply and tell me.`,
+    still: {
+      src: `${APP_URL}/images/email/onboarding-day2-plan.png`,
+      alt: 'Your rollout in Urganize: two activities ticked off, the next one due Thursday, and your team on the plan.',
+      href: `${APP_URL}/dashboard`,
+      width: 936,
+      height: 528,
+      afterParagraph: 0,
+    },
   },
   {
     key: 'day3',
@@ -107,6 +132,14 @@ You can ask it things like:
 It answers, and it can make changes for you. You stay in charge: before it does anything big, it checks with you first.
 
 [Try UrgAns](${APP_URL}/dashboard/urgans)`,
+    still: {
+      src: `${APP_URL}/images/email/onboarding-day5-urgans.png`,
+      alt: 'UrgAns answering “What’s overdue this week?” with two late activities, then asking “Move both to Friday?” before it changes them.',
+      href: `${APP_URL}/dashboard/urgans`,
+      width: 936,
+      height: 528,
+      afterParagraph: 2,
+    },
   },
   {
     key: 'day7',

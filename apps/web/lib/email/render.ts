@@ -1,5 +1,6 @@
 import { render, toPlainText } from 'react-email';
 import type { ReactElement } from 'react';
+import { STILL_LINK_CLASS } from './render-constants';
 
 export type RenderedEmail = { html: string; text: string };
 
@@ -18,6 +19,8 @@ export type RenderedEmail = { html: string; text: string };
 // hand-rolled transport was built to avoid in the first place.
 export async function renderEmail(element: ReactElement): Promise<RenderedEmail> {
   const html = await render(element, { pretty: false });
-  const text = await toPlainText(html);
+  // A picture's link has no words, so html-to-text would print its bare URL as
+  // a stray line. Drop it: the note's own link is right beside it in the text.
+  const text = await toPlainText(html, { selectors: [{ selector: `a.${STILL_LINK_CLASS}`, format: 'skip' }] });
   return { html, text };
 }

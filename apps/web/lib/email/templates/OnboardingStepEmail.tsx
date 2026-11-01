@@ -19,7 +19,7 @@ export function OnboardingStepEmail({ step, recipientName, unsubscribeUrl }: Onb
       preview={definition.preview}
       footer={unsubscribeUrl ? <UnsubscribeFooter url={unsubscribeUrl} /> : undefined}
     >
-      <FounderNoteBody recipientName={recipientName} body={definition.body} />
+      <FounderNoteBody recipientName={recipientName} body={definition.body} still={definition.still} />
     </EmailLayout>
   );
 }
