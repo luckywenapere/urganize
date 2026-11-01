@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, ArrowLeft, Loader2, X } from '@/components/icons';
 import { Button, IconButton } from '@urganize/ui';
-import { BlankSheetIllustration, PlanIllustration } from '@/components/app/BrandIcons';
+import { EmptyRolloutPreview, PLAN_OPTION_CARD, UrgansPlanPreview } from './PlanOptionPreview';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { onRadioGroupKeyDown } from '@/lib/radio-group-keys';
@@ -467,7 +467,11 @@ export function CreateReleaseModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-release-title"
-        className="relative mx-auto w-full max-w-lg focus:outline-none"
+        // The chooser is wider so each option's preview has room (#970); the
+        // form keeps its narrow column.
+        className={`relative mx-auto w-full ${
+          !TYPE_FIRST_CREATE_ENABLED && !plan ? 'max-w-2xl' : 'max-w-lg'
+        } focus:outline-none`}
       >
         <form
           onSubmit={(event) => void handleSubmit(event)}
@@ -531,17 +535,16 @@ export function CreateReleaseModal({
 
           {/* Step 1 — the chooser (founder call, 2026-07-23): two option
               cards side by side, Linear-style. Rollout plan is the
-              recommended default; Blank is the empty canvas. */}
+              recommended default; Blank is the empty canvas. Each shows a
+              small preview of what it gives you (#970). */}
           {!TYPE_FIRST_CREATE_ENABLED && !plan ? (
             <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5">
               <button
                 type="button"
                 onClick={() => setPlan('template')}
-                className="motion-focus motion-press group flex flex-col items-start gap-3 rounded-xl border border-stroke-default bg-bg-elevated p-4 text-left transition-colors hover:border-brand/50 hover:bg-bg-hover sm:p-5"
+                className={`${PLAN_OPTION_CARD} hover:border-brand/50`}
               >
-                <span className="grid h-12 w-12 place-items-center rounded-xl bg-brand/10 text-brand">
-                  <PlanIllustration className="h-7 w-7" />
-                </span>
+                <UrgansPlanPreview planner={PLANNER_ENABLED} />
                 <span className="flex items-center gap-2 font-display text-base font-semibold text-content-primary">
                   Rollout plan
                   <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
@@ -558,11 +561,9 @@ export function CreateReleaseModal({
               <button
                 type="button"
                 onClick={() => setPlan('blank')}
-                className="motion-focus motion-press group flex flex-col items-start gap-3 rounded-xl border border-stroke-default bg-bg-elevated p-4 text-left transition-colors hover:border-stroke-strong hover:bg-bg-hover sm:p-5"
+                className={`${PLAN_OPTION_CARD} hover:border-stroke-strong`}
               >
-                <span className="grid h-12 w-12 place-items-center rounded-xl bg-bg-surface text-content-secondary">
-                  <BlankSheetIllustration className="h-7 w-7" />
-                </span>
+                <EmptyRolloutPreview />
                 <span className="font-display text-base font-semibold text-content-primary">
                   Blank rollout
                 </span>

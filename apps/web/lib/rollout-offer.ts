@@ -86,15 +86,14 @@ export const ROLLOUT_OFFER_COPY = {
   planCta: 'Plan a rollout',
   notNow: 'Not now',
   choiceTitle: 'Plan a rollout',
-  choiceBody: 'Choose how you want to plan it. You can change anything after.',
+  choiceBody: 'See what each way gives you. You can change anything after.',
   urgansTitle: 'Plan it with UrgAns',
-  urgansBody:
-    'Answer a few questions and UrgAns drafts every step, shaped to your answers. Edit anything before it is scheduled.',
+  // Short lines: each option's preview (PlanOptionPreview.tsx) carries the detail.
+  urgansBody: 'A few questions, then UrgAns drafts every step. Edit before anything is scheduled.',
   // With the planner flag off there is no UrgAns intake, so the first choice is
   // the proven rollout plan and must not promise questions it will not ask.
-  urgansBodyNoPlanner:
-    'Start from the proven rollout plan. Every step from first prep to release day is laid out and ready to edit.',
+  urgansBodyNoPlanner: 'Start from the proven rollout plan, first prep to release day.',
   selfTitle: 'I will plan it myself',
-  selfBody: 'Start with an empty rollout and add your own activities and dates. No AI involved.',
+  selfBody: 'You add each activity and date. No AI involved.',
   recommended: 'Recommended',
 } as const;
