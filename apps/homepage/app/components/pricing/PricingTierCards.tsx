@@ -18,6 +18,7 @@ import {
   type PricingTierId,
 } from "@urganize/pricing";
 import { APP_ORIGIN } from "@/lib/app-urls";
+import { PlanPicture } from "./PlanPicture";
 
 // The price table.
 //
@@ -151,7 +152,10 @@ export function PricingTierCards() {
                 key={tierId}
                 className="flex h-full flex-col rounded-[1.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-6"
               >
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--marketing-accent)]">
+                {/* What the plan looks like in the app, before the words (#963). */}
+                <PlanPicture tierId={tierId} />
+
+                <p className="mt-5 text-xs font-bold uppercase tracking-[0.22em] text-[var(--marketing-accent)]">
                   {tier.label}
                 </p>
 
