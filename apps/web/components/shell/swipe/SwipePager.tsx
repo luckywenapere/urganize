@@ -37,14 +37,14 @@ function pagingFrozen(target: EventTarget | null): boolean {
 }
 
 /**
- * The swipe pager (URG-380): Artists, UrgAns and Team side by side, one finger
+ * The swipe pager (URG-380): Home and Assistant side by side, one finger
  * or one tab tap moving between them on the approved spring.
  *
  * Rules (notes.md, "Swipe-gesture conflicts"):
  *  - The pager owns horizontal swipes; nothing inside a page scrolls sideways.
  *  - After 10px pick the axis (|dx| > 1.2·|dy| is ours), held until touch-up.
  *  - Release past half the width or faster than 500px/s turns the page; past
- *    Artists or Team it gives 24px and springs back.
+ *    Home or Assistant it gives 24px and springs back.
  *  - Sheets, dialogs, the keyboard, a text selection and a long press freeze it.
  *  - Each page scrolls on its own, so a page keeps its place when you come back.
  *

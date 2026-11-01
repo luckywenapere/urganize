@@ -148,7 +148,10 @@ export function visibleSettingsSegments(
     // WhatsApp chasing lives here too (2026-10-26), and it is the manager's, so
     // the segment no longer waits on the team brief flag.
     urgans: isManager || flags.teamBrief,
-    directory: flags.directory,
+    // Directory profile left Settings Nov 1, 2026 (founder). The key, the
+    // segment and DirectorySegment stay, so an old ?settings=directory link
+    // opens the menu; set this back to `flags.directory` to restore it.
+    directory: false,
     billing: ownsPlan,
     // Connections was retired on 2026-10-29 (#860). Connected apps was already
     // cut (MCP_CONNECT forced off), and "Download everything" moved to

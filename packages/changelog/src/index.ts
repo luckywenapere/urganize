@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.235.0",
+    title: "Your account page",
+    tag: "Account",
+    date: "November 2, 2026",
+    highlights: [
+      "Tap your photo to open your account page. Team and your settings are all there.",
+      "Home and Assistant are the two tabs. Swipe between them.",
+      "We took out a few settings you did not need, like guided tours and role view.",
+    ],
+  },
+  {
     version: "1.234.4",
     tag: "Rollouts",
     date: "November 2, 2026",

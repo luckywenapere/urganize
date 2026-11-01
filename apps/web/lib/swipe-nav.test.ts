@@ -40,9 +40,10 @@ describe('swipe navigation switch', () => {
 });
 
 describe('tabs and areas', () => {
-  it('knows the three tab routes and nothing else', () => {
+  it('knows the two tab routes and nothing else', () => {
     expect(swipeTabForPath('/dashboard/home')).toBeNull();
-    expect(swipeTabForPath('/dashboard/team')).toBe('team');
+    // Team moved to the account page (Nov 1, 2026): a pushed page now.
+    expect(swipeTabForPath('/dashboard/team')).toBeNull();
     expect(swipeTabForPath('/dashboard/urgans/')).toBe('urgans');
     // Home, the artist list, moved to /dashboard (Oct 30, 2026); the old
     // address still shows it.
@@ -210,10 +211,18 @@ describe('swipe nav is for phone-width screens only', () => {
   });
 });
 
+describe('the swipe tabs', () => {
+  it('are Home and Assistant, with Team a pushed page that has a way back', async () => {
+    const { SWIPE_TABS, swipeBackFor, swipeAreaForPath } = await import('./swipe-nav');
+    expect(SWIPE_TABS.map((tab) => tab.key)).toEqual(['artists', 'urgans']);
+    expect(swipeBackFor('/dashboard/team')).toEqual({ href: '/dashboard' });
+    expect(swipeAreaForPath('/dashboard/team')).toBeNull();
+  });
+});
+
 describe('swipeDocumentTitle', () => {
   it('names each swipe tab with the brand once', async () => {
     const { swipeDocumentTitle } = await import('./swipe-nav');
-    expect(swipeDocumentTitle('team')).toBe('Team | Urganize');
     expect(swipeDocumentTitle('urgans')).toBe('Assistant | Urganize');
     expect(swipeDocumentTitle('artists')).toBe('Artists | Urganize');
   });

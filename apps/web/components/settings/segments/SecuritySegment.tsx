@@ -1,12 +1,9 @@
 'use client';
 
 import { memo } from 'react';
-import { useAuthStore } from '@/lib/auth-store';
-import { canDeleteRollouts } from '@/lib/settings-nav';
 import { DataExportSection } from '../DataExportSection';
 import { DeleteAccountSection } from '../DeleteAccountSection';
 import { LeaveTeamSection } from '../LeaveTeamSection';
-import { ReleasesSection } from '../ReleasesSection';
 import { SecuritySection } from '../SecuritySection';
 
 /**
@@ -24,8 +21,6 @@ import { SecuritySection } from '../SecuritySection';
  * list so it is one tap from any segment.
  */
 function SecuritySegmentView() {
-  const role = useAuthStore((state) => state.user?.role);
-
   return (
     <div>
       <SecuritySection />
@@ -35,10 +30,9 @@ function SecuritySegmentView() {
           Danger zone
         </h2>
         <p className="mt-1 text-sm text-content-secondary">
-          A deleted rollout goes to Trash for 30 days. Deleting your account can&apos;t be undone.
+          Deleting your account can&apos;t be undone.
         </p>
         <div className="mt-2 divide-y divide-stroke-subtle">
-          {canDeleteRollouts(role) ? <ReleasesSection /> : null}
           <LeaveTeamSection />
           <DeleteAccountSection />
         </div>
