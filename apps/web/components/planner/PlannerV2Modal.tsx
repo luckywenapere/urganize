@@ -945,11 +945,11 @@ export function PlannerV2Modal() {
         type="button"
         aria-label="Close the planner"
         onClick={dismiss}
-        className="absolute inset-0 h-full w-full cursor-default bg-[rgb(var(--shadow-ink)/0.55)] backdrop-blur-md"
+        className="absolute inset-0 h-full w-full cursor-default bg-black/72 backdrop-blur-sm"
         tabIndex={-1}
       />
 
-      <div className="planner-v2-panel relative flex h-[100dvh] w-full max-w-[30rem] flex-col overflow-hidden border-stroke-strong bg-bg-surface shadow-[0_24px_64px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))] sm:h-auto sm:max-h-[calc(100dvh-4rem)] sm:rounded-[28px] sm:border">
+      <div className="planner-v2-panel relative flex h-[100dvh] w-full max-w-[30rem] flex-col overflow-hidden border-stroke-strong bg-bg-surface/80 shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))] backdrop-blur-xl backdrop-saturate-150 sm:h-auto sm:max-h-[calc(100dvh-4rem)] sm:rounded-[28px] sm:border">
         <span
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_60%_at_100%_0%,rgb(var(--color-brand)/0.10),transparent_60%)]"
