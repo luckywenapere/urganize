@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>First project still</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --card:#faf5ec; --hover:#ebe6dc;
+    --line:rgba(26,22,17,.09); --control:#7f7a73;
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --board:#d9d5cc; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--text); padding:32px 16px 64px; }
+  p { margin:0; }
+  .wrap { max-width:1060px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; margin:0 0 6px; }
+  .intro p, .sec-h p { color:var(--board-sec); max-width:720px; }
+  .sec-h { margin:40px 0 12px; }
+  .sec-h h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:0 0 4px; }
+  .mono { font-family:'JetBrains Mono', monospace; }
+  .display { font-family:'Young Serif', serif; font-weight:400; }
+
+  /* The page around it */
+  .page { background:var(--bg); border-radius:18px; overflow:hidden; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .top { height:72px; display:flex; align-items:center; padding:0 32px; font-family:'Young Serif', serif; font-size:19px; }
+  .desk { max-width:1000px; margin:0 auto; padding:56px 32px 48px; display:grid; grid-template-columns:minmax(0,1fr) 460px; gap:56px; align-items:start; }
+  .h { font-family:'Young Serif', serif; font-size:40px; line-height:1.12; letter-spacing:-.012em; margin:0; font-weight:400; }
+  .lede { margin-top:8px; font-size:15px; color:var(--sec); }
+  .lede b { color:var(--text); font-weight:600; }
+  .lede u { text-underline-offset:3px; }
+  .acct { margin-top:18px; display:flex; align-items:center; gap:10px; font-size:13.5px; color:var(--sec); }
+  .face { display:inline-grid; place-items:center; border-radius:999px; background:var(--hover); color:var(--sec); font-weight:600; flex-shrink:0; }
+  .surface { background:var(--card); border:1px solid var(--line); border-radius:16px; }
+  .newp { display:flex; align-items:center; gap:12px; padding:12px 14px; }
+  .plus { width:40px; height:40px; border-radius:10px; background:var(--brand); color:var(--bg); display:grid; place-items:center; font-size:22px; }
+  .newp b { display:block; font-size:15px; }
+  .newp span span { display:block; font-size:13px; color:var(--sec); }
+  .lbl { font-size:13px; font-weight:600; color:var(--sec); margin:14px 16px 6px; }
+  .stage { display:flex; align-items:center; gap:12px; margin:0 16px; padding:10px 14px; border-radius:12px; }
+  .stage i { width:20px; height:20px; border-radius:999px; border:1.5px solid var(--control); background:var(--card); flex-shrink:0; }
+  .stage div { font-size:15px; font-weight:500; }
+  .stage small { display:block; font-size:12.5px; color:var(--sec); font-weight:400; }
+  .btn { margin:16px; height:48px; border-radius:12px; background:var(--brand); opacity:.45; color:var(--bg); display:grid; place-items:center; font-weight:600; }
+  .act { margin-top:10px; }
+
+  /* ── The still (desktop): 420 wide, under the lede ── */
+  .still { position:relative; width:420px; height:352px; margin-top:32px; }
+  .still > .eb { position:absolute; left:0; top:0; }
+  .eb { font-family:'JetBrains Mono', monospace; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ter); }
+  .rc { position:absolute; left:0; top:26px; width:max-content; padding:10px 12px; display:flex; align-items:center; gap:11px; }
+  .disc { width:38px; height:38px; border-radius:9px; background:var(--brand-soft); color:var(--brand); display:grid; place-items:center; flex-shrink:0; }
+  .rc .t { font-family:'Young Serif', serif; font-size:16px; line-height:1.2; white-space:nowrap; }
+  .rc .s { font-size:12.5px; color:var(--sec); white-space:nowrap; }
+  .plan { position:absolute; left:52px; right:0; top:120px; overflow:hidden; box-shadow:0 6px 18px rgba(26,22,17,.06); }
+  .plan .hd { display:flex; align-items:center; justify-content:space-between; padding:10px 14px 8px; }
+  .row { display:flex; align-items:center; gap:10px; min-height:44px; padding:0 14px; border-top:1px solid var(--line); }
+  .box { width:16px; height:16px; border-radius:5px; border:1.5px solid var(--control); flex-shrink:0; }
+  .row .n { flex:1; min-width:0; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .d { font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--ter); }
+  .slot { width:24px; height:24px; flex-shrink:0; }
+  .row.mine { background:var(--brand-soft); }
+  .row.mine .face { width:24px; height:24px; font-size:9px; background:var(--brand); color:var(--bg); box-shadow:0 0 0 2px var(--card); }
+  .chip { position:absolute; right:48px; top:314px; display:flex; align-items:center; gap:8px; padding:5px 12px 5px 5px; border-radius:999px; background:var(--card); border:1px solid var(--line); box-shadow:0 4px 12px rgba(26,22,17,.06); font-size:12.5px; white-space:nowrap; }
+  .chip .face { width:26px; height:26px; font-size:9.5px; background:var(--brand); color:var(--bg); }
+  .chip span { color:var(--sec); }
+  svg.arrows { position:absolute; inset:0; overflow:visible; pointer-events:none; }
+  svg.arrows path { fill:none; stroke:var(--control); stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+
+  /* ── Phone (358) ── */
+  .phones { display:flex; gap:28px; flex-wrap:wrap; align-items:flex-start; }
+  .phone { width:358px; background:var(--bg); border-radius:28px; overflow:hidden; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .phone .top { height:56px; padding:0 16px; font-size:15px; font-family:'Instrument Sans'; font-weight:600; }
+  .phone .body { padding:20px 16px 28px; }
+  .phone .h { font-size:30px; }
+  .pstill { margin-top:18px; overflow:hidden; }
+  .peb { margin-top:18px; }
+  .peb + .pstill { margin-top:6px; }
+  .pstill .hd { display:flex; align-items:center; gap:10px; padding:10px 12px; }
+  .pstill .disc { width:32px; height:32px; border-radius:8px; }
+  .pstill .t { font-family:'Young Serif', serif; font-size:15px; line-height:1.2; }
+  .pstill .s { font-size:12px; color:var(--sec); }
+  .pstill .row { min-height:38px; padding:0 12px; }
+  .pstill .row .n { font-size:13px; }
+  .pstill .who { font-size:12px; color:var(--brand); font-weight:600; }
+  .notes { max-width:720px; color:var(--board-sec); }
+  .notes li { margin:4px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <h1>First project screen: what adding a project gets you</h1>
+    <p>Issue #1008, item 2 of #986. A still under "Nothing here yet." on a computer, so the empty left column shows the payoff: your rollout, its plan, a teammate on a task. Made-up names. Follows the theme; drawn here in light.</p>
+  </div>
+
+  <div class="sec-h"><h2>Computer, 1000 wide</h2><p>The still sits under the lede. The form on the right is unchanged.</p></div>
+  <div class="page">
+    <div class="top">Urganize</div>
+    <div class="desk">
+      <div>
+        <h1 class="h">Nothing here yet.</h1>
+        <p class="lede">Add what you're working on in <b>Northline Music</b>, or <u>ask someone to invite you</u>.</p>
+        <div class="acct"><span class="face" style="width:28px;height:28px;font-size:11px">OW</span>you@northline.music · <u>Log out</u></div>
+
+        <div class="still" role="img" aria-label="Example: a rollout, its plan with three tasks, and a teammate on one of them">
+          <div class="surface rc">
+            <span class="disc"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/></svg></span>
+            <div>
+              <p class="t">Love Letters from Yaba</p>
+              <p class="s">Kanmi Gold · Single · out Dec 12</p>
+            </div>
+          </div>
+          <p class="eb">For example</p>
+          <svg class="arrows" width="420" height="352" viewBox="0 0 420 352">
+            <!-- rollout to plan -->
+            <path d="M24 88 C 24 118, 28 138, 46 140" />
+            <path d="M40 135 L 47 140 L 40 145" />
+            <!-- teammate to their task -->
+            <path d="M374 330 C 392 330, 398 312, 397 290" />
+            <path d="M392 296 L 397 289 L 402 296" />
+          </svg>
+          <div class="surface plan">
+            <div class="hd"><span class="eb">Plan</span></div>
+            <div class="row"><i class="box"></i><span class="n">Lock the final mix</span><span class="d">Nov 4</span><i class="slot"></i></div>
+            <div class="row"><i class="box"></i><span class="n">Shoot the cover photo</span><span class="d">Nov 8</span><i class="slot"></i></div>
+            <div class="row mine"><i class="box"></i><span class="n">Pitch to playlists</span><span class="d">Nov 21</span><span class="face">AN</span></div>
+          </div>
+          <div class="chip"><span class="face">AN</span>Ada Nwosu <span>· sees it on Home</span></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="surface">
+          <div class="newp"><span class="plus">+</span><span><b>New project</b><span>Any stage, even just an idea.</span></span></div>
+          <p class="lbl">Where is it now?</p>
+          <div class="stage"><i></i><div>Just an idea<small>No date. Nothing recorded yet.</small></div></div>
+          <div class="stage"><i></i><div>Recording<small>In the studio.</small></div></div>
+          <div class="stage"><i></i><div>Mixing or mastering<small>Recorded, being finished.</small></div></div>
+          <div class="stage"><i></i><div>Ready to release<small>Mastered. Time to plan the release.</small></div></div>
+          <div class="stage"><i></i><div>Already out<small>Keep it going after release day.</small></div></div>
+          <div class="btn">Add it</div>
+        </div>
+        <div class="surface newp act"><span class="plus" style="background:var(--hover);color:var(--sec);font-size:16px">◎</span><span><b>Bring in released music</b><span>Type an artist's name. We pull in their releases.</span></span></div>
+        <div class="surface newp act"><span class="plus" style="background:var(--hover);color:var(--sec);font-size:16px">☺</span><span><b>Invite your team</b><span>They see what's theirs to do.</span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-h"><h2>Phone, 358 wide</h2><p>A redesign, not a squeeze: one card, the rollout as its header, three tasks, the face on one. About 160 tall, so the form still starts high.</p></div>
+  <div class="phones">
+    <div class="phone">
+      <div class="top">Urganize</div>
+      <div class="body">
+        <h1 class="h">Nothing here yet.</h1>
+        <p class="lede">Add what you're working on in <b>Northline Music</b>, or <u>ask someone to invite you</u>.</p>
+        <p class="eb peb">For example</p>
+        <div class="surface pstill" role="img" aria-label="Example: a rollout, its plan with three tasks, and a teammate on one of them">
+          <div class="hd">
+            <span class="disc"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/></svg></span>
+            <div style="min-width:0;flex:1"><p class="t">Love Letters from Yaba</p><p class="s">Kanmi Gold · Single · out Dec 12</p></div>
+          </div>
+          <div class="row"><i class="box"></i><span class="n">Lock the final mix</span><span class="d">Nov 4</span></div>
+          <div class="row"><i class="box"></i><span class="n">Shoot the cover photo</span><span class="d">Nov 8</span></div>
+          <div class="row mine"><i class="box"></i><span class="n">Pitch to playlists</span><span class="d">Nov 21</span><span class="face">AN</span></div>
+        </div>
+        <div class="surface" style="margin-top:20px">
+          <div class="newp"><span class="plus">+</span><span><b>New project</b><span>Any stage, even just an idea.</span></span></div>
+          <p class="lbl">Where is it now?</p>
+          <div class="stage"><i></i><div>Just an idea<small>No date. Nothing recorded yet.</small></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-h"><h2>Notes</h2></div>
+  <ul class="notes">
+    <li>Not the "How it shows on Home" tile: no big initials square, no stage stamp. This one is about what comes after: the plan and who does what.</li>
+    <li>Fixed example content only, never the team's data. Faces are flat initials tiles.</li>
+    <li>Shown from 1024 wide up, where the left column has room (about 420). Between 768 and 1024 the column is too narrow, so it stays as today. Under 768, the phone card.</li>
+    <li>Hidden when someone joined a team that already has rollouts (that view lists the real ones).</li>
+  </ul>
+</div>
+</body>
+</html>
