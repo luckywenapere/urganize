@@ -4,6 +4,7 @@ import {
   PERSONA_HEADLINE_CLASS,
   PersonaValueBlocks,
 } from "../components/landing/PersonaValueBlocks";
+import { ResponsiveProductShot } from "../components/landing/ResponsiveProductShot";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { TrialButton } from "../components/landing/TrialButton";
@@ -13,6 +14,7 @@ import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
 import { TESTIMONIALS } from "@/content/testimonials";
 import { PageDawn } from "../components/marketing/PageDawn";
+import type { ProductShot } from "@/content/product-shots";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Release planning software for artist managers",
@@ -69,6 +71,26 @@ const compactBlocks = [
   },
 ] as const;
 
+// The manager's-week still (#957, mock approved by the founder 2026-11-01).
+// A drawn picture, not a capture: the Artists page with its due and late
+// pills, and one teammate's card (the Team person panel) in front. Made-up
+// artists, drawn in the app's light and neutral dark tokens so it follows the
+// site's theme toggle. The ground around the window is transparent (filmed on
+// white and on black and matted), so the hero's glow shows through it. If the Artists page or the person panel changes,
+// redraw both.
+const managerWeek: ProductShot = {
+  light: "/images/product/manager-week.webp",
+  dark: "/images/product/manager-week-dark.webp",
+  width: 1920,
+  height: 1040,
+};
+const managerWeekPhone: ProductShot = {
+  light: "/images/product/manager-week-phone.webp",
+  dark: "/images/product/manager-week-phone-dark.webp",
+  width: 716,
+  height: 1000,
+};
+
 export default function ForManagersPage() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-[var(--marketing-bg)] text-[var(--marketing-text)] selection:bg-[var(--marketing-selection)] selection:text-[var(--marketing-text)]">
@@ -113,11 +135,31 @@ export default function ForManagersPage() {
           </PageDawn>
         </SectionShell>
 
+        {/* THE WEEK: the approved manager's-week still, right under the
+            hero so "One screen, not five chats" has its picture. Phone
+            picture below sm, the wide one from sm up (ResponsiveProductShot
+            picks one). */}
+        <SectionShell
+          className="pb-8 pt-0 sm:pb-12 sm:pt-0 lg:pb-16 lg:pt-0"
+          containerClassName="max-w-[64rem] px-6 sm:px-8 lg:px-10"
+        >
+          <div className="mx-auto max-w-[24rem] sm:max-w-none">
+            <ResponsiveProductShot
+              desktop={managerWeek}
+              phone={managerWeekPhone}
+              alt="The Urganize Artists page: Kanmi Gold has 2 tasks due and 1 late, Hadiza Moon has 4 due. A card in front shows teammate Tobi Adeyemi: Final cover art for Kanmi Gold is late, Send press photos for Hadiza Moon is due Thursday."
+              sizes="(min-width: 1024px) 944px, calc(100vw - 64px)"
+              fetchPriority="auto"
+            />
+          </div>
+        </SectionShell>
+
         {/* VALUE BLOCKS */}
         <PersonaValueBlocks blocks={valueBlocks} />
 
         {/* PRODUCT PROOF (2026-08-05, URG-218) — this page had zero product
-            imagery; reuses the homepage's screenshot section verbatim so a
+            imagery then (the manager's-week still under the hero came on
+            2026-11-01, #957); reuses the homepage's screenshot section verbatim so a
             manager sees the multi-release catalog the copy is describing. */}
         <WorkspaceShotSection />
 
