@@ -13,6 +13,7 @@ import { CORE_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { WAITLIST_URL } from "@/lib/app-urls";
 import { ChangelogFilter } from "./ChangelogFilter";
+import { ResponsiveProductShot } from "../components/landing/ResponsiveProductShot";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "What's new",
@@ -36,6 +37,12 @@ export const metadata: Metadata = buildPageMetadata({
 //     left off. The filter chips set data-filter on the list and the <style>
 //     below hides what does not match, so no data is shipped twice.
 const LIST_ID = "changelog-list";
+// A titled entry may carry one still of the screen it changed (#967): the
+// files are named by version in public/images/changelog/, light and dark,
+// desktop and phone (see `siteStill` in packages/changelog). The phone drawing
+// shows below sm; ResponsiveProductShot picks one per theme.
+const stillPath = (version: string, variant: string) =>
+  `/images/changelog/${version}${variant}.webp`;
 // The newest month reads in full, and the next ones too until a dozen
 // features are showing (so the 1st of a month never opens on one entry);
 // older months fold behind "Show N updates".
@@ -130,6 +137,28 @@ function Entry({ release }: { release: Release }) {
         <p className="mt-2 max-w-[38rem] leading-7 text-[var(--marketing-text-muted)]">
           {lead}
         </p>
+      ) : null}
+      {release.siteStill ? (
+        <div className="mt-5 max-w-[334px] overflow-hidden rounded-[14px] sm:max-w-[608px] sm:rounded-2xl">
+          <ResponsiveProductShot
+            desktop={{
+              light: stillPath(release.version, ""),
+              dark: stillPath(release.version, "-dark"),
+              width: release.siteStill.width,
+              height: release.siteStill.height,
+            }}
+            phone={{
+              light: stillPath(release.version, "-phone"),
+              dark: stillPath(release.version, "-phone-dark"),
+              width: release.siteStill.phoneWidth,
+              height: release.siteStill.phoneHeight,
+            }}
+            alt={release.siteStill.alt}
+            sizes="608px"
+            className="h-auto w-full"
+            fetchPriority="auto"
+          />
+        </div>
       ) : null}
       {rest.length > 0 ? (
         <details className="changelog-extra mt-1 max-w-[38rem]">

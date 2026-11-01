@@ -31,6 +31,22 @@ export type Release = {
   // A small picture of the change for the in-app What's new panel (#977).
   // Optional: entries without one show text only.
   still?: ReleaseStill;
+  // One picture of the screen a titled entry changed, shown under its lead
+  // line on the public /changelog page (#967). Separate from `still`, which
+  // the in-app panel draws as markup: the site shows image files, named by
+  // version in apps/homepage/public/images/changelog/: <version>.webp and
+  // <version>-dark.webp (desktop), <version>-phone.webp and
+  // <version>-phone-dark.webp (phones). Sizes are the files' pixel sizes. No
+  // siteStill, no picture: the entry reads as before.
+  siteStill?: SiteStill;
+};
+
+export type SiteStill = {
+  alt: string;
+  width: number;
+  height: number;
+  phoneWidth: number;
+  phoneHeight: number;
 };
 
 // The version-grouped release ledger — newest first. This file is the
@@ -61,6 +77,13 @@ export const changelog: Release[] = [
   },
   {
     version: "1.231.0",
+    siteStill: {
+      alt: "Checkout for the Pro plan showing five ways to pay: bank transfer, Naira card, mobile money, dollar card, USDT or USDC.",
+      width: 1216,
+      height: 800,
+      phoneWidth: 668,
+      phoneHeight: 980,
+    },
     title: "Pay your way",
     tag: "Account",
     still: "pay-your-way",
@@ -72,6 +95,13 @@ export const changelog: Release[] = [
   },
   {
     version: "1.230.0",
+    siteStill: {
+      alt: "The Pick a plan step for Northline Music with Emerging at ₦2,600 and Pro at ₦26,000 a month, Pro picked.",
+      width: 1216,
+      height: 720,
+      phoneWidth: 668,
+      phoneHeight: 720,
+    },
     title: "New plans: Emerging and Pro",
     tag: "Account",
     still: "plans",
@@ -155,6 +185,13 @@ export const changelog: Release[] = [
   },
   {
     version: "1.229.0",
+    siteStill: {
+      alt: "The Add your photo step after joining Northline Music, with a photo circle, Add photo and Skip.",
+      width: 1216,
+      height: 720,
+      phoneWidth: 668,
+      phoneHeight: 720,
+    },
     title: "Add your photo",
     tag: "Team",
     still: "photo",
