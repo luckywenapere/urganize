@@ -67,6 +67,19 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.233.0",
+    title: "See it before you pick it",
+    tag: "App",
+    date: "November 1, 2026",
+    highlights: [
+      "Pick a plan and see a small preview of what each option gives you first.",
+      "Tour steps now play a short clip of the thing they explain.",
+      "The plans page shows what each plan opens for your team.",
+      "What's new shows a small picture beside each update.",
+      "Your welcome emails now show the screen they talk about.",
+    ],
+  },
+  {
     version: "1.232.0",
     title: "See what a page looks like when it fills up",
     tag: "App",
