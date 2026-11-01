@@ -474,6 +474,30 @@ html[data-theme='light'] .tour-poster-dark,
   display: none;
 }
 
+/* The empty Artists page's plan loop posters (PlanLoopDemo.tsx, #1007): four
+   stills in the page, one shows, by theme and by the box's own width (the
+   stage switches to its phone scene below 420px). */
+.plan-loop {
+  container-type: inline-size;
+}
+html[data-theme='light'] .plan-loop-dark,
+:root:not([data-theme='light']) .plan-loop-light {
+  display: none;
+}
+/* The phone still is hidden unless the box is narrow, so a browser without
+   container queries shows only the wide one, never both. */
+.plan-loop-phone {
+  display: none;
+}
+@container (max-width: 419.98px) {
+  .plan-loop-wide {
+    display: none;
+  }
+  .plan-loop-phone {
+    display: block;
+  }
+}
+
 /* Content-calendar brand island (URG-157). The ONLY place this feature's
    colors are defined; every component consumes the vars via Tailwind
    arbitrary values. Follows the app's data-theme toggle (founder decision,

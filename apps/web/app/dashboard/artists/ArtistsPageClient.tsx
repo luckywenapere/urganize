@@ -19,8 +19,8 @@ import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { HomeBell } from '@/components/home/v2/HomeBell';
-import { EMPTY_STATE_ACTION_CLASS, EmptyState } from '@/components/shared/EmptyState';
-import { ArtistsEmptyPreview } from '@/components/shared/EmptyPreviews';
+import { EMPTY_STATE_ACTION_CLASS } from '@/components/shared/EmptyState';
+import { PlanLoopDemo } from '@/components/artists/PlanLoopDemo';
 import { useShellStore } from '@/stores/useShellStore';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
@@ -130,26 +130,33 @@ export default function ArtistsPageClient({
   );
 }
 
-/** The first page a new team sees (#969): the list when full, faded, with
- *  the one action that fills it on top. */
+/** The first page a new team sees (#969): the one action that fills it, and
+ *  beside it a short loop of what comes next, a release planned in UrgAns
+ *  (#1007; it replaced the faded list here, which stays on other pages). */
 function ArtistsEmpty() {
   const openAddArtist = useShellStore((state) => state.openAddArtist);
   return (
-    <EmptyState
-      title="No artists yet."
-      description="Add the first and their rollouts show here."
-      preview={<ArtistsEmptyPreview />}
-      action={
-        <button
-          type="button"
-          onClick={() => openAddArtist()}
-          className={EMPTY_STATE_ACTION_CLASS}
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Add artist
-        </button>
-      }
-    />
+    <section className="mx-auto grid max-w-xl items-center gap-8 py-6 sm:py-10 lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-12">
+      <div className="text-center lg:text-left">
+        <h2 className="text-balance font-display text-[24px] font-normal leading-[1.25] text-content-primary sm:text-[28px]">
+          No artists yet.
+        </h2>
+        <p className="mt-2 text-pretty text-[14px] leading-normal text-content-secondary">
+          Add the first and their rollouts show here.
+        </p>
+        <div className="mt-5 flex justify-center lg:justify-start">
+          <button
+            type="button"
+            onClick={() => openAddArtist()}
+            className={EMPTY_STATE_ACTION_CLASS}
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Add artist
+          </button>
+        </div>
+      </div>
+      <PlanLoopDemo className="mx-auto w-full max-w-[440px]" />
+    </section>
   );
 }
 
