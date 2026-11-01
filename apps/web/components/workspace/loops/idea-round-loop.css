@@ -1,0 +1,147 @@
+/* The idea round invite's loop (IdeaRoundStage.tsx, #1010). Every colour is an
+   app token from app/globals.css, so the loop follows the light/dark theme with
+   no second set of rules. Loaded with the loop, never on the first page load. */
+
+.ir .ss-stage {
+  --ss-font: var(--font-sans);
+  --ss-mono: var(--font-mono);
+  --ss-accent: var(--brand-primary);
+  --ss-accent-soft: var(--brand-primary-muted);
+  --ss-accent-text: var(--brand-primary);
+  --ss-success: var(--brand-primary);
+  --ss-surface: var(--bg-surface);
+  --ss-raised: var(--bg-elevated);
+  --ss-canvas: var(--bg-base);
+  --ss-well: var(--bg-base);
+  --ss-text-strong: var(--text-primary);
+  --ss-text: var(--text-secondary);
+  --ss-text-faint: var(--text-tertiary);
+  --ss-line: var(--border-strong);
+  --ss-ink-1: var(--bg-hover);
+  --ss-ink-2: var(--bg-active);
+  --ss-ink-3: var(--border-strong);
+  --ss-ink-4: var(--border-strong);
+  --ss-fill: var(--bg-active);
+  overflow: hidden;
+  background: var(--bg-base);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-family: var(--ss-font);
+  letter-spacing: -0.01em;
+  text-align: left;
+}
+
+.ir-scene {
+  position: absolute;
+  inset: 0;
+  transition: opacity 300ms ease;
+}
+.ir-scene[data-veil] { opacity: 0; }
+
+.ir-head {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 12px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ir-faces { display: flex; gap: 8px; }
+.ir-count {
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.ir-body {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 48px;
+}
+.ir-body { display: grid; }
+.ir-body > * { grid-area: 1 / 1; }
+.ir-stack {
+  display: flex;
+  flex-direction: column;
+  transition: opacity 260ms ease, transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.ir-stack[data-gone] { opacity: 0; transform: translateY(-6px) scale(0.98); }
+.ir-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 30px;
+  margin-bottom: 6px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 0 0 1px var(--border-default);
+}
+.ir-note .ss-avatar { flex: none; }
+.ir-note__text {
+  overflow: hidden;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ir-brief {
+  display: flex;
+  flex-direction: column;
+  height: 102px;
+  padding: 12px 12px 0;
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.08), 0 0 0 1px var(--border-default);
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+  transition: opacity 280ms ease 120ms, transform 380ms cubic-bezier(0.2, 0.8, 0.2, 1) 120ms;
+}
+.ir-brief[data-on] { opacity: 1; transform: none; }
+.ir-brief__top { display: flex; align-items: center; justify-content: space-between; }
+.ir-brief__kicker { font-size: 11.5px; font-weight: 600; color: var(--brand-primary); }
+.ir-brief__title { margin-top: 4px; font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.ir-brief__lines { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+
+.ir-button {
+  position: absolute;
+  right: 12px;
+  bottom: 14px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--brand-primary);
+  color: var(--text-inverse);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 200ms ease, color 200ms ease, box-shadow 200ms ease;
+}
+.ir-button[data-done] {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 1px var(--border-strong);
+}
+
+/* Bottom left, beside the button: the round is private until it closes. */
+.ir-private {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  transition: opacity 240ms ease;
+}
+.ir-private[data-gone] { opacity: 0; }
