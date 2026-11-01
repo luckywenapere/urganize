@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync, statSync } from 'node:fs';
+import path from 'node:path';
 import {
   askedInCount,
   briefToPlanNotes,
@@ -166,5 +168,29 @@ describe('small helpers', () => {
     expect(formatClipLength(48)).toBe('0:48');
     expect(formatClipLength(61.4)).toBe('1:01');
     expect(formatClipLength(null)).toBe('');
+  });
+});
+
+describe('the invite loop loads the way the Stageshow note says (#1010)', () => {
+  const read = (file: string) => readFileSync(path.join(process.cwd(), file), 'utf8');
+  const wrapper = read('components/workspace/IdeaRoundLoop.tsx');
+
+  it('loads the kit lazily, client only', () => {
+    expect(wrapper).toMatch(/dynamic\(\(\) => import\('\.\/loops\/IdeaRoundStage'\), \{\s*ssr: false,/);
+    // Only the loop file may import the kit; anything else would pull it into the first load.
+    for (const file of ['components/workspace/IdeaRoundLoop.tsx', 'components/workspace/RolloutIdeasCard.tsx']) {
+      expect(read(file)).not.toContain('@urganize/stageshow');
+    }
+  });
+
+  it('never mounts the loop under reduced motion', () => {
+    expect(wrapper).toContain("matchMedia('(prefers-reduced-motion: reduce)')");
+    expect(wrapper).toContain('{motion ? (');
+  });
+
+  it('has a light and a dark poster', () => {
+    for (const theme of ['light', 'dark']) {
+      expect(statSync(path.join(process.cwd(), `public/images/idea-round/invite-${theme}.webp`)).size).toBeGreaterThan(0);
+    }
   });
 });

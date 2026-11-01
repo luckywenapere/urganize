@@ -6,6 +6,7 @@ import { ADD_IDEA_EVENT, IDEAS_CHANGED_EVENT } from './RolloutFirstSteps';
 import { Check, Copy, Loader2, Lock, MessageCircle, Mic, Sparkles, UserPlus, X } from '@/components/icons';
 import { VoicePill } from './VoicePill';
 import { useSceneOverlay } from './useSceneOverlay';
+import { IdeaRoundLoop } from './IdeaRoundLoop';
 import { IDEA_ROUND_COPY as ROUND_COPY, isIdeaRoundEnabled } from '@/lib/idea-round';
 import { runBriefFromIdeas } from '@/lib/urgans-actions/client';
 import { useOpenSettings } from '@/components/settings/useOpenSettings';
@@ -585,6 +586,7 @@ export function RolloutIdeasCard({
           {COPY.inviteTitle}
         </h2>
         <p className="mt-2 text-sm text-content-secondary">{round ? ROUND_COPY.ownerPrivateHint : COPY.inviteBody}</p>
+        {round ? <IdeaRoundLoop className="mt-5" /> : null}
         <div className="text-left">
           <WhoShouldChimeIn
             bare
