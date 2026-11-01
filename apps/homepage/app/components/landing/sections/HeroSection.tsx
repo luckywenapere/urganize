@@ -1,4 +1,3 @@
-import { PRODUCT_SHOTS } from "@/content/product-shots";
 import { ProofLine } from "../ProofLine";
 import { ResponsiveProductShot } from "../ResponsiveProductShot";
 import { SectionShell } from "../SectionShell";
@@ -6,7 +5,8 @@ import { WaitlistForm } from "../WaitlistForm";
 import { WatchDemo } from "../WatchDemo";
 import { wideContainerClass } from "./shared";
 import { HeroCards, HeroSky } from "./HeroDawn";
-import { HeroShotTabs } from "../HeroShotTabs";
+import { HeroLoop } from "../hero-loop/HeroLoop";
+import { HERO_LOOP_POSTER } from "../hero-loop/poster";
 
 const HERO_SHOT_SIZES = "(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw";
 
@@ -75,37 +75,28 @@ export function HeroSection() {
         </div>
       </div>
 
-      {/* Below `sm` the frame is a 4:5 window onto the top of the phone
-          capture; from `sm` the desktop capture renders at its own aspect. */}
-      {/* The sky is anchored to this wrapper, so its horizon sits on the
-          shot's top edge whatever height the text above it wraps to. */}
+      {/* THE HERO LOOP (2026-11-01, #952, founder approved the mock; notes in
+          docs/notes/2026-11-01-hero-loop.md): add a release, the plan
+          appears, the tasks land on the team. The poster still is
+          server-rendered and stays the LCP image; HeroLoop lazy-loads the
+          animation over it after load, and never under reduced motion. Below
+          `sm` both are the phone design (358x540), from `sm` the desktop one
+          (1000x560). The sky is anchored to this wrapper, so its horizon sits
+          on the shot's top edge whatever height the text above it wraps to;
+          hero-shot-frame gives the dawn arm its lift shadow. */}
       <div className="relative mx-auto mt-14 max-w-[84rem] sm:mt-16">
         <HeroSky />
-        <div className="hero-shot-frame relative aspect-[4/5] overflow-hidden rounded-xl border border-[color:var(--marketing-border)] sm:aspect-auto">
-          {/* The Artists | Rollouts tabs drawn in the capture are tappable
-              (URG-378): Rollouts is the default and stays the LCP image. */}
-          <HeroShotTabs
-            rollouts={
-              <ResponsiveProductShot
-                desktop={PRODUCT_SHOTS.catalog}
-                phone={PRODUCT_SHOTS.catalogPhone}
-                alt="The Urganize catalog for a team running several artists: release cards with cover art, the release date and a progress bar counting finished tasks against each plan."
-                sizes={HERO_SHOT_SIZES}
-                className="h-full w-full object-cover object-top sm:h-auto sm:object-contain"
-              />
-            }
-            artists={
-              <ResponsiveProductShot
-                desktop={PRODUCT_SHOTS.artistsRoster}
-                phone={PRODUCT_SHOTS.artistsPhone}
-                alt="The Urganize artists roster: every artist the team works with, with how many releases each has in plan."
-                sizes={HERO_SHOT_SIZES}
-                fetchPriority="low"
-                className="absolute inset-0 h-full w-full object-cover object-top"
-              />
-            }
-          />
-        </div>
+        <HeroLoop className="hero-shot-frame rounded-t-xl">
+          <div className="hero-loop-poster">
+            <ResponsiveProductShot
+              desktop={HERO_LOOP_POSTER.desktop}
+              phone={HERO_LOOP_POSTER.phone}
+              alt="An Urganize release plan for the single Harmattan Gold: six tasks with due dates, each with a teammate's name next to it."
+              sizes={HERO_SHOT_SIZES}
+              className="block h-auto w-full"
+            />
+          </div>
+        </HeroLoop>
       </div>
     </SectionShell>
   );
