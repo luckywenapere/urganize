@@ -11,6 +11,7 @@ import { TEAMMATE_INVITED_EVENT } from '@/lib/invite-gate';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { getTemplate, getTemplateSpanDays } from '@/lib/release-templates/loader';
+import { AssignTeamLoop } from './AssignTeamLoop';
 
 type FirstReleaseWinProps = {
   releaseId: string;
@@ -141,7 +142,7 @@ export function FirstReleaseWin({ releaseId, onDone }: FirstReleaseWinProps) {
         role="dialog"
         aria-modal="true"
         aria-label="Your first rollout is planned"
-        className={`relative w-full max-w-lg urg-cartouche rounded-2xl border border-stroke-default bg-bg-surface p-6 shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))] transition-all duration-500 sm:p-8 ${
+        className={`relative max-h-full w-full max-w-lg overflow-y-auto urg-cartouche rounded-2xl border border-stroke-default bg-bg-surface p-6 shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))] transition-all duration-500 sm:p-8 ${
           isMounted ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
         }`}
       >
@@ -243,7 +244,8 @@ export function FirstReleaseWin({ releaseId, onDone }: FirstReleaseWinProps) {
               </div>
             ) : (
               <form onSubmit={(event) => void handleInvite(event)} className="mt-5">
-                <label className="block">
+                <AssignTeamLoop />
+                <label className="mt-5 block">
                   <span className="mb-2 block text-sm font-medium text-content-primary">
                     Teammate email
                   </span>
