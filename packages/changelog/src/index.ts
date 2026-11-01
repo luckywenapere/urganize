@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.234.2",
+    tag: "App",
+    date: "November 2, 2026",
+    highlights: [
+      "The page no longer stays shifted down after you open and close the keyboard.",
+    ],
+  },
+  {
     version: "1.234.1",
     tag: "App",
     date: "November 1, 2026",

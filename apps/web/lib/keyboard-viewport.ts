@@ -80,6 +80,28 @@ function readLayoutHeight(): number {
   return document.documentElement.clientHeight || window.innerHeight;
 }
 
+const NON_TEXT_INPUT_TYPES = new Set([
+  'button', 'checkbox', 'color', 'file', 'image', 'radio', 'range', 'reset', 'submit',
+]);
+
+/**
+ * True for an element that raises the on-screen keyboard when focused. A
+ * keyboard cannot be up with none focused, which is the check that stops a
+ * missed iOS resize event (Safari sometimes skips the last one when the
+ * keyboard goes down) from leaving the page stuck in its "keyboard open"
+ * layout, shifted down with a blank band above it (Nov 2, 2026 report).
+ * Takes a plain element shape so it is testable without a DOM.
+ */
+export function isEditableElement(
+  element: { tagName?: string; type?: string; isContentEditable?: boolean } | null | undefined
+): boolean {
+  if (!element) return false;
+  const tag = String(element.tagName ?? '').toUpperCase();
+  if (tag === 'TEXTAREA') return true;
+  if (tag === 'INPUT') return !NON_TEXT_INPUT_TYPES.has(String(element.type ?? 'text').toLowerCase());
+  return element.isContentEditable === true;
+}
+
 function measure(): KeyboardViewportState {
   const viewport = window.visualViewport;
   const width = window.innerWidth;
@@ -93,9 +115,13 @@ function measure(): KeyboardViewportState {
     baselineHeight = height;
     return { open: false, viewportHeightPx: height, insetPx: 0, offsetTopPx: 0 };
   }
+  const editing = isEditableElement(document.activeElement as HTMLElement | null);
   // The viewport only ever grows back to (or past) its resting height when
-  // nothing is covering it, so the tallest height seen is the baseline.
-  if (height > baselineHeight) baselineHeight = height;
+  // nothing is covering it, so the tallest height seen is the baseline. With
+  // no field focused there is no keyboard, so whatever the height is now IS
+  // the resting height: this also re-baselines after Safari's toolbar slides
+  // away and back, which used to read as a keyboard that never closed.
+  if (!editing || height > baselineHeight) baselineHeight = height;
 
   // DETECTION IS SCROLL-INDEPENDENT ON PURPOSE. It compares heights only —
   // never `offsetTop`. When iOS cannot scroll the document far enough to
@@ -106,7 +132,7 @@ function measure(): KeyboardViewportState {
   // up as MORE dead space, not less. Heights don't move when the page pans.
   const shrank = baselineHeight - height > KEYBOARD_SHRINK_THRESHOLD_PX;
   const covered = readLayoutHeight() - height > KEYBOARD_OVERLAP_THRESHOLD_PX;
-  const open = shrank || covered;
+  const open = (shrank || covered) && editing;
   if (!open) return { open, viewportHeightPx: height, insetPx: 0, offsetTopPx: 0 };
 
   // Both of these DO account for the pan — they are screen coordinates for a
@@ -129,6 +155,11 @@ function handleViewportChange() {
   for (const listener of listeners) listener();
 }
 
+function onFocusOut() {
+  // activeElement is still the old field inside focusout, so wait a tick.
+  for (const delay of [0, 120, 450]) window.setTimeout(handleViewportChange, delay);
+}
+
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   if (!listening) {
@@ -141,6 +172,11 @@ function subscribe(listener: () => void): () => void {
     // layout viewport without either resizing, which changes the overlap.
     window.visualViewport?.addEventListener('resize', handleViewportChange);
     window.visualViewport?.addEventListener('scroll', handleViewportChange);
+    // Focus decides whether a keyboard can be up at all (see measure), and
+    // iOS can drop the final resize when it goes down, so measure again after
+    // a field loses focus, once now and twice as the keyboard finishes sliding.
+    document.addEventListener('focusin', handleViewportChange);
+    document.addEventListener('focusout', onFocusOut);
   }
   return () => {
     listeners.delete(listener);
@@ -149,6 +185,8 @@ function subscribe(listener: () => void): () => void {
     window.removeEventListener('resize', handleViewportChange);
     window.visualViewport?.removeEventListener('resize', handleViewportChange);
     window.visualViewport?.removeEventListener('scroll', handleViewportChange);
+    document.removeEventListener('focusin', handleViewportChange);
+    document.removeEventListener('focusout', onFocusOut);
   };
 }
 
