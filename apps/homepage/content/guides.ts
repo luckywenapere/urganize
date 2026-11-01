@@ -23,6 +23,8 @@
 // word the positioning guard retires for the product. apps/web's
 // positioning-guard walks apps/homepage, so a slip fails the build.
 
+import type { ProductShot } from "./product-shots";
+
 export type GuideBlock =
   | { type: "p"; text: string }
   | { type: "h3"; text: string }
@@ -42,10 +44,31 @@ export type Guide = {
   datePublished: string;
   dateModified: string;
   intro: readonly string[];
+  /** The picture under the intro: a drawn still (#966, mock approved by the
+   *  founder 2026-11-01), not a capture. Light and dark, wide and phone.
+   *  The people, artist and song in them are made up. If the screen it
+   *  draws changes, redraw all four files. */
+  still: { desktop: ProductShot; phone: ProductShot; alt: string };
   sections: readonly GuideSection[];
   /** Slugs of the guides to link at the bottom. */
   related: readonly string[];
 };
+
+// The four files of one guide still, light and dark, wide and phone. The
+// sizes are typed in: they must be the WebP files' pixel sizes (the stage at
+// 2x), so after re-filming a still, update them or the picture's box will
+// have the wrong shape.
+function guideStill(
+  name: string,
+  wide: readonly [number, number],
+  phone: readonly [number, number],
+): { desktop: ProductShot; phone: ProductShot } {
+  const src = (variant: string) => `/images/product/guide-${name}${variant}.webp`;
+  return {
+    desktop: { light: src(""), dark: src("-dark"), width: wide[0], height: wide[1] },
+    phone: { light: src("-phone"), dark: src("-phone-dark"), width: phone[0], height: phone[1] },
+  };
+}
 
 export const GUIDES: readonly Guide[] = [
   {
@@ -60,6 +83,10 @@ export const GUIDES: readonly Guide[] = [
       "This is the plan Urganize uses for a single. It runs 11 weeks: 8 weeks before release day and 3 weeks after. It was written with working managers. Change it to fit your song, your budget and your team.",
       "Start when the master is done, or within a week of it being done.",
     ],
+    still: {
+      ...guideStill("plan", [1360, 800], [716, 680]),
+      alt: "An Urganize timeline for the single Harmattan Gold: activities set out week by week from 8 weeks out to release day, today marked, and the Spotify editorial pitch open with one owner, Ada Nwosu, and one week, 5 weeks out.",
+    },
     sections: [
       {
         heading: "Weeks 8 and 7: decide and brief",
@@ -243,6 +270,10 @@ export const GUIDES: readonly Guide[] = [
       "Use this list to give every step one owner. It follows the single-release plan from our 11-week timeline, sorted by who does the work instead of by week.",
       "Not sure about the order of things? Read the week-by-week version first.",
     ],
+    still: {
+      ...guideStill("checklist", [1360, 908], [716, 940]),
+      alt: "An Urganize activity list for Harmattan Gold: each activity has an owner and a week, and the owner menu is open on the first cover art draft, listing the artist, the manager, the marketing lead and the designer.",
+    },
     sections: [
       {
         heading: "The artist",
@@ -355,6 +386,10 @@ export const GUIDES: readonly Guide[] = [
       "Playlists help a song get heard. Getting onto one takes early work, a short message and some follow-up.",
       "This is the order a release team follows, week by week. It comes from our 11-week single-release plan.",
     ],
+    still: {
+      ...guideStill("pitch", [1360, 1200], [716, 1200]),
+      alt: "An Urganize pitch to the curator Lola Adeyemi for her playlist Lagos Late Nights: a private song link, a short note at 145 of 300 characters and a Send pitch button, above the Answers list where replies show as Added or Listened.",
+    },
     sections: [
       {
         heading: "Pick your targets early",
