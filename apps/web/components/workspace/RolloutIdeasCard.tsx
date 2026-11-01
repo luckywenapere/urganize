@@ -5,6 +5,7 @@ import { Button } from '@urganize/ui';
 import { ADD_IDEA_EVENT, IDEAS_CHANGED_EVENT } from './RolloutFirstSteps';
 import { Check, Copy, Loader2, Lock, MessageCircle, Mic, Sparkles, UserPlus, X } from '@/components/icons';
 import { VoicePill } from './VoicePill';
+import { IdeaCardLoop } from './IdeaCardLoop';
 import { useSceneOverlay } from './useSceneOverlay';
 import { IdeaRoundLoop } from './IdeaRoundLoop';
 import { IDEA_ROUND_COPY as ROUND_COPY, isIdeaRoundEnabled } from '@/lib/idea-round';
@@ -641,7 +642,10 @@ export function RolloutIdeasCard({
         {fresh && path !== 'chime_in' ? COPY.titleFor(release.title) : title}
       </h2>
       {fresh && path !== 'chime_in' ? (
-        <p className="mt-2 text-sm text-content-secondary">{COPY.freshBody}</p>
+        <>
+          <p className="mt-2 text-sm text-content-secondary">{COPY.freshBody}</p>
+          {canAddIdea && data.voice ? <IdeaCardLoop className="mt-5" /> : null}
+        </>
       ) : round && path === 'chime_in' && roundOpen ? (
         <p className="mt-2 text-sm text-content-secondary">
           {hasOwnNote ? ROUND_COPY.thanksBody(ownerFirst) : ROUND_COPY.teammateBody}

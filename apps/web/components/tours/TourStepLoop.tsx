@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useState } from 'react';
+import { usePrefersMotion } from '@/lib/use-prefers-motion';
 import type { TourLoopId } from '@/lib/tours';
 
 /**
@@ -53,18 +53,6 @@ export function TourPoster({ loop, thumb = false }: { loop: TourLoopId; thumb?: 
       ))}
     </>
   );
-}
-
-function usePrefersMotion(): boolean {
-  const [motion, setMotion] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const update = () => setMotion(!mq.matches);
-    update();
-    mq.addEventListener('change', update);
-    return () => mq.removeEventListener('change', update);
-  }, []);
-  return motion;
 }
 
 export function TourStepLoop({ loop }: { loop: TourLoopId }) {
