@@ -1,0 +1,46 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sessions mock</title>
+<style>
+:root{--bg:#f5f0e6;--card:#faf5ec;--ink:#1a1611;--mut:#6f685c;--line:#e4dccb;--brand:#2f6a43}
+*{box-sizing:border-box}body{margin:0;background:#d9d2c3;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:var(--ink);display:flex;gap:26px;justify-content:center;padding:26px;flex-wrap:wrap}
+.cap{font-size:12px;color:#444;margin:0 0 8px;text-align:center;max-width:340px}
+.phone{width:340px;height:700px;background:var(--bg);border-radius:32px;overflow:hidden;position:relative;box-shadow:0 20px 50px -20px #0006}
+.top{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 8px}
+.tabs{display:flex;gap:20px;font-size:17px;color:var(--mut)}.tabs b{color:var(--ink);border-bottom:2px solid var(--brand);padding-bottom:6px}
+.av{width:36px;height:36px;border-radius:50%;background:#1f3d2b;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:600}
+.h{font-family:Georgia,serif;font-size:24px;margin:12px 20px 4px}
+.sub{margin:0 20px 12px;color:var(--mut);font-size:13px}
+.card{margin:0 16px 10px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px;font-size:14px}
+.card h4{font-family:Georgia,serif;font-size:17px;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
+.card h4 s{font:12px system-ui;color:#b33;text-decoration:none;border:1px dashed #b33;border-radius:6px;padding:1px 6px}
+.card ul{margin:6px 0 0;padding-left:18px;color:var(--mut)}
+.row{display:flex;gap:12px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
+.cov{width:44px;height:44px;border-radius:8px;background:#3d6fa8;flex:none}.cov.g{background:#888}
+.row b{display:block;font-size:15px}.row span{font-size:12.5px;color:var(--mut)}.row i{margin-left:auto;color:#aaa;font-style:normal}
+.box{position:absolute;left:14px;right:14px;bottom:18px;background:#fffaf0;border:1px solid var(--ink);border-radius:999px;padding:14px 18px;color:var(--mut);font-size:14px}
+.bub{margin:8px 16px;padding:10px 14px;border-radius:16px;font-size:14px;max-width:80%}
+.me{background:var(--brand);color:#fff;margin-left:auto}.ai{background:var(--card);border:1px solid var(--line)}
+.back{padding:18px 20px 4px;font-size:22px}
+.note{position:absolute;left:12px;right:12px;top:72px;background:#fff3c4;border:1px solid #e6c95a;border-radius:10px;padding:8px 10px;font-size:12px}
+</style></head><body>
+
+<div><p class="cap">1. A rollout page. "Add idea" and "Edit idea" are gone. You type in the chat box instead.</p><div class="phone">
+<div class="top"><div class="tabs"><span>Home</span><span>Assistant</span><span>Sessions</span></div><div class="av">OW</div></div>
+<div class="h">Ohema II <small style="font:12px monospace;color:var(--mut)">0/12</small></div>
+<div class="card"><h4>Rollout brief <s>Add idea · Edit idea removed</s></h4>The team aims to create excitement around Dorian's single.<ul><li>Confirm the release date and lock it</li><li>Plan 6 short TikTok videos</li></ul></div>
+<div class="box">Add a note about the TikTok plan|</div></div></div>
+
+<div><p class="cap">2. They start typing and send. The screen slides to the Sessions tab and this rollout's session opens full page.</p><div class="phone">
+<div class="back">&#8249; <span style="font:15px system-ui;color:var(--mut)">Ohema II</span></div>
+<div class="bub me">Add a note about the TikTok plan</div>
+<div class="bub ai">Done. I added it to the brief. Want me to assign the six video tasks too?</div>
+<div class="box">Message UrgAns about Ohema II...</div></div></div>
+
+<div><p class="cap">3. The Sessions tab: one session per rollout. No "new session". A new session only comes with a new rollout.</p><div class="phone">
+<div class="top"><div class="tabs"><span>Home</span><span>Assistant</span><b>Sessions</b></div><div class="av">OW</div></div>
+<div class="sub" style="margin-top:14px">One session for each rollout</div>
+<div class="row"><div class="cov"></div><div><b>Honest</b><span>Single · you added the TikTok plan</span></div><i>&rsaquo;</i></div>
+<div class="row"><div class="cov g"></div><div><b>Ohema II</b><span>Single · Add a note about the TikTok plan</span></div><i>&rsaquo;</i></div>
+<div class="row"><div class="cov g"></div><div><b>Abena</b><span>Single · No messages yet</span></div><i>&rsaquo;</i></div>
+<div class="box">Message UrgAns...</div></div></div>
+</body></html>
