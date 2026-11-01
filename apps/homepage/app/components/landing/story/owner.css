@@ -1,0 +1,254 @@
+.uo .uo-card {
+  position: absolute;
+  top: 28px;
+  left: 28px;
+  right: 28px;
+  min-height: 460px;
+  padding: 24px 24px 0;
+  border-radius: var(--ss-radius-window);
+  background: var(--ss-surface);
+  box-shadow: var(--ss-shadow-hero);
+}
+
+.uo .ss-stage[data-layout='compact'] .uo-card {
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  padding: 20px 16px 0;
+}
+
+.uo .uo-rest {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 120px;
+  height: 60px;
+}
+
+.uo .uo-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  display: inline-flex;
+  color: var(--ss-icon-faint);
+}
+
+.uo .ss-stage[data-layout='compact'] .uo-close {
+  top: 14px;
+  right: 12px;
+}
+
+.uo .uo-titlerow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-right: 28px;
+}
+
+.uo .uo-mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: var(--ss-accent);
+  color: var(--urg-on-strong);
+}
+
+.uo .uo-title {
+  font-size: 22px;
+  line-height: 1.25;
+  color: var(--ss-text-strong);
+}
+
+.uo .ss-stage[data-layout='compact'] .uo-title {
+  font-size: 20px;
+}
+
+.uo .uo-sub {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--ss-text);
+}
+
+.uo .uo-fields {
+  display: grid;
+  gap: 2px;
+  margin-top: 18px;
+}
+
+.uo .uo-field {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 40px;
+}
+
+.uo .uo-field__icon {
+  display: inline-flex;
+  flex: none;
+  width: 28px;
+  justify-content: center;
+  color: var(--ss-icon-faint);
+}
+
+.uo .uo-field__value {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: var(--ss-radius-md);
+  font-size: 14px;
+  color: var(--ss-text-strong);
+  transition: background 0.15s ease;
+}
+
+.uo .uo-field__value[data-control] {
+  width: 230px;
+  justify-content: space-between;
+}
+
+.uo .uo-field__value[data-control][data-hover],
+.uo .uo-field__value[data-open] {
+  background: var(--ss-fill);
+}
+
+.uo .uo-value {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/* The avatar opens its own width as the name arrives */
+.uo .uo-who {
+  display: inline-flex;
+  will-change: transform;
+  width: 0;
+  margin-right: 0;
+  opacity: 0;
+  scale: 0.6;
+  transition: width 0.35s cubic-bezier(0.45, 0, 0.1, 1), margin-right 0.35s cubic-bezier(0.45, 0, 0.1, 1), opacity 0.3s ease 0.1s, scale 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) 0.1s;
+}
+
+.uo .uo-who[data-on] {
+  width: 22px;
+  margin-right: 8px;
+  opacity: 1;
+  scale: 1;
+}
+
+.uo .uo-empty {
+  color: var(--ss-text-faint);
+}
+
+.uo .uo-chev {
+  flex: none;
+  color: var(--ss-icon-faint);
+}
+
+.uo .uo-desc {
+  display: grid;
+  gap: 9px;
+  margin-top: 20px;
+  padding: 16px 0 0 36px;
+  border-top: 1px solid var(--ss-line-faint);
+}
+
+.uo .uo-pop {
+  position: absolute;
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.uo .uo-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  font-size: 14px;
+  color: var(--ss-text-strong);
+}
+
+.uo .uo-pop .ss-menu {
+  --ss-row: 36px;
+}
+
+.uo .uo-pop .ss-menu__item {
+  padding: 0 8px;
+  border-radius: var(--ss-radius-sm);
+}
+
+.uo .uo-pop .ss-menu__item[data-active] {
+  background: var(--ss-fill);
+}
+
+.uo .uo-person__name {
+  flex: 1;
+}
+
+.uo .uo-person__tick {
+  display: inline-flex;
+  width: 14px;
+  color: var(--ss-accent);
+}
+
+.uo .uo-week {
+  padding: 10px 8px 8px;
+}
+
+.uo .uo-week__head {
+  padding: 0 4px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ss-text-strong);
+}
+
+.uo .uo-week__days {
+  display: grid;
+  grid-template-columns: repeat(7, 32px);
+  gap: 2px;
+}
+
+.uo .uo-day {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 4px 0 6px;
+  border-radius: var(--ss-radius-sm);
+  font-size: 13px;
+  color: var(--ss-text-strong);
+}
+
+.uo .uo-day[data-hover] {
+  background: var(--ss-fill);
+}
+
+.uo .uo-day__d {
+  font-size: 11px;
+  color: var(--ss-text-faint);
+}
+
+/* The picked day: a solid accent disc, the day in white */
+.uo .uo-day__n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.uo .uo-day[data-on] .uo-day__n {
+  background: var(--ss-accent);
+  color: var(--urg-on-strong);
+}
+
+.uo .uo-desc__gap {
+  height: 6px;
+}

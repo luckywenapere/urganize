@@ -1,0 +1,110 @@
+
+/* Urganize's light theme (apps/web/app/globals.css, html[data-theme='light']),
+   mapped onto the kit's tokens. The stage is the app's own page: no plate. */
+.urg .ss-stage {
+  --ss-canvas: #f5f0e6;
+  --ss-well: #f5f0e6;
+  --ss-surface: #faf5ec;
+  --ss-raised: #faf5ec;
+  --ss-chrome: #f0ebe1;
+  --ss-fill: #ebe6dc;
+  --ss-line: rgba(26, 22, 17, 0.15);
+  --ss-line-faint: rgba(26, 22, 17, 0.09);
+  --ss-text-strong: #1a1611;
+  --ss-text: #4b4740;
+  --ss-text-faint: #6a665f;
+  --ss-icon: #4b4740;
+  --ss-icon-faint: #8a857c;
+  --ss-accent: #14643a;
+  --ss-accent-2: #247648;
+  --ss-accent-soft: rgba(20, 100, 58, 0.12);
+  --ss-accent-text: #14643a;
+  --ss-danger: #961a1a;
+  --ss-danger-soft: rgba(150, 26, 26, 0.1);
+  --ss-danger-text: #961a1a;
+  --ss-warning: #7e480a;
+  /* The site's own next/font instances (app/layout.tsx, home-fonts.ts) */
+  --ss-font: var(--font-urg-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ss-mono: var(--font-home-mono), monospace;
+  --ss-radius-sm: 6px;
+  --ss-radius-md: 8px;
+  --ss-radius-lg: 12px;
+  --ss-radius-window: 16px;
+  --ss-shadow-hero: 0 0 0 1px rgba(26, 22, 17, 0.08), 0 14px 32px rgba(26, 22, 17, 0.08);
+  --ss-shadow-float: 0 0 0 1px rgba(26, 22, 17, 0.09), 0 14px 32px rgba(26, 22, 17, 0.12);
+  --ss-popover-bg: #faf5ec;
+  /* Ink on a solid accent or strong-text fill, and a form field's ground */
+  --urg-on-strong: #f5f0e6;
+  --urg-field: #fffdf8;
+  --ss-popover-shadow: 0 0 0 1px rgba(26, 22, 17, 0.09), 0 14px 32px rgba(26, 22, 17, 0.12);
+  overflow: hidden;
+  background: var(--ss-canvas);
+  color: var(--ss-text-strong);
+  font-family: var(--ss-font);
+}
+
+/* The app's small caps: Space Mono, tracked, as on the timeline axis */
+.urg .urg-caps {
+  font-family: var(--ss-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.urg .urg-serif {
+  font-family: var(--font-home-display), Georgia, serif;
+  font-weight: 400;
+}
+
+/* The app's to-do ring and done dot (TimelineScene's colour key) */
+.urg .urg-ring {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ss-icon-faint);
+  background: var(--ss-surface);
+}
+
+/* Urganize's dark theme (apps/web/app/globals.css, :root). StoryDemo passes
+   theme="dark" to the stage when the site is dark; the dark posters were
+   filmed with these same tokens. */
+.urg .ss-stage[data-theme="dark"] {
+  --ss-canvas: #0d120e;
+  --ss-well: #0d120e;
+  --ss-surface: #181d19;
+  --ss-raised: #1a1f1b;
+  --ss-chrome: #121713;
+  --ss-fill: #1c211d;
+  --ss-line: rgba(245, 240, 230, 0.1);
+  --ss-line-faint: rgba(245, 240, 230, 0.06);
+  --ss-ink-1: rgba(245, 240, 230, 0.05);
+  --ss-ink-2: rgba(245, 240, 230, 0.07);
+  --ss-ink-3: rgba(245, 240, 230, 0.1);
+  --ss-text-strong: #f5f0e6;
+  --ss-text: rgb(161 160 152);
+  --ss-text-faint: rgb(135 136 129);
+  --ss-icon: rgb(161 160 152);
+  --ss-icon-faint: rgb(110 111 105);
+  --ss-accent: #7fd99a;
+  --ss-accent-2: #8cdda4;
+  --ss-accent-soft: rgba(127, 217, 154, 0.14);
+  --ss-accent-text: #7fd99a;
+  --ss-danger: #fa8a8a;
+  --ss-danger-soft: rgba(250, 138, 138, 0.14);
+  --ss-danger-text: #fa8a8a;
+  --ss-warning: #f0b95c;
+  --ss-shadow-hero: 0 0 0 1px rgba(245, 240, 230, 0.08), 0 14px 32px rgba(0, 0, 0, 0.5);
+  --ss-shadow-float: 0 0 0 1px rgba(245, 240, 230, 0.1), 0 14px 32px rgba(0, 0, 0, 0.55);
+  --ss-popover-bg: #1a1f1b;
+  --ss-popover-shadow: 0 0 0 1px rgba(245, 240, 230, 0.1), 0 14px 32px rgba(0, 0, 0, 0.55);
+  --urg-on-strong: #0d120e;
+  --urg-field: #121713;
+}
+
+/* On the homepage the scene sits in a rounded card with the site's hairline,
+   like the screenshots it replaced. The posters get the same in StoryDemo. */
+.urg .ss-stage {
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px var(--marketing-border, var(--ss-line));
+}

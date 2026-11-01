@@ -1,0 +1,237 @@
+/* One card, inset a gutter at the top and sides, off the bottom */
+.up .up-card {
+  position: absolute;
+  top: 28px;
+  left: 28px;
+  right: 28px;
+  min-height: 460px;
+  padding: 20px 22px 0;
+  border-radius: var(--ss-radius-window);
+  background: var(--ss-surface);
+  box-shadow: var(--ss-shadow-hero);
+}
+
+.up .ss-stage[data-layout='compact'] .up-card {
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  padding: 18px 16px 0;
+}
+
+.up .up-rest {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 120px;
+  height: 60px;
+}
+
+.up .up-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.up .up-title {
+  font-size: 21px;
+  line-height: 1.2;
+  color: var(--ss-text-strong);
+}
+
+.up .ss-stage[data-layout='compact'] .up-title {
+  font-size: 19px;
+}
+
+.up .up-sub {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--ss-text);
+}
+
+/* The count fades in with the plan, then rolls as each week lands */
+.up .up-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--ss-text);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.up .up-count[data-on] {
+  opacity: 1;
+}
+
+.up .up-count__n {
+  min-width: 2ch;
+  text-align: right;
+  font-weight: 600;
+  color: var(--ss-text-strong);
+}
+
+.up .up-form {
+  padding: 18px 0 20px;
+}
+
+.up .up-form__label {
+  color: var(--ss-text-faint);
+}
+
+.up .up-form__row {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.up .up-date {
+  display: inline-flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--ss-line);
+  border-radius: var(--ss-radius-md);
+  background: var(--urg-field);
+  font-size: 14px;
+  color: var(--ss-text-strong);
+}
+
+.up .up-date svg {
+  color: var(--ss-icon-faint);
+}
+
+.up .up-make {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: var(--ss-radius-md);
+  background: var(--ss-accent);
+  color: var(--urg-on-strong);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.up .up-make[data-hover],
+.up .up-make[data-busy] {
+  background: var(--ss-accent-2);
+}
+
+.up .up-make__busy {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.up .up-weeks {
+  padding-top: 12px;
+}
+
+.up .up-week {
+  padding-top: 6px;
+}
+
+.up .up-week__label {
+  padding: 8px 0 0;
+  margin-bottom: -6px;
+  color: var(--ss-text-faint);
+}
+
+.up .up-week__label[data-release] {
+  color: var(--ss-accent);
+  font-weight: 700;
+}
+
+.up .up-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  border-bottom: 1px solid var(--ss-line-faint);
+  font-size: 14px;
+}
+
+.up .up-row__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ss-text-strong);
+}
+
+.up .up-row .ss-bar {
+  flex: 1;
+}
+
+/* The release-day milestone: the timeline's filled diamond */
+.up .up-diamond {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin: 0 1px;
+  border-radius: 2px;
+  background: var(--ss-accent);
+  rotate: 45deg;
+}
+
+/* Placeholder and real content share one cell; the row resolves in place */
+.up .up-swap {
+  display: inline-grid;
+  align-items: center;
+  justify-items: start;
+}
+
+.up .up-swap > * {
+  grid-area: 1 / 1;
+}
+
+.up .up-swap__real {
+  opacity: 0;
+  transition: opacity 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.up .up-swap__bar {
+  transition: opacity 0.3s ease;
+}
+
+.up .up-week[data-on] .up-swap__real {
+  opacity: 1;
+}
+
+.up .up-week[data-on] .up-swap__bar {
+  opacity: 0;
+}
+
+.up .up-swap--mark {
+  flex: none;
+  width: 12px;
+  justify-items: center;
+}
+
+.up .up-swap--mark .up-swap__real {
+  display: inline-flex;
+}
+
+.up .up-ring--blank {
+  border-color: var(--ss-line);
+}
+
+.up .up-row__title.up-swap {
+  display: grid;
+}
+
+.up .up-week__label.up-swap {
+  display: grid;
+  min-height: 21px;
+}
