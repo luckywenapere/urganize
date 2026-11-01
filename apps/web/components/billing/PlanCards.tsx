@@ -10,6 +10,7 @@ import {
   type BillingInterval,
   type PricingTierId,
 } from '@urganize/pricing';
+import { PlanPicture } from '@/components/billing/PlanPicture';
 import { Check } from '@/components/icons';
 import { onRadioGroupKeyDown } from '@/lib/radio-group-keys';
 
@@ -171,6 +172,7 @@ export function PlanCards({
               >
                 {busy ? 'Opening secure checkout' : current ? 'Your plan' : buttonLabel(tierId)}
               </button>
+              <PlanPicture tierId={tierId} />
               <p className="mt-6 border-b border-stroke-default pb-2.5 text-[13px] text-content-secondary">{lead}</p>
               <ul className="mt-3 flex flex-col gap-2.5">
                 {features.lines.map((line) => (
