@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { ResponsiveProductShot } from "../components/landing/ResponsiveProductShot";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { CORE_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { hasLaunched } from "@/lib/launch-gate";
+import type { ProductShot } from "@/content/product-shots";
 
 // Handed directly to testers during the private Android launch, not discovered —
 // noindex, not in the sitemap, not linked from ProductMenu, the footer, or
@@ -44,6 +46,24 @@ const APK_SIZE = "41 MB";
 
 const bodyText = "text-[var(--marketing-text-muted)]";
 
+// The phone still (#968). A drawing, not a capture: Ada, the task and Lagoon
+// Theory are made up, and the push wording is ours, not the app's real push.
+// Drawn in the app's light and dark tokens on the site's own ground, so it
+// follows the theme toggle. Sizes are the WebP files' pixel sizes (the stage
+// at 2x); update them if the still is re-filmed.
+const androidHome: ProductShot = {
+  light: "/images/product/android-home.webp",
+  dark: "/images/product/android-home-dark.webp",
+  width: 1088,
+  height: 920,
+};
+const androidHomePhone: ProductShot = {
+  light: "/images/product/android-home-phone.webp",
+  dark: "/images/product/android-home-phone-dark.webp",
+  width: 716,
+  height: 800,
+};
+
 export default async function DownloadPage() {
   if (!(await hasLaunched(LAUNCH_AT))) {
     notFound();
@@ -60,6 +80,18 @@ export default async function DownloadPage() {
             Urganize for Android
           </h1>
 
+          {/* The phone still (#968, mock approved by the founder
+              2026-11-01): Home with a push for a task due today. Phone
+              picture below sm, the wide one from sm up. */}
+          <div className="mx-auto mt-10 max-w-[24rem] sm:max-w-none">
+            <ResponsiveProductShot
+              desktop={androidHome}
+              phone={androidHomePhone}
+              alt="An Android phone on Urganize's Home. A push at the top says Due today: Approve the cover art. Under it, the Next card shows the same task for Owambe Weather by Lagoon Theory."
+              sizes="(min-width: 640px) 544px, calc(100vw - 48px)"
+            />
+          </div>
+
           <a
             href="/downloads/urganize.apk"
             download
@@ -71,7 +103,7 @@ export default async function DownloadPage() {
 
           <p className={`mt-6 text-sm leading-6 ${bodyText}`}>
             Android will warn you that this didn&apos;t come from the Play Store. That&apos;s
-            expected — tap through it. Then sign in with your Urganize account.
+            expected. Tap through it. Then sign in with your Urganize account.
           </p>
 
           <p className="mt-10 text-sm text-[var(--marketing-text-subtle)]">
