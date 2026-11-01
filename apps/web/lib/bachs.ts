@@ -79,8 +79,13 @@ export function verifyBachsSignature(input: {
   const now = input.nowSeconds ?? Math.floor(Date.now() / 1000);
   if (Math.abs(now - seconds) > BACHS_SIGNATURE_TOLERANCE_SECONDS) return false;
 
-  const expected = createHmac('sha256', secret).update(`${timestamp}.${input.rawBody}`, 'utf8').digest('hex');
-  return candidates.some((candidate) => hexEqual(expected, candidate));
+  // The portal shows the secret as "whsec_..."; the docs do not say whether
+  // the prefix is part of the key, so either form is accepted.
+  const keys = secret.startsWith('whsec_') ? [secret, secret.slice('whsec_'.length)] : [secret];
+  return keys.some((key) => {
+    const expected = createHmac('sha256', key).update(`${timestamp}.${input.rawBody}`, 'utf8').digest('hex');
+    return candidates.some((candidate) => hexEqual(expected, candidate));
+  });
 }
 
 /** A webhook event as far as we read it. */

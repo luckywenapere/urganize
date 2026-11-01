@@ -66,6 +66,16 @@ describe('verifyBachsSignature', () => {
     ).toBe(true);
   });
 
+  it('accepts a whsec_ secret signed with or without its prefix', () => {
+    const body2 = '{}';
+    const raw = 'abc123';
+    const signWith = (key: string) => createHmac('sha256', key).update(`${NOW}.${body2}`, 'utf8').digest('hex');
+    const base = { rawBody: body2, secret: `whsec_${raw}`, timestampHeader: String(NOW), signatureV2Header: null, nowSeconds: NOW };
+    expect(verifyBachsSignature({ ...base, signatureHeader: signWith(`whsec_${raw}`) })).toBe(true);
+    expect(verifyBachsSignature({ ...base, signatureHeader: signWith(raw) })).toBe(true);
+    expect(verifyBachsSignature({ ...base, signatureHeader: signWith('other') })).toBe(false);
+  });
+
   it('refuses a changed body, a wrong secret, an old timestamp and no signature', () => {
     const good = { secret: SECRET, timestampHeader: String(NOW), signatureV2Header: null, nowSeconds: NOW };
     expect(verifyBachsSignature({ ...good, rawBody: `${body} `, signatureHeader: sign(NOW, body) })).toBe(false);
