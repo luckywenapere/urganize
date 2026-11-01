@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ResponsiveProductShot } from "../../components/landing/ResponsiveProductShot";
 import { TrialButton } from "../../components/landing/TrialButton";
 import { MarketingFooter } from "../../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../../components/marketing/MarketingHeader";
@@ -110,6 +111,18 @@ export default async function GuidePage({
                 {paragraph}
               </p>
             ))}
+          </div>
+
+          {/* The guide's still (#966). Phone picture below sm, the wide one
+              from sm up (ResponsiveProductShot picks one). */}
+          <div className="mx-auto mt-10 max-w-[24rem] sm:max-w-none">
+            <ResponsiveProductShot
+              desktop={guide.still.desktop}
+              phone={guide.still.phone}
+              alt={guide.still.alt}
+              sizes="(min-width: 752px) 704px, calc(100vw - 48px)"
+              fetchPriority="auto"
+            />
           </div>
 
           {guide.sections.map((section) => (
