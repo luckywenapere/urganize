@@ -35,6 +35,7 @@ const APP_ROOT = process.cwd();
 const GUARDED_FILES = [
   'components/releases/CreateReleaseModal.tsx',
   'components/releases/PlanChoiceDialog.tsx',
+  'components/releases/PlanOptionPreview.tsx',
   'components/releases/NeedsRolloutEmpty.tsx',
   'components/home/RolloutOfferCard.tsx',
   'lib/rollout-offer.ts',

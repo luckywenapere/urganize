@@ -3,7 +3,6 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
-import { BlankSheetIllustration, PlanIllustration } from '@/components/app/BrandIcons';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import {
   ROLLOUT_OFFER_COPY as COPY,
@@ -11,6 +10,8 @@ import {
   type RolloutPlanMode,
 } from '@/lib/rollout-offer';
 import { useShellStore } from '@/stores/useShellStore';
+
+import { EmptyRolloutPreview, PLAN_OPTION_CARD, UrgansPlanPreview } from './PlanOptionPreview';
 
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
@@ -74,11 +75,9 @@ export function PlanChoiceDialog({
             ref={firstRef}
             type="button"
             onClick={() => onChoose('urgans')}
-            className="motion-focus motion-press flex flex-col items-start gap-3 rounded-xl border border-stroke-default bg-bg-elevated p-4 text-left transition-colors hover:border-brand/50 hover:bg-bg-hover sm:p-5"
+            className={`${PLAN_OPTION_CARD} hover:border-brand/50`}
           >
-            <span className="grid h-12 w-12 place-items-center rounded-xl bg-brand/10 text-brand">
-              <PlanIllustration className="h-7 w-7" />
-            </span>
+            <UrgansPlanPreview planner={PLANNER_ENABLED} />
             <span className="flex items-center gap-2 font-display text-base font-semibold text-content-primary">
               {COPY.urgansTitle}
               <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
@@ -92,11 +91,9 @@ export function PlanChoiceDialog({
           <button
             type="button"
             onClick={() => onChoose('self')}
-            className="motion-focus motion-press flex flex-col items-start gap-3 rounded-xl border border-stroke-default bg-bg-elevated p-4 text-left transition-colors hover:border-stroke-strong hover:bg-bg-hover sm:p-5"
+            className={`${PLAN_OPTION_CARD} hover:border-stroke-strong`}
           >
-            <span className="grid h-12 w-12 place-items-center rounded-xl bg-bg-surface text-content-secondary">
-              <BlankSheetIllustration className="h-7 w-7" />
-            </span>
+            <EmptyRolloutPreview />
             <span className="font-display text-base font-semibold text-content-primary">{COPY.selfTitle}</span>
             <span className="text-sm leading-6 text-content-secondary">{COPY.selfBody}</span>
           </button>
