@@ -20,6 +20,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     `One inbox for the songs people pitch you, inside Urganize, ${CORE_CLAUSE}. Answer in one tap. Free for curators, and nothing connects to your playlist.`,
   path: "/for-curators",
+  shareCard: "for-curators",
 });
 
 // Honesty rule, and this page needs it more than most: playlist pitching is

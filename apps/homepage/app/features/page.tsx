@@ -15,6 +15,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "From idea to execution. Add a release and get the plan, week by week to release day, with an owner on every task. Plus UrgAns.",
   path: "/features",
+  shareCard: "features",
 });
 
 // One small still per feature section (#962, mock approved by the founder

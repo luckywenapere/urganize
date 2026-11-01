@@ -25,6 +25,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "From idea to execution, at one price for your whole team, from a single manager to a full roster. What each plan includes and how to join the waitlist.",
   path: "/pricing",
+  shareCard: "pricing",
 });
 
 // STILL STATICALLY RENDERED, and keep it that way. The geo-resolved currency
