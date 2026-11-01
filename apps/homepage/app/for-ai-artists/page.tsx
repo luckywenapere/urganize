@@ -5,6 +5,7 @@ import {
   PERSONA_HEADLINE_CLASS,
   PersonaValueBlocks,
 } from "../components/landing/PersonaValueBlocks";
+import { ResponsiveProductShot } from "../components/landing/ResponsiveProductShot";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { TrialButton } from "../components/landing/TrialButton";
@@ -13,6 +14,7 @@ import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
 import { PageDawn } from "../components/marketing/PageDawn";
+import type { ProductShot } from "@/content/product-shots";
 
 export const metadata: Metadata = {
   ...buildPageMetadata({
@@ -95,6 +97,25 @@ const compactBlocks = [
   },
 ] as const;
 
+// The rollouts still (#960, mock approved by the founder 2026-11-01). A drawn
+// picture, not a capture: a rollout with a three-week runway (today at W3, an
+// owner on each activity) behind the rollouts list with what is late and what
+// is due. Fictional artists, drawn in the app's light and dark tokens so it
+// follows the site's theme toggle. If the timeline or the rollouts list
+// changes in the app, redraw both pairs.
+const rolloutsShot: ProductShot = {
+  light: "/images/product/ai-artists-rollouts.webp",
+  dark: "/images/product/ai-artists-rollouts-dark.webp",
+  width: 2000,
+  height: 1150,
+};
+const rolloutsShotPhone: ProductShot = {
+  light: "/images/product/ai-artists-rollouts-phone.webp",
+  dark: "/images/product/ai-artists-rollouts-phone-dark.webp",
+  width: 716,
+  height: 920,
+};
+
 export default function ForAiArtistsPage() {
   if (!AI_ARTISTS_PAGE_ENABLED) {
     notFound();
@@ -136,6 +157,23 @@ export default function ForAiArtistsPage() {
               </p>
             </div>
           </PageDawn>
+        </SectionShell>
+
+        {/* THE ROLLOUTS — the approved still. Phone picture below sm, the
+            wide one from sm up (ResponsiveProductShot picks one). */}
+        <SectionShell
+          className="pb-8 pt-0 sm:pb-12 sm:pt-0 lg:pb-16 lg:pt-0"
+          containerClassName="max-w-[64rem] px-6 sm:px-8 lg:px-10"
+        >
+          <div className="mx-auto max-w-[24rem] overflow-hidden rounded-2xl border border-[color:var(--marketing-border)] sm:max-w-none">
+            <ResponsiveProductShot
+              desktop={rolloutsShot}
+              phone={rolloutsShotPhone}
+              alt="A rollout in Urganize for Night Swim by Vela Nine, out Friday 20 November: a week-by-week timeline with today three weeks out, an owner on each activity, and in front the rollouts list showing Night Swim in 19 days, Paper Moons with 2 late and Low Tide with 3 due this week."
+              sizes="(min-width: 1024px) 944px, calc(100vw - 64px)"
+              fetchPriority="auto"
+            />
+          </div>
         </SectionShell>
 
         {/* VALUE BLOCKS */}
