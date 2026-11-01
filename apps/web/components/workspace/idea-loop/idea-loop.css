@@ -1,0 +1,128 @@
+/* The idea card's loop (IdeaLoop.tsx, #1011). Every colour is an app token
+   from app/globals.css, so the loop follows the light/dark theme. Loaded with
+   the loop, never on the first page load. */
+
+.il .ss-stage {
+  --ss-font: var(--font-sans);
+  --ss-mono: var(--font-mono);
+  --ss-accent: var(--brand-primary);
+  --ss-accent-soft: var(--brand-primary-muted);
+  --ss-success: var(--brand-primary);
+  --ss-surface: var(--bg-surface);
+  --ss-canvas: var(--bg-base);
+  --ss-text-strong: var(--text-primary);
+  --ss-text: var(--text-secondary);
+  --ss-text-faint: var(--text-tertiary);
+  --ss-line: var(--border-strong);
+  --ss-ink-3: var(--border-strong);
+  --ss-ink-4: var(--border-strong);
+  overflow: hidden;
+  /* A tinted well, so the rows read as a picture and never as real tasks. */
+  background: var(--bg-hover);
+  border-radius: 16px;
+  color: var(--text-primary);
+  font-family: var(--ss-font);
+  letter-spacing: -0.01em;
+  text-align: left;
+}
+
+.il-scene { position: absolute; inset: 0; transition: opacity 300ms ease; }
+.il-scene[data-veil] { opacity: 0; }
+
+/* The voice note: a waveform while you talk, then the line it became. */
+.il-note {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 16px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px 0 9px;
+  border-radius: 22px;
+  background: var(--bg-surface);
+  box-shadow: 0 0 0 1px var(--border-default);
+}
+.il-mic {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--brand-primary);
+  color: var(--text-inverse);
+}
+.il-body { position: relative; flex: 1; min-width: 0; height: 100%; overflow: hidden; }
+.il-wave {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  transition: opacity 260ms ease, transform 260ms ease;
+}
+.il-wave > span {
+  flex: none;
+  width: 3px;
+  height: 22px;
+  border-radius: 2px;
+  background: var(--brand-primary);
+  transition: transform 120ms linear;
+}
+.il-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  line-height: 18px;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+.il-note[data-text] .il-wave { opacity: 0; transform: scaleY(0.3); }
+.il-time {
+  flex: none;
+  width: 30px;
+  text-align: right;
+  font-family: var(--ss-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  transition: opacity 200ms ease;
+}
+.il-note[data-text] .il-time { opacity: 0; width: 0; overflow: hidden; }
+
+/* The plan rows the line splits into, over dashed slots where they land. */
+.il-slots,
+.il-rows {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 74px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.il-slots > span { height: 30px; border-radius: 10px; border: 1px dashed var(--border-strong); }
+.il-row {
+  display: grid;
+  grid-template-columns: 15px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--bg-surface);
+  box-shadow: 0 0 0 1px var(--border-default);
+  opacity: 0;
+  transform: translateY(-22px) scale(0.97);
+  will-change: transform;
+  transition: opacity 260ms ease, transform 380ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.il-row[data-on] { opacity: 1; transform: none; }
+.il-check { display: grid; place-items: center; width: 15px; height: 15px; }
+.il-title { font-size: 13px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.il-date { font-family: var(--ss-mono); font-size: 11px; color: var(--text-tertiary); }

@@ -467,10 +467,13 @@ html[data-theme='light'] .app-mark-invert {
   filter: brightness(0) invert(1);
 }
 
-/* The tour loops' poster stills (TourStepLoop.tsx, #971): both themes are in
-   the page and one shows. Dark is the baseline, as above. */
+/* The tour loops' and the idea card loop's poster stills (TourStepLoop.tsx,
+   #971; IdeaCardLoop.tsx, #1011): both themes are in the page and one shows.
+   Dark is the baseline, as above. */
 html[data-theme='light'] .tour-poster-dark,
-:root:not([data-theme='light']) .tour-poster-light {
+:root:not([data-theme='light']) .tour-poster-light,
+html[data-theme='light'] .idea-poster-dark,
+:root:not([data-theme='light']) .idea-poster-light {
   display: none;
 }
 
