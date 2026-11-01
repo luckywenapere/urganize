@@ -1,9 +1,14 @@
-import { PRODUCT_SHOTS } from "@/content/product-shots";
-import { PHONE_CROPS, type ShotCrop } from "@/content/product-shot-crops";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
-import { ThemedProductShot } from "../ThemedProductShot";
+import { StoryDemo, type StoryDemoName } from "../story/StoryDemo";
 import { wideContainerClass } from "./shared";
+
+// ONE SMALL ANIMATION PER STEP (2026-11-01, #953, mocks approved by the
+// founder): the three cropped desktop screenshots are gone. Each step now
+// plays a short scene of the step happening (the plan arriving, an owner and
+// a date being picked, a late activity caught and moved), with its finished
+// state as the poster. See story/StoryDemo.tsx. The demo team is Northline
+// Music and the artist Kanmi Gold, both fictional.
 
 // NO A/B/C BADGES (2026-10-19, founder call): the circled A, B and C above
 // each h2 (and their sr-only "Step X:" prefix) are gone, and with them the
@@ -63,31 +68,27 @@ import { wideContainerClass } from "./shared";
 const STEPS: readonly {
   title: string;
   line: string;
-  shot: (typeof PRODUCT_SHOTS)[keyof typeof PRODUCT_SHOTS];
-  // The part of the desktop capture a phone shows (content/product-shot-crops.ts).
-  phoneCrop: ShotCrop;
+  demo: StoryDemoName;
+  // What the scene's finished state shows (its poster)
   alt: string;
 }[] = [
   {
     title: "Stop planning releases in your head.",
     line: "Add a release and every week till drop day is mapped. Nothing forgotten, no last-minute rush.",
-    shot: PRODUCT_SHOTS.scopedRelease,
-    phoneCrop: PHONE_CROPS.scopedRelease,
-    alt: "A rollout open in Urganize: the activity list grouped by when it is due, with a progress bar counting finished activities against the plan.",
+    demo: "plan",
+    alt: "A new rollout's plan in Urganize: four weeks of activities down to release day, each with an owner, 18 activities in all.",
   },
   {
     title: "Everyone can see who\u2019s holding the ball.",
     line: "Every task has one owner and one date. No more \u201cI thought you were handling it.\u201d",
-    shot: PRODUCT_SHOTS.activityDetail,
-    phoneCrop: PHONE_CROPS.activityDetail,
-    alt: "An activity opened in Urganize, showing who it is assigned to, its due date and its place in the plan.",
+    demo: "owner",
+    alt: "An activity open in Urganize with Ife Bassey as its owner and Fri 13 Nov as its date.",
   },
   {
     title: "Catch the delay before it kills the drop.",
     line: "One timeline shows what\u2019s done, what\u2019s late and what\u2019s next, while there\u2019s still time to fix it.",
-    shot: PRODUCT_SHOTS.timeline,
-    phoneCrop: PHONE_CROPS.timeline,
-    alt: "The Timeline view of a rollout in Urganize: every activity on a week axis with today marked.",
+    demo: "late",
+    alt: "A rollout's timeline in Urganize: Pitch to curators is marked Overdue once today passes its date, then moved to a later day that still lands before release day.",
   },
 ] as const;
 
@@ -114,14 +115,7 @@ export function StorySection() {
                     {step.line}
                   </p>
                 </div>
-                <div className="overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
-                  <ThemedProductShot
-                    {...step.shot}
-                    phoneCrop={step.phoneCrop}
-                    alt={step.alt}
-                    sizes="(min-width: 1024px) 560px, 100vw"
-                  />
-                </div>
+                <StoryDemo name={step.demo} label={step.alt} />
               </div>
             </ScrollReveal>
           );

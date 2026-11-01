@@ -1,0 +1,237 @@
+.ul .ul-card {
+  --label: 220px;
+  position: absolute;
+  top: 28px;
+  left: 28px;
+  right: 28px;
+  min-height: 420px;
+  padding: 20px 22px 0;
+  border-radius: var(--ss-radius-window);
+  background: var(--ss-surface);
+  box-shadow: var(--ss-shadow-hero);
+}
+
+.ul .ss-stage[data-layout='compact'] .ul-card {
+  --label: 154px;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  padding: 18px 14px 0;
+}
+
+.ul .ul-rest {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 120px;
+  height: 60px;
+}
+
+.ul .ul-heading {
+  font-size: 19px;
+  line-height: 1.25;
+  color: var(--ss-text-strong);
+}
+
+.ul .ss-stage[data-layout='compact'] .ul-heading {
+  font-size: 17px;
+}
+
+.ul .ul-body {
+  margin-top: 16px;
+}
+
+.ul .ul-row {
+  display: grid;
+  grid-template-columns: var(--label) minmax(0, 1fr);
+  align-items: center;
+  height: 32px;
+}
+
+.ul .ul-row--axis {
+  height: 28px;
+}
+
+.ul .ul-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding-right: 10px;
+  font-size: 13px;
+  color: var(--ss-text-strong);
+}
+
+.ul .ss-stage[data-layout='compact'] .ul-label {
+  gap: 5px;
+  padding-right: 6px;
+  font-size: 12.5px;
+}
+
+.ul .ul-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ul .ul-flag {
+  flex: none;
+  color: var(--ss-icon);
+}
+
+/* The state in words beside the name, as the app does for overdue work */
+.ul .ul-tagwrap {
+  flex: none;
+}
+
+.ul .ul-tag {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ss-danger);
+  white-space: nowrap;
+}
+
+.ul .ul-lane {
+  position: relative;
+  height: 100%;
+}
+
+.ul .ul-axis .ul-week {
+  position: absolute;
+  top: 50%;
+  translate: 5px -50%;
+  color: var(--ss-text-faint);
+}
+
+.ul .ul-axis .ul-week--release {
+  color: var(--ss-accent);
+  font-weight: 700;
+}
+
+.ul .ul-rows {
+  position: relative;
+}
+
+/* Rules, release line and today line, behind the marks */
+.ul .ul-grid {
+  position: absolute;
+  top: -28px;
+  bottom: -200px;
+  left: var(--label);
+  right: 0;
+  pointer-events: none;
+}
+
+.ul .ul-grid {
+  top: 0;
+}
+
+.ul .ul-rule {
+  position: absolute;
+  top: -28px;
+  bottom: 0;
+  width: 1px;
+  background: var(--ss-line-faint);
+}
+
+.ul .ul-release {
+  position: absolute;
+  top: -28px;
+  bottom: 0;
+  width: 1.5px;
+  translate: -0.75px 0;
+  background: var(--ss-accent);
+}
+
+.ul .ul-today {
+  position: absolute;
+  top: -18px;
+  bottom: 0;
+  width: 1.5px;
+  translate: -0.75px 0;
+  background: var(--ss-text-strong);
+  transition: left 1.6s cubic-bezier(0.45, 0, 0.1, 1);
+  z-index: 2;
+  will-change: transform;
+}
+
+.ul .ul-today__pill {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  translate: -50% 0;
+  padding: 2px 6px 1px;
+  border-radius: 999px;
+  background: var(--ss-text-strong);
+  color: var(--urg-on-strong);
+  font-size: 10px;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.ul .ul-row:not(.ul-row--axis) .ul-lane > * {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+}
+
+.ul .ul-dot {
+  translate: -50% -50%;
+}
+
+.ul .ul-done {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: #6f9f84;
+  color: var(--urg-on-strong);
+}
+
+.ul .ul-diamond {
+  width: 10px;
+  height: 10px;
+  translate: -50% -50%;
+  rotate: 45deg;
+  border-radius: 2px;
+  background: var(--ss-accent);
+}
+
+/* The focal marker: a to-do ring that turns red when late, and is carried */
+.ul .ul-pitch {
+  width: 14px;
+  height: 14px;
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 1.5px solid var(--ss-icon-faint);
+  background: var(--ss-surface);
+  transition: background 0.25s ease, border-color 0.25s ease, scale 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ul .ul-pitch[data-late] {
+  border-color: var(--ss-danger);
+  background: var(--ss-danger);
+}
+
+.ul .ul-pitch[data-dragging] {
+  scale: 1.25;
+  box-shadow: 0 4px 10px rgba(26, 22, 17, 0.22);
+}
+
+.ul .ul-tip .ss-tooltip__label {
+  background: var(--ss-text-strong);
+  color: var(--urg-on-strong);
+  font-family: var(--ss-font);
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.ul .ul-tip {
+  will-change: transform;
+}
