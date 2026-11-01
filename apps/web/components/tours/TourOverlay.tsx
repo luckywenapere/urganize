@@ -9,6 +9,7 @@ import { pickVisibleAnchor, tourStepProgress, type TourAnchor } from '@/lib/tour
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { useOpenSettings } from '@/components/settings/useOpenSettings';
 import { useTourStore } from '@/stores/useTourStore';
+import { TourStepLoop } from './TourStepLoop';
 
 /**
  * The spotlight and the card. One at a time, driven entirely by useTourStore.
@@ -116,7 +117,8 @@ export function TourOverlay() {
       setPlaced(null);
       return;
     }
-    const el = resolveAnchor(step.anchor);
+    const el =
+      resolveAnchor(step.anchor) ?? (step.fallbackAnchor ? resolveAnchor(step.fallbackAnchor) : null);
     if (!el) {
       // Deferred: calling next() during layout would set state inside another
       // component's render pass.
@@ -240,7 +242,7 @@ export function TourOverlay() {
           left: placed?.left ?? 0,
           visibility: placed ? 'visible' : 'hidden',
         }}
-        className={`${CARD_Z} w-[min(20rem,calc(100vw-1.5rem))] rounded-xl border border-stroke-default bg-bg-elevated p-4 shadow-xl`}
+        className={`${CARD_Z} w-[min(22rem,calc(100vw-1.5rem))] rounded-xl border border-stroke-default bg-bg-elevated p-4 shadow-xl`}
       >
         {/* The step indicator sits on its own row above the title, in the
             app's stepped-flow eyebrow (TeamBriefSection's guided mode): the
@@ -260,7 +262,12 @@ export function TourOverlay() {
         <p aria-live="polite" className="mt-2 text-sm font-semibold text-content-primary">
           {step.title}
         </p>
-        <p className="mt-1.5 text-xs leading-relaxed text-content-secondary">{step.body}</p>
+        {/* The step shown as a short loop (issue 971); the line under it names it.
+            22rem wide (was 20) so the loop reads on a computer. */}
+        <div className="mt-3">
+          <TourStepLoop key={step.id} loop={step.loop} />
+        </div>
+        <p className="mt-2.5 text-xs leading-relaxed text-content-secondary">{step.body}</p>
         {/* Both controls are 44px tall: this card is shown mostly on phones,
             and Skip was a 24px text link before. */}
         <div className="mt-4 flex flex-wrap items-center justify-end gap-2">

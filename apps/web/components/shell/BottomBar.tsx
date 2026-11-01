@@ -162,7 +162,7 @@ export function BottomBar({ showHelp = false }: { showHelp?: boolean }) {
                         : undefined
                   }
                   aria-current={isActive ? 'page' : undefined}
-                  data-tour={tab.key === 'catalogue' ? 'nav-catalog' : tab.key === 'urgans' ? 'nav-urgans' : `shell-mobile-${tab.key}`}
+                  data-tour={tab.key === 'catalogue' ? 'nav-catalog' : tab.key === 'urgans' ? 'nav-urgans' : tab.key === 'team' ? 'nav-team' : `shell-mobile-${tab.key}`}
                   className={`motion-focus flex h-full flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium transition-colors ${NAV_TIP_TOUCH_CLASS} ${
                     isActive ? 'bg-bg-hover text-brand' : 'text-content-tertiary'
                   }`}
