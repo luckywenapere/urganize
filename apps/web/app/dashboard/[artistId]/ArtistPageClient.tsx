@@ -199,10 +199,13 @@ function UpNextCard({
   );
 }
 
-export default function ArtistPageClient() {
+/** `artistId` and `home` are set when Home shows an artist their own page
+ *  (lib/artist-home.ts): the id comes from the roster, not the URL, and there
+ *  is no back arrow because there is no list behind it. */
+export default function ArtistPageClient({ artistId: homeArtistId, home = false }: { artistId?: string; home?: boolean } = {}) {
   const router = useRouter();
   const params = useParams<{ artistId: string }>();
-  const artistId = typeof params?.artistId === 'string' ? params.artistId : '';
+  const artistId = homeArtistId ?? (typeof params?.artistId === 'string' ? params.artistId : '');
   const authLoading = useAuthStore((state) => state.isLoading);
 
   const artists = useArtistRosterStore((state) => state.artists);
@@ -277,7 +280,7 @@ export default function ArtistPageClient() {
   const act = (action: 'open_release' | 'new_rollout' | 'up_next' | 'new_record') =>
     captureAnalyticsEvent({ name: 'artist_page_action', properties: { artist_id: artistId, action } });
 
-  const backLink = (
+  const backLink = home ? null : (
     <Link
       href={ARTISTS_HREF}
       aria-label="Artists"
