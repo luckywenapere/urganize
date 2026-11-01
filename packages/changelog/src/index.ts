@@ -41,6 +41,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.231.0",
+    title: "Pay your way",
+    tag: "Account",
+    date: "November 1, 2026",
+    highlights: [
+      "Pay for your plan in Naira by card or transfer, with mobile money in cedis, shillings and more, with a dollar card, or with USDT or USDC.",
+      "Each payment covers a month or a year. We remind you before it ends.",
+    ],
+  },
+  {
     version: "1.230.0",
     title: "New plans: Emerging and Pro",
     tag: "Account",
