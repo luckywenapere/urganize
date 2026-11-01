@@ -27,6 +27,11 @@ type Props = {
   alt: string;
   /** `sizes` for the desktop source (matches the frame it renders in). */
   sizes: string;
+  /**
+   * `sizes` for the phone source. Defaults to the full viewport, which fits a
+   * full-bleed capture; pass the real width when the frame is capped.
+   */
+  phoneSizes?: string;
   className?: string;
   /**
    * "high" for the first product visual on a page (the homepage hero, where it
@@ -42,13 +47,14 @@ export function ResponsiveProductShot({
   phone,
   alt,
   sizes,
+  phoneSizes = "100vw",
   className = "",
   fetchPriority = "high",
 }: Props) {
   return (
     <>
-      <ThemedPicture theme="light" desktop={desktop} phone={phone} alt={alt} sizes={sizes} className={className} fetchPriority={fetchPriority} />
-      <ThemedPicture theme="dark" desktop={desktop} phone={phone} alt={alt} sizes={sizes} className={className} fetchPriority={fetchPriority} />
+      <ThemedPicture theme="light" desktop={desktop} phone={phone} alt={alt} sizes={sizes} phoneSizes={phoneSizes} className={className} fetchPriority={fetchPriority} />
+      <ThemedPicture theme="dark" desktop={desktop} phone={phone} alt={alt} sizes={sizes} phoneSizes={phoneSizes} className={className} fetchPriority={fetchPriority} />
     </>
   );
 }
@@ -59,6 +65,7 @@ function ThemedPicture({
   phone,
   alt,
   sizes,
+  phoneSizes,
   className,
   fetchPriority,
 }: Props & { theme: "light" | "dark" }) {
@@ -75,7 +82,7 @@ function ThemedPicture({
     src: phone[theme],
     width: phone.width,
     height: phone.height,
-    sizes: "100vw",
+    sizes: phoneSizes,
   });
   return (
     <picture className={theme === "light" ? "theme-shot-light" : "theme-shot-dark"}>
