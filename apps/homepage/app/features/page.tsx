@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { ProofLine } from "../components/landing/ProofLine";
-import { ThemedProductShot } from "../components/landing/ThemedProductShot";
-import { PHONE_CROPS } from "@/content/product-shot-crops";
+import { ResponsiveProductShot } from "../components/landing/ResponsiveProductShot";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { TrialButton } from "../components/landing/TrialButton";
@@ -9,6 +8,7 @@ import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
 import { PageDawn } from "../components/marketing/PageDawn";
+import type { ProductShot } from "@/content/product-shots";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Music release plan, tasks and press kit",
@@ -16,6 +16,23 @@ export const metadata: Metadata = buildPageMetadata({
     "From idea to execution. Add a release and get the plan, week by week to release day, with an owner on every task. Plus UrgAns.",
   path: "/features",
 });
+
+// One small still per feature section (#962, mock approved by the founder
+// 2026-11-01). Drawn pictures, not captures: the same window and the same
+// card on every one so the six read as a set, in the app's light and dark
+// tokens so they follow the site's theme toggle. The demo team is made up
+// (Owambe Weather, Ife Mi, Temi Ivory). The numbers in them are the live ones
+// (playbooks 64/90/113); if a screen they show changes, redraw both themes.
+// Desktop 520x340 and phone 358x300, filmed at 2x.
+type FeatureStillName = "plan" | "tasks" | "presskit" | "assistant" | "milestones" | "visibility";
+
+function featureStill(name: FeatureStillName): { desktop: ProductShot; phone: ProductShot } {
+  const base = `/images/product/features-${name}`;
+  return {
+    desktop: { light: `${base}.webp`, dark: `${base}-dark.webp`, width: 1040, height: 680 },
+    phone: { light: `${base}-phone.webp`, dark: `${base}-phone-dark.webp`, width: 716, height: 600 },
+  };
+}
 
 // Every claim on this page must describe the product as it ships today.
 // The honesty rule from /pricing applies here: we don't advertise what
@@ -28,16 +45,17 @@ export const metadata: Metadata = buildPageMetadata({
 // had no CTA until the very bottom (~7 screens down) and ran SIX identical
 // kicker/title/body/bullets blocks in a row, only the first of which had a
 // screenshot — readers extract the pattern after block one and stop.
-// Fixed by: a CTA in the hero, "The plan" (with its screenshot) kept as
-// the one full-size block, and the other five folded into one compact
-// section in a different format. Keep it that way.
+// Fixed by: a CTA in the hero, "The plan" kept as the one full-size block,
+// and the other five folded into one compact section in a different format.
+// Keep it that way. Since #962 every section carries its own small still
+// (see featureStill above); the plan's replaced the full-width screenshot.
 const features = [
   {
     kicker: "The plan",
     title: "Stop starting every release from zero.",
     // Numbers are the live playbooks (CLAUDE.md, shipped v0.55.0): single
-    // 64 activities / 11 weeks, EP 90 / 16, album 113 / 21. The screenshot
-    // below shows the EP one, so the copy names all three rather than
+    // 64 activities / 11 weeks, EP 90 / 16, album 113 / 21. The still
+    // below has the EP one picked, so the copy names all three rather than
     // describing a single next to a 90-activity image.
     body: "Add a release and real managers have already written the plan: 64 tasks for a single, 90 for an EP, 113 for an album. Change anything.",
     points: [
@@ -47,16 +65,9 @@ const features = [
       // was deleted 2026-07-10) and the honesty rule bans advertising it.
       "It\u2019s your plan. Edit or delete anything",
     ],
-    // Real screenshot of the current release view (light and dark retaken
-    // together 2026-08-25, founder-supplied, same release and scroll
-    // position in both — an EP, "Starlife", on the 90-activity EP playbook,
-    // with the UrgAns rail open). Same house rule as the landing page: if
-    // the UI changes meaningfully, retake BOTH the light and dark version —
-    // marketing imagery never lags the product.
-    image: {
-      src: "/images/product/workspace-tasks.png",
-      darkSrc: "/images/product/workspace-tasks-dark.png",
-      alt: "A rollout open in Urganize: the Motion bar at 7 of 90, the week's activities each with an owner and a due date, and the UrgAns assistant open alongside asking what you want to get done today.",
+    still: {
+      ...featureStill("plan"),
+      alt: "A rollout in Urganize grouped by week, counted back from release day, with the playbook card showing Single 64 tasks, EP 90 tasks picked, and Album 113 tasks.",
     },
   },
 ] as const;
@@ -69,28 +80,65 @@ const compactFeatures = [
     kicker: "Tasks",
     title: "Nobody gets to say \u201cI didn\u2019t know.\u201d",
     body: "Every task has an owner, a due date and a priority. Finish one step and the next one unlocks.",
+    still: {
+      ...featureStill("tasks"),
+      alt: "A task list in Urganize: Lock the master file done, Upload to distributor open now, the next tasks locked, and a card showing its owner, its due date and High priority.",
+    },
   },
   {
     kicker: "Press kit",
     title: "Stop rebuilding the EPK every drop.",
     body: "One link, built from work you\u2019ve already done. It tells you when your new release is missing, and you can take it down anytime.",
+    still: {
+      ...featureStill("presskit"),
+      alt: "A public press kit page for Temi Ivory, with a card saying Ife Mi is not on the kit yet, an Add it link, and a switch showing the kit is live.",
+    },
   },
   {
     kicker: "Assistant",
     title: "Type it. It\u2019s done.",
     body: "Tell UrgAns, the AI inside Urganize, to add a release, add a task or mark something done.",
+    still: {
+      ...featureStill("assistant"),
+      alt: "A message to UrgAns asking it to add a task to Ife Mi to book the video shoot for Nov 12, its reply saying it is done, and the new task due Nov 12.",
+    },
   },
   {
     kicker: "Milestones",
     title: "Nobody forgets the video shoot.",
     body: "Listening party, shoot, drop day, all dated on the timeline the whole team sees.",
+    still: {
+      ...featureStill("milestones"),
+      alt: "A rollout timeline in Urganize with today marked, the listening party and the video shoot dated, and release day on Dec 13.",
+    },
   },
   {
     kicker: "Visibility",
     title: "Know what\u2019s late without calling anyone.",
     body: "One list shows every release, with progress, what\u2019s overdue and what\u2019s due this week.",
+    still: {
+      ...featureStill("visibility"),
+      alt: "Every rollout on the roster in one list with progress bars, one with 2 late and one with 3 due this week, and a card saying 2 tasks are late and 7 are due this week.",
+    },
   },
 ] as const;
+
+// Phone picture below sm, the wide one from sm up (ResponsiveProductShot picks
+// one, so each visitor downloads two files per still: one per theme). Capped at
+// its drawn width; below the fold, so no high fetch priority.
+function FeatureStill({ still }: { still: ReturnType<typeof featureStill> & { alt: string } }) {
+  return (
+    <div className="max-w-[22.375rem] sm:max-w-[32.5rem]">
+      <ResponsiveProductShot
+        desktop={still.desktop}
+        phone={still.phone}
+        alt={still.alt}
+        sizes="520px"
+        fetchPriority="auto"
+      />
+    </div>
+  );
+}
 
 const headlineClass =
   "text-balance text-[2rem] leading-[1.1] text-[var(--marketing-text)] sm:text-[2.8rem]";
@@ -183,19 +231,9 @@ export default function FeaturesPage() {
                 </div>
               </div>
 
-              {"image" in feature ? (
-                <div className="mx-auto mt-14 max-w-[64rem] overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
-                  <ThemedProductShot
-                    light={feature.image.src}
-                    dark={feature.image.darkSrc}
-                    alt={feature.image.alt}
-                    width={1920}
-                    height={973}
-                    sizes="(min-width: 1088px) 1024px, 100vw"
-                    phoneCrop={PHONE_CROPS.scopedRelease}
-                  />
-                </div>
-              ) : null}
+              <div className="mx-auto mt-14 max-w-[64rem]">
+                <FeatureStill still={feature.still} />
+              </div>
             </SectionShell>
           </ScrollReveal>
         ))}
@@ -229,6 +267,9 @@ export default function FeaturesPage() {
                       </span>{" "}
                       {item.body}
                     </p>
+                    <div className="mt-6">
+                      <FeatureStill still={item.still} />
+                    </div>
                   </div>
                 ))}
               </div>
