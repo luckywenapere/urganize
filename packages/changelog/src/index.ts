@@ -2,6 +2,13 @@
 export const RELEASE_TAGS = ["Rollouts", "Pitching", "Team", "AI", "Account", "App"] as const;
 export type ReleaseTag = (typeof RELEASE_TAGS)[number];
 
+// Small pictures the in-app What's new panel can draw beside an entry (#977).
+// Each name maps to a drawing in apps/web (components/app/WhatsNewStills.tsx),
+// built as markup in the app's own colours, so it follows light and dark and
+// costs no image bytes. Add a name here and its drawing there together.
+export const RELEASE_STILLS = ["pay-your-way", "plans", "photo"] as const;
+export type ReleaseStill = (typeof RELEASE_STILLS)[number];
+
 export type Release = {
   version: string;
   date: string;
@@ -21,6 +28,9 @@ export type Release = {
   title?: string;
   tag?: ReleaseTag;
   listed?: boolean;
+  // A small picture of the change for the in-app What's new panel (#977).
+  // Optional: entries without one show text only.
+  still?: ReleaseStill;
 };
 
 // The version-grouped release ledger — newest first. This file is the
@@ -53,6 +63,7 @@ export const changelog: Release[] = [
     version: "1.231.0",
     title: "Pay your way",
     tag: "Account",
+    still: "pay-your-way",
     date: "November 1, 2026",
     highlights: [
       "Pay for your plan in Naira by card or transfer, with mobile money in cedis, shillings and more, with a dollar card, or with USDT or USDC.",
@@ -63,6 +74,7 @@ export const changelog: Release[] = [
     version: "1.230.0",
     title: "New plans: Emerging and Pro",
     tag: "Account",
+    still: "plans",
     date: "November 1, 2026",
     highlights: [
       "Our plans have new names and prices: Emerging is ₦2,600 a month and Pro is ₦26,000 a month.",
@@ -145,6 +157,7 @@ export const changelog: Release[] = [
     version: "1.229.0",
     title: "Add your photo",
     tag: "Team",
+    still: "photo",
     date: "October 31, 2026",
     highlights: [
       "Add your photo when you set up your team, or right after you join one. Your team sees your face instead of your initials.",

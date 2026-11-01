@@ -7,6 +7,7 @@ import { changelog, CURRENT_VERSION } from '@urganize/changelog';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { WhatsNewStill } from './WhatsNewStills';
 
 // "What's new" on the first login after an update (founder request,
 // 2026-07-23). The changelog ledger (packages/changelog — the same single
@@ -53,6 +54,9 @@ export function WhatsNewModal() {
   }, [seenVersion]);
 
   const open = !dismissed && freshEntries.length > 0;
+  // The panel widens from sm up only when a still needs the column beside
+  // the notes; text-only updates keep the narrower measure.
+  const hasStills = freshEntries.some((entry) => entry.still);
 
   const dismiss = () => {
     setDismissed(true);
@@ -96,7 +100,7 @@ export function WhatsNewModal() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="whats-new-title"
-        className="relative flex max-h-[min(40rem,calc(100dvh-3rem))] w-full max-w-lg flex-col overflow-hidden urg-cartouche rounded-2xl border border-stroke-default bg-bg-surface shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))]"
+        className={`relative flex max-h-[min(40rem,calc(100dvh-3rem))] w-full max-w-lg flex-col overflow-hidden ${hasStills ? 'sm:max-w-2xl' : ''} urg-cartouche rounded-2xl border border-stroke-default bg-bg-surface shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))]`}
       >
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-stroke-subtle p-5">
           <div className="min-w-0">
@@ -120,21 +124,30 @@ export function WhatsNewModal() {
           </button>
         </div>
 
-        <div className="flex-1 space-y-6 overflow-y-auto overscroll-contain p-5">
+        {/* Each entry can carry a small still (#977): above the notes on a
+            phone, a column beside them from sm up. Entries without one are
+            text only, as before. */}
+        <div className="flex-1 divide-y divide-stroke-subtle overflow-y-auto overscroll-contain px-5">
           {freshEntries.map((entry) => (
-            <div key={entry.version}>
-              <p className="flex items-baseline gap-2 font-mono text-[11px] font-bold text-content-tertiary">
-                v{entry.version}
-                <span className="font-normal">· {entry.date}</span>
-              </p>
-              <ul className="mt-2 space-y-2">
-                {entry.highlights.map((highlight, index) => (
-                  <li key={index} className="flex gap-2.5 text-sm leading-6 text-content-secondary">
-                    <span aria-hidden="true" className="mt-2.5 h-1 w-1 shrink-0 rounded-full bg-brand" />
-                    {highlight}
-                  </li>
-                ))}
-              </ul>
+            <div key={entry.version} className="flex flex-col gap-4 py-5 sm:flex-row sm:gap-5">
+              {entry.still ? <WhatsNewStill still={entry.still} /> : null}
+              <div className="min-w-0">
+                <p className="flex items-baseline gap-2 font-mono text-[11px] font-bold text-content-tertiary">
+                  v{entry.version}
+                  <span className="font-normal">· {entry.date}</span>
+                </p>
+                {entry.title ? (
+                  <h3 className="mt-1 font-sans text-base font-semibold leading-6 tracking-normal text-content-primary">{entry.title}</h3>
+                ) : null}
+                <ul className="mt-2 space-y-2">
+                  {entry.highlights.map((highlight, index) => (
+                    <li key={index} className="flex gap-2.5 text-sm leading-6 text-content-secondary">
+                      <span aria-hidden="true" className="mt-2.5 h-1 w-1 shrink-0 rounded-full bg-brand" />
+                      {highlight}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           ))}
         </div>
@@ -143,7 +156,7 @@ export function WhatsNewModal() {
           <button
             type="button"
             onClick={dismiss}
-            className="motion-focus motion-press rounded-full bg-brand px-5 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+            className="motion-focus motion-press w-full rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-content-inverse hover:bg-brand-hover sm:w-auto sm:py-2"
           >
             Got it
           </button>
