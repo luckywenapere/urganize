@@ -3,16 +3,29 @@
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import Link from 'next/link';
 import {
+  Bell,
   ChevronLeft,
   ChevronRight,
   CircleHelp,
   DoorOpen,
+  Gauge,
   HandshakeLine,
+  MessageSquare,
+  Palette,
   Search,
-  Settings,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+  Trash2,
+  UserCircle,
+  Users,
   X,
   type LucideProps,
 } from '@/components/icons';
+import { getTier } from '@urganize/pricing';
+import { getTeamAccessClient, peekTeamAccessClient, type TeamAccessClientSnapshot } from '@/lib/team-billing-client';
+import { readSettingsFlags, settingsDeepLink, visibleSettingsSegments, type SettingsSegment } from '@/lib/settings-nav';
+import { useReportIssueStore } from '@/stores/useReportIssueStore';
 import { MyFace } from '@/components/shared/AccountPhoto';
 import { useAuthStore } from '@/lib/auth-store';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
@@ -108,6 +121,9 @@ export function AvatarMenu({ showHelp }: { showHelp: boolean }) {
         aria-expanded={open}
         aria-label={newOpportunities > 0 ? 'Account and more, something new' : 'Account and more'}
         data-swipe-avatar
+        // The rollout tour's team step points here on a phone, where Team now
+        // lives in the account page (#971, Nov 1, 2026).
+        data-tour="nav-team"
         className="motion-focus motion-press grid h-11 w-11 place-items-center rounded-full lg:h-12 lg:w-12"
       >
         <span className="lg:hidden">
@@ -147,9 +163,10 @@ function MenuBody({
   desktop?: boolean;
 }) {
   const user = useAuthStore((state) => state.user);
-  const workspaceName = useWorkspaceIdentityStore((state) => state.name);
+  const isAdmin = useWorkspaceIdentityStore((state) => state.isAdmin);
   const openCommand = useShellStore((state) => state.openCommand);
   const openSettings = useOpenSettings();
+  const openReportIssue = useReportIssueStore((state) => state.openReportIssue);
   const helpGroups = useHelpMenuGroups();
   const helpItems = showHelp ? helpGroups.flat() : [];
   const areas = useShellAreas();
@@ -158,11 +175,19 @@ function MenuBody({
 
   const name = user?.name || user?.email || '';
   const role = describeRole(user?.role);
-  const subline = [role, workspaceName].filter(Boolean).join(' · ');
   const relationships = areas.find((area) => area.key === 'relationships' && area.live) ?? null;
   const opportunities = areas.find((area) => area.key === 'opportunities') ?? null;
-  // No Team row (founder, Oct 31, 2026): Team is a tab at the top of the
-  // phone already, so the row here was a second door to the same page.
+  // The account page (Nov 1, 2026, founder approved docs/mocks/account-menu):
+  // Team moved here from the top tabs, and every setting is one row away. A
+  // row shows only when the person has that segment (visibleSettingsSegments),
+  // so nobody gets a door the server would refuse.
+  const segments = visibleSettingsSegments({ role: user?.role, isAdmin }, readSettingsFlags());
+  const has = (segment: SettingsSegment) => segments.includes(segment);
+  const inSettings = (segment: SettingsSegment, section?: string) => () => {
+    onClose();
+    openSettings({ segment, section });
+  };
+  const plan = usePlanCard(has('billing'));
 
   if (view === 'help') {
     return (
@@ -204,7 +229,11 @@ function MenuBody({
         <AvatarFace size={52} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-lg font-semibold text-content-primary">{name}</p>
-          {subline ? <p className="truncate text-sm text-content-primary/55">{subline}</p> : null}
+          {user?.email && user.email !== name ? (
+            <p className="truncate text-sm text-content-primary/55">{user.email}</p>
+          ) : role ? (
+            <p className="truncate text-sm text-content-primary/55">{role}</p>
+          ) : null}
         </div>
         {desktop ? null : (
           <button
@@ -218,20 +247,39 @@ function MenuBody({
         )}
       </div>
 
+      {plan ? (
+        <div className="mb-3 rounded-[20px] border border-content-primary/[0.07] bg-content-primary/[0.03] p-4">
+          <p className="text-xs text-content-primary/55">{plan.eyebrow}</p>
+          <p className="mt-0.5 font-display text-xl text-content-primary">{plan.title}</p>
+          <button
+            type="button"
+            onClick={inSettings('billing')}
+            className="motion-focus motion-press mt-3 inline-flex min-h-11 items-center rounded-full bg-brand px-5 text-sm font-semibold text-content-inverse transition-colors hover:bg-brand-hover"
+          >
+            {plan.action}
+          </button>
+        </div>
+      ) : null}
+
       <button
         type="button"
         onClick={() => {
           onClose();
           openCommand();
         }}
-        className="motion-focus mb-1.5 flex h-[46px] w-full items-center gap-2.5 rounded-[14px] bg-content-primary/[0.06] px-3.5 text-left text-[15.5px] text-content-primary/45"
+        className="motion-focus mb-3 flex h-[46px] w-full items-center gap-2.5 rounded-[14px] bg-content-primary/[0.06] px-3.5 text-left text-[15.5px] text-content-primary/45"
       >
         <Search className="h-[19px] w-[19px] text-content-primary/50" aria-hidden="true" />
         <span className="flex-1">{desktop ? 'Search' : 'Search releases, people, tasks'}</span>
         {desktop ? <kbd className="font-mono text-[11px] text-content-primary/40">⌘K</kbd> : null}
       </button>
 
-      <ul>
+      <MenuGroup>
+        <ActionRow icon={UserCircle} label="Profile" onClick={inSettings('general', 'name')} />
+        {String(user?.role || '').toLowerCase() === 'curator' ? null : (
+          <MenuLink href={settingsDeepLink({ segment: 'team' })} icon={Users} label="Team" onClose={onClose} />
+        )}
+        {has('artists') ? <ActionRow icon={Palette} label="Artists & brand" onClick={inSettings('artists')} /> : null}
         {relationships ? (
           <MenuLink href={relationships.href} icon={HandshakeLine} label="Relationships" onClose={onClose} />
         ) : null}
@@ -251,34 +299,83 @@ function MenuBody({
             }
           />
         ) : null}
-        <li>
-          <button
-            type="button"
-            onClick={() => {
-              onClose();
-              openSettings();
-            }}
-            className={SHEET_ROW}
-          >
-            <Settings className="h-[22px] w-[22px] shrink-0 text-content-primary/75" aria-hidden="true" />
-            <span className="flex-1">Settings</span>
-            <ChevronRight className="h-[18px] w-[18px] text-content-primary/35" aria-hidden="true" />
-          </button>
-        </li>
-        {helpItems.length > 0 ? (
-          <li>
-            <button
-              type="button"
-              onClick={() => setView('help')}
-              className={`${SHEET_ROW} mt-1.5 text-base text-content-primary/60`}
-            >
-              <CircleHelp className="h-5 w-5 shrink-0 text-content-primary/50" aria-hidden="true" />
-              <span className="flex-1">Help</span>
-            </button>
-          </li>
-        ) : null}
-      </ul>
+      </MenuGroup>
+
+      <MenuGroup>
+        {has('notifications') ? <ActionRow icon={Bell} label="Notifications" onClick={inSettings('notifications')} /> : null}
+        {has('urgans') ? <ActionRow icon={Sparkles} label="UrgAns" onClick={inSettings('urgans')} /> : null}
+        <ActionRow icon={SlidersHorizontal} label="Appearance" onClick={inSettings('general', 'theme')} />
+        {has('security') ? <ActionRow icon={ShieldCheck} label="Security & account" onClick={inSettings('security')} /> : null}
+        {/* Trash keeps its one door here now that Delete rollouts left Settings: a deleted rollout waits 30 days there. */}
+        {String(user?.role || '').toLowerCase() === 'curator' ? null : (
+          <MenuLink href="/dashboard/trash" icon={Trash2} label="Trash" onClose={onClose} />
+        )}
+        {has('admin') ? <ActionRow icon={Gauge} label="Admin" onClick={inSettings('admin')} /> : null}
+      </MenuGroup>
+
+      {helpItems.length > 0 || REPORT_ISSUE_ENABLED ? (
+        <MenuGroup>
+          {helpItems.length > 0 ? <ActionRow icon={CircleHelp} label="Help" onClick={() => setView('help')} /> : null}
+          {REPORT_ISSUE_ENABLED ? (
+            <ActionRow
+              icon={MessageSquare}
+              label="Send feedback"
+              onClick={() => {
+                onClose();
+                openReportIssue('bug');
+              }}
+            />
+          ) : null}
+        </MenuGroup>
+      ) : null}
     </div>
+  );
+}
+
+const REPORT_ISSUE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_REPORT_ISSUE === 'true';
+
+/** What the plan card says, or null when this person has no plan to manage
+ *  (a teammate on somebody else's plan never gets the Billing segment). */
+function usePlanCard(canBill: boolean): { eyebrow: string; title: string; action: string } | null {
+  const userId = useAuthStore((state) => state.user?.id ?? null);
+  const [team, setTeam] = useState<TeamAccessClientSnapshot | null>(() => (userId ? peekTeamAccessClient(userId) : null));
+  useEffect(() => {
+    if (!canBill || !userId) return;
+    let cancelled = false;
+    void getTeamAccessClient(userId).then((snapshot) => {
+      if (!cancelled) setTeam(snapshot);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [canBill, userId]);
+  if (!canBill || !team) return null;
+  if (team.state === 'trial') {
+    const days = Math.max(0, team.trialDaysLeft);
+    return { eyebrow: 'Your trial', title: `${days} ${days === 1 ? 'day' : 'days'} left`, action: 'Choose a plan' };
+  }
+  if ((team.state === 'paid' || team.state === 'comped') && team.tier) {
+    return { eyebrow: 'Your plan', title: getTier(team.tier).label, action: 'Manage plan' };
+  }
+  return null;
+}
+
+/** A card of rows, like the account page's three groups. */
+function MenuGroup({ children }: { children: ReactNode }) {
+  return (
+    <ul className="mb-3 rounded-[20px] border border-content-primary/[0.07] bg-content-primary/[0.03] px-4">{children}</ul>
+  );
+}
+
+function ActionRow({ icon: IconComponent, label, onClick }: { icon: Icon; label: string; onClick: () => void }) {
+  return (
+    <li>
+      <button type="button" onClick={onClick} className={SHEET_ROW}>
+        <IconComponent className="h-[22px] w-[22px] shrink-0 text-content-primary/75" aria-hidden="true" />
+        <span className="flex-1">{label}</span>
+        <ChevronRight className="h-[18px] w-[18px] text-content-primary/35" aria-hidden="true" />
+      </button>
+    </li>
   );
 }
 

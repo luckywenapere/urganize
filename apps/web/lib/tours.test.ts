@@ -71,11 +71,12 @@ describe('the rollout tour', () => {
     const last = ROLLOUT_TOUR_STEPS[ROLLOUT_TOUR_STEPS.length - 1];
     expect(last.anchor).toBe('nav-settings');
     expect(last.fallbackAnchor).toBe('nav-team');
-    // Both phone bars give their Team tab that anchor.
-    for (const file of ['components/shell/BottomBar.tsx', 'components/shell/swipe/SwipeTopBar.tsx']) {
-      const bar = readFileSync(path.join(process.cwd(), file), 'utf8');
-      expect(bar).toContain("tab.key === 'team' ? 'nav-team'");
-    }
+    // The classic bar gives its Team tab that anchor; the swipe nav's Team row
+    // is in the account page, so its avatar carries it.
+    const bottom = readFileSync(path.join(process.cwd(), 'components/shell/BottomBar.tsx'), 'utf8');
+    expect(bottom).toContain("tab.key === 'team' ? 'nav-team'");
+    const avatar = readFileSync(path.join(process.cwd(), 'components/shell/swipe/AvatarMenu.tsx'), 'utf8');
+    expect(avatar).toContain('data-tour="nav-team"');
   });
 
   it('shows each step as its own loop (#971)', () => {

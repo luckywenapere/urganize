@@ -1,7 +1,7 @@
 // The swipe navigation (URG-380, Oyin approved the mocks Oct 18, 2026).
 //
-// Three top tabs you swipe between, Artists · UrgAns · Team (Home left the
-// menu Oct 29, 2026, #876, founder call), and one avatar
+// Two top tabs you swipe between, Home · Assistant (Team moved into the
+// avatar's account page Nov 1, 2026, founder call), and one avatar
 // menu for everything else. The bottom bar and the More sheet go away while it
 // is on. On for everyone since v1.160.5; a person can opt out (see
 // useSwipeNavStore).
@@ -14,7 +14,7 @@
 import { URGANS_HREF, ARTISTS_HREF, TEAM_HREF, CATALOGUE_LABEL } from './shell-nav';
 import { artistIdFromPath } from './artist-page';
 
-export type SwipeTabKey = 'artists' | 'urgans' | 'team';
+export type SwipeTabKey = 'artists' | 'urgans';
 
 export type SwipeTab = { key: SwipeTabKey; label: string; href: string };
 
@@ -22,7 +22,6 @@ export const SWIPE_TABS: readonly SwipeTab[] = [
   // The same word as the classic menu (Home since Oct 30, 2026, #886, #892).
   { key: 'artists', label: CATALOGUE_LABEL, href: ARTISTS_HREF },
   { key: 'urgans', label: 'Assistant', href: URGANS_HREF },
-  { key: 'team', label: 'Team', href: TEAM_HREF },
 ];
 
 /** The user_metadata key a person's own choice is kept in (false = classic). */
@@ -91,7 +90,6 @@ export function swipeTabForPath(pathname: string | null | undefined, search?: Se
   // The old address still shows the list (for Android apps built before the move).
   if (path === '/dashboard/artists') return 'artists';
   if (path === URGANS_HREF) return 'urgans';
-  if (path === TEAM_HREF) return 'team';
   return null;
 }
 
@@ -128,6 +126,8 @@ export const SWIPE_BACK_PATHS: readonly string[] = [
   '/dashboard/relationships',
   '/dashboard/opportunities',
   '/dashboard/press-kits',
+  // Team left the tabs for the account page (Nov 1, 2026), so it is a pushed page.
+  TEAM_HREF,
 ];
 
 /** Where the back arrow goes when there is no earlier in-app page, or null for no arrow. */

@@ -41,8 +41,10 @@ const params = (query: string) => new URLSearchParams(query);
 // Team moved to its own tab (#853), so no one sees it in Settings any more.
 // Connections was retired (#860), the same way.
 const NON_ADMIN = SETTINGS_SEGMENTS.filter(
-  (segment) => segment !== 'admin' && segment !== 'team' && segment !== 'connections'
+  (segment) =>
+    segment !== 'admin' && segment !== 'team' && segment !== 'connections' && segment !== 'directory'
 );
+// Directory profile left Settings on Nov 1, 2026 (founder), the same way.
 
 describe('the segment list', () => {
   it('is ten segments, in the order the founder chose, with Admin last', () => {
@@ -100,7 +102,6 @@ describe('visibleSettingsSegments', () => {
       'general',
       'notifications',
       'urgans',
-      'directory',
       'security',
     ]);
   });
@@ -109,7 +110,8 @@ describe('visibleSettingsSegments', () => {
     expect(visibleSettingsSegments({ role: 'curator' }, ALL_ON)).toEqual([]);
   });
 
-  it('hides Directory when its flag is off', () => {
+  it('never shows Directory, whatever its flag says (cut Nov 1, 2026)', () => {
+    expect(visibleSettingsSegments({ role: 'manager' }, ALL_ON)).not.toContain('directory');
     expect(visibleSettingsSegments({ role: 'manager' }, { ...ALL_ON, directory: false })).not.toContain(
       'directory'
     );
