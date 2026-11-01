@@ -4,7 +4,8 @@
 // project card is open when the team has nothing: stage first, then artist,
 // kind, an optional name and only what that stage needs, with a live preview.
 // Plus Bring in released music (the artist import, as a sheet) and Invite
-// your team. The page owns saving; this owns the form, the sheets and copy.
+// your team. Under the heading, a still of what adding a project gets you
+// (#1008). The page owns saving; this owns the form, the sheets and copy.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -23,6 +24,7 @@ import {
 import { lagosToday } from '@/lib/next-records';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { clearPendingImports, readPendingImports } from '@/lib/artist-import/pending';
+import { FirstProjectStill } from './FirstProjectStill';
 import { OnboardingArtistImportStep } from './OnboardingArtistImportStep';
 import {
   AccountChip,
@@ -255,6 +257,7 @@ export function NewProjectScreen({
         .
       </Lede>
       <AccountChip place="top" name={account.name} email={account.email} onLogout={account.onLogout} logoutLabel="Log out" />
+      <FirstProjectStill />
     </>
   );
 
