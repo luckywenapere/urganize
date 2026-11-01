@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, ChevronRight, Disc3, Plus, Users } from '@/components/icons';
+import { ArrowRight, ChevronRight, Disc3, Plus } from '@/components/icons';
 import { initialsFor } from '@/lib/swipe-nav';
 import { useAuthStore } from '@/lib/auth-store';
 import { artistsList, describeDaysToGo, type ArtistListRow, type ArtistStatus } from '@/lib/artists-list';
@@ -19,6 +19,9 @@ import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { HomeBell } from '@/components/home/v2/HomeBell';
+import { EMPTY_STATE_ACTION_CLASS, EmptyState } from '@/components/shared/EmptyState';
+import { ArtistsEmptyPreview } from '@/components/shared/EmptyPreviews';
+import { useShellStore } from '@/stores/useShellStore';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
 
@@ -100,11 +103,7 @@ export default function ArtistsPageClient({
           </ul>
         </div>
       ) : list.rows.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-stroke-default p-8 text-center">
-          <Users className="mx-auto h-6 w-6 text-content-tertiary" aria-hidden />
-          <p className="mt-3 text-sm font-semibold text-content-primary">No artists yet</p>
-          <p className="mt-1 text-sm text-content-secondary">Add an artist in Settings and they appear here.</p>
-        </div>
+        <ArtistsEmpty />
       ) : (
         <div className="section-list-enter">
           {list.spotlight ? <Spotlight row={list.spotlight} /> : null}
@@ -128,6 +127,29 @@ export default function ArtistsPageClient({
         </div>
       )}
     </div>
+  );
+}
+
+/** The first page a new team sees (#969): the list when full, faded, with
+ *  the one action that fills it on top. */
+function ArtistsEmpty() {
+  const openAddArtist = useShellStore((state) => state.openAddArtist);
+  return (
+    <EmptyState
+      title="No artists yet."
+      description="Add the first and their rollouts show here."
+      preview={<ArtistsEmptyPreview />}
+      action={
+        <button
+          type="button"
+          onClick={() => openAddArtist()}
+          className={EMPTY_STATE_ACTION_CLASS}
+        >
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          Add artist
+        </button>
+      }
+    />
   );
 }
 
@@ -441,9 +463,8 @@ function SwipeArtists({ loading, list }: { loading: boolean; list: ArtistsListDa
           ))}
         </ul>
       ) : rows.length === 0 ? (
-        <div className="mt-6 rounded-[22px] border border-content-primary/[0.07] bg-bg-surface p-6">
-          <p className="font-display text-2xl text-content-primary">No artists yet.</p>
-          <p className="mt-2 text-[15px] text-content-primary/55">Add the first and their rollouts show here.</p>
+        <div className="mt-2">
+          <ArtistsEmpty />
         </div>
       ) : (
         <>

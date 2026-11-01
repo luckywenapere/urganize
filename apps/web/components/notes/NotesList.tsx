@@ -5,6 +5,7 @@ import { ListToolbar } from '@/components/shell/ListToolbar';
 import type { NotesView } from '@/lib/note-archive';
 import Image from 'next/image';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { NotesEmptyPreview } from '@/components/shared/EmptyPreviews';
 import { NoteListRow } from './NoteListRow';
 import type { ExecutionRelease } from '@/lib/execution-types';
 import type { Note } from '@/types/notes';
@@ -266,6 +267,9 @@ export function NotesList({
                 ? 'Notes you link to this rollout show up here. Start one now, or clear the filter to see everything.'
                 : undefined
             }
+            // A first-run notebook shows the notebook in use, faded (#969).
+            // The rollout filter is a narrowed view, so it keeps the plain box.
+            preview={isFiltering ? undefined : <NotesEmptyPreview />}
             action={
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <button
@@ -276,14 +280,6 @@ export function NotesList({
                 >
                   <Plus className="h-4 w-4" aria-hidden="true" />
                   New note
-                </button>
-                <button
-                  type="button"
-                  onClick={onBringNotes}
-                  className="motion-focus motion-press inline-flex h-9 items-center gap-1.5 rounded-full border border-stroke-default px-4 text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover"
-                >
-                  <Upload className="h-4 w-4" aria-hidden="true" />
-                  Bring your notes
                 </button>
                 {isFiltering ? (
                   <button

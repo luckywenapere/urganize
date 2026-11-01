@@ -2,6 +2,8 @@
 
 import { DIRECTORY_ROLE_LABELS, type DirectoryRole } from '@/lib/directory-roles';
 import type { FallbackCounts } from '@/lib/directory-search';
+import { EMPTY_STATE_ACTION_CLASS, EmptyState } from '@/components/shared/EmptyState';
+import { DirectoryEmptyPreview } from '@/components/shared/EmptyPreviews';
 
 /**
  * What the directory says when it has nothing to show.
@@ -47,16 +49,29 @@ export function DirectoryEmptyState({
   // broaden to and only one action that helps.
   if (nobodyListed) {
     return (
-      <div className="rounded-xl border border-stroke-default p-6">
-        <h3 className="text-base font-semibold text-content-primary">Nobody is listed yet</h3>
-        <p className={`mt-2 ${line}`}>
-          The directory is how managers find people who have delivered the work a rollout needs.
-          It fills up as people add themselves.
-        </p>
-        <button type="button" onClick={onListMe} className={`mt-4 ${nudge}`}>
-          Add yourself
-        </button>
-      </div>
+      <EmptyState
+        title="Nobody is listed yet"
+        description={
+          <>
+            {/* The phone keeps the short line so the button stays in view. */}
+            <span className="hidden sm:inline">
+              Managers find people here who have delivered the work a rollout needs.{' '}
+            </span>
+            It fills up as people add themselves.
+          </>
+        }
+        // Who the directory will hold, faded, with made-up people (#969).
+        preview={<DirectoryEmptyPreview />}
+        action={
+          <button
+            type="button"
+            onClick={onListMe}
+            className={EMPTY_STATE_ACTION_CLASS}
+          >
+            Add yourself
+          </button>
+        }
+      />
     );
   }
 

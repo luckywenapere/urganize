@@ -184,7 +184,8 @@ describe('the empty Opportunities page', () => {
     expect(source).toContain("import { EmptyState } from '@/components/shared/EmptyState'");
     const empty = source.slice(source.indexOf('<EmptyState'), source.indexOf('/>', source.indexOf('<EmptyState')));
     expect(empty).toContain('title={OPPORTUNITIES_EMPTY_COPY.title}');
-    expect(empty).toContain('description={OPPORTUNITIES_EMPTY_COPY.description}');
+    expect(empty).toContain('{OPPORTUNITIES_EMPTY_COPY.description}');
+    expect(empty).toContain('{OPPORTUNITIES_EMPTY_COPY.descriptionPhone}');
     expect(empty).toContain('action={addButton}');
     // The button opens the add form, the same as the header button does.
     const button = source.slice(source.indexOf('const addButton'), source.indexOf('</button>', source.indexOf('const addButton')));
