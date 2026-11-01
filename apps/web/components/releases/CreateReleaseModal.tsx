@@ -447,7 +447,7 @@ export function CreateReleaseModal({
     // `inset-0` alone falls back to the layout viewport on iOS, pushing the
     // bottom of the modal under the address bar / bottom toolbar.
     <div
-      className="fixed inset-x-0 top-0 z-[220] flex h-[100dvh] items-center justify-center bg-black/72 px-4 py-4 backdrop-blur-sm sm:py-8"
+      className="fixed inset-x-0 top-0 z-[220] flex h-[100dvh] items-center justify-center bg-[rgb(var(--shadow-ink)/0.55)] px-4 py-4 backdrop-blur-md sm:py-8"
       role="presentation"
     >
       <button
@@ -475,10 +475,11 @@ export function CreateReleaseModal({
       >
         <form
           onSubmit={(event) => void handleSubmit(event)}
-          // Glass (2026-10-24, founder approved mock): a translucent, blurred
-          // surface on the theme's own tokens, a hairline rim and a faint top
-          // highlight, so it reads in both themes.
-          className="relative flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden rounded-2xl border border-stroke-strong bg-bg-surface/70 shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))] backdrop-blur-xl backdrop-saturate-150 sm:max-h-[calc(100dvh-4rem)]"
+          // Solid (2026-11-01, founder: "too transparent ... thick and
+          // solid"): an opaque surface over a dimmed, blurred page, so the
+          // page behind never shows through the fields while you type. It
+          // replaced the 2026-10-24 glass panel.
+          className="relative flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden rounded-2xl border border-stroke-strong bg-bg-surface shadow-[0_24px_64px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))] sm:max-h-[calc(100dvh-4rem)]"
         >
           <span
             aria-hidden="true"
