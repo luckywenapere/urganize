@@ -41,6 +41,7 @@ export const KIND_LABEL: Record<OpportunityKind, string> = {
 export const OPPORTUNITIES_EMPTY_COPY = {
   title: 'No opportunities yet',
   description: 'Keep the deals, grants, sync and brand work you are chasing, each with its next step.',
+  descriptionPhone: 'Keep the deals, grants, sync and brand work you are chasing.',
   action: 'Add opportunity',
 } as const;
 

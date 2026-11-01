@@ -6,6 +6,7 @@ import { Pencil, Trash2, X } from '@/components/icons';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { ListToolbar } from '@/components/shell/ListToolbar';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpportunitiesEmptyPreview } from '@/components/shared/EmptyPreviews';
 import { useAuthStore } from '@/lib/auth-store';
 import {
   KIND_LABEL,
@@ -497,8 +498,15 @@ export default function OpportunitiesPageClient() {
         editing === null ? (
           <EmptyState
             title={OPPORTUNITIES_EMPTY_COPY.title}
-            description={OPPORTUNITIES_EMPTY_COPY.description}
             action={addButton}
+            description={
+              // The phone keeps the short line so the button stays in view.
+              <>
+                <span className="sm:hidden">{OPPORTUNITIES_EMPTY_COPY.descriptionPhone}</span>
+                <span className="hidden sm:inline">{OPPORTUNITIES_EMPTY_COPY.description}</span>
+              </>
+            }
+            preview={<OpportunitiesEmptyPreview />}
           />
         ) : null
       ) : visible.length === 0 ? (

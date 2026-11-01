@@ -2128,6 +2128,21 @@ html select.field-native {
   text-align: center;
 }
 
+/* EmptyState's preview (#969): a faded still of the page when full, behind
+   the card with the one action. Faded and a little grey so it never reads as
+   real content; the mask fades its foot into the page. */
+.empty-preview {
+  position: absolute;
+  inset: 0;
+  opacity: 0.42;
+  filter: saturate(0.55);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-mask-image: linear-gradient(#000 0, #000 38%, transparent 94%);
+  mask-image: linear-gradient(#000 0, #000 38%, transparent 94%);
+}
+
 /* ---- Textile structural motifs -------------------------------------------
    Tier 2 of the .urg-textile layer (Tier 1, the ambient grain, is up beside
    body::after). These are opt-in utilities applied through the app's shared
