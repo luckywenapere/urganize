@@ -37,6 +37,7 @@ export const metadata: Metadata = buildPageMetadata({
   // Link previews say the share card's line (#939); search keeps the above.
   shareTitle: LANDING_SHARE_TITLE,
   shareDescription: LANDING_SHARE_DESCRIPTION,
+  shareCard: "home",
 });
 
 // FAQPage structured data, built from the SAME array FaqSection renders, so

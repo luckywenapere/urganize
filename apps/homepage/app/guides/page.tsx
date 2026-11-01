@@ -13,6 +13,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     `Plain guides for artists and managers: the release timeline, who does what and how to pitch playlists. ${SHORT_LINE}`,
   path: "/guides",
+  shareCard: "guides",
 });
 
 export default function GuidesPage() {

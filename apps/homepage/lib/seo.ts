@@ -95,6 +95,52 @@ const SHARE_IMAGE = {
   alt: `Urganize. ${SHARE_HEADLINE} ${SHARE_DESCRIPTION}`,
 };
 
+// Each main page's own share card (#964, mock approved by the founder
+// 2026-11-01): the page's real H1 over a small slice of the product, drawn in
+// the app's light theme with the made-up Northline Music demo team. Pages not
+// listed here keep SHARE_IMAGE above. Static JPEGs in public/share/ for the
+// same reason as SHARE_IMAGE (stable absolute URLs, no host resolution), and
+// like it the words are baked into the picture, so:
+//  - if a page's H1 changes, redraw its card (mock: claude.ai artifact
+//    Do7SrY1rfUe9AnuvdARCMu) and update its alt here in the same commit;
+//  - bump SHARE_CARDS_VERSION whenever any file in public/share/ changes, or
+//    WhatsApp and X keep showing the old picture.
+const SHARE_CARDS_VERSION = "2026-11-01-page-cards";
+
+const SHARE_CARDS = {
+  home: "Urganize. From idea to execution. A rollout timeline for Harmattan Gold by Kanmi Gold, with tasks dated to release day and today marked.",
+  pricing: "Urganize pricing. Pay for the roster, not the headcount. The Northline Music team list on one plan.",
+  features: "Urganize features. Everything your release needs. None of the chasing. A task list where every task has an owner and a due date.",
+  "for-managers": "Urganize for artist managers. Every artist’s release. One screen, not five chats. Five artists’ rollouts on one list, with progress.",
+  "for-executives": "Urganize for executives. Every artist. Every rollout. On plan. The roster with each artist’s next release and its status.",
+  "for-curators": "Urganize for curators. People pitch you all day. Answer in one tap. The pitch inbox with one pitch marked Added.",
+  "for-ai-artists": "Urganize for AI artists. You can make a song in an hour. Releasing one still takes weeks. A three-week plan up to release day.",
+  guides: "Urganize guides. Plan a music release, step by step. A list of steps by week and role.",
+  "guide-how-to-plan-a-music-release": "How to plan a music release in 11 weeks. The plan’s three phases, pre-release, release and post-release, with their milestones.",
+} as const;
+
+export type ShareCard = keyof typeof SHARE_CARDS;
+
+function shareCardImage(card: ShareCard) {
+  return {
+    url: `${SITE_URL}/share/${card}.jpg?v=${SHARE_CARDS_VERSION}`,
+    width: 1200,
+    height: 630,
+    alt: SHARE_CARDS[card],
+  };
+}
+
+/** A page's share image URL for schemas: its own card, or the default. */
+export function shareImageUrl(card?: ShareCard): string {
+  return card ? shareCardImage(card).url : SHARE_IMAGE_URL;
+}
+
+/** The guide whose slug has its own card, if any; the others keep the default. */
+export function guideShareCard(slug: string): ShareCard | undefined {
+  const card = `guide-${slug}`;
+  return card in SHARE_CARDS ? (card as ShareCard) : undefined;
+}
+
 // Shared per-page metadata shape (canonical + OG + Twitter) so every
 // marketing page gets the same fields instead of hand-rolling them.
 // Root layout still owns metadataBase, keywords, and robots defaults.
@@ -108,6 +154,7 @@ export function buildPageMetadata({
   noIndex = false,
   shareTitle = title,
   shareDescription = description,
+  shareCard,
 }: {
   title: string;
   description: string;
@@ -119,6 +166,8 @@ export function buildPageMetadata({
    */
   shareTitle?: string;
   shareDescription?: string;
+  /** This page's own share card (see SHARE_CARDS); omitted, the default card. */
+  shareCard?: ShareCard;
   /**
    * Keep this page out of search results. Emits `noindex, follow` — the page
    * still passes link equity onward, it just never appears as a result
@@ -134,6 +183,7 @@ export function buildPageMetadata({
   noIndex?: boolean;
 }): Metadata {
   const url = `${SITE_URL}${path}`;
+  const image = shareCard ? shareCardImage(shareCard) : SHARE_IMAGE;
 
   return {
     title,
@@ -149,13 +199,13 @@ export function buildPageMetadata({
       siteName: SITE_NAME,
       locale: "en_US",
       type: "website",
-      images: [SHARE_IMAGE],
+      images: [image],
     },
     twitter: {
       card: "summary_large_image",
       title: shareTitle,
       description: shareDescription,
-      images: [SHARE_IMAGE.url],
+      images: [{ url: image.url, alt: image.alt }],
     },
   };
 }

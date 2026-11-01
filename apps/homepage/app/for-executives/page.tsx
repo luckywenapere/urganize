@@ -21,6 +21,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "From idea to execution, across your whole roster. Each release gets the same plan, every activity has an owner and you see where they all stand without chasing anyone.",
   path: "/for-executives",
+  shareCard: "for-executives",
 });
 
 // This is the persona page for the team running a roster. It was written for

@@ -9,9 +9,10 @@ import { GUIDES, getGuide } from "@/content/guides";
 import { SHORT_LINE } from "@/lib/positioning";
 import {
   ORGANIZATION_ID,
-  SHARE_IMAGE_URL,
   SITE_URL,
   buildPageMetadata,
+  guideShareCard,
+  shareImageUrl,
 } from "@/lib/seo";
 import { PageDawn } from "../../components/marketing/PageDawn";
 
@@ -35,6 +36,7 @@ export async function generateMetadata({
     title: guide.title,
     description: `${guide.summary} ${SHORT_LINE}`,
     path: `/guides/${guide.slug}`,
+    shareCard: guideShareCard(guide.slug),
   });
 }
 
@@ -65,7 +67,7 @@ export default async function GuidePage({
     datePublished: guide.datePublished,
     dateModified: guide.dateModified,
     inLanguage: "en",
-    image: SHARE_IMAGE_URL,
+    image: shareImageUrl(guideShareCard(guide.slug)),
     mainEntityOfPage: url,
     author: { "@id": ORGANIZATION_ID },
     publisher: { "@id": ORGANIZATION_ID },

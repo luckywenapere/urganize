@@ -21,6 +21,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "From idea to execution, for artist managers running more than one artist. Add a release, get the plan and your team knows what to do and when.",
   path: "/for-managers",
+  shareCard: "for-managers",
 });
 
 // Same honesty rule as /features and /why-urganize: every claim below
