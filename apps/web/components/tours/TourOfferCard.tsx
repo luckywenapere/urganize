@@ -1,6 +1,15 @@
 'use client';
 
 import { Sparkles, X } from '@/components/icons';
+import { ROLLOUT_TOUR_STEPS, type TourLoopId } from '@/lib/tours';
+import { TourPoster } from './TourStepLoop';
+
+/** What each still in the card stands for (#971). */
+const THUMB_LABEL: Record<TourLoopId, string> = {
+  activities: 'Tick work off',
+  menu: 'Find everything',
+  team: 'Bring your team',
+};
 
 /**
  * Tour B is OFFERED, never auto-run (founder call).
@@ -29,8 +38,20 @@ export function TourOfferCard({
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-content-primary">Your rollout is planned</p>
         <p className="mt-1 text-sm leading-6 text-content-secondary">
-          Want a quick look around? It takes about a minute.
+          Want a quick look around? Three short clips.
         </p>
+        {/* The three steps as stills (#971), so the card says what the tour
+            covers before anyone taps. Posters only: no loop plays here. */}
+        <ul className="mt-3 grid grid-cols-3 gap-1.5 sm:gap-2.5">
+          {ROLLOUT_TOUR_STEPS.map((step) => (
+            <li key={step.id} className="min-w-0">
+              <div aria-hidden="true" className="overflow-hidden rounded-lg">
+                <TourPoster loop={step.loop} thumb />
+              </div>
+              <span className="mt-1.5 block text-xs text-content-secondary">{THUMB_LABEL[step.loop]}</span>
+            </li>
+          ))}
+        </ul>
         <button
           type="button"
           onClick={onStart}

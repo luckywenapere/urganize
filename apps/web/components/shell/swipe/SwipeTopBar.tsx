@@ -105,6 +105,7 @@ export function SwipeTopBar({ showHelp, pagerActive }: { showHelp: boolean; page
           <div ref={rowRef} className="relative flex h-full items-center gap-6 lg:gap-14">
             {SWIPE_TABS.map((tab, i) => {
               const active = area === tab.key;
+              // data-tour: the rollout tour's team step points at the Team tab on a phone (#971).
               return (
                 <Link
                   key={tab.key}
@@ -115,6 +116,7 @@ export function SwipeTopBar({ showHelp, pagerActive }: { showHelp: boolean; page
                   onClick={onTab(tab.key)}
                   aria-current={active ? 'page' : undefined}
                   data-swipe-tab={tab.key}
+                  data-tour={tab.key === 'team' ? 'nav-team' : undefined}
                   className="motion-focus relative flex h-full items-center text-[17px] font-semibold lg:text-[19px]"
                 >
                   <span

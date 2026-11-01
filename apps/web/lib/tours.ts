@@ -40,13 +40,23 @@ export type TourId = 'rollout';
  *  in the DOM (the topbar and the side menu both carry the nav ones, and this
  *  app splits mobile and desktop by CSS rather than by mounting), which is
  *  what `pickVisibleAnchor` is for. */
-export type TourAnchor = 'activities' | 'rollout-menu' | 'nav-settings';
+export type TourAnchor = 'activities' | 'rollout-menu' | 'nav-settings' | 'nav-team';
+
+/** Which short loop a step shows (components/tours/loops, #971). */
+export type TourLoopId = 'activities' | 'menu' | 'team';
 
 export type TourStep = {
   id: string;
   anchor: TourAnchor;
+  /** Pointed at when `anchor` is not on screen. The account button that
+   *  carries 'nav-settings' lives in the side menu, which a phone never
+   *  shows, so the team step used to be skipped there; on a phone it points
+   *  at the Team tab instead, in whichever phone bar is on screen (#971). */
+  fallbackAnchor?: TourAnchor;
   title: string;
+  /** One short line under the loop. The loop shows the action; this names it. */
   body: string;
+  loop: TourLoopId;
   /** Overrides "Next" on the last step. */
   ctaLabel?: string;
   /** What the last step's button does besides ending the tour. 'open-team'
@@ -59,19 +69,23 @@ export const ROLLOUT_TOUR_STEPS: readonly TourStep[] = [
     id: 'activities',
     anchor: 'activities',
     title: 'Your activities.',
-    body: 'Each row is one piece of work with a date. Tick it off when it is done. Timeline shows the same work on a calendar.',
+    body: 'Tick work off as it gets done.',
+    loop: 'activities',
   },
   {
     id: 'menu',
     anchor: 'rollout-menu',
     title: 'Everything else about this rollout.',
-    body: 'Metadata, content posts, cover art, sharing and more live in this menu.',
+    body: 'Cover art, details, pitching and more.',
+    loop: 'menu',
   },
   {
     id: 'team',
     anchor: 'nav-settings',
+    fallbackAnchor: 'nav-team',
     title: 'Bring your team in.',
-    body: 'Invite people from Settings, then assign work to them.',
+    body: 'Invite them, then give them work.',
+    loop: 'team',
     ctaLabel: 'Go to Team',
     action: 'open-team',
   },

@@ -1,0 +1,295 @@
+/* The rollout tour's loops (TourLoops.tsx, #971). Every colour is an app
+   token from app/globals.css, so the loops follow the light/dark theme with no
+   second set of rules. Loaded with the loops, never on the first page load. */
+
+.tl .ss-stage {
+  --ss-font: var(--font-sans);
+  --ss-mono: var(--font-mono);
+  --ss-accent: var(--brand-primary);
+  --ss-accent-soft: var(--brand-primary-muted);
+  --ss-accent-text: var(--brand-primary);
+  --ss-success: var(--brand-primary);
+  --ss-surface: var(--bg-surface);
+  --ss-raised: var(--bg-elevated);
+  --ss-canvas: var(--bg-base);
+  --ss-well: var(--bg-base);
+  --ss-text-strong: var(--text-primary);
+  --ss-text: var(--text-secondary);
+  --ss-text-faint: var(--text-tertiary);
+  --ss-line: var(--border-strong);
+  --ss-ink-1: var(--bg-hover);
+  --ss-ink-2: var(--bg-active);
+  --ss-ink-3: var(--border-strong);
+  --ss-ink-4: var(--border-strong);
+  --ss-fill: var(--bg-active);
+  overflow: hidden;
+  background: var(--bg-base);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-family: var(--ss-font);
+  letter-spacing: -0.01em;
+}
+
+.tl-scene {
+  position: absolute;
+  inset: 0;
+  transition: opacity 300ms ease;
+}
+.tl-scene[data-veil] { opacity: 0; }
+
+/* -------- Step 1: activities */
+.tl-head {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tl-seg { width: 150px; font-size: 12px; }
+.tl-count { white-space: nowrap; font-size: 12.5px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.tl-body { position: absolute; left: 0; right: 0; top: 52px; bottom: 0; }
+.tl-pane {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+.tl-pane[data-on] { opacity: 1; transform: none; }
+.tl-row {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  margin: 0 8px;
+  padding: 0 8px;
+  border-top: 1px solid var(--border-default);
+}
+.tl-row:first-child { border-top: 0; }
+.tl-check { display: grid; place-items: center; width: 16px; height: 16px; }
+.tl-title { font-size: 13px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 200ms ease; }
+.tl-row[data-done] .tl-title { color: var(--text-tertiary); }
+.tl-date { font-family: var(--ss-mono); font-size: 11px; color: var(--text-tertiary); }
+
+.tl-cal { padding: 0 14px; }
+.tl-weeks {
+  display: grid;
+  grid-template-columns: 120px repeat(4, 1fr);
+  font-family: var(--ss-mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+  height: 18px;
+}
+.tl-weeks span:first-child { grid-column: 2; }
+.tl-today {
+  position: absolute;
+  top: 18px;
+  bottom: 22px;
+  left: calc(14px + 120px + (100% - 28px - 120px) * 0.38);
+  width: 1.5px;
+  background: var(--text-primary);
+  opacity: 0.75;
+}
+.tl-crow {
+  position: relative;
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  align-items: center;
+  height: 28px;
+}
+.tl-ctitle { font-size: 11.5px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; }
+.tl-dot {
+  position: absolute;
+  top: 50%;
+  margin-left: 120px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bg-surface);
+  border: 1.5px solid var(--brand-primary);
+  transition: background 200ms ease;
+}
+.tl-dot[data-done] { background: var(--brand-primary); }
+
+/* -------- Step 2: the rollout menu */
+.tl-split .tl-menu {
+  position: absolute;
+  left: 8px;
+  top: 10px;
+  width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tl-group { display: flex; flex-direction: column; gap: 1px; }
+.tl-glabel {
+  padding: 0 8px 2px;
+  font-size: 10.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+}
+.tl-mi {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  transition: background 160ms ease, color 160ms ease;
+}
+.tl-mi[data-hover] { background: var(--bg-hover); }
+.tl-mi[data-on] { background: var(--bg-active); color: var(--text-primary); font-weight: 500; }
+.tl-glyph { flex: none; color: currentColor; opacity: 0.8; }
+
+.tl-panes {
+  position: absolute;
+  left: 166px;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border-strong);
+}
+.tl-p {
+  position: absolute;
+  inset: 0;
+  padding: 14px 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+.tl-p[data-on] { opacity: 1; transform: none; }
+.tl-p__h { font-family: var(--font-display); font-size: 15px; color: var(--text-primary); margin-bottom: 2px; }
+.tl-p__row { display: flex; align-items: center; gap: 8px; height: 16px; }
+.tl-p__cover { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 10px; }
+.tl-p__meta { white-space: nowrap; font-family: var(--ss-mono); font-size: 10px; line-height: 1.5; color: var(--text-tertiary); }
+/* Cover art is a picture, so it keeps its own colours in both themes. */
+.tl-cover {
+  position: relative;
+  flex: none;
+  border-radius: 8px;
+  background: #7a5a16;
+  color: #f5f0e6;
+}
+.tl-cover__t { position: absolute; left: 8px; bottom: 15px; font-family: var(--font-display); font-size: 10.5px; line-height: 1.15; }
+.tl-cover__a { position: absolute; left: 8px; bottom: 7px; font-size: 5.5px; letter-spacing: 0.08em; opacity: 0.85; }
+.tl-kv { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; height: 18px; border-bottom: 1px solid var(--border-default); padding-bottom: 4px; }
+.tl-kv span { color: var(--text-tertiary); }
+.tl-kv b { font-weight: 500; color: var(--text-primary); }
+
+/* Step 2 on a phone */
+.tl-phone .tl-ph-head {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px 0 12px;
+  border-bottom: 1px solid var(--border-strong);
+}
+.tl-ph-back { font-size: 18px; color: var(--text-secondary); line-height: 1; }
+.tl-ph-title { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
+.tl-ph-n { font-family: var(--ss-mono); font-size: 10.5px; color: var(--text-tertiary); }
+.tl-ph-menu { margin-left: auto; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; color: var(--text-secondary); }
+.tl-ph-menu[data-pressed] { background: var(--bg-hover); }
+.tl-phone .tl-panes { left: 0; top: 40px; border-left: 0; }
+.tl-sheet-scrim { position: absolute; inset: 0; background: rgb(var(--shadow-ink) / 0.28); opacity: 0; transition: opacity 260ms ease; pointer-events: none; }
+.tl-sheet-scrim[data-on] { opacity: 1; }
+.tl-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 6px 8px 10px;
+  background: var(--bg-elevated);
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 -8px 24px rgb(var(--shadow-ink) / 0.12);
+  transform: translateY(100%);
+  transition: transform 420ms cubic-bezier(0.3, 0.75, 0.1, 1);
+}
+.tl-sheet:not([data-on]) { box-shadow: none; }
+.tl-sheet[data-on] { transform: none; }
+.tl-grab { display: block; width: 32px; height: 4px; border-radius: 2px; background: var(--border-control); margin: 0 auto 6px; }
+.tl-sheet .tl-mi { height: 30px; font-size: 13px; }
+
+/* -------- Step 3: invite */
+.tl-team { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.tl-eyebrow { font-family: var(--ss-mono); font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-tertiary); }
+.tl-form { display: flex; gap: 8px; }
+.tl-input {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-control);
+  background: var(--bg-surface);
+  font-size: 13px;
+  transition: border-color 160ms ease;
+}
+.tl-input[data-focus] { border-color: var(--brand-primary); }
+.tl-ph { color: var(--text-tertiary); }
+.tl-typed { color: var(--text-primary); white-space: nowrap; }
+.tl-caret { width: 1.5px; height: 15px; background: var(--brand-primary); margin-left: 1px; }
+.tl-btn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: var(--brand-primary);
+  color: var(--text-inverse);
+  font-size: 13px;
+  font-weight: 600;
+  transition: filter 160ms ease, transform 120ms ease;
+}
+.tl-btn[data-hover] { filter: brightness(0.92); }
+.tl-btn[data-pressed] { transform: scale(0.97); }
+.tl-members { display: flex; flex-direction: column; }
+.tl-members .ss-collapse > * { padding-bottom: 6px; }
+.tl-member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+}
+.tl-mtext { flex: 1; min-width: 0; }
+.tl-mname { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12.5px; font-weight: 500; color: var(--text-primary); white-space: nowrap; }
+.tl-email { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tl-mname em { flex: none; }
+.tl-mname em {
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: var(--brand-primary-muted);
+  color: var(--brand-primary);
+}
+.tl-role { flex: none; font-size: 11px; color: var(--text-primary); padding: 3px 7px; border-radius: 7px; border: 1px solid var(--border-default); background: var(--bg-elevated); }
+
+.tl-member--filler { margin-top: 6px; }

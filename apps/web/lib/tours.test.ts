@@ -66,6 +66,46 @@ describe('the rollout tour', () => {
     expect(last.ctaLabel).toBe('Go to Team');
     expect(last.action).toBe('open-team');
   });
+
+  it('points the team step at the Team tab on a phone, where the side menu is hidden', () => {
+    const last = ROLLOUT_TOUR_STEPS[ROLLOUT_TOUR_STEPS.length - 1];
+    expect(last.anchor).toBe('nav-settings');
+    expect(last.fallbackAnchor).toBe('nav-team');
+    // Both phone bars give their Team tab that anchor.
+    for (const file of ['components/shell/BottomBar.tsx', 'components/shell/swipe/SwipeTopBar.tsx']) {
+      const bar = readFileSync(path.join(process.cwd(), file), 'utf8');
+      expect(bar).toContain("tab.key === 'team' ? 'nav-team'");
+    }
+  });
+
+  it('shows each step as its own loop (#971)', () => {
+    expect(ROLLOUT_TOUR_STEPS.map((s) => s.loop)).toEqual(['activities', 'menu', 'team']);
+  });
+});
+
+describe('tour loops load the way the Stageshow note says (#971)', () => {
+  const read = (file: string) => readFileSync(path.join(process.cwd(), file), 'utf8');
+  const wrapper = read('components/tours/TourStepLoop.tsx');
+
+  it('loads the kit lazily, client only', () => {
+    expect(wrapper).toMatch(/dynamic\(\(\) => import\('\.\/loops\/TourLoops'\), \{\s*ssr: false,/);
+    // Only the loops file may import the kit; anything else would pull it into the first load.
+    for (const file of ['components/tours/TourOverlay.tsx', 'components/tours/TourOfferCard.tsx', 'components/tours/TourStepLoop.tsx']) {
+      expect(read(file)).not.toContain('@urganize/stageshow');
+    }
+  });
+
+  it('never mounts the loop under reduced motion', () => {
+    expect(wrapper).toContain("matchMedia('(prefers-reduced-motion: reduce)')");
+    expect(wrapper).toContain('{motion ? (');
+  });
+
+  it('has a light and a dark poster for every loop', () => {
+    const dir = path.join(process.cwd(), 'public/images/tours');
+    const files = ['menu-phone-light', 'menu-phone-dark'];
+    for (const step of ROLLOUT_TOUR_STEPS) files.push(`${step.loop}-light`, `${step.loop}-dark`);
+    for (const name of files) expect(statSync(path.join(dir, `${name}.webp`)).size).toBeGreaterThan(0);
+  });
 });
 
 describe('the welcome tour stays removed (2026-10-11, founder call)', () => {

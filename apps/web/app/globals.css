@@ -467,6 +467,13 @@ html[data-theme='light'] .app-mark-invert {
   filter: brightness(0) invert(1);
 }
 
+/* The tour loops' poster stills (TourStepLoop.tsx, #971): both themes are in
+   the page and one shows. Dark is the baseline, as above. */
+html[data-theme='light'] .tour-poster-dark,
+:root:not([data-theme='light']) .tour-poster-light {
+  display: none;
+}
+
 /* Content-calendar brand island (URG-157). The ONLY place this feature's
    colors are defined; every component consumes the vars via Tailwind
    arbitrary values. Follows the app's data-theme toggle (founder decision,
