@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ProofLine } from "../components/landing/ProofLine";
+import { ResponsiveProductShot } from "../components/landing/ResponsiveProductShot";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { WaitlistForm } from "../components/landing/WaitlistForm";
@@ -8,6 +9,7 @@ import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
 import { PageDawn } from "../components/marketing/PageDawn";
+import type { ProductShot } from "@/content/product-shots";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Why Urganize over WhatsApp and Google Drive",
@@ -39,8 +41,31 @@ const comparisons = [
     // mirrors it. Change both together or not at all.
     them: "Your plan is spread across a pinned chat, an old spreadsheet and your memory. Every new release starts from scratch.",
     us: "Add a release and Urganize lays out the whole plan, written by real managers and sized to the format: 64 tasks for a single, 90 for an EP, 113 for an album. Edit or delete any task.",
+    // The before/after still belongs to this claim only (it shows a single's
+    // 64-task plan), so it is opted in here rather than drawn for every item.
+    showBeforeAfter: true,
   },
 ] as const;
+
+// The before/after still under "The plan" (#961, mock approved by the founder
+// 2026-11-01). A drawn picture, not a capture: left, a release spread across a
+// group chat and an old spreadsheet; right, the same release as an Urganize
+// timeline where the task the chat argues about has an owner and a date. Demo
+// data only (Harmattan Gold by Kanmi Gold; Ada, Kemi and Tunde are made up),
+// drawn in the app's light and dark tokens so it follows the theme toggle. If
+// the timeline view changes, redraw both.
+const beforeAfter: ProductShot = {
+  light: "/images/product/why-before-after.webp",
+  dark: "/images/product/why-before-after-dark.webp",
+  width: 2000,
+  height: 920,
+};
+const beforeAfterPhone: ProductShot = {
+  light: "/images/product/why-before-after-phone.webp",
+  dark: "/images/product/why-before-after-phone-dark.webp",
+  width: 716,
+  height: 1400,
+};
 
 // Folded from three full-size blocks into one compact section (see the
 // note above). Each row is a single sentence per side joined by an arrow
@@ -140,6 +165,21 @@ export default function WhyUrganizePage() {
                     </p>
                   </div>
                 </div>
+
+                {/* The same comparison as one picture. Phone still below sm,
+                    the wide one from sm up (ResponsiveProductShot picks one). */}
+                {item.showBeforeAfter && (
+                  <div className="mx-auto mt-10 max-w-[24rem] sm:max-w-none">
+                    <ResponsiveProductShot
+                      desktop={beforeAfter}
+                      phone={beforeAfterPhone}
+                      alt="Before: a group chat asks who is sending the master to the distributor, over a spreadsheet with question marks in the Who column. With Urganize: the same release as a timeline, 40 of 64 tasks done, where Send master to distributor belongs to Ada, due Fri 13 Nov."
+                      sizes="(min-width: 1104px) 1024px, calc(100vw - 64px)"
+                      phoneSizes="min(24rem, calc(100vw - 48px))"
+                      fetchPriority="auto"
+                    />
+                  </div>
+                )}
               </div>
             </SectionShell>
           </ScrollReveal>
