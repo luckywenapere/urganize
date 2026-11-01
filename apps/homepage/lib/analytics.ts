@@ -6,13 +6,15 @@ import { readHeroVariant } from "./hero-variant";
 // a missing tag is a no-op, never an error. Event names are an enum so a
 // typo cannot quietly split one funnel step into two GA events.
 //
-// Why these four and nothing else: they are the homepage's funnel. Before
+// Why these four to start with: they are the homepage's funnel. Before
 // this the page fired ONE event (demo_video_open) and the waitlist form
 // fired none, so the conversion rate the redesign is meant to move could
 // not be measured at all.
 export type LandingEvent =
   | "start_trial_click"
   | "demo_video_open"
+  // The full YouTube video, opened from under the UrgAns loop (#956).
+  | "demo_full_video_open"
   | "waitlist_submit"
   | "faq_open"
   // The hero shot's Artists | Rollouts tabs (URG-378), with { tab }.

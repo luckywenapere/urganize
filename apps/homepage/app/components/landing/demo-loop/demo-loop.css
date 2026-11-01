@@ -1,0 +1,384 @@
+/* The UrgAns demo loop (#956, DemoLoopScene.tsx). Light values are the
+   approved mock's; dark follows the site toggle (html[data-marketing-theme])
+   with the product's own dark neutrals, the same set as hero-loop.css.
+   Tokens sit here, unlayered, so they beat the kit's layered theme values and
+   switch with the toggle without a re-render. */
+.urg-demo {
+  --ud-canvas: #f7f4ee;
+  --ud-body: #f5f0e6;
+  --ud-chrome: #f0ebe1;
+  --ud-surface: #faf5ec;
+  --ud-hover: #ebe6dc;
+  --ud-line: rgba(26, 22, 17, 0.09);
+  --ud-line-faint: rgba(26, 22, 17, 0.05);
+  --ud-ink: #1a1611;
+  --ud-text: #4b4740;
+  --ud-faint: #6a665f;
+  --ud-sub: rgba(26, 22, 17, 0.55);
+  --ud-chip-line: rgba(26, 22, 17, 0.14);
+  --ud-chip-text: rgba(26, 22, 17, 0.88);
+  --ud-accent: #14643a;
+  --ud-accent-hover: #247648;
+  --ud-on-accent: #f5f0e6;
+  --ud-on-accent-faint: rgba(245, 240, 230, 0.45);
+  --ud-bubble: rgba(20, 100, 58, 0.15);
+  --ud-bubble-line: rgba(20, 100, 58, 0.25);
+  --ud-focus: rgba(20, 100, 58, 0.7);
+  --ud-composer: rgba(250, 245, 236, 0.85);
+}
+
+html[data-marketing-theme="dark"] .urg-demo {
+  --ud-canvas: #141416;
+  --ud-body: #121214;
+  --ud-chrome: #18181a;
+  --ud-surface: #19191b;
+  --ud-hover: #242427;
+  --ud-line: #2c2c30;
+  --ud-line-faint: #242427;
+  --ud-ink: #f4f2ee;
+  --ud-text: #bdbab4;
+  --ud-faint: #95928c;
+  --ud-sub: #95928c;
+  --ud-chip-line: #3a3a3f;
+  --ud-chip-text: #d6d3cd;
+  --ud-accent: #7fd99a;
+  --ud-accent-hover: #95e3ac;
+  --ud-on-accent: #0c0c0d;
+  --ud-on-accent-faint: rgba(12, 12, 13, 0.4);
+  --ud-bubble: rgba(127, 217, 154, 0.14);
+  --ud-bubble-line: rgba(127, 217, 154, 0.3);
+  --ud-focus: rgba(127, 217, 154, 0.6);
+  --ud-composer: #19191b;
+}
+
+.urg-demo .ss-stage {
+  --ss-font: var(--font-urg-sans), "Instrument Sans", system-ui, sans-serif;
+  --ss-mono: var(--font-home-mono), "Space Mono", ui-monospace, monospace;
+  --ss-canvas: var(--ud-canvas);
+  --ss-surface: var(--ud-body);
+  --ss-chrome: var(--ud-chrome);
+  --ss-raised: var(--ud-surface);
+  --ss-line: var(--ud-line);
+  --ss-line-faint: var(--ud-line-faint);
+  --ss-text-strong: var(--ud-ink);
+  --ss-text: var(--ud-text);
+  --ss-text-faint: var(--ud-faint);
+  --ss-icon: var(--ud-text);
+  --ss-icon-faint: var(--ud-faint);
+  --ss-accent: var(--ud-accent);
+  --ss-accent-soft: var(--ud-bubble);
+  --ss-success: var(--ud-accent);
+  --ss-control: 46px;
+  overflow: hidden;
+  background: var(--ss-canvas);
+  font-family: var(--ss-font);
+}
+
+/* Pinned top and sides, off the bottom just under the composer. A little
+   higher and tighter than the mock, so the whole exchange (question, answer,
+   card) fits the 440px stage in the final frame. */
+.urg-demo .urg-win {
+  position: absolute;
+  top: 14px;
+  left: 60px;
+  width: 600px;
+  height: 476px;
+}
+
+.urg-demo .urg-body {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100%;
+  padding: 12px 28px 52px;
+  background: var(--ss-surface);
+}
+
+/* New chat: the mono catalog voice, as the real transcript draws it */
+.urg-demo .urg-head {
+  display: flex;
+  justify-content: flex-end;
+  height: 22px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.urg-demo .urg-head[data-on] {
+  opacity: 1;
+}
+
+.urg-demo .urg-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  border-radius: 6px;
+  color: var(--ss-text-faint);
+  font-family: var(--ss-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.urg-demo .urg-new[data-hover] {
+  color: var(--ss-text-strong);
+  background: var(--ud-hover);
+}
+
+.urg-demo .urg-thread {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 10px;
+  min-height: 0;
+  padding-bottom: 10px;
+  overflow: hidden;
+}
+
+/* The empty screen: a serif question, a line, wrapped prompts */
+.urg-demo .urg-hero {
+  padding-bottom: 4px;
+}
+
+.urg-demo .urg-hero__title {
+  font-family: var(--font-home-display), "Young Serif", Georgia, serif;
+  font-size: 26px;
+  line-height: 1.2;
+  color: var(--ss-text-strong);
+}
+
+.urg-demo .urg-hero__sub {
+  display: block;
+  margin: 8px 0 16px;
+  font-size: 14px;
+  color: var(--ud-sub);
+}
+
+.urg-demo .urg-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 6px;
+}
+
+.urg-demo .urg-prompt {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--ud-chip-line);
+  color: var(--ud-chip-text);
+  font-size: 13px;
+}
+
+/* The manager's turn: right, a soft green bubble with a tucked corner */
+.urg-demo .urg-q {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.urg-demo .urg-q__bubble {
+  max-width: 80%;
+  padding: 9px 15px;
+  border-radius: 16px 16px 6px 16px;
+  background: var(--ud-bubble);
+  box-shadow: inset 0 0 0 1px var(--ud-bubble-line);
+  color: var(--ss-text-strong);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.urg-demo .urg-thinking {
+  display: inline-flex;
+  padding: 10px 15px;
+  border-radius: 16px 16px 16px 6px;
+  background: var(--ud-surface);
+  box-shadow: inset 0 0 0 1px var(--ss-line);
+  color: var(--ss-text-faint);
+  font-size: 13.5px;
+}
+
+/* UrgAns's turn: the surface bubble, tucked bottom-left */
+.urg-demo .urg-a {
+  max-width: 90%;
+  padding: 11px 15px;
+  border-radius: 16px 16px 16px 6px;
+  background: var(--ud-surface);
+  box-shadow: inset 0 0 0 1px var(--ss-line);
+}
+
+.urg-demo .urg-stream {
+  color: var(--ss-text-strong);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+/* The confirmation card: square corners, an info mark, the action on the right */
+.urg-demo .urg-card {
+  padding: 12px 16px;
+  background: var(--ud-surface);
+  box-shadow: inset 0 0 0 1px var(--ss-line);
+}
+
+.urg-demo .urg-card__top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.urg-demo .urg-card__icon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--ss-text);
+}
+
+.urg-demo .urg-card__title {
+  font-family: var(--font-home-display), "Young Serif", Georgia, serif;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--ss-text-strong);
+}
+
+.urg-demo .urg-card__detail {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ss-text);
+}
+
+.urg-demo .urg-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.urg-demo .urg-btn {
+  display: grid;
+  grid-template-areas: "stack";
+  place-items: center;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  transition: background-color 0.25s ease, opacity 0.3s ease, color 0.25s ease;
+}
+
+.urg-demo .urg-btn--ghost {
+  box-shadow: inset 0 0 0 1px var(--ss-line);
+  color: var(--ss-text-strong);
+}
+
+.urg-demo .urg-btn--ghost[data-quiet] {
+  opacity: 0.4;
+}
+
+.urg-demo .urg-btn--primary {
+  min-width: 104px;
+  background: var(--ud-accent);
+  color: var(--ud-on-accent);
+}
+
+.urg-demo .urg-btn--primary[data-hover] {
+  background: var(--ud-accent-hover);
+}
+
+.urg-demo .urg-layer {
+  grid-area: stack;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  opacity: 0;
+  filter: blur(2px);
+  transition: opacity 0.25s ease, filter 0.25s ease;
+  text-box: trim-both cap alphabetic;
+}
+
+.urg-demo .urg-layer[data-on] {
+  opacity: 1;
+  filter: none;
+  transition-delay: 0.08s;
+}
+
+.urg-demo .urg-btn .ss-check__ring { stroke: var(--ud-on-accent-faint); }
+.urg-demo .urg-btn .ss-check__arc { stroke: var(--ud-on-accent); }
+.urg-demo .urg-btn .ss-check__fill { fill: var(--ud-on-accent); }
+.urg-demo .urg-btn .ss-check__tick { stroke: var(--ud-accent); }
+
+/* The composer: a pill, the scope on the left, the send disc on the right */
+.urg-demo .urg-composer .ss-field__box {
+  padding: 0 6px 0 14px;
+  border-radius: 999px;
+  background: var(--ud-composer);
+  box-shadow: inset 0 0 0 1px var(--ss-line);
+  font-size: 14px;
+  gap: 12px;
+}
+
+.urg-demo .urg-composer[data-focused] .ss-field__box {
+  box-shadow: inset 0 0 0 1px var(--ud-focus);
+}
+
+.urg-demo .urg-composer .ss-field__placeholder {
+  color: var(--ss-text-faint);
+}
+
+.urg-demo .urg-scope {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  color: var(--ss-text-faint);
+  font-size: 12px;
+}
+
+.urg-demo .urg-send {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--ud-accent);
+  color: var(--ud-on-accent);
+  opacity: 0.45;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.urg-demo .urg-send[data-ready] {
+  opacity: 1;
+}
+
+.urg-demo .urg-send[data-hover] {
+  background: var(--ud-accent-hover);
+}
+
+/* Narrow: a gutter each side, the window the stage's width */
+.urg-demo .ss-stage[data-layout="compact"] .urg-win {
+  top: 20px;
+  left: 16px;
+  width: 326px;
+  height: 610px;
+}
+
+.urg-demo .ss-stage[data-layout="compact"] .urg-body {
+  padding: 10px 14px 48px;
+}
+
+.urg-demo .ss-stage[data-layout="compact"] .urg-hero__title {
+  font-size: 24px;
+}
+
+.urg-demo .ss-stage[data-layout="compact"] .urg-q__bubble {
+  max-width: 88%;
+}
+
+.urg-demo .ss-stage[data-layout="compact"] .urg-a {
+  max-width: 100%;
+}
+
+.urg-demo .ss-stage[data-layout="compact"] .urg-scope {
+  display: none;
+}
