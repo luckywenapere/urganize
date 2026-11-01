@@ -6,23 +6,43 @@ import { CORE_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { APP_LOGIN_URL, WAITLIST_URL } from "@/lib/app-urls";
 import { PageDawn } from "../components/marketing/PageDawn";
+import { ResponsiveProductShot } from "../components/landing/ResponsiveProductShot";
+import type { ProductShot } from "@/content/product-shots";
 
 // Lives on the marketing domain for the same reason /login does — see the
-// note there. Note the CTA points at /onboarding, not /auth: apps/web's
-// /auth is login-only and has no signup form.
-//
-// This page also reverses the waitlist-only funnel (URG-125 + URG-136,
-// 2026-07-15), which had removed every signup CTA from the marketing site in
-// favour of the inline waitlist capture. Founder call, 2026-08-09: signup is
-// a direct path again. The waitlist forms stay where they are — this is an
-// additional door, not a replacement.
+// note there. The URL stays /signup so old links keep working, but the page
+// is the waitlist: its one button goes to WAITLIST_URL, and its copy says
+// waitlist, never sign up (house copy rule). It was a direct sign-up door to
+// /onboarding from 2026-08-09 until the waitlist came back.
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Sign up",
+  title: "Waitlist",
   description:
     `${CORE_LINE} Join the waitlist and we will let you in as spots open.`,
   path: "/signup",
 });
+
+// The first-release still (#965, mock approved by the founder 2026-11-01):
+// what a team gets once let in, its first release with the plan already
+// filled in. A drawn picture, not a capture, in the app's light and dark
+// tokens so it follows the site's theme toggle. Fictional artist (Ada Sol);
+// the three tasks are the single playbook's first ones, word for word, and
+// "64 activities, 11 weeks" is that playbook's real size. If the playbook or
+// the release page changes, redraw all four. The drawing is a Stageshow
+// scene (examples/urg-first-release, kept outside the repo); with no copy of
+// it to hand, redraw from the approved mock linked on #965.
+const firstRelease: ProductShot = {
+  light: "/images/product/first-release.webp",
+  dark: "/images/product/first-release-dark.webp",
+  width: 1280,
+  height: 880,
+};
+const firstReleasePhone: ProductShot = {
+  light: "/images/product/first-release-phone.webp",
+  dark: "/images/product/first-release-phone-dark.webp",
+  width: 716,
+  height: 760,
+};
 
 export default function SignupPage() {
   return (
@@ -30,29 +50,43 @@ export default function SignupPage() {
       <MarketingHeader />
 
       <main className="px-6 py-16 sm:py-20 isolate overflow-x-clip">
-        <div className="mx-auto max-w-3xl">
-          <PageDawn>
-            <p className="mono-label text-[var(--marketing-text-subtle)]">
-              Sign up
-            </p>
-            <h1 className="mt-6 text-[2.25rem] leading-[1.08] sm:text-[3rem]">
-              Join the waitlist
-            </h1>
-            <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
-              Add your first release and get a plan built from a real playbook,
-              not a blank board you have to fill in yourself.
-            </p>
-
-            <div className="mt-10">
-              <a
-                href={WAITLIST_URL}
-                className="relative z-[60] inline-flex touch-manipulation items-center justify-center rounded-full bg-[var(--marketing-primary)] px-7 py-3.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] pointer-events-auto hover:bg-[var(--marketing-primary-hover)] sm:text-base"
-              >
-                Join waitlist
-              </a>
-              <p className="mt-4 text-sm text-[var(--marketing-text-subtle)]">
-                We are letting teams in from the waitlist.
+        <div className="mx-auto max-w-6xl">
+          {/* Two columns from lg: the copy and its button on the left, the
+              still on the right. Below lg the still sits under the button,
+              so the button stays above the fold on a phone. */}
+          <PageDawn className="grid items-center gap-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <div>
+              <p className="mono-label text-[var(--marketing-text-subtle)]">
+                Waitlist
               </p>
+              <h1 className="mt-6 text-[2.25rem] leading-[1.08] sm:text-[3rem]">
+                Join the waitlist
+              </h1>
+              <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
+                Add your first release and get a plan built from a real playbook,
+                not a blank board you have to fill in yourself.
+              </p>
+
+              <div className="mt-10">
+                <a
+                  href={WAITLIST_URL}
+                  className="relative z-[60] inline-flex touch-manipulation items-center justify-center rounded-full bg-[var(--marketing-primary)] px-7 py-3.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] pointer-events-auto hover:bg-[var(--marketing-primary-hover)] sm:text-base"
+                >
+                  Join waitlist
+                </a>
+                <p className="mt-4 text-sm text-[var(--marketing-text-subtle)]">
+                  We are letting teams in from the waitlist.
+                </p>
+              </div>
+            </div>
+
+            <div className="w-full max-w-[22.375rem] sm:max-w-[40rem] lg:justify-self-end">
+              <ResponsiveProductShot
+                desktop={firstRelease}
+                phone={firstReleasePhone}
+                alt="A release called Sunday Light by Ada Sol in Urganize, with this week's three activities already planned and a card saying your plan is ready: 64 activities over 11 weeks."
+                sizes="(min-width: 1024px) min(46vw, 608px), (min-width: 688px) 640px, calc(100vw - 48px)"
+              />
             </div>
           </PageDawn>
 
@@ -88,8 +122,8 @@ export default function SignupPage() {
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">
               If a manager invited you, open the invite link they sent rather
-              than signing up here. It joins you to their team instead of
-              creating a separate one. Already have an account?{" "}
+              than joining the waitlist here. It takes you straight into their
+              team. Already have an account?{" "}
               <a
                 href={APP_LOGIN_URL}
                 className="underline underline-offset-4 hover:text-[var(--marketing-text)]"
