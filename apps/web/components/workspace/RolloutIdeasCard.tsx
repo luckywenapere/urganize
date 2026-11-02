@@ -1,17 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@urganize/ui';
 import { ADD_IDEA_EVENT, IDEAS_CHANGED_EVENT } from './RolloutFirstSteps';
-import { Check, Copy, Loader2, Lock, MessageCircle, Mic, Sparkles, UserPlus, X } from '@/components/icons';
+import { Check, Copy, Loader2, Lock, MessageCircle, Sparkles, UserPlus, X } from '@/components/icons';
 import { VoicePill } from './VoicePill';
-import { IdeaCardLoop } from './IdeaCardLoop';
 import { useSceneOverlay } from './useSceneOverlay';
 import { IdeaRoundLoop } from './IdeaRoundLoop';
 import { IDEA_ROUND_COPY as ROUND_COPY, isIdeaRoundEnabled } from '@/lib/idea-round';
 import { runBriefFromIdeas } from '@/lib/urgans-actions/client';
 import { useOpenSettings } from '@/components/settings/useOpenSettings';
-import { useVoiceInput } from '@/components/chappi/useVoiceInput';
 import { buildWhatsAppShareUrl } from '@/lib/access-gate';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { useAuthStore } from '@/lib/auth-store';
@@ -233,13 +231,6 @@ export function RolloutIdeasCard({
     persona,
     teammateCount: data?.people.length ?? 0,
   });
-
-  const onTranscript = useCallback((text: string, clip?: { audioPath: string; seconds: number | null }) => {
-    fromVoiceRef.current = true;
-    if (clip) clipRef.current = clip;
-    setDraft((current) => (current.trim() ? `${current.trim()} ${text}` : text).slice(0, MAX_IDEA_LENGTH));
-    setTyping(true);
-  }, []);
 
   if (!ENABLED) return null;
   // Hold the card's place while it loads, so the plan card below it does not jump
@@ -546,19 +537,6 @@ export function RolloutIdeasCard({
   // A closed round takes no more ideas from a teammate.
   const canAddIdea = !round || roundOpen || runner;
 
-  const typeButton = (label: string) => (
-    <button
-      type="button"
-      onClick={() => {
-        setError('');
-        setTyping(true);
-      }}
-      className="motion-focus min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary hover:text-content-primary"
-    >
-      {label}
-    </button>
-  );
-
   // The first thing on a new rollout (2026-10-26, mock A): no box, one centered
   // column 61.8% of the width, its headline near the 38.2% line, and the plan
   // card's button directly below it. It becomes the ordinary card once a note
@@ -630,7 +608,6 @@ export function RolloutIdeasCard({
       {fresh && path !== 'chime_in' ? (
         <>
           <p className="mt-2 text-sm text-content-secondary">{COPY.freshBody}</p>
-          {canAddIdea && data.voice ? <IdeaCardLoop className="mt-5" /> : null}
         </>
       ) : round && path === 'chime_in' && roundOpen ? (
         <p className="mt-2 text-sm text-content-secondary">
@@ -704,21 +681,10 @@ export function RolloutIdeasCard({
             </button>
           </div>
         </div>
-      ) : !canAddIdea ? null : (
-        <div className={hasNotes ? 'mt-3 flex flex-wrap items-center gap-2' : fresh ? 'mt-6 flex flex-col items-center gap-1' : 'mt-4 flex flex-col items-center gap-1'}>
-          {data.voice ? (
-            <IdeaMic
-              compact={hasNotes}
-              releaseId={release.id}
-              onTranscript={onTranscript}
-              onError={setError}
-              typeLink={typeButton(hasNotes ? 'Type it' : COPY.orType)}
-              fallback={typeButton('Type it')}
-            />
-          ) : (
-            typeButton('Type it')
-          )}
-        </div>
+      ) : !canAddIdea || hasNotes ? null : (
+        // No record or type box here any more (Nov 2, 2026, founder): the
+        // chat box does both, and the "n ideas are in" card shows in the chat.
+        <p className="mt-6 text-sm text-content-secondary">Tell UrgAns in the chat box below. Say it or type it.</p>
       )}
 
       {guided && !typing ? (
@@ -1076,123 +1042,6 @@ function BriefList({
         ))}
       </ul>
     </div>
-  );
-}
-
-/** The big green mic. Hold to talk; a quick tap starts and a second tap stops. */
-function IdeaMic({
-  releaseId,
-  onTranscript,
-  onError,
-  typeLink,
-  fallback,
-  compact = false,
-}: {
-  /** Small pill instead of the big mic, once a note is saved. */
-  compact?: boolean;
-  releaseId: string;
-  onTranscript: (text: string, clip?: { audioPath: string; seconds: number | null }) => void;
-  onError: (message: string) => void;
-  typeLink: ReactNode;
-  fallback: ReactNode;
-}) {
-  const voice = useVoiceInput({
-    enabled: true,
-    onTranscript,
-    endpoint: `/api/releases/${encodeURIComponent(releaseId)}/ideas/transcribe`,
-    deniedMessage: 'Allow the microphone to talk your idea.',
-  });
-  const pressedAtRef = useRef(0);
-  const stopOnReleaseRef = useRef(false);
-
-  useEffect(() => {
-    if (voice.error) {
-      onError(voice.error);
-      voice.clearError();
-    }
-  }, [voice, onError]);
-
-  if (!voice.supported) return <>{fallback}</>;
-
-  const busy = voice.state === 'requesting' || voice.state === 'transcribing';
-  const recording = voice.state === 'recording';
-
-  const onDown = () => {
-    if (recording) {
-      // The second tap of tap-to-talk.
-      stopOnReleaseRef.current = false;
-      voice.toggle();
-      return;
-    }
-    if (voice.state !== 'idle') return;
-    onError('');
-    pressedAtRef.current = Date.now();
-    stopOnReleaseRef.current = true;
-    voice.toggle();
-  };
-
-  const onUp = () => {
-    // Held long enough to be a hold: let go to stop. A quick tap keeps recording.
-    if (stopOnReleaseRef.current && Date.now() - pressedAtRef.current > 400 && voice.state === 'recording') {
-      voice.toggle();
-    }
-    stopOnReleaseRef.current = false;
-  };
-
-  const onKey = (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      if (!busy) voice.toggle();
-    }
-  };
-
-  const label = recording
-    ? `${COPY.listening} ${Math.floor(voice.elapsed / 60)}:${String(voice.elapsed % 60).padStart(2, '0')}`
-    : voice.state === 'transcribing'
-      ? COPY.working
-      : COPY.holdToTalk;
-
-  return (
-    <>
-      <button
-        type="button"
-        aria-label={recording ? 'Stop' : COPY.holdToTalk}
-        aria-pressed={recording}
-        onPointerDown={(event) => {
-          event.preventDefault();
-          onDown();
-        }}
-        onPointerUp={onUp}
-        onPointerLeave={onUp}
-        onPointerCancel={onUp}
-        onContextMenu={(event) => event.preventDefault()}
-        onKeyDown={onKey}
-        disabled={busy}
-        style={{ touchAction: 'none' }}
-        className={
-          compact
-            ? `motion-focus inline-flex min-h-11 select-none items-center gap-2 rounded-full px-4 text-sm font-medium text-content-inverse ${
-                recording ? 'bg-brand-hover ring-4 ring-brand/25' : 'bg-brand hover:bg-brand-hover'
-              } disabled:opacity-70`
-            : `motion-focus flex h-16 w-16 select-none items-center justify-center rounded-full text-content-inverse transition-transform duration-fast ${
-                recording ? 'scale-110 bg-brand-hover ring-4 ring-brand/25' : 'bg-brand hover:bg-brand-hover'
-              } disabled:opacity-70`
-        }
-      >
-        {voice.state === 'transcribing' ? (
-          <Loader2 className={compact ? 'h-4 w-4 animate-spin' : 'h-6 w-6 animate-spin'} aria-hidden="true" />
-        ) : (
-          <Mic className={compact ? 'h-4 w-4' : 'h-6 w-6'} aria-hidden="true" />
-        )}
-        {compact ? (recording || busy ? label : COPY.addAnother) : null}
-      </button>
-      {compact ? null : (
-        <p aria-live="polite" className="mt-1 text-xs text-content-tertiary">
-          {label}
-        </p>
-      )}
-      {recording || busy ? null : typeLink}
-    </>
   );
 }
 
