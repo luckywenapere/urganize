@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.243.3",
+    tag: "Rollouts",
+    date: "November 2, 2026",
+    highlights: [
+      "On a computer, the brief has its back button again, so you can get back to the plan.",
+    ],
+  },
+  {
     version: "1.243.2",
     tag: "App",
     date: "November 2, 2026",

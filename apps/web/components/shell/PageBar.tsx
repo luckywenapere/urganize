@@ -60,14 +60,18 @@ export function PageBar() {
   const title = shellPageTitle(areas, pathname);
   // With a side menu the bar always shows (its title or breadcrumb; the fold
   // button moved to the foot of the side menu on 2026-10-16). Without
-  // one (Home) it shows only when the page put tools in it, so Home
-  // does not gain an empty line with its own name on it.
+  // one (Home) it shows only when the page put tools or a crumb in it, so
+  // Home does not gain an empty line with its own name on it. The crumb counts
+  // (Nov 2, 2026): the brief on a computer puts only its back button there,
+  // and with tools alone counting the whole bar, back button included, hid.
   const always = shellSideMenu(areas, pathname) !== null;
 
   return (
     <div
       className={`group/pagebar hidden h-14 min-w-0 items-center gap-[13px] ${
-        always ? 'lg:flex' : 'lg:has-[>[id^=subnav-slot]:not(:empty)]:flex'
+        always
+          ? 'lg:flex'
+          : 'lg:has-[>[id^=subnav-slot]:not(:empty)]:flex lg:has-[>[data-crumb-slot]:not(:empty)]:flex'
       }`}
     >
       {title ? (

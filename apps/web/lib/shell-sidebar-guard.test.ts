@@ -89,6 +89,10 @@ describe('the side menu', () => {
 describe('the page bar', () => {
   const bar = read('components', 'shell', 'PageBar.tsx');
 
+  it('shows on a page with no side menu when only the crumb is filled (the brief back button)', () => {
+    expect(bar).toContain('lg:has-[>[data-crumb-slot]:not(:empty)]:flex');
+  });
+
   it('is desktop only and hosts the page slots', () => {
     for (const slot of ['SUBNAV_SLOT_START', 'SUBNAV_SLOT_TOOLS', 'SUBNAV_SLOT_END']) {
       expect(bar).toContain(`id={${slot}}`);
