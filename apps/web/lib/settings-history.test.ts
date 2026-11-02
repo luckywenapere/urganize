@@ -86,3 +86,15 @@ describe('phone segment entries', () => {
     expect(shouldPushSegmentEntry({ ...base, targetRequest: 'menu' })).toBe(false);
   });
 });
+
+describe('backFromSegment', () => {
+  it('goes back to the list only when the list pushed the segment', async () => {
+    const { backFromSegment } = await import('./settings-history');
+    expect(backFromSegment(1)).toBe('menu');
+    expect(backFromSegment(2)).toBe('menu');
+  });
+  it('closes Settings when the segment was opened straight from the account page', async () => {
+    const { backFromSegment } = await import('./settings-history');
+    expect(backFromSegment(0)).toBe('close');
+  });
+});

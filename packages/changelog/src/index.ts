@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.237.3",
+    tag: "Account",
+    date: "November 2, 2026",
+    highlights: [
+      "Back from a setting you opened from your account page takes you back where you were.",
+    ],
+  },
+  {
     version: "1.237.2",
     tag: "AI",
     date: "November 2, 2026",
