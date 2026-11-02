@@ -124,7 +124,7 @@ export function SessionsPane({ active }: { active: boolean }) {
           <button
             type="button"
             onClick={() => openSession(null)}
-            aria-label="Back to Sessions"
+            aria-label="Back to Rollouts"
             className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
@@ -142,7 +142,7 @@ export function SessionsPane({ active }: { active: boolean }) {
                 headingLevel="h2"
                 emptyHero={{
                   title: `What do you need for ${title}?`,
-                  subtitle: 'This session stays on this rollout. Ask anything about it.',
+                  subtitle: 'This chat stays on this rollout. Ask anything about it.',
                   prompts: [`What's left before ${title} drops?`, `Who still owes me something on ${title}?`, `Draft the pitch for ${title}`],
                 }}
                 externalComposer
@@ -157,9 +157,9 @@ export function SessionsPane({ active }: { active: boolean }) {
 
   return (
     <div className="swipe-page mx-auto w-full max-w-[40rem] px-5">
-      <p className="mb-1 mt-3 text-sm text-content-secondary">One session for each rollout.</p>
+      <p className="mb-1 mt-3 text-sm text-content-secondary">One chat for each rollout.</p>
       {rows.length === 0 ? (
-        <p className="mt-6 text-sm text-content-secondary">No rollouts yet. Plan one and its session shows here.</p>
+        <p className="mt-6 text-sm text-content-secondary">No rollouts yet. Plan one and its chat shows here.</p>
       ) : (
         <ul>
           {rows.map(({ release: entry, last }) => (

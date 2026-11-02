@@ -25,7 +25,9 @@ export const SWIPE_TABS: readonly SwipeTab[] = [
   // The same word as the classic menu (Home since Oct 30, 2026, #886, #892).
   { key: 'artists', label: CATALOGUE_LABEL, href: ARTISTS_HREF },
   { key: 'urgans', label: 'Assistant', href: URGANS_HREF },
-  { key: 'sessions', label: 'Sessions', href: SESSIONS_HREF },
+  // Named Rollouts (Nov 2, 2026, founder): one chat per rollout. The address
+  // and the key stay 'sessions'.
+  { key: 'sessions', label: 'Rollouts', href: SESSIONS_HREF },
 ];
 
 /** The user_metadata key a person's own choice is kept in (false = classic). */

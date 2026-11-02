@@ -417,7 +417,7 @@ function SettingsDialog({
                 onClick={() =>
                   backFromSegment(settingsSegmentEntries()) === 'menu' ? openSettings({ segment: SETTINGS_MENU }) : requestClose()
                 }
-                aria-label="Back to all settings"
+                aria-label={backFromSegment(settingsSegmentEntries()) === 'menu' ? 'Back to all settings' : 'Close settings'}
                 className="motion-focus motion-press -ml-2 grid h-11 w-11 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary sm:hidden"
               >
                 <ChevronLeft className="h-5 w-5" aria-hidden="true" />

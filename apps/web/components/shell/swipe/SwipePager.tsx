@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   SWIPE_TABS,
   clampDrag,
@@ -18,6 +18,7 @@ import {
 import { isEdgeStart } from '@/lib/swipe-edge';
 import { prefersReducedMotion } from '@/lib/home-chat-glide';
 import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
+import { useTabMemoryStore } from '@/stores/useTabMemoryStore';
 import { setSwipeProgress } from './progress';
 
 const COUNT = SWIPE_TABS.length;
@@ -74,6 +75,15 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
   // or the moment a finger starts to move.
   const [mounted, setMounted] = useState<ReadonlySet<number>>(() => new Set([swipeTabIndex(routeTab)]));
   const setGo = useSwipeNavStore((state) => state.setGo);
+  const router = useRouter();
+  // Set when a swipe or a tab tap brings Home back while it remembers a rollout
+  // or artist page (lib/tab-memory.ts); that page opens once the glide settles.
+  const restoreHome = useRef<string | null>(null);
+  const settle = useCallback(() => {
+    const target = restoreHome.current;
+    restoreHome.current = null;
+    if (target) router.push(target, { scroll: false });
+  }, [router]);
   // Written once: after the first render only the pager's own paint() moves the
   // track, so a re-render can never snap it to the end of a glide in progress.
   const [initialTransform] = useState(() => `translate3d(${(-swipeTabIndex(routeTab) * 100) / COUNT}%, 0, 0)`);
@@ -94,6 +104,8 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
     committed.current = index;
     setActive(index);
     if (push && index !== previous) {
+      restoreHome.current =
+        SWIPE_TABS[index].key === 'artists' ? useTabMemoryStore.getState().homePath : null;
       const href = SWIPE_TABS[index].href;
       if (window.location.pathname !== href) window.history.replaceState(null, '', href);
     }
@@ -115,6 +127,7 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
         if (track && !options.instant) {
           track.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'ease-out' });
         }
+        settle();
         return;
       }
       let state = { position: position.current, velocity: options.velocity ?? 0 };
@@ -131,6 +144,7 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
         if (springAtRest(state, index)) {
           paint(index);
           frame.current = null;
+          settle();
           return;
         }
         paint(state.position);
@@ -141,7 +155,7 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
       commit(index, push);
       frame.current = requestAnimationFrame(tick);
     },
-    [commit, paint]
+    [commit, paint, settle]
   );
 
   // The tab row (and anything else, like a Home card) moves the pager through here.
