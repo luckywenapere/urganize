@@ -3557,6 +3557,15 @@ html.urgans-leaving .home-scene-container > :not([data-urgans-source]) {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* The brief's floating "Approve and build the plan" button (Nov 2, 2026): sits
+   just above the chat box, and steps aside while the keyboard is up. */
+.swipe-floating-approve {
+  bottom: calc(2.25rem + var(--home-dock-height, 3.5rem) + env(safe-area-inset-bottom, 0px));
+}
+:root[data-keyboard-open='true'] .swipe-floating-approve {
+  display: none;
+}
+
 /* /dashboard/urgans?m=<id>: the turn rings for 1.2s. */
 .swipe-message-ring {
   border-radius: 1rem;
