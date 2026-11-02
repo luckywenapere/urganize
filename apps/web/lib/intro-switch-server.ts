@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { getIntroPrice, INTRO_MONTHS } from '@urganize/pricing';
+import { getIntroPrice, getTierPrice, INTRO_MONTHS } from '@urganize/pricing';
 import { getTierPaystackPlanCode, isSelfServeTier } from './billing-plans';
 import { notifyFounder } from './billing-alerts-server';
 import { disablePaystackSubscription } from './paystack-subscription-server';
@@ -34,7 +34,7 @@ export async function switchToFullPrice(
      *  just paid. */
     startAt: string | null;
   }
-): Promise<{ ok: boolean; reason?: string }> {
+): Promise<{ ok: boolean; reason?: string; newCode?: string }> {
   const fail = async (reason: string) => {
     console.error('[intro-switch] switch to full price failed:', reason, input.userId);
     await tellFounder(admin, input, reason).catch(() => undefined);
@@ -73,11 +73,8 @@ export async function switchToFullPrice(
     return fail(error instanceof Error ? error.message : 'could not reach Paystack');
   }
 
-  const { error: writeError } = await admin
-    .from('subscriptions')
-    .update({ paystack_subscription_code: newCode, updated_at: new Date().toISOString() })
-    .eq('user_id', input.userId);
-  if (writeError) return fail(`new subscription ${newCode} made but not saved: ${writeError.message}`);
+  const writeError = await stampFullPrice(admin, input.userId, input.plan, newCode);
+  if (writeError) return fail(`new subscription ${newCode} made but not saved: ${writeError}`);
 
   if (input.oldSubscriptionCode && input.oldSubscriptionCode !== newCode) {
     const stopped = await disablePaystackSubscription(
@@ -87,7 +84,32 @@ export async function switchToFullPrice(
     );
     if (!stopped.ok) return fail(`new subscription ${newCode} started, old ${input.oldSubscriptionCode} not stopped: ${stopped.error}`);
   }
-  return { ok: true };
+  return { ok: true, newCode };
+}
+
+/** Point the team's row at the full-price subscription and lock the full
+ *  price, so the team is not read as paying a grandfathered starting price.
+ *  Also used when a redelivered first charge overwrote both. Returns an error
+ *  message, or null. */
+export async function stampFullPrice(
+  admin: SupabaseClient,
+  userId: string,
+  plan: string,
+  subscriptionCode: string
+): Promise<string | null> {
+  const now = new Date().toISOString();
+  const { error } = await admin
+    .from('subscriptions')
+    .update({ paystack_subscription_code: subscriptionCode, updated_at: now })
+    .eq('user_id', userId);
+  if (error) return error.message;
+  const full = isSelfServeTier(plan) ? getTierPrice(plan, 'monthly') : null;
+  if (full) {
+    // Best effort: the column exists since 20261022170000; a miss only leaves
+    // the starting price locked, which refuses self-serve plan changes.
+    await admin.from('subscriptions').update({ price_locked_kobo: full.minorUnit }).eq('user_id', userId);
+  }
+  return null;
 }
 
 async function tellFounder(
