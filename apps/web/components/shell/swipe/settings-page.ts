@@ -2,6 +2,7 @@
 
 import type { SettingsSegment } from '@/lib/settings-nav';
 import { SETTINGS_PAGE_HREF } from '@/lib/swipe-nav';
+import { canHostSettings } from '@/lib/settings-nav';
 import { useSettingsPageStore } from '@/stores/useSettingsPageStore';
 import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
 
@@ -26,8 +27,10 @@ export function openSettingsPage(
   push(SETTINGS_PAGE_HREF);
 }
 
-/** True where Settings is a page: the swipe shell on a phone. */
+/** True where Settings is a page: everywhere in the app since Nov 2, 2026
+ *  (the computer layout, docs/mocks/desktop-nav), so never the pop-up. Pages
+ *  outside the app chrome still go through the dashboard. */
 export function settingsIsAPage(): boolean {
   if (typeof document === 'undefined') return false;
-  return Boolean(document.documentElement.dataset.swipeNav) && !window.matchMedia('(min-width: 1024px)').matches;
+  return canHostSettings(window.location.pathname);
 }
