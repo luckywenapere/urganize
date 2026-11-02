@@ -1,6 +1,16 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { ADMIN_NAV_ITEMS } from '@/components/admin/AdminNav';
+import { SecuritySection } from '@/components/settings/SecuritySection';
+import { DataExportSection } from '@/components/settings/DataExportSection';
+import { LeaveTeamSection } from '@/components/settings/LeaveTeamSection';
+import { DeleteAccountSection } from '@/components/settings/DeleteAccountSection';
+import { TeamBriefSection } from '@/components/settings/TeamBriefSection';
+import { WhatsappChasingSection } from '@/components/settings/WhatsappChasingSection';
+import { isTeamBriefEnabled } from '@/lib/team-brief';
+import { supabase } from '@/lib/supabase/client';
 import { ThemeToggle } from '@urganize/ui';
 import { useAuthStore } from '@/lib/auth-store';
 import { errorMessage } from '@/lib/errors';
@@ -221,5 +231,143 @@ export function NotificationRows() {
         </p>
       ) : null}
     </div>
+  );
+}
+
+// ── The rest of the settings as rows (Nov 2, 2026, founder: "do all") ───────
+// Each row opens its existing form in a sheet, so every setting reads as the
+// same short list of rows, and nothing about how a form saves changes.
+
+type SheetItem = { key: string; label: string; value?: ReactNode; danger?: boolean; render: () => ReactNode };
+
+/**
+ * Rows that open in place, under the row (Codex review on #1040). A row once
+ * opened stays mounted while folded, so a half-written form keeps its draft,
+ * and `openSection` (a search result's section id, which the item keys match)
+ * opens the right row straight away.
+ */
+function SheetRows({ groups, openSection }: { groups: SheetItem[][]; openSection?: string | null }) {
+  const [openKey, setOpenKey] = useState<string | null>(openSection ?? null);
+  const [visited, setVisited] = useState<string[]>(openSection ? [openSection] : []);
+  const [lastSection, setLastSection] = useState(openSection ?? null);
+  if ((openSection ?? null) !== lastSection) {
+    setLastSection(openSection ?? null);
+    if (openSection) {
+      setOpenKey(openSection);
+      if (!visited.includes(openSection)) setVisited([...visited, openSection]);
+    }
+  }
+  const toggle = (key: string) => {
+    setOpenKey((current) => (current === key ? null : key));
+    if (!visited.includes(key)) setVisited([...visited, key]);
+  };
+  return (
+    <div>
+      {groups
+        .filter((group) => group.length > 0)
+        .map((group, index) => (
+          <RowGroup key={index}>
+            {group.map((item) => (
+              <div key={item.key} id={item.key} className="scroll-mt-20 border-b border-content-primary/[0.07] last:border-b-0">
+                <button
+                  type="button"
+                  onClick={() => toggle(item.key)}
+                  aria-expanded={openKey === item.key}
+                  className="motion-press flex min-h-[54px] w-full items-center justify-between gap-4 text-left text-[16px]"
+                >
+                  <span className={item.danger ? 'text-status-error' : 'text-content-primary/60'}>{item.label}</span>
+                  <span className="min-w-0 truncate text-right text-content-primary">
+                    {item.value ?? <span className="text-content-primary/35">{openKey === item.key ? '\u2212' : '+'}</span>}
+                  </span>
+                </button>
+                {visited.includes(item.key) ? (
+                  <div className={openKey === item.key ? 'pb-4' : 'hidden'}>{item.render()}</div>
+                ) : null}
+              </div>
+            ))}
+          </RowGroup>
+        ))}
+    </div>
+  );
+}
+
+/**
+ * True when the signed-in person owns the team (an owner cannot leave it),
+ * read from /api/team like the Leave team form itself, so it is known on every
+ * plan setup (Codex review on #1040: the billing snapshot is not always there).
+ */
+function useIsTeamOwner(): boolean | null {
+  const [owner, setOwner] = useState<boolean | null>(null);
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) return;
+        const response = await fetch('/api/team', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+        if (!response.ok) return;
+        const team = (await response.json()) as { viewer?: { isOwner?: boolean } };
+        if (live && typeof team.viewer?.isOwner === 'boolean') setOwner(team.viewer.isOwner);
+      } catch {
+        // Unknown: the row stays hidden, as the form itself would.
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, []);
+  return owner;
+}
+
+const DATA_EXPORT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DATA_EXPORT === 'true';
+
+export function SecurityRows({ openSection }: { openSection?: string | null }) {
+  const isOwner = useIsTeamOwner();
+  return (
+    <SheetRows
+      openSection={openSection}
+      groups={[
+        [
+          { key: 'password', label: 'Password', value: 'Change', render: () => <SecuritySection /> },
+          ...(DATA_EXPORT_ENABLED
+            ? [{ key: 'export', label: 'Download your data', render: () => <DataExportSection /> }]
+            : []),
+        ],
+        [
+          ...(isOwner === false
+            ? [{ key: 'leave', label: 'Leave team', danger: true, render: () => <LeaveTeamSection /> }]
+            : []),
+          { key: 'delete-account', label: 'Delete account', danger: true, render: () => <DeleteAccountSection /> },
+        ],
+      ]}
+    />
+  );
+}
+
+export function UrgansRows({ openSection }: { openSection?: string | null }) {
+  return (
+    <SheetRows
+      openSection={openSection}
+      groups={[
+        [
+          ...(isTeamBriefEnabled()
+            ? [{ key: 'team-brief', label: 'Teach UrgAns about your team', render: () => <TeamBriefSection /> }]
+            : []),
+          { key: 'chasing', label: 'WhatsApp chasing', render: () => <WhatsappChasingSection /> },
+        ],
+      ]}
+    />
+  );
+}
+
+export function AdminRows() {
+  const router = useRouter();
+  return (
+    <RowGroup>
+      {ADMIN_NAV_ITEMS.map((item) => (
+        <Row key={item.key} label={item.label} value={<span className="text-content-primary/35">&rsaquo;</span>} onClick={() => router.push(item.href)} />
+      ))}
+    </RowGroup>
   );
 }

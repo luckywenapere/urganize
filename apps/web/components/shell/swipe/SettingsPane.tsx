@@ -15,15 +15,12 @@ import {
 import { searchSettings } from '@/lib/settings-search';
 import { getAccessToken } from '@/components/settings/getAccessToken';
 import { useWorkspaceSettings } from '@/components/settings/useWorkspaceSettings';
-import { AdminSegment } from '@/components/settings/segments/AdminSegment';
 import { ArtistsBrandSegment } from '@/components/settings/segments/ArtistsBrandSegment';
 import { BillingSegment } from '@/components/settings/segments/BillingSegment';
 import { ConnectionsSegment } from '@/components/settings/segments/ConnectionsSegment';
 import { DirectorySegment } from '@/components/settings/segments/DirectorySegment';
-import { SecuritySegment } from '@/components/settings/segments/SecuritySegment';
-import { UrgansSegment } from '@/components/settings/segments/UrgansSegment';
 import { MenuBody } from './AvatarMenu';
-import { NotificationRows, ProfileRows } from './SettingsRows';
+import { AdminRows, NotificationRows, ProfileRows, SecurityRows, UrgansRows } from './SettingsRows';
 
 /**
  * The Settings page (Nov 2, 2026, founder approved docs/mocks/settings-page):
@@ -147,7 +144,7 @@ export function SettingsPane({ showHelp }: { showHelp: boolean }) {
       <div className={target ? 'mt-4 pb-10' : 'hidden'}>
         {visited.map((segment) => (
           <div key={segment} className={target?.segment === segment ? '' : 'hidden'}>
-            {renderSegment(segment, workspace)}
+            {renderSegment(segment, workspace, target?.segment === segment ? target.section : null)}
           </div>
         ))}
       </div>
@@ -172,7 +169,11 @@ export function SettingsPane({ showHelp }: { showHelp: boolean }) {
   );
 }
 
-function renderSegment(segment: SettingsSegment, workspace: ReturnType<typeof useWorkspaceSettings>) {
+function renderSegment(
+  segment: SettingsSegment,
+  workspace: ReturnType<typeof useWorkspaceSettings>,
+  section: string | null = null
+) {
   switch (segment) {
     // Grouped rows on the phone (docs/mocks/settings-rows); the others follow.
     case 'general':
@@ -182,17 +183,17 @@ function renderSegment(segment: SettingsSegment, workspace: ReturnType<typeof us
     case 'artists':
       return <ArtistsBrandSegment workspace={workspace} />;
     case 'urgans':
-      return <UrgansSegment />;
+      return <UrgansRows openSection={section} />;
     case 'directory':
       return <DirectorySegment />;
     case 'admin':
-      return <AdminSegment />;
+      return <AdminRows />;
     case 'billing':
       return <BillingSegment />;
     case 'connections':
       return <ConnectionsSegment />;
     case 'security':
-      return <SecuritySegment />;
+      return <SecurityRows openSection={section} />;
     case 'team':
       // Team is its own page; its row links there, so this is never shown.
       return null;
