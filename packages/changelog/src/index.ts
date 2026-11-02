@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.239.2",
+    tag: "Account",
+    date: "November 2, 2026",
+    highlights: [
+      "The green circle around your photo is gone. In Settings your photo just gets a thin outline.",
+      "A setting opens full screen, with a round back button and no tabs above it.",
+    ],
+  },
+  {
     version: "1.239.1",
     tag: "Account",
     date: "November 2, 2026",

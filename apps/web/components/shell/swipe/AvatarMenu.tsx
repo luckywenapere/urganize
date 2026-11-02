@@ -124,6 +124,9 @@ export function AvatarMenu({ showHelp, settingsActive = false }: { showHelp: boo
           // A phone opens the Settings page, the fourth page of the swipe row
           // (Nov 2, 2026). A computer keeps the popover.
           if (!isDesktop) {
+            // A tap must not leave focus on the button: its focus ring was the
+            // big green circle around the photo (founder, Nov 2, 2026).
+            (document.activeElement as HTMLElement | null)?.blur?.();
             openSettingsPage((href) => router.push(href));
             return;
           }
@@ -137,7 +140,9 @@ export function AvatarMenu({ showHelp, settingsActive = false }: { showHelp: boo
         // lives in the account page (#971, Nov 1, 2026).
         data-tour="nav-team"
         aria-current={settingsActive ? 'page' : undefined}
-        className="motion-focus motion-press grid h-11 w-11 place-items-center rounded-full lg:h-12 lg:w-12"
+        // No ring around the 44px button: keyboard focus outlines the photo
+        // itself, the same shape as the Settings outline.
+        className="motion-press grid h-11 w-11 place-items-center rounded-full outline-none [&:focus-visible>span]:shadow-[0_0_0_2px_rgb(var(--color-brand))] lg:h-12 lg:w-12"
       >
         {/* While Settings shows, a thin light border hugs the photo itself, no
             gap (founder's reference, Nov 2, 2026), with a soft shadow so it

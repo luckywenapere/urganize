@@ -22,6 +22,7 @@ import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { SESSIONS_HREF, swipeAreaForPath, swipeTabForPath } from '@/lib/swipe-nav';
 import { nextHomeMemory, type TabMemoryPlace } from '@/lib/tab-memory';
 import { useTabMemoryStore } from '@/stores/useTabMemoryStore';
+import { useSettingsPageStore } from '@/stores/useSettingsPageStore';
 import { RECORD_CAPTURE_PLACEHOLDER, recordIdFromPath } from '@/lib/chappi/record-scope';
 import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
 import { useNeedsYouStore } from '@/stores/useNeedsYouStore';
@@ -74,6 +75,7 @@ export function SwipeFrame({
   const onTab = tab !== null;
   const loadNeedsYou = useNeedsYouStore((state) => state.load);
   const sessionOpen = useSessionsViewStore((state) => state.releaseId !== null);
+  const settingOpen = useSettingsPageStore((state) => state.target !== null);
 
   // Home remembers the rollout or artist page you left it on (lib/tab-memory.ts).
   const searchString = searchParams.toString();
@@ -127,7 +129,9 @@ export function SwipeFrame({
       {onTab ? (
         <div className="swipe-frame flex flex-col bg-bg-base">
           {banners}
-          <SwipeTopBar showHelp={showHelp} pagerActive />
+          {/* Inside one setting the page is full screen: no tabs above it
+              (founder, Nov 2, 2026, with the reference). */}
+          {tab === 'settings' && settingOpen ? null : <SwipeTopBar showHelp={showHelp} pagerActive />}
           <main id="main-content" tabIndex={-1} className="flex min-h-0 flex-1 flex-col focus:outline-none">
             <WorkspacePageErrorBoundary>
               <SwipePager
