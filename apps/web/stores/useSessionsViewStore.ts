@@ -25,18 +25,43 @@ type SessionsViewState = {
   setPinnedScope: (value: boolean) => void;
 };
 
+const OPEN_KEY = 'urganize.tab-memory.rollout-chat';
+
+function readOpen(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.sessionStorage.getItem(OPEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
 export const useSessionsViewStore = create<SessionsViewState>((set) => ({
-  releaseId: null,
+  releaseId: readOpen(),
   backTo: null,
   pinnedScope: false,
   readyFor: null,
   setReadyFor: (readyFor) => set({ readyFor }),
-  open: (releaseId) => set({ releaseId }),
+  open: (releaseId) => {
+    // The open rollout chat survives a reload of the tab (Nov 2, 2026).
+    try {
+      if (releaseId) window.sessionStorage.setItem(OPEN_KEY, releaseId);
+      else window.sessionStorage.removeItem(OPEN_KEY);
+    } catch {
+      // Storage blocked: it still lasts for this page life.
+    }
+    set({ releaseId });
+  },
   setBackTo: (backTo) => set({ backTo: backTo ? { ...backTo, at: Date.now() } : null }),
   setPinnedScope: (pinnedScope) => set({ pinnedScope }),
 }));
 
 registerSignOutReset('sessions-view', () => {
+  try {
+    window.sessionStorage.removeItem(OPEN_KEY);
+  } catch {
+    // Nothing to clear.
+  }
   useSessionsViewStore.setState({ releaseId: null, backTo: null, pinnedScope: false, readyFor: null });
 });
 

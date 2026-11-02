@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.238.0",
+    title: "Tabs remember where you were",
+    tag: "App",
+    date: "November 2, 2026",
+    highlights: [
+      "Leave a rollout for its chat and swipe back to Home: you land on that rollout again.",
+      "The rollout chat you had open is still open after a reload.",
+      "Sessions is now called Rollouts.",
+    ],
+  },
+  {
     version: "1.237.3",
     tag: "Account",
     date: "November 2, 2026",

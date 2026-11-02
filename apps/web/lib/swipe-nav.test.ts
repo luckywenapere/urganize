@@ -226,7 +226,7 @@ describe('swipeDocumentTitle', () => {
   it('names each swipe tab with the brand once', async () => {
     const { swipeDocumentTitle } = await import('./swipe-nav');
     expect(swipeDocumentTitle('urgans')).toBe('Assistant | Urganize');
-    expect(swipeDocumentTitle('sessions')).toBe('Sessions | Urganize');
+    expect(swipeDocumentTitle('sessions')).toBe('Rollouts | Urganize');
     expect(swipeDocumentTitle('artists')).toBe('Artists | Urganize');
   });
   it('the pager sets it and Directory leaves the brand to the template', async () => {

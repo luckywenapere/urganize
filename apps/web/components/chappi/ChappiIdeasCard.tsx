@@ -83,6 +83,9 @@ export function ChappiIdeasCard({
       method: 'POST',
       body: JSON.stringify({ action: 'suggest', idea: suggest }),
     }).then((result) => {
+      // A newer idea asked again while this one was out: drop this answer
+      // (Codex review on #1027), so Apply never applies changes from an older idea.
+      if (suggested.current !== suggest) return;
       if (result.ok && result.data.view) setChanges({ status: 'ready', view: result.data.view });
       else setChanges({ status: 'error', message: result.ok ? 'Could not read the plan just now.' : result.error });
     });

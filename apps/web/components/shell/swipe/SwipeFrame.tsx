@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, type ReactNode } from 'react';
+import { Suspense, useEffect, useRef, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import ArtistsPageClient from '@/app/dashboard/artists/ArtistsPageClient';
@@ -19,7 +19,9 @@ import { WorkspacePageErrorBoundary } from '@/components/app/WorkspacePageErrorB
 import { RootShellSkeleton } from '@/components/loading/RootShellSkeleton';
 import { HomeAskBar } from '@/components/home/HomeAskBar';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
-import { SESSIONS_HREF, swipeTabForPath } from '@/lib/swipe-nav';
+import { SESSIONS_HREF, swipeAreaForPath, swipeTabForPath } from '@/lib/swipe-nav';
+import { nextHomeMemory, type TabMemoryPlace } from '@/lib/tab-memory';
+import { useTabMemoryStore } from '@/stores/useTabMemoryStore';
 import { RECORD_CAPTURE_PLACEHOLDER, recordIdFromPath } from '@/lib/chappi/record-scope';
 import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
 import { useNeedsYouStore } from '@/stores/useNeedsYouStore';
@@ -71,6 +73,20 @@ export function SwipeFrame({
   const onTab = tab !== null;
   const loadNeedsYou = useNeedsYouStore((state) => state.load);
   const sessionOpen = useSessionsViewStore((state) => state.releaseId !== null);
+
+  // Home remembers the rollout or artist page you left it on (lib/tab-memory.ts).
+  const searchString = searchParams.toString();
+  const lastPlace = useRef<TabMemoryPlace | null>(null);
+  useEffect(() => {
+    const place: TabMemoryPlace = {
+      path: `${pathname}${searchString ? `?${searchString}` : ''}`,
+      onTab,
+      area: swipeAreaForPath(pathname, searchString),
+    };
+    const store = useTabMemoryStore.getState();
+    store.setHomePath(nextHomeMemory(store.homePath, lastPlace.current, place));
+    lastPlace.current = place;
+  }, [pathname, searchString, onTab]);
 
   useEffect(() => {
     void loadNeedsYou();
