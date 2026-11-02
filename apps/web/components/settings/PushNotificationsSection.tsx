@@ -51,7 +51,12 @@ const NATIVE_STATUS_COPY: Record<PushStatus, string> = {
   disabled: 'Turn on notifications to hear about activity assignments, due dates, and status changes on this device.',
 };
 
-export function PushNotificationsSection() {
+/**
+ * The push switch's state and action, shared by the pop-up's row and the
+ * phone's Settings page row (Nov 2, 2026). `status` is null until the probe
+ * answers, so nothing flashes the wrong state.
+ */
+export function usePushToggle() {
   const native = NATIVE_PUSH_ENABLED && isNativePushAvailable();
   const [status, setStatus] = useState<PushStatus | null>(null);
   const [isWorking, setIsWorking] = useState(false);
@@ -68,14 +73,11 @@ export function PushNotificationsSection() {
     };
   }, [native]);
 
-  // Renders nothing until the status probe resolves so there's no flash of
-  // the wrong state. Since 2026-10-17 this is the only row in the
-  // Notifications tab, so a device that can't do push gets the one-line
-  // "not supported" note with no button, instead of an empty tab.
-  if (status === null) return null;
   const unsupported = !native && !isPushSupported();
+  const shownStatus: PushStatus | null = status === null ? null : unsupported ? 'unsupported' : status;
 
-  const handleToggle = async () => {
+  const toggle = async () => {
+    if (status === null) return;
     setError('');
     setIsWorking(true);
     try {
@@ -96,7 +98,20 @@ export function PushNotificationsSection() {
   };
 
   const copy = native ? NATIVE_STATUS_COPY : STATUS_COPY;
-  const shownStatus: PushStatus = unsupported ? 'unsupported' : status;
+  return { native, shownStatus, isWorking, error, toggle, copy };
+}
+
+export function PushNotificationsSection() {
+  const { native, shownStatus, isWorking, error, toggle } = usePushToggle();
+
+  // Renders nothing until the status probe resolves so there's no flash of
+  // the wrong state. Since 2026-10-17 this is the only row in the
+  // Notifications tab, so a device that can't do push gets the one-line
+  // "not supported" note with no button, instead of an empty tab.
+  if (shownStatus === null) return null;
+  const handleToggle = toggle;
+
+  const copy = native ? NATIVE_STATUS_COPY : STATUS_COPY;
   const isEnabled = shownStatus === 'enabled';
 
   return (
