@@ -225,12 +225,12 @@ describe('tier prices and the sales-led tier', () => {
   // repo has five times advertised one price and charged another. If this fails,
   // the arithmetic moved: mint the Plans and repoint the vars BEFORE shipping it.
   it('resolves the yearly prices to the figures the Plans must be minted at', () => {
-    // 2026-10-31: Emerging (solo) ₦2,600 / ₦13,000 / ₦26,000 and Pro (manager)
+    // 2026-11-02: Emerging (solo) ₦4,000 / ₦20,000 / ₦40,000; 2026-10-31: Pro (manager)
     // ₦26,000 / ₦130,000 / ₦260,000. Mint these Plans and repoint the
     // PAYSTACK_PLAN_* vars; until then card checkout refuses. Label is unchanged (₦600,000 minted).
-    expect(getTierPrice('solo', 'annual')?.amount).toBe(26_000);
+    expect(getTierPrice('solo', 'annual')?.amount).toBe(40_000);
     expect(getTierPrice('manager', 'annual')?.amount).toBe(260_000);
-    expect(getTierPrice('solo', 'semiannual')?.amount).toBe(13_000);
+    expect(getTierPrice('solo', 'semiannual')?.amount).toBe(20_000);
     expect(getTierPrice('manager', 'semiannual')?.amount).toBe(130_000);
     expect(getTierPrice('label', 'annual')?.amount).toBe(1_000_000);
   });
@@ -239,12 +239,12 @@ describe('tier prices and the sales-led tier', () => {
     // "/month" and "/year" rather than "/mo" and "/yr": the founder's copy rules
     // ask for fifth-grade readable, and an abbreviation is one more thing to
     // decode. The no-argument call takes the default, which is monthly.
-    expect(formatTierPrice('solo')).toBe('₦2,600/month');
+    expect(formatTierPrice('solo')).toBe('₦4,000/month');
     expect(formatTierPrice('manager')).toBe('₦26,000/month');
     expect(formatTierPrice('manager', 'semiannual')).toBe('₦130,000 for 6 months');
     // Label keeps its price for teams already on it, but no page shows it.
     expect(formatTierPrice('label')).toBeNull();
-    expect(formatTierPrice('solo', 'annual')).toBe('₦26,000/year');
+    expect(formatTierPrice('solo', 'annual')).toBe('₦40,000/year');
     expect(formatTierPrice('manager', 'annual')).toBe('₦260,000/year');
     expect(formatTierPrice('label', 'annual')).toBeNull();
   });

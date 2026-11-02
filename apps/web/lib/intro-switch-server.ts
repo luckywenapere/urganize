@@ -104,7 +104,7 @@ async function tellFounder(
     ownerUserId: input.userId,
     actorUserId: null,
     planViewed: input.plan,
-    note: `Starting price ended after ${INTRO_MONTHS} months. Swap the Paystack subscription to the full-price ${input.plan} Plan before ${input.startAt ?? 'the next charge'}. Automatic switch failed: ${reason}`,
+    note: `Starting price ended after ${INTRO_MONTHS === 1 ? '1 month' : `${INTRO_MONTHS} months`}. Swap the Paystack subscription to the full-price ${input.plan} Plan before ${input.startAt ?? 'the next charge'}. Automatic switch failed: ${reason}`,
     metadata: { direction: 'intro_ended', oldSubscriptionCode: input.oldSubscriptionCode, reason },
   });
 }

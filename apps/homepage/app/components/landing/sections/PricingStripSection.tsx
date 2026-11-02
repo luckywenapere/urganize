@@ -48,6 +48,8 @@ export function PricingStripSection() {
           ? `${new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(intro.amount)}/month`
           : formatTierPrice(id),
       then: tier.contactSales ? null : introThenLine(id),
+      // The full price struck through above the offer (founder, Nov 2, 2026).
+      was: !tier.contactSales && intro ? formatTierPrice(id) : null,
       highlights: tierHighlights(id).slice(0, 3),
     };
   });
@@ -74,7 +76,7 @@ export function PricingStripSection() {
         {/* Solo, Manager and Label ("Let's talk") since 2026-10-26, when Group
             came off. One column on a phone, three from md, like /pricing. */}
         <ul className="mx-auto mt-12 grid max-w-[60rem] gap-4 md:grid-cols-3">
-          {tiers.map(({ id, tier, price, then, highlights }) => (
+          {tiers.map(({ id, tier, price, then, was, highlights }) => (
             <li
               key={id}
               className="flex h-full flex-col rounded-[1.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5 sm:p-6"
@@ -90,7 +92,10 @@ export function PricingStripSection() {
               <p className="mt-3 text-sm leading-6 text-[var(--marketing-text-muted)]">
                 {tier.audience}
               </p>
-              <p className="mt-4 text-[1.6rem] font-semibold sm:mt-5 sm:text-[1.75rem] tracking-[-0.03em] text-[var(--marketing-text)]">
+              {was ? (
+                <p className="mt-4 text-sm text-[var(--marketing-text-muted)] line-through sm:mt-5">{was}</p>
+              ) : null}
+              <p className={`${was ? "mt-0.5" : "mt-4 sm:mt-5"} text-[1.6rem] font-semibold sm:text-[1.75rem] tracking-[-0.03em] text-[var(--marketing-text)]`}>
                 {price ?? "Let’s talk"}
               </p>
               {then ? (

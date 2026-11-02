@@ -268,7 +268,7 @@ describe('matchBudgetOffer', () => {
     expect(matchBudgetOffer({ tier: 'manager', band: 'low', planCodes: {} })).toEqual({
       kind: 'switch_plan',
       tier: 'solo',
-      price: 2_600,
+      price: 4_000,
     });
     // Label at ₦100,000 (2026-10-26) has a lowest band under ₦45,000, so
     // Pro at ₦26,000 is the dearest cheaper plan that fits.
@@ -299,8 +299,8 @@ describe('matchBudgetOffer', () => {
   it('names the env vars the setup needs', () => {
     expect(retentionPlanEnvVar('manager', 15000)).toBe('PAYSTACK_PLAN_MANAGER_RETENTION_15000');
     expect(allRetentionPlanEnvVars().map((row) => row.envVar)).toEqual([
-      'PAYSTACK_PLAN_SOLO_RETENTION_2000',
       'PAYSTACK_PLAN_SOLO_RETENTION_2500',
+      'PAYSTACK_PLAN_SOLO_RETENTION_3500',
       'PAYSTACK_PLAN_MANAGER_RETENTION_18000',
       'PAYSTACK_PLAN_MANAGER_RETENTION_24000',
       'PAYSTACK_PLAN_LABEL_RETENTION_70000',
