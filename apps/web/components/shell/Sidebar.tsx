@@ -15,9 +15,6 @@ import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { shellSideMenu } from '@/lib/shell-nav';
 import { useShellAreas } from './useShellAreas';
 import { useNavTip } from './useNavTip';
-import { AvatarFace } from '@/components/shell/swipe/AvatarMenu';
-import { SETTINGS_PAGE_HREF } from '@/lib/swipe-nav';
-import { useSettingsPageStore } from '@/stores/useSettingsPageStore';
 
 /**
  * The desktop side menu (URG-254, 2026-10-14; design review with Femi,
@@ -79,7 +76,7 @@ type SidebarProps = {
  * this file: a phone keeps Settings and the help rows in the bottom bar's
  * More sheet, unchanged.
  */
-export function Sidebar({ account = true }: SidebarProps = {}) {
+export function Sidebar(_props: SidebarProps = {}) {
   const pathname = usePathname() ?? '/dashboard';
   const areas = useShellAreas();
   const menu = shellSideMenu(areas, pathname);
@@ -93,7 +90,9 @@ export function Sidebar({ account = true }: SidebarProps = {}) {
 
   // The swipe navigation's pages with no menu: the avatar is in its top bar,
   // so there is nothing left for the rail to hold.
-  if (!account && !menu) return null;
+  // Your photo lives only in the top bar now (Nov 2, 2026, founder), so a
+  // page with no side menu draws no rail at all.
+  if (!menu) return null;
 
   return (
     <aside
@@ -134,22 +133,6 @@ export function Sidebar({ account = true }: SidebarProps = {}) {
           {tip.panel}
         </nav>
       ) : null}
-      {!menu ? <div className="flex-1" aria-hidden="true" /> : null}
-      <div data-sidebar-foot className="flex shrink-0 flex-col items-center pt-2">
-        {/* Your photo opens Settings over the whole screen (Nov 2, 2026,
-            founder approved docs/mocks/desktop-settings-full); the pop-up
-            account menu is gone. */}
-        {account ? (
-          <Link
-            href={SETTINGS_PAGE_HREF}
-            onClick={() => useSettingsPageStore.getState().setTarget(null)}
-            aria-label="Settings"
-            className="motion-focus motion-press grid h-10 w-10 place-items-center rounded-full"
-          >
-            <AvatarFace size={32} />
-          </Link>
-        ) : null}
-      </div>
     </aside>
   );
 }
