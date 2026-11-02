@@ -31,3 +31,12 @@ describe('nextHomeMemory', () => {
     expect(nextHomeMemory(rollout.path, sessions, settings)).toBe(rollout.path);
   });
 });
+
+describe('sign-out clears the remembered places', () => {
+  it('names both keys, and the auth store removes them by key', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { TAB_MEMORY_STORAGE_KEYS } = await import('./tab-memory');
+    expect(TAB_MEMORY_STORAGE_KEYS).toEqual(['urganize.tab-memory.home', 'urganize.tab-memory.rollout-chat']);
+    expect(readFileSync('lib/auth-store.ts', 'utf8')).toContain('for (const key of TAB_MEMORY_STORAGE_KEYS) window.sessionStorage.removeItem(key);');
+  });
+});

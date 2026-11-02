@@ -46,6 +46,8 @@ import { useSettingsDirtyStore } from '@/stores/useSettingsDirtyStore';
 import { getAccessToken } from './getAccessToken';
 import { SettingsNav } from './SettingsNav';
 import { useCloseSettings, useOpenSettings, writeSettingsUrl } from './useOpenSettings';
+import { useSwipeNav } from '@/stores/useSwipeNavStore';
+import { openSettingsPage } from '@/components/shell/swipe/settings-page';
 import { useIsWide } from './useIsWide';
 import { useTeammates } from './useTeammates';
 import { useWorkspaceSettings } from './useWorkspaceSettings';
@@ -101,6 +103,18 @@ function SettingsModalGate() {
   const user = useAuthStore((s) => s.user);
   const router = useRouter();
   const toTeamTab = state?.request === 'team';
+  // On a phone with the swipe shell, Settings is a page (Nov 2, 2026): a
+  // ?settings= link (emails, bookmarks, older buttons) opens that page on the
+  // same setting instead of the pop-up.
+  const swipePhone = useSwipeNav();
+  const toPage = Boolean(state) && !toTeamTab && swipePhone;
+  const pageRequest = state?.request ?? null;
+  const pageSection = state?.section ?? null;
+  useEffect(() => {
+    if (!toPage || !pageRequest) return;
+    const segment = pageRequest === SETTINGS_MENU ? null : pageRequest;
+    openSettingsPage((href) => router.replace(href), segment ? { segment, section: pageSection } : null);
+  }, [toPage, pageRequest, pageSection, router]);
 
   // Settings → Team is the Team tab now (#853): an old ?settings=team link
   // (emails, bookmarks) lands there instead of on the Settings menu.
@@ -108,7 +122,7 @@ function SettingsModalGate() {
     if (toTeamTab) router.replace(TEAM_PAGE_HREF);
   }, [toTeamTab, router]);
 
-  if (toTeamTab) return null;
+  if (toTeamTab || toPage) return null;
   if (!state || !user || typeof document === 'undefined') return null;
   return createPortal(
     <SettingsDialog request={state.request} section={state.section} />,

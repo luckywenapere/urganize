@@ -14,7 +14,11 @@
 import { URGANS_HREF, ARTISTS_HREF, TEAM_HREF, CATALOGUE_LABEL } from './shell-nav';
 import { artistIdFromPath } from './artist-page';
 
-export type SwipeTabKey = 'artists' | 'urgans' | 'sessions';
+export type SwipeTabKey = 'artists' | 'urgans' | 'sessions' | 'settings';
+
+/** The Settings page (Nov 2, 2026): the fourth page of the swipe row, after
+ *  Rollouts, opened from your photo. It has no label in the tab row. */
+export const SETTINGS_PAGE_HREF = '/dashboard/account';
 
 /** The Sessions tab: one session per rollout (Nov 2, 2026). */
 export const SESSIONS_HREF = '/dashboard/sessions';
@@ -28,6 +32,12 @@ export const SWIPE_TABS: readonly SwipeTab[] = [
   // Named Rollouts (Nov 2, 2026, founder): one chat per rollout. The address
   // and the key stay 'sessions'.
   { key: 'sessions', label: 'Rollouts', href: SESSIONS_HREF },
+];
+
+/** Every page of the swipe row: the three tabs, then Settings. */
+export const SWIPE_PAGES: readonly SwipeTab[] = [
+  ...SWIPE_TABS,
+  { key: 'settings', label: 'Settings', href: SETTINGS_PAGE_HREF },
 ];
 
 /** The user_metadata key a person's own choice is kept in (false = classic). */
@@ -97,6 +107,7 @@ export function swipeTabForPath(pathname: string | null | undefined, search?: Se
   if (path === '/dashboard/artists') return 'artists';
   if (path === URGANS_HREF) return 'urgans';
   if (path === SESSIONS_HREF) return 'sessions';
+  if (path === SETTINGS_PAGE_HREF) return 'settings';
   return null;
 }
 
@@ -172,12 +183,12 @@ export function swipeBackAction(
 export function swipeDocumentTitle(key: SwipeTabKey): string {
   // The Artists page keeps its own name in the browser tab; the menu word is Home.
   if (key === 'artists') return 'Artists | Urganize';
-  const tab = SWIPE_TABS.find((entry) => entry.key === key);
+  const tab = SWIPE_PAGES.find((entry) => entry.key === key);
   return `${tab ? tab.label : 'Artists'} | Urganize`;
 }
 
 export function swipeTabIndex(key: SwipeTabKey): number {
-  return SWIPE_TABS.findIndex((tab) => tab.key === key);
+  return SWIPE_PAGES.findIndex((tab) => tab.key === key);
 }
 
 // ── Gestures ────────────────────────────────────────────────────────────────

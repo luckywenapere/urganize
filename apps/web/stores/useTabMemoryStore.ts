@@ -2,8 +2,7 @@
 
 import { create } from 'zustand';
 import { registerSignOutReset } from '@/lib/sign-out-resets';
-
-const KEY = 'urganize.tab-memory.home';
+import { HOME_MEMORY_KEY as KEY } from '@/lib/tab-memory';
 
 function read(): string | null {
   try {

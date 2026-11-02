@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
-  SWIPE_TABS,
+  SWIPE_PAGES,
   clampDrag,
   lockDirection,
   settleIndex,
@@ -19,9 +19,11 @@ import { isEdgeStart } from '@/lib/swipe-edge';
 import { prefersReducedMotion } from '@/lib/home-chat-glide';
 import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
 import { useTabMemoryStore } from '@/stores/useTabMemoryStore';
+import { useSettingsPageStore } from '@/stores/useSettingsPageStore';
 import { setSwipeProgress } from './progress';
 
-const COUNT = SWIPE_TABS.length;
+// Every page of the row; Settings, the last, is reachable only while open.
+const COUNT = SWIPE_PAGES.length;
 /** Long-press before moving: a text selection or a held message, never a page turn. */
 const LONG_PRESS_MS = 450;
 
@@ -53,11 +55,18 @@ function pagingFrozen(target: EventTarget | null): boolean {
  * route fetch, the URG-362 pattern): tabs are peers, so the OS back-swipe must not
  * walk tab history. Back and Forward from a deep link still move the pager.
  */
+/** How many pages a finger can reach: Settings only while it is open. */
+const reach = () => (useSettingsPageStore.getState().open ? COUNT : COUNT - 1);
+
 export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> }) {
   const pathname = usePathname();
   // The query too: /dashboard is Artists, /dashboard?release= a rollout over it.
   const searchParams = useSearchParams();
   const routeTab = swipeTabForPath(pathname, searchParams) ?? 'artists';
+  // Landing on the Settings address (a reload, a link) puts Settings in the row.
+  useEffect(() => {
+    if (routeTab === 'settings') useSettingsPageStore.getState().setOpen(true);
+  }, [routeTab]);
   // Paging is for the three tab pages only; an artist or rollout page opened from
   // a tab is a detail screen and a sideways drag there must not switch tabs.
   const onTabPage = swipeTabForPath(pathname, searchParams) !== null;
@@ -80,6 +89,8 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
   // or artist page (lib/tab-memory.ts); that page opens once the glide settles.
   const restoreHome = useRef<string | null>(null);
   const settle = useCallback(() => {
+    // Settings leaves the row once you are back on Home (the approved mock).
+    if (committed.current === 0) useSettingsPageStore.getState().setOpen(false);
     const target = restoreHome.current;
     restoreHome.current = null;
     if (target) router.push(target, { scroll: false });
@@ -89,7 +100,7 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
   const [initialTransform] = useState(() => `translate3d(${(-swipeTabIndex(routeTab) * 100) / COUNT}%, 0, 0)`);
 
   const mountAll = useCallback(() => {
-    setMounted((current) => (current.size === COUNT ? current : new Set(SWIPE_TABS.map((_, i) => i))));
+    setMounted((current) => (current.size === COUNT ? current : new Set(SWIPE_PAGES.map((_, i) => i))));
   }, []);
 
   const paint = useCallback((pos: number) => {
@@ -105,13 +116,13 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
     setActive(index);
     if (push && index !== previous) {
       restoreHome.current =
-        SWIPE_TABS[index].key === 'artists' ? useTabMemoryStore.getState().homePath : null;
-      const href = SWIPE_TABS[index].href;
+        SWIPE_PAGES[index].key === 'artists' ? useTabMemoryStore.getState().homePath : null;
+      const href = SWIPE_PAGES[index].href;
       if (window.location.pathname !== href) window.history.replaceState(null, '', href);
     }
     // The URL is written without a route change, so Next never re-reads the
     // page's metadata: set the tab title here to follow the page on screen.
-    if (index !== previous) document.title = swipeDocumentTitle(SWIPE_TABS[index].key);
+    if (index !== previous) document.title = swipeDocumentTitle(SWIPE_PAGES[index].key);
   }, []);
 
   const animateTo = useCallback(
@@ -272,7 +283,7 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
       }
       event.preventDefault();
       const width = viewport.clientWidth || 1;
-      const drag = clampDrag(dx, committed.current, COUNT);
+      const drag = clampDrag(dx, committed.current, reach());
       paint(committed.current - drag / width);
       const now = performance.now();
       samples.push({ x: touch.clientX, t: now });
@@ -289,7 +300,7 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
       const first = samples[0];
       const now = performance.now();
       const velocity = first && now - first.t > 0 ? ((touch.clientX - first.x) / (now - first.t)) * 1000 : 0;
-      const target = settleIndex({ index: committed.current, count: COUNT, dx, width, velocity });
+      const target = settleIndex({ index: committed.current, count: reach(), dx, width, velocity });
       // The spring starts from the finger's speed, in pages per second.
       animateTo(target, { velocity: -velocity / width });
     };
@@ -318,7 +329,7 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
         className="flex h-full flex-nowrap will-change-transform"
         style={{ width: `${COUNT * 100}%`, transform: initialTransform }}
       >
-        {SWIPE_TABS.map((tab, i) => (
+        {SWIPE_PAGES.map((tab, i) => (
           <section
             key={tab.key}
             aria-label={tab.label}

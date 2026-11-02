@@ -33,3 +33,8 @@ export function nextHomeMemory(
   }
   return remembered;
 }
+
+/** The sessionStorage keys that remember places, cleared on every sign-out. */
+export const HOME_MEMORY_KEY = 'urganize.tab-memory.home';
+export const ROLLOUT_CHAT_KEY = 'urganize.tab-memory.rollout-chat';
+export const TAB_MEMORY_STORAGE_KEYS = [HOME_MEMORY_KEY, ROLLOUT_CHAT_KEY] as const;

@@ -23,6 +23,7 @@ export const artistHref = (artistId: string): string =>
  *  holds this list to the folders on disk, so a new page cannot be read as an
  *  artist. */
 export const DASHBOARD_SECTIONS: readonly string[] = [
+  'account',
   'artists',
   'audience',
   'cancel',

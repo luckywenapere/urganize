@@ -3,6 +3,7 @@
 import { useCallback, type MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { markNavigationBlocked } from '@/lib/nav-stall-watch';
+import { openSettingsPage, settingsIsAPage } from '@/components/shell/swipe/settings-page';
 import {
   clearSettingsEntryMark,
   clearSettingsSegmentEntries,
@@ -69,6 +70,12 @@ export function useOpenSettings() {
       // Settings → Team is the Team tab now (#853): a page of its own, so it is
       // a navigation like any page without app chrome.
       const toTeamTab = target?.segment === 'team';
+      // On a phone with the swipe shell, Settings is a page, not this pop-up.
+      if (!toTeamTab && settingsIsAPage()) {
+        const segment = target?.segment && target.segment !== SETTINGS_MENU ? target.segment : null;
+        openSettingsPage((href) => router.push(href), segment ? { segment, section: target?.section ?? null } : null);
+        return;
+      }
       const url = toTeamTab
         ? TEAM_PAGE_HREF
         : canHostSettings(pathname)

@@ -35,7 +35,10 @@ import { useOpenSettings } from '@/components/settings/useOpenSettings';
 import { useHelpMenuGroups } from '@/components/app/HelpMenu';
 import { useShellAreas } from '@/components/shell/useShellAreas';
 import { describeRole, initialsFor } from '@/lib/swipe-nav';
-import { SwipeSheet, SHEET_ROW } from './SwipeSheet';
+import { SHEET_ROW } from './SwipeSheet';
+import { openSettingsPage } from './settings-page';
+import { useRouter } from 'next/navigation';
+import { LogOut } from '@/components/icons';
 import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 
 type Icon = ComponentType<LucideProps>;
@@ -83,11 +86,12 @@ export function AvatarFace({ size = 32, dot = false }: { size?: number; dot?: bo
  * `connections` state and the <ConnectionsSheet> mount (see git history of
  * this file at #860), and turn the Settings segment back on in settings-nav.
  */
-export function AvatarMenu({ showHelp }: { showHelp: boolean }) {
+export function AvatarMenu({ showHelp, settingsActive = false }: { showHelp: boolean; settingsActive?: boolean }) {
   const [open, setOpen] = useState(false);
   const newOpportunities = useNewOpportunities();
   const wrapRef = useRef<HTMLDivElement>(null);
   const isDesktop = useIsDesktopViewport();
+  const router = useRouter();
 
   // Desktop popover: a click outside or Escape closes it. Desktop only: on a
   // phone the menu is a SwipeSheet portalled to <body>, outside wrapRef, so
@@ -116,7 +120,15 @@ export function AvatarMenu({ showHelp }: { showHelp: boolean }) {
     <div ref={wrapRef} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          // A phone opens the Settings page, the fourth page of the swipe row
+          // (Nov 2, 2026). A computer keeps the popover.
+          if (!isDesktop) {
+            openSettingsPage((href) => router.push(href));
+            return;
+          }
+          setOpen((value) => !value);
+        }}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={newOpportunities > 0 ? 'Account and more, something new' : 'Account and more'}
@@ -124,7 +136,10 @@ export function AvatarMenu({ showHelp }: { showHelp: boolean }) {
         // The rollout tour's team step points here on a phone, where Team now
         // lives in the account page (#971, Nov 1, 2026).
         data-tour="nav-team"
-        className="motion-focus motion-press grid h-11 w-11 place-items-center rounded-full lg:h-12 lg:w-12"
+        aria-current={settingsActive ? 'page' : undefined}
+        className={`motion-focus motion-press grid h-11 w-11 place-items-center rounded-full transition-shadow lg:h-12 lg:w-12 ${
+          settingsActive ? 'ring-2 ring-brand ring-offset-2 ring-offset-bg-base' : ''
+        }`}
       >
         <span className="lg:hidden">
           <AvatarFace size={32} dot={newOpportunities > 0} />
@@ -145,23 +160,25 @@ export function AvatarMenu({ showHelp }: { showHelp: boolean }) {
         </div>
       ) : null}
 
-      {/* Phone: a bottom sheet. */}
-      <SwipeSheet open={open && !isDesktop} label="Account and more" onClose={close} desktop="phone">
-        <MenuBody showHelp={showHelp} onClose={close} />
-      </SwipeSheet>
     </div>
   );
 }
 
-function MenuBody({
+export function MenuBody({
   showHelp,
   onClose,
   desktop = false,
+  onOpenSegment,
 }: {
   showHelp: boolean;
   onClose: () => void;
   desktop?: boolean;
+  /** The Settings page: rows open their setting inside the page instead of the
+   *  pop-up, and there is no close button or search at the top (the page's
+   *  search sits at the bottom). */
+  onOpenSegment?: (segment: SettingsSegment, section: string | null) => void;
 }) {
+  const page = Boolean(onOpenSegment);
   const user = useAuthStore((state) => state.user);
   const isAdmin = useWorkspaceIdentityStore((state) => state.isAdmin);
   const openCommand = useShellStore((state) => state.openCommand);
@@ -184,6 +201,10 @@ function MenuBody({
   const segments = visibleSettingsSegments({ role: user?.role, isAdmin }, readSettingsFlags());
   const has = (segment: SettingsSegment) => segments.includes(segment);
   const inSettings = (segment: SettingsSegment, section?: string) => () => {
+    if (onOpenSegment) {
+      onOpenSegment(segment, section ?? null);
+      return;
+    }
     onClose();
     openSettings({ segment, section });
   };
@@ -235,7 +256,7 @@ function MenuBody({
             <p className="truncate text-sm text-content-primary/55">{role}</p>
           ) : null}
         </div>
-        {desktop ? null : (
+        {desktop || page ? null : (
           <button
             type="button"
             onClick={onClose}
@@ -261,6 +282,7 @@ function MenuBody({
         </div>
       ) : null}
 
+      {page ? null : (
       <button
         type="button"
         onClick={() => {
@@ -273,6 +295,7 @@ function MenuBody({
         <span className="flex-1">{desktop ? 'Search' : 'Search releases, people, tasks'}</span>
         {desktop ? <kbd className="font-mono text-[11px] text-content-primary/40">⌘K</kbd> : null}
       </button>
+      )}
 
       <MenuGroup>
         <ActionRow icon={UserCircle} label="Profile" onClick={inSettings('general', 'name')} />
@@ -328,6 +351,37 @@ function MenuBody({
           ) : null}
         </MenuGroup>
       ) : null}
+      {page ? <LogOutRow /> : null}
+    </div>
+  );
+}
+
+/** The Settings page's last row: sign out, the one thing the old pop-up's list held. */
+function LogOutRow() {
+  const router = useRouter();
+  const logout = useAuthStore((state) => state.logout);
+  const email = useAuthStore((state) => state.user?.email ?? '');
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="mb-3 mt-1">
+      {email ? <p className="mb-2 px-1 text-[13px] text-content-primary/55">Signed in as {email}</p> : null}
+      <button
+        type="button"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          try {
+            await logout();
+            router.push('/auth');
+          } finally {
+            setBusy(false);
+          }
+        }}
+        className="motion-focus motion-press flex min-h-[52px] w-full items-center gap-3 rounded-[20px] border border-content-primary/[0.07] bg-content-primary/[0.03] px-4 text-left text-[17px] text-content-primary disabled:opacity-60"
+      >
+        <LogOut className="h-[20px] w-[20px] text-content-primary/75" aria-hidden="true" />
+        Log out
+      </button>
     </div>
   );
 }
@@ -336,7 +390,7 @@ const REPORT_ISSUE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_REPORT_ISSUE === 't
 
 /** What the plan card says, or null when this person has no plan to manage
  *  (a teammate on somebody else's plan never gets the Billing segment). */
-function usePlanCard(canBill: boolean): { eyebrow: string; title: string; action: string } | null {
+export function usePlanCard(canBill: boolean): { eyebrow: string; title: string; action: string } | null {
   const userId = useAuthStore((state) => state.user?.id ?? null);
   const [team, setTeam] = useState<TeamAccessClientSnapshot | null>(() => (userId ? peekTeamAccessClient(userId) : null));
   useEffect(() => {

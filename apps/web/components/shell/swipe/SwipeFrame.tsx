@@ -34,6 +34,7 @@ import { SwipeTopBar } from './SwipeTopBar';
 import { SwipePager } from './SwipePager';
 import { UrgAnsPane, showMain } from './UrgAnsPane';
 import { SessionsPane } from './SessionsPane';
+import { SettingsPane } from './SettingsPane';
 import { BackPill } from './BackPill';
 
 const CommandBar = dynamic(() => import('@/components/shell/CommandBar').then((m) => m.CommandBar));
@@ -138,13 +139,14 @@ export function SwipeFrame({
                   ),
                   urgans: CHAPPI_ENABLED ? <UrgAnsPane active={tab === 'urgans'} /> : null,
                   sessions: CHAPPI_ENABLED ? <SessionsPane active={tab === 'sessions'} /> : null,
+                  settings: <SettingsPane showHelp={showHelp} />,
                 }}
               />
             </WorkspacePageErrorBoundary>
           </main>
           <BackPill active={tab === 'sessions'} />
           {/* The Sessions list has nowhere to send a message: a session is opened first. */}
-          {CHAPPI_ENABLED && !(tab === 'sessions' && !sessionOpen) ? (
+          {CHAPPI_ENABLED && tab !== 'settings' && !(tab === 'sessions' && !sessionOpen) ? (
             <SwipeComposer onUrgAns={tab === 'urgans' || tab === 'sessions'} sessionOpen={tab === 'sessions'} />
           ) : null}
         </div>

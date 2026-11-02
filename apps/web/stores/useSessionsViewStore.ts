@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { registerSignOutReset } from '@/lib/sign-out-resets';
+import { ROLLOUT_CHAT_KEY as OPEN_KEY } from '@/lib/tab-memory';
 
 /**
  * The Sessions tab's own state (Nov 2, 2026): which rollout's session is open
@@ -25,7 +26,6 @@ type SessionsViewState = {
   setPinnedScope: (value: boolean) => void;
 };
 
-const OPEN_KEY = 'urganize.tab-memory.rollout-chat';
 
 function readOpen(): string | null {
   if (typeof window === 'undefined') return null;
