@@ -1,10 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from '@/components/icons';
 import { briefCall } from '@/components/releases/brief-shared';
-import { WhoShouldChimeIn } from '@/components/workspace/RolloutIdeasCard';
+import { IdeaChangesPanel, WhoShouldChimeIn, type SuggestState } from '@/components/workspace/RolloutIdeasCard';
+import { onlyPreProductionWork } from '@/lib/pre-production';
+import { IDEA_CHANGES_COPY, type IdeaChangeView } from '@/lib/rollout-idea-changes';
+import { useTaskStore } from '@/stores/useTaskStore';
+import { useReleaseStore } from '@/stores/useReleaseStore';
 import { IDEAS_CHANGED_EVENT } from '@/components/workspace/RolloutFirstSteps';
 import { IDEA_ROUND_COPY, type IdeaRoundState, visibleIdeaNotes } from '@/lib/idea-round';
 import type { IdeaNote, IdeasPerson } from '@/lib/rollout-ideas';
@@ -33,10 +37,14 @@ type IdeasPayload = {
 export function ChappiIdeasCard({
   releaseId,
   releaseTitle,
+  suggest,
   version,
 }: {
   releaseId: string;
   releaseTitle: string;
+  /** The idea just added in chat. On a rollout that already has a plan it is
+   *  turned into suggested plan changes, the way the workspace card does. */
+  suggest?: string | null;
   version: number;
 }) {
   const router = useRouter();
@@ -46,6 +54,16 @@ export function ChappiIdeasCard({
   const [asking, setAsking] = useState(false);
   const [closing, setClosing] = useState(false);
   const [error, setError] = useState('');
+  const [changes, setChanges] = useState<SuggestState>(null);
+  const [applying, setApplying] = useState(false);
+  const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
+  // A rollout that already has its plan takes ideas as changes to the plan, not
+  // as a round that closes into a brief (Codex review on #1025).
+  const hasPlan = useTaskStore((state) => {
+    const mine = state.tasks.filter((task) => task.releaseId === releaseId);
+    return mine.length > 0 && !onlyPreProductionWork(mine);
+  });
+  const suggested = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     const result = await briefCall<IdeasPayload>(`/api/releases/${encodeURIComponent(releaseId)}/ideas`, { method: 'GET' });
@@ -55,6 +73,44 @@ export function ChappiIdeasCard({
   useEffect(() => {
     void load();
   }, [load, version]);
+
+  const isOwner = Boolean(data?.isOwner);
+  useEffect(() => {
+    if (!suggest || !hasPlan || !isOwner || suggested.current === suggest) return;
+    suggested.current = suggest;
+    setChanges({ status: 'loading' });
+    void briefCall<{ view?: IdeaChangeView }>(`/api/releases/${encodeURIComponent(releaseId)}/ideas/changes`, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'suggest', idea: suggest }),
+    }).then((result) => {
+      if (result.ok && result.data.view) setChanges({ status: 'ready', view: result.data.view });
+      else setChanges({ status: 'error', message: result.ok ? 'Could not read the plan just now.' : result.error });
+    });
+  }, [suggest, hasPlan, isOwner, releaseId]);
+
+  const applyChanges = async () => {
+    if (changes?.status !== 'ready' || applying) return;
+    const { view } = changes;
+    setApplying(true);
+    const result = await briefCall<{ added?: number; moved?: number }>(
+      `/api/releases/${encodeURIComponent(releaseId)}/ideas/changes`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'apply',
+          adds: view.adds.map(({ title, why, offsetDays, now }) => ({ title, why, offsetDays, now })),
+          moves: view.moves.map(({ taskId, offsetDays }) => ({ taskId, offsetDays })),
+        }),
+      }
+    );
+    setApplying(false);
+    if (!result.ok) {
+      setChanges({ status: 'error', message: result.error });
+      return;
+    }
+    setChanges({ status: 'applied', text: IDEA_CHANGES_COPY.applied(result.data.added ?? 0, result.data.moved ?? 0) });
+    void loadCommandCenter({ force: true });
+  };
 
   if (!data) return null;
   const state: IdeaRoundState = data.round?.state ?? 'open';
@@ -126,7 +182,7 @@ export function ChappiIdeasCard({
             }}
           />
         </div>
-      ) : runner && state === 'open' ? (
+      ) : runner && state === 'open' && !hasPlan ? (
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-stroke-subtle pt-4">
           <button
             type="button"
@@ -146,12 +202,20 @@ export function ChappiIdeasCard({
           </button>
         </div>
       ) : null}
+      {changes ? (
+        <IdeaChangesPanel
+          state={changes}
+          applying={applying}
+          onApply={() => void applyChanges()}
+          onDismiss={() => setChanges(null)}
+        />
+      ) : null}
       {error ? (
         <p role="alert" className="mt-3 text-sm text-status-error">
           {error}
         </p>
       ) : null}
-      {runner && state === 'open' && !asking ? (
+      {runner && state === 'open' && !asking && !hasPlan ? (
         <p className="mt-2 text-xs text-content-tertiary">Writing the brief uses UrgAns credits.</p>
       ) : null}
     </section>

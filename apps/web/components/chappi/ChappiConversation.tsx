@@ -462,6 +462,7 @@ export function ChappiConversation({
   const [recapReleaseId, setRecapReleaseId] = useState<string | null>(null);
   // The "n ideas are in" card add_rollout_idea shows under its reply (Nov 2, 2026).
   const [ideasReleaseId, setIdeasReleaseId] = useState<string | null>(null);
+  const [ideasSuggest, setIdeasSuggest] = useState<string | null>(null);
   const ideasRelease = ideasReleaseId ? releases.find((release) => release.id === ideasReleaseId) ?? null : null;
   const recapRelease = recapReleaseId
     ? releases.find((release) => release.id === recapReleaseId) ?? null
@@ -492,6 +493,7 @@ export function ChappiConversation({
     if (coverArtReleaseId) setCoverArtReleaseId(null);
     if (recapReleaseId) setRecapReleaseId(null);
     if (ideasReleaseId) setIdeasReleaseId(null);
+    if (ideasSuggest) setIdeasSuggest(null);
   } else if (lastMessageId !== prevLastMessageId) {
     setPrevLastMessageId(lastMessageId);
     // A new user turn clears the reveal (the previous reply has finished
@@ -511,6 +513,7 @@ export function ChappiConversation({
         if (coverArtReleaseId) setCoverArtReleaseId(null);
       if (recapReleaseId) setRecapReleaseId(null);
       if (ideasReleaseId) setIdeasReleaseId(null);
+      if (ideasSuggest) setIdeasSuggest(null);
     }
   }
 
@@ -1016,7 +1019,10 @@ export function ChappiConversation({
         openQuickCreate({ releaseId: action.releaseId ?? undefined, source: 'quick_create' });
       else if (action.type === 'open_cover_art_upload') setCoverArtReleaseId(action.releaseId);
       else if (action.type === 'open_recap') setRecapReleaseId(action.releaseId);
-      else if (action.type === 'open_ideas') setIdeasReleaseId(action.releaseId);
+      else if (action.type === 'open_ideas') {
+        setIdeasReleaseId(action.releaseId);
+        setIdeasSuggest(action.suggest ?? null);
+      }
       else if (action.type === 'refresh') void loadCommandCenter({ force: true });
     }
   };
@@ -1781,7 +1787,7 @@ export function ChappiConversation({
             }
             onDismissRecap={() => setRecapReleaseId(null)}
             onReportRecap={handleReportRecap}
-            ideas={ideasRelease ? { releaseId: ideasRelease.id, releaseTitle: ideasRelease.title } : null}
+            ideas={ideasRelease ? { releaseId: ideasRelease.id, releaseTitle: ideasRelease.title, suggest: ideasSuggest } : null}
             ideasVersion={messages.length}
           />
         </div>
@@ -1872,7 +1878,7 @@ type TranscriptProps = {
   onDismissRecap: () => void;
   onReportRecap: (message: string) => void;
   /** The ideas card add_rollout_idea asked for, and the transcript length it reloads on. */
-  ideas: { releaseId: string; releaseTitle: string } | null;
+  ideas: { releaseId: string; releaseTitle: string; suggest: string | null } | null;
   ideasVersion: number;
 };
 
@@ -2005,6 +2011,7 @@ function Transcript({
           key={ideas.releaseId}
           releaseId={ideas.releaseId}
           releaseTitle={ideas.releaseTitle}
+          suggest={ideas.suggest}
           version={ideasVersion}
         />
       ) : null}

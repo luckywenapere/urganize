@@ -111,7 +111,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
     kind: 'mutate',
     level: 'auto',
     description:
-      "Put the person's idea for a rollout on its idea round, in THEIR words (typed or dictated), and show the ideas card. Use it whenever they tell you their idea, goal or direction for a rollout, or want to add to or change it: add another idea rather than rewriting an old one (ideas are a running list, and an earlier one cannot be edited here). Not for tasks or plan changes. Fails if the idea round is already closed.",
+      "Put the person's idea for a rollout on its idea round, in THEIR words (typed or dictated), and show the ideas card. Use it whenever they tell you their idea, goal or direction for a rollout, or want to add to or change it: add another idea rather than rewriting an old one (ideas are a running list, and an earlier one cannot be edited here). Not for tasks or plan changes. On a rollout that already has a plan, the card offers the person suggested changes to the plan to approve. May fail if the idea round is closed.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -135,7 +135,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
       return {
         ok: true,
         summary: notes > 0 ? `Added. ${notes === 1 ? '1 idea is' : `${notes} ideas are`} in.` : 'Added the idea.',
-        clientAction: { type: 'open_ideas', releaseId },
+        clientAction: { type: 'open_ideas', releaseId, suggest: content },
       };
     },
   },

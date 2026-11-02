@@ -900,7 +900,7 @@ function PlanStage({
   );
 }
 
-type SuggestState =
+export type SuggestState =
   | null
   | { status: 'loading' }
   | { status: 'ready'; view: IdeaChangeView }
@@ -908,7 +908,7 @@ type SuggestState =
   | { status: 'error'; message: string };
 
 /** The suggested plan changes for the owner to review. Nothing is saved until Apply. */
-function IdeaChangesPanel({
+export function IdeaChangesPanel({
   state,
   applying,
   onApply,
