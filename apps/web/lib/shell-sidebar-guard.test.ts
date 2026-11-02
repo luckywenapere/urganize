@@ -55,7 +55,9 @@ describe('the side menu', () => {
 
   it('is always the thin rail: no fold button, no open state, the profile icon at its foot', () => {
     expect(sidebar).toContain("const mode: 'collapsed' | 'rail' = menu ? 'collapsed' : 'rail';");
-    expect(sidebar).toContain('placement="rail"');
+    // Since Nov 2, 2026 the photo opens Settings over the whole screen, no pop-up.
+    expect(sidebar).toContain('href={SETTINGS_PAGE_HREF}');
+    expect(sidebar).not.toContain('<WorkspaceMenu');
     expect(sidebar).not.toContain('SidebarToggle');
     expect(sidebar).not.toContain('useSidebarStore');
     expect(sidebar).not.toContain('PanelLeftOpen');

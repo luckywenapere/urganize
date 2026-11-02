@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 
 import Link from 'next/link';
 import {
   Bell,
+  Check,
   ChevronLeft,
   ChevronRight,
   CircleHelp,
@@ -40,6 +41,8 @@ import { openSettingsPage } from './settings-page';
 import { useRouter } from 'next/navigation';
 import { LogOut } from '@/components/icons';
 import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
+import { useArtistFilterOptions } from '@/components/shell/useArtistFilter';
+import { ProfileFace } from '@/components/shared/ProfileFace';
 
 type Icon = ComponentType<LucideProps>;
 
@@ -185,8 +188,14 @@ export function MenuBody({
   onClose,
   desktop = false,
   onOpenSegment,
+  artistPicker = false,
+  onSearch,
 }: {
   showHelp: boolean;
+  /** Computer Settings page: the "Showing" artist picker the old pop-up held. */
+  artistPicker?: boolean;
+  /** Computer Settings page: a round search button beside your name. */
+  onSearch?: () => void;
   onClose: () => void;
   desktop?: boolean;
   /** The Settings page: rows open their setting inside the page instead of the
@@ -225,6 +234,7 @@ export function MenuBody({
     openSettings({ segment, section });
   };
   const plan = usePlanCard(has('billing'));
+  const { options: artistOptions, select: selectArtist } = useArtistFilterOptions();
 
   if (view === 'help') {
     return (
@@ -272,6 +282,16 @@ export function MenuBody({
             <p className="truncate text-sm text-content-primary/55">{role}</p>
           ) : null}
         </div>
+        {onSearch ? (
+          <button
+            type="button"
+            onClick={onSearch}
+            aria-label="Search settings"
+            className="motion-focus motion-press grid h-11 w-11 place-items-center rounded-full bg-content-primary/[0.06] text-content-primary"
+          >
+            <Search className="h-5 w-5" aria-hidden="true" />
+          </button>
+        ) : null}
         {desktop || page ? null : (
           <button
             type="button"
@@ -296,6 +316,33 @@ export function MenuBody({
             {plan.action}
           </button>
         </div>
+      ) : null}
+
+      {artistPicker && artistOptions.length > 0 ? (
+        <>
+          <p className="mb-1.5 mt-1 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-content-tertiary">Showing</p>
+          <ul role="group" aria-label="Showing" className="mb-3 rounded-[20px] border border-content-primary/[0.07] bg-content-primary/[0.03] px-4">
+            {artistOptions.map((artist) => (
+              <li key={artist.id ?? 'all'}>
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={artist.active}
+                  onClick={() => selectArtist(artist.id)}
+                  className={SHEET_ROW}
+                >
+                  {artist.id ? (
+                    <ProfileFace name={artist.name} photoUrl={artist.photoUrl} size={24} />
+                  ) : (
+                    <Users className="h-[22px] w-[22px] shrink-0 text-content-primary/75" aria-hidden="true" />
+                  )}
+                  <span className="flex-1 truncate">{artist.name}</span>
+                  {artist.active ? <Check className="h-[18px] w-[18px] text-brand" aria-hidden="true" /> : null}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
       ) : null}
 
       {page ? null : (
