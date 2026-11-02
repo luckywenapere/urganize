@@ -78,22 +78,27 @@ const naira = (amount: number) =>
  *  for the first time pays for its first INTRO_MONTHS months, with the full
  *  price it moves to right under it. No badge and no percentage: the lower
  *  price is simply the price. */
-function cardPrice(tierId: PricingTierId, interval: BillingInterval) {
+function cardPrice(
+  tierId: PricingTierId,
+  interval: BillingInterval
+): { figure: string; unit: string | null; sub: string | null; was: string | null } {
   if (!isSelfServe(tierId)) {
-    return { figure: "Let's talk", unit: null, sub: "A price set with you, for your roster." };
+    return { figure: "Let's talk", unit: null, sub: "A price set with you, for your roster.", was: null };
   }
   if (interval === "monthly") {
     const intro = getIntroPrice(tierId);
     const full = getTierPrice(tierId, "monthly");
-    if (intro) return { figure: naira(intro.amount), unit: "/month", sub: introThenLine(tierId) };
-    return { figure: full ? naira(full.amount) : "", unit: "/month", sub: null };
+    // The full price struck through above the offer (founder, Nov 2, 2026).
+    if (intro) return { figure: naira(intro.amount), unit: "/month", sub: introThenLine(tierId), was: full ? `${naira(full.amount)}/month` : null };
+    return { figure: full ? naira(full.amount) : "", unit: "/month", sub: null, was: null };
   }
   const yearly = getTierPrice(tierId, interval);
-  if (!yearly) return { figure: "", unit: null, sub: null };
+  if (!yearly) return { figure: "", unit: null, sub: null, was: null };
   return {
     figure: naira(yearly.amount),
     unit: "/year",
     sub: `${naira(Math.round(yearly.amount / 12))} a month, paid once a year`,
+    was: null,
   };
 }
 
@@ -145,7 +150,7 @@ export function PricingTierCards() {
           {PRICING_TIER_ORDER.map((tierId) => {
             const tier = getTier(tierId);
             const priced = isSelfServe(tierId);
-            const { figure, unit, sub } = cardPrice(tierId, interval);
+            const { figure, unit, sub, was } = cardPrice(tierId, interval);
             const features = tierFeatures(tierId);
             return (
               <div
@@ -155,11 +160,18 @@ export function PricingTierCards() {
                 {/* What the plan looks like in the app, before the words (#963). */}
                 <PlanPicture tierId={tierId} />
 
-                <p className="mt-5 text-xs font-bold uppercase tracking-[0.22em] text-[var(--marketing-accent)]">
+                <p className="mt-5 flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.22em] text-[var(--marketing-accent)]">
                   {tier.label}
+                  {was ? (
+                    <span className="rounded-full bg-[var(--marketing-accent)]/10 px-2 py-0.5 text-[0.62rem] tracking-[0.08em]">
+                      First month offer
+                    </span>
+                  ) : null}
                 </p>
 
-                <p className="mt-4 flex flex-wrap items-baseline gap-x-1">
+                {/* Keeps its line on every card so the prices line up. */}
+                <p className="mt-4 min-h-5 text-sm text-[var(--marketing-text-muted)] line-through">{was ?? ""}</p>
+                <p className="flex flex-wrap items-baseline gap-x-1">
                   <span className="text-3xl font-black tracking-tighter text-[var(--marketing-text)]">{figure}</span>
                   {unit ? <span className="text-sm text-[var(--marketing-text-muted)]">{unit}</span> : null}
                 </p>
@@ -217,7 +229,7 @@ export function PricingTierCards() {
 
         <p className="mt-8 text-center text-xs leading-6 text-[var(--marketing-text-subtle)]">
           Prices are in Naira. One price covers your whole team, not each person. The first{" "}
-          {INTRO_MONTHS} months price is for teams paying for the first time. Pay monthly or once a year,
+          {INTRO_MONTHS === 1 ? "month" : `${INTRO_MONTHS} months`} offer is for teams paying for the first time. Pay monthly or once a year,
           by card or bank transfer.
         </p>
       </div>

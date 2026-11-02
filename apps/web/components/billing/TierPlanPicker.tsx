@@ -65,7 +65,10 @@ export function planPriceLines(
   const intro = getIntroPrice(tierId);
   const full = getTierPrice(tierId, 'monthly');
   if (intro && full && introMonthsLeft > 0 && charge.amount === intro.amount) {
-    return { price: `${naira(intro.amount)}/month`, sub: `then ${naira(full.amount)} from month ${introMonthsLeft + 1}` };
+    return {
+      price: `${naira(intro.amount)}/month`,
+      sub: introMonthsLeft === 1 ? `first month, then ${naira(full.amount)}` : `then ${naira(full.amount)} from month ${introMonthsLeft + 1}`,
+    };
   }
   return { price: `${naira(charge.amount)}/month`, sub: null };
 }
@@ -83,6 +86,7 @@ export function planChargeNote(
   const intro = getIntroPrice(tierId);
   const full = getTierPrice(tierId, 'monthly');
   if (intro && full && introMonthsLeft > 0 && charge.amount === intro.amount) {
+    if (introMonthsLeft === 1) return `${naira(charge.amount)} today, then ${naira(full.amount)} every month. Cancel any time.`;
     return `${naira(charge.amount)} today, then every month. ${naira(full.amount)} a month from month ${introMonthsLeft + 1}. Cancel any time.`;
   }
   return `${naira(charge.amount)} today, then every month. Cancel any time.`;

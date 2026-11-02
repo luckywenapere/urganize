@@ -1,7 +1,7 @@
 {
   "name": "@urganize/web",
   "description": "Urganize is where music teams plan every release and deliver it on time.",
-  "version": "1.243.3",
+  "version": "1.244.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

@@ -42,7 +42,7 @@ export function planCardPrice(
   tierId: PricingTierId,
   interval: BillingInterval,
   introMonthsLeft: number
-): { figure: string; sub: string | null } | null {
+): { figure: string; sub: string | null; was?: string } | null {
   const charge = getChargePrice(tierId, interval, introMonthsLeft);
   if (!charge) return null;
   if (interval === 'annual') {
@@ -53,7 +53,8 @@ export function planCardPrice(
   const full = getTierPrice(tierId, 'monthly');
   if (intro && full && introMonthsLeft > 0 && charge.amount === intro.amount) {
     const months = introMonthsLeft === 1 ? '1 month' : `${introMonthsLeft} months`;
-    return { figure: naira(intro.amount), sub: `for ${months}, then ${naira(full.amount)}` };
+    // The full price, struck through above the offer (founder, Nov 2, 2026).
+    return { figure: naira(intro.amount), sub: `for ${months}, then ${naira(full.amount)}`, was: `${naira(full.amount)}/month` };
   }
   return { figure: naira(charge.amount), sub: null };
 }
@@ -150,7 +151,10 @@ export function PlanCards({
                   </span>
                 ) : null}
               </h2>
-              <p className="mt-3.5 flex items-baseline gap-1">
+              {price?.was ? (
+                <p className="mt-3 text-sm text-content-tertiary line-through tabular-nums">{price.was}</p>
+              ) : null}
+              <p className={`${price?.was ? 'mt-1' : 'mt-3.5'} flex items-baseline gap-1`}>
                 <span className="text-[40px] font-bold leading-none tracking-[-0.04em] text-content-primary tabular-nums">
                   {price?.figure ?? ''}
                 </span>

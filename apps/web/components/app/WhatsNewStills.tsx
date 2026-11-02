@@ -60,7 +60,7 @@ function PayYourWay() {
 
 function Plans() {
   const plans = [
-    { name: 'Emerging', price: '₦2,600' },
+    { name: 'Emerging', price: '₦4,000' },
     { name: 'Pro', price: '₦26,000', on: true },
   ];
   return (

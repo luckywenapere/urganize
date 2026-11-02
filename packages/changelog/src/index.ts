@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.244.0",
+    title: "Your first month of Emerging is ₦2,500",
+    tag: "Account",
+    date: "November 2, 2026",
+    highlights: [
+      "Emerging is now ₦4,000 a month, and your first month is ₦2,500.",
+      "Paying yearly for Emerging is ₦40,000.",
+    ],
+  },
+  {
     version: "1.243.3",
     tag: "Rollouts",
     date: "November 2, 2026",
