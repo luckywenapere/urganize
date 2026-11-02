@@ -108,7 +108,12 @@ export function BriefEntryCard({
   const summary = useBriefSummary(releaseId);
   // With the brief off, the cover still needs a home on the phone.
   if (!RELEASE_BRIEF_ENABLED) return cover ? <div className="mb-4">{cover}</div> : null;
-  const line = summary ? (summary.written ? summary.line : 'Write the brief') : '';
+  // No brief written yet (Nov 2, 2026, founder): no card. The idea round's own
+  // "Close and write the brief" button is the way in, so a second "Write the
+  // brief" row under the title only repeated it. The cover keeps its place.
+  // Hidden while the read is still out too, so a card never flashes and goes.
+  if (!summary?.written) return cover ? <div className="mb-4">{cover}</div> : null;
+  const line = summary.line;
   const body = (
     <>
       <span className="flex min-w-0 flex-1 flex-col leading-tight">
