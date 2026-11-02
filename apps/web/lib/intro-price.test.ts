@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { getChargePrice, getIntroPrice, INTRO_MONTHS, introThenLine } from '@urganize/pricing';
 import { introEndsAfterCharge, introMonthsLeft } from './intro-price';
 
-// Emerging: ₦2,500 for the first month, then ₦4,000 (founder, 2026-11-02).
+// Emerging: ₦2,600 for the first month, then ₦4,000 (founder, 2026-11-02).
 describe('starting price months', () => {
   it('gives a team that never paid one offer month', () => {
     expect(INTRO_MONTHS).toBe(1);
@@ -25,9 +25,9 @@ describe('starting price months', () => {
 });
 
 describe('starting price amounts', () => {
-  it('charges Emerging ₦2,500 for the offer month, then ₦4,000', () => {
-    expect(getIntroPrice('solo')?.amount).toBe(2_500);
-    expect(getChargePrice('solo', 'monthly', 1)?.amount).toBe(2_500);
+  it('charges Emerging ₦2,600 for the offer month, then ₦4,000', () => {
+    expect(getIntroPrice('solo')?.amount).toBe(2_600);
+    expect(getChargePrice('solo', 'monthly', 1)?.amount).toBe(2_600);
     expect(getChargePrice('solo', 'monthly', 0)?.amount).toBe(4_000);
   });
 

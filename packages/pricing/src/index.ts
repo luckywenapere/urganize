@@ -447,9 +447,9 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // reprice, strategy doc section 8), when Solo went to two seats. It read
     // "For an independent artist." from 2026-10-02 while Solo was one seat.
     audience: 'For an artist and their manager.',
-    // ₦4,000 a month with a ₦2,500 first month since 2026-11-02 (founder
+    // ₦4,000 a month with a ₦2,600 first month since 2026-11-02 (founder
     // approved docs/mocks/emerging-offer; no paying Emerging team, so nobody
-    // moves). Card checkout needs a ₦2,500 Plan (invoice_limit 1) behind
+    // moves). Card checkout needs a ₦2,600 Plan (invoice_limit 1) behind
     // PAYSTACK_PLAN_SOLO_PER_MONTH_INTRO_NGN and ₦4,000 / ₦40,000 Plans behind
     // the _PER_MONTH_ / _PER_YEAR_ vars; until then the price check refuses card.
     // ₦2,600 flat from 2026-10-31 (founder, with the rename to Emerging; no
@@ -470,7 +470,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // ₦75,000 and the _PER_MONTH_ / _PER_YEAR_ vars repointed before this
     // shipped; the ₦5,000 Plans stay in Paystack untouched.
     monthlyPrice: tierPrice(4_000),
-    introMonthlyPrice: tierPrice(2_500),
+    introMonthlyPrice: tierPrice(2_600),
     includesDistribution: false,
     urgansMonthlyCredits: 150,
     // TWO seats since 2026-10-17 (founder-approved reprice: "artist +
@@ -639,7 +639,7 @@ export function isSellableInterval(value: unknown): value is BillingInterval {
 }
 
 /** How many monthly payments are at the starting price: one since 2026-11-02
- *  (founder, Emerging's ₦2,500 first month); six from 2026-10-26. */
+ *  (founder, Emerging's ₦2,600 first month); six from 2026-10-26. */
 export const INTRO_MONTHS = 1;
 
 /** A tier's starting price, or null when it has none. */
