@@ -1429,14 +1429,20 @@ export function WorkspaceView() {
         briefIdeaScreen={panelBody === 'brief' ? ideasCard() : null}
         // Approving the brief opens the planner with the brief as its notes
         // (the server uses the approved brief either way). Owner only, like the planner.
+        // The brief closes as the planner opens (Nov 2, 2026, founder: "once
+        // the plan is generated I should be going straight to the plan page
+        // not the brief page"), so the plan page is what is under the planner
+        // and where the person lands when it is done.
         onBuildPlanFromBrief={
           PLANNER_ENABLED && scopedReleaseIsOwn && !isPlanGenerating
-            ? (notes) =>
+            ? (notes) => {
+                closeScene();
                 openIntake({
                   source: 'ideas',
                   releaseId: scopedReleaseSlim.id,
                   prefill: { ...scopedRolloutIntakePrefill(scopedReleaseSlim), extraNotes: notes },
-                })
+                });
+              }
             : undefined
         }
       />
