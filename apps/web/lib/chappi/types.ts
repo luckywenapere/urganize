@@ -306,7 +306,7 @@ export type ChappiClientAction =
    */
   | { type: 'open_share'; releaseId: string }
   /** Shows the "n ideas are in" card under the reply (add_rollout_idea). */
-  | { type: 'open_ideas'; releaseId: string }
+  | { type: 'open_ideas'; releaseId: string; /** The idea just added, so a rollout that already has a plan offers changes to it. */ suggest?: string }
   | { type: 'refresh' };
 
 /** Normalized outcome of a single tool execution, fed back to the model. */
