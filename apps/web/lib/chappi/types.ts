@@ -174,6 +174,7 @@ export type ChappiToolName =
   // release + task lifecycle
   | 'update_release'
   | 'schedule_release'
+  | 'add_rollout_idea'
   | 'delete_release'
   | 'delete_task'
   | 'add_task_comment'
@@ -304,6 +305,8 @@ export type ChappiClientAction =
    * images itself, so only the id travels.
    */
   | { type: 'open_share'; releaseId: string }
+  /** Shows the "n ideas are in" card under the reply (add_rollout_idea). */
+  | { type: 'open_ideas'; releaseId: string }
   | { type: 'refresh' };
 
 /** Normalized outcome of a single tool execution, fed back to the model. */

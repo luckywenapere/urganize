@@ -30,6 +30,7 @@ import {
   callInternalApi,
   fail,
   type ChappiTool,
+  isFlagGateOff,
 } from './shared';
 
 /** Was this key actually IN the model's call, as opposed to simply falsy?
@@ -102,6 +103,39 @@ export const RELEASE_TOOLS: ChappiTool[] = [
         ok: true,
         summary: title ? `Updated "${title}".` : 'Updated the rollout.',
         clientAction: { type: 'refresh' },
+      };
+    },
+  },
+  {
+    name: 'add_rollout_idea',
+    kind: 'mutate',
+    level: 'auto',
+    description:
+      "Put the person's idea for a rollout on its idea round, in THEIR words (typed or dictated), and show the ideas card. Use it whenever they tell you their idea, goal or direction for a rollout, or want to add to or change it: add another idea rather than rewriting an old one (ideas are a running list, and an earlier one cannot be edited here). Not for tasks or plan changes. Fails if the idea round is already closed.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        releaseId: { type: 'string' },
+        content: { type: 'string', description: "The idea, in the person's own words. Up to 2000 characters." },
+      },
+      required: ['releaseId', 'content'],
+    },
+    execute: async (ctx, args) => {
+      const releaseId = argString(args, 'releaseId');
+      const content = argString(args, 'content');
+      if (!releaseId || !content) return fail('releaseId and content are required.');
+      if (content.length > 2000) return fail('That idea is over 2000 characters. Ask for a shorter version.');
+      const res = await callInternalApi(ctx, `/api/releases/${releaseId}/ideas`, {
+        method: 'POST',
+        body: { content },
+      });
+      if (isFlagGateOff(res)) return fail('Ideas are not switched on for your team.');
+      if (!res.ok) return fail(apiError(res, 'Could not add the idea.'));
+      const notes = Array.isArray(res.body.notes) ? res.body.notes.length : 0;
+      return {
+        ok: true,
+        summary: notes > 0 ? `Added. ${notes === 1 ? '1 idea is' : `${notes} ideas are`} in.` : 'Added the idea.',
+        clientAction: { type: 'open_ideas', releaseId },
       };
     },
   },

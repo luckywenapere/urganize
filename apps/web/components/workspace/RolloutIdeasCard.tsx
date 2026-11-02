@@ -115,7 +115,9 @@ export function RolloutIdeasCard({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [askingWho, setAskingWho] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  // The "Edit idea" button that opened the full card is gone (Nov 2, 2026), so
+  // this stays false; the full card still draws when there is no brief yet.
+  const [expanded] = useState(false);
   const fromVoiceRef = useRef(false);
   // The kept recording of the idea being written (2026-10-27).
   const clipRef = useRef<{ audioPath: string; seconds: number | null } | null>(null);
@@ -491,25 +493,9 @@ export function RolloutIdeasCard({
           <h2 id={`ideas-title-${release.id}`} className="text-base font-semibold text-content-primary">
             {brief ? 'Rollout brief' : 'Your idea'}
           </h2>
-          {canSuggest ? (
-            <button
-              type="button"
-              onClick={() => {
-                setError('');
-                setTyping(true);
-              }}
-              className="motion-focus ml-auto min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary underline hover:text-content-primary"
-            >
-              {IDEA_CHANGES_COPY.addIdea}
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            className={`motion-focus ${canSuggest ? '' : 'ml-auto '}min-h-11 rounded-full px-3 text-sm font-medium text-content-secondary underline hover:text-content-primary`}
-          >
-            Edit idea
-          </button>
+          {/* No Add idea or Edit idea here (Nov 2, 2026, founder): ideas are
+              added by talking or typing to the chat box in the rollout's
+              session, and the idea card appears there. */}
         </div>
         {brief ? (
           <div className="space-y-4 text-sm">
@@ -1211,7 +1197,7 @@ function IdeaMic({
 }
 
 /** "Who should chime in?": tick teammates already on the rollout, or add someone by link. */
-function WhoShouldChimeIn({
+export function WhoShouldChimeIn({
   releaseId,
   releaseTitle,
   people,
