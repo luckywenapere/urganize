@@ -14,7 +14,8 @@ import type { TaskNotification } from '@/lib/tasks';
 type NeedsYouState = {
   items: TaskNotification[];
   loaded: boolean;
-  load: () => Promise<void>;
+  /** Skips the server when the list was read within NEEDS_YOU_FRESH_MS, unless forced. */
+  load: (options?: { force?: boolean }) => Promise<void>;
   markRead: (ids: string[] | 'all') => Promise<void>;
 };
 
@@ -24,6 +25,13 @@ async function token(): Promise<string> {
 }
 
 let inFlight: Promise<void> | null = null;
+// When the list last came back from the server. Focus and tab changes call
+// load() often (every switch back from WhatsApp, every swipe to UrgAns), and
+// each call is a Vercel function run, which is what used up the free plan's
+// Active CPU in Oct 2026 (#1039). Within this window the list on screen is
+// kept as it is.
+export const NEEDS_YOU_FRESH_MS = 2 * 60 * 1000;
+let lastLoadedAt = 0;
 // Bumped on sign-out so a load that was still on its way cannot paint the old
 // account's notices into the next one.
 let epoch = 0;
@@ -31,8 +39,11 @@ let epoch = 0;
 export const useNeedsYouStore = create<NeedsYouState>((set, get) => ({
   items: [],
   loaded: false,
-  load: () => {
+  load: (options) => {
     if (inFlight) return inFlight;
+    if (!options?.force && get().loaded && Date.now() - lastLoadedAt < NEEDS_YOU_FRESH_MS) {
+      return Promise.resolve();
+    }
     const startedAt = epoch;
     inFlight = (async () => {
       try {
@@ -45,6 +56,7 @@ export const useNeedsYouStore = create<NeedsYouState>((set, get) => ({
         if (!response.ok) return;
         const data = (await response.json().catch(() => ({}))) as { notifications?: TaskNotification[] };
         if (startedAt !== epoch) return;
+        lastLoadedAt = Date.now();
         set({ items: Array.isArray(data.notifications) ? data.notifications : [], loaded: true });
       } catch {
         // Best effort: the last list stays.
@@ -69,7 +81,7 @@ export const useNeedsYouStore = create<NeedsYouState>((set, get) => ({
         body: JSON.stringify(ids === 'all' ? {} : { notificationIds: ids }),
       });
     } catch {
-      void get().load();
+      void get().load({ force: true });
     }
   },
 }));
@@ -78,6 +90,7 @@ export const useNeedsYouStore = create<NeedsYouState>((set, get) => ({
 registerSignOutReset('needs-you', () => {
   epoch += 1;
   inFlight = null;
+  lastLoadedAt = 0;
   useNeedsYouStore.setState({ items: [], loaded: false });
 });
 

@@ -17,8 +17,10 @@ export const PRESENCE_TABLE = 'user_presence_days';
 export const PING_INTERVAL_MS = 10 * 60 * 1000;
 
 /** The shortest gap between two pings, so focus and visibility events in quick
- *  succession send one ping rather than several. */
-export const PING_MIN_GAP_MS = 30 * 1000;
+ *  succession send one ping rather than several. 5 minutes since 2026-11-02
+ *  (was 30 seconds, #1039): on a phone every switch back to the app fired a
+ *  ping. Still well inside ONLINE_WINDOW_MS, so nobody reads as offline. */
+export const PING_MIN_GAP_MS = 5 * 60 * 1000;
 
 /** Seen this recently counts as online now. More than two ping intervals, so one
  *  slow or dropped ping does not flicker someone offline. */

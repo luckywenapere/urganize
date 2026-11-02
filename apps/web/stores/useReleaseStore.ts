@@ -53,7 +53,10 @@ const getAccessToken = async () => {
 // Non-forced calls made while a load is already in flight piggyback on that
 // load's promise instead of firing a concurrent duplicate fetch (e.g. the
 // caller's follow-up refresh right after CreateReleaseModal's forced resync).
-const COMMAND_CENTER_FRESH_MS = 10_000;
+// 60s since 2026-11-02 (was 10s, #1039): most pages call loadCommandCenter()
+// on mount, so moving between pages re-ran the whole load each time, and each
+// run is a Vercel function call. Every change the user makes forces a reload.
+const COMMAND_CENTER_FRESH_MS = 60_000;
 let commandCenterLoadedAt = 0;
 let commandCenterInFlight: Promise<CommandCenterData | null> | null = null;
 
