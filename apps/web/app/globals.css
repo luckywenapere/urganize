@@ -3535,6 +3535,18 @@ html.urgans-leaving .home-scene-container > :not([data-urgans-source]) {
   to { box-shadow: 0 0 0 3px rgb(127 217 154 / 0); }
 }
 
+/* The ideas card easing in under a reply in a rollout's session (Nov 2, 2026). */
+.swipe-chat-card-in {
+  animation: swipe-chat-card-in 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes swipe-chat-card-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .swipe-chat-card-in { animation: none; }
+}
+
 /* /dashboard/urgans?m=<id>: the turn rings for 1.2s. */
 .swipe-message-ring {
   border-radius: 1rem;

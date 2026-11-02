@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.236.0",
+    title: "Tell UrgAns your idea",
+    tag: "AI",
+    date: "November 2, 2026",
+    highlights: [
+      "Tell UrgAns your idea for a rollout, typed or spoken, and it goes on the rollout.",
+      "A card shows the ideas that are in, with a way to ask your team and write the brief.",
+      "The Add idea and Edit idea buttons are gone from the brief card.",
+    ],
+  },
+  {
     version: "1.235.0",
     title: "Your account page",
     tag: "Account",

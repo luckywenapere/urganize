@@ -44,6 +44,7 @@ import { TURN_DROPPED_NOTE, failedTurnOutcome, isDeviceOnline } from '@/lib/chap
 import { ChappiConfirmationCard } from '@/components/chappi/ChappiConfirmationCard';
 import { ChappiCoverArtUploadCard } from '@/components/chappi/ChappiCoverArtUploadCard';
 import { ChappiRecapCard } from '@/components/chappi/ChappiRecapCard';
+import { ChappiIdeasCard } from '@/components/chappi/ChappiIdeasCard';
 import { useSceneDataStore } from '@/stores/useSceneDataStore';
 import type { ReleaseCoverArt } from '@/types/cover-art';
 import { ChappiScopePicker } from '@/components/chappi/ChappiScopePicker';
@@ -459,6 +460,9 @@ export function ChappiConversation({
   // uploading art for another, and one shared slot would swallow whichever
   // card was already there.
   const [recapReleaseId, setRecapReleaseId] = useState<string | null>(null);
+  // The "n ideas are in" card add_rollout_idea shows under its reply (Nov 2, 2026).
+  const [ideasReleaseId, setIdeasReleaseId] = useState<string | null>(null);
+  const ideasRelease = ideasReleaseId ? releases.find((release) => release.id === ideasReleaseId) ?? null : null;
   const recapRelease = recapReleaseId
     ? releases.find((release) => release.id === recapReleaseId) ?? null
     : null;
@@ -487,6 +491,7 @@ export function ChappiConversation({
     setRevealMessageId(null);
     if (coverArtReleaseId) setCoverArtReleaseId(null);
     if (recapReleaseId) setRecapReleaseId(null);
+    if (ideasReleaseId) setIdeasReleaseId(null);
   } else if (lastMessageId !== prevLastMessageId) {
     setPrevLastMessageId(lastMessageId);
     // A new user turn clears the reveal (the previous reply has finished
@@ -505,6 +510,7 @@ export function ChappiConversation({
     if (messages.length === 0) {
         if (coverArtReleaseId) setCoverArtReleaseId(null);
       if (recapReleaseId) setRecapReleaseId(null);
+      if (ideasReleaseId) setIdeasReleaseId(null);
     }
   }
 
@@ -1010,6 +1016,7 @@ export function ChappiConversation({
         openQuickCreate({ releaseId: action.releaseId ?? undefined, source: 'quick_create' });
       else if (action.type === 'open_cover_art_upload') setCoverArtReleaseId(action.releaseId);
       else if (action.type === 'open_recap') setRecapReleaseId(action.releaseId);
+      else if (action.type === 'open_ideas') setIdeasReleaseId(action.releaseId);
       else if (action.type === 'refresh') void loadCommandCenter({ force: true });
     }
   };
@@ -1774,6 +1781,8 @@ export function ChappiConversation({
             }
             onDismissRecap={() => setRecapReleaseId(null)}
             onReportRecap={handleReportRecap}
+            ideas={ideasRelease ? { releaseId: ideasRelease.id, releaseTitle: ideasRelease.title } : null}
+            ideasVersion={messages.length}
           />
         </div>
       </div>
@@ -1862,6 +1871,9 @@ type TranscriptProps = {
   recap: { releaseId: string; releaseTitle: string } | null;
   onDismissRecap: () => void;
   onReportRecap: (message: string) => void;
+  /** The ideas card add_rollout_idea asked for, and the transcript length it reloads on. */
+  ideas: { releaseId: string; releaseTitle: string } | null;
+  ideasVersion: number;
 };
 
 /**
@@ -1893,6 +1905,8 @@ function Transcript({
   recap,
   onDismissRecap,
   onReportRecap,
+  ideas,
+  ideasVersion,
 }: TranscriptProps) {
   return (
     <div className="space-y-5 pb-2">
@@ -1983,6 +1997,15 @@ function Transcript({
           releaseTitle={recap.releaseTitle}
           onDismiss={onDismissRecap}
           onReport={onReportRecap}
+        />
+      ) : null}
+
+      {ideas ? (
+        <ChappiIdeasCard
+          key={ideas.releaseId}
+          releaseId={ideas.releaseId}
+          releaseTitle={ideas.releaseTitle}
+          version={ideasVersion}
         />
       ) : null}
 
