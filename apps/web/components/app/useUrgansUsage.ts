@@ -30,9 +30,12 @@ import type { CreditAccount } from '@/lib/credits/allowance';
 
 const CHAPPI_ENABLED = isChappiEnabled();
 
-/** How long a fetched count is reused. Short: it is a live-ish number, and the
- *  request is one indexed count. */
-const CACHE_TTL_MS = 15 * 1000;
+/** How long a fetched count is reused when nothing has changed. 2 minutes since
+ *  2026-11-02 (was 15s, #1039): every page and remount re-asked, and each ask
+ *  is a Vercel function run. A new chat turn still re-reads at once (see
+ *  lastTurnCount below), and anything else that spends credits calls
+ *  invalidateUrgansUsage(). */
+const CACHE_TTL_MS = 2 * 60 * 1000;
 
 export type CreditsView = { total: number; account: CreditAccount; nextGrantAt: string | null; low: boolean };
 
@@ -100,6 +103,18 @@ export function invalidateUrgansUsage(): void {
   for (const listener of usageListeners) listener();
 }
 
+/**
+ * The cached answer when it is still fresh, else one shared request. For
+ * readers outside the hook (useCreditBalance) so a page full of credit lines
+ * asks the server once rather than once per line.
+ */
+export function readUrgansUsageShared(userId: string): Promise<UsageSnapshot | null> {
+  if (cache && cache.userId === userId && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
+    return Promise.resolve(cache.snapshot);
+  }
+  return loadUsage(userId);
+}
+
 /** One request per user at a time, whoever asks. */
 function loadUsage(userId: string): Promise<UsageSnapshot | null> {
   if (inFlight && inFlight.userId === userId) return inFlight.promise;
@@ -134,6 +149,9 @@ export function useUrgansUsage(): UsageSnapshot | null {
   // Latched once we learn this team has no ceiling. A ref, not state: flipping
   // it must not re-render, and it is read inside the effect that sets it.
   const noCeiling = useRef(false);
+  // The turn count the last read answered for. A new turn spends credits, so
+  // it skips the cache instead of waiting out CACHE_TTL_MS.
+  const lastTurnCount = useRef(turnCount);
 
   // Bumped by invalidateUrgansUsage(), which re-runs the read below.
   const [revision, setRevision] = useState(0);
@@ -154,7 +172,10 @@ export function useUrgansUsage(): UsageSnapshot | null {
 
     let cancelled = false;
     void (async () => {
-      const fresh = cache && cache.userId === userId && Date.now() - cache.fetchedAt < CACHE_TTL_MS;
+      const newTurn = turnCount !== lastTurnCount.current;
+      lastTurnCount.current = turnCount;
+      const fresh =
+        !newTurn && cache && cache.userId === userId && Date.now() - cache.fetchedAt < CACHE_TTL_MS;
       const snapshot = fresh ? cache!.snapshot : await loadUsage(userId);
       if (snapshot && snapshot.limit === null && !snapshot.credits) noCeiling.current = true;
       if (!cancelled) setUsage(snapshot);
