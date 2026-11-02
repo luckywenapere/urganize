@@ -447,7 +447,12 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // reprice, strategy doc section 8), when Solo went to two seats. It read
     // "For an independent artist." from 2026-10-02 while Solo was one seat.
     audience: 'For an artist and their manager.',
-    // ₦2,600 flat since 2026-10-31 (founder, with the rename to Emerging; no
+    // ₦4,000 a month with a ₦2,500 first month since 2026-11-02 (founder
+    // approved docs/mocks/emerging-offer; no paying Emerging team, so nobody
+    // moves). Card checkout needs a ₦2,500 Plan (invoice_limit 1) behind
+    // PAYSTACK_PLAN_SOLO_PER_MONTH_INTRO_NGN and ₦4,000 / ₦40,000 Plans behind
+    // the _PER_MONTH_ / _PER_YEAR_ vars; until then the price check refuses card.
+    // ₦2,600 flat from 2026-10-31 (founder, with the rename to Emerging; no
     // paying Solo team, so nobody moves). The ₦4,000 starting price is gone.
     // Card checkout needs ₦2,600 / ₦26,000 Paystack Plans behind the
     // _PER_MONTH_ / _PER_YEAR_ vars; until then the price check refuses card.
@@ -464,7 +469,8 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // this, see monthlyPrice. New Paystack Plans were minted at ₦7,500 /
     // ₦75,000 and the _PER_MONTH_ / _PER_YEAR_ vars repointed before this
     // shipped; the ₦5,000 Plans stay in Paystack untouched.
-    monthlyPrice: tierPrice(2_600),
+    monthlyPrice: tierPrice(4_000),
+    introMonthlyPrice: tierPrice(2_500),
     includesDistribution: false,
     urgansMonthlyCredits: 150,
     // TWO seats since 2026-10-17 (founder-approved reprice: "artist +
@@ -632,8 +638,9 @@ export function isSellableInterval(value: unknown): value is BillingInterval {
   return value === 'monthly' || value === 'annual';
 }
 
-/** How many monthly payments are at the starting price (founder, 2026-10-26). */
-export const INTRO_MONTHS = 6;
+/** How many monthly payments are at the starting price: one since 2026-11-02
+ *  (founder, Emerging's ₦2,500 first month); six from 2026-10-26. */
+export const INTRO_MONTHS = 1;
 
 /** A tier's starting price, or null when it has none. */
 export function getIntroPrice(id: PricingTierId): TierPrice | null {
@@ -652,11 +659,12 @@ export function getChargePrice(
   return getTierPrice(id, interval);
 }
 
-/** "for your first 6 months, then ₦5,000/month", or null with no starting
+/** "for your first month, then ₦4,000/month", or null with no starting
  *  price. */
 export function introThenLine(id: PricingTierId): string | null {
   if (!getIntroPrice(id)) return null;
-  return `for your first ${INTRO_MONTHS} months, then ${formatTierPrice(id, 'monthly')}`;
+  const span = INTRO_MONTHS === 1 ? 'month' : `${INTRO_MONTHS} months`;
+  return `for your first ${span}, then ${formatTierPrice(id, 'monthly')}`;
 }
 
 /** The feature list under a pricing card: a lead-in line, then what this plan

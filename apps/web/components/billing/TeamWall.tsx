@@ -657,7 +657,7 @@ export function TeamWall() {
                 </p>
                 <p className="text-center text-xs leading-5 text-content-tertiary">
                   Prices in Naira, for your whole team.
-                  {anyIntroPrice && introMonthsLeft > 0 ? ' The first 6 months price is for teams paying for the first time.' : ''}{' '}
+                  {anyIntroPrice && introMonthsLeft > 0 ? ' The first month offer is for teams paying for the first time.' : ''}{' '}
                   Card or bank transfer, through Paystack. Cancel any time.
                 </p>
               </div>

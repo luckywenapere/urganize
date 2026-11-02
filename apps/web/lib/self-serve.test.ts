@@ -17,6 +17,7 @@ import {
   partPaidCopy,
   periodAmount,
   periodHeadline,
+  introSubline,
   periodSaving,
   periodsForMethod,
   pickNudge,
@@ -80,13 +81,16 @@ describe('amounts come from the pricing package', () => {
   });
 
   it('Solo', () => {
-    expect(periodAmount('solo', 'monthly')).toBe(2_600);
-    expect(periodAmount('solo', 'semiannual')).toBe(13_000);
-    expect(periodAmount('solo', 'annual')).toBe(26_000);
+    expect(periodAmount('solo', 'monthly')).toBe(4_000);
+    expect(periodAmount('solo', 'monthly', 1)).toBe(2_500);
+    expect(periodAmount('solo', 'semiannual')).toBe(20_000);
+    expect(periodAmount('solo', 'annual')).toBe(40_000);
   });
 
   it('says the price and the saving plainly', () => {
     expect(periodHeadline('manager', 'monthly')).toBe('₦26,000 a month');
+    expect(periodHeadline('solo', 'monthly', 1)).toBe('₦2,500 a month');
+    expect(introSubline('solo', 'monthly', 1)).toBe('For your first month, then ₦4,000 a month.');
     expect(periodHeadline('manager', 'semiannual')).toBe('₦130,000 for 6 months');
     expect(periodHeadline('manager', 'annual')).toBe('₦260,000 a year');
     expect(periodSaving('semiannual')).toBe('One month free');

@@ -978,6 +978,29 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
         planVersion: isPricingTierId(planString) ? PRICE_LIST_VERSION : 'legacy',
         intro: payment.paystack_response?.intro === true,
       });
+      // A one-payment starting price (Emerging's ₦2,500 first month, 2026-11-02)
+      // ends on this very charge, and its Plan (invoice_limit 1) never renews,
+      // so the renewal path below never sees it. Move the card onto the
+      // full-price Plan now, first charged when this period ends.
+      if (
+        payment.paystack_response?.intro === true &&
+        (await loadIntroMonthsLeft(admin, userId)) === 0
+      ) {
+        const after = await admin
+          .from('subscriptions')
+          .select('expires_at,paystack_subscription_code')
+          .eq('user_id', userId)
+          .maybeSingle();
+        const row = after.data as { expires_at: string | null; paystack_subscription_code: string | null } | null;
+        await switchToFullPrice(admin, {
+          userId,
+          plan: planString,
+          customerCode,
+          authorizationCode: payload.data?.authorization?.authorization_code ?? null,
+          oldSubscriptionCode: subscriptionCode ?? row?.paystack_subscription_code ?? null,
+          startAt: row?.expires_at ?? null,
+        });
+      }
       // The team that invited this one earns credits for a first payment. Idempotent
       // on the invited team, so a redelivery cannot pay it twice.
       await rewardReferrerOnFirstPayment(admin, { payerUserId: userId, reference });
@@ -1201,6 +1224,22 @@ async function handleSubscriptionCreate(payload: PaystackWebhookPayload) {
 
   if (!subscriptionCode || !customerCode) {
     return ack({ event: 'subscription.create', matched: false, reason: 'missing_codes' });
+  }
+
+  // A starting-price subscription announced after the first charge already
+  // moved the card onto the full-price Plan (a one-payment starting price)
+  // must not overwrite that newer code, or the team would be left on a Plan
+  // that never charges again.
+  if (isIntroPlanCode(planRef(payload.data)?.plan_code)) {
+    const current = await admin
+      .from('subscriptions')
+      .select('paystack_subscription_code')
+      .eq('paystack_customer_code', customerCode)
+      .maybeSingle();
+    const held = (current.data as { paystack_subscription_code: string | null } | null)?.paystack_subscription_code;
+    if (held && held !== subscriptionCode) {
+      return ack({ event: 'subscription.create', matched: false, reason: 'intro_already_switched' });
+    }
   }
 
   // Stamp the subscription_code onto whichever subscriptions row already
