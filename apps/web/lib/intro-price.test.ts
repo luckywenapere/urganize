@@ -31,9 +31,13 @@ describe('starting price amounts', () => {
     expect(getChargePrice('solo', 'monthly', 0)?.amount).toBe(4_000);
   });
 
-  it('has no offer on Pro or Label', () => {
-    expect(getIntroPrice('manager')).toBeNull();
-    expect(getChargePrice('manager', 'monthly', 1)?.amount).toBe(26_000);
+  it('charges Pro ₦24,000 for the offer month, then ₦40,000', () => {
+    expect(getChargePrice('manager', 'monthly', 1)?.amount).toBe(24_000);
+    expect(getChargePrice('manager', 'monthly', 0)?.amount).toBe(40_000);
+    expect(getChargePrice('manager', 'annual', 1)?.amount).toBe(400_000);
+  });
+
+  it('has no offer on Label', () => {
     expect(getIntroPrice('label')).toBeNull();
     expect(getChargePrice('label', 'monthly', 1)?.amount).toBe(100_000);
   });
@@ -44,6 +48,7 @@ describe('starting price amounts', () => {
 
   it('says the full price that follows', () => {
     expect(introThenLine('solo')).toBe('for your first month, then ₦4,000/month');
-    expect(introThenLine('manager')).toBeNull();
+    expect(introThenLine('manager')).toBe('for your first month, then ₦40,000/month');
+    expect(introThenLine('label')).toBeNull();
   });
 });

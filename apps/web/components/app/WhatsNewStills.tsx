@@ -61,7 +61,7 @@ function PayYourWay() {
 function Plans() {
   const plans = [
     { name: 'Emerging', price: '₦4,000' },
-    { name: 'Pro', price: '₦26,000', on: true },
+    { name: 'Pro', price: '₦40,000', on: true },
   ];
   return (
     <div className="flex w-full max-w-[15rem] gap-1.5 self-stretch">

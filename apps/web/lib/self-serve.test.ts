@@ -75,9 +75,10 @@ describe('checkout intent', () => {
 
 describe('amounts come from the pricing package', () => {
   it('Manager', () => {
-    expect(periodAmount('manager', 'monthly')).toBe(26_000);
-    expect(periodAmount('manager', 'semiannual')).toBe(130_000);
-    expect(periodAmount('manager', 'annual')).toBe(260_000);
+    expect(periodAmount('manager', 'monthly')).toBe(40_000);
+    expect(periodAmount('manager', 'monthly', 1)).toBe(24_000);
+    expect(periodAmount('manager', 'semiannual')).toBe(200_000);
+    expect(periodAmount('manager', 'annual')).toBe(400_000);
   });
 
   it('Solo', () => {
@@ -88,11 +89,11 @@ describe('amounts come from the pricing package', () => {
   });
 
   it('says the price and the saving plainly', () => {
-    expect(periodHeadline('manager', 'monthly')).toBe('₦26,000 a month');
+    expect(periodHeadline('manager', 'monthly')).toBe('₦40,000 a month');
     expect(periodHeadline('solo', 'monthly', 1)).toBe('₦2,600 a month');
     expect(introSubline('solo', 'monthly', 1)).toBe('For your first month, then ₦4,000 a month.');
-    expect(periodHeadline('manager', 'semiannual')).toBe('₦130,000 for 6 months');
-    expect(periodHeadline('manager', 'annual')).toBe('₦260,000 a year');
+    expect(periodHeadline('manager', 'semiannual')).toBe('₦200,000 for 6 months');
+    expect(periodHeadline('manager', 'annual')).toBe('₦400,000 a year');
     expect(periodSaving('semiannual')).toBe('One month free');
     expect(periodSaving('monthly')).toBeNull();
   });
