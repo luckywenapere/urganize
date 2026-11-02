@@ -19,6 +19,14 @@ describe('the one-payment starting price', () => {
     const create = route.slice(route.indexOf('async function handleSubscriptionCreate'), route.indexOf('async function handleSubscriptionDisable'));
     expect(create).toContain('isIntroPlanCode(planRef(payload.data)?.plan_code)');
     expect(create).toContain("reason: 'intro_already_switched'");
-    expect(create.indexOf('intro_already_switched')).toBeLessThan(create.indexOf('.update({'));
+    // One conditional write, not a read and then an update.
+    expect(create).toContain('.or(`paystack_subscription_code.is.null,paystack_subscription_code.eq.${subscriptionCode}`)');
+  });
+
+  it('switches once: a redelivered first charge cannot start a second subscription', () => {
+    const initial = route.slice(route.indexOf("source: 'initial'"), route.indexOf("matched: 'initial_recurring'"));
+    expect(initial).toContain(".is('paystack_response->>intro_switch', null)");
+    expect(initial.indexOf("intro_switch: 'started'")).toBeLessThan(initial.indexOf('switchToFullPrice(admin, {'));
+    expect(initial).toContain('await stampFullPrice(admin, userId, planString, prior);');
   });
 });

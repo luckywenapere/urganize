@@ -25,7 +25,7 @@ import {
   recordSubscriptionCharge,
   rewardReferrerOnFirstPayment,
 } from '@/lib/referrals-server';
-import { switchToFullPrice } from '@/lib/intro-switch-server';
+import { stampFullPrice, switchToFullPrice } from '@/lib/intro-switch-server';
 import {
   TRIAL_CARD_PLAN,
   buildDelayedSubscriptionPayload,
@@ -978,28 +978,54 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
         planVersion: isPricingTierId(planString) ? PRICE_LIST_VERSION : 'legacy',
         intro: payment.paystack_response?.intro === true,
       });
-      // A one-payment starting price (Emerging's ₦2,600 first month, 2026-11-02)
-      // ends on this very charge, and its Plan (invoice_limit 1) never renews,
-      // so the renewal path below never sees it. Move the card onto the
-      // full-price Plan now, first charged when this period ends.
+      // A one-payment starting price (Emerging and Pro, 2026-11-02) ends on
+      // this very charge, and its Plan (invoice_limit 1) never renews, so the
+      // renewal path below never sees it. Move the card onto the full-price
+      // Plan now, first charged when this period ends.
+      //
+      // ONCE ONLY (Codex on #1050): a redelivered charge.success must not start
+      // a second full-price subscription. The payments row claims the switch
+      // (`intro_switch` in its jsonb, set only where it is still empty), then
+      // holds the new code. A redelivery after a switch only re-stamps that
+      // code and price, which the upsert above just overwrote.
       if (
         payment.paystack_response?.intro === true &&
         (await loadIntroMonthsLeft(admin, userId)) === 0
       ) {
-        const after = await admin
-          .from('subscriptions')
-          .select('expires_at,paystack_subscription_code')
-          .eq('user_id', userId)
-          .maybeSingle();
-        const row = after.data as { expires_at: string | null; paystack_subscription_code: string | null } | null;
-        await switchToFullPrice(admin, {
-          userId,
-          plan: planString,
-          customerCode,
-          authorizationCode: payload.data?.authorization?.authorization_code ?? null,
-          oldSubscriptionCode: subscriptionCode ?? row?.paystack_subscription_code ?? null,
-          startAt: row?.expires_at ?? null,
-        });
+        const response = (payment.paystack_response ?? {}) as Record<string, unknown>;
+        const prior = typeof response.intro_switch === 'string' ? response.intro_switch : null;
+        if (prior && prior !== 'started' && prior !== 'failed') {
+          await stampFullPrice(admin, userId, planString, prior);
+        } else if (!prior) {
+          const claim = await admin
+            .from('payments')
+            .update({ paystack_response: { ...response, intro_switch: 'started' } })
+            .eq('id', payment.id)
+            .is('paystack_response->>intro_switch', null)
+            .select('id');
+          if (!claim.error && (claim.data ?? []).length === 1) {
+            const after = await admin
+              .from('subscriptions')
+              .select('expires_at,paystack_subscription_code')
+              .eq('user_id', userId)
+              .maybeSingle();
+            const row = after.data as { expires_at: string | null; paystack_subscription_code: string | null } | null;
+            const switched = await switchToFullPrice(admin, {
+              userId,
+              plan: planString,
+              customerCode,
+              authorizationCode: payload.data?.authorization?.authorization_code ?? null,
+              oldSubscriptionCode: subscriptionCode ?? row?.paystack_subscription_code ?? null,
+              startAt: row?.expires_at ?? null,
+            });
+            await admin
+              .from('payments')
+              .update({
+                paystack_response: { ...response, intro_switch: switched.ok && switched.newCode ? switched.newCode : 'failed' },
+              })
+              .eq('id', payment.id);
+          }
+        }
       }
       // The team that invited this one earns credits for a first payment. Idempotent
       // on the invited team, so a redelivery cannot pay it twice.
@@ -1229,17 +1255,24 @@ async function handleSubscriptionCreate(payload: PaystackWebhookPayload) {
   // A starting-price subscription announced after the first charge already
   // moved the card onto the full-price Plan (a one-payment starting price)
   // must not overwrite that newer code, or the team would be left on a Plan
-  // that never charges again.
+  // that never charges again. One conditional write, so an overlapping
+  // charge.success cannot slip between a read and this update (Codex on #1050):
+  // it lands only on a row with no code yet or this same code.
   if (isIntroPlanCode(planRef(payload.data)?.plan_code)) {
-    const current = await admin
+    const { data: stamped, error: introError } = await admin
       .from('subscriptions')
-      .select('paystack_subscription_code')
+      .update({ paystack_subscription_code: subscriptionCode, updated_at: new Date().toISOString() })
       .eq('paystack_customer_code', customerCode)
-      .maybeSingle();
-    const held = (current.data as { paystack_subscription_code: string | null } | null)?.paystack_subscription_code;
-    if (held && held !== subscriptionCode) {
+      .or(`paystack_subscription_code.is.null,paystack_subscription_code.eq.${subscriptionCode}`)
+      .select('user_id');
+    if (introError) {
+      console.error('[paystack-webhook] subscription.create (intro) update error:', introError.message);
+      return ack({ event: 'subscription.create', matched: false, reason: 'update_failed' });
+    }
+    if ((stamped ?? []).length === 0) {
       return ack({ event: 'subscription.create', matched: false, reason: 'intro_already_switched' });
     }
+    return ack({ event: 'subscription.create', subscription_code: subscriptionCode });
   }
 
   // Stamp the subscription_code onto whichever subscriptions row already
