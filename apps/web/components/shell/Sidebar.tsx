@@ -15,7 +15,9 @@ import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { shellSideMenu } from '@/lib/shell-nav';
 import { useShellAreas } from './useShellAreas';
 import { useNavTip } from './useNavTip';
-import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
+import { AvatarFace } from '@/components/shell/swipe/AvatarMenu';
+import { SETTINGS_PAGE_HREF } from '@/lib/swipe-nav';
+import { useSettingsPageStore } from '@/stores/useSettingsPageStore';
 
 /**
  * The desktop side menu (URG-254, 2026-10-14; design review with Femi,
@@ -77,7 +79,7 @@ type SidebarProps = {
  * this file: a phone keeps Settings and the help rows in the bottom bar's
  * More sheet, unchanged.
  */
-export function Sidebar({ userName, showHelp = false, account = true }: SidebarProps = {}) {
+export function Sidebar({ account = true }: SidebarProps = {}) {
   const pathname = usePathname() ?? '/dashboard';
   const areas = useShellAreas();
   const menu = shellSideMenu(areas, pathname);
@@ -134,7 +136,19 @@ export function Sidebar({ userName, showHelp = false, account = true }: SidebarP
       ) : null}
       {!menu ? <div className="flex-1" aria-hidden="true" /> : null}
       <div data-sidebar-foot className="flex shrink-0 flex-col items-center pt-2">
-        {account ? <WorkspaceMenu userName={userName} showHelp={showHelp} placement="rail" /> : null}
+        {/* Your photo opens Settings over the whole screen (Nov 2, 2026,
+            founder approved docs/mocks/desktop-settings-full); the pop-up
+            account menu is gone. */}
+        {account ? (
+          <Link
+            href={SETTINGS_PAGE_HREF}
+            onClick={() => useSettingsPageStore.getState().setTarget(null)}
+            aria-label="Settings"
+            className="motion-focus motion-press grid h-10 w-10 place-items-center rounded-full"
+          >
+            <AvatarFace size={32} />
+          </Link>
+        ) : null}
       </div>
     </aside>
   );

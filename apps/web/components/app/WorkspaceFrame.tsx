@@ -9,6 +9,8 @@ import { TopNav } from '@/components/shell/TopNav';
 import { SubNav } from '@/components/shell/SubNav';
 import { MainMorph } from '@/components/motion/MainMorph';
 import { Sidebar } from '@/components/shell/Sidebar';
+import { SETTINGS_PAGE_HREF } from '@/lib/swipe-nav';
+import { noteInAppPath } from '@/lib/in-app-history';
 import { PageBar } from '@/components/shell/PageBar';
 import { BottomBar } from '@/components/shell/BottomBar';
 import { KeyboardShortcuts } from '@/components/shell/KeyboardShortcuts';
@@ -89,6 +91,9 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
   useEffect(() => {
     startSwipeNav();
   }, []);
+  useEffect(() => {
+    noteInAppPath(pathname ?? '', SETTINGS_PAGE_HREF);
+  }, [pathname]);
 
   // The same rules AppShell used, narrowed to the routes this frame is mounted
   // on (/dashboard/* and /settings): a curator-only account has no workspace to
@@ -121,6 +126,28 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
         <SwipeFrame userName={workspaceUserName} showHelp={showHelpMenu}>
           {children}
         </SwipeFrame>
+      </>
+    );
+  }
+
+  // Settings on a computer covers the whole screen (Nov 2, 2026, founder
+  // approved docs/mocks/desktop-settings-full): no top bar, no side menu, no
+  // floating launcher. The page draws its own X back to where you were.
+  if (pathname === SETTINGS_PAGE_HREF && showWorkspaceChrome) {
+    return (
+      <>
+        {CHAT_HISTORY_ENABLED ? <ChappiHistoryBridge /> : null}
+        <ReleaseParamSync />
+        <div className="app-layout min-h-dvh">
+          <main id="main-content" tabIndex={-1} className="min-h-dvh pb-10 focus:outline-none">
+            <WorkspacePageErrorBoundary>
+              <Suspense fallback={<RootShellSkeleton />}>{children}</Suspense>
+            </WorkspacePageErrorBoundary>
+          </main>
+        </div>
+        <ErrorBoundary name="command-bar" onError={reportBoundaryError}>
+          <CommandBar />
+        </ErrorBoundary>
       </>
     );
   }

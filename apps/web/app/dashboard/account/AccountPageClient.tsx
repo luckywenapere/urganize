@@ -1,19 +1,47 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { SettingsPane } from '@/components/shell/swipe/SettingsPane';
 import { useSettingsPageStore } from '@/stores/useSettingsPageStore';
+import { useArtistFilterSync } from '@/components/shell/useArtistFilter';
+import { hasInAppPredecessor } from '@/lib/in-app-history';
 
 /**
- * Settings as a page on a computer (Nov 2, 2026, founder approved
- * docs/mocks/desktop-nav): the list on the left with search at its bottom, the
- * open setting on the right. On a phone the swipe shell draws its own Settings
- * page and this one is not shown.
+ * Settings on a computer (Nov 2, 2026, founder approved
+ * docs/mocks/desktop-settings-full): the whole screen, no top bar or side
+ * menu (WorkspaceFrame leaves them off on this route), one centred column like
+ * the phone, and an X at the top right back to the page you were on. On a
+ * phone the swipe shell draws its own Settings page and this one is not shown.
  */
 export default function AccountPageClient() {
+  const router = useRouter();
+  // The top bar normally loads the artist list; it is off on this page.
+  useArtistFilterSync();
   const setOpen = useSettingsPageStore((state) => state.setOpen);
+  const setTarget = useSettingsPageStore((state) => state.setTarget);
   useEffect(() => {
     setOpen(true);
   }, [setOpen]);
-  return <SettingsPane showHelp split />;
+
+  const close = () => {
+    setTarget(null);
+    // Back to the Urganize page you came from; opened from outside, go Home.
+    if (hasInAppPredecessor()) router.back();
+    else router.push('/dashboard');
+  };
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      if (useSettingsPageStore.getState().target) return;
+      const field = document.activeElement;
+      if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) return;
+      close();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
+  return <SettingsPane showHelp onClose={close} />;
 }

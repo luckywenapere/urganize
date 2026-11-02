@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.243.1",
+    tag: "App",
+    date: "November 2, 2026",
+    highlights: [
+      "On a computer, your photo now opens Settings over the whole screen. Close it with the X at the top right.",
+      "Pick which artist you see from the top of Settings.",
+    ],
+  },
+  {
     version: "1.243.0",
     title: "Rollouts and Settings on your computer",
     tag: "App",

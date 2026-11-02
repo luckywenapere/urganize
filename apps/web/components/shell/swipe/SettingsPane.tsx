@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, Search } from '@/components/icons';
+import { ChevronLeft, Search, X } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
@@ -20,7 +20,6 @@ import { BillingSegment } from '@/components/settings/segments/BillingSegment';
 import { ConnectionsSegment } from '@/components/settings/segments/ConnectionsSegment';
 import { DirectorySegment } from '@/components/settings/segments/DirectorySegment';
 import { MenuBody } from './AvatarMenu';
-import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { AdminRows, NotificationRows, ProfileRows, SecurityRows, UrgansRows } from './SettingsRows';
 
 /**
@@ -29,17 +28,17 @@ import { AdminRows, NotificationRows, ProfileRows, SecurityRows, UrgansRows } fr
  * photo. The tabs stay on top and your photo carries a ring while it shows.
  * A row opens its setting inside this page, with an arrow back to the list.
  * The search bar sits at the bottom and stays there (founder). Team opens its
- * own page, as before. On a computer Settings is still the pop-up.
+ * own page, as before.
  */
 /**
- * `split` (Nov 2, 2026, computer layout, founder approved docs/mocks/desktop-nav):
- * on a wide screen the settings list sits on the left with the search at its
- * bottom, and the open setting on the right (Profile until one is picked).
- * Narrower screens behave like the phone page.
+ * `onClose` (Nov 2, 2026, founder approved docs/mocks/desktop-settings-full):
+ * on a computer Settings covers the whole screen, one centred column like the
+ * phone, with an X at the top right that takes you back to where you were and
+ * a search button beside your name. The artist picker sits near the top.
  */
-export function SettingsPane({ showHelp, split = false }: { showHelp: boolean; split?: boolean }) {
-  const isDesktop = useIsDesktopViewport();
-  const wide = split && isDesktop;
+export function SettingsPane({ showHelp, onClose }: { showHelp: boolean; onClose?: () => void }) {
+  const full = Boolean(onClose);
+  const [searching, setSearching] = useState(false);
   const open = useSettingsPageStore((state) => state.open);
   const target = useSettingsPageStore((state) => state.target);
   const setTarget = useSettingsPageStore((state) => state.setTarget);
@@ -56,9 +55,7 @@ export function SettingsPane({ showHelp, split = false }: { showHelp: boolean; s
   // half-typed draft survives a trip back to the list, as in the pop-up
   // (Codex review on #1030). Adjusted during render, like the pop-up does.
   const [visited, setVisited] = useState<SettingsSegment[]>([]);
-  // On a wide screen something is always open on the right: Profile first.
-  const shown = target ?? (wide ? { segment: 'general' as SettingsSegment, section: null } : null);
-  if (shown && !visited.includes(shown.segment)) setVisited([...visited, shown.segment]);
+  if (target && !visited.includes(target.segment)) setVisited([...visited, target.segment]);
   if (!open && visited.length > 0) setVisited([]);
   const results = useMemo(() => searchSettings(query, visible), [query, visible]);
 
@@ -96,66 +93,45 @@ export function SettingsPane({ showHelp, split = false }: { showHelp: boolean; s
 
   const openSegment = (segment: SettingsSegment, section: string | null) => {
     setQuery('');
+    setSearching(false);
     setTarget({ segment, section });
   };
 
-  if (wide) {
-    return (
-      <div className="mx-auto grid min-h-full w-full max-w-[1100px] grid-cols-[280px_minmax(0,1fr)] gap-10 px-2">
-        <aside className="flex min-h-[calc(100dvh-9rem)] flex-col">
-          <h2 className="mb-3 mt-3 font-display text-2xl text-content-primary">Settings</h2>
-          <div className="flex-1">
-            {query.trim() ? (
-              <ul className="rounded-[20px] bg-content-primary/[0.04] px-4">
-                {results.map((result) => (
-                  <li key={`${result.segment}:${result.section ?? ''}:${result.label}`}>
-                    <button
-                      type="button"
-                      onClick={() => openSegment(result.segment, result.section)}
-                      className="motion-focus flex min-h-[48px] w-full items-center justify-between gap-3 border-b border-content-primary/[0.07] text-left last:border-b-0"
-                    >
-                      <span className="text-[15px] text-content-primary">{result.label}</span>
-                      <span className="shrink-0 text-[12px] text-content-tertiary">{result.segmentLabel}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <MenuBody showHelp={showHelp} onClose={() => undefined} onOpenSegment={openSegment} />
-            )}
-          </div>
-          <div className="sticky bottom-0 bg-bg-base pb-4 pt-3">
-            <label className="flex h-11 items-center gap-2.5 rounded-full border border-stroke-control bg-bg-surface px-4">
-              <Search className="h-[18px] w-[18px] text-content-primary/50" aria-hidden="true" />
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search settings"
-                aria-label="Search settings"
-                className="min-w-0 flex-1 bg-transparent text-[15px] text-content-primary placeholder:text-content-tertiary focus:outline-none"
-              />
-            </label>
-          </div>
-        </aside>
-        <section className="min-w-0 pt-3">
-          <h2 className="mb-5 font-display text-2xl text-content-primary">
-            {shown ? SETTINGS_SEGMENT_LABELS[shown.segment] : 'Settings'}
-          </h2>
-          {visited.map((segment) => (
-            <div key={segment} className={shown?.segment === segment ? 'max-w-[40rem]' : 'hidden'}>
-              {renderSegment(segment, workspace, shown?.segment === segment ? shown.section : null)}
-            </div>
-          ))}
-        </section>
-      </div>
-    );
-  }
+  const searchField = (
+    <label className="flex h-[50px] items-center gap-2.5 rounded-full border border-stroke-control bg-bg-surface px-4">
+      <Search className="h-[19px] w-[19px] text-content-primary/50" aria-hidden="true" />
+      <input
+        type="search"
+        value={query}
+        autoFocus={full}
+        onChange={(event) => setQuery(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' && full) {
+            setQuery('');
+            setSearching(false);
+          }
+        }}
+        placeholder="Search settings"
+        aria-label="Search settings"
+        className="min-w-0 flex-1 bg-transparent text-[16px] text-content-primary placeholder:text-content-tertiary focus:outline-none"
+      />
+    </label>
+  );
 
   // One tree for the list and the open setting, so the settings opened earlier
   // keep their place in it and are never remounted by a switch (their drafts last).
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-[40rem] flex-col px-5">
+    <div className={`mx-auto flex min-h-full w-full flex-col px-5 ${full ? 'max-w-[34rem] pt-6' : 'max-w-[40rem]'}`}>
+      {full ? (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close Settings"
+          className="motion-focus motion-press fixed right-5 top-5 z-20 grid h-11 w-11 place-items-center rounded-full bg-content-primary/[0.06] text-content-primary"
+        >
+          <X className="h-5 w-5" aria-hidden="true" />
+        </button>
+      ) : null}
       {target ? (
         <>
           {/* The founder's reference: a round back button on the left, the
@@ -175,6 +151,10 @@ export function SettingsPane({ showHelp, split = false }: { showHelp: boolean; s
             <span aria-hidden="true" />
           </div>
         </>
+      ) : full ? (
+        searching ? (
+          <div className="mb-4">{searchField}</div>
+        ) : null
       ) : (
         <h2 className="mb-3 mt-3 font-display text-2xl text-content-primary">Settings</h2>
       )}
@@ -200,7 +180,13 @@ export function SettingsPane({ showHelp, split = false }: { showHelp: boolean; s
             </ul>
           )
         ) : (
-          <MenuBody showHelp={showHelp} onClose={() => undefined} onOpenSegment={openSegment} />
+          <MenuBody
+            showHelp={showHelp}
+            onClose={() => undefined}
+            onOpenSegment={openSegment}
+            artistPicker={full}
+            onSearch={full ? () => setSearching(true) : undefined}
+          />
         )}
       </div>
 
@@ -213,20 +199,11 @@ export function SettingsPane({ showHelp, split = false }: { showHelp: boolean; s
         ))}
       </div>
 
-      {/* The search stays at the bottom of the page (founder, Nov 2, 2026). */}
-      {target ? null : (
+      {/* The search stays at the bottom of the phone page (founder, Nov 2, 2026);
+          on a computer it opens from the button beside your name. */}
+      {target || full ? null : (
         <div className="sticky bottom-0 -mx-5 bg-bg-base px-5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] pt-3">
-          <label className="flex h-[50px] items-center gap-2.5 rounded-full border border-stroke-control bg-bg-surface px-4">
-            <Search className="h-[19px] w-[19px] text-content-primary/50" aria-hidden="true" />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search settings"
-              aria-label="Search settings"
-              className="min-w-0 flex-1 bg-transparent text-[16px] text-content-primary placeholder:text-content-tertiary focus:outline-none"
-            />
-          </label>
+          {searchField}
         </div>
       )}
     </div>
