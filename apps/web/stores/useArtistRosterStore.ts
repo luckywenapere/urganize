@@ -3,6 +3,8 @@
 import { registerSignOutReset } from '@/lib/sign-out-resets';
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
+import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { ROSTER_CACHE_KEY } from '@/lib/roster-cache';
 
 // The team's artist roster, loaded once and shared.
 //
@@ -51,14 +53,26 @@ const ROSTER_FRESH_MS = 30_000;
 let rosterLoadedAt = 0;
 let rosterInFlight: Promise<void> | null = null;
 
-async function getAccessToken(): Promise<string> {
+async function getSessionInfo(): Promise<{ token: string; userId: string }> {
   try {
     const { data } = await supabase.auth.getSession();
-    return data.session?.access_token ?? '';
+    return { token: data.session?.access_token ?? '', userId: data.session?.user?.id ?? '' };
   } catch {
-    return '';
+    return { token: '', userId: '' };
   }
 }
+
+// The roster saved on the device (Nov 2, 2026), so Home and the artist pages
+// paint at once after a reload, like the rollout list does. Keyed to the
+// account and only used for that same account; a day at most, since the photo
+// links in it are signed and expire. Cleared by key on sign-out (auth-store).
+const ROSTER_CACHE_VERSION = 1;
+const ROSTER_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+type RosterCache = { userId: string; artists: RosterArtist[] };
+const isRosterCache = (value: unknown): value is RosterCache =>
+  Boolean(value) &&
+  typeof (value as RosterCache).userId === 'string' &&
+  Array.isArray((value as RosterCache).artists);
 
 export const useArtistRosterStore = create<ArtistRosterStore>((set) => ({
   artists: [],
@@ -66,6 +80,7 @@ export const useArtistRosterStore = create<ArtistRosterStore>((set) => ({
 
   load: async (options) => {
     const force = options?.force === true;
+    const state = useArtistRosterStore.getState();
     if (!force) {
       if (rosterInFlight) return rosterInFlight;
       if (Date.now() - rosterLoadedAt < ROSTER_FRESH_MS) return;
@@ -73,8 +88,18 @@ export const useArtistRosterStore = create<ArtistRosterStore>((set) => ({
 
     const run = (async () => {
       try {
-        const token = await getAccessToken();
+        const { token, userId } = await getSessionInfo();
         if (!token) return;
+        // Paint the saved roster first; the fetch below refreshes it.
+        if (!state.loaded && state.artists.length === 0 && userId) {
+          const saved = readPersistedState<RosterCache>(
+            ROSTER_CACHE_KEY,
+            ROSTER_CACHE_VERSION,
+            isRosterCache,
+            ROSTER_CACHE_MAX_AGE_MS
+          );
+          if (saved && saved.userId === userId) set({ artists: saved.artists, loaded: true });
+        }
         const response = await fetch('/api/workspace/artists', {
           headers: { Authorization: `Bearer ${token}` },
           cache: 'no-store',
@@ -83,8 +108,16 @@ export const useArtistRosterStore = create<ArtistRosterStore>((set) => ({
         const payload = (await response.json().catch(() => ({}))) as {
           artists?: RosterArtist[];
         };
-        set({ artists: Array.isArray(payload.artists) ? payload.artists : [] });
+        const artists = Array.isArray(payload.artists) ? payload.artists : [];
+        set({ artists });
         rosterLoadedAt = Date.now();
+        if (userId) {
+          try {
+            writePersistedState<RosterCache>(ROSTER_CACHE_KEY, ROSTER_CACHE_VERSION, { userId, artists });
+          } catch {
+            // Storage full or blocked: the next reload just fetches.
+          }
+        }
       } catch {
         // Offline, or mid-deploy. Leave whatever we had; `loaded` still flips
         // so consumers stop waiting on a fetch that is not coming back.

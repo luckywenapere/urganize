@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { TAB_MEMORY_STORAGE_KEYS } from '@/lib/tab-memory';
+import { ROSTER_CACHE_KEY } from '@/lib/roster-cache';
 import type { User } from '@supabase/supabase-js';
 import { supabase, type Profile, handleSupabaseError } from './supabase/client';
 import { errorMessage } from "@/lib/errors";
@@ -551,6 +552,20 @@ export const useAuthStore = create<AuthState>()(
               // that keeps the app signoutable.
               set({ user: null, isAuthenticated: false, isLoading: false, needsOnboarding: true, hasCuratorProfile: null, error: null });
               return;
+            }
+
+            // A reload with this same account saved on the device: open the
+            // gate now so the saved rollouts and artists paint at once instead
+            // of waiting for the two network checks below (founder, Nov 2,
+            // 2026: "users don't have to wait"). Only for the SAME account the
+            // live session belongs to, never another's; the checks below still
+            // run and can still sign out (a revoked session, a scheduled
+            // deletion), which clears everything.
+            {
+              const saved = get();
+              if (saved.isLoading && saved.isAuthenticated && saved.user && saved.user.id === session.user.id) {
+                set({ isLoading: false });
+              }
             }
 
             // The profile read needs only the user id and token already on
@@ -1230,6 +1245,12 @@ if (typeof window !== 'undefined') {
       // computer has no swipe shell). Codex review on #1029.
       try {
         for (const key of TAB_MEMORY_STORAGE_KEYS) window.sessionStorage.removeItem(key);
+      } catch {
+        // Blocked storage: nothing was kept.
+      }
+      // The saved artist roster (Nov 2, 2026), whether or not its store loaded.
+      try {
+        window.localStorage.removeItem(ROSTER_CACHE_KEY);
       } catch {
         // Blocked storage: nothing was kept.
       }

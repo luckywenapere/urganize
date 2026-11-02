@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.241.0",
+    title: "Faster after a reload",
+    tag: "App",
+    date: "November 2, 2026",
+    highlights: [
+      "After a reload your rollouts show straight away instead of a loading screen.",
+      "Your artists show straight away on Home and on an artist's page.",
+    ],
+  },
+  {
     version: "1.240.1",
     tag: "App",
     date: "November 2, 2026",
