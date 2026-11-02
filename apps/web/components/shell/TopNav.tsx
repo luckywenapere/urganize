@@ -6,6 +6,9 @@ import { usePathname } from 'next/navigation';
 import { Logo } from '@urganize/ui';
 import { Search } from '@/components/icons';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
+import { AvatarFace } from '@/components/shell/swipe/AvatarMenu';
+import { SETTINGS_PAGE_HREF } from '@/lib/swipe-nav';
+import { useSettingsPageStore } from '@/stores/useSettingsPageStore';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { activeShellArea } from '@/lib/shell-nav';
 import { useShellAreas } from './useShellAreas';
@@ -163,6 +166,23 @@ export function TopNav() {
               button before it is desktop only too: on a phone search is the
               first row of More. */}
           <NotificationsBell />
+          {/* Your photo opens Settings as a page (Nov 2, 2026, docs/mocks/desktop-nav);
+              a thin light outline while it is open, as on the phone. */}
+          <Link
+            href={SETTINGS_PAGE_HREF}
+            onClick={() => useSettingsPageStore.getState().setTarget(null)}
+            aria-label="Settings"
+            aria-current={pathname === SETTINGS_PAGE_HREF ? 'page' : undefined}
+            className="motion-press grid h-10 w-10 place-items-center rounded-full outline-none [&:focus-visible>span]:shadow-[0_0_0_2px_rgb(var(--color-brand))]"
+          >
+            <span
+              className={`grid place-items-center rounded-full transition-shadow ${
+                pathname === SETTINGS_PAGE_HREF ? 'shadow-[0_0_0_3px_#fff,0_2px_10px_rgb(0_0_0/0.18)]' : ''
+              }`}
+            >
+              <AvatarFace size={32} />
+            </span>
+          </Link>
         </div>
       </div>
     </header>

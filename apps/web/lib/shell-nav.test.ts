@@ -34,26 +34,28 @@ describe('shell nav', () => {
     expect(buildShellAreas(ALL_ON).map((a) => a.key)).toEqual([
       'catalogue',
       'urgans',
-      'team',
+      'rollouts',
       'relationships',
       'opportunities',
     ]);
   });
 
   it('drops Opportunities and parks Relationships while they are paused (Oct 27 and 29, 2026)', () => {
-    expect(buildShellAreas(ALL_OFF).map((a) => a.key)).toEqual(['catalogue', 'urgans', 'team']);
+    expect(buildShellAreas(ALL_OFF).map((a) => a.key)).toEqual(['catalogue', 'urgans', 'rollouts']);
     // Directory alone does not bring the Relationships pill back (#853).
-    expect(buildShellAreas({ ...ALL_OFF, directory: true }).map((a) => a.key)).toEqual(['catalogue', 'urgans', 'team']);
+    expect(buildShellAreas({ ...ALL_OFF, directory: true }).map((a) => a.key)).toEqual(['catalogue', 'urgans', 'rollouts']);
     expect(buildMoreItems(buildShellAreas(ALL_OFF)).map((i) => i.key)).toEqual([]);
   });
 
-  it('Team is one destination, lit on its page', () => {
+  it('Rollouts took Team\'s place (Nov 2, 2026): one destination, lit on its page', () => {
     const areas = buildShellAreas(ALL_OFF);
-    const team = areas.find((a) => a.key === 'team')!;
-    expect(team.href).toBe('/dashboard/team');
-    expect(team.subTabs).toEqual([]);
-    expect(activeShellArea(areas, '/dashboard/team')?.key).toBe('team');
-    expect(activeMobileTab(areas, '/dashboard/team')).toBe('team');
+    const rollouts = areas.find((a) => a.key === 'rollouts')!;
+    expect(rollouts.href).toBe('/dashboard/sessions');
+    expect(rollouts.subTabs).toEqual([]);
+    expect(activeShellArea(areas, '/dashboard/sessions')?.key).toBe('rollouts');
+    expect(activeMobileTab(areas, '/dashboard/sessions')).toBe('rollouts');
+    // Team is a page of Settings now, not in the menu.
+    expect(areas.some((a) => a.key === 'team')).toBe(false);
   });
 
   it('marks areas with nothing built as not live, so their page says coming soon', () => {
@@ -62,7 +64,7 @@ describe('shell nav', () => {
     expect(live).toEqual({
       urgans: true,
       catalogue: true,
-      team: true,
+      rollouts: true,
     });
   });
 
@@ -107,7 +109,7 @@ describe('shell nav', () => {
     const areas = buildShellAreas(ALL_ON);
     const at = (p: string) => activeShellArea(areas, p)?.key ?? null;
     expect(at('/dashboard/home')).toBeNull();
-    expect(at('/dashboard/team')).toBe('team');
+    expect(at('/dashboard/sessions')).toBe('rollouts');
     expect(at('/dashboard')).toBe('catalogue');
     expect(at('/dashboard/artists/abc')).toBe('catalogue');
     expect(at('/dashboard/abc')).toBe('catalogue');
@@ -156,13 +158,13 @@ describe('shell nav', () => {
   });
 
   it('phone bottom bar is Home, Assistant, Team (#876, #886); More holds the rest', () => {
-    expect(buildMobileTabs().map((t) => t.key)).toEqual(['catalogue', 'urgans', 'team']);
-    expect(buildMobileTabs().map((t) => t.label)).toEqual(['Home', 'Assistant', 'Team']);
+    expect(buildMobileTabs().map((t) => t.key)).toEqual(['catalogue', 'urgans', 'rollouts']);
+    expect(buildMobileTabs().map((t) => t.label)).toEqual(['Home', 'Assistant', 'Rollouts']);
     // The Artists tab lands on Artists when the artist page is on, Rollouts when it is off.
     expect(buildMobileTabs(buildShellAreas(ALL_ON))[0].href).toBe('/dashboard');
     expect(buildMobileTabs(buildShellAreas(ALL_OFF))[0].href).toBe('/dashboard');
     // A role view that tucks Team leaves it off the bar.
-    const noTeam = buildShellAreas(ALL_OFF).filter((a) => a.key !== 'team');
+    const noTeam = buildShellAreas(ALL_OFF).filter((a) => a.key !== 'rollouts');
     expect(buildMobileTabs(noTeam).map((t) => t.key)).toEqual(['catalogue', 'urgans']);
     expect(buildMoreItems(buildShellAreas(ALL_ON)).map((i) => i.key)).toEqual([
       'relationships',
@@ -180,7 +182,7 @@ describe('shell nav', () => {
   it('lights More for an area the bar does not carry, UrgAns for its page', () => {
     const areas = buildShellAreas(ALL_ON);
     expect(activeMobileTab(areas, '/dashboard/artists')).toBe('catalogue');
-    expect(activeMobileTab(areas, '/dashboard/team')).toBe('team');
+    expect(activeMobileTab(areas, '/dashboard/sessions')).toBe('rollouts');
     expect(activeMobileTab(areas, '/dashboard/urgans')).toBe('urgans');
     expect(activeMobileTab(areas, '/dashboard/directory')).toBe('more');
     expect(activeMobileTab(areas, '/settings')).toBe('more');

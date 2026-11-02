@@ -120,14 +120,14 @@ describe('the nav filter, per view', () => {
 
   it('Artist manager tucks nothing now that Audience is off the nav (URG-319)', () => {
     const list = view('artist_manager');
-    expect(list.map((a) => a.key)).toEqual(['catalogue', 'urgans', 'team', 'relationships', 'opportunities']);
+    expect(list.map((a) => a.key)).toEqual(['catalogue', 'urgans', 'rollouts', 'relationships', 'opportunities']);
     expect(destinations(list)).toContain('catalogue/artists');
     expect(destinations(list)).toContain('relationships/people');
   });
 
   it('Label tucks Opportunities', () => {
     const list = view('label');
-    expect(list.map((a) => a.key)).toEqual(['catalogue', 'urgans', 'team', 'relationships', 'more']);
+    expect(list.map((a) => a.key)).toEqual(['catalogue', 'urgans', 'rollouts', 'relationships', 'more']);
     expect(more(list)).toEqual(['opportunities']);
     const relationships = list.find((a) => a.key === 'relationships')!;
     expect(relationships.subTabs.map((t) => t.key)).toEqual(['directory', 'people']);
@@ -136,7 +136,7 @@ describe('the nav filter, per view', () => {
   it('Solo artist tucks Artists, Team, Directory and People', () => {
     const list = view('solo_artist');
     // The Artists tab is Home since Oct 30, 2026, so it is never tucked.
-    expect(more(list)).toEqual(['team', 'directory', 'people']);
+    expect(more(list)).toEqual(['directory', 'people']);
     const catalogue = list.find((a) => a.key === 'catalogue')!;
     expect(catalogue.subTabs.map((t) => t.key)).toEqual(['artists', 'notes']);
     // Relationships lost every tab, so it moved under More whole.
@@ -145,7 +145,7 @@ describe('the nav filter, per view', () => {
 
   it('Artist team tucks Artists, People, Directory and Opportunities', () => {
     const list = view('artist_team');
-    expect(list.map((a) => a.key)).toEqual(['catalogue', 'urgans', 'team', 'more']);
+    expect(list.map((a) => a.key)).toEqual(['catalogue', 'urgans', 'rollouts', 'more']);
     expect(more(list)).toEqual(['directory', 'people', 'opportunities']);
   });
 
@@ -180,7 +180,7 @@ describe('the nav filter, per view', () => {
   it('tucks nothing that a flag already hid', () => {
     const flagsOff: ShellFlags = { ...ALL_ON, artistPage: false, directory: false };
     const list = applyRoleView(buildShellAreas(flagsOff), 'solo_artist');
-    expect(more(list)).toEqual(['team', 'people']);
+    expect(more(list)).toEqual(['people']);
   });
 
   it('says what a view tucks in one line', () => {

@@ -1,16 +1,19 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { SettingsPane } from '@/components/shell/swipe/SettingsPane';
+import { useSettingsPageStore } from '@/stores/useSettingsPageStore';
 
 /**
- * Only draws where the swipe shell is not used (a computer, or someone who
- * chose the classic menu): there Settings is the pop-up, so this opens it.
+ * Settings as a page on a computer (Nov 2, 2026, founder approved
+ * docs/mocks/desktop-nav): the list on the left with search at its bottom, the
+ * open setting on the right. On a phone the swipe shell draws its own Settings
+ * page and this one is not shown.
  */
 export default function AccountPageClient() {
-  const router = useRouter();
+  const setOpen = useSettingsPageStore((state) => state.setOpen);
   useEffect(() => {
-    router.replace('/dashboard?settings=menu');
-  }, [router]);
-  return null;
+    setOpen(true);
+  }, [setOpen]);
+  return <SettingsPane showHelp split />;
 }

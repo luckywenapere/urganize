@@ -18,6 +18,7 @@ export type ShellAreaKey =
   | 'urgans'
   | 'catalogue'
   | 'team'
+  | 'rollouts'
   | 'relationships'
   | 'opportunities'
   | 'audience'
@@ -94,6 +95,8 @@ export function readShellFlags(): ShellFlags {
  *  Artists, so anything still pointing here lands where the menu starts. */
 export const HOME_HREF = '/dashboard';
 export const URGANS_HREF = '/dashboard/urgans';
+/** The rollout chats page (the Rollouts tab). */
+export const ROLLOUT_CHATS_HREF = '/dashboard/sessions';
 /** /dashboard with ?release=<id> is a rollout. Without it, it was the Rollouts
  *  list until Oct 30, 2026, and is now the artist list (founder: "disable
  *  rollouts", each rollout opens from its artist's page). */
@@ -201,13 +204,15 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       subTabs: [],
       isActive: (p) => startsWithPath(p, URGANS_HREF),
     },
+    // Rollouts took Team's place (Nov 2, 2026, founder approved
+    // docs/mocks/desktop-nav): one chat per rollout. Team moved into Settings.
     {
-      key: 'team',
-      label: 'Team',
-      href: TEAM_HREF,
+      key: 'rollouts',
+      label: 'Rollouts',
+      href: ROLLOUT_CHATS_HREF,
       live: true,
       subTabs: [],
-      isActive: (p) => startsWithPath(p, TEAM_HREF),
+      isActive: (p) => startsWithPath(p, ROLLOUT_CHATS_HREF),
     },
     // Pitching left the top bar and the phone's bottom bar (founder,
     // 2026-10-15): it lives fully inside each rollout, as its Pitch tab.
@@ -274,8 +279,8 @@ export function buildMobileTabs(areas?: ShellArea[]): MobileTab[] {
     { key: 'catalogue', label: CATALOGUE_LABEL, href: catalogueHref, area: 'catalogue' },
     { key: 'urgans', label: 'Assistant', href: URGANS_HREF, area: 'urgans' },
   ];
-  if (!areas || areas.some((area) => area.key === 'team')) {
-    tabs.push({ key: 'team', label: 'Team', href: TEAM_HREF, area: 'team' });
+  if (!areas || areas.some((area) => area.key === 'rollouts')) {
+    tabs.push({ key: 'rollouts', label: 'Rollouts', href: ROLLOUT_CHATS_HREF, area: 'rollouts' });
   }
   return tabs;
 }
@@ -295,7 +300,7 @@ export function activeMobileTab(areas: ShellArea[], pathname: string): string {
   if (startsWithPath(pathname, URGANS_HREF)) return 'urgans';
   const area = activeShellArea(areas, pathname);
   if (!area) return 'more';
-  if (area.key === 'catalogue' || area.key === 'team') return area.key;
+  if (area.key === 'catalogue' || area.key === 'rollouts') return area.key;
   return 'more';
 }
 

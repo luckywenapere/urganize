@@ -46,7 +46,6 @@ import { useSettingsDirtyStore } from '@/stores/useSettingsDirtyStore';
 import { getAccessToken } from './getAccessToken';
 import { SettingsNav } from './SettingsNav';
 import { useCloseSettings, useOpenSettings, writeSettingsUrl } from './useOpenSettings';
-import { useSwipeNav } from '@/stores/useSwipeNavStore';
 import { openSettingsPage } from '@/components/shell/swipe/settings-page';
 import { useIsWide } from './useIsWide';
 import { useTeammates } from './useTeammates';
@@ -106,8 +105,9 @@ function SettingsModalGate() {
   // On a phone with the swipe shell, Settings is a page (Nov 2, 2026): a
   // ?settings= link (emails, bookmarks, older buttons) opens that page on the
   // same setting instead of the pop-up.
-  const swipePhone = useSwipeNav();
-  const toPage = Boolean(state) && !toTeamTab && swipePhone;
+  // Since Nov 2, 2026 Settings is a page at every width (docs/mocks/desktop-nav),
+  // so every ?settings= link opens the page and the pop-up never draws.
+  const toPage = Boolean(state) && !toTeamTab;
   const pageRequest = state?.request ?? null;
   const pageSection = state?.section ?? null;
   useEffect(() => {

@@ -48,7 +48,13 @@ function Cover({ release, size }: { release: ExecutionRelease; size: number }) {
  * the one on screen: whichever tab arrives loads its own chat (the Assistant
  * loads Main, this tab loads the open rollout's session).
  */
-export function SessionsPane({ active }: { active: boolean }) {
+/**
+ * `split` (Nov 2, 2026, computer layout, founder approved docs/mocks/desktop-nav):
+ * the rollouts list on the left and the open rollout's chat on the right, with
+ * the chat's own box. Used by the /dashboard/sessions page outside the swipe
+ * shell; below lg it shows one of the two at a time, like the phone.
+ */
+export function SessionsPane({ active, split = false }: { active: boolean; split?: boolean }) {
   const releaseId = useSessionsViewStore((state) => state.releaseId);
   const openSession = useSessionsViewStore((state) => state.open);
   const setPinnedScope = useSessionsViewStore((state) => state.setPinnedScope);
@@ -131,16 +137,15 @@ export function SessionsPane({ active }: { active: boolean }) {
     for (const id of toPrefetch.split(',')) prefetchChat(id);
   }, [active, releaseId, toPrefetch]);
 
-  if (releaseId) {
-    const title = release ? displayReleaseTitle(release.title) : 'Session';
-    return (
+  const title = release ? displayReleaseTitle(release.title) : 'Session';
+  const sessionView = releaseId ? (
       <div className="swipe-urgans flex h-full min-h-0 flex-col px-5">
         <div className="flex shrink-0 items-center gap-3 pt-2">
           <button
             type="button"
             onClick={() => openSession(null)}
             aria-label="Back to Rollouts"
-            className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary"
+            className={`motion-focus motion-press ${split ? 'lg:hidden ' : ''}grid h-10 w-10 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary`}
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -160,17 +165,16 @@ export function SessionsPane({ active }: { active: boolean }) {
                   subtitle: 'This chat stays on this rollout. Ask anything about it.',
                   prompts: [`What's left before ${title} drops?`, `Who still owes me something on ${title}?`, `Draft the pitch for ${title}`],
                 }}
-                externalComposer
+                externalComposer={!split}
               />
             </ErrorBoundary>
           ) : null}
         </div>
         <RolloutCreateFlow open={createOpen} onClose={() => setCreateOpen(false)} />
       </div>
-    );
-  }
+  ) : null;
 
-  return (
+  const listView = (
     <div className="swipe-page mx-auto w-full max-w-[40rem] px-5">
       <p className="mb-1 mt-3 text-sm text-content-secondary">One chat for each rollout.</p>
       {rows.length === 0 ? (
@@ -210,4 +214,18 @@ export function SessionsPane({ active }: { active: boolean }) {
       <RolloutCreateFlow open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   );
+
+  if (split) {
+    return (
+      <div className="grid h-full min-h-0 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <div className={`${releaseId ? 'hidden lg:block' : ''} min-h-0 overflow-y-auto lg:border-r lg:border-stroke-subtle`}>{listView}</div>
+        {sessionView ? (
+          <div className="flex min-h-0 flex-col py-3">{sessionView}</div>
+        ) : (
+          <div className="hidden place-items-center text-sm text-content-tertiary lg:grid">Pick a rollout to open its chat.</div>
+        )}
+      </div>
+    );
+  }
+  return sessionView ?? listView;
 }

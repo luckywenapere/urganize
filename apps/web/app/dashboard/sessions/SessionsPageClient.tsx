@@ -1,18 +1,16 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { SessionsPane } from '@/components/shell/swipe/SessionsPane';
 
 /**
- * Sessions is a tab of the phone's swipe shell, which draws it itself
- * (components/shell/swipe/SessionsPane). This page only draws on screens that
- * do not use that shell, where there is no Sessions list, so it sends the
- * person to the Assistant instead.
+ * Rollouts on a computer (Nov 2, 2026, founder approved docs/mocks/desktop-nav):
+ * the rollouts list on the left, the open rollout's chat on the right. On a
+ * phone the swipe shell draws its own Rollouts tab and this page is not shown.
  */
 export default function SessionsPageClient() {
-  const router = useRouter();
-  useEffect(() => {
-    router.replace('/dashboard/urgans');
-  }, [router]);
-  return null;
+  return (
+    <div className="h-[calc(100dvh-8.5rem)] min-h-[28rem]">
+      <SessionsPane active split />
+    </div>
+  );
 }

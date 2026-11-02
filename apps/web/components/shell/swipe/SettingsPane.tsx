@@ -20,6 +20,7 @@ import { BillingSegment } from '@/components/settings/segments/BillingSegment';
 import { ConnectionsSegment } from '@/components/settings/segments/ConnectionsSegment';
 import { DirectorySegment } from '@/components/settings/segments/DirectorySegment';
 import { MenuBody } from './AvatarMenu';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { AdminRows, NotificationRows, ProfileRows, SecurityRows, UrgansRows } from './SettingsRows';
 
 /**
@@ -30,7 +31,15 @@ import { AdminRows, NotificationRows, ProfileRows, SecurityRows, UrgansRows } fr
  * The search bar sits at the bottom and stays there (founder). Team opens its
  * own page, as before. On a computer Settings is still the pop-up.
  */
-export function SettingsPane({ showHelp }: { showHelp: boolean }) {
+/**
+ * `split` (Nov 2, 2026, computer layout, founder approved docs/mocks/desktop-nav):
+ * on a wide screen the settings list sits on the left with the search at its
+ * bottom, and the open setting on the right (Profile until one is picked).
+ * Narrower screens behave like the phone page.
+ */
+export function SettingsPane({ showHelp, split = false }: { showHelp: boolean; split?: boolean }) {
+  const isDesktop = useIsDesktopViewport();
+  const wide = split && isDesktop;
   const open = useSettingsPageStore((state) => state.open);
   const target = useSettingsPageStore((state) => state.target);
   const setTarget = useSettingsPageStore((state) => state.setTarget);
@@ -47,7 +56,9 @@ export function SettingsPane({ showHelp }: { showHelp: boolean }) {
   // half-typed draft survives a trip back to the list, as in the pop-up
   // (Codex review on #1030). Adjusted during render, like the pop-up does.
   const [visited, setVisited] = useState<SettingsSegment[]>([]);
-  if (target && !visited.includes(target.segment)) setVisited([...visited, target.segment]);
+  // On a wide screen something is always open on the right: Profile first.
+  const shown = target ?? (wide ? { segment: 'general' as SettingsSegment, section: null } : null);
+  if (shown && !visited.includes(shown.segment)) setVisited([...visited, shown.segment]);
   if (!open && visited.length > 0) setVisited([]);
   const results = useMemo(() => searchSettings(query, visible), [query, visible]);
 
@@ -87,6 +98,59 @@ export function SettingsPane({ showHelp }: { showHelp: boolean }) {
     setQuery('');
     setTarget({ segment, section });
   };
+
+  if (wide) {
+    return (
+      <div className="mx-auto grid min-h-full w-full max-w-[1100px] grid-cols-[280px_minmax(0,1fr)] gap-10 px-2">
+        <aside className="flex min-h-[calc(100dvh-9rem)] flex-col">
+          <h2 className="mb-3 mt-3 font-display text-2xl text-content-primary">Settings</h2>
+          <div className="flex-1">
+            {query.trim() ? (
+              <ul className="rounded-[20px] bg-content-primary/[0.04] px-4">
+                {results.map((result) => (
+                  <li key={`${result.segment}:${result.section ?? ''}:${result.label}`}>
+                    <button
+                      type="button"
+                      onClick={() => openSegment(result.segment, result.section)}
+                      className="motion-focus flex min-h-[48px] w-full items-center justify-between gap-3 border-b border-content-primary/[0.07] text-left last:border-b-0"
+                    >
+                      <span className="text-[15px] text-content-primary">{result.label}</span>
+                      <span className="shrink-0 text-[12px] text-content-tertiary">{result.segmentLabel}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <MenuBody showHelp={showHelp} onClose={() => undefined} onOpenSegment={openSegment} />
+            )}
+          </div>
+          <div className="sticky bottom-0 bg-bg-base pb-4 pt-3">
+            <label className="flex h-11 items-center gap-2.5 rounded-full border border-stroke-control bg-bg-surface px-4">
+              <Search className="h-[18px] w-[18px] text-content-primary/50" aria-hidden="true" />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search settings"
+                aria-label="Search settings"
+                className="min-w-0 flex-1 bg-transparent text-[15px] text-content-primary placeholder:text-content-tertiary focus:outline-none"
+              />
+            </label>
+          </div>
+        </aside>
+        <section className="min-w-0 pt-3">
+          <h2 className="mb-5 font-display text-2xl text-content-primary">
+            {shown ? SETTINGS_SEGMENT_LABELS[shown.segment] : 'Settings'}
+          </h2>
+          {visited.map((segment) => (
+            <div key={segment} className={shown?.segment === segment ? 'max-w-[40rem]' : 'hidden'}>
+              {renderSegment(segment, workspace, shown?.segment === segment ? shown.section : null)}
+            </div>
+          ))}
+        </section>
+      </div>
+    );
+  }
 
   // One tree for the list and the open setting, so the settings opened earlier
   // keep their place in it and are never remounted by a switch (their drafts last).

@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.243.0",
+    title: "Rollouts and Settings on your computer",
+    tag: "App",
+    date: "November 2, 2026",
+    highlights: [
+      "On a computer the menu is Home, Assistant and Rollouts. Team is in Settings.",
+      "Rollouts shows your rollouts on the left and the open rollout's chat on the right.",
+      "Your photo at the top right opens Settings as a full page.",
+    ],
+  },
+  {
     version: "1.242.1",
     tag: "AI",
     date: "November 2, 2026",
