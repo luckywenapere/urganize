@@ -863,8 +863,34 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
   const ideaCount = brief.ideas?.length ?? 0;
 
   // The review card under the header: approve, or what comes after approval.
+  const floatingApprove = Boolean(round && showChrome && round.state === 'closed' && round.canRun && !isDesktop);
   const roundCard =
-    !round || !showChrome ? null : round.state === 'closed' && round.canRun ? (
+    !round || !showChrome ? null : round.state === 'closed' && round.canRun && !isDesktop ? (
+      // On a phone (Nov 2, 2026, founder: "just a hovering button above the
+      // chatbox"): no card, only the button, floating just above the chat box.
+      // Portalled to <body> because .app-layout's transform would anchor a
+      // fixed box to the page, not the screen (the same reason HomeAskBar is).
+      typeof document === 'undefined'
+        ? null
+        : createPortal(
+            <div className="swipe-floating-approve pointer-events-none fixed inset-x-0 z-[60] flex justify-center px-4">
+              <button
+                type="button"
+                onClick={() => void approve()}
+                disabled={roundBusy !== null}
+                className={`${PRIMARY} pointer-events-auto h-12 gap-2 px-6 text-sm shadow-lg`}
+              >
+                {roundBusy === 'approve' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                )}
+                {hasPlan || !onBuildPlan ? 'Approve' : 'Approve and build the plan'}
+              </button>
+            </div>,
+            document.body
+          )
+    ) : round.state === 'closed' && round.canRun ? (
       <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-brand/30 bg-brand/5 p-4 lg:max-w-[860px]">
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-semibold text-content-primary">Check it, then approve.</p>
@@ -1177,7 +1203,11 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
   }
 
   return (
-    <div className={`pb-10 ${board ? 'lg:max-w-[1240px]' : 'lg:max-w-[860px]'}`}>
+    // The floating approve button hovers about 5.25rem above the chat box, so
+    // the last rows get room to scroll clear of it (Codex review on #1023).
+    <div
+      className={`${floatingApprove ? 'pb-28' : 'pb-10'} ${board ? 'lg:max-w-[1240px]' : 'lg:max-w-[860px]'}`}
+    >
       {header}
       {roundCard}
       {body}
