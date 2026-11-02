@@ -483,6 +483,44 @@ function forkChat(oldId: string) {
   scheduleCacheWrite();
 }
 
+// Chats read ahead of a tap (Nov 2, 2026, the load-wait audit): the Rollouts
+// list asks for the top few rollout chats so opening one after a reload does
+// not wait. Each answer is used once, by the same account, within a minute.
+const PREFETCH_MAX_AGE_MS = 60_000;
+const prefetched = new Map<string, { owner: string; at: number; detail: Promise<ChatDetail | null> }>();
+
+/** At most this many read-ahead chats are held at once. */
+const PREFETCH_MAX_ENTRIES = 5;
+
+export function prefetchChat(id: string): void {
+  if (!HISTORY_ENABLED || !sessionUserId || !id) return;
+  // Drop expired or other-account entries first, so a long session never
+  // keeps old transcripts in memory (Codex review on #1041).
+  const now = Date.now();
+  for (const [key, entry] of prefetched) {
+    if (entry.owner !== sessionUserId || now - entry.at >= PREFETCH_MAX_AGE_MS) prefetched.delete(key);
+  }
+  const existing = prefetched.get(id);
+  if (existing && existing.owner === sessionUserId && Date.now() - existing.at < PREFETCH_MAX_AGE_MS) return;
+  // Already on screen or held from earlier in this page life: nothing to read.
+  if (useChappiStore.getState().conversationId === id || detached.has(id)) return;
+  // Oldest first out when the cap is reached (a Map keeps insertion order).
+  while (prefetched.size >= PREFETCH_MAX_ENTRIES) {
+    const oldest = prefetched.keys().next().value;
+    if (oldest === undefined) break;
+    prefetched.delete(oldest);
+  }
+  prefetched.set(id, { owner: sessionUserId, at: Date.now(), detail: fetchChat(id) });
+}
+
+async function takePrefetchedChat(id: string): Promise<ChatDetail | null> {
+  const entry = prefetched.get(id);
+  if (!entry) return null;
+  prefetched.delete(id);
+  if (entry.owner !== sessionUserId || Date.now() - entry.at >= PREFETCH_MAX_AGE_MS) return null;
+  return entry.detail;
+}
+
 async function fetchChat(id: string): Promise<ChatDetail | null> {
   const owner = sessionUserId;
   const token = await getAccessToken();
@@ -574,7 +612,7 @@ async function openInternal(id: string, auto: boolean): Promise<boolean> {
   const expectedCurrent = chappi.conversationId;
   const seq = (openSeq += 1);
   useChappiHistoryStore.setState({ openingId: id });
-  const detail = await fetchChat(id);
+  const detail = (await takePrefetchedChat(id)) ?? (await fetchChat(id));
   // A later open (or a sign-out) superseded this one while it was fetching.
   if (seq !== openSeq) return false;
   useChappiHistoryStore.setState({ openingId: null });
@@ -777,6 +815,7 @@ export function stopChappiHistory(): void {
  *  Called from lib/auth-store.ts BEFORE the transcript itself is reset, so the
  *  reset is not mistaken for leaving a chat that still needs saving. */
 export function resetChappiHistory(): void {
+  prefetched.clear();
   stopChappiHistory();
   clearChatCache();
 }
