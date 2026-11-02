@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.242.0",
+    title: "Simpler settings on your phone",
+    tag: "Account",
+    date: "November 2, 2026",
+    highlights: [
+      "Security & account, UrgAns and Admin are now short lists of rows. Tap one to open it right there.",
+      "Leave team and Delete account sit together at the bottom, in red.",
+    ],
+  },
+  {
     version: "1.241.2",
     tag: "App",
     date: "November 2, 2026",
