@@ -226,12 +226,12 @@ describe('tier prices and the sales-led tier', () => {
   // the arithmetic moved: mint the Plans and repoint the vars BEFORE shipping it.
   it('resolves the yearly prices to the figures the Plans must be minted at', () => {
     // 2026-11-02: Emerging (solo) ₦4,000 / ₦20,000 / ₦40,000; 2026-10-31: Pro (manager)
-    // ₦26,000 / ₦130,000 / ₦260,000. Mint these Plans and repoint the
+    // ₦40,000 / ₦200,000 / ₦400,000 since 2026-11-02. Mint these Plans and repoint the
     // PAYSTACK_PLAN_* vars; until then card checkout refuses. Label is unchanged (₦600,000 minted).
     expect(getTierPrice('solo', 'annual')?.amount).toBe(40_000);
-    expect(getTierPrice('manager', 'annual')?.amount).toBe(260_000);
+    expect(getTierPrice('manager', 'annual')?.amount).toBe(400_000);
     expect(getTierPrice('solo', 'semiannual')?.amount).toBe(20_000);
-    expect(getTierPrice('manager', 'semiannual')?.amount).toBe(130_000);
+    expect(getTierPrice('manager', 'semiannual')?.amount).toBe(200_000);
     expect(getTierPrice('label', 'annual')?.amount).toBe(1_000_000);
   });
 
@@ -240,12 +240,12 @@ describe('tier prices and the sales-led tier', () => {
     // ask for fifth-grade readable, and an abbreviation is one more thing to
     // decode. The no-argument call takes the default, which is monthly.
     expect(formatTierPrice('solo')).toBe('₦4,000/month');
-    expect(formatTierPrice('manager')).toBe('₦26,000/month');
-    expect(formatTierPrice('manager', 'semiannual')).toBe('₦130,000 for 6 months');
+    expect(formatTierPrice('manager')).toBe('₦40,000/month');
+    expect(formatTierPrice('manager', 'semiannual')).toBe('₦200,000 for 6 months');
     // Label keeps its price for teams already on it, but no page shows it.
     expect(formatTierPrice('label')).toBeNull();
     expect(formatTierPrice('solo', 'annual')).toBe('₦40,000/year');
-    expect(formatTierPrice('manager', 'annual')).toBe('₦260,000/year');
+    expect(formatTierPrice('manager', 'annual')).toBe('₦400,000/year');
     expect(formatTierPrice('label', 'annual')).toBeNull();
   });
 
@@ -946,7 +946,7 @@ describe('Solo limits point at Manager (self-serve checkout)', () => {
       if (verdict.allowed) continue;
       expect(verdict.upgradeTo).toBe('manager');
       expect(verdict.message.toLowerCase()).toContain('upgrade to pro');
-      expect(verdict.message).toContain('26,000');
+      expect(verdict.message).toContain('40,000');
       expect(verdict.message).toContain('come off the price');
       expect(verdict.message).not.toMatch(/\u2014|workspace/i);
     }

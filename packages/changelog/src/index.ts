@@ -68,12 +68,13 @@ export type SiteStill = {
 export const changelog: Release[] = [
   {
     version: "1.244.0",
-    title: "Your first month of Emerging is ₦2,600",
+    title: "A lower price for your first month",
     tag: "Account",
     date: "November 2, 2026",
     highlights: [
       "Emerging is now ₦4,000 a month, and your first month is ₦2,600.",
-      "Paying yearly for Emerging is ₦40,000.",
+      "Pro is now ₦40,000 a month, and your first month is ₦24,000.",
+      "Paying yearly is ₦40,000 for Emerging and ₦400,000 for Pro.",
     ],
   },
   {

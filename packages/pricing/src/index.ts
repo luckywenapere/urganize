@@ -486,7 +486,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     id: 'manager',
     label: 'Pro',
     audience: 'For a manager running more than one artist.',
-    // ₦26,000 flat since 2026-10-31 (founder, with the rename to Pro; no paying
+    // ₦26,000 flat from 2026-10-31 (founder, with the rename to Pro; no paying
     // Manager team, so nobody moves). The starting price is gone. Card checkout
     // needs ₦26,000 / ₦260,000 Paystack Plans behind the vars.
     // ₦30,000 from 2026-10-22 (founder, no Manager customer had paid yet, so
@@ -495,7 +495,12 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // ₦35,000 earlier the same day and ₦22,000 before that). Monthly only — the
     // yearly price is ten months of this. New ₦25,000 / ₦250,000 Paystack Plans
     // were minted and the vars repointed before this shipped.
-    monthlyPrice: tierPrice(26_000),
+    // ₦40,000 a month with a ₦24,000 first month since 2026-11-02 (founder;
+    // no paying Pro team, so nobody moves). Card checkout needs a ₦24,000
+    // Plan (invoice_limit 1) behind PAYSTACK_PLAN_MANAGER_PER_MONTH_INTRO_NGN
+    // and ₦40,000 / ₦400,000 Plans behind the _PER_MONTH_ / _PER_YEAR_ vars.
+    monthlyPrice: tierPrice(40_000),
+    introMonthlyPrice: tierPrice(24_000),
     includesDistribution: true,
     urgansMonthlyCredits: 660,
     // 3 artists / 5 seats since 2026-10-17 (was 5 artists / 4 seats). Both are
