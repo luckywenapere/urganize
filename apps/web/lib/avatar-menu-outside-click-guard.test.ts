@@ -24,7 +24,7 @@ describe('avatar menu outside-click listener', () => {
     expect(source).toMatch(/\}, \[open, isDesktop\]\);/);
   });
 
-  it('the phone menu is still a portalled sheet, which is why the guard matters', () => {
-    expect(source).toMatch(/<SwipeSheet open=\{open && !isDesktop\}/);
+  it('a phone opens the Settings page instead of a menu (Nov 2, 2026)', () => {
+    expect(source).toMatch(/if \(!isDesktop\) \{\s*openSettingsPage\(/);
   });
 });

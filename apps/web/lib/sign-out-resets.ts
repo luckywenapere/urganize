@@ -33,6 +33,7 @@ export type SignOutResetId =
   | 'swipe-nav'
   | 'sessions-view'
   | 'tab-memory'
+  | 'settings-page'
   | 'needs-you';
 
 /**
@@ -58,6 +59,7 @@ export const SIGN_OUT_RESET_ORDER: readonly SignOutResetId[] = [
   'swipe-nav',
   'sessions-view',
   'tab-memory',
+  'settings-page',
   'needs-you',
 ];
 

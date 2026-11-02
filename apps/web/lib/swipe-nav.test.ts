@@ -235,3 +235,14 @@ describe('swipeDocumentTitle', () => {
     expect(readFileSync('app/dashboard/directory/page.tsx', 'utf8')).not.toMatch(/Urganize/);
   });
 });
+
+describe('the Settings page in the swipe row', () => {
+  it('is the fourth page, after the three labelled tabs', async () => {
+    const { SWIPE_PAGES, SWIPE_TABS, swipeTabForPath, swipeTabIndex, swipeDocumentTitle } = await import('./swipe-nav');
+    expect(SWIPE_TABS).toHaveLength(3);
+    expect(SWIPE_PAGES.map((page) => page.key)).toEqual(['artists', 'urgans', 'sessions', 'settings']);
+    expect(swipeTabForPath('/dashboard/account')).toBe('settings');
+    expect(swipeTabIndex('settings')).toBe(3);
+    expect(swipeDocumentTitle('settings')).toBe('Settings | Urganize');
+  });
+});

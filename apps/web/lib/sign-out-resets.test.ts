@@ -32,6 +32,7 @@ const REGISTRANTS: Record<SignOutResetId, string> = {
   'swipe-nav': 'stores/useSwipeNavStore.ts',
   'sessions-view': 'stores/useSessionsViewStore.ts',
   'tab-memory': 'stores/useTabMemoryStore.ts',
+  'settings-page': 'stores/useSettingsPageStore.ts',
   'needs-you': 'stores/useNeedsYouStore.ts',
 };
 

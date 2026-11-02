@@ -1,6 +1,7 @@
 // lib/auth-store.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { TAB_MEMORY_STORAGE_KEYS } from '@/lib/tab-memory';
 import type { User } from '@supabase/supabase-js';
 import { supabase, type Profile, handleSupabaseError } from './supabase/client';
 import { errorMessage } from "@/lib/errors";
@@ -1223,6 +1224,14 @@ if (typeof window !== 'undefined') {
         window.localStorage.removeItem(SCENE_CACHE_KEY);
       } catch {
         // Blocked storage: memory is already cleared, which is what matters.
+      }
+      // Where Home was left and which rollout chat was open (Nov 2, 2026):
+      // cleared by key, since their stores may never have loaded here (a
+      // computer has no swipe shell). Codex review on #1029.
+      try {
+        for (const key of TAB_MEMORY_STORAGE_KEYS) window.sessionStorage.removeItem(key);
+      } catch {
+        // Blocked storage: nothing was kept.
       }
       // The browser copy of account A's UrgAns chats. Deliberately
       // unconditional (not behind the history flag): a copy left behind by a

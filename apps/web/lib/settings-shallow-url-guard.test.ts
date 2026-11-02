@@ -34,8 +34,11 @@ describe('settings pop-up writes its URL without a navigation', () => {
     // The one router.push left is the fallback to the dashboard, behind the
     // canHostSettings check, plus Settings -> Team, which is a page of its own
     // since #853 (the Team tab), not a param change.
+    // Since Nov 2, 2026 a phone with the swipe shell opens the Settings PAGE,
+    // a real page of the row, which is the second push.
     const pushes = hook.match(/router\.push\(/g) ?? [];
-    expect(pushes).toHaveLength(1);
+    expect(pushes).toHaveLength(2);
+    expect(hook).toMatch(/settingsIsAPage\(\)\) \{[\s\S]*?openSettingsPage\(\(href\) => router\.push\(href\)/);
     expect(hook).toMatch(/if \(toTeamTab \|\| !canHostSettings\(pathname\)\) \{\s*router\.push\(url/);
     expect(modal).not.toMatch(/router\.replace\(closeSettingsUrl/);
   });

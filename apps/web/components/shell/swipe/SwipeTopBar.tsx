@@ -52,6 +52,9 @@ export function SwipeTopBar({ showHelp, pagerActive }: { showHelp: boolean; page
       const { left, width } = lerpIndicator(rects, progress);
       indicator.style.transform = `translateX(${left}px)`;
       indicator.style.width = `${width}px`;
+      // Past the last tab is the Settings page: the underline fades out there,
+      // and the ring on your photo says where you are instead.
+      indicator.style.opacity = String(Math.max(0, Math.min(1, SWIPE_TABS.length - progress)));
       // Label colour follows the same progress: full at its page, 45% a page away.
       labelRefs.current.forEach((label, i) => {
         if (!label) return;
@@ -143,7 +146,7 @@ export function SwipeTopBar({ showHelp, pagerActive }: { showHelp: boolean; page
           </div>
         </nav>
         <div className="ml-auto">
-          <AvatarMenu showHelp={showHelp} />
+          <AvatarMenu showHelp={showHelp} settingsActive={area === 'settings'} />
         </div>
       </div>
       {back ? (
