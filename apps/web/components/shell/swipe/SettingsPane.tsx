@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, Search } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
+import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { useSettingsPageStore } from '@/stores/useSettingsPageStore';
 import {
@@ -67,6 +68,14 @@ export function SettingsPane({ showHelp }: { showHelp: boolean }) {
   }, [open, userId]);
   const workspace = useWorkspaceSettings(open && visible.includes('artists') ? userId : '', accessToken);
 
+  // Inside one setting nothing swipes: the pager is frozen until you go back.
+  const lock = useSwipeNavStore((state) => state.lock);
+  const settingShowing = open && target !== null;
+  useEffect(() => {
+    if (!settingShowing) return;
+    return lock();
+  }, [settingShowing, lock]);
+
   // A link to one part of a setting (Appearance, a search result) scrolls to it.
   useEffect(() => {
     if (!target?.section) return;
@@ -89,15 +98,22 @@ export function SettingsPane({ showHelp }: { showHelp: boolean }) {
     <div className="mx-auto flex min-h-full w-full max-w-[40rem] flex-col px-5">
       {target ? (
         <>
-          <button
-            type="button"
-            onClick={() => setTarget(null)}
-            className="motion-focus -ml-1 mt-2 flex min-h-11 items-center gap-1 self-start rounded-md pr-2 text-sm text-content-tertiary"
-          >
-            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-            Settings
-          </button>
-          <h2 className="mt-1 font-display text-2xl text-content-primary">{SETTINGS_SEGMENT_LABELS[target.segment]}</h2>
+          {/* The founder's reference: a round back button on the left, the
+              title centred, full screen with no tabs and no swiping. */}
+          <div className="sticky top-0 z-10 -mx-5 grid grid-cols-[44px_1fr_44px] items-center bg-bg-base px-5 pb-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)]">
+            <button
+              type="button"
+              onClick={() => setTarget(null)}
+              aria-label="Back to Settings"
+              className="motion-press grid h-11 w-11 place-items-center rounded-full bg-content-primary/[0.06] text-content-primary"
+            >
+              <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+            </button>
+            <h2 className="truncate text-center text-[17px] font-semibold text-content-primary">
+              {SETTINGS_SEGMENT_LABELS[target.segment]}
+            </h2>
+            <span aria-hidden="true" />
+          </div>
         </>
       ) : (
         <h2 className="mb-3 mt-3 font-display text-2xl text-content-primary">Settings</h2>

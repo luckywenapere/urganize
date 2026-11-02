@@ -25,6 +25,6 @@ describe('avatar menu outside-click listener', () => {
   });
 
   it('a phone opens the Settings page instead of a menu (Nov 2, 2026)', () => {
-    expect(source).toMatch(/if \(!isDesktop\) \{\s*openSettingsPage\(/);
+    expect(source).toMatch(/if \(!isDesktop\) \{[\s\S]{0,400}?openSettingsPage\(/);
   });
 });
