@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.240.0",
+    title: "Cleaner Profile and Notifications",
+    tag: "Account",
+    date: "November 2, 2026",
+    highlights: [
+      "On your phone, Profile and Notifications are simple rows. Tap one to change it.",
+      "Turn push on or off with one switch.",
+    ],
+  },
+  {
     version: "1.239.2",
     tag: "Account",
     date: "November 2, 2026",

@@ -120,13 +120,15 @@ export function AvatarMenu({ showHelp, settingsActive = false }: { showHelp: boo
     <div ref={wrapRef} className="relative">
       <button
         type="button"
-        onClick={() => {
+        onClick={(event) => {
           // A phone opens the Settings page, the fourth page of the swipe row
           // (Nov 2, 2026). A computer keeps the popover.
           if (!isDesktop) {
             // A tap must not leave focus on the button: its focus ring was the
             // big green circle around the photo (founder, Nov 2, 2026).
-            (document.activeElement as HTMLElement | null)?.blur?.();
+            // Pointer taps only (detail > 0): Enter or Space keeps keyboard
+            // focus (Codex review on #1032).
+            if (event.detail > 0) (document.activeElement as HTMLElement | null)?.blur?.();
             openSettingsPage((href) => router.push(href));
             return;
           }

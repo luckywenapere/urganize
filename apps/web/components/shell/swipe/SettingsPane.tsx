@@ -20,11 +20,10 @@ import { ArtistsBrandSegment } from '@/components/settings/segments/ArtistsBrand
 import { BillingSegment } from '@/components/settings/segments/BillingSegment';
 import { ConnectionsSegment } from '@/components/settings/segments/ConnectionsSegment';
 import { DirectorySegment } from '@/components/settings/segments/DirectorySegment';
-import { GeneralSegment } from '@/components/settings/segments/GeneralSegment';
-import { NotificationsSegment } from '@/components/settings/segments/NotificationsSegment';
 import { SecuritySegment } from '@/components/settings/segments/SecuritySegment';
 import { UrgansSegment } from '@/components/settings/segments/UrgansSegment';
 import { MenuBody } from './AvatarMenu';
+import { NotificationRows, ProfileRows } from './SettingsRows';
 
 /**
  * The Settings page (Nov 2, 2026, founder approved docs/mocks/settings-page):
@@ -175,10 +174,11 @@ export function SettingsPane({ showHelp }: { showHelp: boolean }) {
 
 function renderSegment(segment: SettingsSegment, workspace: ReturnType<typeof useWorkspaceSettings>) {
   switch (segment) {
+    // Grouped rows on the phone (docs/mocks/settings-rows); the others follow.
     case 'general':
-      return <GeneralSegment />;
+      return <ProfileRows />;
     case 'notifications':
-      return <NotificationsSegment />;
+      return <NotificationRows />;
     case 'artists':
       return <ArtistsBrandSegment workspace={workspace} />;
     case 'urgans':
