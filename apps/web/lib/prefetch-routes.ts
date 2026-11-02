@@ -45,10 +45,13 @@ const OPPORTUNITIES_ENABLED = isOpportunitiesEnabled();
 // Home left the menu (founder, 2026-10-29, #876).
 const HOME_ENABLED = false;
 
-/** The two destinations every signed-in team account has. Settings left this
- *  list on 2026-09-29: it is a pop-up over these pages now, so there is no
- *  route to warm, and /settings is only a redirect stub. */
-const BASE_ROUTES = ['/dashboard', '/dashboard/urgans'] as const;
+/** The destinations every signed-in team account has: Home, Assistant, and
+ *  since Nov 2, 2026 the phone's two newer pages of the swipe row, Rollouts
+ *  (/dashboard/sessions, where a message typed on a rollout lands) and Settings
+ *  (/dashboard/account, which your photo opens from any page). They were
+ *  added to the nav without being added here. /settings stays a redirect stub
+ *  and worth no bytes. */
+const BASE_ROUTES = ['/dashboard', '/dashboard/urgans', '/dashboard/sessions', '/dashboard/account'] as const;
 
 export type PrefetchAudience = {
   /**

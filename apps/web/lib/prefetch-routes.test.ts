@@ -33,6 +33,8 @@ describe('buildPrefetchRoutes', () => {
     expect(buildPrefetchRoutes({ hasCuratorProfile: false })).toEqual([
       '/dashboard',
       '/dashboard/urgans',
+      '/dashboard/sessions',
+      '/dashboard/account',
       '/dashboard/team',
     ]);
   });
@@ -45,6 +47,8 @@ describe('buildPrefetchRoutes', () => {
     expect(buildPrefetchRoutes({ hasCuratorProfile: true })).toEqual([
       '/dashboard',
       '/dashboard/urgans',
+      '/dashboard/sessions',
+      '/dashboard/account',
       '/dashboard/team',
       '/dashboard/notes',
       '/dashboard/opportunities',
@@ -125,7 +129,7 @@ describe('buildPrefetchRoutes', () => {
   it('puts the shared destinations first, so a dying link warms those', async () => {
     const { buildPrefetchRoutes } = await loadRoutes(ALL_ON);
     const routes = buildPrefetchRoutes({ hasCuratorProfile: true });
-    expect(routes.slice(0, 2)).toEqual(['/dashboard', '/dashboard/urgans']);
+    expect(routes.slice(0, 4)).toEqual(['/dashboard', '/dashboard/urgans', '/dashboard/sessions', '/dashboard/account']);
     // Settings is a pop-up now; /settings is a redirect stub and worth no bytes.
     expect(routes).not.toContain('/settings');
   });

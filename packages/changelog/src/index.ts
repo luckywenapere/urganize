@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.240.1",
+    tag: "App",
+    date: "November 2, 2026",
+    highlights: [
+      "Rollouts and Settings open faster the first time you tap them.",
+    ],
+  },
+  {
     version: "1.240.0",
     title: "Cleaner Profile and Notifications",
     tag: "Account",
