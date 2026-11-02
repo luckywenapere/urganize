@@ -34,7 +34,13 @@ import {
   type SettingsSegment,
 } from '@/lib/settings-nav';
 import { decideSettingsClose } from '@/lib/settings-dirty';
-import { clearSettingsEntryMark, clearSettingsSegmentEntries, decideSettingsPopstate } from '@/lib/settings-history';
+import {
+  backFromSegment,
+  clearSettingsEntryMark,
+  clearSettingsSegmentEntries,
+  decideSettingsPopstate,
+  settingsSegmentEntries,
+} from '@/lib/settings-history';
 import { searchSettings } from '@/lib/settings-search';
 import { useSettingsDirtyStore } from '@/stores/useSettingsDirtyStore';
 import { getAccessToken } from './getAccessToken';
@@ -408,7 +414,9 @@ function SettingsDialog({
             <div className="flex shrink-0 items-center gap-1 border-b border-stroke-subtle px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6 sm:pb-4 sm:pt-5">
               <button
                 type="button"
-                onClick={() => openSettings({ segment: SETTINGS_MENU })}
+                onClick={() =>
+                  backFromSegment(settingsSegmentEntries()) === 'menu' ? openSettings({ segment: SETTINGS_MENU }) : requestClose()
+                }
                 aria-label="Back to all settings"
                 className="motion-focus motion-press -ml-2 grid h-11 w-11 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary sm:hidden"
               >

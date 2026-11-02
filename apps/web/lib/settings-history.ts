@@ -70,3 +70,14 @@ export function decideSettingsPopstate(input: { settingsInUrl: boolean; dirty: b
   if (input.settingsInUrl) return 'ignore';
   return input.dirty ? 'reprompt' : 'closed';
 }
+
+/**
+ * What the phone's back arrow in a segment does (Nov 2, 2026). A segment opened
+ * from the settings list (the list pushed an entry for it) goes back to that
+ * list. A segment opened straight from the account page has no list behind it,
+ * so back closes Settings and the person is where they started, instead of
+ * landing on a settings list they never opened.
+ */
+export function backFromSegment(segmentEntriesPushed: number): 'menu' | 'close' {
+  return segmentEntriesPushed > 0 ? 'menu' : 'close';
+}
