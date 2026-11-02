@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.239.1",
+    tag: "Account",
+    date: "November 2, 2026",
+    highlights: [
+      "What you type in a setting stays there when you go back to the Settings list.",
+      "In Settings, your photo has a thin light border instead of the green ring.",
+      "Settings opens only from your photo. Swipe right to leave it.",
+    ],
+  },
+  {
     version: "1.239.0",
     title: "Settings is a page",
     tag: "Account",

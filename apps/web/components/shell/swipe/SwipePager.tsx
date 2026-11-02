@@ -55,8 +55,12 @@ function pagingFrozen(target: EventTarget | null): boolean {
  * route fetch, the URG-362 pattern): tabs are peers, so the OS back-swipe must not
  * walk tab history. Back and Forward from a deep link still move the pager.
  */
-/** How many pages a finger can reach: Settings only while it is open. */
-const reach = () => (useSettingsPageStore.getState().open ? COUNT : COUNT - 1);
+/**
+ * How many pages a finger can reach from `index`. Settings is entered only by
+ * tapping your photo, never by swiping on from Rollouts; from Settings itself a
+ * swipe slides out to Rollouts (founder, Nov 2, 2026).
+ */
+const reach = (index: number) => (index === COUNT - 1 ? COUNT : COUNT - 1);
 
 export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> }) {
   const pathname = usePathname();
@@ -89,8 +93,9 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
   // or artist page (lib/tab-memory.ts); that page opens once the glide settles.
   const restoreHome = useRef<string | null>(null);
   const settle = useCallback(() => {
-    // Settings leaves the row once you are back on Home (the approved mock).
-    if (committed.current === 0) useSettingsPageStore.getState().setOpen(false);
+    // Settings leaves the row as soon as you slide out of it; your photo is the
+    // only way back in (founder, Nov 2, 2026).
+    if (committed.current !== COUNT - 1) useSettingsPageStore.getState().setOpen(false);
     const target = restoreHome.current;
     restoreHome.current = null;
     if (target) router.push(target, { scroll: false });
@@ -283,7 +288,7 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
       }
       event.preventDefault();
       const width = viewport.clientWidth || 1;
-      const drag = clampDrag(dx, committed.current, reach());
+      const drag = clampDrag(dx, committed.current, reach(committed.current));
       paint(committed.current - drag / width);
       const now = performance.now();
       samples.push({ x: touch.clientX, t: now });
@@ -300,7 +305,7 @@ export function SwipePager({ panes }: { panes: Record<SwipeTabKey, ReactNode> })
       const first = samples[0];
       const now = performance.now();
       const velocity = first && now - first.t > 0 ? ((touch.clientX - first.x) / (now - first.t)) * 1000 : 0;
-      const target = settleIndex({ index: committed.current, count: reach(), dx, width, velocity });
+      const target = settleIndex({ index: committed.current, count: reach(committed.current), dx, width, velocity });
       // The spring starts from the finger's speed, in pages per second.
       animateTo(target, { velocity: -velocity / width });
     };
