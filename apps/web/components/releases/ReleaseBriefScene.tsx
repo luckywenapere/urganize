@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { ArrowUpRight, Check, Loader2, Lock, Play, X } from '@/components/icons';
 import { VoicePill } from '@/components/workspace/VoicePill';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
+import { recallLast, rememberLast } from '@/lib/last-seen';
 import { briefToPlanNotes, ideaSourceLabel } from '@/lib/idea-round';
 import { DialogPanel } from '@/components/shared/DialogPanel';
 import { UrgansLockedSheet } from '@/components/urgans-actions/UrgansLockedSheet';
@@ -41,9 +42,11 @@ import { BriefAvatar, briefAccessToken, briefCall } from './brief-shared';
  * label. Two columns on a computer (Idea, References, Decisions | Dates, Who's
  * on what, Notes), one on a phone. A block with nothing in it does not render.
  *
- * Fetches for itself and is never cached (lib/scene-cache.ts): the Idea is
- * edited in place under an autosave, and a cached copy painted over a live
- * edit would lose it.
+ * Fetches for itself and is never saved to the device (lib/scene-cache.ts):
+ * the Idea is edited in place under an autosave, and a stale copy painted over
+ * a live edit would lose it. Since Nov 2, 2026 the last copy seen in this page
+ * life (memory only, lib/last-seen.ts) paints at once and the read refreshes
+ * it; words typed before the read lands are kept (pendingIdea).
  *
  * The idea round (2026-10-27, founder approved mocks): after the round closes
  * UrgAns fills this page from the ideas. The owner or a team admin settles
@@ -604,8 +607,13 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
   const [roundBusy, setRoundBusy] = useState<'approve' | 'new_version' | 'write' | null>(null);
   const [settlingId, setSettlingId] = useState<string | null>(null);
   const isDesktop = useIsDesktopViewport();
-  const [state, setState] = useState<LoadState>({ status: 'loading' });
-  const [idea, setIdea] = useState('');
+  // The last copy seen in this page life paints at once; the read below
+  // refreshes it (Nov 2, 2026, the load-wait audit). Memory only.
+  const [state, setState] = useState<LoadState>(() => {
+    const last = recallLast<BriefPayload>('brief', releaseId);
+    return last ? { status: 'ready', brief: last } : { status: 'loading' };
+  });
+  const [idea, setIdea] = useState(() => recallLast<BriefPayload>('brief', releaseId)?.idea ?? '');
   const [writing, setWriting] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [drafting, setDrafting] = useState(false);
@@ -617,7 +625,7 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
   const [presenting, setPresenting] = useState(false);
   const ideaRef = useRef<HTMLTextAreaElement | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savedIdea = useRef('');
+  const savedIdea = useRef(recallLast<BriefPayload>('brief', releaseId)?.idea ?? '');
   const pendingIdea = useRef<string | null>(null);
 
   const fetchBrief = useCallback(async () => {
@@ -625,13 +633,20 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
       method: 'GET',
     });
     if (!result.ok) {
-      setState({ status: 'error' });
+      // A last copy on screen stays rather than turning into the error.
+      setState((prev) => (prev.status === 'ready' ? prev : { status: 'error' }));
       return;
     }
     savedIdea.current = result.data.brief.idea;
-    setIdea(result.data.brief.idea);
+    // Words typed into the last copy while this read was out are kept.
+    if (pendingIdea.current === null) setIdea(result.data.brief.idea);
     setState({ status: 'ready', brief: result.data.brief });
   }, [releaseId]);
+
+  // Whatever is on screen is the last copy for the next visit.
+  useEffect(() => {
+    if (state.status === 'ready') rememberLast('brief', releaseId, state.brief);
+  }, [state, releaseId]);
 
   /** Show the skeleton again, then load (Try again, and after Keep). */
   const load = useCallback(async () => {

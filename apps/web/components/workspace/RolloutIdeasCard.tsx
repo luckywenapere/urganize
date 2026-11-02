@@ -1,5 +1,6 @@
 'use client';
 
+import { recallLast, rememberLast } from '@/lib/last-seen';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@urganize/ui';
 import { ADD_IDEA_EVENT, IDEAS_CHANGED_EVENT } from './RolloutFirstSteps';
@@ -106,7 +107,8 @@ export function RolloutIdeasCard({
 }) {
   const persona = useAuthStore((state) => (state.user?.onboarding_persona ?? null) as OnboardingPersona | null);
   const viewerName = useAuthStore((state) => String(state.user?.name || '').trim());
-  const [data, setData] = useState<IdeasData | null>(null);
+  // The last copy seen in this page life paints at once (Nov 2, 2026).
+  const [data, setData] = useState<IdeasData | null>(() => recallLast<IdeasData>('ideas', release.id));
   const [loadFailed, setLoadFailed] = useState(false);
   const [typing, setTyping] = useState(false);
   const [draft, setDraft] = useState('');
@@ -122,7 +124,7 @@ export function RolloutIdeasCard({
   const [closing, setClosing] = useState(false);
   const { openScene } = useSceneOverlay();
   const sectionRef = useRef<HTMLElement | null>(null);
-  const [brief, setBrief] = useState<RolloutBrief | null>(null);
+  const [brief, setBrief] = useState<RolloutBrief | null>(() => recallLast<RolloutBrief>('ideas-brief', release.id));
   const [suggest, setSuggest] = useState<SuggestState>(null);
   const [applying, setApplying] = useState(false);
   // The owner's guided first run: idea, then invite, then the plan button.
@@ -182,6 +184,14 @@ export function RolloutIdeasCard({
   useEffect(() => {
     if (ENABLED) void load();
   }, [load]);
+
+  // What is on screen is the last copy for the next visit.
+  useEffect(() => {
+    if (data) rememberLast('ideas', release.id, data);
+  }, [data, release.id]);
+  useEffect(() => {
+    if (brief) rememberLast('ideas-brief', release.id, brief);
+  }, [brief, release.id]);
 
   // The brief is written from the notes and the plan's task titles, so it is asked
   // for again only when those change (the server answers from its saved copy when
