@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, ChevronDown, Home as HomeIcon, Plus } from '@/components/icons';
+import { Home as HomeIcon } from '@/components/icons';
 import { ChappiConversation } from '@/components/chappi/ChappiConversation';
 import { ChappiScopePicker } from '@/components/chappi/ChappiScopePicker';
 import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
@@ -11,7 +11,6 @@ import { RolloutCreateFlow } from '@/components/releases/RolloutCreateFlow';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { isChappiHistoryEnabled } from '@/lib/chappi/history-flag';
-import { withoutHomeChat } from '@/lib/chappi/home-chat';
 import { formatRelativeTime } from '@/lib/relative-time';
 import { getNotificationMessage, type TaskNotification } from '@/lib/tasks';
 import { readUrgansLink } from '@/lib/swipe-nav';
@@ -21,11 +20,10 @@ import { showMain } from './main-thread';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useNeedsYouStore } from '@/stores/useNeedsYouStore';
 import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
+import { useSessionsViewStore } from '@/stores/useSessionsViewStore';
 import { scrollIntoColumn } from '@/lib/scroll-in-column';
-import { SwipeSheet, SHEET_ROW } from './SwipeSheet';
 
 const HISTORY_ENABLED = isChappiHistoryEnabled();
-const URGANS_PATH = '/dashboard/urgans';
 
 export { showMain };
 
@@ -39,20 +37,16 @@ function useOnMain(): boolean {
 }
 
 /**
- * UrgAns as a tab (URG-380): one persistent Main thread, a quiet "Main thread ⌄"
- * pill that opens Sessions with the rollout scope beside it, the conversation
+ * UrgAns as a tab (URG-380): one persistent Main thread (the Main-thread pill and
+ * Sessions sheet moved to the Sessions tab, Nov 2, 2026), the rollout scope, the conversation
  * (its box is the shell's one shared composer, SwipeFrame, so it never changes
  * shape between tabs), and two kinds of turn the swipe navigation adds at the end of Main:
  * the Home card carried in, and "Needs you" (what the bell used to hold).
  */
 export function UrgAnsPane({ active }: { active: boolean }) {
-  const [sessionsOpen, setSessionsOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const onMain = useOnMain();
-  const conversationId = useChappiStore((state) => state.conversationId);
   const messageCount = useChappiStore((state) => state.messages.length);
-  const summaries = useChappiHistoryStore((state) => state.summaries);
-  const homeChatId = useChappiHistoryStore((state) => state.homeChatId);
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
   const releases = useReleaseStore((state) => state.releases);
   const handoff = useSwipeNavStore((state) => state.handoff);
@@ -61,11 +55,6 @@ export function UrgAnsPane({ active }: { active: boolean }) {
   const [fresh, setFresh] = useState(false);
   const scopedReleaseId = useChappiStore((state) => state.scopedReleaseId);
   const setScopedReleaseId = useChappiStore((state) => state.setScopedReleaseId);
-
-  const sessionTitle = useMemo(() => {
-    if (onMain) return 'Main thread';
-    return summaries.find((chat) => chat.id === conversationId)?.title || 'Session';
-  }, [onMain, summaries, conversationId]);
 
   useEffect(() => {
     void loadCommandCenter();
@@ -76,8 +65,20 @@ export function UrgAnsPane({ active }: { active: boolean }) {
   useEffect(() => {
     if (!active) return;
     void loadNeedsYou();
+    // A rollout session pins the assistant's scope; coming here takes the pin
+    // off, on a fresh mount too (Codex review on #1022).
+    const view = useSessionsViewStore.getState();
+    if (view.pinnedScope) {
+      useChappiStore.getState().setScopedReleaseId(null);
+      view.setPinnedScope(false);
+    }
     const search = window.location.search;
-    if (handledSearch.current === search) return;
+    if (handledSearch.current === search) {
+      // Back on the tab from Sessions: the one chat store may hold a rollout's
+      // session, so Main is put on screen again.
+      void showMain();
+      return;
+    }
     const first = handledSearch.current === null;
     handledSearch.current = search;
     const link = readUrgansLink(search);
@@ -137,15 +138,6 @@ export function UrgAnsPane({ active }: { active: boolean }) {
   return (
     <div className="swipe-urgans flex h-full min-h-0 flex-col px-5 lg:mx-auto lg:max-w-[46rem]">
       <div className="flex shrink-0 items-center gap-2 pt-2">
-        <button
-          type="button"
-          onClick={() => setSessionsOpen(true)}
-          aria-haspopup="dialog"
-          className="motion-focus motion-press inline-flex h-[30px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-content-primary/[0.05] px-3 text-[13.5px] text-content-primary/70"
-        >
-          <span className="truncate">{sessionTitle}</span>
-          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-content-primary/60" aria-hidden="true" />
-        </button>
         <ChappiScopePicker
           placement="header"
           releases={releases}
@@ -173,20 +165,6 @@ export function UrgAnsPane({ active }: { active: boolean }) {
         </ErrorBoundary>
       </div>
 
-      <SwipeSheet open={sessionsOpen} label="Sessions" onClose={() => setSessionsOpen(false)}>
-        <SessionsList
-          onMain={onMain}
-          currentId={conversationId}
-          summaries={withoutHomeChat(summaries, homeChatId)}
-          onDone={() => setSessionsOpen(false)}
-          onPick={(id) => {
-            const url = id ? `${URGANS_PATH}?s=${encodeURIComponent(id)}` : URGANS_PATH;
-            handledSearch.current = id ? `?s=${encodeURIComponent(id)}` : '';
-            window.history.pushState(null, '', url);
-          }}
-        />
-      </SwipeSheet>
-
       <RolloutCreateFlow open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   );
@@ -209,88 +187,6 @@ function highlightMessage(id: string) {
     el.classList.add('swipe-message-ring');
     window.setTimeout(() => el.classList.remove('swipe-message-ring'), 1200);
   }, 250);
-}
-
-function SessionsList({
-  onMain,
-  currentId,
-  summaries,
-  onDone,
-  onPick,
-}: {
-  onMain: boolean;
-  currentId: string | null;
-  summaries: { id: string; title: string; lastMessageAt: string }[];
-  onDone: () => void;
-  onPick: (id: string | null) => void;
-}) {
-  const loadList = useChappiHistoryStore((state) => state.loadList);
-  const open = useChappiHistoryStore((state) => state.open);
-  useEffect(() => {
-    if (HISTORY_ENABLED) void loadList();
-  }, [loadList]);
-
-  return (
-    <div>
-      <p className="mb-2 mt-0.5 font-mono text-[11px] uppercase tracking-[0.6px] text-content-primary/50">Sessions</p>
-      <ul>
-        <li>
-          <button
-            type="button"
-            onClick={() => {
-              void showMain();
-              onPick(null);
-              onDone();
-            }}
-            className={`${SHEET_ROW} min-h-16`}
-          >
-            <span className="h-2 w-2 shrink-0 rounded-full bg-brand" aria-hidden="true" />
-            <span className="min-w-0 flex-1">
-              <span className="block">Main thread</span>
-              <span className="block text-[13px] text-content-primary/50">Everything, every release</span>
-            </span>
-            {onMain ? <Check className="h-5 w-5 text-brand" aria-label="Open" /> : null}
-          </button>
-        </li>
-        {summaries.slice(0, 8).map((chat) => (
-          <li key={chat.id}>
-            <button
-              type="button"
-              onClick={() => {
-                void open(chat.id);
-                onPick(chat.id);
-                onDone();
-              }}
-              className={`${SHEET_ROW} min-h-16`}
-            >
-              <span className="h-2 w-2 shrink-0 rounded-full bg-content-primary/50" aria-hidden="true" />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate">{chat.title || 'Session'}</span>
-                <span className="block text-[13px] text-content-primary/50">{formatRelativeTime(chat.lastMessageAt)}</span>
-              </span>
-              {!onMain && currentId === chat.id ? <Check className="h-5 w-5 text-brand" aria-label="Open" /> : null}
-            </button>
-          </li>
-        ))}
-        <li>
-          <button
-            type="button"
-            onClick={() => {
-              useChappiStore.getState().reset();
-              onPick(null);
-              window.history.replaceState(null, '', URGANS_PATH);
-              onDone();
-            }}
-            className={`${SHEET_ROW} text-content-primary/65`}
-          >
-            <Plus className="h-5 w-5 shrink-0 text-content-primary/60" aria-hidden="true" />
-            <span className="flex-1">New session</span>
-          </button>
-        </li>
-      </ul>
-      <p className="mt-2 text-[13px] text-content-primary/55">Home and the composer always talk to Main.</p>
-    </div>
-  );
 }
 
 /** The Home card, landed as the newest turn in Main. */

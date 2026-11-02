@@ -19,14 +19,20 @@ import { WorkspacePageErrorBoundary } from '@/components/app/WorkspacePageErrorB
 import { RootShellSkeleton } from '@/components/loading/RootShellSkeleton';
 import { HomeAskBar } from '@/components/home/HomeAskBar';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
-import { swipeTabForPath } from '@/lib/swipe-nav';
+import { SESSIONS_HREF, swipeTabForPath } from '@/lib/swipe-nav';
 import { RECORD_CAPTURE_PLACEHOLDER, recordIdFromPath } from '@/lib/chappi/record-scope';
 import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
 import { useNeedsYouStore } from '@/stores/useNeedsYouStore';
 import { useChappiStore } from '@/stores/useChappiStore';
+import { showRolloutSession } from '@/stores/useChappiHistoryStore';
+import { useSessionsViewStore, whenSessionReady } from '@/stores/useSessionsViewStore';
+import { useReleaseStore } from '@/stores/useReleaseStore';
+import { displayReleaseTitle } from '@/types/releases';
 import { SwipeTopBar } from './SwipeTopBar';
 import { SwipePager } from './SwipePager';
 import { UrgAnsPane, showMain } from './UrgAnsPane';
+import { SessionsPane } from './SessionsPane';
+import { BackPill } from './BackPill';
 
 const CommandBar = dynamic(() => import('@/components/shell/CommandBar').then((m) => m.CommandBar));
 const FloatingUrgAns = dynamic(() => import('@/components/shell/FloatingUrgAns').then((m) => m.FloatingUrgAns));
@@ -64,6 +70,7 @@ export function SwipeFrame({
   const tab = swipeTabForPath(pathname, searchParams);
   const onTab = tab !== null;
   const loadNeedsYou = useNeedsYouStore((state) => state.load);
+  const sessionOpen = useSessionsViewStore((state) => state.releaseId !== null);
 
   useEffect(() => {
     void loadNeedsYou();
@@ -114,11 +121,16 @@ export function SwipeFrame({
                     </div>
                   ),
                   urgans: CHAPPI_ENABLED ? <UrgAnsPane active={tab === 'urgans'} /> : null,
+                  sessions: CHAPPI_ENABLED ? <SessionsPane active={tab === 'sessions'} /> : null,
                 }}
               />
             </WorkspacePageErrorBoundary>
           </main>
-          {CHAPPI_ENABLED ? <SwipeComposer onUrgAns={tab === 'urgans'} /> : null}
+          <BackPill active={tab === 'sessions'} />
+          {/* The Sessions list has nowhere to send a message: a session is opened first. */}
+          {CHAPPI_ENABLED && !(tab === 'sessions' && !sessionOpen) ? (
+            <SwipeComposer onUrgAns={tab === 'urgans' || tab === 'sessions'} sessionOpen={tab === 'sessions'} />
+          ) : null}
         </div>
       ) : (
         <div className="app-layout">
@@ -170,14 +182,26 @@ export function SwipeFrame({
  * message is handed over and the pager glides to UrgAns, where the
  * conversation sends it.
  */
-function SwipeComposer({ onUrgAns }: { onUrgAns: boolean }) {
+function SwipeComposer({ onUrgAns, sessionOpen = false }: { onUrgAns: boolean; sessionOpen?: boolean }) {
   const replyInFlight = useChappiStore((state) => state.replyInFlight);
+  const sessionTitle = useReleaseStore((state) => {
+    const id = useSessionsViewStore.getState().releaseId;
+    return id ? state.releases.find((release) => release.id === id)?.title ?? null : null;
+  });
   return (
     <HomeAskBar
       variant="swipe"
+      placeholder={sessionOpen && sessionTitle ? `Message UrgAns about ${displayReleaseTitle(sessionTitle)}...` : undefined}
       replying={onUrgAns && replyInFlight}
       onSend={() => {
         if (onUrgAns) {
+          // On a session tab the rollout's chat may still be loading: wait for
+          // it, so the message lands in that session (Codex review on #1022).
+          const openId = sessionOpen ? useSessionsViewStore.getState().releaseId : null;
+          if (openId) {
+            void whenSessionReady(openId).then(() => useChappiStore.getState().setSendInputOnOpen(true));
+            return;
+          }
           // The conversation is already on screen: it sends the box's text
           // (and any files, held in pendingAttachments) as soon as it is free.
           useChappiStore.getState().setSendInputOnOpen(true);
@@ -223,6 +247,27 @@ function PageComposer() {
         const held = useChappiStore.getState();
         const text = held.input;
         const files = held.pendingAttachments;
+        // A rollout page talks to that rollout's own session (Nov 2, 2026):
+        // the message is handed to it, the Sessions tab opens on it, and a
+        // brief pill offers the way straight back to this page.
+        if (releaseId && !recordId) {
+          const rollout = useReleaseStore.getState().releases.find((release) => release.id === releaseId);
+          const returnTo = `${window.location.pathname}${window.location.search}`;
+          void showRolloutSession(releaseId).then(() => {
+            const store = useChappiStore.getState();
+            store.setInput(text);
+            store.setPendingAttachments(files);
+            store.setScopedRecordId(null);
+            store.setScopedReleaseId(releaseId);
+            store.setSendInputOnOpen(true);
+            const view = useSessionsViewStore.getState();
+            view.setPinnedScope(true);
+            view.open(releaseId);
+            view.setBackTo({ href: returnTo, label: rollout ? displayReleaseTitle(rollout.title) : 'the rollout' });
+            router.push(SESSIONS_HREF);
+          });
+          return;
+        }
         if (releaseId) held.setScopedReleaseId(releaseId);
         void showMain().then(() => {
           const store = useChappiStore.getState();

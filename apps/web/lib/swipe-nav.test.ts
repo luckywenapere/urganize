@@ -212,9 +212,11 @@ describe('swipe nav is for phone-width screens only', () => {
 });
 
 describe('the swipe tabs', () => {
-  it('are Home and Assistant, with Team a pushed page that has a way back', async () => {
+  it('are Home, Assistant and Sessions, with Team a pushed page that has a way back', async () => {
     const { SWIPE_TABS, swipeBackFor, swipeAreaForPath } = await import('./swipe-nav');
-    expect(SWIPE_TABS.map((tab) => tab.key)).toEqual(['artists', 'urgans']);
+    expect(SWIPE_TABS.map((tab) => tab.key)).toEqual(['artists', 'urgans', 'sessions']);
+    expect(swipeTabForPath('/dashboard/sessions')).toBe('sessions');
+    expect(swipeTabForPath('/dashboard/sessions/')).toBe('sessions');
     expect(swipeBackFor('/dashboard/team')).toEqual({ href: '/dashboard' });
     expect(swipeAreaForPath('/dashboard/team')).toBeNull();
   });
@@ -224,6 +226,7 @@ describe('swipeDocumentTitle', () => {
   it('names each swipe tab with the brand once', async () => {
     const { swipeDocumentTitle } = await import('./swipe-nav');
     expect(swipeDocumentTitle('urgans')).toBe('Assistant | Urganize');
+    expect(swipeDocumentTitle('sessions')).toBe('Sessions | Urganize');
     expect(swipeDocumentTitle('artists')).toBe('Artists | Urganize');
   });
   it('the pager sets it and Directory leaves the brand to the template', async () => {

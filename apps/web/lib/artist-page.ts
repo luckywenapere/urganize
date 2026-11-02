@@ -38,6 +38,7 @@ export const DASHBOARD_SECTIONS: readonly string[] = [
   'press-kits',
   'relationships',
   'releases',
+  'sessions',
   'settings',
   'tasks',
   'team',
