@@ -46,6 +46,12 @@ export function SettingsPane({ showHelp }: { showHelp: boolean }) {
     [user?.role, isAdmin, flags]
   );
   const [query, setQuery] = useState('');
+  // Every setting opened while Settings is open stays mounted (hidden), so a
+  // half-typed draft survives a trip back to the list, as in the pop-up
+  // (Codex review on #1030). Adjusted during render, like the pop-up does.
+  const [visited, setVisited] = useState<SettingsSegment[]>([]);
+  if (target && !visited.includes(target.segment)) setVisited([...visited, target.segment]);
+  if (!open && visited.length > 0) setVisited([]);
   const results = useMemo(() => searchSettings(query, visible), [query, visible]);
 
   const [accessToken, setAccessToken] = useState('');
@@ -77,27 +83,27 @@ export function SettingsPane({ showHelp }: { showHelp: boolean }) {
     setTarget({ segment, section });
   };
 
-  if (target) {
-    return (
-      <div className="swipe-page mx-auto w-full max-w-[40rem] px-5">
-        <button
-          type="button"
-          onClick={() => setTarget(null)}
-          className="motion-focus -ml-1 mt-2 flex min-h-11 items-center gap-1 rounded-md pr-2 text-sm text-content-tertiary"
-        >
-          <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-          Settings
-        </button>
-        <h2 className="mt-1 font-display text-2xl text-content-primary">{SETTINGS_SEGMENT_LABELS[target.segment]}</h2>
-        <div className="mt-4">{renderSegment(target.segment, workspace)}</div>
-      </div>
-    );
-  }
-
+  // One tree for the list and the open setting, so the settings opened earlier
+  // keep their place in it and are never remounted by a switch (their drafts last).
   return (
     <div className="mx-auto flex min-h-full w-full max-w-[40rem] flex-col px-5">
-      <h2 className="mb-3 mt-3 font-display text-2xl text-content-primary">Settings</h2>
-      <div className="flex-1">
+      {target ? (
+        <>
+          <button
+            type="button"
+            onClick={() => setTarget(null)}
+            className="motion-focus -ml-1 mt-2 flex min-h-11 items-center gap-1 self-start rounded-md pr-2 text-sm text-content-tertiary"
+          >
+            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+            Settings
+          </button>
+          <h2 className="mt-1 font-display text-2xl text-content-primary">{SETTINGS_SEGMENT_LABELS[target.segment]}</h2>
+        </>
+      ) : (
+        <h2 className="mb-3 mt-3 font-display text-2xl text-content-primary">Settings</h2>
+      )}
+
+      <div className={target ? 'hidden' : 'flex-1'}>
         {query.trim() ? (
           results.length === 0 ? (
             <p className="px-1 py-6 text-sm text-content-secondary">Nothing matches that.</p>
@@ -121,20 +127,32 @@ export function SettingsPane({ showHelp }: { showHelp: boolean }) {
           <MenuBody showHelp={showHelp} onClose={() => undefined} onOpenSegment={openSegment} />
         )}
       </div>
-      {/* The search stays at the bottom of the page (founder, Nov 2, 2026). */}
-      <div className="sticky bottom-0 -mx-5 bg-bg-base px-5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] pt-3">
-        <label className="flex h-[50px] items-center gap-2.5 rounded-full border border-stroke-control bg-bg-surface px-4">
-          <Search className="h-[19px] w-[19px] text-content-primary/50" aria-hidden="true" />
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search settings"
-            aria-label="Search settings"
-            className="min-w-0 flex-1 bg-transparent text-[16px] text-content-primary placeholder:text-content-tertiary focus:outline-none"
-          />
-        </label>
+
+      {/* Every setting opened since Settings opened, only the current one shown. */}
+      <div className={target ? 'mt-4 pb-10' : 'hidden'}>
+        {visited.map((segment) => (
+          <div key={segment} className={target?.segment === segment ? '' : 'hidden'}>
+            {renderSegment(segment, workspace)}
+          </div>
+        ))}
       </div>
+
+      {/* The search stays at the bottom of the page (founder, Nov 2, 2026). */}
+      {target ? null : (
+        <div className="sticky bottom-0 -mx-5 bg-bg-base px-5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] pt-3">
+          <label className="flex h-[50px] items-center gap-2.5 rounded-full border border-stroke-control bg-bg-surface px-4">
+            <Search className="h-[19px] w-[19px] text-content-primary/50" aria-hidden="true" />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search settings"
+              aria-label="Search settings"
+              className="min-w-0 flex-1 bg-transparent text-[16px] text-content-primary placeholder:text-content-tertiary focus:outline-none"
+            />
+          </label>
+        </div>
+      )}
     </div>
   );
 }

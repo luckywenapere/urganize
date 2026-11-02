@@ -137,14 +137,23 @@ export function AvatarMenu({ showHelp, settingsActive = false }: { showHelp: boo
         // lives in the account page (#971, Nov 1, 2026).
         data-tour="nav-team"
         aria-current={settingsActive ? 'page' : undefined}
-        className={`motion-focus motion-press grid h-11 w-11 place-items-center rounded-full transition-shadow lg:h-12 lg:w-12 ${
-          settingsActive ? 'ring-2 ring-brand ring-offset-2 ring-offset-bg-base' : ''
-        }`}
+        className="motion-focus motion-press grid h-11 w-11 place-items-center rounded-full lg:h-12 lg:w-12"
       >
-        <span className="lg:hidden">
+        {/* While Settings shows, a thin light border hugs the photo itself, no
+            gap (founder's reference, Nov 2, 2026), with a soft shadow so it
+            reads on the cream background too. */}
+        <span
+          className={`grid place-items-center rounded-full transition-shadow lg:hidden ${
+            settingsActive ? 'shadow-[0_0_0_3px_#fff,0_2px_10px_rgb(0_0_0/0.18)]' : ''
+          }`}
+        >
           <AvatarFace size={32} dot={newOpportunities > 0} />
         </span>
-        <span className="hidden lg:inline-grid">
+        <span
+          className={`hidden rounded-full transition-shadow lg:inline-grid ${
+            settingsActive ? 'shadow-[0_0_0_3px_#fff,0_2px_10px_rgb(0_0_0/0.18)]' : ''
+          }`}
+        >
           <AvatarFace size={40} dot={newOpportunities > 0} />
         </span>
       </button>
