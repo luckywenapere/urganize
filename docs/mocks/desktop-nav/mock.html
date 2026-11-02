@@ -1,0 +1,52 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Desktop nav mock</title>
+<style>
+:root{--bg:#f5f0e6;--card:#faf5ec;--ink:#1a1611;--mut:#7a7366;--line:#e2dacb;--brand:#2f6a43;--soft:#efe9dd}
+*{box-sizing:border-box}body{margin:0;background:#d9d2c3;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:var(--ink);padding:24px;display:grid;gap:28px;justify-items:center}
+.cap{font-size:13px;color:#444;margin:0 0 8px;max-width:980px}
+.win{width:980px;height:560px;background:var(--bg);border-radius:14px;overflow:hidden;box-shadow:0 20px 50px -20px #0006;display:grid;grid-template-columns:200px 1fr}
+.side{border-right:1px solid var(--line);padding:18px 12px;display:flex;flex-direction:column;gap:4px}
+.logo{font-family:Georgia,serif;font-size:20px;margin:0 8px 16px}
+.nav{padding:9px 12px;border-radius:10px;font-size:14px;color:var(--mut)}.nav.on{background:var(--soft);color:var(--ink);font-weight:600}
+.main{display:flex;flex-direction:column;min-width:0}
+.top{display:flex;justify-content:flex-end;padding:12px 18px;border-bottom:1px solid var(--line)}
+.av{width:34px;height:34px;border-radius:50%;background:#1f3d2b;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:600}
+.av.on{box-shadow:0 0 0 3px #fff,0 2px 10px rgb(0 0 0/.18)}
+.body{flex:1;display:grid;min-height:0}
+.two{grid-template-columns:280px 1fr}
+.list{border-right:1px solid var(--line);padding:14px}
+.list h3{font-family:Georgia,serif;font-weight:400;font-size:20px;margin:0 0 10px}
+.item{display:flex;gap:10px;align-items:center;padding:9px;border-radius:10px;font-size:14px}.item.on{background:var(--soft)}
+.cov{width:36px;height:36px;border-radius:7px;background:#3d6fa8;flex:none}.cov.g{background:#999}
+.item small{display:block;color:var(--mut);font-size:12px}
+.chat{display:flex;flex-direction:column;padding:16px 22px;min-height:0}
+.chat h2{font-family:Georgia,serif;font-weight:400;font-size:22px;margin:0 0 10px}
+.b{padding:10px 14px;border-radius:14px;font-size:14px;max-width:70%;margin:6px 0}.me{background:var(--brand);color:#fff;margin-left:auto}.ai{background:var(--card);border:1px solid var(--line)}
+.box{margin-top:auto;border:1px solid var(--ink);border-radius:999px;padding:12px 16px;color:var(--mut);font-size:14px}
+.set{grid-template-columns:240px 1fr}
+.grp{background:var(--soft);border-radius:14px;padding:0 14px;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}.row:last-child{border:0}.row .l{color:var(--mut)}
+.pane{padding:18px 26px}.pane h2{font-family:Georgia,serif;font-weight:400;font-size:22px;margin:0 0 12px}
+.srch{margin:10px 0 0;border:1px solid var(--line);border-radius:999px;padding:9px 14px;color:var(--mut);font-size:13px;background:var(--card)}
+.red{color:#b3261e}
+</style></head><body>
+
+<div><p class="cap">1. Rollouts on a computer: the sidebar is Home, Assistant, Rollouts (Team moved into Settings). The rollouts list on the left, the open rollout's chat on the right. One chat per rollout.</p>
+<div class="win"><div class="side"><div class="logo">Urganize</div><div class="nav">Home</div><div class="nav">Assistant</div><div class="nav on">Rollouts</div></div>
+<div class="main"><div class="top"><div class="av">OW</div></div>
+<div class="body two"><div class="list"><h3>Rollouts</h3>
+<div class="item on"><div class="cov"></div><div>Honest<small>Single · last message 5m ago</small></div></div>
+<div class="item"><div class="cov g"></div><div>Ohema II<small>Single · no messages yet</small></div></div>
+<div class="item"><div class="cov g"></div><div>Abena<small>Single · 2d ago</small></div></div></div>
+<div class="chat"><h2>Honest</h2><div class="b me">What's left before Honest drops?</div><div class="b ai">Three tasks this week, one late: the TikTok plan. Want me to assign it?</div><div class="box">Message UrgAns about Honest...</div></div></div></div></div></div>
+
+<div><p class="cap">2. Settings on a computer: your photo opens it as a full page in the main area (no pop-up), with the light outline on your photo. Settings list on the left with the search at the bottom; the setting on the right, in the same rows as the phone.</p>
+<div class="win"><div class="side"><div class="logo">Urganize</div><div class="nav">Home</div><div class="nav">Assistant</div><div class="nav">Rollouts</div></div>
+<div class="main"><div class="top"><div class="av on">OW</div></div>
+<div class="body set"><div class="list" style="display:flex;flex-direction:column"><h3>Settings</h3>
+<div class="item on">Profile</div><div class="item">Team</div><div class="item">Artists &amp; brand</div><div class="item">Notifications</div><div class="item">UrgAns</div><div class="item">Billing</div><div class="item">Security &amp; account</div><div class="item">Trash</div>
+<div class="srch" style="margin-top:auto">Search settings</div></div>
+<div class="pane"><h2>Profile</h2>
+<div class="grp"><div class="row"><span class="l">Name</span><span>Oyin Wenapere</span></div><div class="row"><span class="l">Email</span><span>you@example.com</span></div></div>
+<div class="grp"><div class="row"><span class="l">Appearance</span><span>Light · Dark · System</span></div></div></div></div></div></div></div>
+</body></html>
