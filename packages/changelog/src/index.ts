@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.237.0",
+    title: "A session for each rollout",
+    tag: "AI",
+    date: "November 2, 2026",
+    highlights: [
+      "Sessions is a new tab. Each rollout has its own session, and it stays on that rollout.",
+      "Type in the chat box on a rollout and you land in its session, with a button to go straight back.",
+      "The Assistant tab is just your main thread now.",
+    ],
+  },
+  {
     version: "1.236.1",
     tag: "Rollouts",
     date: "November 2, 2026",

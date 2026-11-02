@@ -31,6 +31,7 @@ export type SignOutResetId =
   | 'activity'
   | 'home'
   | 'swipe-nav'
+  | 'sessions-view'
   | 'needs-you';
 
 /**
@@ -54,6 +55,7 @@ export const SIGN_OUT_RESET_ORDER: readonly SignOutResetId[] = [
   'activity',
   'home',
   'swipe-nav',
+  'sessions-view',
   'needs-you',
 ];
 

@@ -64,6 +64,7 @@ import {
   type StoredChatMessage,
 } from '@/lib/chappi/conversation-history';
 import { homeChatIdFor, isHomeChatId } from '@/lib/chappi/home-chat';
+import { rolloutSessionIdFor } from '@/lib/rollout-session';
 import { clearChatCache, readChatCache, writeChatCache } from '@/lib/chappi/conversation-cache';
 import { takeWarmedHistory } from '@/lib/chappi/history-warm';
 
@@ -1001,19 +1002,35 @@ export async function showHomeChat(): Promise<void> {
   if (!HISTORY_ENABLED || !sessionUserId) return;
   const homeId = homeChatIdFor(sessionUserId);
   if (!homeId) return;
+  await showChatById(homeId);
+}
+
+/**
+ * Puts a rollout's own session on screen (Nov 2, 2026): the same open-or-start
+ * rule as Home's chat, under the id lib/rollout-session.ts works out from the
+ * person and the rollout. One session per rollout, never a free-standing one.
+ */
+export async function showRolloutSession(releaseId: string): Promise<void> {
+  if (!HISTORY_ENABLED || !sessionUserId) return;
+  const id = rolloutSessionIdFor(sessionUserId, releaseId);
+  if (!id) return;
+  await showChatById(id);
+}
+
+async function showChatById(id: string): Promise<void> {
   const chappi = useChappiStore.getState();
-  if (chappi.conversationId === homeId) return;
-  if (chappi.conversationId === null && chappi.nextChatId === homeId) return;
+  if (chappi.conversationId === id) return;
+  if (chappi.conversationId === null && chappi.nextChatId === id) return;
   interacted = true;
-  const opened = await openInternal(homeId, false);
+  const opened = await openInternal(id, false);
   if (opened || !sessionUserId) return;
-  // Nothing saved under the fixed id yet (or it could not be fetched): start
-  // it empty. A save that finds an existing row settles through the normal
+  // Nothing saved under the id yet (or it could not be fetched): start it
+  // empty. A save that finds an existing row settles through the normal
   // conflict rules.
   const now = useChappiStore.getState();
-  if (now.conversationId === homeId) return;
+  if (now.conversationId === id) return;
   now.reset();
-  useChappiStore.getState().setNextChatId(homeId);
+  useChappiStore.getState().setNextChatId(id);
 }
 
 /**
