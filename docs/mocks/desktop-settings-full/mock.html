@@ -1,0 +1,45 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Desktop Settings mock</title>
+<style>
+:root{--bg:#f5f0e6;--card:#faf5ec;--ink:#1a1611;--mut:#7a7366;--line:#e2dacb;--brand:#2f6a43;--soft:#efe9dd}
+*{box-sizing:border-box}body{margin:0;background:#d9d2c3;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:var(--ink);padding:24px;display:grid;gap:28px;justify-items:center}
+.cap{font-size:13px;color:#444;margin:0 0 8px;max-width:980px}
+.win{width:980px;height:640px;background:var(--bg);border-radius:14px;overflow:hidden;box-shadow:0 20px 50px -20px #0006;position:relative}
+.x,.back{position:absolute;top:18px;width:38px;height:38px;border-radius:50%;background:var(--soft);display:grid;place-items:center;font-size:18px;color:var(--ink)}
+.x{right:18px}.back{left:calc(50% - 280px)}
+.col{width:520px;margin:0 auto;padding:26px 0;height:100%;overflow:auto}
+.who{display:flex;align-items:center;gap:14px;margin:4px 0 18px}
+.av{width:48px;height:48px;border-radius:50%;background:#1f3d2b;color:#fff;display:grid;place-items:center;font-weight:600}
+.who b{font-family:Georgia,serif;font-weight:400;font-size:26px;display:block}.who small{color:var(--mut);font-size:13px}
+.srch{margin-left:auto;width:38px;height:38px;border-radius:50%;background:var(--soft);display:grid;place-items:center}
+.lbl{font-size:11px;letter-spacing:.08em;color:var(--mut);margin:14px 4px 6px;font-weight:600}
+.grp{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:0 16px;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--line);font-size:14px}.row:last-child{border:0}
+.row .i{width:18px;text-align:center;color:var(--mut)}.row .c{margin-left:auto;color:var(--mut)}.row .ok{margin-left:auto;color:var(--brand)}
+.plan{display:flex;align-items:center;justify-content:space-between;padding:16px}
+.plan b{font-family:Georgia,serif;font-weight:400;font-size:18px}.plan small{display:block;color:var(--mut);font-size:12px}
+.btn{background:var(--ink);color:#fff;border-radius:999px;padding:9px 14px;font-size:13px}
+.out{background:var(--soft);border-radius:18px;padding:13px 16px;font-size:14px;display:flex;gap:12px}
+.h{text-align:center;font-family:Georgia,serif;font-size:22px;margin:6px 0 22px}
+.field{display:flex;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);font-size:14px}.field:last-child{border:0}.field .l{color:var(--mut)}
+</style></head><body>
+
+<div><p class="cap">1. Computer: your photo (at the foot of the side menu) now opens Settings over the whole screen. No pop-up menu, no side menu. One centred column like the phone. X at the top right takes you back to the page you were on. The search button sits by your name.</p>
+<div class="win"><div class="x">✕</div><div class="col">
+<div class="who"><div class="av">OW</div><div><b>Oyin</b><small>Golden Boy</small></div><div class="srch">⌕</div></div>
+<div class="grp plan"><div><b>Manager plan</b><small>2,788 credits</small></div><div class="btn">Plan and billing</div></div>
+<div class="lbl">SHOWING</div>
+<div class="grp"><div class="row"><span class="i">👥</span>All artists<span class="ok">✓</span></div><div class="row"><span class="i">●</span>Dorian</div><div class="row"><span class="i">T</span>T3N</div></div>
+<div class="grp"><div class="row"><span class="i">◯</span>Profile<span class="c">›</span></div><div class="row"><span class="i">👥</span>Team<span class="c">›</span></div><div class="row"><span class="i">◐</span>Artists &amp; brand<span class="c">›</span></div></div>
+<div class="grp"><div class="row"><span class="i">🔔</span>Notifications<span class="c">›</span></div><div class="row"><span class="i">✦</span>UrgAns<span class="c">›</span></div><div class="row"><span class="i">☰</span>Appearance<span class="c">›</span></div><div class="row"><span class="i">⛨</span>Security &amp; account<span class="c">›</span></div><div class="row"><span class="i">🗑</span>Trash<span class="c">›</span></div></div>
+<div class="grp"><div class="row"><span class="i">?</span>Help<span class="c">›</span></div><div class="row"><span class="i">✎</span>Send feedback<span class="c">›</span></div></div>
+<div class="out"><span>⇥</span>Sign out</div>
+</div></div></div>
+
+<div><p class="cap">2. Clicking a row opens it in the same column, the same as the phone: round back button on the left goes to the list, X on the right closes Settings.</p>
+<div class="win"><div class="back">‹</div><div class="x">✕</div><div class="col">
+<div class="h">Profile</div>
+<div class="grp"><div class="field"><span class="l">Name</span><span>Oyin Wenapere</span></div><div class="field"><span class="l">Email</span><span>you@example.com</span></div></div>
+<div class="grp"><div class="field"><span class="l">Appearance</span><span>Light · Dark · System</span></div></div>
+</div></div></div>
+</body></html>
