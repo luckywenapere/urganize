@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.243.4",
+    tag: "App",
+    date: "November 2, 2026",
+    highlights: [
+      "New icon on your browser tab: the white Urganize mark on black.",
+    ],
+  },
+  {
     version: "1.243.3",
     tag: "Rollouts",
     date: "November 2, 2026",
