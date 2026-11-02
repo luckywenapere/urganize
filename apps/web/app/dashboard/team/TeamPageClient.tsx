@@ -1,5 +1,6 @@
 'use client';
 
+import { recallLast, rememberLast } from '@/lib/last-seen';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Copy, Loader2, Plus, Users } from '@/components/icons';
 import { authHeaders, readError } from '@/components/press-kits/press-kit-client';
@@ -29,7 +30,9 @@ import {
  * Leave is in Settings → Security & account, seats are in the header line.
  */
 export default function TeamPageClient() {
-  const [data, setData] = useState<TeamPageResponse | null>(null);
+  // The last copy seen in this page life paints at once (Nov 2, 2026, the
+  // load-wait audit); the read below refreshes it. Memory only.
+  const [data, setData] = useState<TeamPageResponse | null>(() => recallLast<TeamPageResponse>('team', 'mine'));
   const [loadError, setLoadError] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
@@ -46,7 +49,9 @@ export default function TeamPageClient() {
         setLoadError(await readError(response, 'Could not load your team.'));
         return;
       }
-      setData((await response.json()) as TeamPageResponse);
+      const next = (await response.json()) as TeamPageResponse;
+      rememberLast('team', 'mine', next);
+      setData(next);
       setLoadError(null);
       setNow(new Date());
     } catch {

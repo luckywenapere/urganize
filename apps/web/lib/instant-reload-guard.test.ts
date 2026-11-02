@@ -38,3 +38,15 @@ describe('the saved roster', () => {
     expect(source).toMatch(/ROSTER_CACHE_MAX_AGE_MS = 24 \* 60 \* 60 \* 1000/);
   });
 });
+
+describe('the task view reuses its lists only for the same account', () => {
+  const source = read('components/tasks/TaskUIEngine.tsx');
+
+  it('checks the signed-in account before reusing', () => {
+    expect(source).toMatch(/optionsUserIdRef\.current === userId &&\s*Date\.now\(\) - optionsLoadedAtRef\.current < OPTIONS_FRESH_MS/);
+  });
+
+  it('clears another account\'s lists before loading', () => {
+    expect(source).toMatch(/if \(optionsUserIdRef\.current !== userId\) \{[\s\S]{0,200}setReleases\(\[\]\);\s*setMembers\(\[\]\);/);
+  });
+});
