@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { recallLast, rememberLast } from '@/lib/last-seen';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronRight } from '@/components/icons';
@@ -18,14 +19,17 @@ import { fetchArtistRecords, startRecord } from '@/lib/next-records-client';
 
 export function useArtistRecords(artistId: string) {
   const router = useRouter();
-  const [records, setRecords] = useState<RecordSummary[] | null>(null);
+  // The last copy seen in this page life paints at once (Nov 2, 2026).
+  const [records, setRecords] = useState<RecordSummary[] | null>(() => recallLast<RecordSummary[]>('records', artistId));
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let live = true;
     void fetchArtistRecords(artistId).then((list) => {
-      if (live) setRecords(list ?? []);
+      if (!live) return;
+      if (list) rememberLast('records', artistId, list);
+      setRecords(list ?? []);
     });
     return () => {
       live = false;

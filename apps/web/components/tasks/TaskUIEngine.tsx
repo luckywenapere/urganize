@@ -237,6 +237,10 @@ function toReleaseQuery(release: ReleaseOption | null): string {
   return release?.title || '';
 }
 
+
+/** How long the task view's rollout and people lists are reused. */
+const OPTIONS_FRESH_MS = 60_000;
+
 export function TaskUIEngine({ bridge }: { bridge: TaskUIEngineBridge }) {
   const pathname = usePathname();
   const [activeTaskId, setActiveTaskId] = useState('');
@@ -295,9 +299,31 @@ export function TaskUIEngine({ bridge }: { bridge: TaskUIEngineBridge }) {
   const patchVersionRef = useRef(0);
 
   const loadingOptionsRef = useRef(false);
+  // The rollout and people lists change rarely, so a task opened within a
+  // minute of the last read reuses them instead of showing the assignee field
+  // loading again (Nov 2, 2026, the load-wait audit).
+  const optionsLoadedAtRef = useRef(0);
+  // Whose lists they are: reused only for the same signed-in account, so a
+  // sign-out and a different sign-in in the same tab never sees the last
+  // account's people or rollouts (Codex review on #1037).
+  const optionsUserIdRef = useRef<string | null>(null);
   const loadOptions = useCallback(async () => {
     if (loadingOptionsRef.current) {
       return;
+    }
+    const userId = useAuthStore.getState().user?.id ?? null;
+    if (
+      userId &&
+      optionsUserIdRef.current === userId &&
+      Date.now() - optionsLoadedAtRef.current < OPTIONS_FRESH_MS
+    ) {
+      return;
+    }
+    if (optionsUserIdRef.current !== userId) {
+      // Another account's lists must not show while this one's load.
+      setReleases([]);
+      setMembers([]);
+      setIsOptionsLoaded(false);
     }
 
     loadingOptionsRef.current = true;
@@ -313,6 +339,8 @@ export function TaskUIEngine({ bridge }: { bridge: TaskUIEngineBridge }) {
       setReleases(Array.isArray(releasePayload.releases) ? releasePayload.releases : []);
       setMembers(Array.isArray(membersPayload.members) ? membersPayload.members : []);
       setIsOptionsLoaded(true);
+      optionsLoadedAtRef.current = Date.now();
+      optionsUserIdRef.current = userId;
     } finally {
       loadingOptionsRef.current = false;
       setIsLoadingOptions(false);

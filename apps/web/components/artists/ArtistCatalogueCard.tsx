@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { recallLast, rememberLast } from '@/lib/last-seen';
 import { createPortal } from 'react-dom';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
@@ -190,7 +191,11 @@ export function ArtistCatalogueCard({
   /** The linked streaming profile once the first read answers (#882). */
   onProfile?: (profile: CatalogueProfile | null) => void;
 }) {
-  const [data, setData] = useState<Catalogue>({ releases: [], cap: null, codesPending: 0, profile: null, loaded: false });
+  // The last copy seen in this page life paints at once (Nov 2, 2026, the
+  // load-wait audit); the read refreshes it.
+  const [data, setData] = useState<Catalogue>(
+    () => recallLast<Catalogue>('catalogue', artistId) ?? { releases: [], cap: null, codesPending: 0, profile: null, loaded: false }
+  );
   const [showAll, setShowAll] = useState(false);
   const [confirming, setConfirming] = useState<CatalogueRow | null>(null);
   const [working, setWorking] = useState(false);
@@ -200,7 +205,10 @@ export function ArtistCatalogueCard({
   const polls = useRef(0);
 
   const load = useCallback(() => {
-    void fetchArtistCatalogue(artistId).then(setData);
+    void fetchArtistCatalogue(artistId).then((next) => {
+      if (next.loaded) rememberLast('catalogue', artistId, next);
+      setData(next);
+    });
   }, [artistId]);
 
   useEffect(() => {
