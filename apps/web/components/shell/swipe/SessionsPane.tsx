@@ -13,7 +13,8 @@ import { useAuthStore } from '@/lib/auth-store';
 import { displayReleaseTitle } from '@/types/releases';
 import type { ExecutionRelease } from '@/lib/execution-types';
 import { useChappiStore } from '@/stores/useChappiStore';
-import { showRolloutSession, useChappiHistoryStore } from '@/stores/useChappiHistoryStore';
+import { prefetchChat, showRolloutSession, useChappiHistoryStore } from '@/stores/useChappiHistoryStore';
+import { shouldBackgroundPrefetch } from '@/lib/connection';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useSessionsViewStore } from '@/stores/useSessionsViewStore';
 
@@ -115,6 +116,20 @@ export function SessionsPane({ active }: { active: boolean }) {
       return String(a.release.releaseDate ?? '9999').localeCompare(String(b.release.releaseDate ?? '9999'));
     });
   }, [releases, lastById, userId]);
+
+  // Read the top few rollout chats ahead of a tap, so opening one after a
+  // reload does not wait (Nov 2, 2026). Only chats that have messages, never on
+  // Data Saver or a slow link.
+  const toPrefetch = rows
+    .filter((row) => row.last)
+    .slice(0, 3)
+    .map((row) => rolloutSessionIdFor(userId, row.release.id))
+    .filter((id): id is string => Boolean(id))
+    .join(',');
+  useEffect(() => {
+    if (!active || releaseId || !toPrefetch || !shouldBackgroundPrefetch()) return;
+    for (const id of toPrefetch.split(',')) prefetchChat(id);
+  }, [active, releaseId, toPrefetch]);
 
   if (releaseId) {
     const title = release ? displayReleaseTitle(release.title) : 'Session';
