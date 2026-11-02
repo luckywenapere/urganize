@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.243.2",
+    tag: "App",
+    date: "November 2, 2026",
+    highlights: [
+      "On a computer, your photo is only at the top right now, and the bell is gone from the top bar.",
+      "Settings now says Sign out.",
+    ],
+  },
+  {
     version: "1.243.1",
     tag: "App",
     date: "November 2, 2026",

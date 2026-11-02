@@ -492,9 +492,11 @@ export function NotificationsBell() {
         aria-expanded={isOpen}
         aria-controls={isOpen ? panelId : undefined}
         aria-label={badge.ariaLabel}
-        className="motion-focus motion-press relative hidden h-10 w-10 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary lg:grid"
+        className="motion-focus motion-press relative hidden h-10 w-10 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
       >
-        {/* A plain outline bell (URG-255, 2026-10-14: the "live" signal mark
+        {/* Hidden at every width since Nov 2, 2026 (founder: no bell in the
+            computer's top bar); the list and panel stay mounted for the
+            phone's Home bell. A plain outline bell (URG-255, 2026-10-14: the "live" signal mark
             read as one more thing to decode). Unread is a small dot, not a
             number; the count is still spoken through aria-label. */}
         <Bell className="h-[18px] w-[18px]" aria-hidden="true" />

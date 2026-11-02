@@ -53,10 +53,11 @@ describe('the side menu', () => {
     expect(sidebar).toContain('shellSideMenu(areas, pathname)');
   });
 
-  it('is always the thin rail: no fold button, no open state, the profile icon at its foot', () => {
+  it('is always the thin rail: no fold button, no open state, no photo at its foot', () => {
     expect(sidebar).toContain("const mode: 'collapsed' | 'rail' = menu ? 'collapsed' : 'rail';");
-    // Since Nov 2, 2026 the photo opens Settings over the whole screen, no pop-up.
-    expect(sidebar).toContain('href={SETTINGS_PAGE_HREF}');
+    // Since Nov 2, 2026 your photo is only in the top bar (founder).
+    expect(sidebar).not.toContain('SETTINGS_PAGE_HREF');
+    expect(sidebar).toContain('if (!menu) return null;');
     expect(sidebar).not.toContain('<WorkspaceMenu');
     expect(sidebar).not.toContain('SidebarToggle');
     expect(sidebar).not.toContain('useSidebarStore');

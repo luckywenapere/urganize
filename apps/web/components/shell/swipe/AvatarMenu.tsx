@@ -443,7 +443,7 @@ function LogOutRow() {
         className="motion-focus motion-press flex min-h-[52px] w-full items-center gap-3 rounded-[20px] border border-content-primary/[0.07] bg-content-primary/[0.03] px-4 text-left text-[17px] text-content-primary disabled:opacity-60"
       >
         <LogOut className="h-[20px] w-[20px] text-content-primary/75" aria-hidden="true" />
-        Log out
+        Sign out
       </button>
     </div>
   );
