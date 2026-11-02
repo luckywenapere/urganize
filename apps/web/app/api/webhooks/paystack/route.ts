@@ -978,7 +978,7 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
         planVersion: isPricingTierId(planString) ? PRICE_LIST_VERSION : 'legacy',
         intro: payment.paystack_response?.intro === true,
       });
-      // A one-payment starting price (Emerging's ₦2,500 first month, 2026-11-02)
+      // A one-payment starting price (Emerging's ₦2,600 first month, 2026-11-02)
       // ends on this very charge, and its Plan (invoice_limit 1) never renews,
       // so the renewal path below never sees it. Move the card onto the
       // full-price Plan now, first charged when this period ends.
