@@ -19,9 +19,9 @@ export function VoiceInputDriver({
   onChange: (value: VoiceInputValue) => void;
 }) {
   const voice = useVoiceInput({ enabled: true, onTranscript, getHints });
-  const { supported, state, elapsed, error, toggle, clearError } = voice;
+  const { supported, state, elapsed, error, toggle, start, stop, cancel, clearError } = voice;
   useEffect(() => {
-    onChange({ supported, state, elapsed, error, toggle, clearError });
-  }, [onChange, supported, state, elapsed, error, toggle, clearError]);
+    onChange({ supported, state, elapsed, error, toggle, start, stop, cancel, clearError });
+  }, [onChange, supported, state, elapsed, error, toggle, start, stop, cancel, clearError]);
   return null;
 }

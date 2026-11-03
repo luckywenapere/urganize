@@ -24,6 +24,9 @@ const IDLE: VoiceInputValue = {
   elapsed: 0,
   error: null,
   toggle: noop,
+  start: noop,
+  stop: noop,
+  cancel: noop,
   clearError: noop,
 };
 
