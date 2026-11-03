@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.246.1",
+    tag: "App",
+    date: "November 3, 2026",
+    highlights: [
+      "The artist page fits your phone. The Songs out before Urganize card and the Out now rows no longer squash their words, and the pencil on a cover is a small chip, not a shade over the art.",
+    ],
+  },
+  {
     version: "1.246.0",
     title: "Hold the mic to talk",
     tag: "AI",

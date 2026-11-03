@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ChevronRight, Disc3 } from '@/components/icons';
+import { ArrowLeft, ChevronRight } from '@/components/icons';
 import { useShellStore } from '@/stores/useShellStore';
 import { useAuthStore } from '@/lib/auth-store';
 // Back goes to the Artists tab, the list of artists (founder, 2026-10-14).
@@ -11,7 +11,7 @@ import { ARTISTS_HREF } from '@/lib/shell-nav';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { artistUpNext, bucketReleases, type ArtistUpNext } from '@/lib/artist-overview';
 import { formatCalendarDate, isArtistPageEnabled, recordHref, releaseHref } from '@/lib/artist-page';
-import { lagosToday, type RecordSummary } from '@/lib/next-records';
+import { RECORD_COVER_COLORS, lagosToday, type RecordSummary } from '@/lib/next-records';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
@@ -39,7 +39,10 @@ const primaryButton =
   'motion-focus motion-press inline-flex min-h-11 flex-1 items-center justify-center rounded-full bg-brand px-5 text-sm font-semibold text-content-inverse transition-colors hover:bg-brand-hover disabled:opacity-50 sm:flex-none';
 const ghostButton =
   'motion-focus motion-press inline-flex min-h-11 flex-1 items-center justify-center rounded-full border border-stroke-strong px-5 text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover sm:flex-none';
-const inlineLink = 'motion-focus text-[13px] font-semibold text-brand hover:underline underline-offset-2 disabled:opacity-50';
+// The ::before box makes the tap area 44px tall without changing the line or
+// where the focus ring draws.
+const inlineLink =
+  "motion-focus relative text-[13px] font-semibold text-brand underline-offset-2 before:absolute before:-inset-x-1 before:-inset-y-3 before:content-[''] hover:underline disabled:opacity-50";
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
@@ -74,6 +77,25 @@ function Chip({ children, on = false }: { children: React.ReactNode; on?: boolea
   );
 }
 
+/** Three faded sleeves: the records that will fill the Out now slot. Each
+ *  sleeve is opaque (page colour under a faded tint), so the one in front
+ *  covers the one behind and the 2px seam between them stays clean. */
+function RecordStack() {
+  return (
+    <span className="flex shrink-0" aria-hidden="true">
+      {RECORD_COVER_COLORS.slice(0, 3).map((color, index) => (
+        <span
+          key={color}
+          className={`relative grid h-11 w-11 place-items-center overflow-hidden rounded-lg bg-bg-base ring-2 ring-bg-base ${index ? '-ml-3.5' : ''}`}
+        >
+          <span className="absolute inset-0" style={{ backgroundColor: color, opacity: 0.5 + index * 0.2 }} />
+          <span className="relative h-4 w-4 rounded-full border border-white/40" />
+        </span>
+      ))}
+    </span>
+  );
+}
+
 /** One stop on the Music line. The lit stop is where the artist is now. */
 function Stage({
   label,
@@ -98,7 +120,9 @@ function Stage({
     <li className="relative pl-7">
       {last ? null : <span aria-hidden className="absolute bottom-0 left-[6px] top-[22px] w-[1.5px] bg-stroke-strong" />}
       <span aria-hidden className={`absolute left-0 top-[5px] h-[13px] w-[13px] rounded-full border-[1.5px] ${dot}`} />
-      <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-content-secondary">
+      {/* font-sans: the global heading rule would set the display serif, which
+          has one weight and goes smudgy in faux bold. */}
+      <h3 className="font-sans text-[11px] font-bold uppercase tracking-[0.12em] text-content-secondary">
         {label}
         {count > 0 ? <span className="ml-1.5 font-normal text-content-tertiary">{count}</span> : null}
       </h3>
@@ -507,26 +531,19 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
                     slot the size of a song row. Once brought in (a profile is
                     saved) or any older songs are there, neither shows again. */}
                 {streamingProfile === null && catalogueCount === 0 && buckets.past.length === 0 ? (
-                  <div className="mt-1 flex flex-wrap items-center gap-4 rounded-2xl border border-dashed border-stroke-control p-4 sm:p-5">
-                    <span className="flex shrink-0" aria-hidden="true">
-                      {[0.45, 0.7, 1].map((opacity, index) => (
-                        <span
-                          key={opacity}
-                          className={`grid h-11 w-11 place-items-center rounded-lg border border-stroke-strong bg-bg-surface text-content-tertiary shadow-sm ${index ? '-ml-3.5' : ''}`}
-                          style={{ opacity }}
-                        >
-                          {index === 2 ? <Disc3 className="h-4 w-4" /> : null}
-                        </span>
-                      ))}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[15px] font-semibold text-content-primary">Songs out before Urganize?</p>
-                      <p className="mt-0.5 text-[13px] text-content-secondary">Bring in what {artist.name} already released, once.</p>
+                  <div className="mt-1 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-3 rounded-2xl border border-dashed border-stroke-control p-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:p-5">
+                    <RecordStack />
+                    <div className="min-w-0">
+                      <p className="text-[15px] font-semibold leading-snug text-content-primary">Songs out before Urganize?</p>
+                      <p className="mt-1 text-[13px] leading-snug text-content-secondary">
+                        Bring in what {artist.name} already released. You only do this once.
+                      </p>
                     </div>
+                    {/* Under the words on a phone, beside them from sm up. */}
                     <button
                       type="button"
                       onClick={findOnStreaming}
-                      className="motion-focus motion-press inline-flex min-h-9 items-center rounded-full bg-brand px-4 text-[13px] font-semibold text-content-inverse hover:bg-brand-hover"
+                      className="motion-focus motion-press col-start-2 inline-flex min-h-10 items-center justify-self-start rounded-full bg-brand px-4 text-[13px] font-semibold text-content-inverse hover:bg-brand-hover sm:col-start-auto sm:min-h-9"
                     >
                       Bring them in
                     </button>
@@ -549,7 +566,7 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
                     <button
                       type="button"
                       onClick={findOnStreaming}
-                      className="motion-focus motion-press inline-flex min-h-9 shrink-0 items-center rounded-full border border-stroke-strong px-3.5 text-[13px] font-semibold text-content-primary hover:bg-bg-hover"
+                      className="motion-focus motion-press inline-flex min-h-10 shrink-0 items-center rounded-full border border-stroke-strong px-3.5 text-[13px] font-semibold text-content-primary hover:bg-bg-hover sm:min-h-9"
                     >
                       Bring them in
                     </button>
