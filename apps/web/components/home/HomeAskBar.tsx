@@ -21,6 +21,9 @@ import { useAttachments } from '@/components/chappi/useAttachments';
 import { useLazyVoiceInput } from '@/components/chappi/useLazyVoiceInput';
 import { isChappiEnabled, isUrgansRealtimeEnabled, isUrgansVoiceEnabled } from '@/lib/chappi/config';
 import { mergeTranscript } from '@/lib/urgans-voice';
+import { useHoldToTalk } from '@/components/chappi/useHoldToTalk';
+import { formatHoldElapsed, holdToTalkPlaceholder } from '@/lib/hold-to-talk';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 
@@ -68,7 +71,7 @@ export function HomeAskBar({
   variant = 'home',
   onSend,
   replying = false,
-  placeholder = 'Message AI...',
+  placeholder,
 }: {
   /** 'swipe' (URG-380): the swipe navigation's one box under Home and Artists,
    *  on phones and desktops, centred to the page column. 'page' (Oct 24,
@@ -96,6 +99,7 @@ export function HomeAskBar({
   const inBrowser = useInBrowser();
   const dockRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   // How far the box is sliding, while it slides to the chat (null at rest).
   const [glide, setGlide] = useState<number | null>(null);
 
@@ -148,9 +152,17 @@ export function HomeAskBar({
   const scopedRelease = scopedReleaseId
     ? releases.find((release) => release.id === scopedReleaseId) ?? null
     : null;
+  // A hold sends what was said as soon as it is turned into words; a tap only
+  // puts the words in the box (read through a ref: the hold hook comes after).
+  const holdSendRef = useRef<() => boolean>(() => false);
+  const sendRef = useRef<(text: string) => void>(() => undefined);
   const [voice, voiceDriver] = useLazyVoiceInput({
     enabled: VOICE_ENABLED,
-    onTranscript: (spoken) => setInput(mergeTranscript(useChappiStore.getState().input, spoken)),
+    onTranscript: (spoken) => {
+      const merged = mergeTranscript(useChappiStore.getState().input, spoken);
+      setInput(merged);
+      if (holdSendRef.current()) sendRef.current(merged);
+    },
     getHints: () =>
       scopedRelease
         ? { releaseTitle: scopedRelease.title, artistName: scopedRelease.artistName }
@@ -159,6 +171,17 @@ export function HomeAskBar({
   const isRecording = voice.state === 'recording';
   const isTranscribing = voice.state === 'transcribing';
   const busy = isRecording || isTranscribing;
+  // Hold to talk is for phones (founder approved docs/mocks/hold-to-talk).
+  const isDesktop = useIsDesktopViewport();
+  const hold = useHoldToTalk(voice, !isDesktop && voice.supported && !replying);
+  useEffect(() => {
+    holdSendRef.current = hold.shouldSend;
+  });
+  const hasMessages = useChappiStore((state) => state.messages.length > 0);
+  const boxText =
+    placeholder ??
+    holdToTalkPlaceholder({ phone: !isDesktop, micReady: voice.supported, hasMessages }) ??
+    'Message AI...';
   const canSend =
     (input.trim().length > 0 || attach.attachments.length > 0) && attach.pending === 0 && !busy && !replying;
 
@@ -184,7 +207,14 @@ export function HomeAskBar({
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canSend) return;
-    setInput(input.trim());
+    send(input, event.currentTarget);
+  };
+
+  // What the send button does, also run by a hold to talk once its words land.
+  const send = (text: string, box: HTMLElement | null) => {
+    if (!text.trim() && attach.attachments.length === 0) return;
+    if (attach.pending > 0 || replying) return;
+    setInput(text.trim());
     setPendingAttachments(attach.attachments);
     if (!onSend) setSendInputOnOpen(true);
     attach.clear();
@@ -197,8 +227,12 @@ export function HomeAskBar({
     // Always the full chat page: it mounts the conversation that picks the
     // message up and sends it. No keyboard hand-off: the chat's box is busy
     // while the reply comes, so a kept keyboard would only lose what is typed.
-    openChat(event.currentTarget);
+    if (box) openChat(box);
+    else router.push('/dashboard/urgans');
   };
+  useEffect(() => {
+    sendRef.current = (text) => send(text, formRef.current);
+  });
 
   if (!CHAPPI_ENABLED || !inBrowser) return null;
 
@@ -215,6 +249,7 @@ export function HomeAskBar({
     >
       {voiceDriver}
       <form
+        ref={formRef}
         onSubmit={handleSubmit}
         style={
           glide === null
@@ -228,7 +263,16 @@ export function HomeAskBar({
           {isRecording ? (
             <div role="status" className="flex min-w-0 flex-1 items-center gap-2 px-2 text-[16px] text-content-secondary">
               <span className="h-2 w-2 shrink-0 rounded-full bg-status-error motion-safe:animate-pulse" aria-hidden="true" />
-              Listening...
+              {hold.holding ? (
+                <>
+                  <span className="tabular-nums">{formatHoldElapsed(voice.elapsed)}</span>
+                  <span className={`truncate text-sm ${hold.cancelArmed ? 'text-status-error' : 'text-content-tertiary'}`}>
+                    {hold.cancelArmed ? 'Let go to cancel' : '‹ Slide left to cancel'}
+                  </span>
+                </>
+              ) : (
+                'Listening...'
+              )}
             </div>
           ) : (
             <input
@@ -243,7 +287,7 @@ export function HomeAskBar({
                 event.preventDefault();
                 void attach.addFiles(pictures);
               }}
-              placeholder={isTranscribing ? 'Turning your voice into text...' : placeholder}
+              placeholder={isTranscribing ? 'Turning your voice into text...' : boxText}
               aria-label="Message AI"
               enterKeyHint="send"
               disabled={isTranscribing || replying}
@@ -254,12 +298,13 @@ export function HomeAskBar({
           {voice.supported ? (
             <button
               type="button"
-              onClick={voice.toggle}
+              {...hold.buttonProps}
               data-recording={isRecording ? 'true' : undefined}
+              data-holding={hold.holding ? 'true' : undefined}
               aria-label={isRecording ? 'Stop recording' : TALK_ENABLED ? 'Dictate' : 'Talk to AI'}
               title={TALK_ENABLED && !isRecording ? 'Dictate' : undefined}
-              disabled={isTranscribing || voice.state === 'requesting'}
-              className="motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-elevated hover:text-content-primary disabled:opacity-40 data-[recording=true]:text-status-error"
+              disabled={isTranscribing || (voice.state === 'requesting' && !hold.holding)}
+              className="motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full text-content-secondary transition-[color,background-color,transform] hover:bg-bg-elevated hover:text-content-primary disabled:opacity-40 data-[recording=true]:text-status-error data-[holding=true]:scale-125 data-[holding=true]:bg-status-error data-[holding=true]:text-content-inverse"
             >
               {isTranscribing || voice.state === 'requesting' ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

@@ -73,6 +73,9 @@ import { matchTasksByTitle, parseTaskStatusCommand, type TaskStatusCommand } fro
 import { getTaskStatusLabel } from '@/lib/tasks';
 import type { Task } from '@/types/tasks';
 import { useLazyVoiceInput } from '@/components/chappi/useLazyVoiceInput';
+import { useHoldToTalk } from '@/components/chappi/useHoldToTalk';
+import { holdToTalkPlaceholder } from '@/lib/hold-to-talk';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { useAttachments } from '@/components/chappi/useAttachments';
 import { ChappiAttachMenu } from '@/components/chappi/ChappiAttachMenu';
 import { ChappiAttachmentTray, ChappiMessageAttachments } from '@/components/chappi/ChappiAttachments';
@@ -421,10 +424,19 @@ export function ChappiConversation({
   // into whatever is typed — never replacing it, never sending. Reading the
   // input from getState avoids a stale closure at transcribe time (a clip can
   // land many seconds after recording started).
+  // A hold to talk sends what was said once it is words (read through a ref:
+  // the hold hook comes after, and sendUserTurn is defined further down).
+  const holdSendRef = useRef<() => boolean>(() => false);
+  const holdDeliverRef = useRef<(text: string) => void>(() => undefined);
   const [voice, voiceDriver] = useLazyVoiceInput({
     enabled: VOICE_ENABLED,
     onTranscript: (text) => {
-      setInput(mergeTranscript(useChappiStore.getState().input, text));
+      const merged = mergeTranscript(useChappiStore.getState().input, text);
+      setInput(merged);
+      if (holdSendRef.current()) {
+        holdDeliverRef.current(merged);
+        return;
+      }
       inputRef.current?.focus();
     },
     getHints: () =>
@@ -434,6 +446,12 @@ export function ChappiConversation({
   });
   const isRecording = voice.state === 'recording';
   const isTranscribing = voice.state === 'transcribing';
+  // Hold to talk, phones only (founder approved docs/mocks/hold-to-talk).
+  const isDesktopBox = useIsDesktopViewport();
+  const hold = useHoldToTalk(voice, !isDesktopBox && voice.supported);
+  useEffect(() => {
+    holdSendRef.current = hold.shouldSend;
+  });
 
   // Photos, camera shots and text files .
   // They live in the browser until the message is sent; nothing is stored.
@@ -1432,6 +1450,16 @@ export function ChappiConversation({
     attach.clear();
     sendUserTurn(trimmed, attached);
   };
+  useEffect(() => {
+    holdDeliverRef.current = (text) => {
+      const trimmed = text.trim();
+      const attached = attach.attachments;
+      if ((!trimmed && attached.length === 0) || isThinking || attach.pending > 0) return;
+      setInput('');
+      attach.clear();
+      sendUserTurn(trimmed, attached);
+    };
+  });
 
   // Regenerate the last reply: drop it from the transcript (keeping the user
   // turn that produced it) and re-submit the history up to that turn. Only
@@ -1503,7 +1531,16 @@ export function ChappiConversation({
               className="h-2 w-2 shrink-0 rounded-full bg-status-error motion-safe:animate-pulse"
               aria-hidden="true"
             />
-            Listening… {formatElapsed(voice.elapsed)}
+            {hold.holding ? (
+              <>
+                <span className="tabular-nums">{formatElapsed(voice.elapsed)}</span>
+                <span className={`truncate text-sm ${hold.cancelArmed ? 'text-status-error' : 'text-content-tertiary'}`}>
+                  {hold.cancelArmed ? 'Let go to cancel' : '‹ Slide left to cancel'}
+                </span>
+              </>
+            ) : (
+              <>Listening… {formatElapsed(voice.elapsed)}</>
+            )}
           </div>
         ) : (
           <input
@@ -1525,7 +1562,9 @@ export function ChappiConversation({
                 ? 'Turning your voice into text…'
                 : pageRecordId
                   ? RECORD_CAPTURE_PLACEHOLDER
-                  : placeholder ?? 'Ask AI…'
+                  : placeholder ??
+                    holdToTalkPlaceholder({ phone: !isDesktopBox, micReady: voice.supported, hasMessages: messages.length > 0 }) ??
+                    'Ask AI…'
             }
             aria-label="Message AI"
             disabled={isThinking || isTranscribing}
@@ -1537,7 +1576,8 @@ export function ChappiConversation({
         {voice.supported ? (
           <button
             type="button"
-            onClick={voice.toggle}
+            {...hold.buttonProps}
+            data-holding={hold.holding ? 'true' : undefined}
             // The label carries the state ("Stop recording" / "Talk to UrgAns"),
             // so no aria-pressed as well: announcing both reads as a double
             // negative. The recording colour keys off a data attribute.
@@ -1546,8 +1586,8 @@ export function ChappiConversation({
             aria-label={isRecording ? 'Stop recording' : TALK_ENABLED ? 'Dictate' : 'Talk to AI'}
             title={TALK_ENABLED && !isRecording ? 'Dictate' : undefined}
             // Ghost style so Send stays the primary action.
-            disabled={isThinking || isTranscribing || voice.state === 'requesting'}
-            className="motion-press grid h-9 w-9 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-elevated hover:text-content-primary disabled:opacity-40 data-[recording=true]:text-status-error"
+            disabled={isThinking || isTranscribing || (voice.state === 'requesting' && !hold.holding)}
+            className="motion-press grid h-9 w-9 shrink-0 place-items-center rounded-full text-content-secondary transition-[color,background-color,transform] hover:bg-bg-elevated hover:text-content-primary disabled:opacity-40 data-[recording=true]:text-status-error data-[holding=true]:scale-125 data-[holding=true]:bg-status-error data-[holding=true]:text-content-inverse"
           >
             {isTranscribing || voice.state === 'requesting' ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

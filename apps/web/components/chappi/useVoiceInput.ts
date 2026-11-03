@@ -25,6 +25,11 @@ export type VoiceInputValue = {
   error: string | null;
   /** Tap to start, tap again to stop. Never throws. */
   toggle: () => void;
+  /** Hold to talk (2026-11-02): start, then stop (transcribe) or cancel
+   *  (throw the clip away). Never throw. */
+  start: () => void;
+  stop: () => void;
+  cancel: () => void;
   clearError: () => void;
 };
 
@@ -167,6 +172,9 @@ export function useVoiceInput(options: {
     }
   }, [endpoint]);
 
+  // Set by cancel(): the next onstop drops the clip instead of transcribing it.
+  const discardRef = useRef(false);
+
   const stop = useCallback(() => {
     const recorder = recorderRef.current;
     if (recorder && recorder.state !== 'inactive') {
@@ -219,6 +227,12 @@ export function useVoiceInput(options: {
     recorder.onstop = () => {
       const chunks = chunksRef.current;
       chunksRef.current = [];
+      if (discardRef.current) {
+        discardRef.current = false;
+        releaseMic();
+        setState('idle');
+        return;
+      }
       clipSecondsRef.current = Math.round((Date.now() - startedAtRef.current) / 1000);
       releaseMic();
       const blob = new Blob(chunks, { type: mimeType });
@@ -253,7 +267,22 @@ export function useVoiceInput(options: {
     // requesting/transcribing are transient — ignore taps during them.
   }, [state, start, stop]);
 
+  const cancel = useCallback(() => {
+    const recorder = recorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      discardRef.current = true;
+      recorder.stop();
+    } else {
+      releaseMic();
+      setState('idle');
+    }
+  }, [releaseMic]);
+
+  const startNow = useCallback(() => {
+    if (state === 'idle') void start();
+  }, [state, start]);
+
   const clearError = useCallback(() => setError(null), []);
 
-  return { supported, state, elapsed, error, toggle, clearError };
+  return { supported, state, elapsed, error, toggle, start: startNow, stop, cancel, clearError };
 }

@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.246.0",
+    title: "Hold the mic to talk",
+    tag: "AI",
+    date: "November 3, 2026",
+    highlights: [
+      "On your phone, hold the mic to talk to AI. Let go and it sends. Slide left to cancel.",
+      "A quick tap on the mic still puts your words in the box first.",
+    ],
+  },
+  {
     version: "1.245.1",
     tag: "AI",
     date: "November 3, 2026",
