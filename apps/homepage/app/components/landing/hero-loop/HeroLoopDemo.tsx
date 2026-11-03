@@ -335,7 +335,7 @@ function Scene({ s, layout }: { s: S; layout: Layout }) {
     return <div className="ug-phoneish">{body}</div>
   }
   return (
-    <Window url="app.urganize.app" urlShape="pill" className="ug-window" body={{ className: 'ug-body', 'data-crop': true }}>
+    <Window url="team.urganize.app" urlShape="pill" className="ug-window" body={{ className: 'ug-body', 'data-crop': true }}>
       <div className="ug-topbar">
         <span className="ug-word">Urganize<span className="ug-beta">BETA</span></span>
         <span className="ug-tabs">

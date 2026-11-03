@@ -62,8 +62,9 @@ export default function Home() {
     // (globals.css, 2026-10-17, URG-334).
     <div className={`home-v2 ${homeFontVariables} min-h-screen overflow-x-hidden bg-[var(--marketing-bg)] text-[var(--marketing-text)] selection:bg-[var(--marketing-selection)] selection:text-[var(--marketing-text)]`}>
       {/* Signed-in visitors go straight to the app, before anything below is
-          painted. Home page only: /pricing, /features and /login stay readable
-          (and /login exists for search). See lib/login-redirect.ts. */}
+          painted. Home page only: /pricing, /features and the rest stay
+          readable. /login is a redirect into the app (next.config.ts). See
+          lib/login-redirect.ts. */}
       <script dangerouslySetInnerHTML={{ __html: LOGIN_REDIRECT_SCRIPT }} />
       {/* Hero A/B arm (URG-376), set on <html> before the hero is parsed so
           neither arm flashes the other. See lib/hero-variant.ts. */}

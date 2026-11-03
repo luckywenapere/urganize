@@ -1,6 +1,7 @@
 // Single source of truth for links from the marketing site INTO the product
-// app, mirroring the lib/community.ts pattern so the header, the /login and
-// /signup pages, and anything added later can't drift apart.
+// app, mirroring the lib/community.ts pattern so the header, the /login
+// redirect (next.config.ts), the /signup page and anything added later can't
+// drift apart.
 //
 // The split between login and signup is not cosmetic: apps/web's /auth is
 // LOGIN-ONLY (see apps/web/app/auth/AuthPageClient.tsx — the old in-page
@@ -26,6 +27,3 @@ export const WAITLIST_URL = "/#waitlist";
 
 /** Curator application form, the target of the urganize.app/curator short link. */
 export const APP_CURATOR_APPLY_URL = `${APP_ORIGIN}/curator/apply`;
-
-/** Password reset, linked from /login so users don't bounce off the app. */
-export const APP_PASSWORD_RESET_URL = `${APP_ORIGIN}/auth/forgot-password`;

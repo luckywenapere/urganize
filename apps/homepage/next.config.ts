@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import { APP_CURATOR_APPLY_URL, WAITLIST_URL } from "./lib/app-urls";
+import { APP_CURATOR_APPLY_URL, APP_LOGIN_URL, WAITLIST_URL } from "./lib/app-urls";
 
 const nextConfig: NextConfig = {
   async headers() {
@@ -19,6 +19,25 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // urganize.app/login is the one login link (#1057, founder 2026-11-03),
+      // like claude.ai/login. Sign-in itself stays on team.urganize.app,
+      // where the session lives; /auth there already sends someone who is
+      // signed in straight into the app. Replaces the indexable /login page
+      // kept for Google sitelinks since 2026-08-09. Temporary, so a later
+      // change of mind is not cached in every browser.
+      {
+        source: "/login",
+        destination: APP_LOGIN_URL,
+        permanent: false,
+      },
+      // Old short login link. Needs go.urganize.app added as a domain on this
+      // Vercel project to take effect.
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "go.urganize.app" }],
+        destination: "https://urganize.app/login",
+        permanent: false,
+      },
       {
         source: "/:path*",
         has: [{ type: "host", value: "community.urganize.app" }],

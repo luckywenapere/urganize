@@ -1,6 +1,6 @@
 // A "this browser is signed in" hint the marketing site (urganize.app) can read.
 //
-// The Supabase session lives in localStorage on app.urganize.app, and
+// The Supabase session lives in localStorage on team.urganize.app, and
 // localStorage is per origin, so the marketing site cannot see it. A cookie on
 // the parent domain is the one signal both hosts can read. It holds the single
 // character "1" and nothing else: no token, no user id. It is a HINT, like the

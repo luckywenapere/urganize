@@ -17,12 +17,11 @@ import { WAITLIST_URL } from "@/lib/app-urls";
 // inline waitlist capture stays in the page bodies for anyone not ready to
 // start; it is a second door now, not the only one.
 //
-// Login points at /login on THIS domain rather than jumping straight to
-// team.urganize.app. That costs a returning user one click, bought
-// deliberately: sitelinks under the urganize.app result can only be
-// urganize.app pages, so "Log in" can't appear there without a real page
-// here. Keeping this link and the ProductMenu's on the same destination also
-// avoids two "Log in" links in one header going to different places.
+// Login points at /login on THIS domain: urganize.app/login is the one login
+// link (#1057, 2026-11-03), a redirect to team.urganize.app/auth set in
+// next.config.ts. Going through it costs one redirect and keeps every "Log in"
+// on the same address. (It was a real page kept for Google sitelinks from
+// 2026-08-09 until then.)
 export function MarketingHeader() {
   return (
     <>
