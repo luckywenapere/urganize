@@ -44,7 +44,7 @@ describe('Not now is remembered per user', () => {
 });
 
 describe('planChoiceForMode', () => {
-  it('maps UrgAns to the template plan and self-planning to blank', () => {
+  it('maps AI to the template plan and self-planning to blank', () => {
     expect(planChoiceForMode('urgans')).toBe('template');
     expect(planChoiceForMode('self')).toBe('blank');
   });

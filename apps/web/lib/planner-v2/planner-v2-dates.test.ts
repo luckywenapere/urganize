@@ -153,7 +153,7 @@ describe('when the date is set: the date-dependent tasks', () => {
     expect(empty.walletEmpty).toBe(true);
   });
 
-  it("uses UrgAns's adds when they pass", async () => {
+  it("uses the AI's adds when they pass", async () => {
     const result = await writeDateAdds(input(), {
       configured: true,
       call: async () => [task({ key: 'x', title: 'Send DJ pack to 10 Abuja DJs', channel: 'djs', offset_days: -7 })],

@@ -538,7 +538,7 @@ function PlannerIntakeModalV1() {
             <div className="min-w-0">
               <p className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-brand">
                 <Sparkles className="h-3 w-3" aria-hidden="true" />
-                UrgAns planner
+                AI planner
               </p>
               <p className="mt-1 font-mono text-[11px] text-content-tertiary">
                 {getStepKicker(step, visibleSteps)}
@@ -673,7 +673,7 @@ function PlannerIntakeModalV1() {
           ) : null}
 
           <p className="mt-3 text-center text-[11px] leading-5 text-content-tertiary sm:text-left">
-            UrgAns builds the plan when you finish. You can change any activity after.
+            AI builds the plan when you finish. You can change any activity after.
             {isCreditsEnabled()
               ? ` ${firstPlanFree === true ? FIRST_PLAN_FREE_LINE : embeddedCostLine('release.draft_plan', balance)}`
               : ''}

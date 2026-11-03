@@ -473,7 +473,7 @@ export function PlannerV2Modal() {
         }
         setView(back);
         setError({
-          message: payload.error || 'UrgAns could not write the plan. Try again.',
+          message: payload.error || 'AI could not write the plan. Try again.',
           outOfCredits: payload.code === 'out_of_credits',
         });
         return;
@@ -493,7 +493,7 @@ export function PlannerV2Modal() {
       );
     } catch (thrown) {
       setView(back);
-      setError({ message: thrown instanceof Error ? thrown.message : 'Could not reach UrgAns. Try again.' });
+      setError({ message: thrown instanceof Error ? thrown.message : 'Could not reach AI. Try again.' });
     } finally {
       invalidateUrgansUsage();
       void refreshCredits();
@@ -771,7 +771,7 @@ export function PlannerV2Modal() {
               onPick={(team) => patch({ team })}
               disabled={busy}
             />
-            <SubLabel>Anything UrgAns should know? (optional)</SubLabel>
+            <SubLabel>Anything AI should know? (optional)</SubLabel>
             <textarea
               value={answers.notes}
               maxLength={MAX_NOTES}
@@ -917,7 +917,7 @@ export function PlannerV2Modal() {
   // ── frame ─────────────────────────────────────────────────────────────────
 
   const eyebrow =
-    view === 'steps' ? `Question ${position + 1} of ${steps.length}` : 'Plan with UrgAns';
+    view === 'steps' ? `Question ${position + 1} of ${steps.length}` : 'Plan with AI';
   const title =
     view === 'writing'
       ? 'Writing your plan'
@@ -1020,7 +1020,7 @@ export function PlannerV2Modal() {
                 <div className="space-y-3" role="status" aria-live="polite">
                   <p className="flex items-center gap-2 text-[15px] text-content-secondary">
                     <Loader2 className="h-4 w-4 animate-spin text-brand" aria-hidden="true" />
-                    {view === 'writing' ? 'UrgAns is building it around your answers. About half a minute.' : 'Adding the activities to your rollout.'}
+                    {view === 'writing' ? 'AI is building it around your answers. About half a minute.' : 'Adding the activities to your rollout.'}
                   </p>
                   {[0, 1, 2].map((row) => (
                     <div key={row} className="h-16 rounded-2xl bg-[rgb(var(--color-stroke)/0.06)] motion-safe:animate-pulse" />

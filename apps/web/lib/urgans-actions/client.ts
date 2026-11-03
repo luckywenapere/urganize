@@ -50,8 +50,8 @@ async function postJson(
  *  error — a refused build never leaves the release half-planned. */
 function classifyRunError(status: number, serverMessage?: string): string {
   if (serverMessage) return serverMessage;
-  if (status === 429) return 'UrgAns is busy. Try again in a bit. Nothing was created.';
-  if (status === 503 || status === 504) return 'UrgAns is unavailable right now. Nothing was created.';
+  if (status === 429) return 'AI is busy. Try again in a bit. Nothing was created.';
+  if (status === 503 || status === 504) return 'AI is unavailable right now. Nothing was created.';
   return 'Could not build the plan. Nothing was created.';
 }
 
@@ -123,7 +123,7 @@ function failureFromThrown(error: unknown): CreateReleasePlanResult {
   if (error instanceof DOMException && error.name === 'AbortError') {
     return { ok: false, status: 504, error: 'That took too long. Try again. Nothing was created.' };
   }
-  return { ok: false, status: 0, error: 'Could not reach UrgAns. Try again. Nothing was created.' };
+  return { ok: false, status: 0, error: 'Could not reach AI. Try again. Nothing was created.' };
 }
 
 async function createReleasePlanDirect(
@@ -157,7 +157,7 @@ function builtButUnreported(): CreateReleasePlanResult {
   return {
     ok: false,
     status: 502,
-    error: 'The plan was built, but UrgAns could not report on it. Reload to see the activities.',
+    error: 'The plan was built, but AI could not report on it. Reload to see the activities.',
   };
 }
 
@@ -247,7 +247,7 @@ export async function runFillBoth(params: {
         error:
           typeof payload.error === 'string'
             ? payload.error
-            : 'UrgAns could not write that just now. Try again.',
+            : 'AI could not write that just now. Try again.',
         planRequired: payload.reason === 'plan_required',
       };
     }
@@ -315,7 +315,7 @@ export async function runDraftSpotifyPitch(params: {
         error:
           typeof payload.error === 'string'
             ? payload.error
-            : 'UrgAns could not write that just now. Try again.',
+            : 'AI could not write that just now. Try again.',
         planRequired: payload.reason === 'plan_required',
       };
     }
@@ -367,7 +367,7 @@ export async function runDraftDirectoryBio(params: {
         error:
           typeof payload.error === 'string'
             ? payload.error
-            : 'UrgAns could not write that just now. Try again.',
+            : 'AI could not write that just now. Try again.',
         planRequired: payload.reason === 'plan_required',
       };
     }
@@ -375,14 +375,14 @@ export async function runDraftDirectoryBio(params: {
     const bio = typeof output.bio === 'string' ? output.bio : '';
     const actionId = typeof payload.actionId === 'string' ? payload.actionId : '';
     if (!bio || !actionId) {
-      return { ok: false, status: 502, error: 'UrgAns could not write that just now. Try again.' };
+      return { ok: false, status: 502, error: 'AI could not write that just now. Try again.' };
     }
     return { ok: true, actionId, bio };
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       return { ok: false, status: 504, error: 'That took too long. Your bio is untouched. Try again.' };
     }
-    return { ok: false, status: 0, error: 'Could not reach UrgAns. Your bio is untouched. Try again.' };
+    return { ok: false, status: 0, error: 'Could not reach AI. Your bio is untouched. Try again.' };
   }
 }
 
@@ -411,10 +411,10 @@ export async function runDraftBrief(params: { releaseId: string }): Promise<Brie
         status: response.status,
         error:
           response.status === 404 && typeof payload.error !== 'string'
-            ? 'UrgAns can’t draft this yet. Write it yourself for now.'
+            ? 'AI can’t draft this yet. Write it yourself for now.'
             : typeof payload.error === 'string'
               ? payload.error
-              : 'UrgAns could not write that just now. Try again.',
+              : 'AI could not write that just now. Try again.',
         planRequired: payload.reason === 'plan_required',
       };
     }
@@ -426,14 +426,14 @@ export async function runDraftBrief(params: { releaseId: string }): Promise<Brie
       : [];
     const actionId = typeof payload.actionId === 'string' ? payload.actionId : '';
     if (!idea || !actionId) {
-      return { ok: false, status: 502, error: 'UrgAns could not write that just now. Try again.' };
+      return { ok: false, status: 502, error: 'AI could not write that just now. Try again.' };
     }
     return { ok: true, actionId, idea, headline, feelsLike };
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       return { ok: false, status: 504, error: 'That took too long. Nothing was changed. Try again.' };
     }
-    return { ok: false, status: 0, error: 'Could not reach UrgAns. Nothing was changed. Try again.' };
+    return { ok: false, status: 0, error: 'Could not reach AI. Nothing was changed. Try again.' };
   }
 }
 
@@ -459,14 +459,14 @@ export async function runBriefFromIdeas(params: { releaseId: string }): Promise<
     return {
       ok: false,
       status: response.status,
-      error: typeof payload.error === 'string' ? payload.error : 'UrgAns could not write the brief just now. Try again.',
+      error: typeof payload.error === 'string' ? payload.error : 'AI could not write the brief just now. Try again.',
       planRequired: payload.reason === 'plan_required',
     };
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       return { ok: false, status: 504, error: 'That took too long. Try again.' };
     }
-    return { ok: false, status: 0, error: 'Could not reach UrgAns. Try again.' };
+    return { ok: false, status: 0, error: 'Could not reach AI. Try again.' };
   }
 }
 
@@ -492,7 +492,7 @@ export async function applyRunAction(actionId: string, token: string): Promise<R
     return {
       ok: false,
       status: 0,
-      error: 'Could not reach UrgAns. Your draft is untouched. Try again.',
+      error: 'Could not reach AI. Your draft is untouched. Try again.',
     };
   }
 }
@@ -508,7 +508,7 @@ export async function discardRunAction(actionId: string, token: string): Promise
     }
     return { ok: true };
   } catch {
-    return { ok: false, status: 0, error: 'Could not reach UrgAns.' };
+    return { ok: false, status: 0, error: 'Could not reach AI.' };
   }
 }
 

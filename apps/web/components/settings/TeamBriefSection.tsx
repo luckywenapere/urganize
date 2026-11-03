@@ -185,8 +185,8 @@ export function TeamBriefSection() {
           sentences and is left alone. */}
       <p className="mt-2 max-w-prose text-sm text-content-secondary">
         {canEdit
-          ? 'Tell UrgAns about your team once, and it stops asking.'
-          : 'Your team lead keeps this up to date. UrgAns reads it on every question you ask.'}{' '}
+          ? 'Tell AI about your team once, and it stops asking.'
+          : 'Your team lead keeps this up to date. AI reads it on every question you ask.'}{' '}
         {canEdit ? <HelpTip helpKey="settings.teamBrief" className="align-text-bottom" /> : null}
       </p>
 

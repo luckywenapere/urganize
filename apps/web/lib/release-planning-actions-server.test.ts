@@ -56,7 +56,7 @@ describe('decidePlanCreationOnAiFailure', () => {
       action: 'refuse',
       status: 503,
       code: 'tailoring_unavailable',
-      error: 'UrgAns could not read your notes just now. Try again in a moment.',
+      error: 'AI could not read your notes just now. Try again in a moment.',
     });
   });
 
@@ -72,7 +72,7 @@ describe('decidePlanCreationOnAiFailure', () => {
     const decision = decidePlanCreationOnAiFailure('busy', baseIntake);
     expect(decision.action).toBe('proceed');
     expect(decision.action === 'proceed' && decision.warning).toBe(
-      'UrgAns could not tailor the rest this time. The plan follows the playbook and your answers.'
+      'AI could not tailor the rest this time. The plan follows the playbook and your answers.'
     );
   });
 

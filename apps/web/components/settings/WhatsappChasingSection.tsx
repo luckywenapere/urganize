@@ -262,7 +262,7 @@ export function WhatsappChasingSection() {
     <section id="whatsapp-chasing" className={`${panelClass} scroll-mt-4`}>
       <Heading />
       <p className="mt-2 max-w-prose text-sm text-content-secondary">
-        UrgAns messages the owner of a task on WhatsApp when it is due or late, and moves the date or marks it done from their reply.
+        AI messages the owner of a task on WhatsApp when it is due or late, and moves the date or marks it done from their reply.
       </p>
 
       {!state.serverReady ? (

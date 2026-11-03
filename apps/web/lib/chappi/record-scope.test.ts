@@ -28,7 +28,7 @@ describe('parseRecordScope', () => {
 });
 
 describe('recordScopeLine', () => {
-  it('tells UrgAns to file into this record, with no em dash', () => {
+  it('tells AI to file into this record, with no em dash', () => {
     const line = recordScopeLine({ id: ID, title: 'Untitled EP', artistName: 'Kemi Ade' });
     expect(line).toContain(`add_to_record with this recordId`);
     expect(line).toContain(ID);

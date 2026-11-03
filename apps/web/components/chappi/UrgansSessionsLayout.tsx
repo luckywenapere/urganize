@@ -86,14 +86,14 @@ export function UrgansSessionsLayout({ onNewRelease }: { onNewRelease: () => voi
           }`}
         >
           <Clock className="h-4 w-4" aria-hidden="true" />
-          What UrgAns did
+          What AI did
         </button>
         <div className="min-h-0 flex-1">
           <ChappiHistoryList variant="panel" onDone={() => setShowActivity(false)} />
         </div>
       </aside>
 
-      <section aria-label="UrgAns" data-tour="nav-urgans" className="flex min-w-0 flex-1 flex-col">
+      <section aria-label="AI" data-tour="nav-urgans" className="flex min-w-0 flex-1 flex-col">
         <div className="shrink-0">
           <InviteTeamBanner />
         </div>

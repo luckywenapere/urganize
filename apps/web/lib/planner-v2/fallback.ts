@@ -14,7 +14,7 @@ import { buildMoveMenu, channelForTemplateTask, NIGERIA_PACK, type Move } from '
 import type { PlanV2, PlanV2Task } from './plan';
 import { isDated, isPrepMove, phaseForOffset, planWindow, repairPlanV2, type PlanV2Context } from './validate';
 
-export const QUICK_PLAN_NOTICE = 'Quick plan. UrgAns will tailor it when it’s back.';
+export const QUICK_PLAN_NOTICE = 'Quick plan. AI will tailor it when it’s back.';
 
 export function buildFallbackPlanV2(template: Template, ctx: PlanV2Context): PlanV2 {
   const { answers } = ctx;

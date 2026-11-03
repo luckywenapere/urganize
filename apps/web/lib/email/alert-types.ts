@@ -66,7 +66,7 @@ const SUBJECT_PREFIX: Record<FounderAlertKind, string> = {
   manually_marked_paid: 'Marked paid',
   plan_change_requested: 'SWAP NEEDED',
   payment_failed: 'CARD FAILED',
-  urgans_guard_tripped: 'UrgAns usage cap',
+  urgans_guard_tripped: 'AI usage cap',
   subscription_cancelled: 'Cancelled',
   subscription_paused: 'Paused',
   retention_offer_accepted: 'SWAP NEEDED (retention price)',
@@ -86,7 +86,7 @@ export const FOUNDER_ALERT_HEADLINE: Record<FounderAlertKind, string> = {
   payment_failed:
     'A renewal charge failed for this team. They still have access while Paystack retries, and they drop to read only if the period ends unpaid.',
   urgans_guard_tripped:
-    'This team hit the daily cap on UrgAns actions run inside the product. If this is real usage, raise the cap. If it does not look right, take a look.',
+    'This team hit the daily cap on AI actions run inside the product. If this is real usage, raise the cap. If it does not look right, take a look.',
   subscription_cancelled:
     'This team cancelled. Their access runs to the end of what they paid for (or their trial), then the app is read only for them.',
   subscription_paused:
@@ -96,7 +96,7 @@ export const FOUNDER_ALERT_HEADLINE: Record<FounderAlertKind, string> = {
   trm_registration_needed:
     'This team just paid for a plan that includes distribution. Register them on TRM under the plan in the note. The fee is now in the TRM ledger.',
   ai_wallet_empty:
-    'The AI wallet is empty, so UrgAns could not write a plan and gave a quick plan instead. Top up RodiumAi to bring tailored plans back.',
+    'The AI wallet is empty, so AI could not write a plan and gave a quick plan instead. Top up RodiumAi to bring tailored plans back.',
 };
 
 const formatCount = (value: number | null): string => (value === null ? 'unknown' : String(value));

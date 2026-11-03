@@ -96,7 +96,7 @@ describe('a new plan is small', () => {
     expect(rows.every((row) => planner(row).core === true && planner(row).key === true)).toBe(true);
   });
 
-  it('keeps what UrgAns picked, up to 15, and fills a phase it left short', () => {
+  it('keeps what AI picked, up to 15, and fills a phase it left short', () => {
     const base = draft();
     const pre = base.tasks.filter((t) => draftTaskRolloutPhase(t) === 'pre_release').slice(0, 16);
     const doc = markCoreTasks({ ...base, tasks: base.tasks.map((t) => (pre.includes(t) ? { ...t, key: true } : t)) });
@@ -141,7 +141,7 @@ describe('a new plan is small', () => {
     expect(listPlanSuggestions(doc, new Set())).toEqual([]);
   });
 
-  it('asks UrgAns for a 12 to 15 task core across the phases', () => {
+  it('asks AI for a 12 to 15 task core across the phases', () => {
     const doc = draft();
     const messages = buildPlannerMessages({
       release: { title: 'Song', artistName: 'Tola', releaseDate: '2026-12-04' },

@@ -18,6 +18,6 @@ export function describeTranscriptAnnouncement(state: {
     const { title, detail } = state.pendingConfirmation;
     return [title, detail, 'Approve or cancel below.'].filter(Boolean).join(' ');
   }
-  if (state.isThinking) return 'UrgAns is thinking.';
+  if (state.isThinking) return 'AI is thinking.';
   return state.lastAssistantContent ? stripModelMarkup(state.lastAssistantContent) : '';
 }

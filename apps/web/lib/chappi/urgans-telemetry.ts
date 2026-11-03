@@ -66,7 +66,7 @@ export function startUrgansTelemetry(now: () => number = () => Date.now()) {
         ms: elapsed(),
       };
       addMonitoringBreadcrumb({ category: CATEGORY, message: 'error', level: 'error', data });
-      const event = new Error(`UrgAns reply dropped (${stage})`);
+      const event = new Error(`AI reply dropped (${stage})`);
       event.name = 'UrgansReplyDropped';
       reportErrorToMonitoring(event, {
         feature: 'urgans',

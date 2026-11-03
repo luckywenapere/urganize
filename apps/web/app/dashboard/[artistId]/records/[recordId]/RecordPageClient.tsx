@@ -961,7 +961,7 @@ export default function RecordPageClient() {
 
       {sheet === 'plan' ? (
         <Sheet label="Here's what I'll use" onClose={closeSheet}>
-          <p className="text-[13px] text-content-secondary">UrgAns</p>
+          <p className="text-[13px] text-content-secondary">AI</p>
           <h2 className="mt-0.5 font-display text-[22px] text-content-primary">Here&apos;s what I&apos;ll use</h2>
           <div className="mt-2.5">
             <UseRow label="Kind" value={recordKindLabel(recordReleaseType(record))} />

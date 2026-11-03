@@ -69,9 +69,9 @@ export default function UrgansHubClient() {
             <ArrowLeft className="size-4" aria-hidden="true" />
             Back to plans
           </Link>
-          <h1 className="font-display text-3xl font-semibold text-content-primary">UrgAns</h1>
+          <h1 className="font-display text-3xl font-semibold text-content-primary">AI</h1>
           <p className="max-w-2xl text-base leading-7 text-content-secondary">
-            You can keep using UrgAns without a plan. It runs on credits, and your rollouts are
+            You can keep using AI without a plan. It runs on credits, and your rollouts are
             right where you left them.
           </p>
         </header>
@@ -79,8 +79,8 @@ export default function UrgansHubClient() {
         <section aria-labelledby="urgans-hub-balance" className="flex flex-col gap-4">
           <h2 id="urgans-hub-balance" className="text-base font-semibold text-content-primary">
             {balance === null
-              ? 'Your UrgAns credits'
-              : `You have ${Math.max(0, Math.floor(balance))} UrgAns ${Math.max(0, Math.floor(balance)) === 1 ? 'credit' : 'credits'}.`}
+              ? 'Your AI credits'
+              : `You have ${Math.max(0, Math.floor(balance))} AI ${Math.max(0, Math.floor(balance)) === 1 ? 'credit' : 'credits'}.`}
           </h2>
           <BuyCredits account={account} onPurchased={() => void refresh()} returnTo="/locked/urgans" />
         </section>

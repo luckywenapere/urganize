@@ -59,7 +59,7 @@ export function parseDraftOutput(
 ): PressKitSectionContent {
   const allowed = DRAFT_ALLOWED_FIELDS[section];
   if (!allowed) {
-    throw new Error(`UrgAns does not draft the ${section} section.`);
+    throw new Error(`AI does not draft the ${section} section.`);
   }
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     throw new Error('Model returned invalid JSON format');
@@ -223,7 +223,7 @@ export function buildDraftMessages(
   notes: string
 ): DraftMessage[] {
   const ask = ASK[section];
-  if (!ask) throw new Error(`UrgAns does not draft the ${section} section.`);
+  if (!ask) throw new Error(`AI does not draft the ${section} section.`);
 
   const facts: string[] = [`Artist: ${context.artistName || 'unknown'}`];
   if (context.genres) facts.push(`Genres: ${context.genres}`);
@@ -291,13 +291,13 @@ export function decideDraftApply(input: {
   if (!input.draftedUpdatedAt || !input.currentUpdatedAt) {
     return {
       ok: false,
-      error: 'This section changed while UrgAns was drafting. Look again before you accept.',
+      error: 'This section changed while AI was drafting. Look again before you accept.',
     };
   }
   if (input.draftedUpdatedAt !== input.currentUpdatedAt) {
     return {
       ok: false,
-      error: 'This section changed while UrgAns was drafting. Look again before you accept.',
+      error: 'This section changed while AI was drafting. Look again before you accept.',
     };
   }
   return { ok: true };

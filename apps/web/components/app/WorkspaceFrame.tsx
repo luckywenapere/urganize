@@ -204,7 +204,7 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
             <TeamReadOnlyStrip />
             {/* Assistant-usage indicator, same slot and same contract.
                 Renders only for a team inside the last fifth of its monthly
-                UrgAns actions, which today is nobody: no code path can write
+                AI actions, which today is nobody: no code path can write
                 the capped tier yet. */}
             <UrgansUsageStrip />
             <PolicyUpdateStrip />

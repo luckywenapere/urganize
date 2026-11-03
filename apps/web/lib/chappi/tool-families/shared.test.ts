@@ -73,7 +73,7 @@ describe('argStringArray', () => {
   });
 });
 
-describe('callInternalApi and the UrgAns pass', () => {
+describe('callInternalApi and the AI pass', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   const call = async (ctx: Partial<ChappiToolContext>) => {

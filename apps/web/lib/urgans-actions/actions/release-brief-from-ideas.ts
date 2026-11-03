@@ -26,7 +26,7 @@ import type { UrgansActionDefinition } from '../types';
  * Metered by the same embedded-action credits as every other run.
  */
 
-const NOT_CONFIGURED = 'UrgAns cannot write the brief yet. Write it yourself for now.';
+const NOT_CONFIGURED = 'AI cannot write the brief yet. Write it yourself for now.';
 const DEADLINE_MS = 52_000;
 const TIMEOUT_MS = 25_000;
 
@@ -95,7 +95,7 @@ export const releaseBriefFromIdeasAction: UrgansActionDefinition<Input, Output, 
       return {
         ok: false,
         status: 502,
-        error: 'UrgAns could not write the brief just now. Try again.',
+        error: 'AI could not write the brief just now. Try again.',
         usageCalls: collector.calls,
         failedCalls: collector.failures,
       };
@@ -106,7 +106,7 @@ export const releaseBriefFromIdeasAction: UrgansActionDefinition<Input, Output, 
       return {
         ok: false,
         status: 502,
-        error: 'UrgAns could not write the brief just now. Try again.',
+        error: 'AI could not write the brief just now. Try again.',
         usageCalls: collector.calls,
         failedCalls: collector.failures,
       };

@@ -95,7 +95,7 @@ describe('purchaseDedupeKey', () => {
 });
 
 describe('resolveCreditsReturnPath', () => {
-  it('returns to the UrgAns page behind the wall when asked', () => {
+  it('returns to the AI page behind the wall when asked', () => {
     expect(resolveCreditsReturnPath('/locked/urgans')).toBe('/locked/urgans');
     expect(resolveCreditsReturnPath('/dashboard/credits')).toBe('/dashboard/credits');
   });

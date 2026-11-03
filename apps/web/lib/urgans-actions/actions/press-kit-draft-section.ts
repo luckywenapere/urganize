@@ -46,7 +46,7 @@ const SECTIONS_TABLE = 'press_kit_sections';
 const SECTION_COLUMNS = 'id,kit_id,section,content,status,source,updated_at';
 
 const NOT_CONFIGURED =
-  'UrgAns cannot write for you yet. Fill this in yourself for now.';
+  'AI cannot write for you yet. Fill this in yourself for now.';
 
 const MAX_NOTES_LENGTH = 2000;
 
@@ -104,7 +104,7 @@ export const pressKitDraftSectionAction: UrgansActionDefinition<Input, Output, R
   async execute({ admin, objectId, input }) {
     const section = input?.section;
     if (!section || !isDraftableSection(section)) {
-      return { ok: false, status: 400, error: 'UrgAns does not write that part of a kit.' };
+      return { ok: false, status: 400, error: 'AI does not write that part of a kit.' };
     }
 
     if (!isAiConfigured()) {
@@ -168,7 +168,7 @@ export const pressKitDraftSectionAction: UrgansActionDefinition<Input, Output, R
       return {
         ok: false,
         status: 502,
-        error: 'UrgAns could not write that just now. Try again.',
+        error: 'AI could not write that just now. Try again.',
         usageCalls: collector.calls,
         failedCalls: collector.failures,
       };

@@ -54,7 +54,7 @@ export function useVoiceInput(options: {
 }): VoiceInputValue {
   const { enabled, onTranscript, getHints } = options;
   const endpoint = options.endpoint || '/api/urgans/transcribe';
-  const deniedMessage = options.deniedMessage || 'Allow the microphone to talk to UrgAns.';
+  const deniedMessage = options.deniedMessage || 'Allow the microphone to talk to AI.';
 
   // Feature detection runs once. If any piece is missing, the button is hidden —
   // a control that cannot work is worse than none.

@@ -147,7 +147,7 @@ describe('the model marks key tasks', () => {
 });
 
 describe('approved plans carry an explicit key flag on every task', () => {
-  it('marks what UrgAns listed, plus its focus tasks, and nothing else past the target', () => {
+  it('marks what AI listed, plus its focus tasks, and nothing else past the target', () => {
     const doc = base();
     const open = doc.tasks.filter((task) => !task.removed);
     const keyIds = open.slice(10, 16).map((task) => task.id);

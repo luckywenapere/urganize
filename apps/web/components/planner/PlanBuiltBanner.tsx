@@ -216,7 +216,7 @@ export function PlanBuiltBanner({
         className="mb-4 rounded-2xl border border-brand/30 bg-gradient-to-b from-brand/[0.06] to-transparent p-6 sm:p-7"
       >
         <div className="flex items-start justify-between gap-4">
-          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-brand">UrgAns</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-brand">AI</p>
           <button
             type="button"
             onClick={onDismiss}
@@ -235,7 +235,7 @@ export function PlanBuiltBanner({
 
   return (
     <section
-      aria-label="What UrgAns built"
+      aria-label="What AI built"
       className="mb-4 rounded-xl border border-brand/30 bg-brand/5 p-5 sm:p-6"
     >
       <div className="flex items-start gap-3">
@@ -243,9 +243,9 @@ export function PlanBuiltBanner({
           <Sparkles className="h-4 w-4" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-brand">UrgAns planner</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-brand">AI planner</p>
           <h3 className="mt-1 font-display text-lg font-semibold leading-tight text-content-primary">
-            UrgAns built this plan: {summary.count} {summary.count === 1 ? 'activity' : 'activities'}.
+            AI built this plan: {summary.count} {summary.count === 1 ? 'activity' : 'activities'}.
           </h3>
           {summary.shapedFor ? (
             <p className="mt-1 text-xs font-medium text-brand">Shaped for: {summary.shapedFor}</p>
@@ -264,12 +264,12 @@ export function PlanBuiltBanner({
           {summary.added.length > 0 ? (
             <div className="mt-4">
               <p className="text-sm font-medium text-content-primary">
-                Added by UrgAns ({summary.added.length})
+                Added by AI ({summary.added.length})
               </p>
               <ul className="mt-1.5 space-y-1.5 text-sm leading-6 text-content-secondary">
                 {summary.added.map((task) => (
                   <li key={task.id} className="flex gap-1.5">
-                    <Sparkles className="mt-1.5 h-3 w-3 shrink-0 text-brand" aria-label="Added by UrgAns" />
+                    <Sparkles className="mt-1.5 h-3 w-3 shrink-0 text-brand" aria-label="Added by AI" />
                     <span>
                       <span className="font-medium text-content-primary">{task.title}</span>
                       {task.why ? `: ${task.why}` : ''}

@@ -13,7 +13,7 @@ import type { ProductShot } from "@/content/product-shots";
 export const metadata: Metadata = buildPageMetadata({
   title: "Music release plan, tasks and press kit",
   description:
-    "From idea to execution. Add a release and get the plan, week by week to release day, with an owner on every task. Plus UrgAns.",
+    "From idea to execution. Add a release and get the plan, week by week to release day, with an owner on every task. Plus an AI assistant.",
   path: "/features",
   shareCard: "features",
 });
@@ -98,10 +98,10 @@ const compactFeatures = [
   {
     kicker: "Assistant",
     title: "Type it. It\u2019s done.",
-    body: "Tell UrgAns, the AI inside Urganize, to add a release, add a task or mark something done.",
+    body: "Tell the AI inside Urganize to add a release, add a task or mark something done.",
     still: {
       ...featureStill("assistant"),
-      alt: "A message to UrgAns asking it to add a task to Ife Mi to book the video shoot for Nov 12, its reply saying it is done, and the new task due Nov 12.",
+      alt: "A message to AI asking it to add a task to Ife Mi to book the video shoot for Nov 12, its reply saying it is done, and the new task due Nov 12.",
     },
   },
   {

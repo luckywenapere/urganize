@@ -119,13 +119,13 @@ export function VoiceSheet({
       case 'primer':
         return (
           <div className="flex max-w-md flex-col items-center gap-4 text-center">
-            <h2 className="font-display text-xl font-semibold text-content-primary">Talk to UrgAns</h2>
+            <h2 className="font-display text-xl font-semibold text-content-primary">Talk to AI</h2>
             <p className="text-sm leading-6 text-content-secondary">
-              Say what you need, out loud: make a rollout plan, add an activity, move a date. UrgAns answers, and does it. It asks before anything
+              Say what you need, out loud: make a rollout plan, add an activity, move a date. AI answers, and does it. It asks before anything
               that can&apos;t be undone.
             </p>
             <p className="text-sm font-medium text-content-primary">
-              {VOICE_CREDITS_PER_MINUTE} credits a minute, plus whatever UrgAns does for you. Up to {VOICE_MAX_CALL_MINUTES} minutes a call.
+              {VOICE_CREDITS_PER_MINUTE} credits a minute, plus whatever AI does for you. Up to {VOICE_MAX_CALL_MINUTES} minutes a call.
             </p>
             <p className="text-xs text-content-tertiary">Your browser will ask to use the microphone. Everything said is saved in this chat.</p>
             <Button type="button" variant="primary" onClick={begin} className="h-12 px-8">
@@ -137,7 +137,7 @@ export function VoiceSheet({
         return (
           <div className="flex max-w-md flex-col items-center gap-3 text-center">
             <MicOff className="h-8 w-8 text-status-error" aria-hidden="true" />
-            <h2 className="font-display text-lg font-semibold text-content-primary">UrgAns can&apos;t hear you</h2>
+            <h2 className="font-display text-lg font-semibold text-content-primary">AI can&apos;t hear you</h2>
             <p className="text-sm leading-6 text-content-secondary">The microphone is blocked for this site. To turn it on:</p>
             <ul className="space-y-1 text-left text-sm text-content-secondary">
               <li>Chrome or Edge: the icon left of the address, then Microphone, then Allow.</li>
@@ -211,7 +211,7 @@ export function VoiceSheet({
           <div className="flex w-full flex-col items-center gap-4">
             <VoiceOrb state={call.state} level={call.muted ? 0 : call.level} />
             <p role="status" aria-live="polite" className="text-sm font-medium text-content-secondary">
-              {call.muted ? 'Muted' : call.state === 'acting' ? 'On it, UrgAns is working…' : VOICE_STATE_LABEL[call.state]}
+              {call.muted ? 'Muted' : call.state === 'acting' ? 'On it, AI is working…' : VOICE_STATE_LABEL[call.state]}
             </p>
             {call.pending ? (
               <VoiceConfirmCard
@@ -260,11 +260,11 @@ export function VoiceSheet({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Talk to UrgAns"
+        aria-label="Talk to AI"
         className="flex h-full w-full flex-col bg-bg-surface shadow-2xl sm:h-[55vh] sm:max-w-3xl sm:rounded-t-2xl sm:border sm:border-stroke-subtle"
       >
         <div className="flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2">
-          <p className="text-sm font-semibold text-content-primary">UrgAns</p>
+          <p className="text-sm font-semibold text-content-primary">AI</p>
           <div className="flex items-center gap-2">
             {live || call.state === 'connecting' ? (
               <p

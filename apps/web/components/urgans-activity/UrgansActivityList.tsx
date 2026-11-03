@@ -63,12 +63,12 @@ export function UrgansActivityList({
       const query = releaseId ? `?releaseId=${encodeURIComponent(releaseId)}` : '';
       const res = await fetch(`/api/urgans/activity${query}`, { headers: await authHeaders() });
       if (!res.ok) {
-        setError('Could not load what UrgAns did.');
+        setError('Could not load what AI did.');
         return;
       }
       setData((await res.json()) as Payload);
     } catch {
-      setError('Could not load what UrgAns did. Check your connection.');
+      setError('Could not load what AI did. Check your connection.');
     }
   }, [releaseId]);
 
@@ -154,7 +154,7 @@ export function UrgansActivityList({
 
       {rows.length === 0 ? (
         <p className="text-sm text-content-secondary">
-          Nothing yet. When UrgAns changes something{releaseId ? ' on this rollout' : ''}, it shows here with who asked
+          Nothing yet. When AI changes something{releaseId ? ' on this rollout' : ''}, it shows here with who asked
           for it.
         </p>
       ) : (

@@ -10,7 +10,7 @@ vi.mock('@/lib/monitoring/report', () => ({
 
 import { startUrgansTelemetry } from './urgans-telemetry';
 
-describe('UrgAns telemetry', () => {
+describe('AI telemetry', () => {
   beforeEach(() => {
     crumbs.length = 0;
     reports.length = 0;

@@ -39,7 +39,7 @@ export function ReleaseReviewCard() {
   const { reviewDue } = useBetweenReleases();
   if (!reviewDue) return null;
   const { numbers, thin } = reviewDue;
-  const detail = thin ? 'Tell UrgAns what happened' : `${numbers.done} of ${numbers.total} done · ${numbers.late} late`;
+  const detail = thin ? 'Tell AI what happened' : `${numbers.done} of ${numbers.total} done · ${numbers.late} late`;
   return (
     <HomeCard label="Review ready" dot>
       <div className="min-w-0">

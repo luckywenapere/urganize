@@ -47,7 +47,7 @@ describe('Home on a computer has no chat', () => {
     expect(page).toContain('<HomeAskBar />');
   });
 
-  it('shows a computer the sessions layout on the UrgAns page, never bouncing to Home', () => {
+  it('shows a computer the sessions layout on the AI page, never bouncing to Home', () => {
     const page = read('app', 'dashboard', 'urgans', 'ChappiPageClient.tsx');
     expect(page).toContain('<UrgansSessionsLayout');
     expect(page).not.toContain('router.replace(HOME_PATH)');
@@ -58,13 +58,13 @@ describe('Home on a computer has no chat', () => {
     expect(layout).toContain('data-tour="nav-urgans"');
   });
 
-  it('expands the drawer onto the UrgAns page, not onto Home', () => {
+  it('expands the drawer onto the AI page, not onto Home', () => {
     const panel = read('components', 'chappi', 'ChappiSidePanel.tsx');
     expect(panel).toContain('router.push(URGANS_HREF)');
     expect(panel).not.toContain('router.push(HOME_PATH)');
   });
 
-  it('routes "Ask UrgAns" in the search bar through askUrgansTarget', () => {
+  it('routes "Ask AI" in the search bar through askUrgansTarget', () => {
     const bar = read('components', 'shell', 'CommandBar.tsx');
     expect(bar).toContain('askUrgansTarget(');
   });

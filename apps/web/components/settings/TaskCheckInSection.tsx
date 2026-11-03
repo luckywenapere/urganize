@@ -47,8 +47,8 @@ export function TaskCheckInSection() {
       title="After tasks"
       description={
         isEnabled
-          ? 'When you mark a task done, UrgAns asks how it went. One tap to answer, one tap to skip.'
-          : 'UrgAns will not ask how tasks went.'
+          ? 'When you mark a task done, AI asks how it went. One tap to answer, one tap to skip.'
+          : 'AI will not ask how tasks went.'
       }
       action={
         <button

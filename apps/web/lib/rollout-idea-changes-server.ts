@@ -91,7 +91,7 @@ export async function suggestIdeaChanges(
   }
 ): Promise<SuggestResult> {
   if (!isAiConfigured()) {
-    return { ok: false, status: 503, error: 'UrgAns is not set up on this environment.' };
+    return { ok: false, status: 503, error: 'AI is not set up on this environment.' };
   }
   const releaseDate = params.release.release_date ? params.release.release_date.slice(0, 10) : null;
   const ctx: ChangeContext = { releaseDate, todayYmd: params.todayYmd };
@@ -147,7 +147,7 @@ export async function suggestIdeaChanges(
   }).catch(() => undefined);
 
   if (!changes) {
-    return { ok: false, status: 503, error: 'UrgAns could not read the plan just now. Try again.' };
+    return { ok: false, status: 503, error: 'AI could not read the plan just now. Try again.' };
   }
   return { ok: true, changes, view: viewIdeaChanges(changes, ctx, board.tasks) };
 }

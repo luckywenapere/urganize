@@ -137,7 +137,7 @@ export function youGet(plan: CheckoutPlan, distributionOn: boolean): YouGetRow[]
   const rows: YouGetRow[] = [
     { label: 'Artists', value: limits.artists === null ? 'No limit' : String(limits.artists) },
     { label: 'People on your team', value: limits.seats === null ? 'No limit' : String(limits.seats) },
-    { label: 'UrgAns credits', value: `${ALLOWANCE_CREDITS[plan].toLocaleString('en-NG')} / mo` },
+    { label: 'AI credits', value: `${ALLOWANCE_CREDITS[plan].toLocaleString('en-NG')} / mo` },
   ];
   if (distributionOn) rows.push({ label: 'Distribution', value: 'Partner' });
   return rows;
@@ -429,8 +429,8 @@ export function nudgeEmailCopy(input: NudgeEmailInput): LifecycleEmailCopy {
       const plan = input.plan ? planName(input.plan) : 'Urganize';
       return {
         subject: "Start with the release you're on",
-        preview: 'It takes two minutes, and UrgAns writes the plan.',
-        body: `${plan} is set up for your team. The quickest way to see what Urganize does is to add the release you're working on now. It takes two minutes, and UrgAns writes the plan.`,
+        preview: 'It takes two minutes, and AI writes the plan.',
+        body: `${plan} is set up for your team. The quickest way to see what Urganize does is to add the release you're working on now. It takes two minutes, and AI writes the plan.`,
         cta: 'Start your first rollout',
       };
     }

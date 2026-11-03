@@ -85,16 +85,16 @@ describe('buildOutcomeAiMessages', () => {
     expect(messages[1].role).toBe('user');
   });
 
-  it('names UrgAns and demands JSON only', () => {
-    expect(messages[0].content).toContain('UrgAns');
+  it('says it is the AI inside Urganize and demands JSON only', () => {
+    expect(messages[0].content).toContain('You are the personal AI');
     expect(messages[0].content).toContain('JSON only');
     expect(messages[0].content).toContain('followupQuestion');
   });
 
-  it('describes UrgAns and Urganize with the shared lines, not one of its own', () => {
+  it('describes AI and Urganize with the shared lines, not one of its own', () => {
     // The main UrgAns prompt and this one say the same thing (2026-09-25).
     // This one used to call the product "a rollout planning app".
-    expect(messages[0].content).toContain(`UrgAns, the ${URGANS_LINE} inside Urganize, ${CORE_CLAUSE}.`);
+    expect(messages[0].content).toContain(`You are the ${URGANS_LINE} inside Urganize, ${CORE_CLAUSE}.`);
     expect(messages[0].content).not.toMatch(/rollout planning app/i);
   });
 

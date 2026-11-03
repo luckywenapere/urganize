@@ -230,7 +230,7 @@ describe('generate_release_plan with a releaseId', () => {
   it('maps tailoring_unavailable to offering a retry, never a raw error', async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(
-        { error: 'UrgAns could not read your notes just now.', code: 'tailoring_unavailable' },
+        { error: 'AI could not read your notes just now.', code: 'tailoring_unavailable' },
         503
       )
     );

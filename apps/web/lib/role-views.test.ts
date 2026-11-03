@@ -89,7 +89,7 @@ describe('persona resolution', () => {
 });
 
 describe('the defaults every view keeps', () => {
-  it('never tucks Home, Rollouts, Tasks, Press kits, Pitching, Notes or UrgAns', () => {
+  it('never tucks Home, Rollouts, Tasks, Press kits, Pitching, Notes or AI', () => {
     for (const v of ROLE_VIEWS) {
       for (const feature of ['home', 'rollouts', 'tasks', 'press_kits', 'pitching', 'notes', 'urgans'] as const) {
         expect(isTucked(v, feature)).toBe(false);

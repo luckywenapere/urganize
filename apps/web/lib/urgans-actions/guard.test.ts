@@ -17,7 +17,7 @@ describe('decideEmbeddedActionsGuard', () => {
   it('refuses AT the cap, not only past it', () => {
     expect(decideEmbeddedActionsGuard({ count: 5, cap: 5 })).toEqual({
       allowed: false,
-      message: 'UrgAns is busy. Try again in a bit.',
+      message: 'AI is busy. Try again in a bit.',
     });
   });
 

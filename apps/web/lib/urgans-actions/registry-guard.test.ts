@@ -51,7 +51,7 @@ function collectTsFiles(dir: string, out: string[] = []): string[] {
 const stripComments = (raw: string): string =>
   raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
-describe('every registered UrgAns action carries a prompt version', () => {
+describe('every registered AI action carries a prompt version', () => {
   it('the registry is not empty (guards the walker)', () => {
     expect(Object.keys(URGANS_ACTIONS).length).toBeGreaterThan(0);
   });

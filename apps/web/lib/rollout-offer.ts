@@ -87,9 +87,9 @@ export const ROLLOUT_OFFER_COPY = {
   notNow: 'Not now',
   choiceTitle: 'Plan a rollout',
   choiceBody: 'See what each way gives you. You can change anything after.',
-  urgansTitle: 'Plan it with UrgAns',
+  urgansTitle: 'Plan it with AI',
   // Short lines: each option's preview (PlanOptionPreview.tsx) carries the detail.
-  urgansBody: 'A few questions, then UrgAns drafts every step. Edit before anything is scheduled.',
+  urgansBody: 'A few questions, then AI drafts every step. Edit before anything is scheduled.',
   // With the planner flag off there is no UrgAns intake, so the first choice is
   // the proven rollout plan and must not promise questions it will not ask.
   urgansBodyNoPlanner: 'Start from the proven rollout plan, first prep to release day.',

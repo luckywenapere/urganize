@@ -47,8 +47,8 @@ export function FrontDeskDigestEmail({ pitches, answeredCount, ctaUrl }: FrontDe
   const heading = total === 1 ? 'One question needs you' : `${total} questions need you`;
   const lead =
     answeredCount > 0
-      ? `UrgAns answered ${plural(answeredCount, 'other', 'others')} from your terms. These are the ones only you can answer.`
-      : 'UrgAns couldn’t answer these from your terms. Only you can.';
+      ? `AI answered ${plural(answeredCount, 'other', 'others')} from your terms. These are the ones only you can answer.`
+      : 'AI couldn’t answer these from your terms. Only you can.';
 
   return (
     <EmailLayout preview={first ? `“${first}”` : heading}>
@@ -103,7 +103,7 @@ export function FrontDeskDigestEmail({ pitches, answeredCount, ctaUrl }: FrontDe
       </Section>
 
       <FootnoteText>
-        One email a day, only for questions UrgAns couldn’t answer. Your answer can become part of your terms
+        One email a day, only for questions AI couldn’t answer. Your answer can become part of your terms
         with one tap, so nobody asks twice.
       </FootnoteText>
     </EmailLayout>

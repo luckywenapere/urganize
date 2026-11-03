@@ -171,7 +171,7 @@ describe('decideBioApply', () => {
   it('refuses when the person edited their bio in between', () => {
     const decision = decideBioApply({ bioWhenDrafted: 'Old.', currentBio: 'Old, edited.' });
     expect(decision.ok).toBe(false);
-    expect('error' in decision && decision.error).toMatch(/changed while UrgAns was drafting/);
+    expect('error' in decision && decision.error).toMatch(/changed while AI was drafting/);
     expect(decideBioApply({ bioWhenDrafted: '', currentBio: 'Typed meanwhile.' }).ok).toBe(false);
   });
 });

@@ -186,7 +186,7 @@ export const PLANNER_TOOLS: ChappiTool[] = [
     kind: 'read',
     level: 'read',
     description:
-      "What the preview UrgAns reads its read-back from. Call this with whatever of the intake answers are collected so far, right before saying \"Here's what I'll build\" — it returns the REAL activity count, the resolved release date (fixed, or the deterministic suggestion when none was given yet), how many activities would already be dated before today, and, for an EP or album, the derived date(s) of the staggered single(s). Read these numbers back rather than guessing them; the model's own tailoring runs later and can only remove further, never add, so this is already the floor the manager can trust. Does not create anything.",
+      "What the preview AI reads its read-back from. Call this with whatever of the intake answers are collected so far, right before saying \"Here's what I'll build\" — it returns the REAL activity count, the resolved release date (fixed, or the deterministic suggestion when none was given yet), how many activities would already be dated before today, and, for an EP or album, the derived date(s) of the staggered single(s). Read these numbers back rather than guessing them; the model's own tailoring runs later and can only remove further, never add, so this is already the floor the manager can trust. Does not create anything.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -407,12 +407,12 @@ export const PLANNER_TOOLS: ChappiTool[] = [
         }
         if (res.body.code === 'plan_in_progress') {
           return fail(
-            'UrgAns is already building a plan for this rollout. Wait a moment, then check with get_release_plan.'
+            'AI is already building a plan for this rollout. Wait a moment, then check with get_release_plan.'
           );
         }
         if (res.body.code === 'tailoring_unavailable') {
           return fail(
-            'UrgAns could not read the typed notes just now, so nothing was created. Offer to try again with the same answers.'
+            'AI could not read the typed notes just now, so nothing was created. Offer to try again with the same answers.'
           );
         }
         if (createdHere) {

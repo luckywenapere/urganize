@@ -20,8 +20,8 @@ export function TalkButton({ onClick, disabled, size = 'md' }: { onClick: () => 
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-label="Talk to UrgAns"
-      title="Talk to UrgAns"
+      aria-label="Talk to AI"
+      title="Talk to AI"
       className={`motion-press grid ${box} shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-elevated hover:text-content-primary disabled:opacity-40`}
     >
       <AudioWaveform className="h-4 w-4" aria-hidden="true" />

@@ -45,7 +45,7 @@ import type { UrgansActionDefinition } from '../types';
  * runUrgansAction's entitlement check before this ever runs.
  */
 
-const NOT_CONFIGURED = 'UrgAns cannot write for you yet. Fill this in yourself for now.';
+const NOT_CONFIGURED = 'AI cannot write for you yet. Fill this in yourself for now.';
 const DEADLINE_MS = 52_000;
 
 type Input = { taskId?: string };
@@ -145,7 +145,7 @@ export const releaseDraftSpotifyPitchAction: UrgansActionDefinition<Input, Outpu
       return {
         ok: false,
         status: 502,
-        error: 'UrgAns could not write that just now. Try again.',
+        error: 'AI could not write that just now. Try again.',
         usageCalls: collector.calls,
         failedCalls: collector.failures,
       };

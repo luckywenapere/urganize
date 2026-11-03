@@ -80,7 +80,7 @@ export default function UrgansAdminPageClient() {
           error?: string;
         };
         if (!response.ok) {
-          setError(body.error || 'Could not load UrgAns actions.');
+          setError(body.error || 'Could not load AI actions.');
           return;
         }
         const rows = body.rows || [];
@@ -91,7 +91,7 @@ export default function UrgansAdminPageClient() {
         setMonth((current) => current ?? rows[0]?.month ?? currentMonthKey());
         setChecked(true);
       } catch {
-        setError('Could not load UrgAns actions.');
+        setError('Could not load AI actions.');
       }
     },
     [router]
@@ -157,10 +157,10 @@ export default function UrgansAdminPageClient() {
   return (
     <div>
       <h1 className="mt-2 font-display text-2xl font-semibold text-content-primary">
-        UrgAns actions
+        AI actions
       </h1>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-content-secondary">
-        Every UrgAns action, drafted / applied / discarded / failed, by team and month and
+        Every AI action, drafted / applied / discarded / failed, by team and month and
         by which door it came through &mdash; the button inside the release, or the same job
         asked for in chat. Only the button is plan-gated, so the split is what says whether
         the chat is carrying this instead. Guard trips and upgrade signals land on their own
@@ -290,7 +290,7 @@ export default function UrgansAdminPageClient() {
 
       {/* Moved from the Overview (URG-369): credits, AI cost per team, rollouts
           live and the second-release rate. */}
-      <CockpitSlot label="the UrgAns panel" skeletonClassName="h-56">
+      <CockpitSlot label="the AI panel" skeletonClassName="h-56">
         {(cockpit) => (cockpit.urgans ? <UrgansPanel usage={cockpit.urgans} /> : null)}
       </CockpitSlot>
     </div>

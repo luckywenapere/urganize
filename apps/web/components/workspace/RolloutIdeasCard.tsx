@@ -368,7 +368,7 @@ export function RolloutIdeasCard({
           {ideasToExtraNotes(toReview, 400)}
         </p>
         <p className="mt-2 text-sm text-content-secondary">
-          UrgAns can suggest what this changes in your plan. Nothing changes until you tap Apply.
+          AI can suggest what this changes in your plan. Nothing changes until you tap Apply.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Button
@@ -694,7 +694,7 @@ export function RolloutIdeasCard({
       ) : !canAddIdea || hasNotes ? null : (
         // No record or type box here any more (Nov 2, 2026, founder): the
         // chat box does both, and the "n ideas are in" card shows in the chat.
-        <p className="mt-6 text-sm text-content-secondary">Tell UrgAns in the chat box below. Say it or type it.</p>
+        <p className="mt-6 text-sm text-content-secondary">Tell AI in the chat box below. Say it or type it.</p>
       )}
 
       {guided && !typing ? (
@@ -755,7 +755,7 @@ export function RolloutIdeasCard({
               {COPY.addSomeone}
             </button>
           </div>
-          <p className="mt-2 text-xs text-content-tertiary">Writing the brief uses UrgAns credits.</p>
+          <p className="mt-2 text-xs text-content-tertiary">Writing the brief uses AI credits.</p>
         </div>
       ) : null}
 
@@ -895,7 +895,7 @@ function PlanStage({
             </button>
           ) : null}
           <p className="mt-1 text-xs text-content-tertiary">
-            {buildLabel === COPY.buildPlan ? COPY.fiveQuestions : 'Writing the brief uses UrgAns credits.'}
+            {buildLabel === COPY.buildPlan ? COPY.fiveQuestions : 'Writing the brief uses AI credits.'}
           </p>
           <button
             type="button"

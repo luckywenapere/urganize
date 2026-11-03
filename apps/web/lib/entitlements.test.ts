@@ -151,7 +151,7 @@ describe('the tier table matches what is published', () => {
 
   // UrgAns embedded actions (2026-09-03): the first feature-by-tier gate in
   // this map that is not a countable ceiling. Solo keeps chat only.
-  it('gates UrgAns embedded actions to Manager and above', () => {
+  it('gates AI embedded actions to Manager and above', () => {
     expect(getEntitlement('solo', 'urgans_embedded_actions')).toBe(false);
     expect(getEntitlement('manager', 'urgans_embedded_actions')).toBe(true);
     expect(getEntitlement('label', 'urgans_embedded_actions')).toBe(true);

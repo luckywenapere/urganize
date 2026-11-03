@@ -107,7 +107,7 @@ describe('the first-rollout share offer waits for the next visit', () => {
     expect(opening).toEqual(['components/share/ShareSheet.tsx']);
   });
 
-  it('is saved, not shown, by the create-flow wrapper and by UrgAns', () => {
+  it('is saved, not shown, by the create-flow wrapper and by AI', () => {
     const wrapper = code('components/share/withFirstShareOffer.ts');
     expect(wrapper).toContain('deferFirstShare(userId, releaseId)');
     expect(wrapper).not.toContain('useShareStore');

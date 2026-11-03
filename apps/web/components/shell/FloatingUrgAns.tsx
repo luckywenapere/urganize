@@ -55,7 +55,7 @@ export function FloatingUrgAns() {
       {everOpened ? (
         <ErrorBoundary name="urgans-drawer" onError={reportBoundaryError}>
           <aside
-            aria-label="UrgAns assistant"
+            aria-label="AI assistant"
             aria-hidden={!open}
             inert={!open}
             className={`fixed bottom-6 right-6 top-[88px] z-[60] flex w-[min(440px,calc(100vw-3rem))] flex-col transition-[opacity,transform] duration-slow ease-standard ${

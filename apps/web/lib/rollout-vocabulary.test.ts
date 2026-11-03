@@ -162,7 +162,7 @@ const ALLOWED = [
   /\breleases? (it|them|on)\b/i,
   /\/api\/releases|\?release=|\/releases?\//, // URLs
   /_release\b|\brelease_/, // tool names and enum values (create_release, pre_release)
-  /\bcreate_release\b|\bget_release\b/, // named in UrgAns's own prompt on purpose
+  /\bcreate_release\b|\bget_release\b/, // named in the AI's own prompt on purpose
   // Two strings the Spotify pitch brief wrote with the word release in them, kept as
   // written (the brief's copy is final): the skip button, and the blocked line.
   /release without a/i,
@@ -301,7 +301,7 @@ describe('the object is a rollout: guarded UI files never call it a release', ()
     expect(findObjectWordViolations("const a = 'Call create_release to add the release.';")).toHaveLength(1);
   });
 
-  it('reads the real UrgAns prompt rather than skipping it', () => {
+  it('reads the real AI prompt rather than skipping it', () => {
     // The blind spot this file had until 2026-09-25, pinned on the file it hid:
     // put one object-word sentence into ROLE and the guard has to find it.
     const source = readFileSync(join(APP_ROOT, 'lib/chappi/system-prompt.ts'), 'utf8');

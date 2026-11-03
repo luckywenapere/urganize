@@ -177,7 +177,7 @@ describe('Trash list and purge', () => {
   });
 });
 
-describe('the delete route and UrgAns hold the double confirmation', () => {
+describe('the delete route and AI hold the double confirmation', () => {
   const root = join(__dirname, '..');
   const read = (p: string) => readFileSync(join(root, p), 'utf8');
 
@@ -188,7 +188,7 @@ describe('the delete route and UrgAns hold the double confirmation', () => {
     expect(route).not.toMatch(/\.from\('releases'\)\s*\.delete\(\)/);
   });
 
-  it('UrgAns delete_release proposes a typed confirmation and forwards what the user typed', () => {
+  it('AI delete_release proposes a typed confirmation and forwards what the user typed', () => {
     const tool = read('lib/chappi/tool-families/releases.ts');
     expect(tool).toContain('typedConfirmation: { phrase: release.title }');
     expect(tool).toContain("argString(args, 'confirmation')");

@@ -3,7 +3,7 @@ import CreditsPageClient from './CreditsPageClient';
 
 // Thin server wrapper for the tab title, the press kit page's shape.
 export const metadata: Metadata = {
-  title: 'UrgAns credits',
+  title: 'AI credits',
 };
 
 export default function CreditsPage() {

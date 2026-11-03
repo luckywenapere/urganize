@@ -352,7 +352,7 @@ export function UrgansRows({ openSection }: { openSection?: string | null }) {
       groups={[
         [
           ...(isTeamBriefEnabled()
-            ? [{ key: 'team-brief', label: 'Teach UrgAns about your team', render: () => <TeamBriefSection /> }]
+            ? [{ key: 'team-brief', label: 'Teach AI about your team', render: () => <TeamBriefSection /> }]
             : []),
           { key: 'chasing', label: 'WhatsApp chasing', render: () => <WhatsappChasingSection /> },
         ],

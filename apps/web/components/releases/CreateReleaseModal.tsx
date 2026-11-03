@@ -553,7 +553,7 @@ export function CreateReleaseModal({
                 </span>
                 <span className="text-sm leading-6 text-content-secondary">
                   {PLANNER_ENABLED
-                    ? 'Plan it with UrgAns. A few questions, then a draft rollout you can edit before anything is scheduled.'
+                    ? 'Plan it with AI. A few questions, then a draft rollout you can edit before anything is scheduled.'
                     : 'Start with the proven rollout plan. Every activity from first prep to release day is scheduled around your date and ready to edit. No date yet? It waits for one.'}
                 </span>
               </button>

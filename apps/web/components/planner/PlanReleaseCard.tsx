@@ -50,12 +50,12 @@ export function PlanReleaseCard({ state, failureMessage, onPlan, onAddActivity, 
       cta: 'Build my plan',
     },
     generating: {
-      headline: 'UrgAns is building your plan.',
+      headline: 'AI is building your plan.',
       body: 'About half a minute. It lands here when it is done.',
       cta: null,
     },
     failed: {
-      headline: 'UrgAns could not read your notes just now.',
+      headline: 'AI could not read your notes just now.',
       body: failureMessage
         ? `${failureMessage} Nothing was created. Your answers are saved.`
         : 'Nothing was created. Your answers are saved.',

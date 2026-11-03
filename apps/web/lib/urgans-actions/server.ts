@@ -329,7 +329,7 @@ export async function runUrgansAction(
     return {
       ok: false,
       status: 403,
-      error: `UrgAns can ${action.label.toLowerCase()} for you on ${planLabel}.`,
+      error: `AI can ${action.label.toLowerCase()} for you on ${planLabel}.`,
       reason: 'plan_required',
       minimumPlan: minimumPlan ?? undefined,
     };

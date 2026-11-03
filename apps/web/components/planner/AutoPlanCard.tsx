@@ -69,7 +69,7 @@ export function AutoPlanCard({
         >
           <p className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.16em] text-brand">
             <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-            UrgAns
+            AI
           </p>
           <h3 className="mt-4 font-display text-2xl font-semibold leading-tight text-content-primary">
             Building your plan.
@@ -104,7 +104,7 @@ export function AutoPlanCard({
 
   return (
     <section role="alert" className="rounded-2xl border border-stroke-default bg-bg-elevated p-6 sm:p-7">
-      <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-content-tertiary">UrgAns</p>
+      <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-content-tertiary">AI</p>
       <h3 className="mt-4 font-display text-2xl font-semibold leading-tight text-content-primary">
         Your plan didn&apos;t build.
       </h3>

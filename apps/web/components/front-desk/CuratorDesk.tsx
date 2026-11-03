@@ -66,7 +66,7 @@ export function CuratorInbox({ mode, curatorName }: { mode: 'curator' | 'sample'
           }
         />
         <h1 className={cx(s.display, s.title)}>{waiting ? plural(waiting, 'pitch needs you', 'pitches need you') : 'All answered'}</h1>
-        <p className={s.sub}>{waiting ? 'Only the questions UrgAns couldn’t answer.' : 'UrgAns answered every question from your terms.'}</p>
+        <p className={s.sub}>{waiting ? 'Only the questions AI couldn’t answer.' : 'AI answered every question from your terms.'}</p>
         {mode === 'sample' ? (
           <p className={s.meta} style={{ marginTop: 12, color: 'var(--fd-faint)' }}>
             Sample curator
@@ -104,7 +104,7 @@ export function CuratorInbox({ mode, curatorName }: { mode: 'curator' | 'sample'
                   {row.openItems > 0 ? (
                     <span className={s.inboxCount}>{plural(row.openItems, 'question', 'questions')} for you</span>
                   ) : (
-                    <span className={s.inboxQuiet}>UrgAns answered {row.answered}</span>
+                    <span className={s.inboxQuiet}>AI answered {row.answered}</span>
                   )}
                   {clickable ? (
                     <span className={s.chev} aria-hidden="true">
@@ -264,7 +264,7 @@ export function CuratorPitch({ mode, curatorName, pitchId }: { mode: 'curator' |
       <button type="button" className={s.quietRow} aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
         <span className={cx(s.glyph, s.glyphSm)} aria-hidden="true" />
         <span className={s.grow}>
-          <b>UrgAns answered {plural(detail.answered.length, 'question', 'questions')}</b>
+          <b>AI answered {plural(detail.answered.length, 'question', 'questions')}</b>
         </span>
         <span className={s.chev} aria-hidden="true" style={{ transform: expanded ? 'rotate(90deg)' : undefined, transition: 'transform 160ms' }}>
           ›
@@ -365,7 +365,7 @@ export function CuratorPitch({ mode, curatorName, pitchId }: { mode: 'curator' |
       ) : null}
       {decision === 'added' ? (
         <Banner tone="ok" title="Added to your terms.">
-          UrgAns answers this from now on.{' '}
+          AI answers this from now on.{' '}
           <Link href="/curator/front-desk" className={s.linkBtn} style={{ minHeight: 0 }}>
             See terms
           </Link>

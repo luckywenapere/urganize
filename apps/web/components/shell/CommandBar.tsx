@@ -103,7 +103,7 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
       out.push({
         key: 'ask',
         group: 'Ask',
-        label: `Ask UrgAns: ${query.trim()}`,
+        label: `Ask AI: ${query.trim()}`,
         run: () => {
           setInput(query.trim());
           const target = askUrgansTarget(
@@ -191,7 +191,7 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
         className="absolute inset-0 bg-black/50"
       />
       <DialogPanel
-        label="Search or ask UrgAns"
+        label="Search or ask AI"
         initialFocus="first"
         onClose={onClose}
         className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface shadow-lg"
@@ -217,8 +217,8 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
                 choose(results[active]);
               }
             }}
-            placeholder="Search activities, rollouts and pages, or ask UrgAns"
-            aria-label="Search activities, rollouts and pages, or ask UrgAns"
+            placeholder="Search activities, rollouts and pages, or ask AI"
+            aria-label="Search activities, rollouts and pages, or ask AI"
             className="h-14 min-w-0 flex-1 bg-transparent text-base text-content-primary outline-none focus:outline-none focus-visible:outline-none focus-visible:shadow-none placeholder:text-content-tertiary"
           />
         </div>

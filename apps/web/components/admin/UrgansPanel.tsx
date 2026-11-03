@@ -54,15 +54,15 @@ export function UrgansPanel({ usage }: { usage: UrgansUsage }) {
   return (
     <div className="mt-6">
       <Label
-        text="UrgAns and releases"
-        info="How much paying teams lean on UrgAns, what it costs us, and the release results it should move. Same 7 days as the North Star."
+        text="AI and releases"
+        info="How much paying teams lean on AI, what it costs us, and the release results it should move. Same 7 days as the North Star."
       />
 
       <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
         <div className="rounded-xl border border-brand/40 bg-brand/5 p-5">
           <Label
-            text="Paying teams using UrgAns in releases"
-            info="Of this week's active paying teams (the North Star teams), the share where someone used UrgAns inside a rollout in the last 7 days: chat, a plan, a press kit, a pitch kit, a Spotify pitch, a status update or a task outcome reply tied to a release. Status updates and outcome replies charge no credits but each one is a real AI call we pay for, so they count. An outcome with no note makes no AI call and does not count. The seed-round target is half, every week."
+            text="Paying teams using AI in releases"
+            info="Of this week's active paying teams (the North Star teams), the share where someone used AI inside a rollout in the last 7 days: chat, a plan, a press kit, a pitch kit, a Spotify pitch, a status update or a task outcome reply tied to a release. Status updates and outcome replies charge no credits but each one is a real AI call we pay for, so they count. An outcome with no note makes no AI call and does not count. The seed-round target is half, every week."
           />
           <p className="mt-1 font-display text-4xl font-semibold tabular-nums text-content-primary">
             {share ? formatPercent(share.current.rate) : 'Not tracked'}
@@ -76,7 +76,7 @@ export function UrgansPanel({ usage }: { usage: UrgansUsage }) {
               <p className="mt-1 text-sm text-content-secondary">
                 {formatLastWeekShare(share.previous)}
                 {share.current.activePayingTeams > 0
-                  ? `. ${number.format(share.current.usingAnywhere)} used UrgAns at all this week.`
+                  ? `. ${number.format(share.current.usingAnywhere)} used AI at all this week.`
                   : ''}
               </p>
             </>
@@ -88,7 +88,7 @@ export function UrgansPanel({ usage }: { usage: UrgansUsage }) {
         <div className="rounded-xl border border-stroke-default bg-bg-surface p-5">
           <Label
             text="Credits spent per week"
-            info="UrgAns credits spent by every team, minus refunds, per 7 days. Grants, monthly allowances and top-ups are not spending. Newest on the right."
+            info="AI credits spent by every team, minus refunds, per 7 days. Grants, monthly allowances and top-ups are not spending. Newest on the right."
           />
           <p className="mt-1 font-display text-4xl font-semibold tabular-nums text-content-primary">
             {creditsThisWeek === null ? 'Not tracked' : number.format(creditsThisWeek)}

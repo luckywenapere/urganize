@@ -37,7 +37,7 @@ export function BioDraftCard({ bio, balance, isBusy, error, onAccept, onRetry, o
       <div className="flex items-center gap-2">
         <Sparkles className="h-4 w-4 shrink-0 text-brand" aria-hidden />
         <p className="text-sm font-semibold text-content-primary">
-          UrgAns wrote this. Nothing is saved until you accept it.
+          AI wrote this. Nothing is saved until you accept it.
         </p>
       </div>
 

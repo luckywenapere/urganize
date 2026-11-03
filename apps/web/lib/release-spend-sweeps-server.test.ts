@@ -81,7 +81,7 @@ describe('runSpendCreditsSweep', () => {
       category: 'other',
       source: 'urganize',
       paid_to: 'Urganize',
-      note: '10 UrgAns credits',
+      note: '10 AI credits',
       dedupe_key: `credits:${R1}:2026-10-07`,
       workspace_id: 'ws-1',
       created_by: null,

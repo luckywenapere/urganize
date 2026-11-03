@@ -136,7 +136,7 @@ export function previewSummaryLine(preview: PlannerTemplatePreview): string {
 /** Says where the plan comes from and that UrgAns changes it. */
 export function previewSourceLine(preview: PlannerTemplatePreview): string {
   if (preview.usesSinglePlaybook) {
-    return `Your ${TYPE_WORD[preview.releaseType]} starts from our single playbook for now. UrgAns tailors it to your answers.`;
+    return `Your ${TYPE_WORD[preview.releaseType]} starts from our single playbook for now. AI tailors it to your answers.`;
   }
-  return `This is our ${TYPE_WORD[preview.releaseType]} playbook. UrgAns tailors it to your answers.`;
+  return `This is our ${TYPE_WORD[preview.releaseType]} playbook. AI tailors it to your answers.`;
 }

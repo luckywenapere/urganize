@@ -36,7 +36,7 @@ describe('founderBillingAlertSubject', () => {
       'CARD FAILED: Midnight Records'
     );
     expect(founderBillingAlertSubject('urgans_guard_tripped', context)).toBe(
-      'UrgAns usage cap: Midnight Records'
+      'AI usage cap: Midnight Records'
     );
   });
 

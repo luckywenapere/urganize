@@ -110,7 +110,7 @@ describe('describeActivity', () => {
 });
 
 describe('artist facts', () => {
-  it('names what UrgAns remembered or forgot', () => {
+  it('names what AI remembered or forgot', () => {
     expect(
       describeActivity(row({ tool: 'save_artist_fact', objectType: 'artist_fact', args: { value: 'Prefers Afrobeats' }, after: { value: 'Prefers Afrobeats' } }), ME, names, NOW).title
     ).toBe('Remembered "Prefers Afrobeats"');

@@ -584,7 +584,7 @@ export function creditsLineAmountKobo(credits: number): number {
 /** TODO(copy): the note on the automatic credits line. */
 export function creditsLineNote(credits: number): string {
   const count = Math.round(credits);
-  return `${count} UrgAns ${count === 1 ? 'credit' : 'credits'}`;
+  return `${count} AI ${count === 1 ? 'credit' : 'credits'}`;
 }
 
 /** One line per rollout per day, so a sweep that runs twice writes it once. */

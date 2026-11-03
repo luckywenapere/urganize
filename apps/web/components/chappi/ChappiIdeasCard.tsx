@@ -219,7 +219,7 @@ export function ChappiIdeasCard({
         </p>
       ) : null}
       {runner && state === 'open' && !asking && !hasPlan ? (
-        <p className="mt-2 text-xs text-content-tertiary">Writing the brief uses UrgAns credits.</p>
+        <p className="mt-2 text-xs text-content-tertiary">Writing the brief uses AI credits.</p>
       ) : null}
     </section>
   );

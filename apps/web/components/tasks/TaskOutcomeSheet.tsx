@@ -201,7 +201,7 @@ function OutcomeSheetBody({
           <div className="flex items-center justify-between gap-2">
             <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
               <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
-              UrgAns
+              AI
             </p>
             <button
               type="button"
@@ -219,7 +219,7 @@ function OutcomeSheetBody({
             <div>
               <h2 className="font-display text-xl text-content-primary">Thanks. Saved.</h2>
               <p className="mt-1 text-sm text-content-secondary">
-                UrgAns will remember this for the rollout.
+                AI will remember this for the rollout.
               </p>
             </div>
           ) : phase === 'followup' && question ? (
@@ -278,7 +278,7 @@ function OutcomeSheetBody({
                 onChange={(event) => setNote(event.target.value.slice(0, OUTCOME_NOTE_MAX_LENGTH))}
                 rows={3}
                 aria-label="What happened"
-                placeholder="Tell UrgAns what happened"
+                placeholder="Tell AI what happened"
                 className="mt-4 w-full resize-none rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               />
               <p className="mt-1 text-xs text-content-tertiary">Optional</p>

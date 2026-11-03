@@ -147,21 +147,21 @@ export function describeAgentError(error: unknown): AgentErrorDescription {
   const failure = classifyAiFailure(error);
   switch (failure.kind) {
     case 'timeout':
-      return { status: 504, message: 'UrgAns took too long. Try again.' };
+      return { status: 504, message: 'AI took too long. Try again.' };
     case 'rate_limited':
-      return { status: 503, message: 'UrgAns is busy. Try again in a moment.' };
+      return { status: 503, message: 'AI is busy. Try again in a moment.' };
     case 'insufficient_balance':
-      return { status: 503, message: 'UrgAns is unavailable right now.', alert: 'balance' };
+      return { status: 503, message: 'AI is unavailable right now.', alert: 'balance' };
     case 'auth':
-      return { status: 503, message: 'UrgAns is unavailable right now.', alert: 'credentials' };
+      return { status: 503, message: 'AI is unavailable right now.', alert: 'credentials' };
     default:
-      return { status: 503, message: 'UrgAns is unavailable right now.', alert: 'unexpected' };
+      return { status: 503, message: 'AI is unavailable right now.', alert: 'unexpected' };
   }
 }
 
 /** The line the route writes for each kind of alert. */
 export const AGENT_ALERT_LOG_LINES: Record<NonNullable<AgentErrorDescription['alert']>, string> = {
-  balance: '[chappi] gateway balance exhausted, UrgAns is down until it is topped up:',
-  credentials: '[chappi] gateway rejected the API key, UrgAns is down until it is fixed:',
+  balance: '[chappi] gateway balance exhausted, AI is down until it is topped up:',
+  credentials: '[chappi] gateway rejected the API key, AI is down until it is fixed:',
   unexpected: '[chappi] agent run failed:',
 };

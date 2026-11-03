@@ -60,7 +60,7 @@ const config: ExpoConfig = {
       UIBackgroundModes: ['remote-notification'],
       // Voice input for UrgAns (NEXT_PUBLIC_FEATURE_URGANS_VOICE): iOS shows
       // this string when the webview first asks for the microphone.
-      NSMicrophoneUsageDescription: 'Urganize uses the microphone so you can talk to UrgAns.',
+      NSMicrophoneUsageDescription: 'Urganize uses the microphone so you can talk to AI.',
       // No WKAppBoundDomains, deliberately. It is what lets a service worker
       // run in an iOS webview, and nothing needs one there today: Web Push
       // cannot reach a webview at all, and the site's offline layer

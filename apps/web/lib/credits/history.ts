@@ -80,13 +80,13 @@ function labelFor(row: LedgerHistoryRow): { label: string; detail: string } {
         return { label: pitchSpendHistoryLabel(text(meta.curator_name)), detail: text(meta.song_title) };
       }
       if (meta.reason === 'voice_minute') {
-        return { label: 'Voice call with UrgAns', detail: '' };
+        return { label: 'Voice call with AI', detail: '' };
       }
       if (meta.source === 'embedded_action') {
         const action = text(meta.action);
-        return { label: ACTION_HISTORY_LABELS[action] ?? 'UrgAns did some work', detail: '' };
+        return { label: ACTION_HISTORY_LABELS[action] ?? 'AI did some work', detail: '' };
       }
-      return { label: 'UrgAns chat', detail: '' };
+      return { label: 'AI chat', detail: '' };
     }
     case 'adjust': {
       if (meta.source === 'referral' && row.credits > 0) {

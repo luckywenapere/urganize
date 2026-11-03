@@ -68,7 +68,7 @@ describe('orderHomeBlocks', () => {
     expect(orderHomeBlocks({ ...full, showSpend: false })).not.toContain('spend');
   });
 
-  it("keeps UrgAns' daily line for days when nothing is late", () => {
+  it("keeps the AI's daily line for days when nothing is late", () => {
     expect(orderHomeBlocks({ ...full, lateCount: 2 })).not.toContain('daily-line');
   });
 });

@@ -156,7 +156,7 @@ export function TopNav() {
             type="button"
             onClick={() => (hasPullReveal() ? revealListSearch() : openCommand())}
             data-tour="shell-search"
-            aria-label="Search or ask UrgAns"
+            aria-label="Search or ask AI"
             className="motion-focus motion-press hidden h-10 items-center justify-center gap-2 rounded-full border border-stroke-default bg-bg-surface/70 px-3 text-sm text-content-secondary hover:text-content-primary lg:inline-flex"
           >
             <Search className="h-[18px] w-[18px]" aria-hidden="true" />

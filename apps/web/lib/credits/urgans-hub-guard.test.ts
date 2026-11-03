@@ -11,7 +11,7 @@ import { isHardPaywallGatedPath } from '@/lib/team-billing';
 const root = join(__dirname, '..', '..');
 const read = (path: string) => readFileSync(join(root, path), 'utf8');
 
-describe('the UrgAns page behind the wall', () => {
+describe('the AI page behind the wall', () => {
   it('lives under /locked, outside every path the wall redirects from', () => {
     // Read from source: importing the card pulls in the browser Supabase client.
     const match = /URGANS_HUB_PATH = '([^']+)'/.exec(read('components/billing/WallUrgansCard.tsx'));

@@ -18,7 +18,7 @@ import { formatDate, formatGrowth, formatShare, formatUsd, people, timeAgo } fro
 const number = new Intl.NumberFormat('en');
 
 const PLAN_LABELS: Record<keyof PlanSplit, string> = {
-  urgans: 'Planned by UrgAns',
+  urgans: 'Planned by AI',
   playbook: 'Playbook plan, no AI changes',
   own: 'Their own plan',
   none: 'No plan yet',
@@ -152,7 +152,7 @@ export function MetricsView({
       <Section
         id="metrics-active"
         title="Active people"
-        info="Growth this week compares people active this calendar week (Monday to Sunday, Lagos time) with all of last week, so mid-week it shows progress toward the target and it settles on Sunday night. It is the number YC asks for: 5 to 7% a week is good, 10% is exceptional. Our own team's accounts are left out of every number here. A person counts on a day if the app was open on their screen, they did something (an activity, a rollout, UrgAns, a note and so on), they opened the app, or they signed in. Days are Lagos days. The check-in that sees people who only look around started on the day this page went live, so earlier days only count people who did something or opened the app."
+        info="Growth this week compares people active this calendar week (Monday to Sunday, Lagos time) with all of last week, so mid-week it shows progress toward the target and it settles on Sunday night. It is the number YC asks for: 5 to 7% a week is good, 10% is exceptional. Our own team's accounts are left out of every number here. A person counts on a day if the app was open on their screen, they did something (an activity, a rollout, AI, a note and so on), they opened the app, or they signed in. Days are Lagos days. The check-in that sees people who only look around started on the day this page went live, so earlier days only count people who did something or opened the app."
       >
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <Stat label="Today" value={number.format(active.today)} />
@@ -210,7 +210,7 @@ export function MetricsView({
       <Section
         id="metrics-rollouts"
         title="Rollouts"
-        info="Every rollout ever made, test rollouts left out. Going out means a release date in the next 30 days; out means a date in the last 30. How plans were made: Planned by UrgAns is a plan UrgAns tailored; Playbook plan is the playbook with no AI changes; Their own plan has only activities people added by hand; No plan yet has no activities, or is still waiting for a plan or a date."
+        info="Every rollout ever made, test rollouts left out. Going out means a release date in the next 30 days; out means a date in the last 30. How plans were made: Planned by AI is a plan AI tailored; Playbook plan is the playbook with no AI changes; Their own plan has only activities people added by hand; No plan yet has no activities, or is still waiting for a plan or a date."
       >
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <Stat
@@ -287,7 +287,7 @@ export function MetricsView({
       <Section
         id="metrics-work"
         title="Work done"
-        info="Activities marked done, activities people added by hand rather than from a plan, conversations with UrgAns (one per message sent), and what the AI provider charged us in the last 30 days."
+        info="Activities marked done, activities people added by hand rather than from a plan, conversations with AI (one per message sent), and what the AI provider charged us in the last 30 days."
       >
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Stat
@@ -297,7 +297,7 @@ export function MetricsView({
           />
           <Stat label="Added by hand, 7 days" value={number.format(work.addedByHand7d)} />
           <Stat
-            label="UrgAns messages, 7 days"
+            label="AI messages, 7 days"
             value={number.format(work.urgansTurns7d)}
             fact={`from ${people(work.urgansPeople7d)}`}
           />

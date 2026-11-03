@@ -245,7 +245,7 @@ function probesFor(model: string): Probe[] {
         ];
   return [
     {
-      name: 'chat: what UrgAns sends',
+      name: 'chat: what AI sends',
       mustPass: true,
       body: buildChatCompletionBody({ model, messages: say, tools: PROBE_TOOLS, maxOutputTokens, tokenParam, reasoningEffort: effort }),
     },

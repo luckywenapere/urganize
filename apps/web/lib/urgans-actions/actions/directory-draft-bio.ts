@@ -43,7 +43,7 @@ const PROFILES_TABLE = 'person_profiles';
 const RECORDS_TABLE = 'delivery_records';
 const PROFILE_COLUMNS = 'id,user_id,display_name,roles,city,country,bio,links,updated_at';
 
-const NOT_CONFIGURED = 'UrgAns cannot write for you yet. Write it yourself for now.';
+const NOT_CONFIGURED = 'AI cannot write for you yet. Write it yourself for now.';
 const MAX_NOTES_LENGTH = 2000;
 const DRAFT_DEADLINE_MS = 52_000;
 
@@ -155,7 +155,7 @@ export const directoryDraftBioAction: UrgansActionDefinition<Input, Output, Resu
       return {
         ok: false,
         status: 502,
-        error: 'UrgAns could not write that just now. Try again.',
+        error: 'AI could not write that just now. Try again.',
         usageCalls: collector.calls,
         failedCalls: collector.failures,
       };

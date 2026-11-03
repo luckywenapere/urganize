@@ -59,8 +59,8 @@ export function UrgansUsageStrip() {
       <p className="text-sm text-content-secondary">
         <span className="font-medium text-content-primary">
           {atCeiling
-            ? 'You have used this month’s UrgAns actions.'
-            : `UrgAns: ${left} ${left === 1 ? 'action' : 'actions'} left this month.`}
+            ? 'You have used this month’s AI actions.'
+            : `AI: ${left} ${left === 1 ? 'action' : 'actions'} left this month.`}
         </span>{' '}
         {atCeiling
           ? 'Quick commands still work, and your actions reset on your billing day.'

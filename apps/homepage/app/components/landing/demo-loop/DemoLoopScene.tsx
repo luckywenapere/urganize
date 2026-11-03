@@ -110,7 +110,7 @@ export default function DemoLoopScene({ theme, compact, onReady }: Props) {
       className="urg-demo"
     >
       {(s) => (
-        <Window title="UrgAns" className="urg-win">
+        <Window title="AI" className="urg-win">
           <div className="urg-body">
             <div className="urg-head" data-on={s.sent || undefined}>
               <span className="urg-new" data-target="new-chat" data-cursor="pointer">
@@ -171,7 +171,7 @@ export default function DemoLoopScene({ theme, compact, onReady }: Props) {
             <Field
               className="urg-composer"
               value={s.draft}
-              placeholder="Ask UrgAns…"
+              placeholder="Ask AI…"
               focused={s.focused}
               box={{ 'data-target': 'composer' }}
               leading={

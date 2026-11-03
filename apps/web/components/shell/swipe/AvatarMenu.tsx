@@ -389,7 +389,7 @@ export function MenuBody({
 
       <MenuGroup>
         {has('notifications') ? <ActionRow icon={Bell} label="Notifications" onClick={inSettings('notifications')} /> : null}
-        {has('urgans') ? <ActionRow icon={Sparkles} label="UrgAns" onClick={inSettings('urgans')} /> : null}
+        {has('urgans') ? <ActionRow icon={Sparkles} label="AI" onClick={inSettings('urgans')} /> : null}
         <ActionRow icon={SlidersHorizontal} label="Appearance" onClick={inSettings('general', 'theme')} />
         {has('security') ? <ActionRow icon={ShieldCheck} label="Security & account" onClick={inSettings('security')} /> : null}
         {/* Trash keeps its one door here now that Delete rollouts left Settings: a deleted rollout waits 30 days there. */}

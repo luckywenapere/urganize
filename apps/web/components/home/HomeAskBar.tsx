@@ -68,7 +68,7 @@ export function HomeAskBar({
   variant = 'home',
   onSend,
   replying = false,
-  placeholder = 'Message UrgAns...',
+  placeholder = 'Message AI...',
 }: {
   /** 'swipe' (URG-380): the swipe navigation's one box under Home and Artists,
    *  on phones and desktops, centred to the page column. 'page' (Oct 24,
@@ -244,7 +244,7 @@ export function HomeAskBar({
                 void attach.addFiles(pictures);
               }}
               placeholder={isTranscribing ? 'Turning your voice into text...' : placeholder}
-              aria-label="Message UrgAns"
+              aria-label="Message AI"
               enterKeyHint="send"
               disabled={isTranscribing || replying}
               // 16px: anything smaller makes iOS zoom the page on focus.
@@ -256,7 +256,7 @@ export function HomeAskBar({
               type="button"
               onClick={voice.toggle}
               data-recording={isRecording ? 'true' : undefined}
-              aria-label={isRecording ? 'Stop recording' : TALK_ENABLED ? 'Dictate' : 'Talk to UrgAns'}
+              aria-label={isRecording ? 'Stop recording' : TALK_ENABLED ? 'Dictate' : 'Talk to AI'}
               title={TALK_ENABLED && !isRecording ? 'Dictate' : undefined}
               disabled={isTranscribing || voice.state === 'requesting'}
               className="motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-elevated hover:text-content-primary disabled:opacity-40 data-[recording=true]:text-status-error"
@@ -281,7 +281,7 @@ export function HomeAskBar({
           ) : null}
           <button
             type="submit"
-            aria-label="Send to UrgAns"
+            aria-label="Send to AI"
             disabled={!canSend}
             className={SEND_BUTTON_DOCK_CLASS}
           >

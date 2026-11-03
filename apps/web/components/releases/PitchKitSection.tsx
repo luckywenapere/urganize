@@ -560,7 +560,7 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
               <div className="mt-1.5 flex items-center gap-3 empty:hidden">
                 {savedNote('story', savingStory)}
                 {!savingStory && savedAt !== 'story' && data.fields.storySource === 'ai' && data.fields.story ? (
-                  <span className="text-xs text-content-tertiary">Written by UrgAns. Change anything.</span>
+                  <span className="text-xs text-content-tertiary">Written by AI. Change anything.</span>
                 ) : null}
               </div>
             </KitRow>
@@ -753,7 +753,7 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
         <div className="mt-3">
           {showNotes ? (
             <textarea
-              aria-label="A hint for UrgAns"
+              aria-label="A hint for AI"
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               rows={2}

@@ -73,7 +73,7 @@ export default function PrivacyPolicy() {
                 PostHog) to understand product usage.
               </li>
               <li>
-                — UrgAns sends the release context it needs to our AI provider,
+                — AI sends the release context it needs to our AI provider,
                 only to do what you asked. We do not use your content to train
                 AI models.
               </li>
@@ -177,7 +177,7 @@ export default function PrivacyPolicy() {
             <Section number="04" title="How we use it">
               <p>— To provide and operate Urganize.</p>
               <p>
-                — To build your release plan and, when you use UrgAns, to do
+                — To build your release plan and, when you use AI, to do
                 what you ask it to (see section 05).
               </p>
               <p>
@@ -211,13 +211,13 @@ export default function PrivacyPolicy() {
 
             <Section number="05" title="AI processing">
               <p>
-                When you use UrgAns, the release details, tasks and messages it
+                When you use AI, the release details, tasks and messages it
                 needs are sent through our AI gateway to a third-party AI model
                 provider, solely to do what you asked. Your uploaded files are
                 never sent.
               </p>
               <p>
-                If you talk to UrgAns instead of typing, the voice clip is sent
+                If you talk to AI instead of typing, the voice clip is sent
                 to the same AI provider to turn into text, and the clip is not
                 stored. The text lands in the message box for you to read and
                 edit before anything is sent.

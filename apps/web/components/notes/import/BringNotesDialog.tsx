@@ -341,7 +341,7 @@ export function BringNotesDialog({ open, onClose, releases, onMakePlan, releaseH
       running: false,
       done: target.length,
       total: target.length,
-      summary: parts.join(' ') || 'UrgAns read it. Nothing needed changing.',
+      summary: parts.join(' ') || 'AI read it. Nothing needed changing.',
       error: '',
     });
     trackEvent('notes_import_ai_sorted', {
@@ -737,13 +737,13 @@ export function BringNotesDialog({ open, onClose, releases, onMakePlan, releaseH
               {ai.running
                 ? `Reading ${Math.min(ai.done + 1, ai.total)} of ${ai.total}...`
                 : ai.summary
-                  ? 'Sort again with UrgAns'
-                  : 'Sort with UrgAns'}
+                  ? 'Sort again with AI'
+                  : 'Sort with AI'}
             </button>
             <p className="mt-1.5 text-xs text-content-tertiary">
               {ai.summary ||
                 ai.error ||
-                'Better labels, skips small talk, spots dates. This sends the text shown here to UrgAns to read. It is not saved.'}
+                'Better labels, skips small talk, spots dates. This sends the text shown here to AI to read. It is not saved.'}
             </p>
           </div>
 

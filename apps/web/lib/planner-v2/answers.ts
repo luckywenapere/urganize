@@ -227,7 +227,7 @@ export function parsePlannerV2Answers(
   if (releaseType !== 'single' && releaseType !== 'ep' && releaseType !== 'album') {
     return { ok: false, error: 'release_type must be single, ep or album.' };
   }
-  if (!oneOf(STAGE_OPTIONS, r.stage)) return { ok: false, error: 'Tell UrgAns where the music is.' };
+  if (!oneOf(STAGE_OPTIONS, r.stage)) return { ok: false, error: 'Tell AI where the music is.' };
   if (!oneOf(BUDGET_BAND_OPTIONS, r.budget)) return { ok: false, error: 'Pick a promo budget.' };
   if (!oneOf(TEAM_OPTIONS, r.team)) return { ok: false, error: "Pick who's doing the work." };
   const wins = listOf(WIN_OPTIONS, r.wins);
@@ -246,7 +246,7 @@ export function parsePlannerV2Answers(
   }
   const outWhen = oneOf(OUT_WHEN_OPTIONS, r.out_when) ? r.out_when : null;
   if (r.stage === 'out' && !outWhen && !releaseDate) {
-    return { ok: false, error: 'Tell UrgAns when it came out.' };
+    return { ok: false, error: 'Tell AI when it came out.' };
   }
   // No date is fine (2026-10-26, Oyin): the plan is built relative to
   // release day and dated when the "Set your release date" row is used.

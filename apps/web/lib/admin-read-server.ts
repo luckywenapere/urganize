@@ -102,8 +102,8 @@ export const ACTIVITY_SOURCES: ActivitySource[] = [
   { table: 'release_messages', actor: 'user_id', at: 'created_at', label: 'posted in a rollout chat' },
   { table: 'releases', actor: 'owner_user_id', at: 'created_at', label: 'created a rollout' },
   { table: 'notes', actor: 'owner_user_id', at: 'updated_at', label: 'wrote a note' },
-  { table: 'urgans_actions', actor: 'actor_user_id', at: 'created_at', label: 'ran an UrgAns action' },
-  { table: 'urgans_conversations', actor: 'owner_user_id', at: 'last_message_at', label: 'chatted with UrgAns' },
+  { table: 'urgans_actions', actor: 'actor_user_id', at: 'created_at', label: 'ran an AI action' },
+  { table: 'urgans_conversations', actor: 'owner_user_id', at: 'last_message_at', label: 'chatted with AI' },
   {
     table: 'billing_events',
     actor: 'actor_user_id',
@@ -111,7 +111,7 @@ export const ACTIVITY_SOURCES: ActivitySource[] = [
     // Only the events a member caused by using the product. The table also
     // holds paywall hits and the founder's own admin actions.
     types: ['urgans_action', 'urgans_embedded_action', 'urgans_voice_transcription'],
-    label: 'used UrgAns',
+    label: 'used AI',
   },
   { table: 'playlist_pitches', actor: 'created_by', at: 'created_at', label: 'sent a pitch' },
   { table: 'press_kit_section_versions', actor: 'saved_by', at: 'created_at', label: 'edited a press kit' },

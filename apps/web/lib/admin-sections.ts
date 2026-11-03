@@ -187,10 +187,10 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   },
   {
     key: 'urgans',
-    label: 'UrgAns actions',
+    label: 'AI actions',
     href: '/admin/urgans',
     group: 'operations',
-    description: 'UrgAns drafts per team: made, applied, cost.',
+    description: 'AI drafts per team: made, applied, cost.',
   },
   {
     key: 'emails',

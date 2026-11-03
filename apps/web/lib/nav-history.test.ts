@@ -88,7 +88,7 @@ describe('nextNavigationStack', () => {
     expect(trail[trail.length - 2]).toBeUndefined();
   });
 
-  it('terminates a two-release loop, which UrgAns and note chips can both start', () => {
+  it('terminates a two-release loop, which AI and note chips can both start', () => {
     const a = `/dashboard?release=${RELEASE}`;
     const b = `/dashboard?release=${OTHER_RELEASE}`;
     let trail = nextNavigationStack(nextNavigationStack(['/dashboard'], a), b);

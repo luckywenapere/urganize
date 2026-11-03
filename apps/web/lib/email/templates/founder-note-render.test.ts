@@ -74,7 +74,7 @@ describe('OnboardingStepEmail', () => {
 
   it('leaves the picture out of the plain-text part instead of printing a bare link', async () => {
     const { text } = await renderEmail(OnboardingStepEmail({ step: 'day5', recipientName: 'Ada' }));
-    expect(text).toContain('Try UrgAns https://team.urganize.app/dashboard/urgans');
+    expect(text).toContain('Try AI https://team.urganize.app/dashboard/urgans');
     expect(text.split('https://team.urganize.app/dashboard/urgans')).toHaveLength(2);
   });
 
@@ -82,7 +82,7 @@ describe('OnboardingStepEmail', () => {
     const { html } = await renderEmail(OnboardingStepEmail({ step: 'day5', recipientName: 'Ada' }));
     const img = html.indexOf('<img');
     expect(html.indexOf('checks with you first')).toBeLessThan(img);
-    expect(html.indexOf('Try UrgAns')).toBeGreaterThan(img);
+    expect(html.indexOf('Try AI')).toBeGreaterThan(img);
   });
 
   it('keeps the other steps as plain text, with no picture', async () => {

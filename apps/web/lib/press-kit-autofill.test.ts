@@ -66,7 +66,7 @@ describe('the source guard', () => {
     expect(patchFor('live', result)).toBeUndefined();
   });
 
-  it('NEVER writes a section UrgAns has drafted', () => {
+  it('NEVER writes a section AI has drafted', () => {
     const written = freshSections().map((entry) =>
       entry.section === 'live' ? { ...entry, source: 'ai' as const } : entry
     );

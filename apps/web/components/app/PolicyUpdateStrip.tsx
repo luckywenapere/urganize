@@ -39,7 +39,7 @@ export function PolicyUpdateStrip() {
     <div className="flex items-center justify-center gap-3 border-b border-stroke-subtle bg-bg-surface px-4 py-2 text-center">
       <p className="text-sm text-content-secondary">
         <span className="font-medium text-content-primary">We updated our terms and privacy policy.</span>{' '}
-        <span className="hidden sm:inline">They now cover distribution, pitching and UrgAns.</span>
+        <span className="hidden sm:inline">They now cover distribution, pitching and AI.</span>
       </p>
       <a
         href={TERMS_URL}

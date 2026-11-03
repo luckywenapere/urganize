@@ -102,7 +102,7 @@ describe('amounts come from the pricing package', () => {
     expect(youGet('manager', false)).toEqual([
       { label: 'Artists', value: '3' },
       { label: 'People on your team', value: '5' },
-      { label: 'UrgAns credits', value: '660 / mo' },
+      { label: 'AI credits', value: '660 / mo' },
     ]);
     expect(youGet('manager', true).at(-1)).toEqual({ label: 'Distribution', value: 'Partner' });
   });

@@ -282,7 +282,7 @@ describe('POST /api/urgans when the turn fails', () => {
         code: 'rate_limit_exceeded',
       })
     );
-    expect(result).toEqual({ status: 503, body: { mode: 'error', error: 'UrgAns is busy. Try again in a moment.' } });
+    expect(result).toEqual({ status: 503, body: { mode: 'error', error: 'AI is busy. Try again in a moment.' } });
     expect(console.error).not.toHaveBeenCalled();
     expect(recordUrgansAction).not.toHaveBeenCalled();
   });
@@ -290,7 +290,7 @@ describe('POST /api/urgans when the turn fails', () => {
   it('reports a timeout as too slow', async () => {
     const abort = Object.assign(new Error('The operation was aborted'), { name: 'AbortError' });
     const result = await failWith(abort);
-    expect(result).toEqual({ status: 504, body: { mode: 'error', error: 'UrgAns took too long. Try again.' } });
+    expect(result).toEqual({ status: 504, body: { mode: 'error', error: 'AI took too long. Try again.' } });
   });
 
   it('tells the user only that it is unavailable when the balance is empty, and says why in the log', async () => {
@@ -300,7 +300,7 @@ describe('POST /api/urgans when the turn fails', () => {
         code: 'insufficient_balance',
       })
     );
-    expect(result).toEqual({ status: 503, body: { mode: 'error', error: 'UrgAns is unavailable right now.' } });
+    expect(result).toEqual({ status: 503, body: { mode: 'error', error: 'AI is unavailable right now.' } });
     expect(String((console.error as ReturnType<typeof vi.fn>).mock.calls[0][0])).toMatch(/balance/i);
   });
 

@@ -64,7 +64,7 @@ describe('smartLinkLine', () => {
 });
 
 describe('formatSmartLinksSection', () => {
-  it('is empty when no rollout can have a link, so UrgAns never offers one', () => {
+  it('is empty when no rollout can have a link, so AI never offers one', () => {
     expect(formatSmartLinksSection([facts({ hasCode: false, link: null })], TODAY)).toBe('');
   });
 

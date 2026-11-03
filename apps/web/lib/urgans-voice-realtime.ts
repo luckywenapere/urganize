@@ -160,7 +160,7 @@ export function shouldWarn(input: { balance: number | null; minutesBilled: numbe
 export const VOICE_REFUSAL_COPY: Record<VoiceRefusal, string> = {
   out_of_credits: "You're out of credits, so I'll end the call here. Your conversation is saved.",
   call_cap: "We've hit the 30 minute limit for one call. Your conversation is saved.",
-  daily_cap: "Your team has used today's 120 voice minutes. You can keep typing to UrgAns.",
+  daily_cap: "Your team has used today's 120 voice minutes. You can keep typing to AI.",
 };
 
 // ── Call states (designer section) ───────────────────────────────────────────
@@ -189,13 +189,13 @@ export function isLiveState(state: VoiceCallState): boolean {
 
 /** The one-line status under the orb, for screen readers as well as the eye. */
 export const VOICE_STATE_LABEL: Record<VoiceCallState, string> = {
-  primer: 'Talk to UrgAns',
+  primer: 'Talk to AI',
   mic_denied: 'Microphone is blocked',
   connecting: 'Connecting…',
   listening: 'Listening',
   user_speaking: 'Listening',
   thinking: 'Thinking…',
-  speaking: 'UrgAns is speaking',
+  speaking: 'AI is speaking',
   acting: 'On it…',
   confirming: 'Waiting for your answer',
   reconnecting: 'Reconnecting…',
@@ -239,7 +239,7 @@ export const URGANS_DO_TOOL = {
   type: 'function',
   name: URGANS_DO_TOOL_NAME,
   description:
-    "Hand the user's request to UrgAns, which can read and change their rollouts, activities, notes, shows, press kits and team. Use it for anything beyond small talk: questions about their work and every change. Pass the request in the user's own words, with any names, dates and numbers they said. When UrgAns asked the user to confirm something and they clearly said yes, call it again with confirmed true; if they said no, with cancel true.",
+    "Hand the user's request to AI, which can read and change their rollouts, activities, notes, shows, press kits and team. Use it for anything beyond small talk: questions about their work and every change. Pass the request in the user's own words, with any names, dates and numbers they said. When AI asked the user to confirm something and they clearly said yes, call it again with confirmed true; if they said no, with cancel true.",
   parameters: {
     type: 'object',
     properties: {

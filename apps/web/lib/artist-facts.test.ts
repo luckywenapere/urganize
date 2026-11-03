@@ -157,7 +157,7 @@ describe('confirmation card copy', () => {
       { topic: 'playlist_pitching', value: 'Pitch to playlists' },
       { kind: 'replace', previous: fact({ id: 'f1' }) }
     );
-    expect(card.title).toBe('Change what UrgAns remembers about Kemi?');
+    expect(card.title).toBe('Change what AI remembers about Kemi?');
     expect(card.detail).toContain("Was: Don't pitch.");
     expect(card.detail).toContain('Now: Pitch to playlists.');
     expect(card.confirmLabel).toBe('Update');

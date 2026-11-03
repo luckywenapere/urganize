@@ -423,7 +423,7 @@ function soloLimitMessage(key: CountableLimitKey, limit: number): string {
     }
     case 'urgans_monthly_actions': {
       const actions = manager.limits.urgansMonthlyActions;
-      return `You have used all ${limit} UrgAns actions on your plan this period. Everything else keeps working normally, and these reset when your billing period does. upgrade to Pro for ${actions === null ? 'unlimited' : `${actions} a month`}.`;
+      return `You have used all ${limit} AI actions on your plan this period. Everything else keeps working normally, and these reset when your billing period does. upgrade to Pro for ${actions === null ? 'unlimited' : `${actions} a month`}.`;
     }
   }
 }
@@ -439,7 +439,7 @@ function limitMessage(key: CountableLimitKey, limit: number, tier: PricingTierId
     case 'active_releases':
       return `${label} plans cover ${limit} ${limit === 1 ? 'release' : 'releases'} at a time. Archive one you have finished, or upgrade to Label for unlimited releases.`;
     case 'urgans_monthly_actions':
-      return `You have used all ${limit} UrgAns actions on your plan this period. Everything else keeps working normally, and these reset when your billing period does. Upgrade to Label for unlimited.`;
+      return `You have used all ${limit} AI actions on your plan this period. Everything else keeps working normally, and these reset when your billing period does. Upgrade to Label for unlimited.`;
   }
 }
 
