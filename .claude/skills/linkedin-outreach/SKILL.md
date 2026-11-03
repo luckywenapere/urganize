@@ -66,15 +66,27 @@ Write only in phrases he uses. From his DMs:
 - "I'm the founder of a music tech startup and we're trying to solve problems for people such as yourself."
 - "A call would be the easiest way to walk you through what we've built."
 
-Short, loose punctuation, no polished marketing lines. When he asks what Urganize is, use the current positioning line, nothing older.
+Short, loose punctuation, no polished marketing lines. Write like him from the first draft: he rejected polished drafts as "robotic". Reuse his phrases but never a product description from his old DMs. When anyone asks what Urganize is, use the current positioning line, nothing older ("the team app for music release" went out once on 3 Nov and needed a correction).
+
+Second replies stay short. If they say they'll check their calendar, "Sounds good. I'm flexible." is enough.
+
+## Names
+
+- Use the first name from the profile. If it's unclear, say so when you show the draft. Examples: "Wilson Mary Oluwayemisi" (used Mary), "Tayebwa David" (Ugandan names often put the surname first, so used David), "rodricci ." (no real name, so no name).
+- Never guess a name from a handle.
 
 ## Inbox replies
 
-1. Open `/messaging/?filter=unread`. Opening a thread marks it read, so list every thread you open in case one gets missed.
+1. Open `/messaging/?filter=unread`. Opening a thread marks it read, so list every thread you open in case one gets missed. Threads you opened earlier in the session won't show as unread any more, so add them by hand.
 2. Read each thread's last messages before drafting. If they asked a question, answer it. If they named a release, offer the call.
-3. Show all drafts, wait for his yes, send, check each.
-4. If someone says they can't sign up, that's expected: Urganize is waitlist only and Oyin lets people in himself. Note their name for him so he can let them in, and never send them a sign-up link.
-5. LinkedIn only lets you edit a sent message for about an hour. After that, fix mistakes with a short follow-up, with his yes.
+3. Skip chats that have ended ("Alright thank you", "Thanks"). Don't reply just to have the last word.
+4. Never guess a fact about Oyin or the company. If they ask something you can't find in the thread or memory (e.g. "Does Tangent end with a demo day?"), leave a gap in the draft and ask him.
+5. Old threads: say what you can't tell. E.g. a call agreed months ago with no follow-up: did it happen? Flag it when you show the draft.
+6. Lay out drafts as: name, what they said (one line, their words), then the draft. Then wait for his yes.
+7. Right before sending, re-read the last message in the thread. People reply while you work, and the draft may no longer fit.
+8. Send, check each shows as "You: ..." in the thread, then check the Unread filter again: new replies usually come in during the run.
+9. If someone says they can't sign up, that's expected: Urganize is waitlist only and Oyin lets people in himself. Note their name for him so he can let them in, and never send them a sign-up link.
+10. LinkedIn only lets you edit a sent message for about an hour. After that, fix mistakes with a short follow-up, with his yes.
 
 ## Browser notes
 
@@ -82,3 +94,5 @@ Short, loose punctuation, no polished marketing lines. When he asks what Urganiz
 - Open an existing thread: `/messaging/?searchTerm=<name>`, then open the first result.
 - When the pane isn't on screen, clicks can time out. Retry once after a short wait.
 - The inbox list only draws about 10 rows while the window is hidden. Use search or the Unread filter, not scrolling.
+- The safety check sometimes blocks a send once ("Real-World Transactions"). After Oyin's yes, retry once. If it blocks again, stop and tell him.
+- After a send, the thread can take a few seconds to show the new message. Re-open the thread to check before you call it failed or send again.
