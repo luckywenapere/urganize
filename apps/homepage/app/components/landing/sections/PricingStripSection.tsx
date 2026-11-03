@@ -51,6 +51,10 @@ export function PricingStripSection() {
       // The full price struck through above the offer (founder, Nov 2, 2026).
       was: !tier.contactSales && intro ? formatTierPrice(id) : null,
       highlights: tierHighlights(id).slice(0, 3),
+      // What the plan does for the team (#1063, the 3 Nov positioning), read
+      // from @urganize/pricing like /pricing and the sign-in page.
+      outcomeHeading: tier.outcomeHeading ?? null,
+      outcomes: tier.outcomes ?? [],
     };
   });
 
@@ -76,7 +80,7 @@ export function PricingStripSection() {
         {/* Solo, Manager and Label ("Let's talk") since 2026-10-26, when Group
             came off. One column on a phone, three from md, like /pricing. */}
         <ul className="mx-auto mt-12 grid max-w-[60rem] gap-4 md:grid-cols-3">
-          {tiers.map(({ id, tier, price, then, was, highlights }) => (
+          {tiers.map(({ id, tier, price, then, was, highlights, outcomeHeading, outcomes }) => (
             <li
               key={id}
               className="flex h-full flex-col rounded-[1.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5 sm:p-6"
@@ -101,7 +105,28 @@ export function PricingStripSection() {
               {then ? (
                 <p className="mt-1 text-[0.8rem] leading-5 text-[var(--marketing-text-muted)]">{then}</p>
               ) : null}
-              <ul className="mt-4 space-y-1 sm:mt-5 sm:space-y-2">
+              {outcomeHeading ? (
+                <>
+                  <p className="mt-4 text-sm font-semibold text-[var(--marketing-text)] sm:mt-5">{outcomeHeading}</p>
+                  <ul className="mt-2 space-y-1 sm:space-y-2">
+                    {outcomes.map((line) => (
+                      <li
+                        key={line}
+                        className="flex items-baseline gap-3 text-[0.95rem] leading-7 text-[var(--marketing-text)]"
+                      >
+                        <span
+                          className="font-mono text-[0.72rem] text-[var(--marketing-accent)]"
+                          aria-hidden
+                        >
+                          —
+                        </span>
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+              <ul className="mt-4 space-y-1 border-t border-[var(--marketing-border)] pt-4 sm:mt-5 sm:space-y-2 sm:pt-5">
                 {highlights.map((line) => (
                   <li
                     key={line}
