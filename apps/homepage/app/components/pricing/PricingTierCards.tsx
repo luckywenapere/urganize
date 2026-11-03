@@ -18,7 +18,7 @@ import {
   type PricingTierId,
 } from "@urganize/pricing";
 import { APP_ORIGIN } from "@/lib/app-urls";
-import { PlanPicture } from "./PlanPicture";
+import { PlanPicture } from "@urganize/ui/PlanPicture";
 
 // The price table.
 //
@@ -152,13 +152,21 @@ export function PricingTierCards() {
             const priced = isSelfServe(tierId);
             const { figure, unit, sub, was } = cardPrice(tierId, interval);
             const features = tierFeatures(tierId);
+            // Outcomes first (#1053, the 3 Nov positioning), then the limits.
+            // A limit already said as an outcome is not said twice.
+            const outcomes = tier.outcomes ?? [];
+            const featureLines = features.lines.filter((line) => !outcomes.includes(line));
             return (
               <div
                 key={tierId}
                 className="flex h-full flex-col rounded-[1.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-6"
               >
                 {/* What the plan looks like in the app, before the words (#963). */}
-                <PlanPicture tierId={tierId} />
+                <PlanPicture
+                  activeReleases={tier.limits.activeReleases}
+                  seats={tier.limits.seats}
+                  monthlyCredits={tier.urgansMonthlyCredits}
+                />
 
                 <p className="mt-5 flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.22em] text-[var(--marketing-accent)]">
                   {tier.label}
@@ -206,13 +214,30 @@ export function PricingTierCards() {
                   </a>
                 )}
 
+                {tier.outcomeHeading ? (
+                  <>
+                    <p className="mt-6 text-sm font-semibold text-[var(--marketing-text)]">{tier.outcomeHeading}</p>
+                    <ul className="mt-3 flex flex-col gap-2.5">
+                      {outcomes.map((line) => (
+                        <li
+                          key={line}
+                          className="flex items-start gap-2 text-sm leading-6 text-[var(--marketing-text-muted)]"
+                        >
+                          <RiCheckLine className="mt-1 size-4 shrink-0 text-[var(--marketing-accent)]" aria-hidden="true" />
+                          <span>{line}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
+
                 {/* What the plan includes, X-style: each card adds to the one
                     before it. Every line is true of the product today. */}
                 <p className="mt-6 border-b border-[var(--marketing-border)] pb-2.5 text-[0.8rem] text-[var(--marketing-text-subtle)]">
                   {features.heading}
                 </p>
                 <ul className="mt-3 flex flex-1 flex-col gap-2.5">
-                  {features.lines.map((line) => (
+                  {featureLines.map((line) => (
                     <li
                       key={line}
                       className="flex items-start gap-2 text-sm leading-6 text-[var(--marketing-text-muted)]"

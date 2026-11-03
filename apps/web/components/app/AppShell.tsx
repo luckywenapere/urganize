@@ -255,6 +255,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isCuratorRoute = pathname?.startsWith('/curator');
   const isPublicStandaloneRoute =
     pathname === '/' ||
+    // The sign-in page (#1053): its two-column hero and footer are measured to
+    // the window edge, so the signed-in gutter would push them off true.
+    pathname === '/auth' ||
     // The unsubscribe link in an email, opened by someone who may not be signed in.
     pathname === '/unsubscribe' ||
     pathname?.startsWith('/credits/') ||

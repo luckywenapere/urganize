@@ -1,9 +1,11 @@
 {
   "name": "@urganize/ui",
-  "version": "1.244.0",
+  "version": "1.245.0",
   "private": true,
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "*.css"
+  ],
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {

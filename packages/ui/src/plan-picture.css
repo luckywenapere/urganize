@@ -1,0 +1,282 @@
+/* The small product picture on each pricing card (PlanPicture.tsx, #963; shared since #1053 by the
+   marketing site and the sign-in page).
+   Drawn at 320x196 "picture pixels" and scaled to the card's width with
+   container query units: --px is one picture pixel, so every size below is
+   calc(N * var(--px)). Colours follow the product app's light and dark
+   tokens (apps/web globals.css), keyed off the site's theme attribute; the
+   raised card and the empty task circle are picked to match them. */
+.plan-shot {
+  --ps-ground: #ebe4d6;
+  --ps-surface: #faf5ec;
+  --ps-raised: #fffdf8;
+  --ps-line: #e6dfd2;
+  --ps-line-faint: #efe9de;
+  --ps-ink: #1a1611;
+  --ps-ink-2: #4b4740;
+  --ps-ink-3: #6a665f;
+  --ps-check: #b9b2a5;
+  --ps-brand: #14643a;
+  --ps-track: #e7e0d3;
+  --ps-shadow: rgba(26, 22, 17, 0.06);
+  --ps-shadow-strong: rgba(26, 22, 17, 0.14);
+  container-type: inline-size;
+  position: relative;
+  aspect-ratio: 320 / 196;
+  overflow: hidden;
+  border-radius: 0.875rem;
+  background: var(--ps-ground);
+  font-family: var(--font-sans);
+  letter-spacing: normal;
+  user-select: none;
+}
+
+html[data-marketing-theme="dark"] .plan-shot,
+html[data-theme="dark"] .plan-shot {
+  --ps-ground: #0d120e;
+  --ps-surface: #181d19;
+  --ps-raised: #222823;
+  --ps-line: rgba(245, 240, 230, 0.08);
+  --ps-line-faint: rgba(245, 240, 230, 0.05);
+  --ps-ink: #f5f0e6;
+  --ps-ink-2: #a1a098;
+  --ps-ink-3: #878881;
+  --ps-check: #5c5e58;
+  --ps-brand: #7fd99a;
+  --ps-track: rgba(245, 240, 230, 0.1);
+  --ps-shadow: rgba(0, 0, 0, 0.3);
+  --ps-shadow-strong: rgba(0, 0, 0, 0.5);
+}
+
+/* Without container query units every size above is invalid, so leave the
+   picture out rather than draw it broken. */
+@supports not (width: 1cqw) {
+  .plan-shot {
+    display: none;
+  }
+}
+
+.plan-shot__stage {
+  --px: calc(100cqw / 320);
+  position: absolute;
+  inset: 0;
+}
+
+.plan-shot__panel {
+  position: absolute;
+  top: calc(18 * var(--px));
+  left: calc(18 * var(--px));
+  width: calc(330 * var(--px));
+  height: calc(240 * var(--px));
+  border: 1px solid var(--ps-line);
+  border-radius: calc(12 * var(--px));
+  background: var(--ps-surface);
+  box-shadow: 0 1px 2px var(--ps-shadow), 0 calc(8 * var(--px)) calc(24 * var(--px)) var(--ps-shadow);
+}
+
+.plan-shot__head {
+  display: flex;
+  align-items: baseline;
+  gap: calc(8 * var(--px));
+  padding: calc(12 * var(--px)) calc(14 * var(--px)) calc(10 * var(--px));
+  border-bottom: 1px solid var(--ps-line);
+  line-height: 1.3;
+}
+
+.plan-shot__head b {
+  font-size: calc(12.5 * var(--px));
+  font-weight: 600;
+  color: var(--ps-ink);
+}
+
+.plan-shot__head span {
+  font-size: calc(11 * var(--px));
+  color: var(--ps-ink-3);
+}
+
+.plan-shot__list {
+  padding: 0 calc(14 * var(--px));
+}
+
+/* More than the picture holds: the list runs on past the edge. */
+.plan-shot__list--more {
+  -webkit-mask-image: linear-gradient(to bottom, #000 52%, transparent 82%);
+  mask-image: linear-gradient(to bottom, #000 52%, transparent 82%);
+}
+
+.plan-shot__row {
+  display: grid;
+  grid-template-columns: calc(22 * var(--px)) minmax(0, 1fr) calc(64 * var(--px));
+  align-items: center;
+  gap: calc(9 * var(--px));
+  height: calc(40 * var(--px));
+  border-bottom: 1px solid var(--ps-line-faint);
+}
+
+.plan-shot__avatar,
+.plan-shot__pile > span {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.plan-shot__avatar {
+  width: calc(22 * var(--px));
+  height: calc(22 * var(--px));
+  font-size: calc(8.5 * var(--px));
+}
+
+.plan-shot__who {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.plan-shot__who b {
+  font-size: calc(11.5 * var(--px));
+  font-weight: 600;
+  color: var(--ps-ink);
+}
+
+.plan-shot__who i {
+  font-family: var(--font-display);
+  font-size: calc(10 * var(--px));
+  font-style: normal;
+  color: var(--ps-ink-2);
+}
+
+.plan-shot__bar {
+  position: relative;
+  height: calc(4 * var(--px));
+  overflow: hidden;
+  border-radius: calc(2 * var(--px));
+  background: var(--ps-track);
+}
+
+.plan-shot__bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--ps-brand);
+}
+
+.plan-shot__tasks {
+  display: flex;
+  flex-direction: column;
+  gap: calc(9 * var(--px));
+  padding: calc(10 * var(--px)) 0 0 calc(5 * var(--px));
+}
+
+.plan-shot__task {
+  display: flex;
+  align-items: center;
+  gap: calc(8 * var(--px));
+  font-size: calc(11 * var(--px));
+  line-height: 1.3;
+  color: var(--ps-ink-2);
+}
+
+.plan-shot__task::before {
+  content: "";
+  flex: none;
+  box-sizing: border-box;
+  width: calc(12 * var(--px));
+  height: calc(12 * var(--px));
+  border: calc(1.5 * var(--px)) solid var(--ps-check);
+  border-radius: 50%;
+}
+
+.plan-shot__task--done {
+  color: var(--ps-ink-3);
+  text-decoration: line-through;
+  text-decoration-color: var(--ps-check);
+}
+
+.plan-shot__task--done::before {
+  border-color: var(--ps-brand);
+  background: var(--ps-brand);
+  box-shadow: inset 0 0 0 calc(2 * var(--px)) var(--ps-surface);
+}
+
+.plan-shot__card {
+  position: absolute;
+  right: calc(18 * var(--px));
+  bottom: calc(18 * var(--px));
+  width: calc(150 * var(--px));
+  padding: calc(11 * var(--px)) calc(12 * var(--px)) calc(10 * var(--px));
+  border-radius: calc(12 * var(--px));
+  background: var(--ps-raised);
+  box-shadow: 0 1px 2px var(--ps-shadow), 0 calc(12 * var(--px)) calc(28 * var(--px)) var(--ps-shadow-strong);
+}
+
+/* Faces above the count, so "Your whole team" fits the same card width as
+   "2 people". */
+.plan-shot__team {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(6 * var(--px));
+  padding-bottom: calc(9 * var(--px));
+  border-bottom: 1px solid var(--ps-line);
+}
+
+.plan-shot__pile {
+  display: flex;
+  flex: none;
+}
+
+.plan-shot__pile > span {
+  width: calc(20 * var(--px));
+  height: calc(20 * var(--px));
+  font-size: calc(8 * var(--px));
+  box-shadow: 0 0 0 calc(2 * var(--px)) var(--ps-raised);
+}
+
+.plan-shot__pile > span + span {
+  margin-left: calc(-6 * var(--px));
+}
+
+.plan-shot__team b {
+  font-size: calc(11 * var(--px));
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  color: var(--ps-ink);
+}
+
+.plan-shot__credits {
+  display: flex;
+  flex-direction: column;
+  gap: calc(2 * var(--px));
+  padding-top: calc(8 * var(--px));
+  line-height: 1.3;
+}
+
+.plan-shot__credits small {
+  font-size: calc(10 * var(--px));
+  color: var(--ps-ink-3);
+}
+
+.plan-shot__credits > span {
+  display: flex;
+  align-items: baseline;
+  gap: calc(5 * var(--px));
+}
+
+.plan-shot__credits strong {
+  font-size: calc(19 * var(--px));
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ps-ink);
+}
+
+.plan-shot__credits > span > span {
+  font-size: calc(10.5 * var(--px));
+  color: var(--ps-ink-3);
+}

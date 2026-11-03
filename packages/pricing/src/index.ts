@@ -341,6 +341,12 @@ export type PricingTierDefinition = {
   label: string;
   /** One line on who this is for — the pricing card's subtitle. */
   audience: string;
+  /** What the plan does for the team at its career stage, in the 3 Nov 2026
+   *  positioning ("run your music business better, wherever you are in your
+   *  career"). Shown above the limits on the sign-in page and /pricing. Only
+   *  features that exist today belong here. */
+  outcomeHeading?: string;
+  outcomes?: readonly string[];
   /** UrgAns credits the plan gives each billing window, as the pricing card
    *  prints them. apps/web/lib/credits/allowance.test.ts holds this equal to
    *  ALLOWANCE_CREDITS, so the published number is the granted one. Group's is its default; the
@@ -443,10 +449,18 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
   solo: {
     id: 'solo',
     label: 'Emerging',
+    // Career-stage wording since 2026-11-03 (#1053, the founder's new
+    // positioning). Before that:
     // "For an artist and their manager." since 2026-10-17 (founder-approved
     // reprice, strategy doc section 8), when Solo went to two seats. It read
     // "For an independent artist." from 2026-10-02 while Solo was one seat.
-    audience: 'For an artist and their manager.',
+    audience: 'For artists and managers starting out.',
+    outcomeHeading: 'Structure from your first rollout',
+    outcomes: [
+      'A rollout plan made for you, every step and date',
+      'An AI assistant for the music business',
+      'Find collaborators in the Urganize directory',
+    ],
     // ₦4,000 a month with a ₦2,600 first month since 2026-11-02 (founder
     // approved docs/mocks/emerging-offer; no paying Emerging team, so nobody
     // moves). Card checkout needs a ₦2,600 Plan (invoice_limit 1) behind
@@ -485,7 +499,15 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
   manager: {
     id: 'manager',
     label: 'Pro',
-    audience: 'For a manager running more than one artist.',
+    // Career-stage wording since 2026-11-03 (#1053). It read "For a manager
+    // running more than one artist." before.
+    audience: 'For managers taking their artists to the next level.',
+    outcomeHeading: 'Run your roster at the next level',
+    outcomes: [
+      'Every artist and rollout in one view',
+      'Your team knows their job till drop day. Nobody chases anybody.',
+      'Order distribution inside the rollout',
+    ],
     // ₦26,000 flat from 2026-10-31 (founder, with the rename to Pro; no paying
     // Manager team, so nobody moves). The starting price is gone. Card checkout
     // needs ₦26,000 / ₦260,000 Paystack Plans behind the vars.
@@ -543,12 +565,20 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
   label: {
     id: 'label',
     label: 'Label',
+    // Career-stage wording since 2026-11-03 (#1053, the founder's new
+    // positioning). Before that:
     // "For small labels and management teams." since 2026-10-02, the strategy
     // doc's wording for this tier ("Labels and management companies") in the
     // site's plain voice. It read "For a label or a team running a roster."
     // until 2026-09-11, then "For a team running a roster." while labels were
     // out of the audience.
-    audience: 'For small labels and management teams.',
+    audience: 'For labels organising and scaling.',
+    outcomeHeading: 'Organise and scale your label',
+    outcomes: [
+      'Your whole catalogue in one place: artists, songs, credits',
+      'We set your roster up with you',
+      'WhatsApp support, answered same day',
+    ],
     // ₦100,000 since 2026-10-26 (founder, with the call-led onboarding rules;
     // Paystack Plans at
     // ₦100,000 / ₦500,000 / ₦1,000,000 are still to be minted.
@@ -670,6 +700,19 @@ export function introThenLine(id: PricingTierId): string | null {
   if (!getIntroPrice(id)) return null;
   const span = INTRO_MONTHS === 1 ? 'month' : `${INTRO_MONTHS} months`;
   return `for your first ${span}, then ${formatTierPrice(id, 'monthly')}`;
+}
+
+/** The plan's outcome block (heading plus lines) and the limits that follow
+ *  it, with any limit line already said as an outcome left out so a card
+ *  never repeats itself. null outcomes for a tier that has none (Group). */
+export function tierOutcomes(id: PricingTierId): {
+  heading: string | null;
+  outcomes: readonly string[];
+  includes: string[];
+} {
+  const { outcomeHeading, outcomes = [] } = PRICING_TIERS[id];
+  const includes = tierHighlights(id).filter((line) => !outcomes.includes(line));
+  return { heading: outcomeHeading ?? null, outcomes, includes };
 }
 
 /** The feature list under a pricing card: a lead-in line, then what this plan
@@ -849,8 +892,8 @@ export function tierHighlights(
   lines.push(
     // Only a tier with no price at all (Group) agrees its credits per deal.
     !monthlyPrice
-      ? 'UrgAns credits to fit your deal'
-      : `${urgansMonthlyCredits.toLocaleString('en-US')} UrgAns credits a month`
+      ? 'AI credits to fit your deal'
+      : `${urgansMonthlyCredits.toLocaleString('en-US')} AI credits a month`
   );
 
   const distribution = distributionHighlight(
