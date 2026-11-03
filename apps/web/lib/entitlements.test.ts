@@ -824,11 +824,11 @@ describe('tierHighlights', () => {
 
   it('says unlimited where there is no ceiling, and quotes no number', () => {
     const lines = tierHighlights('label');
-    // The UrgAns line is a credit grant, not a ceiling, so it carries a number.
-    const ceilingLines = lines.slice(0, 4).filter((line) => !line.includes('UrgAns credits'));
+    // The AI credits line is a credit grant, not a ceiling, so it carries a number.
+    const ceilingLines = lines.slice(0, 4).filter((line) => !line.includes('AI credits'));
     expect(ceilingLines.length).toBe(3);
     expect(lines).toContain(
-      `${PRICING_TIERS.label.urgansMonthlyCredits.toLocaleString('en-US')} UrgAns credits a month`
+      `${PRICING_TIERS.label.urgansMonthlyCredits.toLocaleString('en-US')} AI credits a month`
     );
     for (const line of ceilingLines) {
       expect(line.toLowerCase()).toContain('unlimited');

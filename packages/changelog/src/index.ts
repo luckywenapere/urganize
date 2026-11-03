@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.245.0",
+    title: "A new sign-in page",
+    tag: "Account",
+    date: "November 3, 2026",
+    highlights: [
+      "The sign-in page is new: sign in with Google or your email, and see the plans and answers to common questions below.",
+      "Each plan now says what it does for you, wherever you are in your career.",
+    ],
+  },
+  {
     version: "1.244.0",
     title: "A lower price for your first month",
     tag: "Account",

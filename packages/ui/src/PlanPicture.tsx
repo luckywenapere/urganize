@@ -1,12 +1,14 @@
-import { getTier, type PricingTierId } from "@urganize/pricing";
+import "./plan-picture.css";
 
 // The small picture at the top of each pricing card (#963, mock approved under
 // #951): the same shot of Urganize on every plan, your rollouts list and a card
-// with your team and your UrgAns credits, where only the plan's numbers change.
+// with your team and your AI credits, where only the plan's numbers change.
+// Shared since #1053 by /pricing on the marketing site and the sign-in page in
+// the app, so the two pages can never draw a plan differently.
 //
 // Drawn in markup rather than shipped as a screenshot, on purpose: every
-// number in it comes from the tier's `limits` and `urgansMonthlyCredits` in
-// @urganize/pricing, so it cannot show a seat count, a rollout count or a
+// number in it is passed in from the tier's `limits` and `urgansMonthlyCredits`
+// in @urganize/pricing by the caller, so it cannot show a seat count, a rollout count or a
 // credit allowance the price list (and the product) does not. A WebP would
 // freeze today's numbers into a file the next reprice forgets.
 //
@@ -33,8 +35,17 @@ const PEOPLE = [
   { initials: "TE", color: "#9a6a2e" },
 ] as const;
 
-export function PlanPicture({ tierId }: { tierId: PricingTierId }) {
-  const { limits, urgansMonthlyCredits } = getTier(tierId);
+export type PlanPictureProps = {
+  /** Rollouts at a time; null is no limit. */
+  activeReleases: number | null;
+  /** People on the team; null is no limit. */
+  seats: number | null;
+  /** AI credits a month. */
+  monthlyCredits: number;
+};
+
+export function PlanPicture({ activeReleases, seats, monthlyCredits }: PlanPictureProps) {
+  const limits = { activeReleases, seats };
   const unlimitedRollouts = limits.activeReleases === null;
   const rollouts = ROLLOUTS.slice(0, limits.activeReleases ?? ROLLOUTS.length);
   // More rollouts than the picture holds: let the list run past the edge.
@@ -90,9 +101,9 @@ export function PlanPicture({ tierId }: { tierId: PricingTierId }) {
             <b>{peopleLine}</b>
           </div>
           <div className="plan-shot__credits">
-            <small>UrgAns credits</small>
+            <small>AI credits</small>
             <span>
-              <strong>{urgansMonthlyCredits.toLocaleString("en-US")}</strong>
+              <strong>{monthlyCredits.toLocaleString("en-US")}</strong>
               <span>a month</span>
             </span>
           </div>
