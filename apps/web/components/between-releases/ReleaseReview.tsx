@@ -133,7 +133,7 @@ function ReviewBody({
           U
         </span>
         <p className="text-[15px] leading-relaxed text-content-primary">
-          <span className="sr-only">UrgAns: </span>
+          <span className="sr-only">AI: </span>
           {review.verdict}
         </p>
       </div>

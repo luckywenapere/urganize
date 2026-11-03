@@ -39,7 +39,7 @@ export async function openVoiceGate(request: NextRequest): Promise<{ error: Next
   }
   const team = await getTeamAccessForUser(auth.user.id, auth.user.email);
   if (!team.primaryWorkspaceId) {
-    return { error: NextResponse.json({ error: 'You need a team to talk to UrgAns.' }, { status: 403 }) };
+    return { error: NextResponse.json({ error: 'You need a team to talk to AI.' }, { status: 403 }) };
   }
   return { auth, team, workspaceId: team.primaryWorkspaceId };
 }

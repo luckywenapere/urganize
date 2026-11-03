@@ -20,7 +20,7 @@ export function UrgAnsLabel({ right }: { right?: ReactNode }) {
     <div className={s.blockHead} style={{ padding: 0, marginBottom: 0 }}>
       <span className={cx(s.meta, s.urgansLabel)}>
         <Glyph small />
-        UrgAns
+        AI
       </span>
       {right}
     </div>
@@ -199,7 +199,7 @@ export function DeskGate({ access, children, standalone = true }: { access: Desk
   if (!standalone) return <div className={s.desk}>{body}</div>;
   return (
     <div className={cx(s.desk, s.ambient)}>
-      <DeskBar context="UrgAns" />
+      <DeskBar context="AI" />
       {body}
     </div>
   );

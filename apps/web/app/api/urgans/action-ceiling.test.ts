@@ -94,7 +94,7 @@ const REFUSED = {
   key: 'urgans_monthly_actions',
   limit: 150,
   current: 150,
-  message: 'You have used all 150 UrgAns actions on your plan this month.',
+  message: 'You have used all 150 AI actions on your plan this month.',
   upgradeTo: 'label',
 };
 
@@ -175,7 +175,7 @@ describe('POST /api/urgans — the action ceiling', () => {
   });
 
   it('does not charge a turn the gateway failed to complete', async () => {
-    runChappiAgent.mockRejectedValue(new Error('UrgAns is unavailable right now.'));
+    runChappiAgent.mockRejectedValue(new Error('AI is unavailable right now.'));
 
     const response = await POST(post({ messages }));
 

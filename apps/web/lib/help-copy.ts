@@ -280,7 +280,7 @@ export const HELP_COPY = {
     text: 'Your fans and what the numbers say. Coming soon.',
   },
   'nav.urgans': {
-    label: 'UrgAns',
+    label: 'AI',
     text: 'Your assistant. Ask it to plan, write or find anything about your music.',
   },
   'nav.more': {

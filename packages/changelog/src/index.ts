@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.245.1",
+    tag: "AI",
+    date: "November 3, 2026",
+    highlights: [
+      "The assistant is now just called AI. Same helper, new name, and your credits are AI credits.",
+    ],
+  },
+  {
     version: "1.245.0",
     title: "A new sign-in page",
     tag: "Account",

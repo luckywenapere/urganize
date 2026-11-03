@@ -118,7 +118,7 @@ export function buildIdeaChangesMessages(input: IdeaChangesPromptInput): AiMessa
   const window = changeWindow(ctx);
   const today = ctx.releaseDate === null ? null : daysBetween(ctx.releaseDate, ctx.todayYmd);
   const system = [
-    'You are UrgAns, the release planner inside Urganize, for music teams in Nigeria.',
+    'You are the release planner inside Urganize, for music teams in Nigeria.',
     'A plan already exists. The team just added a new idea. Suggest how the plan should change, as JSON matching the schema. Plain words. No hype, no em dashes.',
     `- "adds": 0 to ${MAX_IDEA_ADDS} NEW tasks that carry out the idea. Do not repeat a task already on the board. Each title is a short action. "why" says how it serves the idea.`,
     `- "moves": 0 to ${MAX_IDEA_MOVES} existing open tasks whose timing should change because of the idea. "task" is the key (t1, t2 ...). Only move a task if the idea clearly needs it.`,

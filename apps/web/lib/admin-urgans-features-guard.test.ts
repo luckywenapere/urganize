@@ -14,7 +14,7 @@ import { URGANS_CHOSEN_FEATURES } from './admin-urgans-usage';
 const root = path.resolve(__dirname, '..');
 const read = (file: string) => readFileSync(path.join(root, file), 'utf8');
 
-describe('which UrgAns features count on the cockpit', () => {
+describe('which AI features count on the cockpit', () => {
   it('counts every feature the AI usage log records', () => {
     expect([...URGANS_CHOSEN_FEATURES].sort()).toEqual([...AI_USAGE_FEATURES].sort());
     expect(URGANS_CHOSEN_FEATURES.has('status')).toBe(true);

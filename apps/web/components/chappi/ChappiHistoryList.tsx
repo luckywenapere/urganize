@@ -113,13 +113,13 @@ export function ChappiHistoryList({ variant, onDone }: ChappiHistoryListProps) {
           </div>
         ) : summaries.length === 0 && isMenu ? (
           <p className="px-2.5 py-2 text-xs leading-relaxed text-content-tertiary">
-            Your sessions with UrgAns show up here.
+            Your sessions with AI show up here.
           </p>
         ) : summaries.length === 0 ? (
           <div className="px-3.5 py-2">
             <EmptyState
               title="No saved sessions yet"
-              description="Your sessions with UrgAns show up here, so you can pick one up again later."
+              description="Your sessions with AI show up here, so you can pick one up again later."
             />
           </div>
         ) : (

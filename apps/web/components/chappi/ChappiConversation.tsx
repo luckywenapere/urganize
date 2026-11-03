@@ -1525,9 +1525,9 @@ export function ChappiConversation({
                 ? 'Turning your voice into text…'
                 : pageRecordId
                   ? RECORD_CAPTURE_PLACEHOLDER
-                  : placeholder ?? 'Ask UrgAns…'
+                  : placeholder ?? 'Ask AI…'
             }
-            aria-label="Message UrgAns"
+            aria-label="Message AI"
             disabled={isThinking || isTranscribing}
             // 16px below sm is deliberate: anything smaller makes iOS zoom the
             // page on focus, which is its own kind of layout jump.
@@ -1543,7 +1543,7 @@ export function ChappiConversation({
             // negative. The recording colour keys off a data attribute.
             data-recording={isRecording ? 'true' : undefined}
             // "Dictate" once Talk sits beside it, so the two never share a name.
-            aria-label={isRecording ? 'Stop recording' : TALK_ENABLED ? 'Dictate' : 'Talk to UrgAns'}
+            aria-label={isRecording ? 'Stop recording' : TALK_ENABLED ? 'Dictate' : 'Talk to AI'}
             title={TALK_ENABLED && !isRecording ? 'Dictate' : undefined}
             // Ghost style so Send stays the primary action.
             disabled={isThinking || isTranscribing || voice.state === 'requesting'}
@@ -1827,7 +1827,7 @@ export function ChappiConversation({
         ) : null}
         <div className={`mx-auto w-full ${isPanel ? '' : 'max-w-[46rem] px-1'}`}>
           {/* Phase 3 nudge: only once UrgAns has actually answered ("when
-              UrgAns answers in a team with an empty brief", per the spec) —
+              AI answers in a team with an empty brief", per the spec) —
               never on the empty landing, never mid-question. Above the
               composer so it is visible without scrolling; the component
               itself decides whether it has anything to say. */}

@@ -276,7 +276,7 @@ export function TeachUrgAns({ mode }: { mode: 'curator' | 'sample' }) {
   if (!loaded) {
     return (
       <div className={cx(s.desk, s.ambient)}>
-        <DeskBar context={curatorName || 'UrgAns'} />
+        <DeskBar context={curatorName || 'AI'} />
         <DeskSkeleton />
       </div>
     );
@@ -294,7 +294,7 @@ export function TeachUrgAns({ mode }: { mode: 'curator' | 'sample' }) {
           {primaryLabel}
         </button>
       )}
-      <div className={cx(s.meta, s.dockCap)}>UrgAns never promises beyond this</div>
+      <div className={cx(s.meta, s.dockCap)}>AI never promises beyond this</div>
     </div>
   );
 
@@ -321,8 +321,8 @@ export function TeachUrgAns({ mode }: { mode: 'curator' | 'sample' }) {
                 </Link>
               }
             />
-            <h1 className={cx(s.display, s.title)}>Teach UrgAns</h1>
-            <p className={s.sub}>Answer once. UrgAns answers artists for you.</p>
+            <h1 className={cx(s.display, s.title)}>Teach AI</h1>
+            <p className={s.sub}>Answer once. AI answers artists for you.</p>
             {mode === 'sample' ? (
               <p className={s.meta} style={{ marginTop: 12, color: 'var(--fd-faint)' }}>
                 Sample curator · changes stay on this device
@@ -338,7 +338,7 @@ export function TeachUrgAns({ mode }: { mode: 'curator' | 'sample' }) {
             ) : null}
             {save === 'saved' ? (
               <Banner tone="ok" title="Saved.">
-                {isOn ? 'UrgAns is answering for you.' : 'UrgAns is off. Artists ask you directly.'}
+                {isOn ? 'AI is answering for you.' : 'AI is off. Artists ask you directly.'}
               </Banner>
             ) : null}
             {save === 'error' ? (
@@ -351,14 +351,14 @@ export function TeachUrgAns({ mode }: { mode: 'curator' | 'sample' }) {
               <div className={s.row} style={{ minHeight: 76 }}>
                 <div className={s.grow}>
                   <div className={s.t} style={{ fontSize: 16 }} id="fd-toggle-label">
-                    Let UrgAns answer artists for me
+                    Let AI answer artists for me
                   </div>
                   <div className={s.s}>{ready ? 'Only from this page and each pitch.' : 'Add one service to turn this on.'}</div>
                 </div>
                 <Toggle
                   on={isOn}
                   disabled={!ready}
-                  label="Let UrgAns answer artists for me"
+                  label="Let AI answer artists for me"
                   onChange={(next) => {
                     setEnabled(next);
                     if (save === 'saved') setSave('idle');

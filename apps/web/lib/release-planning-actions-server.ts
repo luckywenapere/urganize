@@ -199,13 +199,13 @@ export type AiFailureDecision =
   | { action: 'proceed'; warning: string | null }
   | { action: 'refuse'; status: 503; code: 'tailoring_unavailable'; error: string };
 
-const NOTES_UNREAD_ERROR = 'UrgAns could not read your notes just now. Try again in a moment.';
+const NOTES_UNREAD_ERROR = 'AI could not read your notes just now. Try again in a moment.';
 const UNTAILORED_WARNING =
-  'UrgAns could not tailor the rest this time. The plan follows the playbook and your answers.';
+  'AI could not tailor the rest this time. The plan follows the playbook and your answers.';
 const FIRST_PLAN_NOTES_WARNING =
-  'UrgAns could not read your notes this time. Your first plan follows the playbook and your selected answers.';
+  'AI could not read your notes this time. Your first plan follows the playbook and your selected answers.';
 const NOT_CONFIGURED_NOTES_WARNING =
-  'UrgAns is not set up to read notes on this environment. The plan follows the playbook and your selected answers.';
+  'AI is not set up to read notes on this environment. The plan follows the playbook and your selected answers.';
 
 /**
  * What a model failure does to the request (founder call, 2026-09-12).

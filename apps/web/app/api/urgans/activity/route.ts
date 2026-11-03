@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await query;
   if (error) {
     console.error('[urgans-activity] read failed:', error.message);
-    return NextResponse.json({ error: 'Could not load what UrgAns did.' }, { status: 500 });
+    return NextResponse.json({ error: 'Could not load what AI did.' }, { status: 500 });
   }
 
   const rows = ((data as LogRow[] | null) ?? []).map(

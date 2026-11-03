@@ -31,7 +31,7 @@ describe('buildHistory', () => {
         'Monthly credits',
         'Trial credits',
         'Trial credits ended',
-        'UrgAns chat',
+        'AI chat',
       ].sort()
     );
   });
@@ -42,7 +42,7 @@ describe('buildHistory', () => {
       row({ kind: 'spend', credits: -2, created_at: '2026-10-03T00:00:00Z' }),
       row({ kind: 'allowance', credits: 150, created_at: '2026-10-02T00:00:00Z' }),
     ]);
-    expect(entries.map((e) => e.label)).toEqual(['UrgAns chat', 'Monthly credits', 'Trial credits']);
+    expect(entries.map((e) => e.label)).toEqual(['AI chat', 'Monthly credits', 'Trial credits']);
   });
 
   it('folds the rows of one turn into a single line that adds up', () => {
@@ -69,7 +69,7 @@ describe('buildHistory', () => {
       row({ kind: 'spend', credits: -7, metadata: { source: 'embedded_action', action: 'something.new' } }),
     ]);
     expect(entries.map((e) => e.label).sort()).toEqual(
-      ['Built a rollout plan', 'Filled a pitch kit', 'UrgAns did some work'].sort()
+      ['Built a rollout plan', 'Filled a pitch kit', 'AI did some work'].sort()
     );
   });
 
@@ -124,7 +124,7 @@ describe('a voice call in the history (2026-10-11)', () => {
       voiceRow(3, -2, '2026-10-11T10:02:00Z'),
     ] as never);
     expect(entries).toHaveLength(1);
-    expect(entries[0]).toMatchObject({ label: 'Voice call with UrgAns', credits: -6 });
+    expect(entries[0]).toMatchObject({ label: 'Voice call with AI', credits: -6 });
   });
 });
 

@@ -93,8 +93,8 @@ export function classifyFile(file: { name: string; type: string; size: number })
       ok: false,
       reason:
         ext === 'doc' || ext === 'xls'
-          ? 'UrgAns cannot read the old .doc and .xls files. Save it as .docx or .xlsx and try again.'
-          : 'UrgAns cannot read PowerPoint files yet. Save the slides as a PDF and attach that.',
+          ? 'AI cannot read the old .doc and .xls files. Save it as .docx or .xlsx and try again.'
+          : 'AI cannot read PowerPoint files yet. Save the slides as a PDF and attach that.',
     };
   }
 
@@ -117,7 +117,7 @@ export function classifyFile(file: { name: string; type: string; size: number })
 
   return {
     ok: false,
-    reason: 'UrgAns can read pictures, PDFs, Word and Excel files, and plain text (text, CSV, JSON, Markdown).',
+    reason: 'AI can read pictures, PDFs, Word and Excel files, and plain text (text, CSV, JSON, Markdown).',
   };
 }
 

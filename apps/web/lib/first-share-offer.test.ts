@@ -108,7 +108,7 @@ describe('withFirstShareOffer', () => {
   });
 });
 
-describe('deferFirstShareOffer (UrgAns create_release, and a reply that lands late)', () => {
+describe('deferFirstShareOffer (AI create_release, and a reply that lands late)', () => {
   it('follows the same rules as the create flows', () => {
     deferFirstShareOffer('rel-9', true);
     expect(readDeferredFirstShare()?.releaseId).toBe('rel-9');

@@ -459,9 +459,9 @@ export function CalendarScene({ release, onToast }: CalendarSceneProps) {
           compounded to 32px a side (the same bug WorkspaceView documents on
           its own wrapper). The grid's room at lg+ is a width budget rather
           than a layout switch now: the release rails are gone (2026-09-30), and
-          with UrgAns closed the right-hand column is only the 208px menu, which
+          with AI closed the right-hand column is only the 208px menu, which
           keeps the month grid at a 1440px window (lib/layout-columns.ts pins
-          it). With UrgAns open the container query below swaps to the agenda. */}
+          it). With AI open the container query below swaps to the agenda. */}
       <div className="mx-auto max-w-[1200px] pb-8 pt-6 sm:px-6 [@media(min-width:1024px)_and_(max-height:900px)]:pb-4 [@media(min-width:1024px)_and_(max-height:900px)]:pt-3">
         {/* The artist and release title are screen-reader only (founder,
             2026-10-11: "remove this from all the tabs, I don't want the title

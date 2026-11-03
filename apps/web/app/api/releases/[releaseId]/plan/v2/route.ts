@@ -98,7 +98,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
     const minimumPlan = minimumTierWith('urgans_embedded_actions');
     const planLabel = minimumPlan ? PRICING_TIERS[minimumPlan].label : 'a higher plan';
     return NextResponse.json(
-      { error: `UrgAns can plan this rollout for you on ${planLabel}.`, code: 'plan_required' },
+      { error: `AI can plan this rollout for you on ${planLabel}.`, code: 'plan_required' },
       { status: 403 }
     );
   }

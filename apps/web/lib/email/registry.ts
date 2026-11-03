@@ -262,9 +262,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     category: 'transactional',
     name: 'Front desk questions',
     description:
-      'UrgAns front desk: once a day, the questions artists asked a curator that UrgAns could not answer from their terms. Never sent when there are none.',
+      'AI front desk: once a day, the questions artists asked a curator that AI could not answer from their terms. Never sent when there are none.',
     placeholderCopy: false,
-    fromName: 'UrgAns at Urganize',
+    fromName: 'Urganize AI',
     fromAddress: 'notifications@urganize.app',
     replyTo: 'support@urganize.app',
   },

@@ -137,18 +137,18 @@ function ReleaseTypeStep({ draft, patch, disabled }: StepBodyProps) {
             draft.releaseType === 'ep' ? (
               <>
                 The EP playbook plans {getTemplateStats('ep').spanWeeks} weeks around a lead single
-                that drops ahead of the EP. UrgAns tailors it to your dates.
+                that drops ahead of the EP. AI tailors it to your dates.
               </>
             ) : (
               <>
                 The album playbook plans {getTemplateStats('album').spanWeeks} weeks around two
-                staggered singles. UrgAns tailors it to your dates.
+                staggered singles. AI tailors it to your dates.
               </>
             )
           ) : (
             <>
               {draft.releaseType === 'ep' ? 'EPs' : 'Albums'} start from the single playbook for now.
-              UrgAns stretches it to cover more tracks.
+              AI stretches it to cover more tracks.
             </>
           )}
         </p>
@@ -182,7 +182,7 @@ function ArtistStep({ draft, patch, disabled, knownArtistName }: StepBodyProps) 
             maxLength={120}
           />
         </label>
-        <p className={helperClass}>UrgAns uses this in the plan and in status updates.</p>
+        <p className={helperClass}>AI uses this in the plan and in status updates.</p>
       </>
     );
   }
@@ -396,7 +396,7 @@ export function DateStep({ draft, patch, disabled, leadTimeDays, otherRollouts }
       ) : compressedWeeks ? (
         <p className={helperClass}>
           That date compresses the first {compressedWeeks}{' '}
-          {compressedWeeks === 1 ? 'week' : 'weeks'} of prep. UrgAns marks those as catch up so you
+          {compressedWeeks === 1 ? 'week' : 'weeks'} of prep. AI marks those as catch up so you
           can see them.
         </p>
       ) : (
@@ -434,7 +434,7 @@ function ReadyStep({ draft, patch, disabled }: StepBodyProps) {
         disabled={disabled}
       />
       <p className={helperClass}>
-        Pick as many as apply. Anything already finished shortens the runway UrgAns plans for.
+        Pick as many as apply. Anything already finished shortens the runway AI plans for.
       </p>
     </>
   );
@@ -479,7 +479,7 @@ function BudgetStep({ draft, patch, disabled }: StepBodyProps) {
         onChange={(budget) => patch({ budget })}
         disabled={disabled}
       />
-      <p className={helperClass}>UrgAns sizes the promo work to match, and drops what you cannot fund.</p>
+      <p className={helperClass}>AI sizes the promo work to match, and drops what you cannot fund.</p>
     </>
   );
 }
@@ -505,14 +505,14 @@ function ExtrasStep({ draft, patch, disabled, fromNote }: StepBodyProps) {
         disabled={disabled}
       />
       <p className={helperClass}>
-        Everything is in to start. Untick anything you do not want, and UrgAns
+        Everything is in to start. Untick anything you do not want, and AI
         leaves that kind of work out. Release day and getting it to stores stay
         either way.
       </p>
 
       <label className="mt-5 block">
         <span className="mb-2 block text-sm font-medium text-content-primary">
-          Anything else UrgAns should know?
+          Anything else AI should know?
         </span>
         <textarea
           value={draft.extraNotes}

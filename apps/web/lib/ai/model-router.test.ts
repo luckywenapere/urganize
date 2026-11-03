@@ -217,7 +217,7 @@ describe('classifyChatTurn', () => {
   });
 });
 
-describe('routeModel: UrgAns chat', () => {
+describe('routeModel: AI chat', () => {
   it('sends a plain request to the quick rung on the current model', () => {
     const d = routeModel({ surface: 'chat', chat: turn("what's due this week?"), team: paid('manager'), env: {} });
     expect(d).toMatchObject({ tier: 'quick', model: 'openai/gpt-4o-mini', pinned: false, maxHops: 2, hops: 0 });

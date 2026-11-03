@@ -117,11 +117,11 @@ describe('visibleSettingsSegments', () => {
     );
   });
 
-  it('keeps UrgAns for a manager with the team brief off, since WhatsApp chasing lives there (Oct 26, 2026)', () => {
+  it('keeps AI for a manager with the team brief off, since WhatsApp chasing lives there (Oct 26, 2026)', () => {
     expect(visibleSettingsSegments({ role: 'manager' }, { ...ALL_ON, teamBrief: false })).toContain('urgans');
   });
 
-  it('hides UrgAns from a non-manager while the team brief is off', () => {
+  it('hides AI from a non-manager while the team brief is off', () => {
     expect(visibleSettingsSegments({ role: 'artist' }, { ...ALL_ON, teamBrief: false })).not.toContain('urgans');
   });
 

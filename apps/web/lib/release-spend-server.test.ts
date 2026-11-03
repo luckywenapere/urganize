@@ -322,7 +322,7 @@ describe('lines Urganize writes', () => {
     amountKobo: 18_000,
     spentOn: '2026-10-08',
     paidTo: 'Urganize',
-    note: '12 UrgAns credits',
+    note: '12 AI credits',
     dedupeKey: `credits:${REL}:2026-10-08`,
     ...over,
   });

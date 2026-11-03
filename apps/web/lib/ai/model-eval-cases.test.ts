@@ -93,7 +93,7 @@ describe('the evaluation cases', () => {
 describe('the evaluation system prompt', () => {
   const prompt = buildEvalSystemPrompt();
 
-  it("is UrgAns's real instructions followed by a workspace snapshot in the real format", () => {
+  it("is the AI's real instructions followed by a workspace snapshot in the real format", () => {
     expect(prompt.startsWith(ROLE)).toBe(true);
     expect(prompt).toContain('Current rollouts (3):');
     expect(prompt).toContain('Midnight EP');

@@ -247,7 +247,7 @@ describe('formatting', () => {
   });
 });
 
-describe('isBriefEmpty and the UrgAns draft cleanup', () => {
+describe('isBriefEmpty and the AI draft cleanup', () => {
   it('is empty only with no idea, references or decisions', () => {
     expect(isBriefEmpty({ idea: ' ', references: [], decisions: [] })).toBe(true);
     expect(isBriefEmpty({ idea: 'x', references: [], decisions: [] })).toBe(false);

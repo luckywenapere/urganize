@@ -35,7 +35,7 @@ describe('the transcribe route is dark when the flag is off', () => {
 });
 
 describe('speaking is never metered', () => {
-  it('never records an UrgAns action or checks the chat allowance', () => {
+  it('never records an AI action or checks the chat allowance', () => {
     expect(source).not.toMatch(/recordUrgansAction/);
     expect(source).not.toMatch(/checkUrgansAllowance/);
     expect(source).not.toMatch(/'urgans_action'/);

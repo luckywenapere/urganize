@@ -67,7 +67,7 @@ export default function TermsPage() {
                 a release plan built from our templates, tasks with owners and
                 dates, file storage per release, press kits, event milestones,
                 pitching to curators and opportunities, distribution through
-                our partner, and UrgAns, our AI assistant. We improve the product
+                our partner, and our AI assistant. We improve the product
                 continuously: features may change, and we may add, modify, or
                 retire functionality.
               </p>
@@ -144,14 +144,14 @@ export default function TermsPage() {
               </p>
             </Section>
 
-            <Section number="07" title="UrgAns">
+            <Section number="07" title="AI">
               <p>
-                UrgAns can plan, add and update releases and tasks when you
+                AI can plan, add and update releases and tasks when you
                 ask it to. Check what it does. Its output is a draft for you to
                 review, not professional advice, and we don&apos;t guarantee
                 its accuracy or results. The product works without it. Each
-                plan comes with a monthly allowance of UrgAns credits, and
-                unused credits roll over. How UrgAns handles your data is covered in our{" "}
+                plan comes with a monthly allowance of AI credits, and
+                unused credits roll over. How AI handles your data is covered in our{" "}
                 <Link
                   href="/privacy"
                   className="font-medium text-[var(--marketing-accent)] hover:opacity-80"

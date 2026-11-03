@@ -189,7 +189,7 @@ describe('a spoken answer to "Should I go ahead?"', () => {
   });
 });
 
-describe('what UrgAns says aloud', () => {
+describe('what AI says aloud', () => {
   it('keeps two sentences and points at the screen instead of reading a list', () => {
     const reply = 'I added 6 tasks to "Calm Down". They start next week. Here they are:\n- Artwork\n- Pitch\n- Teaser';
     expect(spokenSummary(reply)).toBe('I added 6 tasks to "Calm Down". They start next week. The details are on screen.');

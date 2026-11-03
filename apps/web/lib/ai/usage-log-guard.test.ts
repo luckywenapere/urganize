@@ -62,7 +62,7 @@ describe('one writer', () => {
     expect(source).not.toMatch(/\.(insert|update|upsert|delete)\s*\(/);
   });
 
-  it("keeps the founder cockpit's UrgAns panel (/admin) to reading", () => {
+  it("keeps the founder cockpit's AI panel (/admin) to reading", () => {
     const source = sources.get('lib/admin-urgans-usage-server.ts') ?? '';
     expect(source).toContain('ai_usage_events');
     expect(source).not.toMatch(/\.(insert|update|upsert|delete)\s*\(/);

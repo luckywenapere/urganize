@@ -97,7 +97,7 @@ export default function PlanLoop({ still }: { still?: boolean }) {
       {(s) => (
         <div className="mpl-scene" data-veil={s.veil || undefined}>
           <div className="mpl-ask" data-sent={s.sent || undefined}>
-            <span className="mpl-ask-who">UrgAns</span>
+            <span className="mpl-ask-who">AI</span>
             <span className="mpl-ask-text">
               {s.draft ? (
                 <>

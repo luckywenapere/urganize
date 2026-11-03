@@ -241,14 +241,14 @@ export function AskAboutPitch({ pitchId }: { pitchId: string }) {
   );
 
   const card = !view.live ? (
-    <section className={s.card} aria-label="UrgAns">
+    <section className={s.card} aria-label="AI">
       <UrgAnsLabel />
       <p className={s.aTxt} style={{ marginTop: 16 }}>
         <b>{view.curatorName} answers questions themselves.</b>
       </p>
     </section>
   ) : (
-    <section className={s.card} aria-label="Ask UrgAns about this pitch">
+    <section className={s.card} aria-label="Ask AI about this pitch">
       <UrgAnsLabel />
       {!turns.length && !view.answered.length ? (
         <>

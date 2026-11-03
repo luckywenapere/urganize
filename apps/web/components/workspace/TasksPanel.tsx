@@ -691,7 +691,7 @@ export function TasksPanel({
     <aside id={id} data-tour="activities" className="flex min-h-[calc(100dvh-5.5rem)] min-w-0 flex-1 flex-col scroll-mt-4 lg:min-h-0 lg:scroll-mt-20">
       {/* (The desktop's row of scene pills that sat here until 2026-09-30 is
           the rollout menu now: a vertical card at the top of the right-hand
-          column, above the UrgAns chat, rendered by WorkspaceView and drawn from
+          column, above the AI chat, rendered by WorkspaceView and drawn from
           the same builder as the phone's release menu below. "New activity" moved
           up beside the Motion bar. Founder call, from Cursor's agent window.) */}
 
@@ -1014,7 +1014,7 @@ export function TasksPanel({
             hamburger -> the menu, and only the menu. No field in it at all.
             search    -> a field over real results, in three groups: matching
                          activities, then any release tool whose name matches,
-                         then the app's own pages (Catalog, UrgAns, Notes,
+                         then the app's own pages (Catalog, AI, Notes,
                          Shows, Settings, the curator crossing — see
                          lib/app-pages.ts, which carries the keywords that make
                          "billing" find Settings).

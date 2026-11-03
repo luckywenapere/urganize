@@ -96,7 +96,7 @@ export function StatusAsk() {
             <h2 className={s.meta}>Ask a question</h2>
             <span className={cx(s.meta, s.urgansLabel)}>
               <span className={cx(s.glyph, s.glyphSm)} aria-hidden="true" />
-              UrgAns
+              AI
             </span>
           </div>
           {turn ? (

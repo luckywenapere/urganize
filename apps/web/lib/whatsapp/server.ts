@@ -709,7 +709,7 @@ async function aiReply(admin: SupabaseClient, contact: WhatsappContact, task: Ta
     {
       role: 'system' as const,
       content:
-        'You are UrgAns, replying on WhatsApp for a music team that uses Urganize. Reply in one or two short sentences, plain words, no em dashes, no hype. ' +
+        'You are the AI in Urganize, replying on WhatsApp for a music team that uses Urganize. Reply in one or two short sentences, plain words, no em dashes, no hype. ' +
         'You cannot change tasks yourself. If they want to mark something done, tell them to reply Done. If they need more time, tell them to reply Need more time. ' +
         'Never invent facts about the task. ' + context,
     },

@@ -64,7 +64,7 @@ export function DemoLoop({ className = "" }: { className?: string }) {
         <ResponsiveProductShot
           desktop={DEMO_LOOP_POSTER.desktop}
           phone={DEMO_LOOP_POSTER.phone}
-          alt="UrgAns answers what is still open on the single Golden Hour, and the playlist pitch is assigned to Ife."
+          alt="AI answers what is still open on the single Golden Hour, and the playlist pitch is assigned to Ife."
           sizes="(min-width: 960px) 896px, calc(100vw - 32px)"
           phoneSizes="358px"
           fetchPriority="auto"

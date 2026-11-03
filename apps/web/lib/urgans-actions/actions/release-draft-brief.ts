@@ -28,7 +28,7 @@ import type { UrgansActionDefinition } from '../types';
  * Metered by the same embedded-action credits as every other run.
  */
 
-const NOT_CONFIGURED = 'UrgAns cannot write for you yet. Write it yourself for now.';
+const NOT_CONFIGURED = 'AI cannot write for you yet. Write it yourself for now.';
 const DEADLINE_MS = 52_000;
 const TIMEOUT_MS = 20_000;
 
@@ -108,7 +108,7 @@ export const releaseDraftBriefAction: UrgansActionDefinition<Input, Output, Resu
       return {
         ok: false,
         status: 502,
-        error: 'UrgAns could not write that just now. Try again.',
+        error: 'AI could not write that just now. Try again.',
         usageCalls: collector.calls,
         failedCalls: collector.failures,
       };
@@ -119,7 +119,7 @@ export const releaseDraftBriefAction: UrgansActionDefinition<Input, Output, Resu
       return {
         ok: false,
         status: 502,
-        error: 'UrgAns could not write that just now. Try again.',
+        error: 'AI could not write that just now. Try again.',
         usageCalls: collector.calls,
         failedCalls: collector.failures,
       };
@@ -149,7 +149,7 @@ export const releaseDraftBriefAction: UrgansActionDefinition<Input, Output, Resu
     // Somebody may have written an idea while UrgAns was drafting. Theirs wins.
     const current = await admin.from(BRIEFS_TABLE).select('idea').eq('release_id', objectId).maybeSingle();
     if (!current.error && text(asRow(current.data).idea)) {
-      return { ok: false, status: 409, error: 'Someone wrote the idea while UrgAns was drafting. Theirs is kept.' };
+      return { ok: false, status: 409, error: 'Someone wrote the idea while AI was drafting. Theirs is kept.' };
     }
 
     const saved = await saveBriefIdea(admin, {

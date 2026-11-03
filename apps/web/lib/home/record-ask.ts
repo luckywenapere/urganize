@@ -166,7 +166,7 @@ export function describeSessionQuestion(
 }
 
 export const RECORD_ASK_COPY = {
-  label: 'UrgAns',
+  label: 'AI',
   whatsNextTitle: (ask: Pick<WhatsNextAsk, 'releaseTitle' | 'artistName' | 'daysOut'>) =>
     `"${ask.releaseTitle}" has been out ${describeOutFor(ask.daysOut)}. What's next for ${ask.artistName}?`,
   whatsNextLine: "Tell me in a line. I'll keep track of the songs and sessions so nothing lives in your head.",

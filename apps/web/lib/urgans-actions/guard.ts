@@ -47,7 +47,7 @@ export function decideEmbeddedActionsGuard(input: {
 }): EmbeddedActionsGuardDecision {
   const cap = input.cap ?? EMBEDDED_ACTIONS_DAILY_CAP;
   if (input.count >= cap) {
-    return { allowed: false, message: 'UrgAns is busy. Try again in a bit.' };
+    return { allowed: false, message: 'AI is busy. Try again in a bit.' };
   }
   return { allowed: true };
 }

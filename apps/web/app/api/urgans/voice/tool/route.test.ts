@@ -85,7 +85,7 @@ describe('the urgans_do tool route', () => {
     expect(billOwedMinutes).not.toHaveBeenCalled();
   });
 
-  it('hands a request to the typed UrgAns handler, with the caller\'s own credentials and nothing else', async () => {
+  it('hands a request to the typed AI handler, with the caller\'s own credentials and nothing else', async () => {
     requireActiveSession.mockResolvedValue({ session: session() });
     runUrgansTurn.mockResolvedValue(agentReply());
     const response = await call({

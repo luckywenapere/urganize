@@ -72,7 +72,7 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
 
 Urganize started with a problem I had myself. I was managing an artist, and there was no software built for it. I needed one place to share tasks, keep us both accountable and see how my artist’s career was going. Somewhere I could open and see everything about the music and the management at once. That place didn’t exist, so I built it.
 
-Over the next week I’ll send you four short emails: how to get set up, one quick question, a look at your assistant UrgAns and a check-in to see how it’s going.
+Over the next week I’ll send you four short emails: how to get set up, one quick question, a look at your AI assistant and a check-in to see how it’s going.
 
 One small favour: if this landed in Promotions or Spam, please move it to your main inbox or mark it as important. That way the next few reach you.
 
@@ -119,10 +119,10 @@ Just hit reply.`,
   {
     key: 'day5',
     day: 5,
-    label: 'Meet UrgAns',
-    subject: 'Meet UrgAns, your assistant',
+    label: 'Meet your AI assistant',
+    subject: 'Meet your AI assistant',
     preview: 'Ask it anything about your rollout.',
-    body: `Inside Urganize there’s an assistant called UrgAns. Think of it as a teammate who already knows your plan.
+    body: `Inside Urganize there’s an AI assistant. Think of it as a teammate who already knows your plan.
 
 You can ask it things like:
 “What’s overdue this week?”
@@ -131,10 +131,10 @@ You can ask it things like:
 
 It answers, and it can make changes for you. You stay in charge: before it does anything big, it checks with you first.
 
-[Try UrgAns](${APP_URL}/dashboard/urgans)`,
+[Try AI](${APP_URL}/dashboard/urgans)`,
     still: {
       src: `${APP_URL}/images/email/onboarding-day5-urgans.png`,
-      alt: 'UrgAns answering “What’s overdue this week?” with two late activities, then asking “Move both to Friday?” before it changes them.',
+      alt: 'AI answering “What’s overdue this week?” with two late activities, then asking “Move both to Friday?” before it changes them.',
       href: `${APP_URL}/dashboard/urgans`,
       width: 936,
       height: 528,

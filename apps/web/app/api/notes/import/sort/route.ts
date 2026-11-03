@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
   if ('error' in auth) return auth.error;
 
   if (!isAiConfigured()) {
-    return NextResponse.json({ error: "UrgAns isn't available right now. Your notes are already sorted." }, { status: 503 });
+    return NextResponse.json({ error: "AI isn't available right now. Your notes are already sorted." }, { status: 503 });
   }
 
   const items = readItems(await request.json().catch(() => null));
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const used = await countBillingEventsSince(adminClient, team.primaryWorkspaceId, 'notes_import_sort', since);
     if (used >= SORT_DAILY_CAP) {
-      return NextResponse.json({ error: "You've used UrgAns a lot today. Try again tomorrow." }, { status: 429 });
+      return NextResponse.json({ error: "You've used AI a lot today. Try again tomorrow." }, { status: 429 });
     }
   }
 
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       onUsage: collector.onUsage,
       onFailure: collector.onFailure,
       parse: (raw) => parseSortResponse(raw, sentIds, releaseIds),
-      invalidFormatMessage: 'UrgAns answered in a shape we could not read.',
+      invalidFormatMessage: 'AI answered in a shape we could not read.',
     });
 
     await recordRequestUsage(adminClient, {
@@ -138,6 +138,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch {
-    return NextResponse.json({ error: 'UrgAns could not sort that just now. Your notes are still sorted by the basics.' }, { status: 502 });
+    return NextResponse.json({ error: 'AI could not sort that just now. Your notes are still sorted by the basics.' }, { status: 502 });
   }
 }

@@ -198,7 +198,7 @@ const SHOTS = [
   { name: "epk-phone", viewport: "phone", url: "/epk/$EPK", themes: ["dark"], waitFor: { text: "Press kit", timeoutMs: 60_000 }, rail: "keep" },
   {
     name: "urgans-confirmation", viewport: "desktop", url: "/dashboard/urgans", rail: "keep",
-    waitFor: { selector: '[aria-label="Message UrgAns"]' },
+    waitFor: { selector: '[aria-label="Message AI"]' },
     // Two turns that mirror the section copy exactly: one thing it just does
     // (completing an activity is not gated) and one it must ask about first
     // (deleting a release is). The model answers the deletion by asking for
@@ -210,11 +210,11 @@ const SHOTS = [
       // the team); dismiss them so the conversation is the whole picture.
       { type: "eval", expression: "for (const sel of ['[aria-label=\"Dismiss invite banner\"]', '[role=\"status\"] [aria-label=\"Dismiss\"]']) document.querySelector(sel)?.click(); true" },
       { type: "settle", ms: 400 },
-      { type: "type", selector: '[aria-label="Message UrgAns"]', text: "Mark the cover art activity done for $HERO_TITLE" },
+      { type: "type", selector: '[aria-label="Message AI"]', text: "Mark the cover art activity done for $HERO_TITLE" },
       { type: "settle", ms: 500 },
       { type: "click", selector: '[aria-label="Send"]' },
       { type: "settle", ms: 30_000 },
-      { type: "type", selector: '[aria-label="Message UrgAns"]', text: "Delete the release $HERO_TITLE" },
+      { type: "type", selector: '[aria-label="Message AI"]', text: "Delete the release $HERO_TITLE" },
       { type: "settle", ms: 500 },
       { type: "click", selector: '[aria-label="Send"]' },
       { type: "wait", selector: '[aria-label="Confirm this action"]', timeoutMs: 60_000, optional: true },
@@ -710,7 +710,7 @@ async function captureShot(client, shot, context) {
   if (shot.rail !== "keep" && shot.viewport === "desktop") {
     // The UrgAns side rail arms itself open once per session; the shots want
     // the product, not the assistant, unless they are about the assistant.
-    await client.evaluate(`(() => { const b = document.querySelector('[aria-label="Close UrgAns"]'); if (b) b.click(); return true; })()`);
+    await client.evaluate(`(() => { const b = document.querySelector('[aria-label="Close AI"]'); if (b) b.click(); return true; })()`);
   }
   for (const action of shot.actions ?? []) await runAction(client, action, context);
   await hideChrome(client, [...PROMPT_CARDS, ...(shot.hide ?? [])]);

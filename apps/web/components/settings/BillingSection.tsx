@@ -333,7 +333,7 @@ export function BillingSection() {
             href="/dashboard/credits"
             className="motion-focus text-content-secondary underline underline-offset-2 hover:text-content-primary"
           >
-            See your UrgAns credit history
+            See your AI credit history
           </Link>
         </p>
       ) : null}

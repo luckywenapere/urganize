@@ -339,7 +339,7 @@ function Scene({ s, layout }: { s: S; layout: Layout }) {
       <div className="ug-topbar">
         <span className="ug-word">Urganize<span className="ug-beta">BETA</span></span>
         <span className="ug-tabs">
-          <span>Home</span><span>UrgAns</span><span data-active>Artists</span><span>Relationships</span><span>Opportunities</span>
+          <span>Home</span><span>AI</span><span data-active>Artists</span><span>Relationships</span><span>Opportunities</span>
         </span>
         <span className="ug-tools">
           <span className="ug-round"><Search size={15} strokeWidth={1.7} /></span>

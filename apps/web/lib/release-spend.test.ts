@@ -578,8 +578,8 @@ describe('the credits line', () => {
   });
 
   it('says how many credits it was', () => {
-    expect(creditsLineNote(1)).toBe('1 UrgAns credit');
-    expect(creditsLineNote(12)).toBe('12 UrgAns credits');
+    expect(creditsLineNote(1)).toBe('1 AI credit');
+    expect(creditsLineNote(12)).toBe('12 AI credits');
   });
 
   it('keys a line by rollout and day, so the same day is one line', () => {

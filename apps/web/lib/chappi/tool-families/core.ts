@@ -199,7 +199,7 @@ export const CORE_TOOLS: ChappiTool[] = [
       // plans it, so promising a generated plan here would be a lie.
       const plannerPending = res.body.plannerPending === true;
       const created = plannerPending
-        ? `Created "${title}". Open it to plan the rollout with UrgAns.`
+        ? `Created "${title}". Open it to plan the rollout with AI.`
         : `Created "${title}" and generated its rollout tasks.`;
       return {
         ok: true,

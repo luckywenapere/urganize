@@ -41,7 +41,7 @@ import type { UrgansActionDefinition } from '../types';
 
 const SECTIONS_TABLE = 'press_kit_sections';
 const KITS_TABLE = 'press_kits';
-const NOT_CONFIGURED = 'UrgAns cannot write for you yet. Fill this in yourself for now.';
+const NOT_CONFIGURED = 'AI cannot write for you yet. Fill this in yourself for now.';
 const MAX_NOTES_LENGTH = 2000;
 const DEADLINE_MS = 52_000;
 
@@ -166,7 +166,7 @@ export const epkFillBothAction: UrgansActionDefinition<Input, Output, Result> = 
       return {
         ok: false,
         status: 502,
-        error: 'UrgAns could not write that just now. Try again.',
+        error: 'AI could not write that just now. Try again.',
         usageCalls: collector.calls,
         failedCalls: collector.failures,
       };

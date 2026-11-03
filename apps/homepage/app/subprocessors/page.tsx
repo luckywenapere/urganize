@@ -63,7 +63,7 @@ const subprocessors = [
   {
     name: "AI model provider (via our gateway)",
     purpose:
-      "Powering UrgAns, only when you use it",
+      "Powering AI, only when you use it",
     data: "Release context (details, task progress). Never your uploaded files, and never used to train models",
   },
   {

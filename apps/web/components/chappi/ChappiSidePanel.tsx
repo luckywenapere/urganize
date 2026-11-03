@@ -68,7 +68,7 @@ export function ChappiSidePanel({ open, onNewRelease }: ChappiSidePanelProps) {
 
   return (
     <section
-      aria-label="UrgAns assistant"
+      aria-label="AI assistant"
       aria-hidden={!open}
       inert={!open}
       // `min-h-[22rem]` is what the menu card above is capped against
@@ -84,7 +84,7 @@ export function ChappiSidePanel({ open, onNewRelease }: ChappiSidePanelProps) {
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-stroke-subtle px-3 py-2">
         <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
           <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
-          UrgAns
+          AI
         </p>
         <div className="flex items-center gap-1">
           {HISTORY_ENABLED ? (
@@ -126,7 +126,7 @@ export function ChappiSidePanel({ open, onNewRelease }: ChappiSidePanelProps) {
               setRailOpen(false);
               router.push(URGANS_HREF);
             }}
-            aria-label="Open UrgAns full page"
+            aria-label="Open AI full page"
             title="Open full page"
             className="motion-focus motion-press grid h-7 w-7 place-items-center text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
           >
@@ -135,7 +135,7 @@ export function ChappiSidePanel({ open, onNewRelease }: ChappiSidePanelProps) {
           <button
             type="button"
             onClick={() => setRailOpen(false)}
-            aria-label="Close UrgAns"
+            aria-label="Close AI"
             title="Close"
             className="motion-focus motion-press grid h-7 w-7 place-items-center text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
           >

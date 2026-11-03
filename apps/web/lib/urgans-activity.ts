@@ -236,10 +236,10 @@ export function describeActivity(
       door = reply ? `${who} replied "${reply.slice(0, 40)}" on WhatsApp` : `${who} replied on WhatsApp`;
       break;
     case 'embedded':
-      door = `${who} used an UrgAns button`;
+      door = `${who} used an AI button`;
       break;
     case 'memory':
-      door = row.trigger === 'artist_page' ? `${who} edited it on the artist page` : `${who} told UrgAns`;
+      door = row.trigger === 'artist_page' ? `${who} edited it on the artist page` : `${who} told AI`;
       break;
     case 'cron':
     default:

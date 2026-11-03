@@ -38,7 +38,7 @@ describe('which screen changes fade in', () => {
     expect(morphScreenKey('/dashboard')).toBe('catalogue');
   });
 
-  it('tells Home, UrgAns and an artist apart', () => {
+  it('tells Home, AI and an artist apart', () => {
     expect(morphScreenKey('/dashboard/home')).toBe('/dashboard/home');
     expect(morphScreenKey('/dashboard/urgans')).toBe('/dashboard/urgans');
     expect(morphScreenKey('/dashboard/artists/a1')).toBe('/dashboard/artists/a1');
@@ -130,7 +130,7 @@ describe('the tab row lights the tapped tab at once', () => {
   });
 });
 
-describe('UrgAns glides with the keyboard', () => {
+describe('AI glides with the keyboard', () => {
   it('runs the open/closed flip in a view transition where the names exist', () => {
     const bridge = strip(read('components/providers/KeyboardViewportBridge.tsx'));
     expect(bridge).toMatch(/if \(toggled && document\.querySelector\('\.morph-urgans-hero'\)\) \{\s*morphUpdate\(apply\);/);

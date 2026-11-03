@@ -107,7 +107,7 @@ export function ChappiDeleteChatDialog({
             Delete &ldquo;{chatTitle}&rdquo;?
           </h2>
           <p className="mt-2 text-sm leading-6 text-content-secondary">
-            This deletes the session on every device. This can&rsquo;t be undone. Anything UrgAns
+            This deletes the session on every device. This can&rsquo;t be undone. Anything AI
             did for you in it stays done.
           </p>
         </div>

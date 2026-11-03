@@ -72,7 +72,7 @@ export function buildDateAddsMessages(input: DateAddsInput): AiMessage[] {
   const { answers } = ctx;
   const today = todayOffsetFor(ctx) ?? 0;
   const budgetLeft = Math.max(0, plannedBudget(answers) - input.spent);
-  const system = `You are UrgAns, the release planner inside Urganize, for music teams in Nigeria.
+  const system = `You are the release planner inside Urganize, for music teams in Nigeria.
 The release date was just set. Add ONLY the tasks that depend on it, as JSON matching the schema. Plain words. No hype.
 - Editorial pitch deadlines about ${EDITORIAL_LEAD_DAYS} days before release for the picked platforms, radio/OAP and DJ timing, a release-day push on day 0, and one or two after-release pushes.
 - offset_days counts from release day (0 = release day). Never before today (day ${today}). At most day ${POST_WINDOW_DAYS}.

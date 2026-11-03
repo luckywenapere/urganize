@@ -7,7 +7,7 @@ export type ConnectionRow = { name: string; sub: string; section: string };
 
 export function connectionRows(flags: { mcpConnect: boolean; dataExport: boolean }): ConnectionRow[] {
   const rows: ConnectionRow[] = [];
-  if (flags.mcpConnect) rows.push({ name: 'Connected apps', sub: 'UrgAns in Claude and ChatGPT', section: 'connected-apps' });
+  if (flags.mcpConnect) rows.push({ name: 'Connected apps', sub: 'AI in Claude and ChatGPT', section: 'connected-apps' });
   if (flags.dataExport) rows.push({ name: 'Your data', sub: 'Download everything', section: 'export' });
   return rows;
 }

@@ -66,7 +66,7 @@ export async function POST(
       const minimumPlan = minimumTierWith('urgans_embedded_actions');
       const planLabel = minimumPlan ? PRICING_TIERS[minimumPlan].label : 'a higher plan';
       return NextResponse.json(
-        { error: `UrgAns can update this plan for you on ${planLabel}.`, code: 'plan_required' },
+        { error: `AI can update this plan for you on ${planLabel}.`, code: 'plan_required' },
         { status: 403 }
       );
     }

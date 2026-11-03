@@ -83,7 +83,7 @@ export function decideBioApply(input: {
   if ((input.bioWhenDrafted ?? '').trim() === (input.currentBio ?? '').trim()) return { ok: true };
   return {
     ok: false,
-    error: 'Your bio changed while UrgAns was drafting. Look again before you accept.',
+    error: 'Your bio changed while AI was drafting. Look again before you accept.',
   };
 }
 

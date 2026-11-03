@@ -98,7 +98,7 @@ export default function CreditsPageClient() {
       </Link>
 
       <header>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">UrgAns credits</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">AI credits</p>
         <h1 className="mt-1 font-display text-2xl font-semibold text-content-primary">Your credit history</h1>
         {balance !== null ? (
           <p className="mt-1 text-sm text-content-secondary">

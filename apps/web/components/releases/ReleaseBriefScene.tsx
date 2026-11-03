@@ -1144,7 +1144,7 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
                 {roundBusy === 'write' ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                    UrgAns is writing…
+                    AI is writing…
                   </>
                 ) : (
                   `Write it from the ${ideaCount === 1 ? 'idea' : `${ideaCount} ideas`}`
@@ -1166,7 +1166,7 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
             {drafting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                UrgAns is writing…
+                AI is writing…
               </>
             ) : brief.planSeed?.idea ? (
               BRIEF_COPY.polish

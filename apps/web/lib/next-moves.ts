@@ -51,7 +51,7 @@ export const NEXT_MOVE_TITLE_MAX = 60;
 export const NEXT_MOVE_COPY = {
   label: 'Next moves',
   dismiss: 'Not now',
-  plan: { title: 'Build the plan', detail: 'UrgAns writes it from a few answers.', action: 'Plan it' },
+  plan: { title: 'Build the plan', detail: 'AI writes it from a few answers.', action: 'Plan it' },
   distribute: {
     title: 'Run the distribution check',
     detail: (days: number) => `Out in ${days} ${days === 1 ? 'day' : 'days'}. Catch gaps before your distributor does.`,

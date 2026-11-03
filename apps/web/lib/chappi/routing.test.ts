@@ -213,7 +213,7 @@ describe('describeAgentError', () => {
 
   it('tells the user a slow model was too slow', () => {
     const abort = Object.assign(new Error('The operation was aborted'), { name: 'AbortError' });
-    expect(describeAgentError(abort)).toMatchObject({ status: 504, message: 'UrgAns took too long. Try again.' });
+    expect(describeAgentError(abort)).toMatchObject({ status: 504, message: 'AI took too long. Try again.' });
     expect(describeAgentError(gateway(504))).toMatchObject({ status: 504 });
   });
 
@@ -222,7 +222,7 @@ describe('describeAgentError', () => {
     // route used, /rate[- ]limit/, does not match that.
     expect(describeAgentError(gateway(429, 'rate_limit_exceeded'))).toMatchObject({
       status: 503,
-      message: 'UrgAns is busy. Try again in a moment.',
+      message: 'AI is busy. Try again in a moment.',
     });
     expect(describeAgentError(new Error('rate_limit_exceeded'))).toMatchObject({ status: 503 });
   });
@@ -231,7 +231,7 @@ describe('describeAgentError', () => {
     for (const error of [gateway(500), new Error('boom'), gateway(400), 'a string']) {
       expect(describeAgentError(error)).toMatchObject({
         status: 503,
-        message: 'UrgAns is unavailable right now.',
+        message: 'AI is unavailable right now.',
         alert: 'unexpected',
       });
     }
@@ -240,12 +240,12 @@ describe('describeAgentError', () => {
   it('flags the failures that need a human, without telling the user why', () => {
     expect(describeAgentError(gateway(402, 'insufficient_balance'))).toMatchObject({
       status: 503,
-      message: 'UrgAns is unavailable right now.',
+      message: 'AI is unavailable right now.',
       alert: 'balance',
     });
     expect(describeAgentError(gateway(401))).toMatchObject({
       status: 503,
-      message: 'UrgAns is unavailable right now.',
+      message: 'AI is unavailable right now.',
       alert: 'credentials',
     });
   });

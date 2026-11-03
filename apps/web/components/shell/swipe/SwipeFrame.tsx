@@ -213,7 +213,7 @@ function SwipeComposer({ onUrgAns, sessionOpen = false }: { onUrgAns: boolean; s
   return (
     <HomeAskBar
       variant="swipe"
-      placeholder={sessionOpen && sessionTitle ? `Message UrgAns about ${displayReleaseTitle(sessionTitle)}...` : undefined}
+      placeholder={sessionOpen && sessionTitle ? `Message AI about ${displayReleaseTitle(sessionTitle)}...` : undefined}
       replying={onUrgAns && replyInFlight}
       onSend={() => {
         if (onUrgAns) {

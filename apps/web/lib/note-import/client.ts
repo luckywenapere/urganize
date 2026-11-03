@@ -129,7 +129,7 @@ export async function sortWithAi(
         | { results?: SortResult[]; summary?: string; error?: string }
         | null;
       if (!response.ok || !Array.isArray(payload?.results)) {
-        return { ok: false, error: payload?.error || 'UrgAns could not sort that just now.' };
+        return { ok: false, error: payload?.error || 'AI could not sort that just now.' };
       }
       results.push(...payload.results);
       if (!summary && payload.summary) summary = payload.summary;

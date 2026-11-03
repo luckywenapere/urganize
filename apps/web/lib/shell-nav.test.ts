@@ -30,7 +30,7 @@ const ALL_OFF: ShellFlags = {
 };
 
 describe('shell nav', () => {
-  it('offers Artists, UrgAns, Team (Home left Oct 29, 2026, #876; Audience cut Oct 16, 2026)', () => {
+  it('offers Artists, AI, Team (Home left Oct 29, 2026, #876; Audience cut Oct 16, 2026)', () => {
     expect(buildShellAreas(ALL_ON).map((a) => a.key)).toEqual([
       'catalogue',
       'urgans',
@@ -179,7 +179,7 @@ describe('shell nav', () => {
     expect(soon).toEqual({ relationships: false, opportunities: false });
   });
 
-  it('lights More for an area the bar does not carry, UrgAns for its page', () => {
+  it('lights More for an area the bar does not carry, AI for its page', () => {
     const areas = buildShellAreas(ALL_ON);
     expect(activeMobileTab(areas, '/dashboard/artists')).toBe('catalogue');
     expect(activeMobileTab(areas, '/dashboard/sessions')).toBe('rollouts');

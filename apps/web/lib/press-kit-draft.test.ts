@@ -30,7 +30,7 @@ const section = (
   ...over,
 });
 
-describe('what UrgAns may draft', () => {
+describe('what AI may draft', () => {
   it('drafts prose and never facts', () => {
     expect([...DRAFTABLE_SECTIONS].sort()).toEqual(['bios', 'header', 'latest_release']);
   });
@@ -149,7 +149,7 @@ describe('parseDraftAiResponse', () => {
     expect(() => parseDraftAiResponse('bios', JSON.stringify({}))).toThrow();
   });
 
-  it('still throws for a section UrgAns was never offered to draft', () => {
+  it('still throws for a section AI was never offered to draft', () => {
     expect(() => parseDraftAiResponse('numbers', JSON.stringify({ stats: [] }))).toThrow();
   });
 
@@ -232,7 +232,7 @@ describe('decideDraftApply', () => {
     ).toBe(true);
   });
 
-  it('REFUSES when somebody edited the section while UrgAns was drafting', () => {
+  it('REFUSES when somebody edited the section while AI was drafting', () => {
     const decision = decideDraftApply({
       draftedUpdatedAt: '2026-09-05T10:00:00.000Z',
       currentUpdatedAt: '2026-09-05T10:05:00.000Z',

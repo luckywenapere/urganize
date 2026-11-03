@@ -21,7 +21,7 @@ export function ReferralRewardEmail({ recipientName, credits, creditsUrl }: Refe
     <EmailLayout preview={lead}>
       <Paragraph>{greeting}</Paragraph>
       <Paragraph>{lead}</Paragraph>
-      <Paragraph>They never expire. Use them with UrgAns, or keep sharing your invite link to earn more.</Paragraph>
+      <Paragraph>They never expire. Use them with AI, or keep sharing your invite link to earn more.</Paragraph>
       <Paragraph>
         <PrimaryButton href={creditsUrl}>See your credits</PrimaryButton>
       </Paragraph>

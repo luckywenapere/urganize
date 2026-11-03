@@ -148,7 +148,7 @@ export async function loadUsageMetrics(
       TABLE_CAP
     ),
     readAll(
-      'billing_events (UrgAns turns)',
+      'billing_events (AI turns)',
       (from, to) =>
         client
           .from('billing_events')

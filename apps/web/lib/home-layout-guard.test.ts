@@ -25,7 +25,7 @@ describe('Home layout', () => {
     expect(page).not.toContain('home-split-height');
   });
 
-  it('keeps the screen-locked split for the desktop UrgAns page, which still needs it', () => {
+  it('keeps the screen-locked split for the desktop AI page, which still needs it', () => {
     expect(css).toMatch(/\.home-split-height\s*\{[^}]*height:/);
     expect(sessions).toContain('home-split-height');
     // A flex child's floor is its widest content unless min-width is zero, so a

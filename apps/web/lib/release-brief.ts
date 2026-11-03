@@ -58,18 +58,18 @@ export function isBriefBlock(value: unknown): value is BriefBlock {
 }
 
 /** The revision author label used when UrgAns wrote the change. */
-export const URGANS_ACTOR_LABEL = 'UrgAns';
+export const URGANS_ACTOR_LABEL = 'AI';
 
 export const BRIEF_COPY = {
   loadError: 'Couldn’t load the brief.',
   notReady: 'The brief is not set up yet.',
   emptyTitle: 'One page for the whole team.',
   emptyLine: 'The idea, references and decisions. No more scrolling WhatsApp.',
-  draft: 'Draft with UrgAns',
-  polish: 'Rewrite with UrgAns',
+  draft: 'Draft with AI',
+  polish: 'Rewrite with AI',
   fromPlan: 'Written from your plan',
   writeYourself: 'Write it yourself',
-  drafted: 'UrgAns drafted this',
+  drafted: 'AI drafted this',
   shareTitle: 'Share the brief',
   shareLine: 'Your team sees it in Urganize.',
   viewLink: 'View link',

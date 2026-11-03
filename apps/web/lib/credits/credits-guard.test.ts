@@ -307,17 +307,17 @@ describe('the balance replaces the daily embedded-action guard', () => {
   });
 });
 
-describe('a credits-only team can use UrgAns, and only UrgAns', () => {
+describe('a credits-only team can use AI, and only AI', () => {
   const urgansRoutes = [...sources.keys()].filter((file) => /^app\/api\/urgans\/.*route\.ts$/.test(file));
   const access = sources.get('app/api/_shared/urgans-access.ts') ?? '';
   const gate = sources.get('app/api/_shared/auth.ts') ?? '';
   const chat = sources.get('app/api/urgans/route.ts') ?? '';
 
-  it('finds the UrgAns routes it is about to check', () => {
+  it('finds the AI routes it is about to check', () => {
     expect(urgansRoutes.length).toBeGreaterThanOrEqual(8);
   });
 
-  it('puts every UrgAns route behind the UrgAns gate, and none behind the plain paywalled ones', () => {
+  it('puts every AI route behind the AI gate, and none behind the plain paywalled ones', () => {
     // The voice routes (2026-10-11) open the same gate through their shared
     // openVoiceGate, which checks the voice flag first.
     const voiceGate = sources.get('app/api/urgans/voice/_shared.ts') ?? '';
@@ -329,7 +329,7 @@ describe('a credits-only team can use UrgAns, and only UrgAns', () => {
     }
   });
 
-  it('keeps the admission to UrgAns: no other route imports the UrgAns gate', () => {
+  it('keeps the admission to AI: no other route imports the AI gate', () => {
     const users = [...sources]
       .filter(([file, source]) => /requireUrgansAccess/.test(source) && !file.startsWith('app/api/urgans/') && file !== 'app/api/_shared/urgans-access.ts')
       .map(([file]) => file);

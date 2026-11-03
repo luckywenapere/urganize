@@ -55,7 +55,7 @@ function quickCommandsLine(account: CreditAccount): string {
 /** Said in the chat when a team has no credits left. */
 export function outOfCreditsNotice(input: NoticeInput, purchasable: boolean = isCreditsPurchasable()): string {
   const next = whatNext(input, purchasable);
-  return ['You are out of UrgAns credits.', quickCommandsLine(input.account), next].filter(Boolean).join(' ');
+  return ['You are out of AI credits.', quickCommandsLine(input.account), next].filter(Boolean).join(' ');
 }
 
 /**
@@ -66,8 +66,8 @@ export function outOfCreditsNotice(input: NoticeInput, purchasable: boolean = is
 export function embeddedEstimateLine(actionId: string): string {
   const credits = embeddedEstimateCredits(actionId);
   return actionId in EMBEDDED_ESTIMATE_CREDITS
-    ? `This uses about ${credits} UrgAns credits.`
-    : `This uses up to ${EMBEDDED_HOLD_CREDITS} UrgAns credits.`;
+    ? `This uses about ${credits} AI credits.`
+    : `This uses up to ${EMBEDDED_HOLD_CREDITS} AI credits.`;
 }
 
 /**
@@ -90,7 +90,7 @@ export function embeddedRefusalNotice(
 ): string {
   const left = Math.max(0, Math.floor(input.left));
   const next = whatNext(input, purchasable);
-  return `This needs up to ${input.needed} UrgAns credits and you have ${left}.${next ? ` ${next}` : ''}`;
+  return `This needs up to ${input.needed} AI credits and you have ${left}.${next ? ` ${next}` : ''}`;
 }
 
 const plural = (count: number, one: string, many: string): string => `${count} ${count === 1 ? one : many}`;
@@ -98,8 +98,8 @@ const plural = (count: number, one: string, many: string): string => `${count} $
 /** The banner's first line. `left` is whole credits and never below zero. */
 export function creditsLeftLine(left: number): string {
   const safe = Math.max(0, Math.floor(left));
-  if (safe === 0) return 'You have used all your UrgAns credits.';
-  return `UrgAns: ${plural(safe, 'credit', 'credits')} left.`;
+  if (safe === 0) return 'You have used all your AI credits.';
+  return `${plural(safe, 'AI credit', 'AI credits')} left.`;
 }
 
 /** The banner's second line; '' when there is nothing true to add. */

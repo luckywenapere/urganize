@@ -109,7 +109,7 @@ export function TeamBriefNudge() {
       className="mb-2 flex items-center justify-between gap-3 rounded-lg border border-stroke-default bg-bg-surface px-3 py-2"
     >
       <p className="min-w-0 text-xs text-content-secondary">
-        UrgAns doesn&apos;t know your team yet.{' '}
+        AI doesn&apos;t know your team yet.{' '}
         <Link
           href={settingsDeepLink({ segment: 'urgans', section: 'team-brief' })}
           onClick={openSettingsOnClick}

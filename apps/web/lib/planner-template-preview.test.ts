@@ -151,11 +151,11 @@ describe('preview copy', () => {
     previewSourceLine({ ...preview, releaseType: 'ep', usesSinglePlaybook: true }),
   ];
 
-  it('says the real numbers and calls it the starting plan UrgAns tailors', () => {
+  it('says the real numbers and calls it the starting plan AI tailors', () => {
     expect(previewSummaryLine(preview)).toBe(
       `${SINGLE_RELEASE_TEMPLATE.tasks.length} activities over ${preview.spanWeeks} weeks`
     );
-    expect(previewSourceLine(preview)).toContain('UrgAns tailors it to your answers');
+    expect(previewSourceLine(preview)).toContain('AI tailors it to your answers');
     expect(PLANNER_PREVIEW_COPY.noCharge).toContain('free');
   });
 

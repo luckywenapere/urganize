@@ -7,9 +7,9 @@ import { UrgansActivityList } from './UrgansActivityList';
 export function UrgansActivityView() {
   return (
     <div className="h-full min-h-0 overflow-y-auto pb-6">
-      <h2 className="text-base font-semibold text-content-primary">What UrgAns did</h2>
+      <h2 className="text-base font-semibold text-content-primary">What AI did</h2>
       <p className="mb-4 mt-1 text-sm text-content-secondary">
-        Every change UrgAns made in the last 30 days, and who asked for it.
+        Every change AI made in the last 30 days, and who asked for it.
       </p>
       <UrgansActivityList showRolloutPicker showPersonFilter />
     </div>

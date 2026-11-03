@@ -11,7 +11,7 @@
 
 import { isUuid } from '@/lib/next-records';
 
-export const RECORD_CAPTURE_PLACEHOLDER = 'Tell UrgAns what happened…';
+export const RECORD_CAPTURE_PLACEHOLDER = 'Tell AI what happened…';
 
 const RECORD_PATH = /^\/dashboard\/artists\/[^/]+\/records\/([^/?#]+)\/?$/;
 

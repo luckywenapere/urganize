@@ -112,7 +112,7 @@ export function UrgansLockedSheet({ open, message, actionType, onClose }: Urgans
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label="UrgAns is not available on your plan"
+        aria-label="AI is not available on your plan"
         className="flex w-full max-w-md flex-col overflow-hidden rounded-t-2xl border-t border-stroke-strong bg-bg-surface shadow-[0_28px_80px_-38px_rgb(var(--shadow-ink)/calc(0.68*var(--shadow-alpha-scale)))] sm:rounded-2xl sm:border"
         style={
           dragOffset > 0

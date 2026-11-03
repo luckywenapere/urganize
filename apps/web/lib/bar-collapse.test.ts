@@ -34,7 +34,7 @@ describe('nextBarCollapsed', () => {
 });
 
 describe('barNeverCollapsesOn', () => {
-  it('holds the bar open in UrgAns only', () => {
+  it('holds the bar open in AI only', () => {
     expect(barNeverCollapsesOn('/dashboard/urgans')).toBe(true);
     expect(barNeverCollapsesOn('/dashboard/urgans/abc')).toBe(true);
     expect(barNeverCollapsesOn('/dashboard/home')).toBe(false);

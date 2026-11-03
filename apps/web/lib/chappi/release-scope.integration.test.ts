@@ -64,7 +64,7 @@ const configured = Boolean(
 
 type Release = Awaited<ReturnType<typeof listVisibleReleases>>[number];
 
-describe.skipIf(!configured)('UrgAns release scoping', () => {
+describe.skipIf(!configured)('AI release scoping', () => {
   let admin: SupabaseClient;
   const ctxFor = new Map<string, ChappiToolContext>();
 

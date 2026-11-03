@@ -13,7 +13,7 @@ describe('describeTranscriptAnnouncement', () => {
   it('says it is thinking while a request is in flight', () => {
     expect(
       describeTranscriptAnnouncement({ ...idle, isThinking: true, lastAssistantContent: 'Earlier reply' })
-    ).toBe('UrgAns is thinking.');
+    ).toBe('AI is thinking.');
   });
 
   it('puts a question waiting on the person ahead of the reply that raised it', () => {
@@ -33,7 +33,7 @@ describe('describeTranscriptAnnouncement', () => {
         isThinking: true,
         pendingConfirmation: { title: 'Delete it?' },
       })
-    ).toBe('UrgAns is thinking.');
+    ).toBe('AI is thinking.');
   });
 
   it('says nothing for an empty conversation', () => {

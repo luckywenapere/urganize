@@ -98,7 +98,7 @@ export default function WelcomePageClient() {
           {firstName ? `Welcome, ${firstName}. ` : 'Welcome. '}Let&apos;s plan your next release.
         </h1>
         <p className="text-content-secondary">
-          Add the release you&apos;re working on. UrgAns writes the plan in under a minute, and you change anything you
+          Add the release you&apos;re working on. AI writes the plan in under a minute, and you change anything you
           like.
         </p>
         <ol className="divide-y divide-stroke-subtle rounded-2xl border border-stroke-default bg-bg-surface px-5">

@@ -69,11 +69,11 @@ describe('buying wording follows the purchase switch', () => {
 
 describe('the lines a person reads', () => {
   it('say how many credits are left, singular and plural, and never a negative number', () => {
-    expect(creditsLeftLine(42)).toBe('UrgAns: 42 credits left.');
-    expect(creditsLeftLine(1)).toBe('UrgAns: 1 credit left.');
-    expect(creditsLeftLine(0)).toBe('You have used all your UrgAns credits.');
-    expect(creditsLeftLine(-8)).toBe('You have used all your UrgAns credits.');
-    expect(creditsLeftLine(3.9)).toBe('UrgAns: 3 credits left.');
+    expect(creditsLeftLine(42)).toBe('42 AI credits left.');
+    expect(creditsLeftLine(1)).toBe('1 AI credit left.');
+    expect(creditsLeftLine(0)).toBe('You have used all your AI credits.');
+    expect(creditsLeftLine(-8)).toBe('You have used all your AI credits.');
+    expect(creditsLeftLine(3.9)).toBe('3 AI credits left.');
   });
 
   it('tell a subscriber out of credits that quick commands still work and when the next credits arrive', () => {
@@ -104,8 +104,8 @@ describe('the lines a person reads', () => {
   });
 
   it('do not claim quick commands work for a credits-only team, whose commands reach the same paywalled routes', () => {
-    expect(outOfCreditsNotice(creditsOnly, false)).toBe('You are out of UrgAns credits.');
-    expect(outOfCreditsNotice(creditsOnly, true)).toBe('You are out of UrgAns credits. You can buy more credits at any time.');
+    expect(outOfCreditsNotice(creditsOnly, false)).toBe('You are out of AI credits.');
+    expect(outOfCreditsNotice(creditsOnly, true)).toBe('You are out of AI credits. You can buy more credits at any time.');
     expect(creditsNextLine(0, creditsOnly, true)).toBe('You can buy more credits at any time.');
     // The teams that do have a plan are told as before.
     expect(outOfCreditsNotice(trial, false)).toContain('Quick commands still work');
@@ -135,11 +135,11 @@ describe('isLowOnCredits', () => {
 
 describe('the estimate shown before an embedded action runs', () => {
   it('says "about 12" for the planner, which has an estimate', () => {
-    expect(embeddedEstimateLine('release.draft_plan')).toBe('This uses about 12 UrgAns credits.');
+    expect(embeddedEstimateLine('release.draft_plan')).toBe('This uses about 12 AI credits.');
   });
 
   it('says "up to 25" for the press-kit draft, which has none yet, because that is the most it can cost', () => {
-    expect(embeddedEstimateLine('presskit.draft_section')).toBe('This uses up to 25 UrgAns credits.');
+    expect(embeddedEstimateLine('presskit.draft_section')).toBe('This uses up to 25 AI credits.');
   });
 
   it('keeps to the house rules, and says nothing about buying', () => {
@@ -154,7 +154,7 @@ describe('the refusal when a run cannot start', () => {
 
   it('says what it needs and what the team has, and when the next credits arrive', () => {
     const line = embeddedRefusalNotice(input);
-    expect(line).toBe('This needs up to 25 UrgAns credits and you have 7. Your next monthly credits arrive on 12 November.');
+    expect(line).toBe('This needs up to 25 AI credits and you have 7. Your next monthly credits arrive on 12 November.');
   });
 
   it('never shows a negative balance, and promises a date only to a subscriber', () => {
@@ -170,11 +170,11 @@ describe('the refusal when a run cannot start', () => {
 
 describe('embeddedCostLine', () => {
   it('says the estimate and then the balance', () => {
-    expect(embeddedCostLine('release.draft_plan', 412)).toBe('This uses about 12 UrgAns credits. You have 412 credits.');
+    expect(embeddedCostLine('release.draft_plan', 412)).toBe('This uses about 12 AI credits. You have 412 credits.');
   });
 
   it('says "up to" for an action with no estimate of its own', () => {
-    expect(embeddedCostLine('release.fill_pitch', 80)).toBe('This uses up to 25 UrgAns credits. You have 80 credits.');
+    expect(embeddedCostLine('release.fill_pitch', 80)).toBe('This uses up to 25 AI credits. You have 80 credits.');
   });
 
   it('is singular for one credit and never negative', () => {
@@ -183,7 +183,7 @@ describe('embeddedCostLine', () => {
   });
 
   it('says only the estimate when the balance is not known', () => {
-    expect(embeddedCostLine('release.fill_pitch', null)).toBe('This uses up to 25 UrgAns credits.');
-    expect(embeddedCostLine('release.fill_pitch', Number.NaN)).toBe('This uses up to 25 UrgAns credits.');
+    expect(embeddedCostLine('release.fill_pitch', null)).toBe('This uses up to 25 AI credits.');
+    expect(embeddedCostLine('release.fill_pitch', Number.NaN)).toBe('This uses up to 25 AI credits.');
   });
 });

@@ -64,7 +64,7 @@ BUILD A PRESS KIT YOU CAN SEND
 Every artist gets one standing page you can send to writers, radio and playlist curators. It stays current as your releases land.
 
 ASK URGANS
-UrgAns is the personal AI for music professionals inside Urganize. Ask it what is late, have it build your rollout plan, or tell it to create an activity in plain words. It asks before anything that cannot be undone.
+Urganize has a personal AI for music professionals built in. Ask it what is late, have it build your rollout plan, or tell it to create an activity in plain words. It asks before anything that cannot be undone.
 
 WHO IT IS FOR
 Artists running their own releases. Managers running more than one artist at a time. Labels running a full roster.

@@ -321,7 +321,7 @@ export function ScoreboardView({
           </li>
           <li>
             Something a member did: a task change, comment, file, release chat message, new
-            release, note, UrgAns message or press kit edit. Task changes are only recorded
+            release, note, AI message or press kit edit. Task changes are only recorded
             from 2 October 2026, so activity before then is undercounted.
           </li>
           <li>

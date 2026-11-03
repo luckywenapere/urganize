@@ -61,7 +61,7 @@ export function validateFactInput(input: {
     return { ok: false, error: `Pick a topic: ${ARTIST_FACT_TOPICS.join(', ')}.` };
   }
   const value = normalizeFactValue(input.value);
-  if (!value) return { ok: false, error: 'Write what UrgAns should know.' };
+  if (!value) return { ok: false, error: 'Write what AI should know.' };
   if (value.length > MAX_FACT_LENGTH) {
     // Refused, not cut: a fact cut in half can say the opposite of what was meant.
     return { ok: false, error: `Keep it under ${MAX_FACT_LENGTH} characters. Longer thoughts belong in a note.` };
@@ -162,7 +162,7 @@ export function describeFactSaveCard(
   const label = ARTIST_FACT_TOPIC_LABEL[input.topic];
   if (plan.kind === 'replace') {
     return {
-      title: `Change what UrgAns remembers about ${artistName}?`,
+      title: `Change what AI remembers about ${artistName}?`,
       detail: `${label}. Was: ${plan.previous.value}. Now: ${input.value}.`,
       confirmLabel: 'Update',
     };

@@ -412,7 +412,7 @@ export default function PressKitPageClient() {
             setLockedMessage(String(body.error || ''));
             return;
           }
-          setDraftError(String(body?.error || 'UrgAns could not write that just now.'));
+          setDraftError(String(body?.error || 'AI could not write that just now.'));
           return;
         }
 
@@ -424,7 +424,7 @@ export default function PressKitPageClient() {
         // A successful run is paid for, so the balance just moved.
         void refreshBalance();
       } catch {
-        setDraftError('Could not reach UrgAns. Check your connection and try again.');
+        setDraftError('Could not reach AI. Check your connection and try again.');
       } finally {
         setDraftBusy(false);
       }

@@ -263,7 +263,7 @@ describe('refusing a turn the team cannot pay for', () => {
 
     expect(response!.status).toBe(429);
     expect(body.mode).toBe('deterministic');
-    expect(body.notice).toMatch(/out of UrgAns credits/);
+    expect(body.notice).toMatch(/out of AI credits/);
     expect(body.notice).toMatch(/next monthly credits arrive on 1 November/);
     expect(body.notice).not.toMatch(/come back|reset/i);
     expect(runChappiAgent).not.toHaveBeenCalled();
@@ -277,7 +277,7 @@ describe('refusing a turn the team cannot pay for', () => {
 
     const body = await (await POST(post({ messages })))!.json();
 
-    expect(body.notice).toMatch(/out of UrgAns credits/);
+    expect(body.notice).toMatch(/out of AI credits/);
     expect(body.notice).not.toMatch(/November|arrive/);
   });
 

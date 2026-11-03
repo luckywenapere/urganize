@@ -101,7 +101,7 @@ afterEach(() => {
 const passGiven = (): string | undefined => (resolveChappiContext.mock.calls[0][0] as { urgansPass?: string }).urgansPass;
 
 describe('a funded credits-only team', () => {
-  it('gets a UrgAns pass for its assistant, minted for that user', async () => {
+  it('gets an AI pass for its assistant, minted for that user', async () => {
     const response = await POST(post());
     expect(response!.status).toBe(200);
     const pass = passGiven();
@@ -123,7 +123,7 @@ describe('a funded credits-only team', () => {
     expect(response!.status).toBe(429);
     const body = await response!.json();
     expect(body.mode).toBe('deterministic');
-    expect(body.notice).toContain('out of UrgAns credits');
+    expect(body.notice).toContain('out of AI credits');
     expect(body.notice).not.toContain('Quick commands');
     expect(runChappiAgent).not.toHaveBeenCalled();
     expect(settleTurn).not.toHaveBeenCalled();

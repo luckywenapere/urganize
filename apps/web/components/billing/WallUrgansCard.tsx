@@ -35,14 +35,14 @@ export function WallUrgansCard() {
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-stroke-subtle pt-5">
       <p className="text-sm text-content-secondary">
         {left > 0
-          ? `Or use UrgAns on credits. You have ${left.toLocaleString('en-US')} left.`
-          : 'Or use UrgAns on credits, and pay as you go.'}
+          ? `Or use AI on credits. You have ${left.toLocaleString('en-US')} left.`
+          : 'Or use AI on credits, and pay as you go.'}
       </p>
       <Link
         href={URGANS_HUB_PATH}
         className="motion-focus inline-flex min-h-11 items-center font-semibold text-content-primary underline underline-offset-4 hover:text-brand"
       >
-        {left > 0 ? 'Open UrgAns' : 'Get credits'}
+        {left > 0 ? 'Open AI' : 'Get credits'}
       </Link>
     </div>
   );
