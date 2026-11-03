@@ -133,7 +133,7 @@ export function ProfilePhotoPicker({
           title="Remove photo"
           // Shown on hover or keyboard focus only (founder, 2026-10-15); a
           // touch screen has no hover, so it stays visible there.
-          className="motion-focus motion-press absolute bottom-1.5 right-1.5 grid h-8 w-8 place-items-center rounded-full bg-black/55 text-white/85 opacity-0 backdrop-blur-sm transition-[opacity,background-color,color] hover:bg-black/80 hover:text-status-error focus-visible:bg-black/80 focus-visible:text-status-error focus-visible:opacity-100 group-hover/photo:opacity-100 [@media(hover:none)]:opacity-100"
+          className="motion-focus motion-press absolute bottom-1.5 right-1.5 grid h-8 w-8 place-items-center rounded-full bg-black/55 text-white/85 opacity-0 backdrop-blur-sm transition-[opacity,background-color,color] hover:bg-black/80 hover:text-status-error focus-visible:bg-black/80 focus-visible:text-status-error focus-visible:opacity-100 group-hover/photo:opacity-100 touch:opacity-100"
         >
           <Trash2 className="h-4 w-4" aria-hidden />
         </button>

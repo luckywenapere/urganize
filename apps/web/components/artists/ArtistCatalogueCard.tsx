@@ -28,7 +28,7 @@ const primaryButton =
 const secondaryButton =
   'motion-press inline-flex min-h-11 items-center justify-center rounded-full border border-stroke-default bg-bg-surface px-5 text-sm font-medium text-content-secondary transition-colors duration-fast ease-standard hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-50';
 const smallButton =
-  'motion-focus motion-press inline-flex min-h-9 items-center rounded-full border border-stroke-default px-3.5 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-50';
+  'motion-focus motion-press inline-flex min-h-10 items-center rounded-full border border-stroke-default px-3.5 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-9';
 
 /** The notices this list opens. */
 export function Modal({ titleId, children, onClose }: { titleId: string; children: React.ReactNode; onClose: () => void }) {
@@ -150,7 +150,7 @@ function AddCode({ artistId, row, onSaved }: { artistId: string; row: CatalogueR
     else onSaved();
   };
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="flex flex-col items-start gap-1 sm:items-end">
       <div className="flex items-center gap-2">
         <input
           type="text"
@@ -166,7 +166,7 @@ function AddCode({ artistId, row, onSaved }: { artistId: string; row: CatalogueR
         </button>
       </div>
       {error ? (
-        <p role="alert" className="max-w-56 text-right text-xs text-status-error">
+        <p role="alert" className="max-w-56 text-xs text-status-error sm:text-right">
           {error}
         </p>
       ) : null}
@@ -282,8 +282,15 @@ export function ArtistCatalogueCard({
             {visible.map((row) => {
               const hasCode = Boolean(row.upc || row.isrc);
               const lookingUp = !hasCode && row.source === 'deezer' && !row.codes_checked_at;
+              // No action while codes are being looked up: no empty grid row either.
+              const hasAction = Boolean(row.link?.url) || hasCode || !lookingUp;
               return (
-                <li key={row.id} className="-mx-2 flex items-center gap-3 rounded-xl px-2 py-2">
+                // On a phone the action sits under the words, so the title
+                // keeps the width; from sm up it takes the right column.
+                <li
+                  key={row.id}
+                  className="-mx-2 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 rounded-xl px-2 py-2 sm:grid-cols-[auto_minmax(0,1fr)_auto]"
+                >
                   {row.cover_url ? (
                     // eslint-disable-next-line @next/next/no-img-element -- remote cover, never stored by us
                     <img src={row.cover_url} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-lg bg-bg-elevated object-cover" />
@@ -305,17 +312,23 @@ export function ArtistCatalogueCard({
                       {kindLabel(row.kind)}
                       {row.release_date ? `, ${row.release_date.slice(0, 4)}` : ''}
                     </p>
-                    <p className="truncate font-mono text-xs text-content-tertiary">
-                      {hasCode
-                        ? [row.upc ? `UPC ${row.upc}` : '', row.isrc ? `ISRC ${row.isrc}` : ''].filter(Boolean).join(' · ')
-                        : lookingUp
-                          ? 'Looking up codes…'
-                          : 'UPC and ISRC not found yet'}
+                    <p className="flex flex-wrap gap-x-2 font-mono text-xs text-content-tertiary">
+                      {hasCode ? (
+                        <>
+                          {row.upc ? <span>UPC {row.upc}</span> : null}
+                          {row.isrc ? <span>ISRC {row.isrc}</span> : null}
+                        </>
+                      ) : lookingUp ? (
+                        'Looking up codes…'
+                      ) : (
+                        'UPC and ISRC not found yet'
+                      )}
                     </p>
                   </div>
-                  <div className="shrink-0 text-right">
+                  {hasAction ? (
+                  <div className="col-start-2 justify-self-start sm:col-start-auto sm:justify-self-end sm:text-right">
                     {row.link?.url ? (
-                      <div className="flex flex-col items-end gap-1">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:flex-col sm:items-end sm:gap-1">
                         <a
                           href={row.link.url}
                           target="_blank"
@@ -343,6 +356,7 @@ export function ArtistCatalogueCard({
                       <AddCode artistId={artistId} row={row} onSaved={load} />
                     )}
                   </div>
+                  ) : null}
                 </li>
               );
             })}
@@ -351,7 +365,7 @@ export function ArtistCatalogueCard({
             <button
               type="button"
               onClick={() => setShowAll((current) => !current)}
-              className="motion-focus mt-2 text-xs font-medium text-content-secondary hover:text-content-primary"
+              className="motion-focus mt-1 inline-flex min-h-10 items-center text-[13px] font-medium text-content-secondary hover:text-content-primary"
             >
               {showAll ? 'Show fewer' : `Show all ${rows.length}`}
             </button>

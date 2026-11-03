@@ -66,9 +66,13 @@ export function CoverThumbEditor({
         }}
         aria-label={coverUrl ? `Change cover art for ${title}` : `Add cover art for ${title}`}
         title={coverUrl ? 'Change cover art' : 'Add cover art'}
-        className="motion-focus absolute inset-0 grid place-items-center bg-black/50 text-white opacity-0 transition-opacity focus-visible:opacity-100 group-hover/cover:opacity-100 [@media(hover:none)]:bg-black/30 [@media(hover:none)]:opacity-100"
+        className="motion-focus absolute inset-0 grid place-items-center bg-black/50 text-white opacity-0 transition-opacity focus-visible:opacity-100 group-hover/cover:opacity-100 touch:place-items-end touch:bg-transparent touch:opacity-100"
       >
-        <Pencil className="h-4 w-4" aria-hidden />
+        {/* On a touch screen the whole cover is still the button, but the
+            pencil is a small chip in the corner, not a shade over the art. */}
+        <span className="grid place-items-center touch:m-0.5 touch:h-5 touch:w-5 touch:rounded-full touch:border touch:border-stroke-strong touch:bg-bg-surface touch:text-content-secondary touch:shadow-sm">
+          <Pencil className="h-4 w-4 touch:h-3 touch:w-3" aria-hidden />
+        </span>
       </button>
       {isUploading ? (
         <span className="absolute inset-0 grid place-items-center bg-black/60">
