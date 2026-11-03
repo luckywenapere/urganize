@@ -36,7 +36,7 @@ export function PitchPicture() {
         <i />
         <i />
         <i />
-        <span className="fb-url">app.urganize.app</span>
+        <span className="fb-url">team.urganize.app</span>
       </div>
       <div className="fb-app">
         <div className="fb-side">

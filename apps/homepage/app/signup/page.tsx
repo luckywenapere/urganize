@@ -9,8 +9,9 @@ import { PageDawn } from "../components/marketing/PageDawn";
 import { ResponsiveProductShot } from "../components/landing/ResponsiveProductShot";
 import type { ProductShot } from "@/content/product-shots";
 
-// Lives on the marketing domain for the same reason /login does — see the
-// note there. The URL stays /signup so old links keep working, but the page
+// Lives on the marketing domain so it can be found by people searching the
+// brand (founder call, 2026-08-09; see the note in app/sitemap.ts). The URL
+// stays /signup so old links keep working, but the page
 // is the waitlist: its one button goes to WAITLIST_URL, and its copy says
 // waitlist, never sign up (house copy rule). It was a direct sign-up door to
 // /onboarding from 2026-08-09 until the waitlist came back.

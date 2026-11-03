@@ -11,7 +11,6 @@ const SITE_URL = "https://urganize.app";
 // 2026-10-18). WHEN YOU CHANGE A PAGE, BUMP ITS DATE HERE in the same commit.
 const LAST_MODIFIED = {
   home: "2026-10-18",
-  login: "2026-10-02",
   signup: "2026-10-07",
   features: "2026-10-17",
   pricing: "2026-10-18",
@@ -31,17 +30,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 1,
     },
-    // Ahead of the product pages on purpose: these two exist to be found by
-    // people searching the brand to get in, and to be sitelink candidates
-    // above Features (founder call, 2026-08-09). They're real pages here
-    // rather than redirects to team.urganize.app because a redirect isn't
-    // indexable and a subdomain can't be a sitelink of this one.
-    {
-      url: `${SITE_URL}/login`,
-      lastModified: LAST_MODIFIED.login,
-      changeFrequency: "monthly",
-      priority: 0.9,
-    },
+    // Ahead of the product pages on purpose: it exists to be found by people
+    // searching the brand to get in, and to be a sitelink candidate above
+    // Features (founder call, 2026-08-09). /login used to sit here too; it
+    // became a redirect into the app on 2026-11-03 (#1057).
     {
       url: `${SITE_URL}/signup`,
       lastModified: LAST_MODIFIED.signup,
