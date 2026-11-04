@@ -56,3 +56,43 @@ People who said they can't sign up. Urganize is waitlist only; Oyin lets them in
 | Name | Where | Date |
 |---|---|---|
 | kollyfield Manager | LinkedIn, moved to WhatsApp (number asked) | 3 Nov 2026 |
+
+## Inbox replies, 4 Nov 2026
+
+| Name | What they said | Status |
+|---|---|---|
+| Ehinome Ogbeide | Picked Thursday 10:30am | **demo booked, Thu 5 Nov 10:30 WAT**, Google Meet invite sent |
+| Ewa Okesanya | Works with Drahocenny, asked what Urganize does | answered, asked for a day |
+| Marilu Cobos | Networking is the hard part, asked Oyin's role | answered, asked who she works with |
+| Emmanuel Ogunmola | Release coming after his speech | asked for the release date |
+| Abubakar Shehu Idris | Calendar busy | "whenever you're free" |
+| kollyfield Manager | Sent SoundCloud | asked for WhatsApp number |
+| Snumari Datnayi | Asked raise amount | answered |
+| Wilson Mary Oluwayemisi | "Noted, I will let you know" | ended, no reply |
+
+## 4 Nov 2026
+
+| Name | Role | Profile | Liked | DM | Status |
+|---|---|---|---|---|---|
+| Pourya Partovi | Artist and label manager, Blue Feathers | /in/pouryapartovi | rollout post | yes | sent |
+| Christel Kayibi | Repertoire Strategy Africa, Sony Music | /in/christel-kayibi-llb-lpc-a0493540 | WeTalkSound post | yes | sent |
+| Alex Putman | Label director, artist manager | /in/alex-putman-10016a69 | AIM nominations post | yes | sent |
+| Greg Zajac | Events director, artist manager | /in/greg-zajac-12455b20 | HK Hall open house post | yes | sent |
+| Ryo Tamura | A&R, international artists | /in/ryo-tamura-7468a324 | no posts | yes | sent |
+| Lilian Anyanwu | Label partnerships, Soundyaad | /in/lilian-anyanwu-34337a240 | joined Soundyaad post | yes | sent |
+| Ashiru Abdulkabiru | Various Artists Management | /in/ashiru-abdulkabiru-924339433 | release week mistakes post | yes | sent |
+| Mayowa Olasunkanmi | Founder, MVMG World | /in/mayowa-olasunkanmi-05047b3a8 | team expansion post | yes | sent |
+| Joseph Udemezue | A&R and artist growth | /in/joseph-udemezue-0b05bb11b | DEJA VU post | yes | sent |
+| Charlie Gendron | Artist manager | /in/charlie-gendron | bringing artists back post | yes | sent |
+| Daniel De Virgilio | Founder, KR3 Records | /in/daniel-de-virgilio-b9b615226 | KR3.021 post | yes | sent |
+| Thurmas Brown | CEO, GBC Music | /in/thurmas-brown-522b93132 | CEO update post | yes | sent |
+| Mbuso Xulu | Ocean's States Recordings | /in/mbuso-xulu-676071a7 | Shaka Zulu EP post | yes | sent |
+| Nicholas Asefuah Mensah | Talent manager, Accra | /in/nicholas-asefuah-mensah-0b5890312 | no posts | yes | sent |
+| Abraham Udubrah | A&R executive, Amelia Songs | /in/abraham-udubrah-380bb4303 | Afro-House camp post | yes | sent |
+
+## Running totals (to 4 Nov)
+
+| | Sent | Replied | Demos booked |
+|---|---|---|---|
+| Cold DMs | 30 | 5 (from the first 15; today's 15 not due yet) | 0 |
+| Follow-ups on old chats | 9 | 5 | 1 (Ehinome) |
