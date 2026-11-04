@@ -13,7 +13,11 @@ import { isUuid } from '@/lib/next-records';
 
 export const RECORD_CAPTURE_PLACEHOLDER = 'Tell AI what happened…';
 
-const RECORD_PATH = /^\/dashboard\/artists\/[^/]+\/records\/([^/?#]+)\/?$/;
+// The project page lives at /dashboard/<artistId>/records/<id> (artistHref in
+// lib/artist-page.ts). The older /dashboard/artists/... form is still read so a
+// stale link scopes too. Until 4 Nov 2026 only that older form was read, so the
+// box on a project page never knew it was on one.
+const RECORD_PATH = /^\/dashboard\/(?:artists\/)?[^/]+\/records\/([^/?#]+)\/?$/;
 
 /** The record id when the page is a record page, else null. */
 export function recordIdFromPath(pathname: string | null | undefined): string | null {
@@ -32,5 +36,5 @@ export function parseRecordScope(body: unknown): string | null {
 
 /** The line UrgAns reads when the box is on a record. */
 export function recordScopeLine(record: { id: string; title: string; artistName: string }): string {
-  return `The user is on the record "${record.title}" by ${record.artistName} (recordId: ${record.id}), which is still being made. When they say what happened or what is planned (sessions, who was there, songs and their stages), call add_to_record with this recordId. Unless they clearly name another record, questions are about this one.`;
+  return `The user is on the record "${record.title}" by ${record.artistName} (recordId: ${record.id}), which is still being made. When they say what happened or what is planned (sessions, who was there, songs and their stages), call add_to_record with this recordId. Unless they clearly name another record, questions are about this one. For work to do on it, call get_project with this recordId and suggest from its list; add a task with create_task and this recordId after a yes.`;
 }

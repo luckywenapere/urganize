@@ -144,7 +144,11 @@ export async function loadCommandCenterData(
       Object.keys(access.releaseScopeByOwnerId).length > 0)
   ) {
     const visibleReleaseIds = new Set(releases.map((release) => release.id));
-    tasks = tasks.filter((task) => task.releaseId && visibleReleaseIds.has(task.releaseId));
+    // A project's task has no rollout; the task list already dropped the ones
+    // this member cannot see (dropRowsOutsideScope), so it stays.
+    tasks = tasks.filter((task) =>
+      task.releaseId ? visibleReleaseIds.has(task.releaseId) : Boolean(task.recordId)
+    );
   }
 
   let todaysDirective: ExecutionTask | null = null;

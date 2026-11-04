@@ -17,6 +17,8 @@ import {
 } from '@/lib/tasks-server';
 import { TaskService } from '@/lib/services/task-service';
 import { ASSIGN_OUTSIDE_TEAM_MESSAGE, isTeamAssignee } from '@/lib/task-assignee-server';
+import { decideTaskOwner } from '@/lib/project-tasks';
+import { isOpenRecord, isUuid, type RecordStatus } from '@/lib/next-records';
 
 // Allowed POST body fields. Same allowlist discipline as the PATCH route —
 // only `assignedToUserId` is accepted for assignee writes (the legacy
@@ -25,6 +27,7 @@ const TASK_POST_ALLOWED_FIELDS = new Set([
   'title',
   'description',
   'releaseId',
+  'recordId',
   'groupId',
   'workspaceId',
   'assignedToUserId',
@@ -69,12 +72,17 @@ export async function GET(request: NextRequest) {
     }
 
     const releaseId = request.nextUrl.searchParams.get('release');
+    // A project's tasks (4 Nov 2026). The scope filter in getTasksForUser
+    // still decides what this member may see.
+    const recordParam = request.nextUrl.searchParams.get('recordId');
+    const recordId = recordParam && isUuid(recordParam) ? recordParam : null;
     const priority = request.nextUrl.searchParams.get('priority') || undefined;
     const status = request.nextUrl.searchParams.get('status') || undefined;
     const mineOnly = request.nextUrl.searchParams.get('mine') === '1';
 
     const tasks = await taskService.getTasksForUser(auth.user.id, access, {
       releaseId,
+      recordId,
       priority,
       status,
       mineOnly,
@@ -119,6 +127,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
+    const owner = decideTaskOwner(body);
+    if ('error' in owner) {
+      return NextResponse.json({ error: owner.error }, { status: 400 });
+    }
+
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
     const workspaceId = body.workspaceId || access.primaryWorkspaceId;
 
@@ -134,6 +147,34 @@ export async function POST(request: NextRequest) {
       return buildReadOnlyResponse();
     }
 
+    // A project's task: the project must be this team's, still open (an idea or
+    // being made), and visible to this member. Same rules as the record routes
+    // (app/api/records/_shared.ts): an artist-limited member reaches only their
+    // artist's projects, a rollout-limited member reaches none.
+    if (owner.value.recordId) {
+      const recordResult = await adminClient
+        .from('next_records')
+        .select('artist_id,status')
+        .eq('id', owner.value.recordId)
+        .eq('workspace_id', workspaceId)
+        .maybeSingle();
+      const record = recordResult.data as { artist_id?: unknown; status?: unknown } | null;
+      const artistScope = access.artistScopeByWorkspaceId[workspaceId];
+      if (
+        !record ||
+        access.releaseScopeByWorkspaceId[workspaceId] ||
+        (artistScope && String(record.artist_id || '') !== artistScope)
+      ) {
+        return NextResponse.json({ error: 'That project was not found.' }, { status: 404 });
+      }
+      if (!isOpenRecord(String(record.status || '') as RecordStatus)) {
+        return NextResponse.json(
+          { error: 'This project already has its rollout. Add the task there.' },
+          { status: 409 }
+        );
+      }
+    }
+
     // Whoever the activity is handed to has to be on this team. The PATCH route
     // has always checked; creating with an assignee did not, so any user id
     // on the platform was accepted. An absent or null assignee is fine (it
@@ -145,7 +186,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const createdRow = await taskService.createTask(auth.user.id, workspaceId, body);
+    const createdRow = await taskService.createTask(auth.user.id, workspaceId, { ...body, ...owner.value });
 
     // Map the row before returning (URG-234). `createTask` resolves to the raw
     // inserted row — snake_case `release_id`, `workspace_id`, `due_date` — but

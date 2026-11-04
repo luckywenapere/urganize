@@ -4,6 +4,7 @@ import { readPlanCore, readPlanKey } from '@/lib/plan-focus';
 import { readTaskPhase } from '@/lib/rollout-phases';
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
+import { taskHref } from '@/lib/project-tasks';
 import {
   type SupabaseClient,
   type User,
@@ -25,6 +26,7 @@ import {
   type TaskPriority,
   type TaskRequirement,
   type TaskReleaseSummary,
+  type TaskRecordSummary,
   type TaskSortKey,
   type TaskStatus,
   type ReleasePipelineState,
@@ -280,6 +282,7 @@ export type TaskRow = {
   workspace_id: string;
   group_id: string | null;
   release_id: string | null;
+  record_id?: string | null;
   created_by: string;
   assigned_to_user_id: string | null;
   assigned_to: string | null;
@@ -305,7 +308,7 @@ export type TaskRow = {
 // pattern where one select adds a column (e.g. assigned_to_user_id) and a
 // sibling select silently keeps reading without it.
 export const TASKS_SELECT_COLUMNS =
-  'id,workspace_id,group_id,release_id,created_by,assigned_to_user_id,assigned_to,title,description,status,priority,due_date,completed_at,position,requirement,dependencies,state,auto_generated,metadata,group_name,group_color,created_at,updated_at';
+  'id,workspace_id,group_id,release_id,record_id,created_by,assigned_to_user_id,assigned_to,title,description,status,priority,due_date,completed_at,position,requirement,dependencies,state,auto_generated,metadata,group_name,group_color,created_at,updated_at';
 
 type TaskCommentRow = {
   id: string;
@@ -1363,6 +1366,27 @@ async function loadReleaseSummaries(
   );
 }
 
+/** Title and artist of each project a task belongs to (4 Nov 2026). A failed
+ * read leaves task.record null, never fails the list. */
+async function loadRecordSummaries(
+  adminClient: SupabaseClient,
+  recordIds: string[]
+): Promise<Map<string, TaskRecordSummary>> {
+  const ids = Array.from(new Set(recordIds.filter(Boolean)));
+  if (!ids.length) return new Map();
+  const result = await adminClient.from('next_records').select('id,title,artist_id').in('id', ids);
+  if (result.error || !Array.isArray(result.data)) {
+    if (result.error) console.error('loadRecordSummaries query failed:', result.error);
+    return new Map();
+  }
+  return new Map(
+    (result.data as Array<{ id: string; title: string | null; artist_id: string | null }>).map((row) => [
+      String(row.id),
+      { id: String(row.id), title: String(row.title || 'Untitled'), artistId: String(row.artist_id || '') },
+    ])
+  );
+}
+
 async function loadTaskGroups(
   adminClient: SupabaseClient,
   groupIds: string[]
@@ -1435,13 +1459,15 @@ function toTask(
   memberByUserId: Map<string, WorkspaceMember>,
   memberById: Map<string, WorkspaceMember>,
   commentCountByTaskId: Map<string, number>,
-  attachmentCountByTaskId: Map<string, number>
+  attachmentCountByTaskId: Map<string, number>,
+  recordById: Map<string, TaskRecordSummary> = new Map()
 ): Task {
   return {
     id: row.id,
     workspaceId: row.workspace_id,
     groupId: row.group_id,
     releaseId: row.release_id,
+    recordId: row.record_id ?? null,
     createdBy: row.created_by,
     assignedToUserId: row.assigned_to_user_id,
     assignedTo: row.assigned_to,
@@ -1455,6 +1481,7 @@ function toTask(
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     release: row.release_id ? releaseById.get(row.release_id) || null : null,
+    record: row.record_id ? recordById.get(row.record_id) || null : null,
     group: row.group_id ? groupById.get(row.group_id) || null : null,
     assignee: row.assigned_to_user_id ? memberByUserId.get(row.assigned_to_user_id) || null : (row.assigned_to ? memberById.get(row.assigned_to) || null : null),
     context: normalizeTaskContext(row.metadata),
@@ -1497,7 +1524,7 @@ export async function loadTasks(
 
   // Everything here is independent — releases, groups, members, and both
   // count lookups used to run as up to 5+ serial awaits per call.
-  const [releaseById, groupById, memberLists, commentCountByTaskId, attachmentCountByTaskId] =
+  const [releaseById, groupById, memberLists, commentCountByTaskId, attachmentCountByTaskId, recordById] =
     await Promise.all([
       step('t_releases', () =>
         loadReleaseSummaries(
@@ -1526,6 +1553,12 @@ export async function loadTasks(
       step('t_attach', () =>
         loadTaskCounts(adminClient, TASK_ATTACHMENTS_TABLE, rows.map((row) => row.id))
       ),
+      step('t_records', () =>
+        loadRecordSummaries(
+          adminClient,
+          rows.map((row) => row.record_id || '').filter(Boolean)
+        )
+      ),
     ]);
 
   const memberById = new Map<string, WorkspaceMember>();
@@ -1540,7 +1573,7 @@ export async function loadTasks(
   }
 
   return rows.map((row) =>
-    toTask(row, releaseById, groupById, memberByUserId, memberById, commentCountByTaskId, attachmentCountByTaskId)
+    toTask(row, releaseById, groupById, memberByUserId, memberById, commentCountByTaskId, attachmentCountByTaskId, recordById)
   );
 }
 
@@ -1615,6 +1648,19 @@ export async function ensureTaskAccess(
     }
     const releaseArtistId = String(releaseRow?.artist_id || '');
     if (artistScope && releaseArtistId !== artistScope) {
+      return { error: NextResponse.json({ error: 'Task not found.' }, { status: 404 }) };
+    }
+  }
+  // A project's task (4 Nov 2026): an artist-limited member only touches the
+  // tasks of their own artist's projects, read through next_records.
+  if (task.record_id && artistScope) {
+    const recordResult = await adminClient
+      .from('next_records')
+      .select('artist_id')
+      .eq('id', task.record_id)
+      .maybeSingle();
+    const recordArtistId = String((recordResult.data as { artist_id?: unknown } | null)?.artist_id || '');
+    if (recordArtistId !== artistScope) {
       return { error: NextResponse.json({ error: 'Task not found.' }, { status: 404 }) };
     }
   }
@@ -2058,12 +2104,30 @@ export async function logTaskActivity(
 // sweep pass in admin-edited preset copy for the three due-date tiers
 // without this function knowing anything about app_settings — see
 // createDueDateNotificationsForAllUsers, which loads presets once per run.
+/** The project a task belongs to, for its links (4 Nov 2026). Never throws. */
+async function loadTaskProject(
+  adminClient: SupabaseClient,
+  recordId: unknown
+): Promise<{ id: string; artistId: string; title: string } | null> {
+  const id = typeof recordId === 'string' ? recordId : '';
+  if (!id) return null;
+  try {
+    const result = await adminClient.from('next_records').select('id,artist_id,title').eq('id', id).maybeSingle();
+    const row = result.data as { artist_id?: unknown; title?: unknown } | null;
+    if (!row) return null;
+    return { id, artistId: String(row.artist_id || ''), title: String(row.title || 'Untitled') };
+  } catch {
+    return null;
+  }
+}
+
 function buildTaskPushPayload(
   type: NotificationType,
   taskTitle: string,
   taskId: string,
   releaseId: string | null,
-  copyOverrides?: Partial<Record<NotificationType, { title: string; body: string }>>
+  copyOverrides?: Partial<Record<NotificationType, { title: string; body: string }>>,
+  record: { id: string; artistId: string } | null = null
 ): PushPayload {
   const quoted = taskTitle ? `“${taskTitle}”` : 'An activity';
   const copy: Partial<Record<NotificationType, { title: string; body: string }>> = {
@@ -2085,7 +2149,7 @@ function buildTaskPushPayload(
   return {
     title: entry.title.replace('{taskTitle}', quoted),
     body: entry.body.replace('{taskTitle}', quoted),
-    url: releaseId ? `/dashboard?release=${releaseId}` : '/dashboard',
+    url: taskHref({ releaseId, record }),
     tag: `task-${taskId}-${type}`,
   };
 }
@@ -2140,15 +2204,16 @@ export async function createTaskNotification(
   try {
     const taskResult = await adminClient
       .from(TASKS_TABLE)
-      .select('title,release_id')
+      .select('title,release_id,record_id')
       .eq('id', input.taskId)
       .maybeSingle();
     const taskTitle = String(taskResult.data?.title || '').trim();
     const releaseId = taskResult.data?.release_id ? String(taskResult.data.release_id) : null;
+    const project = await loadTaskProject(adminClient, taskResult.data?.record_id);
     await sendPushToUsers(
       adminClient,
       [input.userId],
-      buildTaskPushPayload(input.type, taskTitle, input.taskId, releaseId, input.copyOverrides)
+      buildTaskPushPayload(input.type, taskTitle, input.taskId, releaseId, input.copyOverrides, project)
     );
   } catch (error) {
     console.error('[push] task notification push failed', error);
@@ -2191,7 +2256,7 @@ async function sendTaskAssignedEmail(
       : Promise.resolve({ data: null, error: null }),
     adminClient
       .from(TASKS_TABLE)
-      .select('title,description,due_date,priority,release_id')
+      .select('title,description,due_date,priority,release_id,record_id')
       .eq('id', input.taskId)
       .maybeSingle(),
   ]);
@@ -2205,9 +2270,17 @@ async function sendTaskAssignedEmail(
     'Your teammate';
 
   const task = taskResult.data as
-    | { title?: string; description?: string; due_date?: string; priority?: string; release_id?: string }
+    | {
+        title?: string;
+        description?: string;
+        due_date?: string;
+        priority?: string;
+        release_id?: string;
+        record_id?: string;
+      }
     | null;
   const releaseId = String(task?.release_id || '').trim();
+  const project = releaseId ? null : await loadTaskProject(adminClient, task?.record_id);
 
   let releaseTitle = '';
   if (releaseId) {
@@ -2217,6 +2290,8 @@ async function sendTaskAssignedEmail(
       .eq('id', releaseId)
       .maybeSingle();
     releaseTitle = String(releaseResult.data?.title || '').trim();
+  } else if (project) {
+    releaseTitle = project.title;
   }
 
   await sendEmail(adminClient, {
@@ -2230,7 +2305,7 @@ async function sendTaskAssignedEmail(
       dueDateLabel: formatDueDateForEmail(task?.due_date),
       priorityLabel: priorityLabelForEmail(task?.priority),
       note: noteExcerptForEmail(task?.description),
-      taskUrl: releaseId ? `${APP_URL}/dashboard?release=${releaseId}` : `${APP_URL}/dashboard`,
+      taskUrl: `${APP_URL}${taskHref({ releaseId: releaseId || null, record: project })}`,
     },
     trigger: 'task_assigned',
     recipientUserId: input.assigneeUserId,

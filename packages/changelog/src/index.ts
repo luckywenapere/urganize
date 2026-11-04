@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.248.0",
+    tag: "App",
+    date: "November 4, 2026",
+    highlights: [
+      "A project has its own tasks now. Add the jobs before the rollout exists, tick them off, and tap one to set who does it and when.",
+      "Each project suggests what to do next, like finishing a song that is in the mix. Tap Add to make it a task. The AI can read your project and add tasks too.",
+    ],
+  },
+  {
     version: "1.247.0",
     tag: "App",
     date: "November 4, 2026",

@@ -34,6 +34,8 @@ import {
   updateSong,
 } from '@/lib/next-records-server';
 import { listRelationships } from '@/lib/relationships-server';
+import { suggestProjectTasks } from '@/lib/project-suggestions';
+import { isTaskClosed } from '@/types/tasks';
 import { recordScopeLine } from '../record-scope';
 import { argString, fail, type ChappiTool, type ChappiToolContext } from './shared';
 
@@ -282,6 +284,67 @@ export const RECORD_TOOLS: ChappiTool[] = [
         ok: true,
         summary: `Added to ${record.title} (${target.artistName}): ${parts.join(', ')}. It is on the record page under ${target.artistName} in Catalogue.${doneLine(target.record, record)}`,
         data: { recordId, artistId: target.artistId, sessions: plan.sessions.length, newSongs: plan.newSongs.length, stageChanges: plan.stageChanges.length },
+      };
+    },
+  },
+  {
+    name: 'get_project',
+    kind: 'read',
+    level: 'read',
+    description:
+      'Read a project (music still being made, before its rollout): its stage, songs, open and done tasks, and the jobs it suggests next. Call this before suggesting work on a project, and suggest only from its "suggested" list. Leave recordId out to use the only open project.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        recordId: { type: 'string', description: 'The project. Leave out when there is only one.' },
+      },
+    },
+    execute: async (ctx, args) => {
+      const open = await listRecordsInMaking(ctx.adminClient, {
+        workspaceIds: ctx.workspaceIds,
+        artistScopeByWorkspaceId: ctx.artistScopeByWorkspaceId,
+        releaseScopeByWorkspaceId: ctx.releaseScopeByWorkspaceId,
+      });
+      if (!open) return fail('Could not read the projects. Try again.');
+      const wanted = argString(args, 'recordId');
+      const target = wanted ? open.find((r) => r.id === wanted) : open.length === 1 ? open[0] : undefined;
+      if (!target) {
+        if (!wanted && open.length > 1) {
+          return fail(`There are ${open.length} open projects. Ask which one: ${open.map((r) => `${r.title} (${r.artistName}, recordId ${r.id})`).join('; ')}.`);
+        }
+        return fail('That project was not found, or it already has its rollout.');
+      }
+      const read = await readRecord(ctx.adminClient, target.workspaceId, target.id);
+      if (!read.ok) return fail(read.error);
+      const record = read.value;
+      const taskRows = await ctx.adminClient
+        .from('tasks')
+        .select('id,title,status,due_date')
+        .eq('record_id', record.id)
+        .order('position', { ascending: true });
+      const tasks = ((taskRows.data ?? []) as Array<{ id: string; title: string; status: string; due_date: string | null }>).map(
+        (t) => ({ id: t.id, title: t.title, done: isTaskClosed(t.status), dueDate: t.due_date ? t.due_date.slice(0, 10) : null })
+      );
+      const suggested = suggestProjectTasks({
+        status: record.status,
+        songs: record.songs,
+        existingTitles: tasks.map((t) => t.title),
+        limit: 6,
+      });
+      const openTasks = tasks.filter((t) => !t.done);
+      return {
+        ok: true,
+        summary: `${record.title} (${target.artistName}) is at the ${record.status === 'idea' ? 'Idea' : 'Making'} stage with ${record.songs.length} song(s), ${openTasks.length} open task(s) and ${suggested.length} suggested job(s). To add one, call create_task with recordId ${record.id} after the user says yes.`,
+        data: {
+          recordId: record.id,
+          artistId: target.artistId,
+          title: record.title,
+          stage: record.status,
+          idea: record.idea,
+          songs: record.songs.map((s) => ({ title: s.title, stage: s.stage })),
+          tasks,
+          suggested: suggested.map((s) => ({ title: s.title, description: s.description })),
+        },
       };
     },
   },

@@ -9,6 +9,12 @@ describe('recordIdFromPath', () => {
     expect(recordIdFromPath(`/dashboard/artists/art-1/records/${ID}/`)).toBe(ID);
   });
 
+  it('reads it from the page as it lives today, /dashboard/<artistId>/records/<id>', () => {
+    expect(recordIdFromPath(`/dashboard/art-1/records/${ID}`)).toBe(ID);
+    expect(recordIdFromPath(`/dashboard/art-1/records/${ID}/`)).toBe(ID);
+    expect(recordIdFromPath(`/dashboard/art-1/records/${ID}/edit`)).toBeNull();
+  });
+
   it('is null anywhere else', () => {
     expect(recordIdFromPath('/dashboard/artists/art-1')).toBeNull();
     expect(recordIdFromPath('/dashboard/urgans')).toBeNull();
