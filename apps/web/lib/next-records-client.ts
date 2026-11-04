@@ -38,8 +38,9 @@ export async function fetchArtistRecords(artistId: string): Promise<RecordSummar
   }
 }
 
+// A new project starts at Idea (2026-11-04, #1074): nothing is being made yet.
 export const startRecord = (artistId: string, input: { title?: string } = {}) =>
-  recordCall(`/api/workspace/artists/${artistId}/records`, 'POST', input);
+  recordCall(`/api/workspace/artists/${artistId}/records`, 'POST', { status: 'idea', ...input });
 
 export const fetchRecord = (recordId: string) => recordCall(`/api/records/${recordId}`, 'GET');
 

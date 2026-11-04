@@ -25,8 +25,22 @@ export const SESSION_STATUS_LABELS: Record<SessionStatus, string> = {
 export const RECORD_KINDS = ['single', 'ep', 'album'] as const;
 export type RecordKind = (typeof RECORD_KINDS)[number];
 
-export const RECORD_STATUSES = ['making', 'planned', 'dropped'] as const;
+// A project's stages (2026-11-04, #1074, docs/notes/2026-11-04-project-lifecycle.md).
+// Idea: nobody has started making it. Making: songs and sessions under way.
+// Planned: it became a rollout. Dropped: let go. Idea moves to Making by a
+// button or by itself the first time work starts, and never back.
+export const RECORD_STATUSES = ['idea', 'making', 'planned', 'dropped'] as const;
 export type RecordStatus = (typeof RECORD_STATUSES)[number];
+
+/** The stages a project is still open in: on the artist page, askable, plannable. */
+export const OPEN_RECORD_STATUSES = ['idea', 'making'] as const;
+export type OpenRecordStatus = (typeof OPEN_RECORD_STATUSES)[number];
+
+export const isOpenRecord = (status: RecordStatus): status is OpenRecordStatus =>
+  (OPEN_RECORD_STATUSES as readonly string[]).includes(status);
+
+/** A song past its Idea stage means the making has started. */
+export const songStartsMaking = (stage: SongStage): boolean => stage !== 'idea';
 
 export const MAX_RECORD_TITLE = 120;
 export const MAX_IDEA = 2000;
@@ -77,6 +91,8 @@ export type RecordSummary = {
   /** Resolved: the picked colour, else the artist's. */
   coverColor: string;
   coverUrl: string | null;
+  /** Idea or Making: the artist page marks an idea. */
+  status: RecordStatus;
   songCount: number;
   doneCount: number;
   nextSession: { date: string | null; dateHint: string } | null;
@@ -111,15 +127,25 @@ const cleanLine = (value: unknown) => (typeof value === 'string' ? value.replace
 
 export type RecordPatch = Partial<{ title: string; kind: RecordKind | null; idea: string; status: 'making' | 'dropped' }>;
 
-/** POST body: everything optional, so one tap can start an untitled record. */
-export function parseRecordCreate(body: unknown): Parsed<{ title: string; kind: RecordKind | null; idea: string }> {
+export type RecordCreate = { title: string; kind: RecordKind | null; idea: string; status: OpenRecordStatus };
+
+/**
+ * POST body: everything optional, so one tap can start an untitled record.
+ * A project starts at Idea or Making; Making is the default so every caller
+ * from before the Idea stage (2026-11-04) keeps its meaning.
+ */
+export function parseRecordCreate(body: unknown): Parsed<RecordCreate> {
   const input = asRecord(body);
   const title = cleanLine(input.title) || DEFAULT_RECORD_TITLE;
   if (title.length > MAX_RECORD_TITLE) return { error: `Keep the name under ${MAX_RECORD_TITLE} characters.` };
   if (input.kind !== undefined && input.kind !== null && !isRecordKind(input.kind)) return { error: 'Pick single, EP or album.' };
   const idea = typeof input.idea === 'string' ? input.idea.trim() : '';
   if (idea.length > MAX_IDEA) return { error: `Keep the idea under ${MAX_IDEA} characters.` };
-  return { value: { title, kind: isRecordKind(input.kind) ? input.kind : null, idea } };
+  if (input.status !== undefined && input.status !== 'idea' && input.status !== 'making') {
+    return { error: 'A project starts as an idea or in the making.' };
+  }
+  const status: OpenRecordStatus = input.status === 'idea' ? 'idea' : 'making';
+  return { value: { title, kind: isRecordKind(input.kind) ? input.kind : null, idea, status } };
 }
 
 export function parseRecordPatch(body: unknown): Parsed<RecordPatch> {
@@ -142,6 +168,7 @@ export function parseRecordPatch(body: unknown): Parsed<RecordPatch> {
   }
   if (has(input, 'status')) {
     // 'planned' is set only by planning the rollout (step 4), never by a PATCH.
+    // 'idea' is only ever a starting stage: nothing moves a project back to it.
     if (input.status !== 'making' && input.status !== 'dropped') return { error: 'That status is not allowed here.' };
     patch.status = input.status;
   }
@@ -234,7 +261,7 @@ export function parseSessionInput(body: unknown): Parsed<SessionInput> {
 
 /** "1 of 4 done" and the next planned session, for the artist page row. */
 export function summarizeRecord(
-  record: Pick<NextRecord, 'id' | 'artistId' | 'title' | 'kind' | 'coverColor' | 'coverUrl' | 'songs' | 'sessions'>,
+  record: Pick<NextRecord, 'id' | 'artistId' | 'title' | 'kind' | 'coverColor' | 'coverUrl' | 'status' | 'songs' | 'sessions'>,
   today: string
 ): RecordSummary {
   const doneCount = record.songs.filter((song) => song.stage === 'done').length;
@@ -244,6 +271,7 @@ export function summarizeRecord(
     kind: record.kind,
     coverColor: recordCoverColor(record),
     coverUrl: record.coverUrl,
+    status: record.status,
     songCount: record.songs.length,
     doneCount,
     nextSession: (() => {

@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.247.0",
+    tag: "App",
+    date: "November 4, 2026",
+    highlights: [
+      "A project can start as just an idea. Write the idea down, then tap Start making when the work begins. It also moves on by itself when a song starts recording or you book a session.",
+      "The artist page marks a project that is still an idea, so you can see at a glance which artists have something on the way.",
+    ],
+  },
+  {
     version: "1.246.2",
     tag: "App",
     date: "November 4, 2026",

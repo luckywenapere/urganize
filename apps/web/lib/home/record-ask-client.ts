@@ -24,7 +24,7 @@ async function send(path: string, method: string, body: unknown): Promise<Done<R
 
 /** "What's next?" answered: starts the record with the line as its idea. */
 export async function startRecordWithIdea(artistId: string, idea: string): Promise<Done<NextRecord>> {
-  const result = await send(`/api/workspace/artists/${artistId}/records`, 'POST', { idea });
+  const result = await send(`/api/workspace/artists/${artistId}/records`, 'POST', { idea, status: 'idea' });
   if (!result.ok) return result;
   const record = result.value.record as NextRecord | undefined;
   return record ? { ok: true, value: record } : { ok: false, error: 'Something went wrong. Try again.' };
