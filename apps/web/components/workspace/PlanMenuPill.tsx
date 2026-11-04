@@ -59,6 +59,15 @@ export function PlanMenuPillDock({ toTop = false, anchorClassName = '' }: { toTo
     if (!el) return;
     const read = () => {
       const rect = el.getBoundingClientRect();
+      // The rollout page draws its phone and desktop layouts together and
+      // hides one with CSS, and both carry a dock. A hidden anchor measures
+      // zero wide at x=0, and since the pill goes to <body> it would still
+      // show, cut off at the left edge (#1069). So no width, no pill. The
+      // ResizeObserver brings it back when the layout switches.
+      if (rect.width === 0) {
+        setBox(null);
+        return;
+      }
       setBox((prev) => (prev && prev.left === rect.left && prev.width === rect.width ? prev : { left: rect.left, width: rect.width }));
     };
     read();
