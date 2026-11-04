@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.246.2",
+    tag: "App",
+    date: "November 4, 2026",
+    highlights: [
+      "The Up next card on an artist's page is a plain card now, without the green stripe down its side.",
+    ],
+  },
+  {
     version: "1.246.1",
     tag: "App",
     date: "November 3, 2026",

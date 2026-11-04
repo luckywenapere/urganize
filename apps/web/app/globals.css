@@ -230,6 +230,35 @@
   --urg-thread-gold-strong: rgb(var(--color-status-warning) / 0.10);
 }
 
+/* shadcn/ui semantic tokens (2026-11-04, #1071): aliases onto the Urganize
+   palette, RGB triplets like everything above, mapped to utilities in
+   packages/config/tailwind/preset.js (bg-card, text-muted-foreground, ...).
+   Declared once here: every theme block in this file sits on the html
+   element too, so each alias resolves to that theme's value. An island that
+   redefines --color-* on an inner element (.cc-island, .epk-island) does not
+   reach these; a shadcn component inside one keeps the page theme. */
+:root {
+  --background: var(--color-bg-base);
+  --foreground: var(--color-text-primary);
+  --card: var(--color-bg-surface);
+  --card-foreground: var(--color-text-primary);
+  --popover: var(--color-bg-elevated);
+  --popover-foreground: var(--color-text-primary);
+  --primary: var(--color-brand);
+  --primary-foreground: var(--color-text-inverse);
+  --secondary: var(--color-bg-hover);
+  --secondary-foreground: var(--color-text-primary);
+  --muted: var(--color-bg-hover);
+  --muted-foreground: var(--color-text-secondary);
+  --accent: var(--color-bg-hover);
+  --accent-foreground: var(--color-text-primary);
+  --destructive: var(--color-status-error);
+  --destructive-foreground: var(--color-text-inverse);
+  --border: var(--border-default);
+  --input: var(--color-stroke-control);
+  --ring: var(--color-brand);
+}
+
 html[data-theme='dark'] { color-scheme: dark; }
 
 html[data-theme='light'] {

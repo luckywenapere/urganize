@@ -32,3 +32,7 @@ Oyin sent two phone screenshots: the Out now card "Songs out before Urganize?" h
 - Copy: "Bring in what X already released, once." now reads "Bring in what X already released. You only do this once." Not re-mocked: Oyin's "do everything" waiver covered this pass.
 
 Checked in a local browser harness (the real component with stubbed data, not the app) at 390px and 1280px, light and dark, in five states: nothing yet, records in the making, a live rollout, a rollout out with the older-songs slot, and brought-in songs. The captures are in `docs/mocks/artist-page-phone/` (before and after, every state, dark). Not checked on a real phone.
+
+## Amended 2026-11-04: the Up next card
+
+Oyin did not like the 3px brand stripe on the card's left edge. The card is now a real shadcn/ui Card (`components/ui/card.tsx`, see `2026-11-04-shadcn-ui.md`): plain border, soft shadow, no stripe, with the whole card one link or button through a stretched control over it. Two options were rendered; he picked the one that keeps the big serif countdown on the left over a mono badge beside the label.
