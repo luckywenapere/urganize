@@ -34,6 +34,7 @@ import {
   updateSong,
 } from '@/lib/next-records-server';
 import { listRelationships } from '@/lib/relationships-server';
+import { buildProjectOffer, type ProjectOffer } from '@/lib/project-offer';
 import { suggestProjectTasks } from '@/lib/project-suggestions';
 import { isTaskClosed } from '@/types/tasks';
 import { recordScopeLine } from '../record-scope';
@@ -280,10 +281,38 @@ export const RECORD_TOOLS: ChappiTool[] = [
         plan.newSongs.length ? `${plan.newSongs.length} new song(s)` : '',
         plan.stageChanges.length ? `${plan.stageChanges.length} stage change(s)` : '',
       ].filter(Boolean);
+      // The next jobs, offered as chips under the reply (mock screen 6). From
+      // the project's own suggestion list, never invented; jobs already added
+      // are left out. No offer when the list is empty or the read fails.
+      // The Add has already saved, so the offer never fails it: any trouble
+      // reading the project's tasks just means no chips.
+      let offer: ProjectOffer | null = null;
+      try {
+        const taskRows = await admin
+          .from('tasks')
+          .select('title')
+          .eq('workspace_id', workspaceId)
+          .eq('record_id', recordId);
+        if (!taskRows.error) {
+          offer = buildProjectOffer({
+            recordId,
+            recordTitle: record.title,
+            suggestions: suggestProjectTasks({
+              status: record.status,
+              songs: record.songs,
+              existingTitles: ((taskRows.data ?? []) as Array<{ title: string | null }>).map((row) => String(row.title || '')),
+              limit: 2,
+            }),
+          });
+        }
+      } catch {
+        offer = null;
+      }
       return {
         ok: true,
-        summary: `Added to ${record.title} (${target.artistName}): ${parts.join(', ')}. It is on the record page under ${target.artistName} in Catalogue.${doneLine(target.record, record)}`,
+        summary: `Added to ${record.title} (${target.artistName}): ${parts.join(', ')}. It is on the record page under ${target.artistName} in Catalogue.${doneLine(target.record, record)}${offer ? ' The next jobs for it are offered just below.' : ''}`,
         data: { recordId, artistId: target.artistId, sessions: plan.sessions.length, newSongs: plan.newSongs.length, stageChanges: plan.stageChanges.length },
+        ...(offer ? { clientAction: { type: 'offer_project_tasks' as const, offer } } : {}),
       };
     },
   },

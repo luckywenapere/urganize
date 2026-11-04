@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.250.0",
+    tag: "App",
+    date: "November 4, 2026",
+    highlights: [
+      "On your phone, the box on a project page now opens the AI right there, over the project. It keeps its own chat for each project.",
+      "When the AI adds something to a project, it offers the next jobs as buttons. Tap to add them, or Not now.",
+    ],
+  },
+  {
     version: "1.249.0",
     tag: "App",
     date: "November 4, 2026",

@@ -21,12 +21,7 @@ function hash32(input: string, seed: number): number {
 
 const hex8 = (value: number) => value.toString(16).padStart(8, '0');
 
-export function rolloutSessionIdFor(
-  userId: string | null | undefined,
-  releaseId: string | null | undefined
-): string | null {
-  if (!userId || !releaseId) return null;
-  const input = `rollout-session:${userId}:${releaseId}`;
+function sessionIdFrom(input: string): string {
   const parts = [0x9e3779b1, 0x85ebca6b, 0xc2b2ae35, 0x27d4eb2f].map((seed) => hex8(hash32(input, seed)));
   const flat = parts.join('');
   const variant = ((parseInt(flat[16], 16) & 0x3) | 0x8).toString(16);
@@ -37,4 +32,25 @@ export function rolloutSessionIdFor(
     `${variant}${flat.slice(17, 20)}`,
     flat.slice(20, 32),
   ].join('-');
+}
+
+export function rolloutSessionIdFor(
+  userId: string | null | undefined,
+  releaseId: string | null | undefined
+): string | null {
+  if (!userId || !releaseId) return null;
+  return sessionIdFrom(`rollout-session:${userId}:${releaseId}`);
+}
+
+/**
+ * One chat per project, per person (2026-11-04, #1074), the same way a rollout
+ * has one: the project page's box talks to it, so its conversation stays about
+ * that project. A different prefix, so it never meets a rollout session.
+ */
+export function projectSessionIdFor(
+  userId: string | null | undefined,
+  recordId: string | null | undefined
+): string | null {
+  if (!userId || !recordId) return null;
+  return sessionIdFrom(`project-session:${userId}:${recordId}`);
 }

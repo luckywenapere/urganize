@@ -64,7 +64,7 @@ import {
   type StoredChatMessage,
 } from '@/lib/chappi/conversation-history';
 import { homeChatIdFor, isHomeChatId } from '@/lib/chappi/home-chat';
-import { rolloutSessionIdFor } from '@/lib/rollout-session';
+import { projectSessionIdFor, rolloutSessionIdFor } from '@/lib/rollout-session';
 import { clearChatCache, readChatCache, writeChatCache } from '@/lib/chappi/conversation-cache';
 import { takeWarmedHistory } from '@/lib/chappi/history-warm';
 
@@ -1052,6 +1052,14 @@ export async function showHomeChat(): Promise<void> {
 export async function showRolloutSession(releaseId: string): Promise<void> {
   if (!HISTORY_ENABLED || !sessionUserId) return;
   const id = rolloutSessionIdFor(sessionUserId, releaseId);
+  if (!id) return;
+  await showChatById(id);
+}
+
+/** Puts this project's own chat on screen (2026-11-04, #1074), the way a rollout's session is. */
+export async function showProjectSession(recordId: string): Promise<void> {
+  if (!HISTORY_ENABLED || !sessionUserId) return;
+  const id = projectSessionIdFor(sessionUserId, recordId);
   if (!id) return;
   await showChatById(id);
 }

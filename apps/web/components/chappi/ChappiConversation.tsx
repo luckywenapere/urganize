@@ -44,6 +44,9 @@ import { TURN_DROPPED_NOTE, failedTurnOutcome, isDeviceOnline } from '@/lib/chap
 import { ChappiConfirmationCard } from '@/components/chappi/ChappiConfirmationCard';
 import { ChappiCoverArtUploadCard } from '@/components/chappi/ChappiCoverArtUploadCard';
 import { ChappiRecapCard } from '@/components/chappi/ChappiRecapCard';
+import { ChappiProjectOfferCard } from '@/components/chappi/ChappiProjectOfferCard';
+import { projectOfferDoneLine, type ProjectOffer, type ProjectOfferChoice } from '@/lib/project-offer';
+import { addProjectTask } from '@/lib/project-tasks-client';
 import { ChappiIdeasCard } from '@/components/chappi/ChappiIdeasCard';
 import { useSceneDataStore } from '@/stores/useSceneDataStore';
 import type { ReleaseCoverArt } from '@/types/cover-art';
@@ -146,6 +149,12 @@ type ChappiConversationProps = {
    * conversation publishes `replyInFlight` for the box's busy state.
    */
   externalComposer?: boolean;
+  /**
+   * Send a message the shell's box handed over (sendInputOnOpen) even as a
+   * panel. Only the project page's phone sheet sets it (2026-11-04, #1074):
+   * its box hands the message to the sheet instead of the AI tab.
+   */
+  takeHandedInput?: boolean;
 };
 
 // Icons live here, not in the client-safe intent-router lib (icons are React
@@ -285,6 +294,7 @@ export function ChappiConversation({
   emptyHero,
   placeholder,
   externalComposer = false,
+  takeHandedInput = false,
 }: ChappiConversationProps) {
   const isPanel = variant === 'panel';
   const router = useRouter();
@@ -481,6 +491,8 @@ export function ChappiConversation({
   // The "n ideas are in" card add_rollout_idea shows under its reply (Nov 2, 2026).
   const [ideasReleaseId, setIdeasReleaseId] = useState<string | null>(null);
   const [ideasSuggest, setIdeasSuggest] = useState<string | null>(null);
+  // The next jobs on a project, as chips after add_to_record (2026-11-04, #1074).
+  const [projectOffer, setProjectOffer] = useState<ProjectOffer | null>(null);
   const ideasRelease = ideasReleaseId ? releases.find((release) => release.id === ideasReleaseId) ?? null : null;
   const recapRelease = recapReleaseId
     ? releases.find((release) => release.id === recapReleaseId) ?? null
@@ -512,6 +524,7 @@ export function ChappiConversation({
     if (recapReleaseId) setRecapReleaseId(null);
     if (ideasReleaseId) setIdeasReleaseId(null);
     if (ideasSuggest) setIdeasSuggest(null);
+    if (projectOffer) setProjectOffer(null);
   } else if (lastMessageId !== prevLastMessageId) {
     setPrevLastMessageId(lastMessageId);
     // A new user turn clears the reveal (the previous reply has finished
@@ -532,6 +545,7 @@ export function ChappiConversation({
       if (recapReleaseId) setRecapReleaseId(null);
       if (ideasReleaseId) setIdeasReleaseId(null);
       if (ideasSuggest) setIdeasSuggest(null);
+      if (projectOffer) setProjectOffer(null);
     }
   }
 
@@ -733,6 +747,32 @@ export function ChappiConversation({
   // The recap card reports "saved" / "could not save" back into the log. Same
   // rule as the upload handlers above: only into the transcript it sat in.
   const handleReportRecap = (message: string) => reportFromCard(message);
+
+  // A chip under the project offer: the choice is the user's turn, the tasks
+  // are added straight through the task route (no model, no credits), and the
+  // answer says what landed. The card goes either way, so nothing is added twice.
+  const handleProjectOfferChoice = async (choice: ProjectOfferChoice) => {
+    const offer = projectOffer;
+    if (!offer) return;
+    appendMessage({ id: nextMessageId('u'), role: 'user', content: choice.label });
+    setProjectOffer(null);
+    if (choice.jobs.length === 0) {
+      reportFromCard("Okay. They stay under Suggested next on the project whenever you want them.");
+      return;
+    }
+    let added = 0;
+    let failure = '';
+    for (const job of choice.jobs) {
+      const result = await addProjectTask(offer.recordId, { title: job.title, description: job.description, source: 'ai' });
+      if (result.ok) {
+        added += 1;
+        captureAnalyticsEvent({ name: 'project_task_added', properties: { source: 'ai' } });
+      } else failure = result.error;
+    }
+    if (added === 0) reportFromCard(failure || 'Could not add them. Try again from the project page.');
+    else if (failure) reportFromCard(`${projectOfferDoneLine(added)} One could not be added: ${failure}`);
+    else reportFromCard(projectOfferDoneLine(added));
+  };
 
   // Deterministic intent handling — chips, and the AI-off fallback for prompts.
   const handleIntent = (intent: ChappiIntent) => {
@@ -1037,6 +1077,7 @@ export function ChappiConversation({
         openQuickCreate({ releaseId: action.releaseId ?? undefined, source: 'quick_create' });
       else if (action.type === 'open_cover_art_upload') setCoverArtReleaseId(action.releaseId);
       else if (action.type === 'open_recap') setRecapReleaseId(action.releaseId);
+      else if (action.type === 'offer_project_tasks') setProjectOffer(action.offer);
       else if (action.type === 'open_ideas') {
         setIdeasReleaseId(action.releaseId);
         setIdeasSuggest(action.suggest ?? null);
@@ -1430,7 +1471,7 @@ export function ChappiConversation({
   useEffect(() => {
     // Only the full page takes a message handed over from Home, and only once
     // no reply is in flight, so a queued message is never lost or doubled.
-    if (!sendInputOnOpen || variant !== 'page' || isThinking) return;
+    if (!sendInputOnOpen || (variant !== 'page' && !takeHandedInput) || isThinking) return;
     const text = useChappiStore.getState().input.trim();
     const files = useChappiStore.getState().pendingAttachments;
     useChappiStore.getState().setSendInputOnOpen(false);
@@ -1439,7 +1480,7 @@ export function ChappiConversation({
     useChappiStore.getState().setInput('');
     sendUserTurn(text, files);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sendInputOnOpen, variant, isThinking]);
+  }, [sendInputOnOpen, variant, takeHandedInput, isThinking]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1829,6 +1870,8 @@ export function ChappiConversation({
             onReportRecap={handleReportRecap}
             ideas={ideasRelease ? { releaseId: ideasRelease.id, releaseTitle: ideasRelease.title, suggest: ideasSuggest } : null}
             ideasVersion={messages.length}
+            projectOffer={projectOffer}
+            onProjectOfferChoice={handleProjectOfferChoice}
           />
         </div>
       </div>
@@ -1920,6 +1963,9 @@ type TranscriptProps = {
   /** The ideas card add_rollout_idea asked for, and the transcript length it reloads on. */
   ideas: { releaseId: string; releaseTitle: string; suggest: string | null } | null;
   ideasVersion: number;
+  /** The next jobs on a project, offered as chips (add_to_record). */
+  projectOffer: ProjectOffer | null;
+  onProjectOfferChoice: (choice: ProjectOfferChoice) => Promise<void>;
 };
 
 /**
@@ -1953,6 +1999,8 @@ function Transcript({
   onReportRecap,
   ideas,
   ideasVersion,
+  projectOffer,
+  onProjectOfferChoice,
 }: TranscriptProps) {
   return (
     <div className="space-y-5 pb-2">
@@ -2054,6 +2102,10 @@ function Transcript({
           suggest={ideas.suggest}
           version={ideasVersion}
         />
+      ) : null}
+
+      {projectOffer ? (
+        <ChappiProjectOfferCard key={projectOffer.recordId} offer={projectOffer} onChoose={onProjectOfferChoice} />
       ) : null}
 
       {/* Follow-ups — a titled list of full-width rows (the streamed-answer
