@@ -274,6 +274,17 @@ export async function updateRecord(
   const { data, error } = await query.select('id');
   if (error) return fail(500, 'Could not save the record.');
   if (patch.status && (!data || data.length === 0)) return fail(409, 'This project already has its rollout.');
+  // A dropped project's open tasks close with it (2026-11-04, #1074), so they
+  // leave everyone's lists and the WhatsApp chase. Done ones stay as history.
+  if (patch.status === 'dropped') {
+    const closed = await admin
+      .from('tasks')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('record_id', recordId)
+      .eq('workspace_id', workspaceId)
+      .not('status', 'in', '(done,cancelled)');
+    if (closed.error) console.error('[next-records] closing the tasks of a dropped project failed:', closed.error.message);
+  }
   return readRecord(admin, workspaceId, recordId);
 }
 

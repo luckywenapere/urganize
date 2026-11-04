@@ -51,14 +51,15 @@ export type TaskListScope = {
 
 /**
  * Drop rows the caller's limits hide. Unlimited callers pay nothing. A limited
- * member never sees a task with no rollout, and sees a rollout's task only
- * when that rollout passes both limits for the task's workspace.
+ * member sees a rollout's task only when that rollout passes both limits for
+ * the task's workspace. A project's task (no rollout, 4 Nov 2026) shows to an
+ * artist-limited member of that artist only, and never to a rollout-limited one.
  */
 export async function dropRowsOutsideScope<T>(
   adminClient: SupabaseClient,
   rows: T[],
   scope: TaskListScope,
-  pick: (row: T) => { workspaceId: string; releaseId: string | null }
+  pick: (row: T) => { workspaceId: string; releaseId: string | null; recordId?: string | null }
 ): Promise<T[]> {
   const limited = (workspaceId: string) =>
     Boolean(scope.artistScopeByWorkspaceId[workspaceId] || scope.releaseScopeByWorkspaceId[workspaceId]);
@@ -68,6 +69,22 @@ export async function dropRowsOutsideScope<T>(
   for (const row of rows) {
     const { workspaceId, releaseId } = pick(row);
     if (releaseId && scope.artistScopeByWorkspaceId[workspaceId]) artistNeeded.add(releaseId);
+  }
+  const recordNeeded = new Set<string>();
+  for (const row of rows) {
+    const { workspaceId, releaseId, recordId } = pick(row);
+    if (!releaseId && recordId && scope.artistScopeByWorkspaceId[workspaceId]) recordNeeded.add(recordId);
+  }
+  const artistByRecord = new Map<string, string>();
+  if (recordNeeded.size) {
+    const { data, error } = await adminClient
+      .from('next_records')
+      .select('id,artist_id')
+      .in('id', Array.from(recordNeeded));
+    if (error) throw error;
+    for (const row of (data || []) as Array<{ id: string; artist_id: string | null }>) {
+      artistByRecord.set(String(row.id), String(row.artist_id || ''));
+    }
   }
   const artistByRelease = new Map<string, string>();
   if (artistNeeded.size) {
@@ -82,9 +99,13 @@ export async function dropRowsOutsideScope<T>(
   }
 
   return rows.filter((row) => {
-    const { workspaceId, releaseId } = pick(row);
+    const { workspaceId, releaseId, recordId } = pick(row);
     if (!limited(workspaceId)) return true;
-    if (!releaseId) return false;
+    if (!releaseId) {
+      if (!recordId || scope.releaseScopeByWorkspaceId[workspaceId]) return false;
+      const artistScope = scope.artistScopeByWorkspaceId[workspaceId];
+      return Boolean(artistScope) && artistByRecord.get(recordId) === artistScope;
+    }
     const releaseScope = scope.releaseScopeByWorkspaceId[workspaceId];
     if (releaseScope && !releaseScope.includes(releaseId)) return false;
     const artistScope = scope.artistScopeByWorkspaceId[workspaceId];
@@ -107,6 +128,7 @@ export class TaskService {
    */
   async getTasksForUser(userId: string, scope: TaskListScope, filters: {
     releaseId?: string | null;
+    recordId?: string | null;
     priority?: string;
     status?: string;
     mineOnly?: boolean;
@@ -127,6 +149,7 @@ export class TaskService {
 
         if (filters.mineOnly) query = query.eq('assigned_to_user_id', userId);
         if (filters.releaseId) query = query.eq('release_id', filters.releaseId);
+        if (filters.recordId) query = query.eq('record_id', filters.recordId);
         if (filters.priority) query = query.eq('priority', filters.priority);
         if (filters.status) query = query.eq('status', filters.status);
         return query as unknown as PromiseLike<{ data: TaskRow[] | null; error: { message?: string } | null }>;
@@ -145,6 +168,7 @@ export class TaskService {
     const visibleRows = await dropRowsOutsideScope(this.adminClient, liveRows, scope, (row) => ({
       workspaceId: String(row.workspace_id || ''),
       releaseId: row.release_id ? String(row.release_id) : null,
+      recordId: row.record_id ? String(row.record_id) : null,
     }));
     return loadTasks(this.adminClient, visibleRows, userId, undefined, timings);
   }
@@ -179,6 +203,7 @@ export class TaskService {
     const visibleRows = await dropRowsOutsideScope(this.adminClient, liveRows, scope, (row) => ({
       workspaceId: String(row.workspace_id || ''),
       releaseId: row.release_id ? String(row.release_id) : null,
+      recordId: row.record_id ? String(row.record_id) : null,
     }));
     return loadTasks(this.adminClient, visibleRows, userId);
   }
@@ -213,7 +238,9 @@ export class TaskService {
   async createTask(userId: string, workspaceId: string, data: {
     title: string;
     description?: string | null;
-    releaseId: string;
+    /** Exactly one of releaseId and recordId (tasks_one_owner_check). */
+    releaseId: string | null;
+    recordId?: string | null;
     groupId?: string | null;
     priority?: TaskPriority;
     dueDate?: string | null;
@@ -243,6 +270,7 @@ export class TaskService {
         title: data.title,
         description: data.description,
         release_id: data.releaseId,
+        record_id: data.recordId ?? null,
         group_id: data.groupId,
         priority: data.priority || 'none',
         due_date: data.dueDate,

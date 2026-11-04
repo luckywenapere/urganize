@@ -157,11 +157,21 @@ export interface TaskReleaseSummary {
   artistName: string;
 }
 
+/** The project a task belongs to before a rollout exists (4 Nov 2026). */
+export interface TaskRecordSummary {
+  id: string;
+  title: string;
+  artistId: string;
+}
+
 export interface Task {
   id: string;
   workspaceId: string;
   groupId: string | null;
   releaseId: string | null;
+  /** Set on a project's task, and then releaseId is null. Exactly one of the
+   * two is set (tasks_one_owner_check). Optional so older literals compile. */
+  recordId?: string | null;
   createdBy: string;
   assignedToUserId: string | null;
   assignedTo: string | null;
@@ -245,6 +255,7 @@ export interface Task {
 
   // Relations (optional)
   release?: TaskReleaseSummary | null;
+  record?: TaskRecordSummary | null;
   group?: TaskGroup | null;
   assignee?: WorkspaceMember | null;
   context?: TaskContextLink;

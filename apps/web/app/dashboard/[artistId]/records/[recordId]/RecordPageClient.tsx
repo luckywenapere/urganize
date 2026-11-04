@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Check, MoreHorizontal, Plus, X } from '@/components/icons';
 import { CoverTile, DateBlock, Sheet, StageBars } from '@/components/records/RecordParts';
+import { ProjectTasksCard } from '@/components/records/ProjectTasksCard';
 import { PhotoCropDialog } from '@/components/shared/PhotoCropDialog';
 import { useAuthStore } from '@/lib/auth-store';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
@@ -21,6 +22,7 @@ import {
   SESSION_STATUSES,
   SESSION_STATUS_LABELS,
   artistCoverColor,
+  isOpenRecord,
   lagosToday,
   pickNextSession,
   recordCoverColor,
@@ -939,6 +941,12 @@ export default function RecordPageClient() {
       ) : (
         <AddCard title="Add a song" hint="A working title is fine. Rename it later." onClick={() => setAddingSong(true)} />
       )}
+
+      {/* Tasks (2026-11-04, mock screens 2 and 3): real tasks on the project,
+          under the songs because the songs are why the tasks exist. */}
+      {isOpenRecord(record.status) ? (
+        <ProjectTasksCard recordId={record.id} status={record.status} songs={record.songs} />
+      ) : null}
 
       {/* Sessions with a little date block (mock screen 3) */}
       {record.sessions.length || (draft && draft.id === null) ? (

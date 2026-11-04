@@ -104,4 +104,38 @@ describe('dropRowsOutsideScope', () => {
     );
     expect(out.map((r) => r.id)).toEqual(['t1', 't4']);
   });
+
+  describe('project tasks (4 Nov 2026)', () => {
+    type ProjectRow = { id: string; workspace_id: string; release_id: string | null; record_id: string | null };
+    const projectRows: ProjectRow[] = [
+      { id: 'p1', workspace_id: 'w1', release_id: null, record_id: 'rec1' },
+      { id: 'p2', workspace_id: 'w1', release_id: null, record_id: 'rec2' },
+      { id: 't1', workspace_id: 'w1', release_id: 'r1', record_id: null },
+    ];
+    const pickProject = (row: ProjectRow) => ({
+      workspaceId: row.workspace_id,
+      releaseId: row.release_id,
+      recordId: row.record_id,
+    });
+
+    it('an artist-limited member sees their own artist projects only', async () => {
+      const out = await dropRowsOutsideScope(
+        admin({ r1: 'a1', rec1: 'a1', rec2: 'a2' }),
+        projectRows,
+        { workspaceIds: ['w1'], artistScopeByWorkspaceId: { w1: 'a1' }, releaseScopeByWorkspaceId: {} },
+        pickProject
+      );
+      expect(out.map((r) => r.id)).toEqual(['p1', 't1']);
+    });
+
+    it('a rollout-limited member sees no project tasks', async () => {
+      const out = await dropRowsOutsideScope(
+        admin({ r1: 'a1', rec1: 'a1' }),
+        projectRows,
+        { workspaceIds: ['w1'], artistScopeByWorkspaceId: { w1: 'a1' }, releaseScopeByWorkspaceId: { w1: ['r1'] } },
+        pickProject
+      );
+      expect(out.map((r) => r.id)).toEqual(['t1']);
+    });
+  });
 });

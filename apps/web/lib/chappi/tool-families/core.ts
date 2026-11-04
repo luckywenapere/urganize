@@ -8,6 +8,7 @@
 import { countProgress } from '@/lib/task-progress';
 import { describeStatusFacts, type StatusFacts } from '@/lib/release-status';
 import { TaskService } from '@/lib/services/task-service';
+import { decideTaskOwner } from '@/lib/project-tasks';
 import { settingsDeepLink } from '@/lib/settings-nav';
 import { listVisibleReleases } from '../release-scope';
 import { assistantReleaseStatus } from '../release-status';
@@ -216,27 +217,34 @@ export const CORE_TOOLS: ChappiTool[] = [
     name: 'create_task',
     kind: 'mutate',
     level: 'auto',
-    description: 'Create a task on a rollout.',
+    description:
+      'Create a task on a rollout (releaseId) or on a project still being made (recordId). Pass exactly one of the two.',
     inputSchema: {
       type: 'object',
       properties: {
-        releaseId: { type: 'string' },
+        releaseId: { type: 'string', description: 'The rollout. Leave out when recordId is set.' },
+        recordId: {
+          type: 'string',
+          description: 'A project (an idea or being made). Leave out when releaseId is set.',
+        },
         title: { type: 'string' },
         description: { type: 'string' },
         dueDate: { type: 'string', description: 'YYYY-MM-DD' },
         priority: { type: 'string', description: 'none, low, medium, high' },
         assigneeId: { type: 'string', description: 'Team member user id to assign.' },
       },
-      required: ['releaseId', 'title'],
+      required: ['title'],
     },
     execute: async (ctx, args) => {
-      const releaseId = argString(args, 'releaseId');
       const title = argString(args, 'title');
-      if (!releaseId || !title) return fail('releaseId and title are required.');
+      if (!title) return fail('title is required.');
+      // One rule for the route and this tool (lib/project-tasks.ts).
+      const owner = decideTaskOwner({ releaseId: argString(args, 'releaseId'), recordId: argString(args, 'recordId') });
+      if ('error' in owner) return fail(owner.error);
       const res = await callInternalApi(ctx, '/api/tasks', {
         method: 'POST',
         body: {
-          releaseId,
+          ...(owner.value.recordId ? { recordId: owner.value.recordId } : { releaseId: owner.value.releaseId }),
           title,
           description: argString(args, 'description') || undefined,
           dueDate: argString(args, 'dueDate') || undefined,
