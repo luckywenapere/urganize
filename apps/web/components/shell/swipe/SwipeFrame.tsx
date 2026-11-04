@@ -27,7 +27,8 @@ import { RECORD_CAPTURE_PLACEHOLDER, recordIdFromPath } from '@/lib/chappi/recor
 import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
 import { useNeedsYouStore } from '@/stores/useNeedsYouStore';
 import { useChappiStore } from '@/stores/useChappiStore';
-import { showRolloutSession } from '@/stores/useChappiHistoryStore';
+import { showProjectSession, showRolloutSession } from '@/stores/useChappiHistoryStore';
+import { useProjectChatStore } from '@/stores/useProjectChatStore';
 import { useSessionsViewStore, whenSessionReady } from '@/stores/useSessionsViewStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { displayReleaseTitle } from '@/types/releases';
@@ -287,6 +288,21 @@ function PageComposer() {
             view.open(releaseId);
             view.setBackTo({ href: returnTo, label: rollout ? displayReleaseTitle(rollout.title) : 'the rollout' });
             router.push(SESSIONS_HREF);
+          });
+          return;
+        }
+        // A project page keeps the conversation on the page (2026-11-04,
+        // #1074, mock screen 6): the message goes to the project's own chat in
+        // a sheet over the page (ProjectChatSheet), not to the AI tab.
+        if (recordId) {
+          void showProjectSession(recordId).then(() => {
+            const store = useChappiStore.getState();
+            store.setInput(text);
+            store.setPendingAttachments(files);
+            store.setScopedReleaseId(null);
+            store.setScopedRecordId(recordId);
+            store.setSendInputOnOpen(true);
+            useProjectChatStore.getState().open(recordId);
           });
           return;
         }

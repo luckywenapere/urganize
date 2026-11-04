@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Check, MoreHorizontal, Plus, X } from '@/components/icons';
 import { CoverTile, DateBlock, Sheet, StageBars } from '@/components/records/RecordParts';
 import { ProjectTasksCard } from '@/components/records/ProjectTasksCard';
+import { ProjectChatSheet } from '@/components/records/ProjectChatSheet';
 import { fetchProjectTasks } from '@/lib/project-tasks-client';
 import { isTaskClosed } from '@/types/tasks';
 import { PhotoCropDialog } from '@/components/shared/PhotoCropDialog';
@@ -1073,6 +1074,9 @@ export default function RecordPageClient() {
       )}
 
       {/* ── Sheets ─────────────────────────────────────────────────────────── */}
+
+      {/* The AI on this project, on a phone (2026-11-04, #1074): the box sends here. */}
+      <ProjectChatSheet recordId={record.id} title={record.title} />
 
       {sheet === 'plan' ? (
         <Sheet label="Here's what I'll use" onClose={closeSheet}>

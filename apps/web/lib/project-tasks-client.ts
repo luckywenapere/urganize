@@ -40,7 +40,7 @@ async function taskCall(path: string, method: string, body: unknown): Promise<Pr
 
 export function addProjectTask(
   recordId: string,
-  input: { title: string; description?: string; source: 'suggestion' | 'manual' }
+  input: { title: string; description?: string; source: 'suggestion' | 'manual' | 'ai' }
 ): Promise<ProjectTaskCall> {
   return taskCall('/api/tasks', 'POST', {
     recordId,

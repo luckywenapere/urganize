@@ -1,3 +1,4 @@
+import type { ProjectOffer } from '@/lib/project-offer';
 // Client-safe Chappi types. No server-only imports here — this module is
 // consumed by the ChappiHero client component AND (from Phase 2 onward) by the
 // server-side agent route, mirroring the lib/release-planning.ts split.
@@ -307,6 +308,12 @@ export type ChappiClientAction =
    */
   | { type: 'open_share'; releaseId: string }
   /** Shows the "n ideas are in" card under the reply (add_rollout_idea). */
+  /**
+   * The next jobs on a project as chips under the reply, after add_to_record
+   * (2026-11-04, #1074, mock screen 6). The jobs come from the suggestion list,
+   * never from the model, and a tap adds them as tasks with no model call.
+   */
+  | { type: 'offer_project_tasks'; offer: ProjectOffer }
   | { type: 'open_ideas'; releaseId: string; /** The idea just added, so a rollout that already has a plan offers changes to it. */ suggest?: string }
   | { type: 'refresh' };
 
