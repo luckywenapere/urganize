@@ -6,6 +6,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Check, MoreHorizontal, Plus, X } from '@/components/icons';
 import { CoverTile, DateBlock, Sheet, StageBars } from '@/components/records/RecordParts';
 import { ProjectTasksCard } from '@/components/records/ProjectTasksCard';
+import { fetchProjectTasks } from '@/lib/project-tasks-client';
+import { isTaskClosed } from '@/types/tasks';
 import { PhotoCropDialog } from '@/components/shared/PhotoCropDialog';
 import { useAuthStore } from '@/lib/auth-store';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
@@ -44,6 +46,7 @@ import {
   recordReleaseType,
   recordStatusLine,
   recordUseNote,
+  carryOverLine,
 } from '@/lib/next-records-rollout';
 import {
   addRecordSong,
@@ -436,6 +439,8 @@ export default function RecordPageClient() {
   const [sheetError, setSheetError] = useState('');
   const [renameTo, setRenameTo] = useState('');
   const [ideaDraft, setIdeaDraft] = useState('');
+  /** Open tasks that move into Pre-production, counted when the plan sheet opens. */
+  const [openTaskCount, setOpenTaskCount] = useState(0);
   const [editingSong, setEditingSong] = useState<RecordSong | null>(null);
   const [songName, setSongName] = useState('');
   const [cropping, setCropping] = useState<File | null>(null);
@@ -648,6 +653,10 @@ export default function RecordPageClient() {
   const openPlanSheet = () => {
     setSheetError('');
     setSheet('plan');
+    setOpenTaskCount(0);
+    void fetchProjectTasks(record.id).then((tasks) => {
+      if (tasks) setOpenTaskCount(tasks.filter((task) => !isTaskClosed(task.status)).length);
+    });
     captureAnalyticsEvent({
       name: 'record_rollout',
       properties: {
@@ -697,6 +706,7 @@ export default function RecordPageClient() {
   };
 
   const useNote = recordUseNote(record.songs);
+  const tasksNote = carryOverLine(openTaskCount);
 
   return (
     <div className="mx-auto w-full max-w-xl space-y-3 pb-10">
@@ -1082,6 +1092,7 @@ export default function RecordPageClient() {
             <UseRow label="Cover" value={record.coverUrl ? 'Your cover' : 'Your mood colour, until there\'s art'} />
           </div>
           {useNote ? <p className="mt-2 text-[13px] text-content-secondary">{useNote}</p> : null}
+          {tasksNote ? <p className="mt-2 text-[13px] text-content-secondary">{tasksNote}</p> : null}
           {sheetError ? (
             <p role="alert" className="mt-2 text-sm text-status-error">
               {sheetError}

@@ -8,16 +8,16 @@ import { X } from '@/components/icons';
 import { DialogPanel } from '@/components/shared/DialogPanel';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
-import { PRE_PRODUCTION_PLAN } from '@/lib/pre-production';
-import { supabase } from '@/lib/supabase/client';
+import { recordHref } from '@/lib/artist-page';
+import { startRecord } from '@/lib/next-records-client';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
-import { useReleaseStore } from '@/stores/useReleaseStore';
 
 /**
- * "Start the next one" (URG-280): artist, optional working title, one button.
- * Creates a rollout with no release date and the eight Pre-production
- * activities, then opens it. A bottom sheet on phones, a centred panel on
- * desktop (mocks approved 2026-10-16).
+ * "Start the next one" (URG-280, mocks approved 2026-10-16): artist, optional
+ * working title, one button. Since 2026-11-04 (#1074, mock screen 7) it starts
+ * a project, as just an idea or already being made, and opens its page. A
+ * project becomes a rollout when you plan it, and its open tasks move into
+ * Pre-production then. It no longer makes a dateless rollout.
  */
 export function StartNextSheet({
   defaultArtistId,
@@ -31,9 +31,9 @@ export function StartNextSheet({
   const router = useRouter();
   const artists = useArtistRosterStore((state) => state.artists);
   const loadArtists = useArtistRosterStore((state) => state.load);
-  const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
   const [artistId, setArtistId] = useState<string | null>(defaultArtistId);
   const [title, setTitle] = useState('');
+  const [stage, setStage] = useState<'idea' | 'making'>('idea');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -46,32 +46,21 @@ export function StartNextSheet({
   useEffect(() => lockBodyScroll(), []);
 
   const start = async () => {
+    if (!artistId) {
+      setError('Add an artist first, then start their next project.');
+      return;
+    }
     setBusy(true);
     setError('');
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const response = await fetch('/api/releases', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${session?.access_token || ''}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plan: PRE_PRODUCTION_PLAN,
-          ...(artistId ? { artistId } : {}),
-          ...(title.trim() ? { title: title.trim() } : {}),
-        }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as { release?: { id?: string }; id?: string; error?: string };
-      const releaseId = payload.release?.id ?? payload.id;
-      if (!response.ok || !releaseId) throw new Error(payload.error || 'Could not start it. Try again.');
-      captureAnalyticsEvent({ name: 'pre_production_started', properties: { source } });
-      await loadCommandCenter({ force: true }).catch(() => null);
-      onClose();
-      router.push(`/dashboard?release=${releaseId}`);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not start it. Try again.');
+    const result = await startRecord(artistId, { status: stage, ...(title.trim() ? { title: title.trim() } : {}) });
+    if (!result.ok) {
+      setError(result.error);
       setBusy(false);
+      return;
     }
+    captureAnalyticsEvent({ name: 'project_started', properties: { source, stage } });
+    onClose();
+    router.push(recordHref(artistId, result.record.id));
   };
 
   if (typeof document === 'undefined') return null;
@@ -96,7 +85,7 @@ export function StartNextSheet({
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
-        <p className="mt-1 text-sm text-content-tertiary">From sessions to the final video. No release date needed.</p>
+        <p className="mt-1 text-sm text-content-tertiary">Start with the idea. Plan the rollout when the music is ready.</p>
 
         {artists.length > 0 ? (
           <fieldset className="mt-4">
@@ -133,6 +122,30 @@ export function StartNextSheet({
           />
         </label>
 
+        <fieldset className="mt-4">
+          <legend className="text-[13px] text-content-secondary">Where it is</legend>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {([
+              ['idea', 'Just an idea'],
+              ['making', 'Already making it'],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={stage === value}
+                onClick={() => setStage(value)}
+                className={`motion-focus inline-flex h-9 items-center rounded-full border px-3.5 text-[13px] ${
+                  stage === value
+                    ? 'border-brand text-brand'
+                    : 'border-stroke-default text-content-primary hover:border-stroke-strong'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
         {error ? (
           <p role="alert" className="mt-3 text-sm text-status-error">
             {error}
@@ -140,7 +153,7 @@ export function StartNextSheet({
         ) : null}
 
         <Button className="mt-5 w-full" size="lg" isLoading={busy} onClick={() => void start()}>
-          Start pre-production
+          Start the project
         </Button>
       </DialogPanel>
     </div>,

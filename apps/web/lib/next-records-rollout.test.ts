@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   RECORD_TASK_PREFIX,
+  carryOverLine,
+  carryOverTaskUpdates,
   creditRolesFor,
   finishTaskTitle,
   fromRecordLine,
@@ -225,5 +227,30 @@ describe('the planner from a record', () => {
       'team',
     ]);
     expect(visibleV2Steps({ stage: 'making', prefilledDate: null, todayYmd: '2026-10-27' })[0]).toBe('music');
+  });
+});
+
+describe("a project's open tasks move into the rollout (2026-11-04, #1074)", () => {
+  it('the sheet says how many move', () => {
+    expect(carryOverLine(0)).toBeNull();
+    expect(carryOverLine(1)).toBe('Your open task moves into Pre-production, with its owner and day.');
+    expect(carryOverLine(3)).toBe('Your 3 open tasks move into Pre-production, with their owners and days.');
+  });
+  it('only open tasks move, into Pre-production, keeping what else they carry', () => {
+    const updates = carryOverTaskUpdates([
+      { id: 'a', status: 'todo', metadata: { note: 1 } },
+      { id: 'b', status: 'done', metadata: {} },
+      { id: 'c', status: 'cancelled', metadata: null },
+      { id: 'd', status: 'in_progress', metadata: null },
+    ]);
+    expect(updates).toEqual([
+      { id: 'a', metadata: { note: 1, phase: 'pre_production' } },
+      { id: 'd', metadata: { phase: 'pre_production' } },
+    ]);
+  });
+  it('a song already has its finish job on the project, so the plan does not add it twice', () => {
+    const plan = { tasks: [task({ offset_days: -28 })] } as PlanV2;
+    const tasks = recordLeadTasks([song('Pressure', 'mixing'), song('Wahala', 'recording')], plan, [' finish the PRESSURE mix ']);
+    expect(tasks.map((t) => t.title)).toEqual(['Finish recording Wahala']);
   });
 });

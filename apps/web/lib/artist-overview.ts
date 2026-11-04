@@ -1,3 +1,4 @@
+import { WHATS_NEXT_AFTER_DAYS, WHATS_NEXT_UNTIL_DAYS } from './home/record-ask';
 import { parseReleaseDate } from './recap-copy';
 
 // The pure half of the artist page (Catalogue, Phase 1): which of an artist's
@@ -178,4 +179,33 @@ export function artistUpNext<R extends OverviewRelease, C extends UpNextRecord>(
   if (ready) return { kind: 'record', record: ready, step: 'plan' };
   if (records[0]) return { kind: 'record', record: records[0], step: 'add_songs' };
   return { kind: 'start' };
+}
+
+/**
+ * "What's next for <artist>?" (2026-11-04, #1074). The ask that lived on Home
+ * (lib/home/record-ask.ts) moved here when Home left the menu: Up next asks it
+ * when nothing is planned and the newest release came out a week to 90 days
+ * ago. Same window as Home's ask. Null otherwise. The page only shows it in
+ * the "start" state, so an open project already answers it.
+ */
+export function whatsNextFor<R extends OverviewRelease & { title: string }>({
+  buckets,
+  today,
+}: {
+  buckets: ReleaseBuckets<R>;
+  today: string;
+}): { releaseTitle: string; daysOut: number } | null {
+  if (buckets.planned.length > 0) return null;
+  const todayN = dayNumber(today);
+  if (todayN === null) return null;
+  let newest: { release: R; day: number } | null = null;
+  for (const release of [...buckets.live, ...buckets.past]) {
+    const day = release.releaseDate ? dayNumber(release.releaseDate) : null;
+    if (day === null || day > todayN) continue;
+    if (!newest || day > newest.day) newest = { release, day };
+  }
+  if (!newest) return null;
+  const daysOut = todayN - newest.day;
+  if (daysOut < WHATS_NEXT_AFTER_DAYS || daysOut > WHATS_NEXT_UNTIL_DAYS) return null;
+  return { releaseTitle: newest.release.title, daysOut };
 }

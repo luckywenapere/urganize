@@ -1,15 +1,14 @@
 'use client';
 
-import { useId, useState, type ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import Link from 'next/link';
-import { Button } from '@urganize/ui';
-import { captureAnalyticsEvent } from '@/lib/analytics/client';
-import { StartNextSheet } from './StartNextSheet';
 import { useBetweenReleases } from './useBetweenReleases';
 
 /**
- * The two Home cards for the between-releases state (URG-253 + URG-280). They
- * read useBetweenReleases and render nothing when they have nothing to say,
+ * The Home card for the between-releases state (URG-253). The "Next song" card
+ * that started a pre-production rollout was removed 2026-11-04 (#1074): it was
+ * mounted nowhere, and Start the next one makes a project now. It reads
+ * useBetweenReleases and render nothing when they have nothing to say,
  * so the Home redesign can place them above OpportunitiesCard (URG-266)
  * without conditions of its own. Same floating-label card as Opportunities.
  */
@@ -52,50 +51,6 @@ export function ReleaseReviewCard() {
       >
         Open
       </Link>
-    </HomeCard>
-  );
-}
-
-/** "Next song": start pre-production, or pick up the one already started. */
-export function PreProductionStartCard() {
-  const { inPreProduction, between } = useBetweenReleases();
-  const [open, setOpen] = useState(false);
-
-  if (inPreProduction) {
-    return (
-      <HomeCard label="Next song">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-content-primary">{inPreProduction.title}</p>
-          <p className="mt-0.5 truncate text-[13px] text-content-tertiary">
-            Pre-production · {inPreProduction.done} of {inPreProduction.total} done
-          </p>
-        </div>
-        <Link
-          href={`/dashboard?release=${inPreProduction.releaseId}`}
-          className="motion-focus motion-press inline-flex h-10 shrink-0 items-center rounded-full border border-stroke-default px-4 text-sm font-semibold text-content-primary hover:border-stroke-strong"
-        >
-          Open
-        </Link>
-      </HomeCard>
-    );
-  }
-  if (!between) return null;
-  return (
-    <HomeCard label="Next song">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-content-primary">Start pre-production</p>
-        <p className="mt-0.5 truncate text-[13px] text-content-tertiary">Sessions to final video</p>
-      </div>
-      <Button
-        className="shrink-0"
-        onClick={() => {
-          captureAnalyticsEvent({ name: 'start_next_opened', properties: { source: 'home' } });
-          setOpen(true);
-        }}
-      >
-        Start
-      </Button>
-      {open ? <StartNextSheet defaultArtistId={null} source="home" onClose={() => setOpen(false)} /> : null}
     </HomeCard>
   );
 }

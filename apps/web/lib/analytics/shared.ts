@@ -677,6 +677,11 @@ export interface AnalyticsEventPropertiesMap {
   pre_production_started: {
     source: 'review' | 'home';
   };
+  /** A project started from Start the next one (2026-11-04, #1074). Replaces pre_production_started. */
+  project_started: {
+    source: 'review' | 'home';
+    stage: 'idea' | 'making';
+  };
   /**
    * Self-serve checkout (2026-10-22, lib/self-serve.ts). One shape for the
    * whole funnel: which path, plan, period and payment method. No amounts of a

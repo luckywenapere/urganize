@@ -9,7 +9,7 @@ import { useAuthStore } from '@/lib/auth-store';
 // Back goes to the Artists tab, the list of artists (founder, 2026-10-14).
 import { ARTISTS_HREF } from '@/lib/shell-nav';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
-import { artistUpNext, bucketReleases, type ArtistUpNext } from '@/lib/artist-overview';
+import { artistUpNext, bucketReleases, whatsNextFor, type ArtistUpNext } from '@/lib/artist-overview';
 import { formatCalendarDate, isArtistPageEnabled, recordHref, releaseHref } from '@/lib/artist-page';
 import { RECORD_COVER_COLORS, lagosToday, type RecordSummary } from '@/lib/next-records';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
@@ -140,6 +140,8 @@ function Quiet({ children }: { children: React.ReactNode }) {
 function UpNextCard({
   next,
   artistId,
+  artistName,
+  whatsNext,
   starting,
   onStart,
   onPlan,
@@ -147,6 +149,9 @@ function UpNextCard({
 }: {
   next: ArtistUpNext<ExecutionRelease, RecordSummary>;
   artistId: string;
+  artistName: string;
+  /** The What's next ask (whatsNextFor), shown in the start state only. */
+  whatsNext: { releaseTitle: string; daysOut: number } | null;
   starting: boolean;
   onStart: () => void;
   onPlan: () => void;
@@ -194,6 +199,12 @@ function UpNextCard({
       title = 'Add the first song';
       line = isUntitledRecord(record.title) ? "Write down what's being made." : `To ${record.title}.`;
     }
+  } else if (whatsNext) {
+    // The ask that lived on Home (2026-10-27) moved here when Home went
+    // (2026-11-04, #1074): a week after the newest release, ask what is next.
+    title = `What's next for ${artistName}?`;
+    line = `${displayReleaseTitle(whatsNext.releaseTitle)} has been out ${plural(whatsNext.daysOut, 'day')}. Start the next project.`;
+    action = onStart;
   } else {
     title = 'Start the next project';
     line = 'Keep the songs, sessions and people in one place, not in your head.';
@@ -293,6 +304,7 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
     () => artistUpNext({ buckets, records: records ?? [], tasks, today }),
     [buckets, records, tasks, today]
   );
+  const whatsNext = useMemo(() => whatsNextFor({ buckets, today }), [buckets, today]);
   const taskCounts = useMemo(() => {
     const counts = new Map<string, { done: number; total: number }>();
     for (const task of tasks) {
@@ -497,6 +509,8 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
             <UpNextCard
               next={upNext}
               artistId={artist.id}
+              artistName={artist.name}
+              whatsNext={whatsNext}
               starting={starting}
               onStart={newRecord}
               onPlan={planRollout}
