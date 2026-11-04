@@ -520,7 +520,10 @@ export interface AnalyticsEventPropertiesMap {
       | 'session_removed'
       | 'details'
       | 'cover'
-      | 'dropped';
+      | 'dropped'
+      /** Start making on a project at Idea (2026-11-04, #1074). */
+      | 'started_making'
+      | 'idea';
     stage?: 'idea' | 'recording' | 'mixing' | 'done';
     songs?: number;
   };

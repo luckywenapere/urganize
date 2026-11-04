@@ -79,7 +79,7 @@ export function RecordRows({ artistId, records }: { artistId: string; records: R
               )}
               <div className="min-w-0 flex-1">
                 <p className={`truncate text-sm font-semibold ${untitled ? 'text-content-secondary' : 'text-content-primary'}`}>
-                  {untitled ? 'Untitled record' : record.title}
+                  {untitled ? 'Untitled project' : record.title}
                   {record.kind ? <span className="font-normal text-content-secondary"> · {recordKindLabel(record.kind)}</span> : null}
                 </p>
                 <p className="truncate text-[13px] text-content-secondary">{parts.join(' · ')}</p>
@@ -89,6 +89,12 @@ export function RecordRows({ artistId, records }: { artistId: string; records: R
                   </div>
                 ) : null}
               </div>
+              {/* An idea nobody has started making yet (2026-11-04, mock screen 1). */}
+              {record.status === 'idea' ? (
+                <span className="shrink-0 rounded-full border border-stroke-control bg-bg-hover px-2 py-0.5 text-[11px] font-semibold text-content-secondary">
+                  Idea
+                </span>
+              ) : null}
               <ChevronRight className="h-4 w-4 shrink-0 text-content-tertiary" aria-hidden />
             </Link>
           </li>

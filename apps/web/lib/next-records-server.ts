@@ -3,9 +3,12 @@ import { seedRelationship } from '@/lib/relationships-server';
 import { removePhotoObject, signPhotoPath } from '@/lib/profile-photo-server';
 import {
   lagosToday,
+  OPEN_RECORD_STATUSES,
   orderSessions,
+  songStartsMaking,
   summarizeRecord,
   type NextRecord,
+  type OpenRecordStatus,
   type RecordKind,
   type RecordPatch,
   type RecordSession,
@@ -59,7 +62,24 @@ export async function findTeamArtist(
   return data ? { id: text((data as Row).id), name: text((data as Row).name) } : null;
 }
 
-/** Records still being made for one artist, as the artist page's rows. */
+/**
+ * Idea moves to Making the first time work starts (2026-11-04, #1074): a song
+ * past its Idea stage, or a session saved. Conditional on 'idea', so it never
+ * moves a project back and never touches a planned or dropped one. Best
+ * effort: the work itself is already saved, so a failure here is logged and
+ * the project simply stays an idea until the next change.
+ */
+export async function startMakingIfIdea(admin: SupabaseClient, workspaceId: string, recordId: string): Promise<void> {
+  const { error } = await admin
+    .from(RECORDS_TABLE)
+    .update({ status: 'making' })
+    .eq('id', recordId)
+    .eq('workspace_id', workspaceId)
+    .eq('status', 'idea');
+  if (error) console.error('[next-record] work started but the project stayed an idea:', error.message);
+}
+
+/** Projects still open (Idea or Making) for one artist, as the artist page's rows. */
 export async function listArtistRecords(
   admin: SupabaseClient,
   workspaceId: string,
@@ -70,7 +90,7 @@ export async function listArtistRecords(
     .select('id')
     .eq('workspace_id', workspaceId)
     .eq('artist_id', artistId)
-    .eq('status', 'making')
+    .in('status', [...OPEN_RECORD_STATUSES])
     .order('created_at', { ascending: false })
     .limit(20);
   if (error) return fail(500, 'Could not load the records.');
@@ -83,7 +103,16 @@ export async function listArtistRecords(
 
 export async function createRecord(
   admin: SupabaseClient,
-  input: { workspaceId: string; artistId: string; userId: string; title: string; kind: RecordKind | null; idea: string }
+  input: {
+    workspaceId: string;
+    artistId: string;
+    userId: string;
+    title: string;
+    kind: RecordKind | null;
+    idea: string;
+    /** Idea or Making; Making when left out, as before the Idea stage. */
+    status?: OpenRecordStatus;
+  }
 ): Promise<RecordsResult<NextRecord>> {
   const { data, error } = await admin
     .from(RECORDS_TABLE)
@@ -93,6 +122,7 @@ export async function createRecord(
       title: input.title,
       kind: input.kind,
       idea: input.idea,
+      status: input.status ?? 'making',
       created_by: input.userId,
     })
     .select('id')
@@ -237,8 +267,13 @@ export async function updateRecord(
   recordId: string,
   patch: RecordPatch
 ): Promise<RecordsResult<NextRecord>> {
-  const { error } = await admin.from(RECORDS_TABLE).update(patch).eq('id', recordId).eq('workspace_id', workspaceId);
+  // A project that became a rollout stays planned: a status change never
+  // reopens it (2026-11-04, review of #1076). Idea, Making and Dropped can move.
+  let query = admin.from(RECORDS_TABLE).update(patch).eq('id', recordId).eq('workspace_id', workspaceId);
+  if (patch.status) query = query.neq('status', 'planned');
+  const { data, error } = await query.select('id');
   if (error) return fail(500, 'Could not save the record.');
+  if (patch.status && (!data || data.length === 0)) return fail(409, 'This project already has its rollout.');
   return readRecord(admin, workspaceId, recordId);
 }
 
@@ -288,6 +323,7 @@ export async function addSong(
     .from(RECORD_SONGS_TABLE)
     .insert({ workspace_id: workspaceId, record_id: recordId, title: song.title, stage: song.stage, position });
   if (error) return fail(500, 'Could not add the song.');
+  if (songStartsMaking(song.stage)) await startMakingIfIdea(admin, workspaceId, recordId);
   return readRecord(admin, workspaceId, recordId);
 }
 
@@ -307,6 +343,7 @@ export async function updateSong(
     .select('id');
   if (error) return fail(500, 'Could not save the song.');
   if (!data || data.length === 0) return fail(404, 'Song not found.');
+  if (patch.stage && songStartsMaking(patch.stage)) await startMakingIfIdea(admin, workspaceId, recordId);
   return readRecord(admin, workspaceId, recordId);
 }
 
@@ -454,6 +491,8 @@ export async function saveSession(
   const written = await Promise.all(writes);
   if (written.some((result) => result.error)) return fail(500, 'Could not save everyone in the session.');
 
+  // A session saved is the making started (2026-11-04).
+  await startMakingIfIdea(admin, workspaceId, recordId);
   return readRecord(admin, workspaceId, recordId);
 }
 
@@ -478,9 +517,9 @@ export async function deleteSession(
 export type RecordInScope = { id: string; title: string; artistId: string; artistName: string; workspaceId: string };
 
 /**
- * Every record still being made across the caller's teams, newest first. A
- * teammate scoped to one artist sees only that artist's records, as on the
- * routes. Null when the read fails.
+ * Every project still open (Idea or Making) across the caller's teams, newest
+ * first. A teammate scoped to one artist sees only that artist's records, as
+ * on the routes. Null when the read fails.
  */
 export async function listRecordsInMaking(
   admin: SupabaseClient,
@@ -497,7 +536,7 @@ export async function listRecordsInMaking(
     .from(RECORDS_TABLE)
     .select('id,title,artist_id,workspace_id')
     .in('workspace_id', scope.workspaceIds)
-    .eq('status', 'making')
+    .in('status', [...OPEN_RECORD_STATUSES])
     .order('created_at', { ascending: false })
     .limit(50);
   if (error) return null;
@@ -553,11 +592,13 @@ export async function loadHomeRecordAsk(
     const { workspaceId, scopeArtistId, now } = input;
     const today = lagosToday(now);
 
+    // Open projects, Idea or Making: an artist with an idea already has a next
+    // one, so "What's next?" is not asked; a session can only be on an open one.
     let making = admin
       .from(RECORDS_TABLE)
       .select('id,title,artist_id')
       .eq('workspace_id', workspaceId)
-      .eq('status', 'making');
+      .in('status', [...OPEN_RECORD_STATUSES]);
     if (scopeArtistId) making = making.eq('artist_id', scopeArtistId);
     const { data: recordRows, error: recordError } = await making;
     if (recordError) return null;

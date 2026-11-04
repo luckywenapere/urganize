@@ -1,0 +1,479 @@
+<title>Project lifecycle mocks</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* Layout: a board of phone frames (the app at 360px), one computer frame, one drawn figure.
+     Colour: the app's light theme, read from html[data-theme='light'] in apps/web/app/globals.css (4 Nov 2026).
+     Type: Instrument Sans (body and UI), Young Serif (headings, used large and rarely), Space Mono (dates, counts, stages). */
+  :root {
+    --bg:#f5f0e6; --side:#f0ebe1; --side-on:#e6e1d6; --card:#faf5ec; --hover:#ebe6dc;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --amber:#7e480a; --amber-soft:rgba(126,72,10,.12); --err:#961a1a;
+    --board:#d9d5cc; --board-text:#1a1611; --board-sec:#4f4a42;
+    --font-ui:'Instrument Sans', system-ui, sans-serif; --font-display:'Young Serif', Georgia, serif; --font-mono:'Space Mono', ui-monospace, monospace;
+    color-scheme: light;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--board); color:var(--board-text); font:14px/1.5 var(--font-ui); -webkit-font-smoothing:antialiased; letter-spacing:-.01em; padding-block:32px 72px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
+  p, h1, h2, h3 { margin:0; }
+  .intro { max-width:880px; margin:0 auto 24px; }
+  .intro h1 { font-family:var(--font-display); font-weight:400; font-size:30px; text-wrap:balance; margin-bottom:8px; }
+  .intro p { color:var(--board-sec); max-width:65ch; }
+  .tag { font-family:var(--font-mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--board-sec); margin-bottom:6px; }
+  .decisions { max-width:880px; margin:0 auto 32px; display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px; }
+  .dec { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; }
+  .dec b { display:block; margin-bottom:3px; }
+  .dec p { color:var(--board-sec); font-size:13px; }
+  .figure { max-width:880px; margin:0 auto 40px; background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px 16px 10px; overflow-x:auto; }
+  .figure svg { display:block; width:100%; min-width:720px; height:auto; }
+  .board { display:flex; flex-wrap:wrap; gap:28px; justify-content:center; }
+  .col { width:360px; max-width:100%; min-width:0; }
+  .why { font-size:13px; color:var(--board-sec); margin-bottom:12px; min-height:58px; }
+  .phone { background:var(--bg); color:var(--text); border-radius:28px; padding:18px 16px 16px; min-height:720px; position:relative; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 12px 32px rgba(26,22,17,.12); }
+  .ser { font-family:var(--font-display); font-weight:400; }
+  .mono { font-family:var(--font-mono); font-size:11px; letter-spacing:.04em; text-transform:uppercase; }
+  .mu { color:var(--sec); } .ter { color:var(--ter); }
+  .crumb { font-size:13px; color:var(--sec); margin-bottom:12px; display:flex; align-items:center; gap:10px; }
+  .back { width:34px; height:34px; border-radius:50%; border:1px solid var(--line2); display:grid; place-items:center; color:var(--sec); flex:none; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-top:12px; }
+  .h2 { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+  .h2 b { font-family:var(--font-display); font-weight:400; font-size:16px; }
+  .h2 span { font-size:13px; color:var(--sec); }
+  .row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:9px 0; border-top:1px solid var(--line); min-width:0; }
+  .row:first-of-type { border-top:0; }
+  .n { color:var(--ter); width:18px; display:inline-block; font-variant-numeric:tabular-nums; }
+  .bars { display:flex; gap:3px; }
+  .bars i { width:16px; height:6px; border-radius:3px; background:var(--side-on); }
+  .bars i.on { background:var(--brand); }
+  .cover { border-radius:16px; height:170px; display:flex; flex-direction:column; justify-content:space-between; padding:12px 14px; color:#f5f0e6; }
+  .pill { background:rgba(26,22,17,.35); border-radius:999px; padding:5px 11px; font-size:12px; color:#f5f0e6; }
+  .dots { width:32px; height:32px; border-radius:50%; background:rgba(26,22,17,.35); display:grid; place-items:center; color:#f5f0e6; font-weight:700; letter-spacing:1px; }
+  .btn { display:flex; align-items:center; justify-content:center; min-height:44px; border-radius:999px; font-weight:600; font-size:14px; margin-top:12px; }
+  .green { background:var(--brand); color:#f5f0e6; }
+  .outline { border:1px solid var(--line2); color:var(--text); }
+  .hint { font-size:12px; color:var(--sec); text-align:center; margin-top:6px; }
+  .stages { display:flex; align-items:center; gap:6px; margin-top:14px; }
+  .stages .s { flex:1; text-align:center; padding:7px 0 5px; border-radius:10px; border:1px solid var(--line); background:var(--card); }
+  .stages .s b { display:block; font-size:13px; font-weight:600; color:var(--ter); }
+  .stages .s small { font-family:var(--font-mono); font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--ter); }
+  .stages .s.on { border-color:var(--brand); background:var(--brand-soft); }
+  .stages .s.on b { color:var(--brand); }
+  .stages .s.on small { color:var(--brand); }
+  .stages .s.done b { color:var(--text); }
+  .stages .arrow { color:var(--ter); font-size:12px; }
+  .date { width:42px; flex:none; border-radius:10px; background:var(--hover); text-align:center; padding:4px 0; }
+  .date b { display:block; font-family:var(--font-display); font-weight:400; font-size:17px; line-height:1.1; }
+  .date small { font-family:var(--font-mono); font-size:9px; color:var(--sec); text-transform:uppercase; letter-spacing:.06em; }
+  .date.soon { background:var(--amber-soft); }
+  .date.soon small { color:var(--amber); }
+  .lr { display:flex; gap:12px; align-items:center; min-width:0; }
+  .face { width:32px; height:32px; border-radius:50%; background:#e3ddd0; display:grid; place-items:center; font-size:11px; font-weight:700; color:var(--text); flex:none; }
+  .chip { font-size:11px; font-weight:600; border:1px solid var(--line2); border-radius:999px; padding:3px 9px; color:var(--sec); white-space:nowrap; }
+  .chip.warn { border-color:rgba(126,72,10,.5); color:var(--amber); }
+  .chip.idea { border-color:var(--line2); color:var(--ter); background:var(--hover); }
+  .chip.brand { border-color:var(--brand); color:var(--brand); background:var(--brand-soft); }
+  .spacer { flex:1; }
+  .ubox { border:1px solid var(--line2); border-radius:999px; padding:12px 16px; display:flex; justify-content:space-between; color:var(--sec); margin-top:14px; background:var(--card); }
+  .bubble { border-radius:14px; padding:10px 12px; font-size:14px; margin-top:10px; max-width:90%; }
+  .me { background:var(--text); color:var(--bg); margin-left:auto; }
+  .bot { background:var(--card); border:1px solid var(--line2); }
+  .scrim { position:absolute; inset:0; background:rgba(26,22,17,.35); }
+  .dash { border:1px dashed var(--line2); border-radius:14px; padding:12px 14px; margin-top:12px; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; background:var(--card); border-radius:22px 22px 0 0; padding:10px 16px 18px; border-top:1px solid var(--line2); }
+  .grab { width:40px; height:4px; border-radius:2px; background:var(--line2); margin:0 auto 14px; }
+  .kv { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-top:1px solid var(--line); font-size:14px; }
+  .kv:first-of-type { border-top:0; }
+  .kv span:first-child { color:var(--sec); }
+  .kv span:last-child { text-align:right; }
+  .tick { width:18px; height:18px; border-radius:50%; border:1.5px solid var(--line2); flex:none; display:grid; place-items:center; font-size:11px; }
+  .tick.on { background:var(--brand); border-color:var(--brand); color:#f5f0e6; }
+  .task { display:flex; align-items:center; gap:10px; padding:9px 0; border-top:1px solid var(--line); min-width:0; }
+  .task:first-of-type { border-top:0; }
+  .task .t { flex:1; min-width:0; }
+  .task .t p:first-child { font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .task .t p:last-child { font-size:12px; color:var(--sec); }
+  .sug { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px solid var(--line); }
+  .sug:first-of-type { border-top:0; }
+  .add { font-size:12px; font-weight:700; color:var(--brand); border:1px solid var(--brand); border-radius:999px; padding:4px 10px; white-space:nowrap; }
+  .phase { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 0; border-top:1px solid var(--line); }
+  .phase:first-of-type { border-top:0; }
+  .phase .bar { flex:1; height:5px; border-radius:3px; background:var(--side-on); overflow:hidden; }
+  .phase .bar i { display:block; height:100%; background:var(--brand); }
+  .opt { border:1px solid var(--line2); border-radius:14px; padding:12px 14px; margin-top:8px; }
+  .opt.sel { border-color:var(--brand); background:var(--brand-soft); }
+  .q { font-size:12px; color:var(--sec); }
+  .field { border:1px solid var(--line2); border-radius:12px; padding:11px 12px; margin-top:8px; background:var(--card); color:var(--ter); }
+  .desk { max-width:1160px; margin:40px auto 0; background:var(--bg); color:var(--text); border-radius:18px; overflow:hidden; display:grid; grid-template-columns:200px 1fr 300px; min-height:620px; box-shadow:0 12px 32px rgba(26,22,17,.12); }
+  .rail { background:var(--side); border-right:1px solid var(--line); padding:18px 12px; display:flex; flex-direction:column; gap:2px; }
+  .rail .logo { font-family:var(--font-display); font-size:18px; padding:0 8px 16px; }
+  .rail a { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px; color:var(--sec); font-size:13.5px; text-decoration:none; }
+  .rail a.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .main { padding:22px 26px; min-width:0; }
+  .side { background:var(--side); border-left:1px solid var(--line); padding:18px 14px; display:flex; flex-direction:column; min-width:0; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .checks { max-width:880px; margin:40px auto 0; }
+  .checks h2 { font-family:var(--font-display); font-weight:400; font-size:20px; margin-bottom:8px; }
+  .checks ol { margin:0 0 20px; padding-left:20px; color:var(--board-sec); }
+  .checks li { margin-bottom:6px; }
+  .checks li b { color:var(--board-text); }
+  @media (max-width: 900px) { .desk { grid-template-columns:1fr; } .rail, .side { display:none; } }
+  @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
+</style>
+
+<div class="intro">
+  <p class="tag">Mocks · 4 Nov 2026 · for your yes</p>
+  <h1>One lifecycle: a project becomes a rollout</h1>
+  <p>Where a release starts before the music exists. A project has two stages, Idea and Making, with real tasks so the AI can suggest work. Plan the rollout turns it into the rollout you already know, with Pre-production holding whatever was still open. Names and songs are made up. Drawn in the app's light look at phone width, one computer frame at the end.</p>
+</div>
+
+<div class="decisions">
+  <div class="dec"><b>Stages live on the project</b><p>The record row gets an Idea stage and tasks. It is not a rollout row, so rollout counts, plan limits and the scoreboard stay honest.</p></div>
+  <div class="dec"><b>Forward by itself, never back</b><p>Start making is a button. The stage also moves on its own the first time a song goes past Idea or a session is saved. Drop is the only way down.</p></div>
+  <div class="dec"><b>Tasks are real tasks</b><p>Same rows as a rollout's activities, so chasing, assignment emails, the task pop-up and the AI all work on a project with no new plumbing.</p></div>
+  <div class="dec"><b>One way to start the next one</b><p>Start the next one makes a project. The old pre-production rollout and its eight seeded jobs become suggestions in the Making stage.</p></div>
+</div>
+
+<div class="figure">
+  <p class="tag">The lifecycle, as one line</p>
+  <svg viewBox="0 0 760 190" role="img" aria-label="Idea and Making are stages of a project. Plan the rollout turns it into a rollout with Pre-production, Pre-release, Release and Post-release. After it is out, the artist page asks what is next and a new project starts.">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#6a665f"/></marker>
+    </defs>
+    <rect x="12" y="22" width="236" height="96" rx="14" fill="#f5f0e6" stroke="#d6d0c4"/>
+    <text x="24" y="42" font-family="Space Mono, monospace" font-size="10" letter-spacing="1" fill="#6a665f">PROJECT</text>
+    <rect x="24" y="54" width="96" height="48" rx="10" fill="#faf5ec" stroke="#14643a"/>
+    <text x="72" y="74" text-anchor="middle" font-family="Instrument Sans, sans-serif" font-size="14" font-weight="600" fill="#1a1611">Idea</text>
+    <text x="72" y="91" text-anchor="middle" font-family="Instrument Sans, sans-serif" font-size="10.5" fill="#6a665f">a name, an idea</text>
+    <line x1="120" y1="78" x2="138" y2="78" stroke="#6a665f" stroke-width="1.5" marker-end="url(#arr)"/>
+    <rect x="140" y="54" width="96" height="48" rx="10" fill="#faf5ec" stroke="#14643a"/>
+    <text x="188" y="74" text-anchor="middle" font-family="Instrument Sans, sans-serif" font-size="14" font-weight="600" fill="#1a1611">Making</text>
+    <text x="188" y="91" text-anchor="middle" font-family="Instrument Sans, sans-serif" font-size="10.5" fill="#6a665f">songs, sessions, tasks</text>
+    <text x="130" y="136" text-anchor="middle" font-family="Instrument Sans, sans-serif" font-size="11" fill="#6a665f">Start making, or a song moves past Idea</text>
+    <line x1="248" y1="78" x2="286" y2="78" stroke="#14643a" stroke-width="2" marker-end="url(#arr)"/>
+    <text x="267" y="66" text-anchor="middle" font-family="Instrument Sans, sans-serif" font-size="10.5" font-weight="600" fill="#14643a">Plan</text>
+    <rect x="290" y="22" width="440" height="96" rx="14" fill="#f5f0e6" stroke="#d6d0c4"/>
+    <text x="302" y="42" font-family="Space Mono, monospace" font-size="10" letter-spacing="1" fill="#6a665f">ROLLOUT</text>
+    <rect x="302" y="54" width="102" height="48" rx="10" fill="#faf5ec" stroke="#7e480a"/>
+    <text x="353" y="74" text-anchor="middle" font-family="Instrument Sans, sans-serif" font-size="13" font-weight="600" fill="#1a1611">Pre-production</text>
+    <text x="353" y="91" text-anchor="middle" font-family="Instrument Sans, sans-serif" font-size="10.5" fill="#6a665f">open tasks carried in</text>
+    <line x1="404" y1="78" x2="412" y2="78" stroke="#6a665f" stroke-width="1.5" marker-end="url(#arr)"/>
+    <rect x="414" y="54" width="100" height="48" rx="10" fill="#faf5ec" stroke="#d6d0c4"/>
+    <text x="464" y="74" text-anchor="middle" font-family="Instrument Sans, sans-serif" font-size="13" font-weight="600" fill="#1a1611">Pre-release</text>
+    <text x="464" y="91" text-anchor="middle" font-family="Instrument Sans, sans-serif" font-size="10.5" fill="#6a665f">to day -8</text>
+    <line x1="514" y1="78" x2="522" y2="78" stroke="#6a665f" stroke-width="1.5" marker-end="url(#arr)"/>
+    <rect x="524" y="54" width="92" height="48" rx="10" fill="#faf5ec" stroke="#d6d0c4"/>
+    <text x="570" y="74" text-anchor="middle" font-family="Instrument Sans, sans-serif" font-size="13" font-weight="600" fill="#1a1611">Release</text>
+    <text x="570" y="91" text-anchor="middle" font-family="Instrument Sans, sans-serif" font-size="10.5" fill="#6a665f">days -7 to +7</text>
+    <line x1="616" y1="78" x2="624" y2="78" stroke="#6a665f" stroke-width="1.5" marker-end="url(#arr)"/>
+    <rect x="626" y="54" width="94" height="48" rx="10" fill="#faf5ec" stroke="#d6d0c4"/>
+    <text x="673" y="74" text-anchor="middle" font-family="Instrument Sans, sans-serif" font-size="13" font-weight="600" fill="#1a1611">Post-release</text>
+    <text x="673" y="91" text-anchor="middle" font-family="Instrument Sans, sans-serif" font-size="10.5" fill="#6a665f">day +8 on</text>
+    <text x="510" y="136" text-anchor="middle" font-family="Instrument Sans, sans-serif" font-size="11" fill="#6a665f">A date lands and the planner builds the three dated phases, as today</text>
+    <path d="M673 102 L673 160 L72 160 L72 108" fill="none" stroke="#6a665f" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#arr)"/>
+    <text x="372" y="176" text-anchor="middle" font-family="Instrument Sans, sans-serif" font-size="11" fill="#6a665f">Out. A week later the artist page asks "What's next for Kemi?" and a new project starts</text>
+    <path d="M130 118 L130 150" fill="none" stroke="#961a1a" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <text x="150" y="153" font-family="Instrument Sans, sans-serif" font-size="10.5" fill="#961a1a">Drop, from either stage</text>
+  </svg>
+</div>
+
+<div class="board">
+
+  <!-- 1. Artist page -->
+  <div class="col">
+    <p class="tag">1 · Artist page</p>
+    <p class="why">Up next leads with the thing that needs a decision, here a project that is still an idea. On the Music line an idea reads as a chip beside the records being made, so a manager with three artists sees in one glance which ones have nothing cooking.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">←</span>Artists</div>
+      <div class="lr"><div class="face" style="width:56px;height:56px;border-radius:14px;font-size:16px">KA</div><p class="ser" style="font-size:26px">Kemi Ade</p></div>
+      <div class="card" style="border-color:var(--brand)">
+        <p class="mono" style="color:var(--brand);margin-bottom:4px">Up next</p>
+        <p style="font-weight:600">Untitled is still an idea</p>
+        <p class="mu" style="font-size:13px">Add the first song, or tell the AI what it is about.</p>
+        <div class="btn outline" style="min-height:38px">Open the project</div>
+      </div>
+      <div class="card">
+        <div class="h2"><b>Music</b></div>
+        <div class="stages" style="margin-top:4px">
+          <div class="s on"><b>2</b><small>In the making</small></div><span class="arrow">›</span>
+          <div class="s"><b>0</b><small>Rolling out</small></div><span class="arrow">›</span>
+          <div class="s done"><b>3</b><small>Out now</small></div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <div class="lr"><div style="width:48px;height:48px;border-radius:10px;background:#3b2a52;flex:none"></div>
+            <div style="min-width:0;flex:1"><p style="font-weight:600">Wahala EP</p><p class="mu" style="font-size:13px">1 of 3 songs done · next Fri</p>
+              <div class="bars" style="margin-top:5px"><i class="on"></i><i></i><i></i></div></div></div>
+          <span class="mu">›</span>
+        </div>
+        <div class="row">
+          <div class="lr"><div style="width:48px;height:48px;border-radius:10px;background:#24453a;flex:none"></div>
+            <div style="min-width:0;flex:1"><p style="font-weight:600">Untitled</p><p class="mu" style="font-size:13px">A short one for the rainy season</p></div></div>
+          <span class="chip idea">Idea</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="h2"><b>Out now</b><span>3</span></div>
+        <div class="row"><div class="lr"><div style="width:40px;height:40px;border-radius:8px;background:#e3ddd0"></div><div><p style="font-weight:600">Gold Dust</p><p class="mu" style="font-size:13px">Single · out 20 Oct</p></div></div><span class="chip">Out</span></div>
+      </div>
+      <div class="spacer"></div>
+      <div class="ubox"><span>Message AI…</span><span>↑</span></div>
+    </div>
+  </div>
+
+  <!-- 2. Project, idea stage -->
+  <div class="col">
+    <p class="tag">2 · The project, Idea stage</p>
+    <p class="why">Nothing is required, as before. The idea is back on the page because an idea stage with nowhere to write the idea is empty. Start making is the big button: it is the decision this stage is for. Plan the rollout stays one tap away, quieter.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">←</span>Kemi Ade</div>
+      <div class="cover" style="background:#24453a">
+        <div style="display:flex;justify-content:space-between"><span class="pill">Add cover</span><span class="dots">···</span></div>
+        <div><p style="color:#cfe3d8;font-size:13px">Kemi Ade</p><p class="ser" style="font-size:28px;line-height:1.1">Untitled</p></div>
+      </div>
+      <div class="stages">
+        <div class="s on"><b>Idea</b><small>now</small></div><span class="arrow">›</span>
+        <div class="s"><b>Making</b><small>next</small></div><span class="arrow">›</span>
+        <div class="s"><b>Rollout</b><small>later</small></div>
+      </div>
+      <div class="card">
+        <div class="h2"><b>The idea</b><span>Edit</span></div>
+        <p>A short one for the rainy season. Three songs, one feature, all Tolu on the beats. Soft, no club record this time.</p>
+      </div>
+      <div class="btn green">Start making</div>
+      <p class="hint">Moves to Making. It also moves by itself when a song starts recording.</p>
+      <div class="card">
+        <div class="h2"><b>Suggested next</b><span>from the AI</span></div>
+        <div class="sug"><div><p style="font-weight:500">Write the hook for the lead song</p><p class="mu" style="font-size:12px">Kemi · no day yet</p></div><span class="add">+ Add</span></div>
+        <div class="sug"><div><p style="font-weight:500">Record a rough demo</p><p class="mu" style="font-size:12px">Kemi · no day yet</p></div><span class="add">+ Add</span></div>
+        <div class="sug"><div><p style="font-weight:500">Book the first session with Tolu</p><p class="mu" style="font-size:12px">You · no day yet</p></div><span class="add">+ Add</span></div>
+      </div>
+      <div class="dash"><p style="font-weight:600">Add a song</p><p class="mu" style="font-size:13px">A working title is fine. Rename it later.</p></div>
+      <div class="spacer"></div>
+      <div class="ubox"><span>Tell AI what happened…</span><span>↑</span></div>
+    </div>
+  </div>
+
+  <!-- 3. Project, making stage -->
+  <div class="col">
+    <p class="tag">3 · The project, Making stage</p>
+    <p class="why">The tracklist and stage bars stay as approved on 27 Oct. Tasks sit under the songs because the songs are the reason the tasks exist. Suggestions follow the songs: Wahala is at Mixing, so "Finish the Wahala mix" is offered, not invented.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">←</span>Kemi Ade</div>
+      <div class="cover" style="background:#3b2a52;height:150px">
+        <div style="display:flex;justify-content:space-between"><span class="pill">EP</span><span class="dots">···</span></div>
+        <div><p style="color:#d9cfe6;font-size:13px">Kemi Ade</p><p class="ser" style="font-size:28px;line-height:1.1">Wahala</p></div>
+      </div>
+      <div class="stages">
+        <div class="s done"><b>Idea</b><small>done</small></div><span class="arrow">›</span>
+        <div class="s on"><b>Making</b><small>now</small></div><span class="arrow">›</span>
+        <div class="s"><b>Rollout</b><small>next</small></div>
+      </div>
+      <p style="margin-top:10px">1 of 3 songs done · <span style="color:var(--amber)">next session Fri 7 Nov with Tolu</span></p>
+      <div class="btn green">Plan the rollout</div>
+      <p class="hint">You can plan while 2 songs are still being made</p>
+      <div class="card">
+        <div class="h2"><b>Songs</b><span>3</span></div>
+        <div class="row"><div class="lr"><span class="n">1</span><p style="font-weight:500">Wahala</p></div><div class="bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div></div>
+        <div class="row"><div class="lr"><span class="n">2</span><p style="font-weight:500">Pressure</p></div><div class="bars"><i class="on"></i><i class="on"></i><i></i><i></i></div></div>
+        <div class="row"><div class="lr"><span class="n">3</span><p style="font-weight:500">Soft Life</p></div><div class="bars"><i class="on"></i><i></i><i></i><i></i></div></div>
+      </div>
+      <div class="card">
+        <div class="h2"><b>Tasks</b><span>3 open · 2 done</span></div>
+        <div class="task"><span class="tick"></span><div class="t"><p>Book the mix session with Tolu</p><p>You · Fri 7 Nov</p></div></div>
+        <div class="task"><span class="tick"></span><div class="t"><p>Artwork brief to Dami</p><p>Dami · 14 Nov</p></div></div>
+        <div class="task"><span class="tick"></span><div class="t"><p>Master Wahala</p><p>Nobody yet · no day</p></div></div>
+        <div class="sug" style="border-top:1px solid var(--line2);margin-top:4px"><div><p style="font-weight:500">Finish the Wahala mix</p><p class="mu" style="font-size:12px">Suggested · Wahala is at Mixing</p></div><span class="add">+ Add</span></div>
+        <div class="sug"><div><p style="font-weight:500">Shoot the video</p><p class="mu" style="font-size:12px">Suggested</p></div><span class="add">+ Add</span></div>
+      </div>
+      <div class="card">
+        <div class="h2"><b>Sessions</b><span>+</span></div>
+        <div class="row"><div class="lr"><div class="date soon"><b>7</b><small>Fri</small></div><div><p style="font-weight:500">Recording Pressure</p><p class="mu" style="font-size:13px">Tolu, producer</p></div></div><span class="chip warn">Next</span></div>
+      </div>
+      <div class="spacer"></div>
+      <div class="ubox"><span>Tell AI what happened…</span><span>↑</span></div>
+    </div>
+  </div>
+
+  <!-- 4. Here's what I'll use -->
+  <div class="col">
+    <p class="tag">4 · Plan the rollout: here's what I'll use</p>
+    <p class="why">The sheet you approved, with one new line: open tasks move into Pre-production. Saying it here means nothing disappears without warning, which is the one thing that would make a manager stop trusting the hand-over.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">←</span>Kemi Ade</div>
+      <div class="cover" style="background:#3b2a52;height:150px">
+        <div style="display:flex;justify-content:space-between"><span class="pill">EP</span><span class="dots">···</span></div>
+        <div><p style="color:#d9cfe6;font-size:13px">Kemi Ade</p><p class="ser" style="font-size:28px;line-height:1.1">Wahala</p></div>
+      </div>
+      <p style="margin-top:10px">1 of 3 songs done</p>
+      <div class="btn green">Plan the rollout</div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <p class="ser" style="font-size:20px;margin-bottom:6px">Here's what I'll use</p>
+        <div class="kv"><span>Kind</span><span>EP</span></div>
+        <div class="kv"><span>Songs</span><span>Wahala, Pressure, Soft Life</span></div>
+        <div class="kv"><span>Credits</span><span>Tolu (producer), Ada (mix)</span></div>
+        <div class="kv"><span>The idea</span><span>A short one for the rainy season</span></div>
+        <div class="kv"><span>Open tasks</span><span>3 move into Pre-production</span></div>
+        <div class="kv"><span>Cover</span><span>Your colour, no art yet</span></div>
+        <p class="mu" style="font-size:13px;margin-top:10px">Pressure and Soft Life aren't done yet. I'll add a task to finish each one, first.</p>
+        <div class="btn green">Continue</div>
+        <div class="btn outline">Not yet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. The rollout, just planned -->
+  <div class="col">
+    <p class="tag">5 · The rollout, just planned</p>
+    <p class="why">Pre-production is the phase that already exists for this. The carried tasks keep their owner and day, so Dami still sees the artwork brief on 14 Nov. The three dated phases are the planner's, as today. "Made from your project" links back.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">←</span>Rollouts</div>
+      <p class="mono mu">EP · 12 Dec</p>
+      <p class="ser" style="font-size:26px;line-height:1.1">Wahala</p>
+      <div class="card">
+        <div class="phase"><span style="width:104px;font-weight:600;color:var(--amber)">Pre-production</span><span class="chip warn">Now</span><div class="bar"><i style="width:0"></i></div><span class="mono mu">0 of 5</span></div>
+        <div class="phase"><span style="width:104px;font-weight:600">Pre-release</span><span class="mono ter">to 4 Dec</span><div class="bar"><i style="width:0"></i></div><span class="mono mu">0 of 41</span></div>
+        <div class="phase"><span style="width:104px;font-weight:600">Release</span><span class="mono ter">5 to 19 Dec</span><div class="bar"><i style="width:0"></i></div><span class="mono mu">0 of 14</span></div>
+        <div class="phase"><span style="width:104px;font-weight:600">Post-release</span><span class="mono ter">20 Dec on</span><div class="bar"><i style="width:0"></i></div><span class="mono mu">0 of 9</span></div>
+      </div>
+      <div class="card">
+        <div class="h2"><b>Pre-production</b><span>5</span></div>
+        <div class="task"><span class="tick"></span><div class="t"><p>Finish recording Pressure</p><p>Kemi · first up</p></div></div>
+        <div class="task"><span class="tick"></span><div class="t"><p>Finish writing Soft Life</p><p>Kemi · first up</p></div></div>
+        <div class="task"><span class="tick"></span><div class="t"><p>Book the mix session with Tolu</p><p>You · Fri 7 Nov · from the project</p></div></div>
+        <div class="task"><span class="tick"></span><div class="t"><p>Artwork brief to Dami</p><p>Dami · 14 Nov · from the project</p></div></div>
+        <div class="task"><span class="tick"></span><div class="t"><p>Master Wahala</p><p>Nobody yet · from the project</p></div></div>
+      </div>
+      <div class="card">
+        <div class="h2"><b>Made from your project</b><span>›</span></div>
+        <p class="mu" style="font-size:13px">3 songs · 2 sessions · 2 credits · 2 tasks done while making it</p>
+      </div>
+      <div class="spacer"></div>
+      <div class="ubox"><span>Message AI…</span><span>↑</span></div>
+    </div>
+  </div>
+
+  <!-- 6. The AI on a project -->
+  <div class="col">
+    <p class="tag">6 · The AI on the project</p>
+    <p class="why">One line in still files the session (the card you approved). What is new is the second move: the AI offers the next two jobs from the Making list, grounded in what just happened, and only adds them on a yes. It never invents a job that is not on the list.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">←</span>Wahala</div>
+      <div class="bubble me">we start recording pressure friday with tolu</div>
+      <div class="bubble bot" style="padding:12px 14px">
+        <p class="mono mu" style="margin-bottom:6px">Add to Wahala</p>
+        <p>Session · Fri 7 Nov · Tolu, producer · Pressure</p>
+        <p>Pressure → Recording</p>
+        <div style="display:flex;gap:8px;margin-top:10px"><span class="btn green" style="flex:1;min-height:38px;margin:0">Add</span><span class="btn outline" style="flex:1;min-height:38px;margin:0">Fix something</span></div>
+      </div>
+      <div class="bubble bot">Added. Pressure is recording now. Two things usually follow at this stage:<br><br>· Book the mix session with Tolu<br>· Brief the artwork<br><br>Add them to the project?</div>
+      <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end"><span class="chip brand">Yes, add both</span><span class="chip">Just the mix</span><span class="chip">Not now</span></div>
+      <div class="bubble me" style="margin-top:14px">yes both</div>
+      <div class="bubble bot">Done. Both are on the project, no day yet. Say when and I'll date them.</div>
+      <div class="spacer"></div>
+      <div class="ubox"><span>Tell AI what happened…</span><span>↑</span></div>
+    </div>
+  </div>
+
+  <!-- 7. Start the next one -->
+  <div class="col">
+    <p class="tag">7 · Start the next one</p>
+    <p class="why">The old sheet made a dateless rollout with eight jobs. Now it makes a project. The stage question is the only new thing, and "Just an idea" is first because that is where most next records are when a manager first writes them down.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">←</span>Artists</div>
+      <div class="lr"><div class="face" style="width:56px;height:56px;border-radius:14px;font-size:16px">KA</div><p class="ser" style="font-size:26px">Kemi Ade</p></div>
+      <div class="card" style="border-color:var(--brand)">
+        <p class="mono" style="color:var(--brand);margin-bottom:4px">Up next</p>
+        <p style="font-weight:600">Gold Dust has been out a week. What's next for Kemi?</p>
+        <div class="btn outline" style="min-height:38px">Start the next one</div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <p class="ser" style="font-size:20px;margin-bottom:4px">Start the next one</p>
+        <p class="mu" style="font-size:13px">A project under Kemi Ade. Nothing is required; name it later.</p>
+        <p class="q" style="margin-top:12px">Where is it now?</p>
+        <div class="opt sel"><p style="font-weight:600">Just an idea</p><p class="mu" style="font-size:13px">Nothing recorded yet.</p></div>
+        <div class="opt"><p style="font-weight:600">Already making it</p><p class="mu" style="font-size:13px">In the studio, or mixing.</p></div>
+        <p class="q" style="margin-top:12px">Working title</p>
+        <div class="field">Untitled</div>
+        <div class="btn green">Start the project</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Computer frame -->
+<div class="intro" style="margin:48px auto 12px">
+  <p class="tag">8 · On a computer</p>
+  <p>The same Making-stage project with the menu on the left and the AI on the right, where it already lives. Songs and tasks sit side by side, because on a wide screen the manager reads them together.</p>
+</div>
+<div class="desk">
+  <div class="rail">
+    <div class="logo">Urganize</div>
+    <a>My day</a><a class="on">Artists</a><a>Rollouts</a><a>Shows</a><a>Relationships</a><a>Settings</a>
+  </div>
+  <div class="main">
+    <p class="mu" style="font-size:13px">Artists › Kemi Ade</p>
+    <div class="lr" style="margin-top:10px;align-items:flex-start">
+      <div class="cover" style="background:#3b2a52;width:150px;height:150px;flex:none;border-radius:14px"><span class="pill" style="align-self:flex-start">EP</span><p class="ser" style="font-size:24px;line-height:1.1">Wahala</p></div>
+      <div style="flex:1;min-width:0">
+        <p class="ser" style="font-size:28px">Wahala</p>
+        <p class="mu">Kemi Ade · 1 of 3 songs done · <span style="color:var(--amber)">next session Fri 7 Nov with Tolu</span></p>
+        <div class="stages" style="max-width:420px">
+          <div class="s done"><b>Idea</b><small>done</small></div><span class="arrow">›</span>
+          <div class="s on"><b>Making</b><small>now</small></div><span class="arrow">›</span>
+          <div class="s"><b>Rollout</b><small>next</small></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center"><div class="btn green" style="padding:0 18px;min-height:40px">Plan the rollout</div><p class="hint" style="margin:12px 0 0">You can plan while 2 songs are still being made</p></div>
+      </div>
+    </div>
+    <div class="two" style="margin-top:6px">
+      <div class="card">
+        <div class="h2"><b>Songs</b><span>3</span></div>
+        <div class="row"><div class="lr"><span class="n">1</span><p style="font-weight:500">Wahala</p></div><div class="bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div></div>
+        <div class="row"><div class="lr"><span class="n">2</span><p style="font-weight:500">Pressure</p></div><div class="bars"><i class="on"></i><i class="on"></i><i></i><i></i></div></div>
+        <div class="row"><div class="lr"><span class="n">3</span><p style="font-weight:500">Soft Life</p></div><div class="bars"><i class="on"></i><i></i><i></i><i></i></div></div>
+        <div class="h2" style="margin-top:14px"><b>Sessions</b><span>+</span></div>
+        <div class="row"><div class="lr"><div class="date soon"><b>7</b><small>Fri</small></div><div><p style="font-weight:500">Recording Pressure</p><p class="mu" style="font-size:13px">Tolu, producer</p></div></div><span class="chip warn">Next</span></div>
+      </div>
+      <div class="card">
+        <div class="h2"><b>Tasks</b><span>3 open · 2 done</span></div>
+        <div class="task"><span class="tick"></span><div class="t"><p>Book the mix session with Tolu</p><p>You · Fri 7 Nov</p></div></div>
+        <div class="task"><span class="tick"></span><div class="t"><p>Artwork brief to Dami</p><p>Dami · 14 Nov</p></div></div>
+        <div class="task"><span class="tick"></span><div class="t"><p>Master Wahala</p><p>Nobody yet · no day</p></div></div>
+        <div class="h2" style="margin-top:14px"><b>Suggested next</b><span>from the AI</span></div>
+        <div class="sug"><div><p style="font-weight:500">Finish the Wahala mix</p><p class="mu" style="font-size:12px">Wahala is at Mixing</p></div><span class="add">+ Add</span></div>
+        <div class="sug"><div><p style="font-weight:500">Shoot the video</p><p class="mu" style="font-size:12px">Making stage</p></div><span class="add">+ Add</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="side">
+    <p class="mono mu" style="margin-bottom:8px">AI · Wahala</p>
+    <div class="bubble me" style="max-width:100%">we start recording pressure friday with tolu</div>
+    <div class="bubble bot" style="max-width:100%">Added. Pressure is recording now. Two things usually follow at this stage: book the mix session with Tolu, and brief the artwork. Add them to the project?</div>
+    <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><span class="chip brand">Yes, add both</span><span class="chip">Not now</span></div>
+    <div class="spacer"></div>
+    <div class="ubox"><span>Tell AI what happened…</span><span>↑</span></div>
+  </div>
+</div>
+
+<div class="checks">
+  <h2>What I am asking you to decide</h2>
+  <ol>
+    <li><b>Start making as the big button in the Idea stage</b>, with Plan the rollout quieter underneath. The other way round keeps your 27 Oct rule (rollout button on top from day one) but makes the idea stage look like it only exists to be skipped.</li>
+    <li><b>Suggestions as a short list with + Add</b>, on the page and from the AI, never auto-added. Taps add a real task. The list is fixed per stage, plus one per song from its stage, so the AI tailors and never invents.</li>
+    <li><b>The idea text comes back on the page</b> (it was left off the 27 Oct page). Shown in the Idea stage, folded under the cover once Making starts.</li>
+    <li><b>Carried tasks say "from the project"</b> on the rollout for a while, so a teammate understands why a task they were given on the project now lives on a rollout.</li>
+    <li><b>Start the next one asks one question</b> (Just an idea, or Already making it) and nothing else. Name, kind and cover come later, as on the record page today.</li>
+  </ol>
+  <h2>Not in these mocks, on purpose</h2>
+  <ol>
+    <li>Dates on project tasks are optional and carry nothing until a rollout date exists. The rollout planner never reads them.</li>
+    <li>WhatsApp check-ins for sessions (step 5 from 27 Oct) still wait on Twilio and your yes.</li>
+    <li>No click data exists yet, so the order of everything here is a prediction. The measure stays the same: weekly active teams with no rollout in progress.</li>
+  </ol>
+</div>

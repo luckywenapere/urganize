@@ -32,7 +32,7 @@ export function MadeFromRecordCard({ releaseId }: { releaseId: string }) {
       className="motion-focus flex items-center justify-between gap-3 rounded-[14px] border border-stroke-default bg-bg-surface px-3.5 py-3 transition-colors hover:border-stroke-strong"
     >
       <span className="min-w-0">
-        <span className="block text-sm font-semibold text-content-primary">Made from your record</span>
+        <span className="block text-sm font-semibold text-content-primary">Made from your project</span>
         <span className="block truncate text-[13px] text-content-secondary">{link.line}</span>
       </span>
       <ChevronRight className="h-4 w-4 shrink-0 text-content-tertiary" aria-hidden />

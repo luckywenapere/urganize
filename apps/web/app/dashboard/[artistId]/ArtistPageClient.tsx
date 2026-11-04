@@ -64,7 +64,7 @@ function daysFrom(today: string, value: string | null): number | null {
   return Number.isFinite(a) && Number.isFinite(b) ? Math.round((b - a) / DAY_MS) : null;
 }
 
-const recordName = (record: RecordSummary) => (isUntitledRecord(record.title) ? 'the untitled record' : record.title);
+const recordName = (record: RecordSummary) => (isUntitledRecord(record.title) ? 'the untitled project' : record.title);
 
 function Chip({ children, on = false }: { children: React.ReactNode; on?: boolean }) {
   return (
@@ -177,11 +177,16 @@ function UpNextCard({
   } else if (next.kind === 'record') {
     const { record } = next;
     href = recordHref(artistId, record.id);
-    if (next.step === 'finish') {
+    if (record.status === 'idea') {
+      // An idea nobody has started making (2026-11-04, mock screen 1). Checked
+      // before the steps: songs still at Idea would otherwise read "Finish".
+      title = `${isUntitledRecord(record.title) ? 'Untitled' : record.title} is still an idea`;
+      line = 'Add the first song, or tell the AI what it is about.';
+    } else if (next.step === 'finish') {
       title = `Finish ${recordName(record)}`;
       line = `${record.doneCount} of ${plural(record.songCount, 'song')} done. Plan its rollout when it's ready.`;
     } else if (next.step === 'plan') {
-      title = `${isUntitledRecord(record.title) ? 'The record' : record.title} is ready`;
+      title = `${isUntitledRecord(record.title) ? 'The project' : record.title} is ready`;
       line = 'Every song is done. Plan its rollout.';
       href = null;
       action = onPlan;
@@ -190,7 +195,7 @@ function UpNextCard({
       line = isUntitledRecord(record.title) ? "Write down what's being made." : `To ${record.title}.`;
     }
   } else {
-    title = 'Start the next record';
+    title = 'Start the next project';
     line = 'Keep the songs, sessions and people in one place, not in your head.';
     action = onStart;
   }
@@ -360,7 +365,17 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
   if (upNext.kind === 'rollout') chips.push({ label: `Rolling out ${displayReleaseTitle(upNext.release.title)}`, on: true });
   else if (upNext.kind === 'out') chips.push({ label: `${displayReleaseTitle(upNext.release.title)} is out`, on: true });
   else if (upNext.kind === 'record')
-    chips.push({ label: isUntitledRecord(upNext.record.title) ? 'Making a record' : `Making ${upNext.record.title}`, on: true });
+    chips.push({
+      label:
+        upNext.record.status === 'idea'
+          ? isUntitledRecord(upNext.record.title)
+            ? 'An idea'
+            : `${upNext.record.title} is an idea`
+          : isUntitledRecord(upNext.record.title)
+            ? 'Making a project'
+            : `Making ${upNext.record.title}`,
+      on: true,
+    });
   if (buckets.planned.length === 0 && buckets.live.length === 0) chips.push({ label: 'No rollout yet', on: false });
   else if (records && records.length > 0) chips.push({ label: `${records.length} in the making`, on: false });
 
@@ -460,7 +475,7 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
         {/* New record first: between releases the next record is the work (founder, 2026-10-29). */}
         <div className="flex gap-2">
           <button type="button" onClick={newRecord} disabled={starting} className={primaryButton}>
-            {starting ? 'Starting…' : 'New record'}
+            {starting ? 'Starting…' : 'New project'}
           </button>
           <button type="button" onClick={planRollout} className={ghostButton}>
             Plan a rollout

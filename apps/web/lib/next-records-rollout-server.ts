@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { NextRecord } from '@/lib/next-records';
+import { isOpenRecord, OPEN_RECORD_STATUSES, type NextRecord } from '@/lib/next-records';
 import { madeFromLine, recordCredits, creditRolesFor } from '@/lib/next-records-rollout';
 import { RECORDS_TABLE, readRecord, type RecordsResult } from '@/lib/next-records-server';
 
@@ -35,7 +35,7 @@ export async function linkRecordRelease(
 ): Promise<RecordsResult<NextRecord>> {
   const current = await readRecord(admin, ctx.workspaceId, recordId);
   if (!current.ok) return current;
-  if (current.value.status !== 'making') return fail(409, 'This record already has its rollout.');
+  if (!isOpenRecord(current.value.status)) return fail(409, 'This record already has its rollout.');
 
   // The rollout must be this user's own, for this record's artist: the one the
   // ordinary create route made a moment ago.
@@ -54,7 +54,7 @@ export async function linkRecordRelease(
     .update({ release_id: releaseId })
     .eq('id', recordId)
     .eq('workspace_id', ctx.workspaceId)
-    .eq('status', 'making');
+    .in('status', [...OPEN_RECORD_STATUSES]);
   if (error) return fail(500, 'Could not link the rollout.');
   return readRecord(admin, ctx.workspaceId, recordId);
 }
@@ -83,7 +83,7 @@ export async function findPlanningRecord(admin: SupabaseClient, releaseId: strin
       .eq('workspace_id', team.workspaceId)
       .eq('artist_id', team.artistId)
       .eq('release_id', releaseId)
-      .eq('status', 'making')
+      .in('status', [...OPEN_RECORD_STATUSES])
       .limit(1);
     const id = text(((data ?? []) as Row[])[0]?.id);
     if (!id) return null;
@@ -112,7 +112,7 @@ export async function completeRecordRollout(
       .update({ status: 'planned', release_id: releaseId })
       .eq('id', record.id)
       .eq('workspace_id', team.workspaceId)
-      .eq('status', 'making');
+      .in('status', [...OPEN_RECORD_STATUSES]);
     if (error) {
       console.error('[next-record] plan saved but the record did not move to planned:', error.message);
       return;

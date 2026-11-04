@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   formatSessionDay,
   isCalendarDate,
+  isOpenRecord,
   isRecordDone,
   lagosToday,
+  OPEN_RECORD_STATUSES,
+  songStartsMaking,
   orderSessions,
   parseRecordCreate,
   parseRecordPatch,
@@ -29,15 +32,38 @@ function session(over: Partial<RecordSession> = {}): RecordSession {
 
 describe('parseRecordCreate', () => {
   it('starts an untitled record from an empty body', () => {
-    expect(parseRecordCreate({})).toEqual({ value: { title: 'Untitled', kind: null, idea: '' } });
+    expect(parseRecordCreate({})).toEqual({ value: { title: 'Untitled', kind: null, idea: '', status: 'making' } });
   });
   it('keeps a kind and an idea', () => {
     expect(parseRecordCreate({ title: ' New  EP ', kind: 'ep', idea: '4 songs' })).toEqual({
-      value: { title: 'New EP', kind: 'ep', idea: '4 songs' },
+      value: { title: 'New EP', kind: 'ep', idea: '4 songs', status: 'making' },
     });
   });
   it('refuses an unknown kind', () => {
     expect(parseRecordCreate({ kind: 'mixtape' })).toHaveProperty('error');
+  });
+  it('can start a project at the Idea stage', () => {
+    expect(parseRecordCreate({ status: 'idea' })).toMatchObject({ value: { status: 'idea' } });
+  });
+  it('a project can only start at Idea or Making, never planned or dropped', () => {
+    expect(parseRecordCreate({ status: 'planned' })).toHaveProperty('error');
+    expect(parseRecordCreate({ status: 'dropped' })).toHaveProperty('error');
+  });
+});
+
+describe('project stages', () => {
+  it('Idea and Making are the open stages', () => {
+    expect([...OPEN_RECORD_STATUSES]).toEqual(['idea', 'making']);
+    expect(isOpenRecord('idea')).toBe(true);
+    expect(isOpenRecord('making')).toBe(true);
+    expect(isOpenRecord('planned')).toBe(false);
+    expect(isOpenRecord('dropped')).toBe(false);
+  });
+  it('a song past its Idea stage starts the making, a song still an idea does not', () => {
+    expect(songStartsMaking('idea')).toBe(false);
+    expect(songStartsMaking('recording')).toBe(true);
+    expect(songStartsMaking('mixing')).toBe(true);
+    expect(songStartsMaking('done')).toBe(true);
   });
 });
 
@@ -47,6 +73,12 @@ describe('parseRecordPatch', () => {
   });
   it('never lets a PATCH mark a record planned', () => {
     expect(parseRecordPatch({ status: 'planned' })).toHaveProperty('error');
+  });
+  it('never moves a project back to Idea', () => {
+    expect(parseRecordPatch({ status: 'idea' })).toHaveProperty('error');
+  });
+  it('Start making is a PATCH to making', () => {
+    expect(parseRecordPatch({ status: 'making' })).toEqual({ value: { status: 'making' } });
   });
   it('can drop a record and clear its kind', () => {
     expect(parseRecordPatch({ status: 'dropped', kind: null })).toEqual({ value: { status: 'dropped', kind: null } });
@@ -142,12 +174,20 @@ describe('summaries', () => {
         kind: 'ep',
         coverColor: '#24453a',
         coverUrl: null,
+        status: 'making',
         songs: [song({ stage: 'done' }), song(), song()],
         sessions: [],
       },
       '2026-10-27'
     );
     expect(summary).toMatchObject({ songCount: 3, doneCount: 1, nextSession: null, coverColor: '#24453a' });
+  });
+  it('carries the stage, so the artist page can mark an idea', () => {
+    const summary = summarizeRecord(
+      { id: ID, artistId: ID2, title: 'Untitled', kind: null, coverColor: null, coverUrl: null, status: 'idea', songs: [], sessions: [] },
+      '2026-11-04'
+    );
+    expect(summary.status).toBe('idea');
   });
   it('a record is done only with songs, all done', () => {
     expect(isRecordDone({ songs: [] })).toBe(false);

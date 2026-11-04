@@ -123,7 +123,52 @@ function UseRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-type SheetName = 'menu' | 'rename' | 'cover' | 'kind' | 'drop' | 'plan' | null;
+type SheetName = 'menu' | 'rename' | 'cover' | 'kind' | 'drop' | 'plan' | 'idea' | null;
+
+/**
+ * Where the project stands (2026-11-04, #1074, mock screens 2 and 3): Idea,
+ * Making, then its rollout. The lit stop is now; the ones before it read done.
+ */
+function StageLine({ status }: { status: NextRecord['status'] }) {
+  const stops = [
+    { key: 'idea', label: 'Idea' },
+    { key: 'making', label: 'Making' },
+    { key: 'planned', label: 'Rollout' },
+  ] as const;
+  const at = status === 'dropped' ? -1 : stops.findIndex((stop) => stop.key === status);
+  return (
+    <ol aria-label="Where this project is" className="flex items-center gap-1.5">
+      {stops.map((stop, index) => {
+        const now = index === at;
+        const past = at > index;
+        return (
+          <li key={stop.key} className="flex min-w-0 flex-1 items-center gap-1.5">
+            <span
+              aria-current={now ? 'step' : undefined}
+              className={`flex min-w-0 flex-1 flex-col items-center rounded-[10px] border px-1 pb-1 pt-1.5 ${
+                now ? 'border-brand bg-brand/10' : 'border-stroke-default bg-bg-surface'
+              }`}
+            >
+              <span
+                className={`text-[13px] font-semibold ${now ? 'text-brand' : past ? 'text-content-primary' : 'text-content-tertiary'}`}
+              >
+                {stop.label}
+              </span>
+              <span className={`font-mono text-[10px] uppercase tracking-[0.06em] ${now ? 'text-brand' : 'text-content-tertiary'}`}>
+                {now ? 'Now' : past ? 'Done' : index === at + 1 ? 'Next' : 'Later'}
+              </span>
+            </span>
+            {index < stops.length - 1 ? (
+              <span aria-hidden className="text-xs text-content-tertiary">
+                ›
+              </span>
+            ) : null}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 type Draft = {
   id: string | null;
@@ -388,6 +433,7 @@ export default function RecordPageClient() {
   const [sheet, setSheet] = useState<SheetName>(null);
   const [sheetError, setSheetError] = useState('');
   const [renameTo, setRenameTo] = useState('');
+  const [ideaDraft, setIdeaDraft] = useState('');
   const [editingSong, setEditingSong] = useState<RecordSong | null>(null);
   const [songName, setSongName] = useState('');
   const [cropping, setCropping] = useState<File | null>(null);
@@ -451,7 +497,7 @@ export default function RecordPageClient() {
       <div className="mx-auto w-full max-w-xl">
         {back}
         {missing ? (
-          <p className="text-sm text-content-secondary">We could not find that record on your team.</p>
+          <p className="text-sm text-content-secondary">We could not find that project on your team.</p>
         ) : (
           <div className="h-[190px] animate-pulse rounded-2xl bg-bg-surface" aria-busy="true" />
         )}
@@ -465,12 +511,17 @@ export default function RecordPageClient() {
   const coverColor = recordCoverColor(record);
   const artistName = artist?.name ?? '';
   const planned = record.status === 'planned' && record.releaseId;
+  const isIdea = record.status === 'idea';
   const sessionPeople = recordCredits(record);
   const closeSheet = () => {
     if (busy) return;
     setSheet(null);
     setSheetError('');
   };
+
+  /** Idea to Making (2026-11-04): a PATCH, and never back. */
+  const startMaking = () =>
+    void run(() => patchRecord(record.id, { status: 'making' }), { record_id: record.id, action: 'started_making' });
 
   const addSong = async () => {
     const name = newSong.trim();
@@ -667,7 +718,7 @@ export default function RecordPageClient() {
           <div className={`relative ${sheet === 'menu' ? 'z-[210]' : ''}`}>
             <button
               type="button"
-              aria-label="More for this record"
+              aria-label="More for this project"
               aria-haspopup="menu"
               aria-expanded={sheet === 'menu'}
               onClick={() => setSheet(sheet === 'menu' ? null : 'menu')}
@@ -682,7 +733,7 @@ export default function RecordPageClient() {
               {sheet === 'menu' ? (
                 <div
                   role="menu"
-                  aria-label="More for this record"
+                  aria-label="More for this project"
                   onKeyDown={(event) => {
                     if (event.key === 'Escape') setSheet(null);
                   }}
@@ -715,7 +766,7 @@ export default function RecordPageClient() {
                     onClick={() => setSheet('drop')}
                     className="motion-focus block min-h-11 w-full border-t border-stroke-strong px-3.5 text-left text-sm text-status-error hover:bg-bg-hover"
                   >
-                    Drop this record
+                    Drop this project
                   </button>
                 </div>
               ) : null}
@@ -739,12 +790,58 @@ export default function RecordPageClient() {
         ) : null}
       </p>
 
+      {record.status !== 'dropped' ? <StageLine status={record.status} /> : null}
+
+      {/* The idea (2026-11-04): back on the page, because an Idea stage with
+          nowhere to write the idea is empty. In the making it shows only once written. */}
+      {isIdea || record.idea ? (
+        <Card
+          title="The idea"
+          aside={
+            <button
+              type="button"
+              onClick={() => {
+                setIdeaDraft(record.idea);
+                setSheetError('');
+                setSheet('idea');
+              }}
+              className="motion-focus -my-2 inline-flex min-h-11 items-center px-1 text-[13px] font-semibold text-content-primary hover:underline"
+            >
+              {record.idea ? 'Edit' : 'Write it'}
+            </button>
+          }
+        >
+          <p className={`whitespace-pre-line text-sm ${record.idea ? 'text-content-primary' : 'text-content-secondary'}`}>
+            {record.idea || 'What is this one about? A line is enough.'}
+          </p>
+        </Card>
+      ) : null}
+
       {planned ? (
         <div>
           <Link href={`/dashboard?release=${record.releaseId}`} className={greenButton}>
             Open the rollout
           </Link>
-          <p className="mt-1.5 text-center text-xs text-content-secondary">This record is now its rollout</p>
+          <p className="mt-1.5 text-center text-xs text-content-secondary">This project is now its rollout</p>
+        </div>
+      ) : isIdea ? (
+        // Idea stage (mock screen 2): Start making is the decision this stage is
+        // for, so it is the big button; the rollout stays one tap away, quieter.
+        <div>
+          <button type="button" onClick={startMaking} disabled={busy} className={greenButton}>
+            Start making
+          </button>
+          <p className="mt-1.5 text-center text-xs text-content-secondary">
+            It also moves to Making by itself when a song starts recording or a session is saved.
+          </p>
+          <button
+            type="button"
+            onClick={openPlanSheet}
+            disabled={busy}
+            className="motion-focus mx-auto mt-1 flex min-h-11 items-center px-2 text-[13px] font-semibold text-content-secondary hover:text-content-primary hover:underline"
+          >
+            Or plan the rollout now
+          </button>
         </div>
       ) : (
         <div>
@@ -993,6 +1090,51 @@ export default function RecordPageClient() {
         </Sheet>
       ) : null}
 
+      {sheet === 'idea' ? (
+        <Sheet label="The idea" onClose={closeSheet}>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const next = ideaDraft.trim();
+              if (next === record.idea) {
+                closeSheet();
+                return;
+              }
+              void run(() => patchRecord(record.id, { idea: next }), { record_id: record.id, action: 'idea' }).then((ok) => {
+                if (ok) setSheet(null);
+              });
+            }}
+          >
+            <h2 className="font-display text-xl text-content-primary">The idea</h2>
+            <p className="mt-1 text-[13px] text-content-secondary">What it is about, the sound, who is on it. The AI reads it too.</p>
+            <label className="mt-3 block">
+              <span className="sr-only">The idea</span>
+              <textarea
+                autoFocus
+                value={ideaDraft}
+                maxLength={2000}
+                rows={5}
+                onChange={(event) => setIdeaDraft(event.target.value)}
+                className={`${fieldClass} min-h-[120px] py-2.5 leading-relaxed`}
+              />
+            </label>
+            {sheetError ? (
+              <p role="alert" className="mt-2 text-sm text-status-error">
+                {sheetError}
+              </p>
+            ) : null}
+            <div className="mt-3 space-y-2">
+              <button type="submit" disabled={busy} className={greenButton}>
+                Save
+              </button>
+              <button type="button" onClick={closeSheet} disabled={busy} className={outlineButton}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Sheet>
+      ) : null}
+
       {sheet === 'rename' ? (
         <Sheet label="Rename" onClose={closeSheet}>
           <form
@@ -1010,7 +1152,7 @@ export default function RecordPageClient() {
           >
             <h2 className="font-display text-xl text-content-primary">Rename</h2>
             <label className="mt-3 block">
-              <span className="sr-only">Record name</span>
+              <span className="sr-only">Project name</span>
               <input autoFocus value={renameTo} maxLength={120} onChange={(event) => setRenameTo(event.target.value)} className={fieldClass} />
             </label>
             {sheetError ? (
@@ -1033,7 +1175,7 @@ export default function RecordPageClient() {
       {sheet === 'kind' ? (
         <Sheet label="Single, EP or album" onClose={closeSheet}>
           <h2 className="font-display text-xl text-content-primary">Single, EP or album</h2>
-          <div className="mt-2" role="radiogroup" aria-label="What kind of record">
+          <div className="mt-2" role="radiogroup" aria-label="Single, EP or album">
             {[...RECORD_KINDS, null].map((kind: RecordKind | null) => {
               const on = record.kind === kind;
               return (
@@ -1221,7 +1363,7 @@ export default function RecordPageClient() {
                 }
                 className="motion-focus flex min-h-11 w-full items-center justify-center text-sm text-status-error"
               >
-                Take it off the record
+                Take it off the project
               </button>
             </div>
           </form>
