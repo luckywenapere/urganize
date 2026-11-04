@@ -48,7 +48,25 @@ const preset = {
         priority: {
           medium: withOpacity("--color-priority-medium"),
           none: withOpacity("--color-priority-none")
-        }
+        },
+        // shadcn/ui's semantic names (2026-11-04, #1071), so components added
+        // with `shadcn add` work unchanged. The variables are aliases onto
+        // the palette above, declared in apps/web/app/globals.css.
+        background: withOpacity("--background"),
+        foreground: withOpacity("--foreground"),
+        card: { DEFAULT: withOpacity("--card"), foreground: withOpacity("--card-foreground") },
+        popover: { DEFAULT: withOpacity("--popover"), foreground: withOpacity("--popover-foreground") },
+        primary: { DEFAULT: withOpacity("--primary"), foreground: withOpacity("--primary-foreground") },
+        secondary: { DEFAULT: withOpacity("--secondary"), foreground: withOpacity("--secondary-foreground") },
+        muted: { DEFAULT: withOpacity("--muted"), foreground: withOpacity("--muted-foreground") },
+        accent: { DEFAULT: withOpacity("--accent"), foreground: withOpacity("--accent-foreground") },
+        destructive: { DEFAULT: withOpacity("--destructive"), foreground: withOpacity("--destructive-foreground") },
+        // The hairline every card and divider draws (--border aliases each
+        // theme's --border-default, alpha included); an opaque control edge;
+        // the focus ring.
+        border: "var(--border)",
+        input: withOpacity("--input"),
+        ring: withOpacity("--ring")
       },
       fontFamily: {
         // sans/display must resolve through the semantic CSS variables, not

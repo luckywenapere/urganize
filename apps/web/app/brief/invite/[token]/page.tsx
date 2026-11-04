@@ -112,20 +112,20 @@ export default async function BriefGuestInvitePage({ params }: PageProps) {
 // The page's own colours, light by default and dark when the phone is: it is
 // opened outside the app, where the app's theme setting is not known.
 const STYLES = `
-.bg-page { --bg:#f5f0e6; --card:#faf5ec; --line:rgba(26,22,17,.1); --text:#1a1611; --muted:#5a564f; --brand:#14643a; --on-brand:#f5f0e6; background:var(--bg); color:var(--text); }
+.bg-page { --bg:#f5f0e6; --card-color:#faf5ec; --line:rgba(26,22,17,.1); --text:#1a1611; --muted-text:#5a564f; --brand:#14643a; --on-brand:#f5f0e6; background:var(--bg); color:var(--text); }
 @media (prefers-color-scheme: dark) {
-  .bg-page { --bg:#0c0c0d; --card:rgba(255,255,255,.04); --line:rgba(255,255,255,.12); --text:#f2f2f0; --muted:rgba(242,242,240,.62); --brand:#7fd99a; --on-brand:#0c0c0d; }
+  .bg-page { --bg:#0c0c0d; --card-color:rgba(255,255,255,.04); --line:rgba(255,255,255,.12); --text:#f2f2f0; --muted-text:rgba(242,242,240,.62); --brand:#7fd99a; --on-brand:#0c0c0d; }
 }
-.bg-muted { color:var(--muted); }
+.bg-muted { color:var(--muted-text); }
 .bg-title { font-family:var(--font-display, Georgia, serif); font-size:26px; line-height:1.1; }
 .bg-headline { font-family:var(--font-display, Georgia, serif); font-size:23px; line-height:1.15; }
-.bg-eyebrow { font-family:ui-monospace, monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
-.bg-label { font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); }
+.bg-eyebrow { font-family:ui-monospace, monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted-text); }
+.bg-label { font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--muted-text); }
 .bg-cover { width:64px; height:64px; border-radius:10px; overflow:hidden; flex:none; background:var(--line); }
-.bg-card { border:1px solid var(--line); background:var(--card); border-radius:14px; padding:2px 14px; }
+.bg-card { border:1px solid var(--line); background:var(--card-color); border-radius:14px; padding:2px 14px; }
 .bg-row { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--line); }
 .bg-row:last-child { border-bottom:0; }
-.bg-due { text-align:right; font-family:ui-monospace, monospace; font-size:12px; color:var(--muted); flex:none; }
+.bg-due { text-align:right; font-family:ui-monospace, monospace; font-size:12px; color:var(--muted-text); flex:none; }
 .bg-button { display:flex; align-items:center; justify-content:center; min-height:50px; border-radius:14px; background:var(--brand); color:var(--on-brand); font-weight:600; font-size:15px; }
 .bg-join { position:sticky; bottom:0; margin-top:28px; padding:14px 0 22px; background:linear-gradient(to top, var(--bg) 78%, transparent); }
 `;

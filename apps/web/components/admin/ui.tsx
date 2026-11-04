@@ -13,9 +13,9 @@ import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 //
 // Server-safe: no hooks, no 'use client'.
 
-export function cn(...parts: Array<string | false | null | undefined>): string {
-  return parts.filter(Boolean).join(' ');
-}
+// One cn() for the app: shadcn's (clsx + tailwind-merge) in lib/utils.ts.
+export { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (

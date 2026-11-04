@@ -21,6 +21,8 @@ import { CoverThumbEditor } from '@/components/artists/CoverThumbEditor';
 import { ArtistCatalogueCard } from '@/components/artists/ArtistCatalogueCard';
 import type { CatalogueProfile } from '@/lib/artist-import/client';
 import { RecordRows, isUntitledRecord, useArtistRecords } from '@/components/artists/ArtistRecordsCard';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import type { ExecutionRelease } from '@/lib/execution-types';
 import { displayReleaseTitle } from '@/types/releases';
 
@@ -193,33 +195,47 @@ function UpNextCard({
     action = onStart;
   }
 
-  const body = (
-    <>
+  // shadcn/ui Card (components/ui/card.tsx, added with `shadcn add`; Oyin's
+  // pick, #1071): a plain bordered card, no accent stripe, the countdown as the
+  // big number on the left. The whole card is one link or button through a
+  // stretched control over it, so the Card itself stays the registry's div.
+  // The visible text is aria-hidden so a screen reader hears the card once,
+  // through the control's name and description.
+  const descriptionId = `up-next-${artistId}`;
+  const days = countdown === 1 ? 'day' : 'days';
+  const name = countdown !== null ? `${title}, ${countdown} ${days} to go` : title;
+  const control = 'motion-focus absolute inset-0 rounded-xl';
+  return (
+    <Card className={cn('relative flex flex-row items-center gap-4 px-4 py-3.5 transition-colors hover:bg-accent', starting && 'opacity-60')}>
       {countdown !== null ? (
-        <span className="shrink-0 pr-1 text-center">
-          <span className="block font-display text-3xl leading-none text-brand">{countdown}</span>
-          <span className="text-[11px] text-content-tertiary">{countdown === 1 ? 'day' : 'days'}</span>
-        </span>
+        <div className="shrink-0 pr-1 text-center" aria-hidden>
+          <span className="block font-display text-3xl leading-none text-primary">{countdown}</span>
+          <span className="text-xs text-muted-foreground">{days}</span>
+        </div>
       ) : null}
-      <span className="min-w-0 flex-1">
-        <span className="block text-[10.5px] font-bold uppercase tracking-[0.12em] text-brand">Up next</span>
-        <span className="mt-0.5 block text-[15px] font-semibold text-content-primary">{title}</span>
-        <span className="block text-[13px] text-content-secondary">{line}</span>
+      <CardHeader className="min-w-0 flex-1 gap-0.5 space-y-0 p-0" aria-hidden>
+        <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-primary">Up next</p>
+        {/* leading-snug: a long record title wraps on a phone. */}
+        <CardTitle className="leading-snug">{title}</CardTitle>
+        <CardDescription>{line}</CardDescription>
+      </CardHeader>
+      <span id={descriptionId} className="sr-only">
+        {line}
       </span>
-      <ChevronRight className="h-4 w-4 shrink-0 text-content-tertiary" aria-hidden />
-    </>
-  );
-  const shell =
-    'motion-focus flex w-full items-center gap-4 rounded-2xl border border-l-[3px] border-stroke-default border-l-brand bg-bg-surface px-4 py-3.5 text-left transition-colors hover:bg-bg-hover disabled:opacity-60';
-
-  return href ? (
-    <Link href={href} onClick={onOpen} className={shell}>
-      {body}
-    </Link>
-  ) : (
-    <button type="button" onClick={action ?? undefined} disabled={starting} className={shell}>
-      {body}
-    </button>
+      <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+      {href ? (
+        <Link href={href} onClick={onOpen} aria-label={name} aria-describedby={descriptionId} className={control} />
+      ) : (
+        <button
+          type="button"
+          onClick={action ?? undefined}
+          disabled={starting}
+          aria-label={name}
+          aria-describedby={descriptionId}
+          className={cn(control, 'disabled:cursor-not-allowed')}
+        />
+      )}
+    </Card>
   );
 }
 
