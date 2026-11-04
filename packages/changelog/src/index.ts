@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.249.0",
+    tag: "App",
+    date: "November 4, 2026",
+    highlights: [
+      "When you plan a project's rollout, its open tasks move into Pre-production with their owners and days. Nothing to copy over.",
+      "Start the next one starts a project now. Pick the artist, say if it is just an idea or already being made, and you land on its page.",
+      "A week after a release comes out, the artist page asks what is next for them, so the next project starts while the last one is fresh.",
+    ],
+  },
+  {
     version: "1.248.0",
     tag: "App",
     date: "November 4, 2026",

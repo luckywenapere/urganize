@@ -5,6 +5,7 @@ import {
   artistUpNext,
   bucketReleases,
   splitTeamByArtistScope,
+  whatsNextFor,
 } from './artist-overview';
 
 // Local noon, so a date-only string and "now" never straddle a day boundary
@@ -184,5 +185,29 @@ describe('artistUpNext', () => {
 
   it('asks to start a record when there is nothing at all', () => {
     expect(artistUpNext({ buckets: empty, records: [], tasks: [], today: TODAY })).toEqual({ kind: 'start' });
+  });
+});
+
+describe("whatsNextFor: the What's next ask on the artist page (2026-11-04, #1074)", () => {
+  const buckets = (list: ReturnType<typeof rel>[]) => bucketReleases(list, NOW);
+  it('asks a week after the latest release came out', () => {
+    expect(whatsNextFor({ buckets: buckets([rel('Wahala', '2026-09-20')]), today: '2026-10-02' })).toEqual({
+      releaseTitle: 'Wahala',
+      daysOut: 12,
+    });
+  });
+  it('not before a week, and not past 90 days', () => {
+    expect(whatsNextFor({ buckets: buckets([rel('Soon', '2026-09-28')]), today: '2026-10-02' })).toBeNull();
+    expect(whatsNextFor({ buckets: buckets([rel('Old', '2026-06-01')]), today: '2026-10-02' })).toBeNull();
+  });
+  it('reads the newest release, so an old one never asks once a new one is out', () => {
+    expect(
+      whatsNextFor({ buckets: buckets([rel('Old', '2026-08-01'), rel('New', '2026-09-29')]), today: '2026-10-02' })
+    ).toBeNull();
+  });
+  it('a release still being planned means the next one is already on its way', () => {
+    expect(
+      whatsNextFor({ buckets: buckets([rel('Out', '2026-09-20'), rel('Next', '2026-12-01')]), today: '2026-10-02' })
+    ).toBeNull();
   });
 });

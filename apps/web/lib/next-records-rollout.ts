@@ -5,6 +5,8 @@
 // docs/notes/2026-10-27-next-record.md, "v2 decisions".
 
 import type { ReleaseCreditRole } from '@/types/credits';
+import { isTaskClosed } from '@/types/tasks';
+import { withTaskPhase } from './rollout-phases';
 import type { MusicStage } from './planner-v2/answers';
 import type { PlanV2, PlanV2Task } from './planner-v2/plan';
 import type { PlanReleaseType } from './release-planning';
@@ -137,6 +139,28 @@ export function recordUseNote(songs: readonly Pick<RecordSong, 'title' | 'stage'
   return `${open.length} songs aren't done yet. I'll add a task to finish each one, first.`;
 }
 
+const sameTitle = (title: string): string => title.trim().replace(/\s+/g, ' ').toLowerCase();
+
+/** The sheet's line about the project's open tasks, or null when there are none. */
+export function carryOverLine(openCount: number): string | null {
+  if (openCount <= 0) return null;
+  if (openCount === 1) return 'Your open task moves into Pre-production, with its owner and day.';
+  return `Your ${openCount} open tasks move into Pre-production, with their owners and days.`;
+}
+
+/**
+ * The project's tasks when its rollout is planned (2026-11-04, #1074): open
+ * ones move onto the rollout in Pre-production, owner and day untouched. Done
+ * and cancelled ones stay on the project as its history.
+ */
+export function carryOverTaskUpdates(
+  rows: ReadonlyArray<{ id: string; status: string; metadata: unknown }>
+): Array<{ id: string; metadata: Record<string, unknown> }> {
+  return rows
+    .filter((row) => !isTaskClosed(row.status))
+    .map((row) => ({ id: row.id, metadata: withTaskPhase(row.metadata, 'pre_production') }));
+}
+
 /** Keys of the tasks the record adds. The browser's copy of them is never trusted. */
 export const RECORD_TASK_PREFIX = 'rec_';
 
@@ -147,11 +171,19 @@ const EARLIEST_UNDATED_OFFSET = -56;
  * One "Finish ..." task per song not yet done: first up, prep for now, free,
  * on the plan's earliest day, so it leads the list and blocks nothing.
  */
-export function recordLeadTasks(songs: readonly Pick<RecordSong, 'title' | 'stage'>[], plan: Pick<PlanV2, 'tasks'>): PlanV2Task[] {
+export function recordLeadTasks(
+  songs: readonly Pick<RecordSong, 'title' | 'stage'>[],
+  plan: Pick<PlanV2, 'tasks'>,
+  /** Titles of the project's open tasks, which move over by themselves
+   * (carryOverTaskUpdates). A song whose finish job is already one of them is
+   * not added twice. */
+  openProjectTaskTitles: readonly string[] = []
+): PlanV2Task[] {
   const offsets = plan.tasks.map((task) => task.offset_days);
   const offset = offsets.length ? Math.min(...offsets) : EARLIEST_UNDATED_OFFSET;
+  const taken = new Set(openProjectTaskTitles.map(sameTitle));
   return songs
-    .filter((song) => song.stage !== 'done')
+    .filter((song) => song.stage !== 'done' && !taken.has(sameTitle(finishTaskTitle(song))))
     .map((song, index) => ({
       key: `${RECORD_TASK_PREFIX}${index + 1}`,
       library_id: null,

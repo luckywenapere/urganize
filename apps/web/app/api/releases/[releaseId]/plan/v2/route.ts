@@ -20,7 +20,7 @@ import { PRICING_TIERS } from '@urganize/pricing';
 import { IDEA_ROUND_COPY } from '@/lib/idea-round';
 import { planInputFor } from '@/lib/idea-round-server';
 import { recordLeadTasks, withoutRecordTasks } from '@/lib/next-records-rollout';
-import { completeRecordRollout, findPlanningRecord } from '@/lib/next-records-rollout-server';
+import { completeRecordRollout, findPlanningRecord, openProjectTaskTitles } from '@/lib/next-records-rollout-server';
 
 /**
  * Plan with UrgAns v2 (2026-10-26, founder approved): UrgAns writes the whole
@@ -119,6 +119,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
   // Planned from a record in the making (step 4, 2026-10-27): each song not
   // yet done leads the plan as a "Finish ..." task, never a blocker.
   const record = await findPlanningRecord(adminClient, releaseId);
+  // Its open tasks move over by themselves, so a song's finish job already
+  // among them is not added a second time (2026-11-04, #1074).
+  const projectTaskTitles = record ? await openProjectTaskTitles(adminClient, releaseId, record.id) : [];
 
   if (action === 'preview') {
     const result = await previewPlanV2(adminClient, {
@@ -133,7 +136,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
       return NextResponse.json({ error: result.error, ...(result.code ? { code: result.code } : {}) }, { status: result.status });
     }
     const { written, releaseDate } = result;
-    const leadTasks = record ? recordLeadTasks(record.songs, written.plan) : [];
+    const leadTasks = record ? recordLeadTasks(record.songs, written.plan, projectTaskTitles) : [];
     return NextResponse.json({
       plan: leadTasks.length ? { ...written.plan, tasks: [...leadTasks, ...written.plan.tasks] } : written.plan,
       source: written.source,
@@ -152,7 +155,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
     source,
     todayYmd: todayYmd(),
     loadTeam: () => loadPlannerTeam(adminClient, releaseId, auth.user),
-    leadTasks: record ? recordLeadTasks(record.songs, plan!) : [],
+    leadTasks: record ? recordLeadTasks(record.songs, plan!, projectTaskTitles) : [],
   });
   if (!result.ok) {
     return NextResponse.json({ error: result.error, ...(result.code ? { code: result.code } : {}) }, { status: result.status });

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isOpenRecord, OPEN_RECORD_STATUSES, type NextRecord } from '@/lib/next-records';
-import { madeFromLine, recordCredits, creditRolesFor } from '@/lib/next-records-rollout';
+import { carryOverTaskUpdates, madeFromLine, recordCredits, creditRolesFor } from '@/lib/next-records-rollout';
+import { isTaskClosed } from '@/types/tasks';
 import { RECORDS_TABLE, readRecord, type RecordsResult } from '@/lib/next-records-server';
 
 // From the next record to its rollout (step 4, v2 mocks approved 27 Oct 2026).
@@ -23,6 +24,7 @@ const text = (value: unknown) => (typeof value === 'string' ? value : '');
 const fail = (status: number, error: string): { ok: false; status: number; error: string } => ({ ok: false, status, error });
 
 const RELEASES_TABLE = 'releases';
+const TASKS_TABLE = 'tasks';
 const ARTISTS_TABLE = 'artists';
 const CREDIT_SUBMISSIONS_TABLE = 'release_credit_submissions';
 
@@ -95,6 +97,61 @@ export async function findPlanningRecord(admin: SupabaseClient, releaseId: strin
 }
 
 /**
+ * Titles of the project's open tasks, so the plan does not add a song's finish
+ * job twice (recordLeadTasks). Empty on any failure: a duplicate is the worst case.
+ */
+export async function openProjectTaskTitles(admin: SupabaseClient, releaseId: string, recordId: string): Promise<string[]> {
+  try {
+    const team = await releaseTeam(admin, releaseId);
+    if (!team) return [];
+    const { data } = await admin
+      .from(TASKS_TABLE)
+      .select('title,status')
+      .eq('workspace_id', team.workspaceId)
+      .eq('record_id', recordId);
+    return ((data ?? []) as Row[]).filter((row) => !isTaskClosed(row.status)).map((row) => text(row.title));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * The project's open tasks move onto the rollout, into Pre-production, owner
+ * and day kept (2026-11-04, #1074). Done and cancelled ones stay on the project.
+ * Each update is conditional on the task still being the project's, so a run
+ * that repeats moves nothing twice.
+ */
+async function carryOverProjectTasks(
+  admin: SupabaseClient,
+  input: { workspaceId: string; recordId: string; releaseId: string }
+): Promise<number> {
+  const { data, error } = await admin
+    .from(TASKS_TABLE)
+    .select('id,status,metadata')
+    .eq('workspace_id', input.workspaceId)
+    .eq('record_id', input.recordId);
+  if (error) {
+    console.error('[next-record] plan saved but the project tasks could not be read:', error.message);
+    return 0;
+  }
+  const updates = carryOverTaskUpdates(
+    ((data ?? []) as Row[]).map((row) => ({ id: text(row.id), status: text(row.status), metadata: row.metadata }))
+  );
+  let moved = 0;
+  for (const update of updates) {
+    const result = await admin
+      .from(TASKS_TABLE)
+      .update({ release_id: input.releaseId, record_id: null, metadata: update.metadata, updated_at: new Date().toISOString() })
+      .eq('id', update.id)
+      .eq('workspace_id', input.workspaceId)
+      .eq('record_id', input.recordId);
+    if (result.error) console.error('[next-record] a project task did not move to the rollout:', result.error.message);
+    else moved += 1;
+  }
+  return moved;
+}
+
+/**
  * The plan saved: the record leaves In the making, and each session person
  * becomes a credit on the rollout (once; a name already credited is skipped).
  * Best effort after the plan is in: a failure here is logged, never undoes it.
@@ -117,6 +174,8 @@ export async function completeRecordRollout(
       console.error('[next-record] plan saved but the record did not move to planned:', error.message);
       return;
     }
+
+    await carryOverProjectTasks(admin, { workspaceId: team.workspaceId, recordId: record.id, releaseId });
 
     const people = recordCredits(record);
     if (people.length === 0) return;

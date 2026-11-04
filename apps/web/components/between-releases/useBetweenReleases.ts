@@ -14,7 +14,7 @@ import { pickBetweenReleases, type BetweenReleasesState } from '@/lib/release-re
  *    dismissed (ReleaseReviewCard).
  *  - inPreProduction: the newest rollout still in pre-production.
  *  - between: no rollout has open work ahead of its release, which is when
- *    PreProductionStartCard ("Start the next one") belongs on Home.
+ *    the Home "Next song" card belonged on Home (removed 2026-11-04, #1074).
  *
  * Layout is the Home redesign's call; this hook and the two cards are what it
  * drops in, above the existing OpportunitiesCard (URG-266).
