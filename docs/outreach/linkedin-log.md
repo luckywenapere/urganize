@@ -96,3 +96,13 @@ People who said they can't sign up. Urganize is waitlist only; Oyin lets them in
 |---|---|---|---|
 | Cold DMs | 30 | 5 (from the first 15; today's 15 not due yet) | 0 |
 | Follow-ups on old chats | 9 | 5 | 1 (Ehinome) |
+
+## 5 Nov 2026
+
+**Inbox replies sent (9):** Nicholas (offered Tue 4pm or Wed 2pm), Ewa (site link, asked for a day), Christel (King Promise, Boypee, Morravey; asked for a day), John (asked WhatsApp number), Joseph (rollout already set; offered next release free), Mbuso (EP in 2027; plan early), Oluwaseyi (funding is the pain), Triple C (asked release date and a day), Razget (asked about next EP). Ehinome demo today 10:30.
+
+**Cold DMs (15):** Deep Dave, David Effiong, Oluwatosin Ajibode, Britni Ruff, Iva Georgieva, James Hadfield, Roman Yasin, Omer Cakirogullari, Rakesh Rafukiya, Hanan Hassan, Abiodun Odunuga, Chukwuemeka Wisdom Jude, Henrik Littauer, Sheye Banks, Thomas Stokes. 12 own posts liked.
+
+**Connection requests with a note (17):** Adefemi Ogundipe, Demario K., Samuel Babayemi, Erick Lugo, James Chinedu, Gregg Miller, Afolabi Adesina, Ismail Ozbey, Afolami Akinwande, Arthur Cross, Ali L., Neil Mason, Anthony Egwu, Bash Plug, Frank Okafor, Divine Egbue, Adedolapo (Justin) Adeyemi. 13 own posts liked. Skipped: Paul Chima Onyeka (invite already pending from before), Chris Allison (sells a playlisting tool), Edem Edmund (Oyin already talks to him; reworded note pending his yes).
+
+Daily invite target: 20 (LinkedIn allows about 100 a week). 677 invites are still pending in total.
