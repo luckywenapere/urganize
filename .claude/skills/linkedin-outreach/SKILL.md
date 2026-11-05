@@ -10,7 +10,7 @@ Outbound only: the first touch, not the sale. Every DM, reply and connection not
 ## Before you start
 
 1. GitHub issue first (`area:partnerships-outreach`, `chore`), reuse an open one if it exists.
-2. Read the memory note on current positioning. As of 3 Nov 2026: "Urganize helps music professionals run their music businesses better, regardless of where they are in their careers." Never reuse an older product line from his past DMs ("the team app for music release" and "AI workspace for music executives" are retired).
+2. Read the memory note on current positioning. When someone asks what Urganize is or does, say it in Oyin's words (5 Nov 2026): "Urganize is where music teams work, from the idea to everything that comes after. Think of it like project management for the music industry: you add a release, you get the plan, and your team knows what to do and when." The broader line "Urganize helps music professionals run their music businesses better" (3 Nov) is fine as a one-liner but too vague on its own. Never reuse an older product line from his past DMs ("the team app for music release" and "AI workspace for music executives" are retired).
 3. Open LinkedIn in the built-in browser pane. He is signed in there. If a sign-in is blocked, use Claude in Chrome.
 
 ## Who counts (ICP)
@@ -66,7 +66,7 @@ Write only in phrases he uses. From his DMs:
 - "I'm the founder of a music tech startup and we're trying to solve problems for people such as yourself."
 - "A call would be the easiest way to walk you through what we've built."
 
-Short, loose punctuation, no polished marketing lines. Write like him from the first draft: he rejected polished drafts as "robotic". Reuse his phrases but never a product description from his old DMs. When anyone asks what Urganize is, use the current positioning line, nothing older ("the team app for music release" went out once on 3 Nov and needed a correction).
+Short, loose punctuation, no polished marketing lines. Write like him from the first draft: he rejected polished drafts as "robotic". Reuse his phrases but never a product description from his old DMs. When anyone asks what Urganize is, use the description in step 2 of "Before you start", nothing older ("the team app for music release" went out once on 3 Nov and needed a correction).
 
 Second replies stay short. If they say they'll check their calendar, "Sounds good. I'm flexible." is enough.
 
