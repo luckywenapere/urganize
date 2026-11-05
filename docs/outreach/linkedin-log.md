@@ -106,3 +106,22 @@ People who said they can't sign up. Urganize is waitlist only; Oyin lets them in
 **Connection requests with a note (17):** Adefemi Ogundipe, Demario K., Samuel Babayemi, Erick Lugo, James Chinedu, Gregg Miller, Afolabi Adesina, Ismail Ozbey, Afolami Akinwande, Arthur Cross, Ali L., Neil Mason, Anthony Egwu, Bash Plug, Frank Okafor, Divine Egbue, Adedolapo (Justin) Adeyemi. 13 own posts liked. Skipped: Paul Chima Onyeka (invite already pending from before), Chris Allison (sells a playlisting tool), Edem Edmund (Oyin already talks to him; reworded note pending his yes).
 
 Daily invite target: 20 (LinkedIn allows about 100 a week). 677 invites are still pending in total.
+
+## 5 Nov 2026, later
+
+**Invites withdrawn:** the 369 oldest pending invites, so 677 pending dropped to about 304. This leaves room under LinkedIn's weekly cap.
+
+**Other replies:** Edem Edmund got a reworded note (Oyin already talks to him; he hasn't joined yet). Ehinome missed the 10:30 demo; told him we'd meet at a better time, no further replies.
+
+**Cold DMs (8 more, 23 today):**
+
+| Name | Role | Profile | Liked | Status |
+|---|---|---|---|---|
+| Samuel Adebiyi | Creative operations, label manager | /in/samuel-adebiyi-471a8627a | "She" by Gimba post | sent |
+| Yemi Akinnigbagbe | CEO, Krystal Entertainment | /in/yemi-akinnigbagbe-06846735 | reposts only | sent |
+| Nate Green Sr. | Artist and label manager | /in/nate-green-sr-175a731b4 | Scrilltown merch post | sent |
+| Edwin Harb | Senior label manager, MDLBEAST | /in/edwinharb | XP Music Futures post | sent |
+| Gilbert Bani | Head of Acquisition Africa, Bytetunes | /in/gilbert-bani-2408bba | Blaqbonez "Chanel" post | sent |
+| Ololade Tijani | Music executive, Soundcity | /in/ololade-tijani-611640229 | birthday post | sent |
+| Mario "DAKO" da Costa | Music executive, Masterminds Entertainment | /in/mario-dako-da-costa-1ab83b45 | CAVE sold-out show post | sent |
+| Teniola Awe | Creative director, Blackpod | /in/teniola-awe-050106266 | reposts only | sent |
