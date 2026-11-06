@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.254.5",
+    tag: "Rollouts",
+    date: "November 6, 2026",
+    highlights: [
+      "The buttons at the top of a released song work again. They were all copying the smart link.",
+      "The artist list on Home is simpler: the Drops column is gone.",
+    ],
+  },
+  {
     version: "1.254.4",
     tag: "Rollouts",
     date: "November 6, 2026",

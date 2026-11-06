@@ -50,7 +50,7 @@ export function SmartLinkBox({
       <button
         type="button"
         onClick={() => void copy()}
-        className="hit-44 motion-focus inline-flex h-8 shrink-0 items-center gap-1 rounded-lg px-2.5 text-[13px] font-semibold text-brand hover:bg-bg-hover"
+        className="hit-44 relative motion-focus inline-flex h-8 shrink-0 items-center gap-1 rounded-lg px-2.5 text-[13px] font-semibold text-brand hover:bg-bg-hover"
       >
         {copied ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
         {copied ? 'Copied' : 'Copy'}
@@ -59,7 +59,7 @@ export function SmartLinkBox({
         type="button"
         onClick={() => void share()}
         aria-label={`Share ${title}`}
-        className="hit-44 motion-focus grid h-8 w-8 shrink-0 place-items-center rounded-lg text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+        className="hit-44 relative motion-focus grid h-8 w-8 shrink-0 place-items-center rounded-lg text-content-secondary hover:bg-bg-hover hover:text-content-primary"
       >
         <Share className="h-4 w-4" aria-hidden="true" />
       </button>
