@@ -51,7 +51,7 @@ Rule from this: no product name, no link, in the first message or connection not
 
 ## Waiting for Oyin to let them in
 
-People who said they can't sign up. Urganize is waitlist only; Oyin lets them in.
+Since 6 Nov evening, interested people get the sign-up link and create their own account (#1100). Sign-up is closed, so each one waits here until Oyin lets them in from /admin and sends the WhatsApp message.
 
 | Name | Where | Date |
 |---|---|---|
@@ -106,3 +106,35 @@ People who said they can't sign up. Urganize is waitlist only; Oyin lets them in
 **Connection requests with a note (17):** Adefemi Ogundipe, Demario K., Samuel Babayemi, Erick Lugo, James Chinedu, Gregg Miller, Afolabi Adesina, Ismail Ozbey, Afolami Akinwande, Arthur Cross, Ali L., Neil Mason, Anthony Egwu, Bash Plug, Frank Okafor, Divine Egbue, Adedolapo (Justin) Adeyemi. 13 own posts liked. Skipped: Paul Chima Onyeka (invite already pending from before), Chris Allison (sells a playlisting tool), Edem Edmund (Oyin already talks to him; reworded note pending his yes).
 
 Daily invite target: 20 (LinkedIn allows about 100 a week). 677 invites are still pending in total.
+
+## 6 Nov 2026
+
+**Inbox replies sent (9):** Nicholas (picked Tuesday 4pm, asked his email for the invite), Mario (CAVE album out, offered a call), Afolabi (shared his album, asked about next release), Triple C (offered Mon 2pm or Wed 11am), Ashiru (what Urganize is, asked for a day), Henrik (asked release date, offered a call), Ololade (asked about Mavo's next release), Samuel (what Urganize is, asked for a day), Ewa (not needed yet, one artist; closed warmly).
+
+**Cold DMs (23):** Meghan Kek, Matthew Ohio, Lucas Rizzo, Bruno Duque, Nkosinathi Jele, Bayo Fatoba, Unopa Xulu, Josephine A.Bonsu, Lanre Lawal, Tarmeet Kaur Grewal, Rotimi Sanyaolu, John Sadek, Amelia Stranger, Kareem Sherif, Nsereko Muhamad, Scott Steele, Ryan Hanson, Muhammed Emin, Ernest Martin Jr, Tayo Adeniran, Mohamed Babiker Ali, OluwaBullion Sound, Bigdrima Mekitrel. Skipped Rob Wacey (Beatport staff).
+
+**Connection requests with a note (20):** Yasin B., Adeyemi Adedeji, Steve Adams, Adewale Okekunle, Alex Knoblauch, Franco Angelo Lavorato, Maria João Fortes, Amel Lamsaaf, Lordson Benson, Ledemy Ubi, Dennis Ekundayo, Ebow Dawson, Tom Janke, Chris Bass, Saheed Adedapo, Richard M. Ajayi, Oluwasijibomi Adebayo, Ayodeji Oyedeji, Oluwanishola Ridwan, Nil Cukjati. Skipped people with an old invite still pending (Olajide Stephen, Brandon Garcia, Somto Udugba, Lester Sunday, James Oluwalayomi) and Scott Anderson (sells playlisting).
+
+**Reply rate, measured 6 Nov** (opened every cold-DM thread; any message back counts):
+
+| Batch | Sent | Replied | Rate |
+|---|---|---|---|
+| 3 Nov | 15 | 6 | 40% |
+| 4 Nov | 15 | 6 | 40% |
+| 5 Nov | 15 | 2 | 13% (one day old) |
+| 5 Nov, later | 8 | 3 | 38% (one day old) |
+| **All to 5 Nov** | **53** | **17** | **32%** |
+
+Connection requests from 5 Nov: 3 of 18 accepted so far, 2 of them replied (Afolabi, Ismail). Calls: Nicholas, Tuesday 10 Nov 4pm (waiting on his email).
+
+**Evening, 6 Nov: first replies under the self sign-up script.** Sent the sign-up link to Scott Steele (emerging hip hop artist, Toronto), John Sadek (Batistuta, nubi) and Ayodeji Oyedeji (Music Custodian, for artists he scouts). Kept the calls already agreed: Lucas Rizzo got the booking link (asked for next Wednesday afternoon), Bayo Fatoba was asked about 4pm Monday. Bullion said he'd pause if it costs money: told him it's paid, parked it, check in after Dec 26. Unopa Xulu (between roles, animation project) wished well, no link.
+
+**Later replies (7):** Abraham sent his email: invite sent for Tue 10 Nov 12pm. Bayo picked Monday 3pm (flight at 7pm), asked his email. John Sadek asked for more: explained it, sign-up link. Bullion asked what the paid tool is: explained it, Emerging is N4,000 a month (N2,600 first month), sign-up link. Mohamed Babiker Ali (Sudanese artists in the UAE, producer in Egypt): sign-up link. Nkosinathi and Meghan Kek asked for a call: booking link.
+
+**Evening DMs (3):** Ebow Dawson, Chisom Ezike, Afolami Akinwande.
+
+**Evening connection requests (8 sent):** Mike Crook (The Sherlocks), Clinton Mabulana, Ubokobong Umana, Lauren Altman, Elvis Ofurum, Skylar Ward, Khanh Van, GRYN MKO. Not sent: Kwao Richard and Toochukwu Igboko (invite did not show in Sent after two tries). Skipped as already pending: Danielle Lawani, Kasope Owoaje, Edem Edmund.
+
+**Late replies, 6 Nov (4 sent):** Ebow Dawson (manages Quoia States, Halifax): asked about her EP. Josephine A.Bonsu (freelancing for a US company): asked label or live. Chisom Ezike (no release coming): what Urganize is, sign-up link for later. Mohamed Babiker Ali said he'll try the app: told him I'll let him in once he signs up. Meghan Kek booked Wed 11 Nov 2pm through the booking link. Abraham confirmed Tuesday 12pm.
+
+**7 Nov, 12am:** Fuad Jamiudeen (manages GeezyShore and Warsheep; album and EP planned) missed the 26 Oct 9pm call and sent his WhatsApp number. Sent the sign-up link and said Oyin will message him on WhatsApp (he's free 9pm or early morning). Oyin to message him.
