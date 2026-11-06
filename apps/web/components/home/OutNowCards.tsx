@@ -15,18 +15,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Check, Disc3, Share, X } from '@/components/icons';
+import { Disc3, X } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useHiddenNudgeSet } from '@/lib/hidden-nudges';
-import { copyText, shareTextToApps } from '@/lib/share-file';
-import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { pickOutNow } from '@/lib/code-finder/rules';
 import { isAltlinkEnabled, isReleasedOn } from '@/lib/altlink/rules';
 import { displayReleaseTitle } from '@/types/releases';
 import type { ExecutionRelease } from '@/lib/execution-types';
 import { CodeFinderPanel } from '@/components/releases/CodeFinderPanel';
 import { useCodeFinder } from '@/components/releases/useCodeFinder';
+import { SmartLinkBox } from '@/components/releases/SmartLinkBox';
 
 const ALTLINK_ENABLED = isAltlinkEnabled();
 /** How often to look again while a link is being made, and for how long. */
@@ -77,7 +76,6 @@ export function OutNowCards({ artistId, className = '' }: { artistId?: string; c
 function OutNowCard({ release, now, onHide }: { release: ExecutionRelease; now: number; onHide: () => void }) {
   const [view, setView] = useState<LinkView | null>(null);
   const [canWrite, setCanWrite] = useState(false);
-  const [copied, setCopied] = useState(false);
   const polls = useRef(0);
   const title = displayReleaseTitle(release.title);
 
@@ -119,22 +117,6 @@ function OutNowCard({ release, now, onHide }: { release: ExecutionRelease; now: 
     needsCode && canWrite && isReleasedOn(release.releaseDate, now),
     onLinkMade
   );
-
-  const copy = async () => {
-    if (!url) return;
-    captureAnalyticsEvent({ name: 'out_now_link_copied', properties: { release_id: release.id } });
-    if (await copyText(url)) {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
-    }
-  };
-
-  const share = async () => {
-    if (!url) return;
-    captureAnalyticsEvent({ name: 'out_now_link_shared', properties: { release_id: release.id } });
-    const outcome = await shareTextToApps({ text: `${title} is out now. Listen: ${url}`, title });
-    if (outcome === 'unsupported') await copy();
-  };
 
   const cover = release.coverThumbUrl ?? release.coverArtUrl ?? null;
   const typeCodeHref = `/dashboard?release=${encodeURIComponent(release.id)}&scene=metadata&field=upc`;
@@ -191,25 +173,7 @@ function OutNowCard({ release, now, onHide }: { release: ExecutionRelease; now: 
 
       <div className="mt-4">
         {url ? (
-          <div className="flex items-center gap-1 rounded-xl border border-stroke-default bg-bg-base py-1 pl-3 pr-1">
-            <span className="min-w-0 flex-1 truncate text-[13.5px] text-content-secondary">{url.replace(/^https?:\/\//, '')}</span>
-            <button
-              type="button"
-              onClick={() => void copy()}
-              className="hit-44 motion-focus inline-flex h-8 shrink-0 items-center gap-1 rounded-lg px-2.5 text-[13px] font-semibold text-brand hover:bg-bg-hover"
-            >
-              {copied ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
-              {copied ? 'Copied' : 'Copy'}
-            </button>
-            <button
-              type="button"
-              onClick={() => void share()}
-              aria-label={`Share ${title}`}
-              className="hit-44 motion-focus grid h-8 w-8 shrink-0 place-items-center rounded-lg text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-            >
-              <Share className="h-4 w-4" aria-hidden="true" />
-            </button>
-          </div>
+          <SmartLinkBox url={url} title={title} releaseId={release.id} />
         ) : finderAsks ? (
           <CodeFinderPanel
             view={finder.view}

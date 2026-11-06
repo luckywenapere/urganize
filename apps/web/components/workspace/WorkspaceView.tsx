@@ -7,6 +7,7 @@ import { artistHref, isArtistPageEnabled } from '@/lib/artist-page';
 import dynamic from 'next/dynamic';
 import { AlertCircle } from '@/components/icons';
 import { RolloutPhoneHeader } from './RolloutPhoneHeader';
+import { RolloutOutNowLink } from './RolloutOutNowLink';
 import { RolloutCoverTile } from './RolloutCoverTile';
 import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
 import { useAuthStore } from '@/lib/auth-store';
@@ -1814,6 +1815,15 @@ export function WorkspaceView() {
                   planView={bodyIsMainView && scopedTasks.length > 0 ? (panelBody as PlanView) : null}
                   below={
                     <>
+                      {/* Once the song is out, its smart link (#1092). */}
+                      {bodyIsMainView ? (
+                        <RolloutOutNowLink
+                          releaseId={scopedReleaseSlim.id}
+                          releaseDate={scopedReleaseSlim.releaseDate}
+                          title={scopedReleaseSlim.title}
+                          className="mb-3"
+                        />
+                      ) : null}
                       {/* The brief's door on a phone (#902): a card under the
                           title, always on since the slim header (Oct 31, 2026),
                           planned or not. Its cover is the phone's cover editor. */}

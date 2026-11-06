@@ -17,6 +17,7 @@ import { usePlanMenuFold } from '@/stores/usePlanMenuFold';
 import type { ReleaseCardData } from './catalogue-types';
 import type { RolloutMenuDialogInput } from './useRolloutMenuActions';
 import { displayStatus, statusGroup } from '@/lib/catalogue-table';
+import { RolloutOutNowLink } from './RolloutOutNowLink';
 
 type WorkspaceDesktopFocusedProps = {
   /** Tasks already filtered to the scoped release. */
@@ -288,6 +289,10 @@ export function WorkspaceDesktopFocused({
           the top bar (2026-10-26, founder), gaining a background and a soft
           shadow as it locks. It sits outside the header block above, so it can
           stick for the whole page and not only inside that block. */}
+      {/* Once the song is out, its smart link sits above the tabs (#1092). */}
+      {focus ? null : (
+        <RolloutOutNowLink releaseId={scopedRelease.id} releaseDate={scopedRelease.releaseDate} title={scopedRelease.title} className="max-w-xl" />
+      )}
       <div ref={tabsSentinelRef} aria-hidden="true" className="-mb-4 h-0" />
       {/* Folded (#898), the pill floats 34 above the bottom of the screen
           (#926), centred on the plan, so the menu is one tap away mid-plan

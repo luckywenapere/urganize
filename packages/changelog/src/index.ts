@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.254.0",
+    title: "Out now has its place",
+    tag: "Rollouts",
+    date: "November 6, 2026",
+    highlights: [
+      "On release day, a song moves from Rolling out to the top of Out now on the artist page, with its smart link.",
+      "Open a rollout once the song is out and its smart link is right at the top, ready to copy or share.",
+    ],
+  },
+  {
     version: "1.253.0",
     title: "Release day runs itself",
     tag: "Rollouts",

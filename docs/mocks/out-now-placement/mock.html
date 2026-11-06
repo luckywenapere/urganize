@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Out now placement</title>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root { --bg:#f5f0e6; --card:#faf5ec; --hover:#ebe6dc; --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10); --board:#d9d5cc; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--board); font:14px/1.5 'Instrument Sans',system-ui,sans-serif; color:var(--text); padding:32px 16px 64px; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; }
+  p,h1,h2,h3 { margin:0; font-weight:400; }
+  .wrap { max-width:1240px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif',serif; font-size:28px; margin-bottom:6px; }
+  .intro p { color:#4f4a42; max-width:780px; }
+  .row { display:flex; gap:28px; flex-wrap:wrap; margin-top:28px; align-items:flex-start; }
+  .opt { flex:1 1 360px; max-width:400px; }
+  .opt h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+  .opt .why { color:#4f4a42; margin:4px 0 12px; min-height:64px; }
+  .phone { background:var(--bg); border-radius:34px; padding:20px 16px 24px; box-shadow:0 12px 32px rgba(26,22,17,.12); border:8px solid #1a1611; min-height:620px; }
+  .serif { font-family:'Young Serif',serif; }
+  .sec { color:var(--sec); } .ter { color:var(--ter); }
+  .stage { position:relative; padding:0 0 18px 22px; }
+  .stage:before { content:''; position:absolute; left:5px; top:8px; bottom:0; width:1.5px; background:var(--line2); }
+  .stage.last:before { display:none; }
+  .dot { position:absolute; left:0; top:4px; width:12px; height:12px; border-radius:50%; border:2px solid var(--line2); background:var(--bg); }
+  .dot.lit { border-color:var(--brand); background:var(--brand); }
+  .dot.done { border-color:var(--brand); background:var(--bg); }
+  .sl { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--sec); }
+  .sl b { color:var(--ter); font-weight:500; margin-left:4px; }
+  .song { display:flex; align-items:center; gap:12px; padding:8px 0; }
+  .cv { width:40px; height:40px; border-radius:7px; flex:none; background:#2c4a3a; }
+  .cv.b { background:#5a3b2a; } .cv.c { background:#2a3a5a; }
+  .t { font-weight:600; font-size:14px; } .t span { font-weight:400; color:var(--sec); }
+  .m { font-size:12.5px; color:var(--sec); }
+  .bar { height:4px; width:150px; border-radius:4px; background:rgba(26,22,17,.1); margin-top:5px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:var(--brand); }
+  .link { display:flex; align-items:center; gap:4px; padding:4px 4px 4px 12px; border-radius:12px; background:var(--bg); border:1px solid var(--line2); font-size:13.5px; }
+  .link .u { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--sec); }
+  .mini { font-size:12.5px; font-weight:600; color:var(--brand); padding:6px 10px; border-radius:8px; }
+  .icon { display:grid; place-items:center; width:32px; height:32px; border-radius:8px; color:var(--sec); }
+  .pill { display:inline-flex; align-items:center; gap:6px; height:24px; padding:0 10px; border-radius:99px; background:var(--brand-soft); color:var(--brand); font-size:12px; font-weight:600; }
+  .pill i { width:6px; height:6px; border-radius:50%; background:var(--brand); }
+  .tabs { display:flex; gap:6px; margin-top:16px; overflow:hidden; }
+  .tab { padding:7px 12px; border-radius:10px; font-size:13px; font-weight:600; color:var(--sec); white-space:nowrap; }
+  .tab.on { background:var(--card); color:var(--text); box-shadow:0 0 0 1px var(--line); }
+  .task { display:flex; gap:10px; align-items:center; padding:10px 0; border-top:1px solid var(--line); font-size:13.5px; }
+  .ring { width:16px; height:16px; border-radius:50%; border:1.5px solid var(--line2); flex:none; }
+  .tag { margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ter); }
+  .chg { font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--brand); margin:2px 0 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <h1>Out now, where it belongs</h1>
+    <p>On release day a song leaves "Rolling out" and moves to the top of "Out now" on the artist page. Its smart link sits right there, and at the top of the rollout itself.</p>
+  </div>
+
+  <div class="row">
+    <div class="opt">
+      <h2>1 · Artist page, before release day</h2>
+      <p class="why">Today: Ohema is rolling out, Wahala is upcoming.</p>
+      <div class="phone">
+        <p class="serif" style="font-size:22px;margin-bottom:14px">Music</p>
+        <div class="stage"><div class="dot"></div><p class="sl">In the making <b>1</b></p>
+          <div class="song"><div class="cv c"></div><div><p class="t">Untitled demo</p><p class="m">Idea</p></div></div></div>
+        <div class="stage"><div class="dot lit"></div><p class="sl">Rolling out <b>2</b></p>
+          <div class="song"><div class="cv"></div><div style="flex:1"><p class="t">Ohema <span>· Single</span></p><p class="m">41 of 64 tasks done</p><div class="bar"><i style="width:64%"></i></div></div><div style="text-align:right"><p style="font-family:'JetBrains Mono';font-size:11px">NOV 6</p><p class="m">tomorrow</p></div></div>
+          <div class="song"><div class="cv b"></div><div style="flex:1"><p class="t">Wahala <span>· Single</span></p><p class="m">8 of 64 tasks done</p><div class="bar"><i style="width:12%"></i></div></div><div style="text-align:right"><p style="font-family:'JetBrains Mono';font-size:11px">DEC 12</p><p class="m">in 37 days</p></div></div></div>
+        <div class="stage last"><div class="dot"></div><p class="sl">Out now <b>3</b></p>
+          <div class="song"><div class="cv b"></div><div><p class="t">Gbedu <span>· Single, 2025</span></p></div></div></div>
+      </div>
+    </div>
+
+    <div class="opt">
+      <h2>2 · Artist page, release day</h2>
+      <p class="why">Ohema moves to the top of Out now, with its link. It stays the rollout it was: the after-release tasks are still one tap away.</p>
+      <div class="phone">
+        <p class="serif" style="font-size:22px;margin-bottom:14px">Music</p>
+        <div class="stage"><div class="dot"></div><p class="sl">In the making <b>1</b></p>
+          <div class="song"><div class="cv c"></div><div><p class="t">Untitled demo</p><p class="m">Idea</p></div></div></div>
+        <div class="stage"><div class="dot lit"></div><p class="sl">Rolling out <b>1</b></p>
+          <div class="song"><div class="cv b"></div><div style="flex:1"><p class="t">Wahala <span>· Single</span></p><p class="m">8 of 64 tasks done</p><div class="bar"><i style="width:12%"></i></div></div><div style="text-align:right"><p style="font-family:'JetBrains Mono';font-size:11px">DEC 12</p><p class="m">in 36 days</p></div></div></div>
+        <div class="stage last"><div class="dot done"></div><p class="sl">Out now <b>4</b></p>
+          <div class="song"><div class="cv"></div><div style="flex:1;min-width:0"><p class="t">Ohema <span>· Single</span></p><p class="m">Out today</p></div></div>
+          <div class="link" style="margin:0 0 6px 52px"><span class="u">altlink.co/dorian/ohema</span><span class="mini">Copy</span><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></span></div>
+          <div class="song"><div class="cv b"></div><div><p class="t">Gbedu <span>· Single, 2025</span></p></div></div></div>
+      </div>
+    </div>
+
+    <div class="opt">
+      <h2>3 · Inside the rollout, once it's out</h2>
+      <p class="why">The link sits under the title, above the tabs, on every tab of the rollout. Same box as Home: Copy and share inside it.</p>
+      <div class="phone">
+        <p class="ter" style="font-size:13px">‹ Dorian</p>
+        <div style="display:flex;gap:12px;align-items:center;margin-top:12px">
+          <div class="cv" style="width:56px;height:56px;border-radius:10px"></div>
+          <div><span class="pill"><i></i>Out now</span><p class="serif" style="font-size:24px;line-height:1.15;margin-top:4px">Ohema</p></div>
+        </div>
+        <div class="link" style="margin-top:14px"><span class="u">altlink.co/dorian/ohema</span><span class="mini">Copy</span><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></span></div>
+        <div class="tabs"><span class="tab on">Plan</span><span class="tab">Distribute</span><span class="tab">Smart link</span><span class="tab">Pitch this!</span></div>
+        <p class="sl" style="margin-top:16px">After release</p>
+        <div class="task"><div class="ring"></div>Share week one numbers<span class="tag">13 Nov</span></div>
+        <div class="task"><div class="ring"></div>Thank the playlist curators<span class="tag">14 Nov</span></div>
+        <div class="task"><div class="ring"></div>Post the fan reaction video<span class="tag">15 Nov</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
