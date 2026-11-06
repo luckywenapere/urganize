@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Release day on Home</title>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:#f5f0e6; --card:#faf5ec; --hover:#ebe6dc;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --board:#d9d5cc;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--board); font:14px/1.5 'Instrument Sans', system-ui, sans-serif; color:var(--text); padding:32px 16px 64px; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; }
+  p { margin:0; } h1,h2,h3 { margin:0; font-weight:400; }
+  .wrap { max-width:1240px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif', serif; font-size:28px; margin-bottom:6px; }
+  .intro p { color:#4f4a42; max-width:760px; }
+  .mono { font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; }
+  .row { display:flex; gap:28px; flex-wrap:wrap; margin-top:28px; align-items:flex-start; }
+  .opt { flex:1 1 360px; max-width:400px; }
+  .opt h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+  .opt .why { color:#4f4a42; margin:4px 0 12px; min-height:62px; }
+  .rec { display:inline-block; background:var(--brand); color:#f5f0e6; border-radius:99px; padding:1px 8px; font-size:11px; margin-left:6px; letter-spacing:0; text-transform:none; font-weight:600; }
+
+  .phone { background:var(--bg); border-radius:34px; padding:22px 18px 26px; box-shadow:0 12px 32px rgba(26,22,17,.12); border:8px solid #1a1611; min-height:720px; }
+  .date { color:rgba(26,22,17,.55); }
+  .greet { font-family:'Young Serif', serif; font-size:28px; line-height:1.15; margin-top:8px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:20px; }
+  .btn { display:flex; align-items:center; justify-content:center; height:48px; border-radius:99px; background:var(--brand); color:#f5f0e6; font-weight:600; font-size:15px; }
+  .btn.sm { height:40px; font-size:14px; padding:0 18px; display:inline-flex; }
+  .ghost { display:flex; align-items:center; justify-content:center; height:44px; border-radius:99px; color:var(--sec); font-weight:500; }
+  .ghost.line { border:1px solid var(--line2); color:var(--text); font-weight:600; }
+  .cover { border-radius:12px; background:linear-gradient(135deg,#7a3b1d,#d08a3c 55%,#f1d08a); position:relative; overflow:hidden; }
+  .cover::after { content:'OHEMA'; position:absolute; left:10px; bottom:8px; font-family:'Young Serif',serif; color:rgba(255,248,235,.92); font-size:13px; letter-spacing:.06em; }
+  .chip { display:inline-flex; align-items:center; gap:6px; height:24px; padding:0 10px; border-radius:99px; background:var(--brand-soft); color:var(--brand); font-weight:600; font-size:12px; }
+  .chip::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--brand); }
+  .one { margin-top:16px; padding:22px 22px 16px; min-height:190px; display:flex; flex-direction:column; }
+  .one h3 { font-family:'Young Serif',serif; font-size:24px; line-height:1.2; margin-top:10px; }
+  .one .arrow { margin-top:auto; align-self:flex-end; width:34px; height:34px; border-radius:50%; background:var(--brand); }
+  .dim { opacity:.55; }
+  .linkline { display:flex; align-items:center; gap:8px; margin-top:12px; padding:9px 12px; border-radius:12px; background:var(--hover); font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--sec); }
+  .linkline b { color:var(--text); font-weight:500; }
+  .hr { height:1px; background:var(--line); }
+
+  .states { margin-top:44px; }
+  .states h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+  .states > p { color:#4f4a42; margin:4px 0 14px; max-width:760px; }
+  .st { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:18px; }
+  .st .lab { font-weight:600; margin-bottom:8px; }
+  .st .card { background:var(--card); }
+  .note { margin-top:40px; background:#efe9dd; border-radius:16px; padding:18px 20px; color:#3d3933; max-width:900px; }
+  .note b { color:var(--text); }
+  .note ul { margin:8px 0 0; padding-left:18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <h1>Release day on Home</h1>
+    <p>On the day a song comes out, Home shows it, with its smart link one tap away. Three ways to draw it, on a phone. The same card sits at the top of the 920px column on a computer.</p>
+  </div>
+
+  <div class="row">
+    <!-- A -->
+    <div class="opt">
+      <h2>A · Out now card above the next task <span class="rec">I'd pick this</span></h2>
+      <p class="why">Cover, title and two buttons. It celebrates the day, then the usual next task sits right under it, so the day's work is still one look away.</p>
+      <div class="phone">
+        <p class="mono date">Fri 6 Nov</p>
+        <h1 class="greet">Good morning, Wena.</h1>
+
+        <div class="card" style="margin-top:22px;padding:16px;">
+          <div style="display:flex;gap:14px;align-items:center;">
+            <div class="cover" style="width:84px;height:84px;flex:none;"></div>
+            <div style="min-width:0;">
+              <span class="chip">Out now</span>
+              <h3 style="font-family:'Young Serif',serif;font-size:22px;line-height:1.2;margin-top:8px;">Ohema</h3>
+              <p style="color:var(--sec);font-size:13.5px;">Dorian · Single</p>
+            </div>
+          </div>
+          <div class="btn" style="margin-top:16px;">Copy smart link</div>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <div class="ghost line" style="flex:1;">Share</div>
+            <div class="ghost line" style="flex:1;">See clicks</div>
+          </div>
+        </div>
+
+        <div class="card one">
+          <span class="mono date">Next · Due today</span>
+          <h3>Post the release day video</h3>
+          <p style="color:var(--sec);font-size:13.5px;margin-top:6px;">Ohema</p>
+          <span class="arrow"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- B -->
+    <div class="opt">
+      <h2>B · The song takes over the top</h2>
+      <p class="why">Big cover, the whole top of the screen. Most like a party. It pushes the next task below the fold on a phone, so the day's work is a scroll away.</p>
+      <div class="phone">
+        <p class="mono date">Fri 6 Nov</p>
+        <h1 class="greet">It's out, Wena.</h1>
+
+        <div class="card" style="margin-top:22px;padding:14px;">
+          <div class="cover" style="width:100%;aspect-ratio:1/1;border-radius:14px;"></div>
+          <div style="padding:14px 4px 2px;">
+            <span class="chip">Out now</span>
+            <h3 style="font-family:'Young Serif',serif;font-size:26px;line-height:1.15;margin-top:8px;">Ohema</h3>
+            <p style="color:var(--sec);">Dorian · Single</p>
+            <div class="btn" style="margin-top:14px;">Copy smart link</div>
+            <div class="ghost">Share</div>
+          </div>
+        </div>
+
+        <div class="card one dim" style="min-height:120px;">
+          <span class="mono date">Next · Due today</span>
+          <h3 style="font-size:20px;">Post the release day video</h3>
+        </div>
+      </div>
+    </div>
+
+    <!-- C -->
+    <div class="opt">
+      <h2>C · One quiet line</h2>
+      <p class="why">A single row under the greeting. Calm and small, but it is easy to miss on the one day worth noticing, and the link sits behind a tap.</p>
+      <div class="phone">
+        <p class="mono date">Fri 6 Nov</p>
+        <h1 class="greet">Good morning, Wena.</h1>
+
+        <div class="card" style="margin-top:22px;padding:6px 14px;">
+          <div style="display:flex;align-items:center;gap:12px;height:56px;">
+            <div class="cover" style="width:36px;height:36px;border-radius:8px;flex:none;"></div>
+            <div style="flex:1;min-width:0;">
+              <p style="font-weight:600;">Ohema is out now</p>
+              <p style="color:var(--sec);font-size:13px;">Tap to copy the smart link</p>
+            </div>
+            <span style="color:rgba(26,22,17,.4);font-size:18px;">›</span>
+          </div>
+        </div>
+
+        <div class="card one">
+          <span class="mono date">Next · Due today</span>
+          <h3>Post the release day video</h3>
+          <p style="color:var(--sec);font-size:13.5px;margin-top:6px;">Ohema</p>
+          <span class="arrow"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- States for A -->
+  <div class="states">
+    <h2>Option A, in each state</h2>
+    <p>Most songs already have a link by the morning: the pre-save turns into a smart link at midnight. So the button is usually "Copy", and "Make" only shows when we can't make one yet.</p>
+    <div class="st">
+      <div>
+        <p class="lab">1 · Link is ready (most days)</p>
+        <div class="card" style="padding:16px;">
+          <div style="display:flex;gap:14px;align-items:center;">
+            <div class="cover" style="width:64px;height:64px;flex:none;"></div>
+            <div><span class="chip">Out now</span><p style="font-family:'Young Serif',serif;font-size:19px;margin-top:6px;">Ohema</p></div>
+          </div>
+          <div class="linkline"><b>altl.ink/dorian-ohema</b></div>
+          <div class="btn" style="margin-top:10px;">Copy smart link</div>
+        </div>
+      </div>
+      <div>
+        <p class="lab">2 · No UPC or ISRC yet</p>
+        <div class="card" style="padding:16px;">
+          <div style="display:flex;gap:14px;align-items:center;">
+            <div class="cover" style="width:64px;height:64px;flex:none;"></div>
+            <div><span class="chip">Out now</span><p style="font-family:'Young Serif',serif;font-size:19px;margin-top:6px;">Ohema</p></div>
+          </div>
+          <p style="color:var(--sec);font-size:13.5px;margin-top:12px;">Add the song's UPC or ISRC and we'll make the link for you.</p>
+          <div class="btn" style="margin-top:12px;">Make smart link</div>
+        </div>
+      </div>
+      <div>
+        <p class="lab">3 · Making it now</p>
+        <div class="card" style="padding:16px;">
+          <div style="display:flex;gap:14px;align-items:center;">
+            <div class="cover" style="width:64px;height:64px;flex:none;"></div>
+            <div><span class="chip">Out now</span><p style="font-family:'Young Serif',serif;font-size:19px;margin-top:6px;">Ohema</p></div>
+          </div>
+          <p style="color:var(--sec);font-size:13.5px;margin-top:12px;">Making your smart link. It takes about a minute.</p>
+          <div class="btn" style="margin-top:12px;opacity:.6;">Making it…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>Questions I'd settle before building</b>
+    <ul>
+      <li><b>How long it stays:</b> I'd keep it 7 days from release day, then it goes. A link is still worth sharing in the first week.</li>
+      <li><b>"Not now":</b> a small "Hide" in the card's corner, so a manager who already shared it can clear it.</li>
+      <li><b>Two songs out the same day:</b> one card each, newest first.</li>
+      <li><b>No cover art yet:</b> an initials tile, never a gradient placeholder (house rule).</li>
+      <li><b>"Make smart link"</b> opens the UPC field on the song's Distribute page, since the link can't be made without a code.</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

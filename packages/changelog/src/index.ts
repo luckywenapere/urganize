@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.251.0",
+    tag: "App",
+    date: "November 6, 2026",
+    highlights: [
+      "When a song comes out, it shows at the top of your home screen for a week, with a button to copy its smart link.",
+      "No UPC or ISRC yet? We find your song on streaming and ask if it's the right one. Say yes and we make the smart link for you.",
+    ],
+  },
+  {
     version: "1.250.0",
     tag: "App",
     date: "November 4, 2026",
