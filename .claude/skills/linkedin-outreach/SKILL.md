@@ -7,11 +7,14 @@ description: Run Oyin's LinkedIn outbound for Urganize. Go through his newest co
 
 Outbound only: the first touch, not the sale. Every DM, reply and connection note is shown to Oyin and sent only after his yes. Likes need no approval.
 
+**The goal is a person who creates their own account (since 6 Nov 2026, #1100).** We no longer push a call. Once someone is interested, send them the sign-up link and tell them Oyin will let them in. Sign-up is still closed, so a new account lands on "You're on the list" until Oyin lets them in from `/admin` and messages them with the WhatsApp template there. Offer a call only when they ask for one.
+
 ## Before you start
 
 1. GitHub issue first (`area:partnerships-outreach`, `chore`), reuse an open one if it exists.
 2. Read the memory note on current positioning. When someone asks what Urganize is or does, say it in Oyin's words (5 Nov 2026): "Urganize is where music teams work, from the idea to everything that comes after. Think of it like project management for the music industry: you add a release, you get the plan, and your team knows what to do and when." The broader line "Urganize helps music professionals run their music businesses better" (3 Nov) is fine as a one-liner but too vague on its own. Never reuse an older product line from his past DMs ("the team app for music release" and "AI workspace for music executives" are retired).
-3. Open LinkedIn in the built-in browser pane. He is signed in there. If a sign-in is blocked, use Claude in Chrome.
+3. **WhatsApp follow-ups first.** Open `C:\Users\penta\Documents\Urganize Business\Operations\WhatsApp follow-ups.md`. List every row where "Messaged?" is No (name, number, what to say) and ask Oyin if he has messaged them. Only his own "done" moves a row to Done with the date. Ask again at the end of the run if any are still No.
+4. Open LinkedIn in the built-in browser pane. He is signed in there. If a sign-in is blocked, use Claude in Chrome.
 
 ## Who counts (ICP)
 
@@ -59,16 +62,22 @@ Write only in phrases he uses. From his DMs:
 - "Oh nice that's exciting.", "Oh very nice", "Appreciate.", "Sounds good"
 - "Who are you working with right now, if you don't mind me asking?"
 - "Do you have a release coming out soon?"
-- "We can hop on a quick call if you'd like. Sound good?"
-- "Anytime works, you can pick here https://call.urganize.app"
-- "How does the new week look? I'm flexible."
-- "15 minute max break down to see how it works"
 - "I'm the founder of a music tech startup and we're trying to solve problems for people such as yourself."
-- "A call would be the easiest way to walk you through what we've built."
+- Only when they ask for a call: "Anytime works, you can pick here https://call.urganize.app"
 
 Short, loose punctuation, no polished marketing lines. Write like him from the first draft: he rejected polished drafts as "robotic". Reuse his phrases but never a product description from his old DMs. When anyone asks what Urganize is, use the description in step 2 of "Before you start", nothing older ("the team app for music release" went out once on 3 Nov and needed a correction).
 
 Second replies stay short. If they say they'll check their calendar, "Sounds good. I'm flexible." is enough.
+
+## Getting them to sign up
+
+The link: https://team.urganize.app/auth?mode=signup (opens on "Create your account"). It only goes in a reply, never in the first DM: first DMs with a link got 0 of 2 replies.
+
+When to send it: they say what they're working on, ask what Urganize is, or sound interested. Say what it is in one line (step 2 of "Before you start"), then the link, then that Oyin will let them in. Example, in his voice:
+
+> Oh nice that's exciting. Urganize is where music teams work, from the idea to everything that comes after. Think of it like project management for the music industry. You can create your account here https://team.urganize.app/auth?mode=signup and I'll let you in once you're on. Let me know when you've signed up
+
+After sending: add them to the log's "Waiting for Oyin to let them in" table and name them in your summary, so he lets them in and sends the WhatsApp message from `/admin`. If they say they've signed up, flag it to him straight away.
 
 ## Names
 
@@ -78,15 +87,16 @@ Second replies stay short. If they say they'll check their calendar, "Sounds goo
 ## Inbox replies
 
 1. Open `/messaging/?filter=unread`. Opening a thread marks it read, so list every thread you open in case one gets missed. Threads you opened earlier in the session won't show as unread any more, so add them by hand.
-2. Read each thread's last messages before drafting. If they asked a question, answer it. If they named a release, offer the call.
+2. Read each thread's last messages before drafting. If they asked a question, answer it. If they named a release or sound interested, send the sign-up link (see "Getting them to sign up"). Offer a call only if they ask for one; calls already booked stay booked.
 3. Skip chats that have ended ("Alright thank you", "Thanks"). Don't reply just to have the last word.
 4. Never guess a fact about Oyin or the company. If they ask something you can't find in the thread or memory (e.g. "Does Tangent end with a demo day?"), leave a gap in the draft and ask him.
 5. Old threads: say what you can't tell. E.g. a call agreed months ago with no follow-up: did it happen? Flag it when you show the draft.
 6. Lay out drafts as: name, what they said (one line, their words), then the draft. Then wait for his yes.
 7. Right before sending, re-read the last message in the thread. People reply while you work, and the draft may no longer fit.
 8. Send, check each shows as "You: ..." in the thread, then check the Unread filter again: new replies usually come in during the run.
-9. If someone says they can't sign up, that's expected: Urganize is waitlist only and Oyin lets people in himself. Note their name for him so he can let them in, and never send them a sign-up link.
-10. LinkedIn only lets you edit a sent message for about an hour. After that, fix mistakes with a short follow-up, with his yes.
+9. If someone says they can't get in after signing up, that's expected: sign-up is closed and Oyin lets people in himself. Tell them he'll let them in shortly, and add them to the log's "Waiting for Oyin to let them in" table.
+10. When someone sends a phone number, add them to the WhatsApp follow-ups file straight away (name, number, who they are, date, what to say, Messaged? No). Never put numbers in the repo or the outreach log; the log only says "sent his number, Oyin to message". In your summary, tell Oyin to message them. When you ask someone for their number, add them under "Number asked".
+11. LinkedIn only lets you edit a sent message for about an hour. After that, fix mistakes with a short follow-up, with his yes.
 
 ## Browser notes
 
