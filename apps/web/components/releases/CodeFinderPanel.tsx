@@ -28,6 +28,8 @@ const QUIET =
   'motion-focus motion-press flex h-11 w-full items-center justify-center rounded-full border border-stroke-control text-sm font-semibold text-content-primary hover:bg-bg-hover disabled:opacity-60';
 
 export function CodeFinderPanel({ view, answering, error, onAnswer, typeCodeHref, compact = false }: Props) {
+  // A linked artist's song is found without anyone watching (#1090).
+  if (view?.status === 'quiet') return null;
   if (!view || view.status === 'has_code' || view.status === 'not_out' || view.status === 'confirmed') {
     if (view?.status === 'confirmed') {
       return (

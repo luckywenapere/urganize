@@ -96,6 +96,13 @@ const LOADERS: LoaderMap = {
       subject: (p) => m.teamAdminNoticeSubject(p.kind, p.when),
     };
   },
+  release_out_now: async () => {
+    const m = await import('./ReleaseOutNowEmail');
+    return {
+      element: (p) => createElement(m.ReleaseOutNowEmail, p),
+      subject: (p) => m.releaseOutNowSubject(p.releaseTitle),
+    };
+  },
   release_payback_question: async () => {
     const m = await import('./ReleasePaybackQuestionEmail');
     return {

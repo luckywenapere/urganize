@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Release day on its own</title>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root { --bg:#f5f0e6; --card:#faf5ec; --hover:#ebe6dc; --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10); --board:#d9d5cc; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--board); font:14px/1.5 'Instrument Sans',system-ui,sans-serif; color:var(--text); padding:32px 16px 64px; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; }
+  p,h1,h2,h3 { margin:0; font-weight:400; }
+  .wrap { max-width:1240px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif',serif; font-size:28px; margin-bottom:6px; }
+  .intro p { color:#4f4a42; max-width:780px; }
+  .row { display:flex; gap:28px; flex-wrap:wrap; margin-top:28px; align-items:flex-start; }
+  .opt { flex:1 1 360px; max-width:400px; }
+  .opt h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+  .opt .why { color:#4f4a42; margin:4px 0 12px; min-height:84px; }
+  .phone { background:var(--bg); border-radius:34px; padding:20px 16px 24px; box-shadow:0 12px 32px rgba(26,22,17,.12); border:8px solid #1a1611; min-height:640px; }
+  .serif { font-family:'Young Serif',serif; }
+  .mono { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ter); }
+  .sec { color:var(--sec); } .ter { color:var(--ter); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:16px; margin-top:14px; }
+  .top { display:flex; gap:12px; align-items:center; }
+  .cover { width:56px; height:56px; border-radius:12px; background:#2c4a3a; flex:none; }
+  .btn { display:flex; align-items:center; justify-content:center; height:46px; border-radius:99px; background:var(--brand); color:#f5f0e6; font-weight:600; font-size:15px; }
+  .ghost { display:flex; align-items:center; justify-content:center; height:42px; border-radius:99px; border:1px solid var(--line2); font-weight:600; flex:1; }
+  .link { display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:12px; background:var(--bg); border:1px solid var(--line2); font-size:13.5px; }
+  .spin { width:14px; height:14px; border-radius:50%; border:2px solid var(--line2); border-top-color:var(--brand); flex:none; }
+  .ok { width:16px; height:16px; border-radius:50%; background:var(--brand); flex:none; }
+  .mini { font-size:12.5px; font-weight:600; color:var(--brand); padding:6px 10px; border-radius:8px; }
+  .icon { display:grid; place-items:center; width:32px; height:32px; border-radius:8px; color:var(--sec); }
+  .two { display:flex; gap:8px; margin-top:10px; }
+  .mail { background:#fff; border-radius:16px; box-shadow:0 12px 32px rgba(26,22,17,.12); overflow:hidden; }
+  .mail .head { padding:14px 18px; border-bottom:1px solid var(--line); font-size:13px; color:var(--sec); }
+  .mail .body { padding:22px 22px 26px; }
+  .note { margin-top:10px; font-size:12.5px; color:var(--ter); }
+  .q { margin-top:36px; background:var(--card); border-radius:16px; padding:18px 20px; max-width:860px; }
+  .q h3 { font-weight:700; font-size:15px; margin-bottom:6px; }
+  .q li { margin:4px 0; color:var(--sec); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <h1>Release day, on its own</h1>
+    <p>For an artist linked to streaming, nobody types a code. On release day the app finds the song on the artist's own page, makes the smart link, and emails the whole team that the song is out.</p>
+  </div>
+
+  <div class="row">
+    <div class="opt">
+      <h2>1 · Out now card</h2>
+      <p class="why">Shows only once the link exists. Before that, nothing on screen: no "Looking…", no code box. It came from the artist's own page, so nothing to confirm.</p>
+      <div class="phone">
+        <p class="mono">Out now</p>
+        <div class="card">
+          <div class="top">
+            <div class="cover"></div>
+            <div><p style="font-weight:600;font-size:15px">Ohema</p><p class="sec" style="font-size:13px">Dorian · Single · Out today</p></div>
+          </div>
+          <div class="link" style="margin-top:14px;padding:6px 6px 6px 12px">
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">altlink.co/dorian/ohema</span>
+            <span class="mini">Copy</span>
+            <span class="icon" aria-label="Share"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="opt">
+      <h2>2 · The email, to everyone on the team</h2>
+      <p class="why">One email per person, sent once. Short: the song is out, here's the link to share.</p>
+      <div class="mail">
+        <div class="head"><b style="color:var(--text)">Ohema is out now</b><br/>From Urganize · to each team member</div>
+        <div class="body">
+          <div class="cover" style="width:72px;height:72px"></div>
+          <p class="serif" style="font-size:22px;margin-top:14px">Ohema by Dorian is out now.</p>
+          <p class="sec" style="margin-top:8px">It's live on streaming. Here's the smart link that opens it on every service. Share it everywhere today.</p>
+          <div class="link" style="margin-top:16px"><span>altlink.co/dorian/ohema</span></div>
+          <div class="btn" style="margin-top:14px">Open the link</div>
+          <p class="note" style="margin-top:16px">You're getting this because you're on Dorian's team in Urganize.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="q">
+    <h3>How it works behind the scenes</h3>
+    <ul>
+      <li><b>Linking fills in the past.</b> When someone links an artist in the popup, the app brings in their old releases (the same import that exists today) and matches every rollout already in Urganize to its streaming release: UPC, ISRC and a smart link, filled in silently.</li>
+      <li>Our hosting checks once a day, early on release day (about 08:00 Lagos). Songs that land later are found the next time anyone on the team opens the app, and again the next morning.</li>
+      <li>Artists not linked yet keep today's flow, including "Type the code yourself".</li>
+      <li>If a linked artist's song still isn't found by the day after release, the card shows "Type the code yourself" so nobody is stuck.</li>
+      <li>Email cost: one email per team member per release. Our email plan allows 100 a day.</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

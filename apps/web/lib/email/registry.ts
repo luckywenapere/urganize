@@ -202,6 +202,17 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     fromAddress: 'billing@urganize.app',
     replyTo: 'support@urganize.app',
   },
+  release_out_now: {
+    id: 'release_out_now',
+    category: 'reminders',
+    name: 'Out now',
+    description:
+      'Sent once to each person on the artist team on release day, when the smart link exists: the song is out, with the link (#1090).',
+    placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: 'support@urganize.app',
+  },
   release_payback_question: {
     id: 'release_payback_question',
     category: 'reminders',

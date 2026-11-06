@@ -15,6 +15,8 @@ export type CodeFinderClientView =
   | { status: 'has_code' }
   | { status: 'not_out' }
   | { status: 'looking' }
+  /** A linked artist's song is being looked for: nothing is shown (#1090). */
+  | { status: 'quiet' }
   | { status: 'found'; candidate: CodeCandidate }
   | { status: 'confirmed' };
 
@@ -35,6 +37,10 @@ export function useCodeFinder(releaseId: string, enabled: boolean, onLinkMade?: 
   const [answering, setAnswering] = useState<'yes' | 'no' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const live = useRef(true);
+  const linkMade = useRef(onLinkMade);
+  useEffect(() => {
+    linkMade.current = onLinkMade;
+  }, [onLinkMade]);
 
   const look = useCallback(async () => {
     try {
@@ -45,7 +51,10 @@ export function useCodeFinder(releaseId: string, enabled: boolean, onLinkMade?: 
         return;
       }
       const body = (await response.json()) as { view: CodeFinderClientView };
-      if (live.current) setView(body.view);
+      if (!live.current) return;
+      setView(body.view);
+      // A linked artist's song was matched on its own: the link is on its way.
+      if (body.view.status === 'confirmed') linkMade.current?.();
     } catch {
       if (live.current) setView((current) => current ?? { status: 'looking' });
     }
@@ -60,7 +69,7 @@ export function useCodeFinder(releaseId: string, enabled: boolean, onLinkMade?: 
     };
   }, [enabled, look]);
 
-  const stillLooking = enabled && view?.status === 'looking';
+  const stillLooking = enabled && (view?.status === 'looking' || view?.status === 'quiet');
   useEffect(() => {
     if (!stillLooking) return;
     const timer = window.setInterval(() => void look(), LOOKUP_RETRY_MS);
