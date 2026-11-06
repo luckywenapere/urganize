@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, requireActiveAuthenticatedUser } from '@/app/api/_shared/auth';
 import { ensureReleaseTeamReadAccess, ensureReleaseTeamWriteAccess } from '@/lib/release-access-server';
-import { isAltlinkEnabled } from '@/lib/altlink/rules';
+import { isAltlinkEnabled, isReleasedOn } from '@/lib/altlink/rules';
+import { findCodes } from '@/lib/code-finder/server';
+import { getTeamAccessForUser } from '@/lib/team-billing-server';
 import { loadSmartLinkView, syncSmartLink } from '@/lib/altlink/server';
 import { emailTeamOutNowQuietly } from '@/lib/release-out-now/server';
 import { afterResponse } from '@/lib/after-response';
@@ -19,7 +21,7 @@ import { isOutNowEmailDay } from '@/lib/code-finder/rules';
 // reads only, a non-member gets the existence-hiding 404.
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 30;
+export const maxDuration = 45;
 
 const notFound = () => NextResponse.json({ error: 'Not found.' }, { status: 404 });
 
@@ -35,7 +37,25 @@ export async function GET(request: NextRequest, context: { params: Promise<{ rel
 
   const canWrite = !('error' in (await ensureReleaseTeamWriteAccess(admin, releaseId, auth.user)));
   try {
-    const view = await loadSmartLinkView(admin, releaseId, { actorUserId: canWrite ? auth.user.id : null, readOnly: !canWrite });
+    let view = await loadSmartLinkView(admin, releaseId, { actorUserId: canWrite ? auth.user.id : null, readOnly: !canWrite });
+    // Out, but no code yet (#1097): look the song up here too, so the link
+    // appears wherever the team opens it (the rollout, the artist page), not
+    // only on Home. At most every 15 minutes (findCodes holds that). A linked
+    // artist's match makes the link straight away; read the view again then.
+    const noCode = view.notReady === 'no_code' || view.notReady === 'missing_identifier';
+    if (canWrite && !view.link && noCode && isReleasedOn(view.facts.releaseDate, Date.now())) {
+      try {
+        const team = await getTeamAccessForUser(auth.user.id, auth.user.email);
+        const found = await findCodes(admin, releaseId, {
+          actorUserId: auth.user.id,
+          workspaceId: team.primaryWorkspaceId ?? null,
+          ownerUserId: team.ownerUserId ?? null,
+        });
+        if (found.status === 'confirmed') view = await loadSmartLinkView(admin, releaseId, { readOnly: true });
+      } catch (error) {
+        console.error('[altlink] lookup on open failed', { releaseId, message: error instanceof Error ? error.message : 'error' });
+      }
+    }
     // Release day (#1090): the link exists, so the team hears the song is out.
     // Once only, and only on release day or the day after; checked server-side.
     if (view.link?.url && isOutNowEmailDay(view.facts.releaseDate, Date.now())) afterResponse('out now email', () => emailTeamOutNowQuietly(admin, releaseId));
