@@ -4,6 +4,7 @@ import {
   bachsAmountToKobo,
   bachsBaseUrl,
   isBachsConfigured,
+  shouldOfferBachs,
   koboToBachsAmount,
   paidCheckoutFromEvent,
   parseBachsEvent,
@@ -144,5 +145,24 @@ describe('remoteCheckoutIsPaid', () => {
     expect(remoteCheckoutIsPaid({ ...paid, amount: '2600.00' }, row)).toBe(false);
     expect(remoteCheckoutIsPaid({ ...paid, currency: 'USD' }, row)).toBe(false);
     expect(remoteCheckoutIsPaid({ ...paid, reference: 'someone_else' }, row)).toBe(false);
+  });
+});
+
+describe('shouldOfferBachs', () => {
+  it('offers Bachs only to people outside Nigeria', () => {
+    expect(shouldOfferBachs(true, 'GH')).toBe(true);
+    expect(shouldOfferBachs(true, 'us')).toBe(true);
+    expect(shouldOfferBachs(true, 'NG')).toBe(false);
+    expect(shouldOfferBachs(true, 'ng')).toBe(false);
+  });
+
+  it('shows Paystack when the country is unknown', () => {
+    expect(shouldOfferBachs(true, null)).toBe(false);
+    expect(shouldOfferBachs(true, '')).toBe(false);
+    expect(shouldOfferBachs(true, 'XYZ')).toBe(false);
+  });
+
+  it('never offers Bachs when it is not set up', () => {
+    expect(shouldOfferBachs(false, 'GH')).toBe(false);
   });
 });

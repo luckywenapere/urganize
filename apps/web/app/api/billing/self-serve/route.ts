@@ -6,7 +6,7 @@ import { CHECKOUT_PLANS, isCheckoutPeriod, isCheckoutPlan } from '@/lib/self-ser
 import { isDedicatedAccountEnabled, loadOpenInvoice, loadPaymentAccount, validatePromoCode } from '@/lib/self-serve-server';
 import { getAppAccess } from '@/lib/access-gate-server';
 import { allowedCallLed } from '@/lib/call-led-server';
-import { isBachsConfigured } from '@/lib/bachs';
+import { isBachsConfigured, shouldOfferBachs } from '@/lib/bachs';
 
 
 // GET  /api/billing/self-serve   what the checkout page can offer this person:
@@ -87,7 +87,8 @@ export async function GET(request: NextRequest) {
     cardPeriods,
     introMonthsLeft,
     transferAccounts: isDedicatedAccountEnabled(),
-    payWithBachs: isBachsConfigured(),
+    // Bachs is for people outside Nigeria; Nigeria pays through Paystack (#1103).
+    payWithBachs: shouldOfferBachs(isBachsConfigured(), request.headers.get('x-vercel-ip-country')),
     distributionOn: process.env.NEXT_PUBLIC_FEATURE_TRM_SEND !== 'false',
     approved: Boolean((access as { allowed?: boolean }).allowed),
     openInvoice: invoice

@@ -19,6 +19,21 @@ export function isBachsConfigured(env: Record<string, string | undefined> = proc
   return Boolean(env.BACHS_SECRET_KEY?.trim());
 }
 
+/**
+ * Whether checkout offers Bachs to this person. Bachs is for people paying from
+ * outside Nigeria: in Naira, Paystack is cheaper (card 1.5% against 2%, transfer
+ * capped at ₦300 against ₦2,000), so someone in Nigeria gets Paystack's card and
+ * bank transfer. `country` is the two-letter code Vercel puts on the request
+ * (x-vercel-ip-country). When it is missing (local dev, or Vercel could not tell),
+ * Paystack is shown: most of our buyers are in Nigeria, and it still works.
+ */
+export function shouldOfferBachs(configured: boolean, country: string | null | undefined): boolean {
+  if (!configured) return false;
+  const code = (country ?? '').trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code)) return false;
+  return code !== 'NG';
+}
+
 /** Bachs writes money as a decimal string in major units: 2,600,00 kobo -> "2600.00". */
 export function koboToBachsAmount(kobo: number): string {
   return (Math.round(kobo) / 100).toFixed(2);
