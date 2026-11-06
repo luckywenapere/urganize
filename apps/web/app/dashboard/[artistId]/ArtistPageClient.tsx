@@ -454,6 +454,17 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
                   <div className="h-full rounded-full bg-brand" style={{ width: `${Math.round((counts.done / counts.total) * 100)}%` }} />
                 </div>
               </>
+            ) : recent && counts && counts.total > 0 && counts.done < counts.total ? (
+              // Out, with after-release tasks still open (#1105): the count and
+              // bar stay, so the team keeps tracking them.
+              <>
+                <p className="text-[13px] text-content-secondary">
+                  {outLabel(days)} · {counts.done} of {plural(counts.total, 'task')} done
+                </p>
+                <div className="mt-1.5 h-1 w-full max-w-[200px] overflow-hidden rounded-full bg-[rgb(var(--color-stroke)/0.14)]">
+                  <div className="h-full rounded-full bg-brand" style={{ width: `${Math.round((counts.done / counts.total) * 100)}%` }} />
+                </div>
+              </>
             ) : recent ? (
               <p className="text-[13px] text-content-secondary">{outLabel(days)}</p>
             ) : !rollingOut ? null : (
