@@ -5,6 +5,7 @@ import { fetchImportArtistPhotoUrl, fetchImportReleases } from './fetch';
 import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-constants';
 import { artistPhotoPathPrefix, isProfilePhotoMimeType, MAX_PROFILE_PHOTO_BYTES } from '@/lib/profile-photo';
 import type { ImportProvider, ImportRelease } from './providers';
+import { linkAfterImport } from '@/lib/artist-streaming/server';
 
 export const CATALOGUE_TABLE = 'artist_catalogue_releases';
 
@@ -96,6 +97,13 @@ export async function importArtistCatalogue(
     return { ok: false, reason: 'save_failed', message: 'Could not save the releases.' };
   }
   await rememberStreamingProfile(adminClient, {
+    artistId,
+    provider: input.provider,
+    sourceId: input.sourceId,
+  });
+  // The same pick links the artist for finding their songs later (#1088).
+  await linkAfterImport(adminClient, {
+    workspaceId: input.workspaceId,
     artistId,
     provider: input.provider,
     sourceId: input.sourceId,

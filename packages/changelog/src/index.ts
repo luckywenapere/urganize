@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.252.0",
+    title: "Link your artists to streaming",
+    tag: "Rollouts",
+    date: "November 6, 2026",
+    highlights: [
+      "Link each artist to their streaming page once. Home asks about artists who are not linked yet, with our best guess ready.",
+      "Once an artist is linked, we find their new songs on their own page, so your smart link gets the right UPC and ISRC.",
+    ],
+  },
+  {
     version: "1.251.0",
     tag: "App",
     date: "November 6, 2026",

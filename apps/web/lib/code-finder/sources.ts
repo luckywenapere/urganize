@@ -8,6 +8,7 @@
 
 import { normalizeIsrc, normalizeUpc, releaseYmd } from '@/lib/altlink/rules';
 import { normalizeName, preferredKind, titleScore, artistScore, type CodeCandidate, type CodeTarget } from './rules';
+import { fetchDeezerCodes, fetchImportReleases } from '@/lib/artist-import/fetch';
 
 type FetchLike = typeof fetch;
 
@@ -151,6 +152,14 @@ export function resetSpotifyToken() {
   cachedToken = null;
 }
 
+/** One Spotify Web API read with the app's token. Null when Spotify is not set up or did not answer. */
+export async function spotifyGet(path: string, fetchImpl: FetchLike = fetch): Promise<Record<string, unknown> | null> {
+  if (!isSpotifyConfigured()) return null;
+  const token = await spotifyToken(fetchImpl);
+  if (!token) return null;
+  return getJson(fetchImpl, `${SPOTIFY_API}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+}
+
 const spotifyArtists = (row: Record<string, unknown>): string =>
   (Array.isArray(row.artists) ? row.artists : [])
     .map((artist) => text((artist as Record<string, unknown>)?.name))
@@ -205,6 +214,73 @@ export async function searchSpotify(target: CodeTarget, fetchImpl: FetchLike = f
         upc: normalizeUpc(albumExternal.upc),
         coverUrl: spotifyCover(album ?? (row.album as Record<string, unknown> | undefined)),
         url: text((row.external_urls as Record<string, unknown> | undefined)?.spotify),
+      },
+    ];
+  });
+}
+
+// ── A linked artist (#1088) ─────────────────────────────────────────────────
+
+/**
+ * The song looked up inside the artist's own Deezer page, never by name, so a
+ * fan's upload or another artist with the same name cannot be found. Up to
+ * three releases whose title matches get their codes read.
+ */
+export async function searchLinkedDeezer(target: CodeTarget, deezerArtistId: string): Promise<CodeCandidate[]> {
+  const releases = (await fetchImportReleases('deezer', deezerArtistId)) ?? [];
+  const matching = releases
+    .map((release) => ({ release, score: titleScore(target.title, release.title) }))
+    .filter((entry) => entry.score >= 0.8)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, DETAIL_LIMIT);
+  const out: CodeCandidate[] = [];
+  for (const { release } of matching) {
+    const codes = await fetchDeezerCodes(release.sourceId, release.kind);
+    if (!codes) continue;
+    out.push({
+      source: 'deezer',
+      id: release.sourceId,
+      kind: release.kind === 'single' ? 'track' : 'album',
+      title: release.title,
+      artist: target.artistName,
+      releaseDate: release.releaseDate,
+      upc: normalizeUpc(codes.upc),
+      isrc: normalizeIsrc(codes.isrc),
+      coverUrl: release.coverUrl,
+      url: release.url,
+    });
+  }
+  return out;
+}
+
+/** The same, inside the artist's own Spotify page, when Spotify is set up. */
+export async function searchLinkedSpotify(target: CodeTarget, spotifyArtistId: string): Promise<CodeCandidate[]> {
+  if (!/^[A-Za-z0-9]{1,64}$/.test(spotifyArtistId)) return [];
+  const list = await spotifyGet(`/artists/${spotifyArtistId}/albums?include_groups=album,single&limit=50`);
+  const items = (Array.isArray(list?.items) ? list.items : []) as Record<string, unknown>[];
+  const ids = items
+    .filter((album) => titleScore(target.title, text(album.name) ?? '') >= 0.8)
+    .slice(0, DETAIL_LIMIT)
+    .map((album) => text(album.id))
+    .filter((id): id is string => Boolean(id));
+  if (ids.length === 0) return [];
+  const albums = await spotifyGet(`/albums?ids=${ids.join(',')}`);
+  return ((Array.isArray(albums?.albums) ? albums.albums : []) as Record<string, unknown>[]).flatMap((album): CodeCandidate[] => {
+    const id = text(album.id);
+    if (!id) return [];
+    const type = text(album.album_type);
+    return [
+      {
+        source: 'spotify',
+        id,
+        kind: type === 'single' && preferredKind(target.releaseType) === 'track' ? 'track' : 'album',
+        title: text(album.name) ?? '',
+        artist: target.artistName,
+        releaseDate: releaseYmd(text(album.release_date)),
+        upc: normalizeUpc(((album.external_ids ?? {}) as Record<string, unknown>).upc),
+        isrc: null,
+        coverUrl: spotifyCover(album),
+        url: text((album.external_urls as Record<string, unknown> | undefined)?.spotify),
       },
     ];
   });

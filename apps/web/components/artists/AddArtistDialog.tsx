@@ -16,6 +16,7 @@ import { useArtistRosterStore, type RosterArtist } from '@/stores/useArtistRoste
 import { useShellStore } from '@/stores/useShellStore';
 import { ProfileFace } from '@/components/shared/ProfileFace';
 import { Cover, formatFans, initials } from './ImportParts';
+import { streamingLinkUrl } from '@/lib/artist-streaming/rules';
 
 type Phase = 'search' | 'check';
 type Lookup = { ok: boolean; body: { releases?: ImportRelease[]; error?: string } };
@@ -51,6 +52,13 @@ async function addByName(name: string): Promise<{ id: string } | { error: string
     });
     const payload = (await response.json().catch(() => ({}))) as { artist?: { id?: string }; error?: string };
     if (!response.ok || !payload.artist?.id) return { error: payload.error || 'Could not add the artist.' };
+    // "Not on streaming yet" (#1088): Home asks to link them once a rollout of
+    // theirs comes out, not straight away. Best effort: the artist is added either way.
+    void fetch(streamingLinkUrl(payload.artist.id), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ notOnStreaming: true }),
+    }).catch(() => undefined);
     return { id: payload.artist.id };
   } catch {
     return { error: 'Could not add the artist.' };

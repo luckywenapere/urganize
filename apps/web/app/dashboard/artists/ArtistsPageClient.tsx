@@ -22,6 +22,7 @@ import { HomeBell } from '@/components/home/v2/HomeBell';
 import { EMPTY_STATE_ACTION_CLASS } from '@/components/shared/EmptyState';
 import { PlanLoopDemo } from '@/components/artists/PlanLoopDemo';
 import { OutNowCards } from '@/components/home/OutNowCards';
+import { StreamingLinkPrompt } from '@/components/artists/StreamingLinkPrompt';
 import { useShellStore } from '@/stores/useShellStore';
 import { useRoleViewViewer } from '@/components/shell/useShellAreas';
 import { artistHomeId } from '@/lib/artist-home';
@@ -88,6 +89,7 @@ export default function ArtistsPageClient({
       <>
         <SwipeArtists loading={loading} list={list} />
         {opened ? <DuplicateArtistsPrompt /> : null}
+        {opened ? <StreamingLinkPrompt /> : null}
       </>
     );
   }
@@ -95,6 +97,7 @@ export default function ArtistsPageClient({
   return (
     <div>
       <DuplicateArtistsPrompt />
+      <StreamingLinkPrompt />
       {/* The section's content top: the same spacer CatalogueView draws, and
           nothing else above the list, so both tabs start 20px under the tab
           row (tab jump fix, Oct 18, 2026; lib/section-content-top-guard). */}
