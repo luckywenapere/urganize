@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.254.3",
+    title: "Pay the cheaper way",
+    tag: "Account",
+    date: "November 6, 2026",
+    highlights: [
+      "In Nigeria, you can pay for a plan by card or bank transfer again.",
+      "Outside Nigeria, you pay in your own currency, by mobile money or with crypto.",
+    ],
+  },
+  {
     version: "1.254.2",
     title: "Bought credits land",
     tag: "Account",
