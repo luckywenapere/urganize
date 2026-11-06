@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.254.2",
+    title: "Bought credits land",
+    tag: "Account",
+    date: "November 6, 2026",
+    highlights: [
+      "When you buy UrgAns credits, they now show up on your account straight away.",
+    ],
+  },
+  {
     version: "1.254.1",
     tag: "Rollouts",
     date: "November 6, 2026",

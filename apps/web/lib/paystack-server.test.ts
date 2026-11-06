@@ -214,6 +214,7 @@ describe('verifyPaystackTransaction', () => {
         status: 'success',
         reference: 'urgpitch-1',
         amountKobo: 1_500_000,
+        requestedAmountKobo: 1_500_000,
         currency: 'NGN',
         feesKobo: 32_500,
         transactionId: 4099260516,
@@ -221,6 +222,20 @@ describe('verifyPaystackTransaction', () => {
         metadata: { quote_id: 'q1' },
       },
     });
+  });
+});
+
+describe('verifyPaystackTransaction with the fee passed on', () => {
+  it('reports what we asked for apart from what the buyer was charged', async () => {
+    respondWith({
+      json: {
+        status: true,
+        data: { status: 'success', reference: 'urgcredits-1', amount: 152_285, requested_amount: 150_000, currency: 'NGN', fees: 2_285 },
+      },
+    });
+    const result = await verifyPaystackTransaction('urgcredits-1');
+    expect(result.ok && result.data.amountKobo).toBe(152_285);
+    expect(result.ok && result.data.requestedAmountKobo).toBe(150_000);
   });
 });
 

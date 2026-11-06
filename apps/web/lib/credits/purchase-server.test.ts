@@ -28,7 +28,7 @@ const metadata = (over: Record<string, unknown> = {}) => ({
 
 const paystackSays = (over: Record<string, unknown> = {}) => ({
   ok: true as const,
-  data: { status: 'success', currency: 'NGN', amountKobo: 750_000, metadata: metadata(), ...over },
+  data: { status: 'success', currency: 'NGN', amountKobo: 750_000, requestedAmountKobo: 750_000, metadata: metadata(), ...over },
 });
 
 beforeEach(() => {
@@ -68,6 +68,13 @@ describe('settleCreditsPurchase', () => {
     expect(logEvent).not.toHaveBeenCalled();
   });
 
+  it('credits the pack when Paystack adds its fee on top of the price (#1099)', async () => {
+    credit.mockResolvedValue('credited');
+    verify.mockResolvedValue(paystackSays({ amountKobo: 761_400, requestedAmountKobo: 750_000 }));
+    expect(await settleCreditsPurchase(admin, REF, 'webhook')).toEqual({ state: 'credited', credits: 500 });
+    expect(credit).toHaveBeenCalledTimes(1);
+  });
+
   it('credits nothing for a payment that has not gone through', async () => {
     verify.mockResolvedValue(paystackSays({ status: 'abandoned' }));
     expect(await settleCreditsPurchase(admin, REF, 'callback')).toEqual({ state: 'not_paid' });
@@ -75,7 +82,7 @@ describe('settleCreditsPurchase', () => {
   });
 
   it('credits nothing for money that does not match a pack, and says so loudly', async () => {
-    verify.mockResolvedValue(paystackSays({ amountKobo: 100 }));
+    verify.mockResolvedValue(paystackSays({ amountKobo: 100, requestedAmountKobo: 100 }));
     expect(await settleCreditsPurchase(admin, REF, 'webhook')).toEqual({ state: 'mismatch' });
     expect(credit).not.toHaveBeenCalled();
     expect(console.error).toHaveBeenCalledWith(expect.stringContaining('MISMATCH'));
