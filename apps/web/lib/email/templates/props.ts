@@ -22,6 +22,7 @@ import type { ChatMentionEmailProps } from './ChatMentionEmail';
 import type { ChimeInEmailProps } from './ChimeInEmail';
 import type { TeamAdminNoticeEmailProps } from './TeamAdminNoticeEmail';
 import type { ReleasePaybackQuestionEmailProps } from './ReleasePaybackQuestionEmail';
+import type { ReleaseOutNowEmailProps } from './ReleaseOutNowEmail';
 import type { ClaimInviteEmailProps } from './ClaimInviteEmail';
 import type { ClaimPageEmailProps } from './ClaimPageEmail';
 import type { DirectoryInviteEmailProps } from './DirectoryInviteEmail';
@@ -51,6 +52,7 @@ export type EmailTemplateProps = {
   chime_in: ChimeInEmailProps;
   team_admin_notice: TeamAdminNoticeEmailProps;
   release_payback_question: ReleasePaybackQuestionEmailProps;
+  release_out_now: ReleaseOutNowEmailProps;
   claim_invite: ClaimInviteEmailProps;
   claim_auto_invite: ClaimPageEmailProps;
   claim_reminder: ClaimPageEmailProps;

@@ -35,6 +35,7 @@ const EXPECTED: Record<EmailTemplateId, { from: string; replyTo: string | null }
   pitch_notice: NOTIFY,
   front_desk_digest: { from: 'Urganize AI <notifications@urganize.app>', replyTo: 'support@urganize.app' },
   release_payback_question: NOTIFY,
+  release_out_now: NOTIFY,
   claim_code: VERIFY,
   pay_link: BILLING,
   team_admin_notice: BILLING,

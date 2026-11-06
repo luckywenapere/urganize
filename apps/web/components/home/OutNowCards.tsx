@@ -8,10 +8,14 @@
 // smart link at midnight), so the button is usually "Copy smart link". A song
 // with no UPC or ISRC gets the code finder instead: we look it up on streaming
 // and ask "Is this your song?" before making anything.
+//
+// Release day on its own (#1090, docs/mocks/release-day-auto-link): nothing is
+// shown while a link is looked for or made. The card appears once there is a
+// link, or something the team must answer. Copy and Share sit inside the link.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Check, Copy, Disc3, Loader2, X } from '@/components/icons';
+import { Check, Disc3, Share, X } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useHiddenNudgeSet } from '@/lib/hidden-nudges';
@@ -135,6 +139,13 @@ function OutNowCard({ release, now, onHide }: { release: ExecutionRelease; now: 
   const cover = release.coverThumbUrl ?? release.coverArtUrl ?? null;
   const typeCodeHref = `/dashboard?release=${encodeURIComponent(release.id)}&scene=metadata&field=upc`;
 
+  // Only a question the team must answer shows before the link: "Is this your
+  // song?", or the "Type the code yourself" a song not found by then gets.
+  const finderAsks =
+    needsCode && canWrite && (finder.view?.status === 'found' || finder.view?.status === 'looking');
+  const offerSetup = !url && !making && !needsCode && Boolean(view && canWrite && !view.link);
+  if (!url && !finderAsks && !offerSetup) return null;
+
   return (
     <section
       className="relative rounded-[20px] border border-stroke-default bg-bg-surface p-4 sm:p-5"
@@ -180,40 +191,26 @@ function OutNowCard({ release, now, onHide }: { release: ExecutionRelease; now: 
 
       <div className="mt-4">
         {url ? (
-          <>
-            <p className="truncate rounded-xl bg-bg-hover px-3 py-2 font-mono text-[12.5px] text-content-secondary">
-              {url.replace(/^https?:\/\//, '')}
-            </p>
+          <div className="flex items-center gap-1 rounded-xl border border-stroke-default bg-bg-base py-1 pl-3 pr-1">
+            <span className="min-w-0 flex-1 truncate text-[13.5px] text-content-secondary">{url.replace(/^https?:\/\//, '')}</span>
             <button
               type="button"
               onClick={() => void copy()}
-              className="motion-focus motion-press mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-[15px] font-semibold text-content-inverse hover:bg-brand-hover"
+              className="hit-44 motion-focus inline-flex h-8 shrink-0 items-center gap-1 rounded-lg px-2.5 text-[13px] font-semibold text-brand hover:bg-bg-hover"
             >
-              {copied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
-              {copied ? 'Copied' : 'Copy smart link'}
+              {copied ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
+              {copied ? 'Copied' : 'Copy'}
             </button>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => void share()}
-                className="motion-focus motion-press flex h-11 items-center justify-center rounded-full border border-stroke-control text-sm font-semibold text-content-primary hover:bg-bg-hover"
-              >
-                Share
-              </button>
-              <Link
-                href={`/dashboard/distribute/${encodeURIComponent(release.id)}?tab=numbers`}
-                className="motion-focus motion-press flex h-11 items-center justify-center rounded-full border border-stroke-control text-sm font-semibold text-content-primary hover:bg-bg-hover"
-              >
-                See clicks
-              </Link>
-            </div>
-          </>
-        ) : making ? (
-          <p role="status" className="flex items-center gap-2 text-sm text-content-secondary">
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            Making your smart link. It takes about a minute.
-          </p>
-        ) : needsCode && canWrite ? (
+            <button
+              type="button"
+              onClick={() => void share()}
+              aria-label={`Share ${title}`}
+              className="hit-44 motion-focus grid h-8 w-8 shrink-0 place-items-center rounded-lg text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+            >
+              <Share className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+        ) : finderAsks ? (
           <CodeFinderPanel
             view={finder.view}
             answering={finder.answering}
@@ -222,7 +219,7 @@ function OutNowCard({ release, now, onHide }: { release: ExecutionRelease; now: 
             typeCodeHref={typeCodeHref}
             compact
           />
-        ) : view && canWrite && !view.link ? (
+        ) : offerSetup ? (
           <Link
             href={`/dashboard/distribute/${encodeURIComponent(release.id)}?tab=link`}
             className="motion-focus motion-press flex h-11 items-center justify-center rounded-full border border-stroke-control text-sm font-semibold text-content-primary hover:bg-bg-hover"

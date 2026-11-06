@@ -6,6 +6,7 @@ import { isImportProvider, isSafeSourceId } from '@/lib/artist-import/providers'
 import { importArtistCatalogue } from '@/lib/artist-import/server';
 import { enrichCatalogueCodes } from '@/lib/artist-import/links-server';
 import { afterResponse } from '@/lib/after-response';
+import { fillArtistRollouts } from '@/lib/release-out-now/server';
 
 // Saves an artist and their releases onto the signed-in team. Body:
 // { provider, id, name, artistId? }; artistId puts the releases on a roster
@@ -72,6 +73,8 @@ export async function POST(request: NextRequest) {
     // UPC and ISRC fill in after the reply; the catalogue read finishes what
     // this batch leaves.
     afterResponse('catalogue codes', () => enrichCatalogueCodes(auth.adminClient, outcome.artistId));
+    // The pick links the artist too: rollouts already here fill in (#1090).
+    afterResponse('link fills the past', () => fillArtistRollouts(auth.adminClient, outcome.artistId));
     return NextResponse.json(outcome);
   } catch (error) {
     return NextResponse.json(

@@ -17,6 +17,7 @@ import { runClaimAutoEmailSweep } from '@/lib/claim-auto-email-server';
 import { runOnTheRiseSweep } from '@/lib/featured-shelves-server';
 import { purgeExpiredReleases } from '@/lib/rollout-trash-server';
 import { runWhatsappChaseSweep } from '@/lib/whatsapp/server';
+import { runOutNowSweep } from '@/lib/release-out-now/server';
 
 // Scheduled sweep — see apps/web/vercel.json for the cron schedule. Vercel
 // Cron automatically sends `Authorization: Bearer ${CRON_SECRET}` when that
@@ -162,8 +163,14 @@ export async function GET(request: NextRequest) {
   // Twilio env is set and a team has switched it on. Never throws.
   const whatsappSweep = await runWhatsappChaseSweep(adminClient);
 
+  // Release day on its own (#1090): songs out today or yesterday. A linked
+  // artist's song is matched and its smart link made; then each team whose link
+  // exists is emailed that the song is out, once. Own time budget, never throws.
+  const outNowSweep = await runOutNowSweep(adminClient);
+
   return NextResponse.json({
     ok: true,
+    outNowSweep,
     whatsappSweep,
     trashPurge,
     trialSweep,

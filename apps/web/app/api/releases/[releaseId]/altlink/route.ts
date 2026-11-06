@@ -3,6 +3,9 @@ import { createAdminClient, requireActiveAuthenticatedUser } from '@/app/api/_sh
 import { ensureReleaseTeamReadAccess, ensureReleaseTeamWriteAccess } from '@/lib/release-access-server';
 import { isAltlinkEnabled } from '@/lib/altlink/rules';
 import { loadSmartLinkView, syncSmartLink } from '@/lib/altlink/server';
+import { emailTeamOutNowQuietly } from '@/lib/release-out-now/server';
+import { afterResponse } from '@/lib/after-response';
+import { isOutNowEmailDay } from '@/lib/code-finder/rules';
 
 // The rollout's Altlink pre-save / smart link (Oct 2026 pilot).
 //
@@ -33,6 +36,9 @@ export async function GET(request: NextRequest, context: { params: Promise<{ rel
   const canWrite = !('error' in (await ensureReleaseTeamWriteAccess(admin, releaseId, auth.user)));
   try {
     const view = await loadSmartLinkView(admin, releaseId, { actorUserId: canWrite ? auth.user.id : null, readOnly: !canWrite });
+    // Release day (#1090): the link exists, so the team hears the song is out.
+    // Once only, and only on release day or the day after; checked server-side.
+    if (view.link?.url && isOutNowEmailDay(view.facts.releaseDate, Date.now())) afterResponse('out now email', () => emailTeamOutNowQuietly(admin, releaseId));
     return NextResponse.json({ view, canWrite });
   } catch (error) {
     console.error('[altlink] view failed', { releaseId, message: error instanceof Error ? error.message : 'error' });

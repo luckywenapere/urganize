@@ -306,7 +306,7 @@ export function SmartLinkSection({ releaseId, onToast, part = 'all', onOpenLink 
             <CaptureSection releaseId={releaseId} onToast={onToast} embedded beforeLink />
           </section>
         ) : null}
-        {!hidden && finder.view && finder.view.status !== 'has_code' && finder.view.status !== 'not_out' ? (
+        {!hidden && finder.view && finder.view.status !== 'has_code' && finder.view.status !== 'not_out' && finder.view.status !== 'quiet' ? (
           <section className={`${CARD} p-5`}>
             <CodeFinderPanel
               view={finder.view}
@@ -316,7 +316,7 @@ export function SmartLinkSection({ releaseId, onToast, part = 'all', onOpenLink 
               typeCodeHref={`/dashboard?release=${encodeURIComponent(releaseId)}&scene=metadata&field=upc`}
             />
           </section>
-        ) : hidden ? null : (
+        ) : hidden || finder.view?.status === 'quiet' ? null : (
           <SmartLinkComing
             reason={view.notReady}
             configured={view.configured}

@@ -1,5 +1,10 @@
 // Finding a released song's UPC and ISRC: the database half. Server only.
 //
+// For an artist linked to streaming (#1090) there is no question: the song is
+// looked for on the artist's own page, and a match is saved and made into the
+// smart link straight away, then the team is emailed. For the first two days
+// nothing is shown while it looks ('quiet').
+//
 // findCodes looks the song up (at most every 15 minutes) and keeps what it found
 // in release_code_lookups. Nothing reaches release_metadata, and so nothing
 // reaches the smart link, until the person answers "Yes, this is my song"
@@ -22,6 +27,7 @@ import {
   decideMatch,
   isLookupDue,
   isOutOn,
+  isQuietLookup,
   parseMatchPick,
   type CodeCandidate,
   type CodeTarget,
@@ -30,6 +36,7 @@ import {
 } from './rules';
 import { isSpotifyConfigured, searchDeezer, searchLinkedDeezer, searchLinkedSpotify, searchSpotify } from './sources';
 import { loadArtistStreamingIds } from '@/lib/artist-streaming/server';
+import { emailTeamOutNowQuietly } from '@/lib/release-out-now/server';
 
 export const CODE_LOOKUPS_TABLE = 'release_code_lookups';
 
@@ -60,6 +67,8 @@ export type CodeFinderView =
   | { status: 'has_code' }
   | { status: 'not_out' }
   | { status: 'looking' }
+  /** A linked artist's song is being looked for: show nothing. */
+  | { status: 'quiet' }
   | { status: 'found'; candidate: CodeCandidate }
   | { status: 'confirmed' };
 
@@ -142,7 +151,16 @@ export async function findCodes(admin: SupabaseClient, releaseId: string, contex
   if (!isOutOn(facts.releaseDate, now) || !facts.title || !facts.artistName) return { status: 'not_out' };
 
   const row = await loadRow(admin, releaseId);
-  if (!isLookupDue(row ? { status: row.status, checkedAt: row.checked_at } : null, now)) return viewOf(row);
+  // A linked artist is looked up on their own page only (#1088), and what is
+  // found there is taken without asking (#1090).
+  const linked = await loadLinkedIds(admin, releaseId);
+  const isLinkedArtist = Boolean(linked.deezer || linked.spotify);
+  const quiet = isLinkedArtist && isQuietLookup(facts.releaseDate, now);
+  const shown = (view: CodeFinderView): CodeFinderView => (quiet && view.status === 'looking' ? { status: 'quiet' } : view);
+  // A name-search find from before the artist was linked is looked up again,
+  // on the artist's own page, rather than left waiting for a yes.
+  const refind = isLinkedArtist && row?.status === 'found';
+  if (!refind && !isLookupDue(row ? { status: row.status, checkedAt: row.checked_at } : null, now)) return shown(viewOf(row));
 
   const target: CodeTarget = {
     title: facts.title,
@@ -153,12 +171,9 @@ export async function findCodes(admin: SupabaseClient, releaseId: string, contex
   const rejected = row?.rejected_keys ?? [];
   const fetchImpl = context.fetchImpl ?? fetch;
 
-  // A linked artist is looked up on their own page only (#1088); the name
-  // search is for artists nobody has linked yet.
-  const linked = await loadLinkedIds(admin, releaseId);
   let candidates: CodeCandidate[];
   let decision;
-  if (linked.deezer || linked.spotify) {
+  if (isLinkedArtist) {
     candidates = linked.deezer ? await searchLinkedDeezer(target, linked.deezer) : [];
     decision = decideMatch(target, candidates, rejected);
     if (decision.kind === 'none' && linked.spotify && isSpotifyConfigured()) {
@@ -199,7 +214,33 @@ export async function findCodes(admin: SupabaseClient, releaseId: string, contex
     checked_at: new Date(now).toISOString(),
   };
   await saveRow(admin, releaseId, fields);
-  return found ? { status: 'found', candidate: found } : { status: 'looking' };
+  if (found && isLinkedArtist) {
+    await confirmCandidate(admin, releaseId, found, { ...context, now });
+    return { status: 'confirmed' };
+  }
+  return shown(found ? { status: 'found', candidate: found } : { status: 'looking' });
+}
+
+/** Saves the codes, makes the smart link and emails the team on release day. */
+async function confirmCandidate(
+  admin: SupabaseClient,
+  releaseId: string,
+  candidate: CodeCandidate,
+  context: FindContext & { now: number }
+): Promise<SyncOutcome['kind'] | null> {
+  const facts = await loadSmartLinkFacts(admin, releaseId);
+  if (!facts) return null;
+  if (!facts.upc && !facts.isrc) {
+    await saveCodes(admin, releaseId, candidate, facts.title ?? candidate.title, facts.artistName ?? candidate.artist);
+  }
+  await saveRow(admin, releaseId, {
+    status: 'confirmed',
+    confirmed_at: new Date(context.now).toISOString(),
+    confirmed_by: context.actorUserId,
+  });
+  const outcome = await syncSmartLink(admin, releaseId, { actorUserId: context.actorUserId, now: context.now });
+  await emailTeamOutNowQuietly(admin, releaseId, context.now);
+  return outcome.kind;
 }
 
 /** Saves the codes where a typed code would go: release_metadata. */
@@ -250,16 +291,7 @@ export async function answerCodes(
     return { view: await findCodes(admin, releaseId, context), link: null };
   }
 
-  const facts = await loadSmartLinkFacts(admin, releaseId);
-  if (!facts) return { view: { status: 'not_out' }, link: null };
-  if (!facts.upc && !facts.isrc) {
-    await saveCodes(admin, releaseId, row.candidate, facts.title ?? row.candidate.title, facts.artistName ?? row.candidate.artist);
-  }
-  await saveRow(admin, releaseId, {
-    status: 'confirmed',
-    confirmed_at: new Date(now).toISOString(),
-    confirmed_by: context.actorUserId,
-  });
-  const outcome = await syncSmartLink(admin, releaseId, { actorUserId: context.actorUserId, now });
-  return { view: { status: 'confirmed' }, link: outcome.kind };
+  const link = await confirmCandidate(admin, releaseId, row.candidate, { ...context, now });
+  if (link === null) return { view: { status: 'not_out' }, link: null };
+  return { view: { status: 'confirmed' }, link };
 }

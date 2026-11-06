@@ -9,7 +9,7 @@
 // more results look equally right, AI picks between them, but it can only pick
 // one of the real results, never write a code itself.
 
-import { lagosYmd, normalizeIsrc, normalizeUpc, releaseYmd } from '@/lib/altlink/rules';
+import { daysUntilRelease, lagosYmd, normalizeIsrc, normalizeUpc, releaseYmd } from '@/lib/altlink/rules';
 
 export type CodeSource = 'deezer' | 'spotify';
 
@@ -269,4 +269,27 @@ export function pickOutNow<T extends OutNowInput>(releases: readonly T[], nowMs:
       return age >= 0 && age < OUT_NOW_DAYS;
     })
     .sort((a, b) => String(releaseYmd(b.releaseDate)).localeCompare(String(releaseYmd(a.releaseDate))));
+}
+
+// ── Release day on its own (#1090) ──────────────────────────────────────────
+
+/**
+ * How long a linked artist's song is looked for with nothing on screen: release
+ * day and the day after. Past that the team gets "Type the code yourself", so a
+ * song we never find cannot leave anyone stuck.
+ */
+export const QUIET_LOOKUP_DAYS = 2;
+
+/** Whether a linked artist's lookup is still in its quiet window. */
+export function isQuietLookup(releaseDate: string | null | undefined, nowMs: number): boolean {
+  const until = daysUntilRelease(releaseDate, nowMs);
+  return until !== null && until <= 0 && -until < QUIET_LOOKUP_DAYS;
+}
+
+/** The team is emailed about a song only on release day or the day after, never for old releases. */
+export const OUT_NOW_EMAIL_DAYS = 2;
+
+export function isOutNowEmailDay(releaseDate: string | null | undefined, nowMs: number): boolean {
+  const until = daysUntilRelease(releaseDate, nowMs);
+  return until !== null && until <= 0 && -until < OUT_NOW_EMAIL_DAYS;
 }
