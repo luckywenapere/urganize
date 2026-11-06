@@ -25,6 +25,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 import { cn } from '@/lib/utils';
 import type { ExecutionRelease } from '@/lib/execution-types';
 import { displayReleaseTitle } from '@/types/releases';
+import { SmartLinkBox, useReleaseSmartLink } from '@/components/releases/SmartLinkBox';
 
 // The artist page, redesigned 2026-10-29 (#866, founder approved
 // docs/mocks/artist-page/mock.html). Where the artist stands first (two chips
@@ -54,6 +55,26 @@ function shortDay(value: string | null): string | null {
   const parsed = new Date(`${value}T00:00:00`);
   if (Number.isNaN(parsed.getTime())) return null;
   return new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(parsed);
+}
+
+/** "Out today", "Out yesterday", "Out 5 days ago". */
+function outLabel(days: number | null): string {
+  if (days === null || days >= 0) return 'Out today';
+  if (days === -1) return 'Out yesterday';
+  return `Out ${-days} days ago`;
+}
+
+/** A song out in the last month: its row, and its smart link under it once there is one. */
+function RecentOut({ release, children }: { release: ExecutionRelease; children: React.ReactNode }) {
+  const url = useReleaseSmartLink(release.id, true);
+  return (
+    <li className="list-none">
+      <ul>{children}</ul>
+      {url ? (
+        <SmartLinkBox url={url} title={displayReleaseTitle(release.title)} releaseId={release.id} className="mb-1.5 ml-[52px]" />
+      ) : null}
+    </li>
+  );
 }
 
 /** Whole days from today (Lagos) to a release date; negative once it is out. */
@@ -391,11 +412,13 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
   if (buckets.planned.length === 0 && buckets.live.length === 0) chips.push({ label: 'No rollout yet', on: false });
   else if (records && records.length > 0) chips.push({ label: `${records.length} in the making`, on: false });
 
-  const rolling = [...buckets.planned, ...buckets.live];
-  const outCount = buckets.past.length + (catalogueCount ?? 0);
+  // On release day a song leaves Rolling out for the top of Out now (#1092,
+  // docs/mocks/out-now-placement); its rollout and after-release tasks are one tap away.
+  const rolling = buckets.planned;
+  const outCount = buckets.live.length + buckets.past.length + (catalogueCount ?? 0);
 
   // The cover sits outside the link so its pencil is its own button (#847).
-  const releaseRow = (release: ExecutionRelease, rollingOut: boolean) => {
+  const releaseRow = (release: ExecutionRelease, rollingOut: boolean, recent = false) => {
     const counts = taskCounts.get(release.id);
     const days = daysFrom(today, release.releaseDate);
     const typeLabel = release.releaseType === 'ep' ? 'EP' : release.releaseType === 'album' ? 'Album' : 'Single';
@@ -419,7 +442,7 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
               <span className="font-normal text-content-secondary">
                 {' · '}
                 {typeLabel}
-                {!rollingOut && release.releaseDate ? `, ${release.releaseDate.slice(0, 4)}` : ''}
+                {!rollingOut && !recent && release.releaseDate ? `, ${release.releaseDate.slice(0, 4)}` : ''}
               </span>
             </p>
             {rollingOut && counts && counts.total > 0 ? (
@@ -431,6 +454,8 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
                   <div className="h-full rounded-full bg-brand" style={{ width: `${Math.round((counts.done / counts.total) * 100)}%` }} />
                 </div>
               </>
+            ) : recent ? (
+              <p className="text-[13px] text-content-secondary">{outLabel(days)}</p>
             ) : !rollingOut ? null : (
               <p className="text-[13px] text-content-secondary">{release.releaseDate ? 'No tasks yet' : 'No release day yet'}</p>
             )}
@@ -566,8 +591,15 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
               </Stage>
 
               <Stage label="Out now" count={outCount} tone={outCount > 0 ? 'done' : 'idle'} last>
-                {buckets.past.length > 0 ? (
-                  <ul className="space-y-0.5">{buckets.past.map((release) => releaseRow(release, false))}</ul>
+                {buckets.live.length + buckets.past.length > 0 ? (
+                  <ul className="space-y-0.5">
+                    {buckets.live.map((release) => (
+                      <RecentOut key={release.id} release={release}>
+                        {releaseRow(release, false, true)}
+                      </RecentOut>
+                    ))}
+                    {buckets.past.map((release) => releaseRow(release, false))}
+                  </ul>
                 ) : null}
                 <ArtistCatalogueCard artistId={artist.id} onCount={setCatalogueCount} onProfile={setStreamingProfile} />
                 {/* Songs out before Urganize come in once (#890, mock
