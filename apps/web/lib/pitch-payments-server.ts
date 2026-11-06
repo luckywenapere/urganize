@@ -279,7 +279,8 @@ export async function settlePitchCheckout(
 
   const { data: result, error: rpcError } = await admin.rpc('settle_pitch_quote', {
     p_quote_id: quoteId,
-    p_amount_kobo: verified.data.amountKobo,
+    // Compared with the quote total, which is before Paystack's fee (#1099).
+    p_amount_kobo: verified.data.requestedAmountKobo,
     p_currency: verified.data.currency,
     p_transaction_id: verified.data.transactionId,
     p_paid_at: verified.data.paidAt || new Date().toISOString(),

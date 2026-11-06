@@ -204,7 +204,8 @@ export async function settleExtraRelease(admin: Admin, reference: string, via: '
   const decision = checkExtraReleasePayment({
     status: verified.data.status,
     currency: verified.data.currency,
-    amountKobo: verified.data.amountKobo,
+    // The price before Paystack's fee, which is passed on to the buyer (#1099).
+    amountKobo: verified.data.requestedAmountKobo,
     metadata: verified.data.metadata,
   });
   if (!decision.ok) {

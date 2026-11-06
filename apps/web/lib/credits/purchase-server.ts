@@ -39,7 +39,8 @@ export async function settleCreditsPurchase(
   const decision = checkPurchase({
     status: verified.data.status,
     currency: verified.data.currency,
-    amountKobo: verified.data.amountKobo,
+    // The pack price before Paystack's fee, which is passed on to the buyer (#1099).
+    amountKobo: verified.data.requestedAmountKobo,
     metadata: verified.data.metadata,
   });
 
@@ -47,7 +48,7 @@ export async function settleCreditsPurchase(
     if (decision.reason === 'mismatch') {
       // Money may have arrived that matches no pack. Loud, so it is found.
       console.error(
-        `[credits-purchase] MISMATCH on ${reference} (${via}): paid ${verified.data.amountKobo} ${verified.data.currency}, status ${verified.data.status}`
+        `[credits-purchase] MISMATCH on ${reference} (${via}): paid ${verified.data.amountKobo} (asked ${verified.data.requestedAmountKobo}) ${verified.data.currency}, status ${verified.data.status}`
       );
     }
     return { state: decision.reason };

@@ -273,7 +273,15 @@ export async function initializePaystackTransaction(input: {
 export type VerifiedPaystackTransaction = {
   status: string;
   reference: string;
+  /** What the customer was charged, fee included when the account passes it on. */
   amountKobo: number;
+  /**
+   * What we asked for when the checkout started, before any fee Paystack adds.
+   * Our account passes the fee on to the buyer, so a ₦1,500 pack is charged as
+   * ₦1,522.85: compare prices against THIS, never against amountKobo (#1099).
+   * Falls back to amountKobo when Paystack does not send it.
+   */
+  requestedAmountKobo: number;
   currency: string;
   feesKobo: number | null;
   transactionId: number | null;
@@ -294,6 +302,8 @@ export async function verifyPaystackTransaction(
   if (!result.ok) return result;
   const data = result.data || {};
   const fees = Number(data.fees);
+  const amount = Number(data.amount) || 0;
+  const requested = Number(data.requested_amount);
   const id = Number(data.id);
   const metadata = data.metadata && typeof data.metadata === 'object' ? (data.metadata as Record<string, unknown>) : null;
   return {
@@ -301,7 +311,8 @@ export async function verifyPaystackTransaction(
     data: {
       status: String(data.status || ''),
       reference: String(data.reference || reference),
-      amountKobo: Number(data.amount) || 0,
+      amountKobo: amount,
+      requestedAmountKobo: Number.isFinite(requested) && requested > 0 ? requested : amount,
       currency: String(data.currency || ''),
       feesKobo: Number.isFinite(fees) ? fees : null,
       transactionId: Number.isFinite(id) && id > 0 ? id : null,
