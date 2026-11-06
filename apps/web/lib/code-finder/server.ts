@@ -28,7 +28,8 @@ import {
   type LookupStatus,
   type ScoredCandidate,
 } from './rules';
-import { isSpotifyConfigured, searchDeezer, searchSpotify } from './sources';
+import { isSpotifyConfigured, searchDeezer, searchLinkedDeezer, searchLinkedSpotify, searchSpotify } from './sources';
+import { loadArtistStreamingIds } from '@/lib/artist-streaming/server';
 
 export const CODE_LOOKUPS_TABLE = 'release_code_lookups';
 
@@ -46,6 +47,13 @@ type LookupRow = {
   confirmed_at: string | null;
   confirmed_by?: string | null;
 };
+
+/** The release's artist's linked Deezer and Spotify ids, if any. */
+async function loadLinkedIds(admin: SupabaseClient, releaseId: string): Promise<{ deezer: string | null; spotify: string | null }> {
+  const { data } = await admin.from('releases').select('artist_id').eq('id', releaseId).maybeSingle();
+  const artistId = (data as { artist_id?: string | null } | null)?.artist_id;
+  return artistId ? loadArtistStreamingIds(admin, artistId) : { deezer: null, spotify: null };
+}
 
 /** What the browser is told. The codes are shown so the person can check them. */
 export type CodeFinderView =
@@ -145,11 +153,25 @@ export async function findCodes(admin: SupabaseClient, releaseId: string, contex
   const rejected = row?.rejected_keys ?? [];
   const fetchImpl = context.fetchImpl ?? fetch;
 
-  let candidates = await searchDeezer(target, fetchImpl);
-  let decision = decideMatch(target, candidates, rejected);
-  if (decision.kind === 'none' && isSpotifyConfigured()) {
-    candidates = [...candidates, ...(await searchSpotify(target, fetchImpl))];
+  // A linked artist is looked up on their own page only (#1088); the name
+  // search is for artists nobody has linked yet.
+  const linked = await loadLinkedIds(admin, releaseId);
+  let candidates: CodeCandidate[];
+  let decision;
+  if (linked.deezer || linked.spotify) {
+    candidates = linked.deezer ? await searchLinkedDeezer(target, linked.deezer) : [];
     decision = decideMatch(target, candidates, rejected);
+    if (decision.kind === 'none' && linked.spotify && isSpotifyConfigured()) {
+      candidates = [...candidates, ...(await searchLinkedSpotify(target, linked.spotify))];
+      decision = decideMatch(target, candidates, rejected);
+    }
+  } else {
+    candidates = await searchDeezer(target, fetchImpl);
+    decision = decideMatch(target, candidates, rejected);
+    if (decision.kind === 'none' && isSpotifyConfigured()) {
+      candidates = [...candidates, ...(await searchSpotify(target, fetchImpl))];
+      decision = decideMatch(target, candidates, rejected);
+    }
   }
 
   let found: CodeCandidate | null = null;

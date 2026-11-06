@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Link artists to streaming</title>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root { --bg:#f5f0e6; --card:#faf5ec; --hover:#ebe6dc; --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10); --board:#d9d5cc; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--board); font:14px/1.5 'Instrument Sans',system-ui,sans-serif; color:var(--text); padding:32px 16px 64px; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; }
+  p,h1,h2,h3 { margin:0; font-weight:400; }
+  .wrap { max-width:1240px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif',serif; font-size:28px; margin-bottom:6px; }
+  .intro p { color:#4f4a42; max-width:780px; }
+  .row { display:flex; gap:28px; flex-wrap:wrap; margin-top:28px; align-items:flex-start; }
+  .opt { flex:1 1 360px; max-width:400px; }
+  .opt h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+  .opt .why { color:#4f4a42; margin:4px 0 12px; min-height:84px; }
+  .phone { background:var(--bg); border-radius:34px; padding:20px 16px 24px; box-shadow:0 12px 32px rgba(26,22,17,.12); border:8px solid #1a1611; min-height:720px; position:relative; overflow:hidden; }
+  .dim { position:absolute; inset:0; background:rgba(26,22,17,.35); }
+  .sheet { position:absolute; left:0; right:0; bottom:0; background:var(--card); border-radius:22px 22px 0 0; padding:18px 18px 22px; }
+  .grab { width:40px; height:4px; border-radius:4px; background:var(--line2); margin:0 auto 14px; }
+  .serif { font-family:'Young Serif',serif; }
+  .mono { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ter); }
+  .sec { color:var(--sec); }
+  .btn { display:flex; align-items:center; justify-content:center; height:48px; border-radius:99px; background:var(--brand); color:#f5f0e6; font-weight:600; font-size:15px; }
+  .ghost { display:flex; align-items:center; justify-content:center; height:44px; border-radius:99px; border:1px solid var(--line2); font-weight:600; }
+  .quiet { display:flex; align-items:center; justify-content:center; height:40px; color:var(--sec); font-weight:500; }
+  .field { height:46px; border-radius:12px; border:1px solid rgba(26,22,17,.35); background:var(--bg); display:flex; align-items:center; padding:0 14px; font-size:16px; }
+  .face { border-radius:50%; flex:none; background:linear-gradient(135deg,#3b2a1d,#a0653a); }
+  .res { display:flex; align-items:center; gap:12px; padding:10px; border-radius:14px; }
+  .res.on { background:var(--brand-soft); outline:2px solid var(--brand); }
+  .res + .res { margin-top:4px; }
+  .tick { margin-left:auto; width:22px; height:22px; border-radius:50%; border:2px solid var(--line2); flex:none; }
+  .res.on .tick { background:var(--brand); border-color:var(--brand); }
+  .chips { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
+  .chip { font-size:11.5px; font-weight:600; padding:2px 8px; border-radius:99px; background:var(--hover); color:var(--sec); }
+  .chip.ok { background:var(--brand-soft); color:var(--brand); }
+  .dots { display:flex; gap:5px; justify-content:center; margin-top:12px; }
+  .dots i { width:6px; height:6px; border-radius:50%; background:var(--line2); }
+  .dots i.on { background:var(--brand); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:20px; }
+  .cover { border-radius:12px; background:linear-gradient(135deg,#7a3b1d,#d08a3c 55%,#f1d08a); flex:none; }
+  .note { margin-top:40px; background:#efe9dd; border-radius:16px; padding:18px 20px; color:#3d3933; max-width:940px; }
+  .note b { color:var(--text); }
+  .note ul { margin:8px 0 0; padding-left:18px; }
+  .note li + li { margin-top:4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <h1>Link artists to their streaming page</h1>
+    <p>Every artist gets linked to their real profile once. After that, Urganize finds their songs, codes and covers from that profile, not by guessing from a name. Three screens, on a phone.</p>
+  </div>
+
+  <div class="row">
+    <!-- 1 -->
+    <div class="opt">
+      <h2>1 · Adding an artist</h2>
+      <p class="why">Type the name, pick the right face. This becomes a required step everywhere an artist is added (onboarding, a new rollout, the roster). "Not on streaming yet" skips it, and we ask again after their first release.</p>
+      <div class="phone">
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <p class="mono">Add an artist</p>
+          <h3 class="serif" style="font-size:22px;margin-top:6px;">Which one is them?</h3>
+          <div class="field" style="margin-top:14px;">Dorian</div>
+          <div style="margin-top:12px;">
+            <div class="res on">
+              <span class="face" style="width:48px;height:48px;"></span>
+              <div style="min-width:0;">
+                <p style="font-weight:600;">Dorian</p>
+                <p class="sec" style="font-size:13px;">12,400 fans · latest: Ohema</p>
+              </div>
+              <span class="tick"></span>
+            </div>
+            <div class="res">
+              <span class="face" style="width:48px;height:48px;background:linear-gradient(135deg,#1d2a3b,#5a7aa0);"></span>
+              <div style="min-width:0;">
+                <p style="font-weight:600;">Dorian Electra</p>
+                <p class="sec" style="font-size:13px;">310,000 fans · latest: Fanfare</p>
+              </div>
+              <span class="tick"></span>
+            </div>
+            <div class="res">
+              <span class="face" style="width:48px;height:48px;background:linear-gradient(135deg,#2d3b1d,#7aa05a);"></span>
+              <div style="min-width:0;">
+                <p style="font-weight:600;">Dorian Concept</p>
+                <p class="sec" style="font-size:13px;">48,000 fans · latest: Hide</p>
+              </div>
+              <span class="tick"></span>
+            </div>
+          </div>
+          <div class="btn" style="margin-top:16px;">Add Dorian</div>
+          <div class="quiet" style="margin-top:4px;">Not on streaming yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 -->
+    <div class="opt">
+      <h2>2 · The popup for artists already set up</h2>
+      <p class="why">Shows on Home for anyone with an unlinked artist. One artist at a time, with our best guess already picked, so most are one tap. "Not now" brings it back next visit; "Not on streaming yet" stops asking about that artist.</p>
+      <div class="phone">
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <p class="mono">Artist 1 of 4</p>
+          <h3 class="serif" style="font-size:22px;margin-top:6px;">Is this Tems on streaming?</h3>
+          <p class="sec" style="margin-top:4px;">Linking them lets us find their songs and make smart links for you.</p>
+          <div class="card" style="margin-top:14px;padding:14px;display:flex;align-items:center;gap:14px;">
+            <span class="face" style="width:64px;height:64px;background:linear-gradient(135deg,#3b1d2a,#a03a6a);"></span>
+            <div style="min-width:0;">
+              <p style="font-weight:600;font-size:16px;">Tems</p>
+              <p class="sec" style="font-size:13px;">4.2M fans</p>
+              <p class="sec" style="font-size:13px;">Latest: Love Me JeJe</p>
+            </div>
+          </div>
+          <div class="btn" style="margin-top:14px;">Yes, that's Tems</div>
+          <div class="ghost" style="margin-top:8px;">No, search again</div>
+          <div style="display:flex;justify-content:space-between;margin-top:6px;">
+            <div class="quiet">Not on streaming yet</div>
+            <div class="quiet">Not now</div>
+          </div>
+          <div class="dots"><i class="on"></i><i></i><i></i><i></i></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 -->
+    <div class="opt">
+      <h2>3 · Release day, with a linked artist</h2>
+      <p class="why">The song is looked up only inside that artist's own releases, so a fan's sped-up copy or another artist with the same name can never be picked. It still asks once before making the public link.</p>
+      <div class="phone">
+        <p class="mono">Fri 6 Nov</p>
+        <h1 class="serif" style="font-size:28px;margin-top:8px;">Good morning, Wena.</h1>
+        <div class="card" style="margin-top:20px;padding:16px;">
+          <div style="display:flex;gap:14px;align-items:center;">
+            <div class="cover" style="width:84px;height:84px;"></div>
+            <div>
+              <span class="chip ok">● Out now</span>
+              <h3 class="serif" style="font-size:22px;margin-top:8px;">Ohema</h3>
+              <p class="sec" style="font-size:13.5px;">Dorian · Single</p>
+            </div>
+          </div>
+          <p style="font-weight:600;margin-top:16px;">Found it on Dorian's page</p>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--hover);">
+            <div style="min-width:0;flex:1;">
+              <p style="font-weight:600;font-size:14px;">Ohema</p>
+              <p class="sec" style="font-size:12.5px;">Out today · UPC and ISRC found</p>
+            </div>
+            <span style="color:var(--brand);font-weight:600;font-size:13px;">Listen</span>
+          </div>
+          <div class="btn" style="margin-top:12px;">Make the smart link</div>
+          <div class="quiet">That's not the right song</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>How it works behind the scenes</b>
+    <ul>
+      <li>You pick the artist once, on Deezer (it gives the codes for free). We then link the same artist on Spotify and Apple Music ourselves, by matching one of their songs' ISRC, so you never pick three times.</li>
+      <li>On release day we look at that artist's newest releases only, match the title, and read the UPC and ISRC from it.</li>
+      <li>Artists already linked from the old music import keep their link. Right now none of the 68 artists in the app have one, so everyone sees the popup once.</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>
