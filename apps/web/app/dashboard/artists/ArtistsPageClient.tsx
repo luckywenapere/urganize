@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight, ChevronRight, Disc3, Plus } from '@/components/icons';
 import { initialsFor } from '@/lib/swipe-nav';
 import { useAuthStore } from '@/lib/auth-store';
-import { artistsList, describeDaysToGo, type ArtistListRow, type ArtistStatus } from '@/lib/artists-list';
+import { artistsList, type ArtistListRow, type ArtistStatus } from '@/lib/artists-list';
 import { artistHref, isArtistPageEnabled, releaseHref } from '@/lib/artist-page';
 import { lagosToday } from '@/lib/next-records';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
@@ -136,7 +136,6 @@ export default function ArtistsPageClient({
             <div className={`hidden ${ROW_GRID} border-b border-stroke-subtle py-3 pl-[4.75rem] pr-5 text-xs font-medium text-content-tertiary md:grid`}>
               <span>Artist</span>
               <span className="pl-14">Next rollout</span>
-              <span>Drops</span>
               <span>Tasks</span>
               <span />
             </div>
@@ -186,8 +185,8 @@ type RosterArtist = { id: string; name: string; photoUrl?: string | null };
 type ListRow = ArtistListRow<RosterArtist, ExecutionRelease>;
 type ArtistsListData = { rows: ListRow[]; spotlight: ListRow | null };
 
-// Who, next rollout, drops, tasks, arrow (#878).
-const ROW_GRID = 'grid-cols-[minmax(0,1.3fr)_minmax(0,1.5fr)_7rem_9.5rem_1rem] gap-4';
+// Who, next rollout, tasks, arrow (#878; the Drops column left Home, Nov 6, 2026).
+const ROW_GRID = 'grid-cols-[minmax(0,1.3fr)_minmax(0,1.5fr)_9.5rem_1rem] gap-4';
 
 const STATUS_WORD: Record<ArtistStatus, string> = {
   rolling_out: 'Rolling out',
@@ -432,18 +431,6 @@ function ArtistRow({
               </>
             )}
           </span>
-        </span>
-        <span className="hidden md:block">
-          {day ? (
-            <>
-              <span className="block text-sm font-medium leading-5 text-content-primary">{day}</span>
-              {row.daysToGo !== null ? (
-                <span className="block text-xs leading-4 text-content-secondary">{describeDaysToGo(row.daysToGo)}</span>
-              ) : null}
-            </>
-          ) : (
-            <span className="text-sm text-content-tertiary">Not set</span>
-          )}
         </span>
         <span className="hidden flex-col gap-1.5 md:flex">
           {row.total > 0 ? (
