@@ -56,7 +56,9 @@ export type RouteSurface =
   /** Bring your notes: UrgAns labels the cards of an import (2026-10-26). */
   | 'notes_import'
   /** UrgAns's WhatsApp answer to a task owner, when the team has no own key (2026-10-26). */
-  | 'whatsapp_reply';
+  | 'whatsapp_reply'
+  /** Picks which streaming listing is the released song, when several look right (2026-11-06). */
+  | 'code_match';
 
 // ── Switches ─────────────────────────────────────────────────────────────────
 
@@ -123,6 +125,8 @@ const SURFACE_FLOOR: Record<RouteSurface, ModelTier> = {
   notes_import: 'quick',
   // A short text reply about one task.
   whatsapp_reply: 'quick',
+  // Choosing one of up to five listings. The answer is a number.
+  code_match: 'quick',
 };
 
 /** How many times one request may change model. */
@@ -138,6 +142,7 @@ const SURFACE_MAX_HOPS: Record<RouteSurface, number> = {
   press_kit: 2,
   notes_import: 1,
   whatsapp_reply: 1,
+  code_match: 1,
 };
 
 /**
@@ -160,6 +165,8 @@ function pinnedModelFor(surface: RouteSurface, env: EnvLike): string | undefined
       return get('AI_PRESSKIT_MODEL') ?? get('AI_STATUS_MODEL');
     case 'notes_import':
       return get('AI_NOTES_MODEL') ?? get('AI_STATUS_MODEL');
+    case 'code_match':
+      return get('AI_CODE_MATCH_MODEL') ?? get('AI_STATUS_MODEL');
     default:
       return undefined;
   }

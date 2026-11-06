@@ -21,6 +21,7 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { HomeBell } from '@/components/home/v2/HomeBell';
 import { EMPTY_STATE_ACTION_CLASS } from '@/components/shared/EmptyState';
 import { PlanLoopDemo } from '@/components/artists/PlanLoopDemo';
+import { OutNowCards } from '@/components/home/OutNowCards';
 import { useShellStore } from '@/stores/useShellStore';
 import { useRoleViewViewer } from '@/components/shell/useShellAreas';
 import { artistHomeId } from '@/lib/artist-home';
@@ -122,6 +123,8 @@ export default function ArtistsPageClient({
         <ArtistsEmpty />
       ) : (
         <div className="section-list-enter">
+          {/* Songs out this week sit above everything (#1086). */}
+          <OutNowCards className="mb-4" />
           {list.spotlight ? <Spotlight row={list.spotlight} /> : null}
           <div className={`${list.spotlight ? 'mt-4 ' : ''}overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface`}>
             {/* The tracklist (#878, mock docs/mocks/artists-list, B): who, what
@@ -491,6 +494,7 @@ function SwipeArtists({ loading, list }: { loading: boolean; list: ArtistsListDa
         </div>
       ) : (
         <>
+          <OutNowCards className="mt-4" />
           {spotlight ? (
             <div className="mt-4">
               <Spotlight row={spotlight} compact />

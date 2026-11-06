@@ -17,6 +17,7 @@ import {
   ctrPercent,
   daysUntilRelease,
   isFanCaptureAvailable,
+  isReleasedOn,
   orderPlatforms,
   smartLinkPhase,
   type SmartLinkPlatform,
@@ -25,6 +26,8 @@ import {
 import { CaptureSection } from './CaptureSection';
 import { PoweredByAltlink } from './PoweredByAltlink';
 import { markSmartLinkReady } from './useSmartLinkReady';
+import { CodeFinderPanel } from './CodeFinderPanel';
+import { useCodeFinder } from './useCodeFinder';
 
 const FAN_EMAILS_ENABLED = isFanCaptureAvailable();
 
@@ -169,6 +172,19 @@ export function SmartLinkSection({ releaseId, onToast, part = 'all', onOpenLink 
     Boolean(view?.enabled && view?.configured) && !view?.link && !view?.notReady;
   const creating = phase === 'creating' || waitingToCreate;
 
+  // A released song with no UPC or ISRC: look it up on streaming and ask
+  // "Is this your song?" (#1086). The same finder the Out now card uses.
+  const needsCode = view?.notReady === 'no_code' || view?.notReady === 'missing_identifier';
+  const onLinkMade = useCallback(() => {
+    polls.current = 0;
+    void load();
+  }, [load]);
+  const finder = useCodeFinder(
+    releaseId,
+    Boolean(view?.enabled && view?.configured && canWrite && needsCode && phase === 'none' && isReleasedOn(view?.facts.releaseDate, now)),
+    onLinkMade
+  );
+
   // A link seen here turns the menu row and panel title to "Smart link" (#852).
   const linkSeen = phase === 'presave' || phase === 'released';
   useEffect(() => {
@@ -290,7 +306,17 @@ export function SmartLinkSection({ releaseId, onToast, part = 'all', onOpenLink 
             <CaptureSection releaseId={releaseId} onToast={onToast} embedded beforeLink />
           </section>
         ) : null}
-        {hidden ? null : (
+        {!hidden && finder.view && finder.view.status !== 'has_code' && finder.view.status !== 'not_out' ? (
+          <section className={`${CARD} p-5`}>
+            <CodeFinderPanel
+              view={finder.view}
+              answering={finder.answering}
+              error={finder.error}
+              onAnswer={(accept) => void finder.answer(accept)}
+              typeCodeHref={`/dashboard?release=${encodeURIComponent(releaseId)}&scene=metadata&field=upc`}
+            />
+          </section>
+        ) : hidden ? null : (
           <SmartLinkComing
             reason={view.notReady}
             configured={view.configured}

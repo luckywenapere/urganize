@@ -483,6 +483,9 @@ export interface AnalyticsEventPropertiesMap {
   };
   /** The Artists list's Next drop banner (#878): a tap opens that rollout. */
   artists_list_action: { artist_id: string; action: 'spotlight' };
+  /** The Out now card on Home (#1086): the smart link copied or shared. */
+  out_now_link_copied: { release_id: string };
+  out_now_link_shared: { release_id: string };
   /**
    * The posting plan (2026-10-27): posts per artist, between releases. Added
    * against marked done is the whole question. Ids and counts only, never the
