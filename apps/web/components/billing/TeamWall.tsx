@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Card, Logo } from '@urganize/ui';
 import {
   PRICING_TIER_ORDER,
+  formatTierFromPrice,
   SALES_CONTACT_EMAIL,
   SALES_WHATSAPP_URL,
   DEFAULT_SELLING_INTERVAL,
@@ -92,6 +93,10 @@ const PRICING_V2 = isPricingV2Enabled();
  *  Sales-led tiers drop out on their own, which is what we want: the
  *  full-weight "Talk to us" card beside this picker IS their path, and a radio
  *  that cannot check out would be a dead end sitting next to the real one. */
+/** Label is a custom deal (2026-11-07): shown as a starting price beside the
+ *  Talk to us links, never as a card with a checkout. */
+const LABEL_FROM = formatTierFromPrice('label');
+
 const WALL_TIERS: readonly PricingTierId[] = PRICING_TIER_ORDER.filter(
   (tier) => !getTier(tier).contactSales
 );
@@ -831,6 +836,11 @@ export function TeamWall() {
             {/* Talk to us: a quiet second path, not a rival button. One filled action
                 converts best; teams that close over an invoice still find this in one
                 tap, right under the thing they are deciding about. */}
+            {LABEL_FROM ? (
+              <p className="text-center text-sm text-content-secondary">
+                Running a label? Label is {LABEL_FROM.replace(/^From/, 'from')}, set up with you.
+              </p>
+            ) : null}
             <div className="flex flex-wrap items-center justify-center gap-x-4 text-sm">
               <button
                 type="button"

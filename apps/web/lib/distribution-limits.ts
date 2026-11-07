@@ -1,4 +1,10 @@
-import { DISTRIBUTION_ALLOWANCE, EXTRA_RELEASE_PRICE_NAIRA, TRM_PER_RELEASE_NAIRA, type PricingTierId } from '@urganize/pricing';
+import {
+  DISTRIBUTION_ALLOWANCE,
+  EXTRA_RELEASE_PRICE_NAIRA,
+  TRM_PER_RELEASE_NAIRA,
+  type PricingTierId,
+  type TeamDistributionPlan,
+} from '@urganize/pricing';
 
 // What a plan's "Distribution included" covers, and what a send beyond it costs
 // (founder, 2026-10-26; mocks docs/mocks/distribution-limits). Pure and
@@ -6,13 +12,16 @@ import { DISTRIBUTION_ALLOWANCE, EXTRA_RELEASE_PRICE_NAIRA, TRM_PER_RELEASE_NAIR
 //
 // THE RULES
 //   Artists   The plan's artists are the first ones the team sends under the
-//             plan (Manager 1, Label 5), for as long as the team is on it.
+//             plan (Pro 1, Label 5), for as long as the team is on it.
 //   Releases  Each release sent under the plan counts once in the Lagos month
-//             it was first sent (Manager 7, Label 10). The count starts again
+//             it was first sent (Pro 7, Label 10) on a monthly-paying team;
+//             a team paying yearly is on TRM's yearly plan, which has no
+//             monthly cap (2026-11-07, #1112). The count starts again
 //             on the 1st.
 //   Beyond    A send for another artist, or past the month's count, is one paid
-//             release (₦2,200: TRM's ₦2,100 plus a markup that covers the
-//             Paystack fee), paid before it goes.
+//             single (₦2,000, of which we owe TRM 80%: ₦1,600; TRM confirmed
+//             2026-11-07 that pay per release is for singles only), paid before
+//             it goes.
 //   Resends   A release that already counted, or was paid for, never counts or
 //             costs again (a resubmit after a rejection is free).
 //
@@ -75,7 +84,8 @@ export type DistributionVerdict =
 export type DistributionLimitView = {
   tier: PricingTierId;
   artistsLimit: number;
-  releasesLimit: number;
+  /** Releases a month the plan covers, or null on TRM's yearly plan (no cap). */
+  releasesLimit: number | null;
   /** Releases counted under the plan this Lagos month. */
   used: number;
   /** When the count starts again (the 1st, 00:00 Lagos), ISO. */
@@ -96,6 +106,9 @@ export function decideDistributionLimit(input: {
   releaseId: string;
   artistKey: string | null;
   now: Date;
+  /** The team's TRM plan from how it pays us. 'yearly' lifts the monthly
+   *  release count; anything else keeps it. Defaults to monthly. */
+  teamPlan?: TeamDistributionPlan;
 }): DistributionLimitView | null {
   const allowance = DISTRIBUTION_ALLOWANCE[input.tier];
   if (!allowance) return null;
@@ -126,12 +139,12 @@ export function decideDistributionLimit(input: {
     planArtistKeys.length >= allowance.artists
   ) {
     verdict = 'artist';
-  } else if (used >= allowance.releasesPerMonth) verdict = 'releases';
+  } else if (input.teamPlan !== 'yearly' && used >= allowance.releasesPerMonth) verdict = 'releases';
 
   return {
     tier: input.tier,
     artistsLimit: allowance.artists,
-    releasesLimit: allowance.releasesPerMonth,
+    releasesLimit: input.teamPlan === 'yearly' ? null : allowance.releasesPerMonth,
     used,
     resetsAt: nextStartsAt.toISOString(),
     planArtists: planArtistKeys.map((key) => artistNames.get(key) ?? 'An artist'),

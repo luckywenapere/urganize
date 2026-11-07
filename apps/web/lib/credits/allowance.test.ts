@@ -15,14 +15,15 @@ import { isCreditsEnabled } from './config';
 import { NAIRA_PER_CREDIT_CREDITS_ONLY, NAIRA_PER_CREDIT_SUBSCRIBER } from './pricing';
 
 describe('the founder rules in numbers', () => {
-  it('give a trial 50 credits and the plans 150, 660 and 1,500, Group the same as Label', () => {
+  it('give a trial 50 credits and the plans 100, 300, 600 and 1,500, Group the same as Label', () => {
     expect(TRIAL_CREDITS).toBe(50);
-    expect(ALLOWANCE_CREDITS).toEqual({ solo: 150, manager: 660, label: 1500, enterprise: 1500 });
+    expect(ALLOWANCE_CREDITS).toEqual({ solo: 100, manager: 300, pro: 600, label: 1500, enterprise: 1500 });
     // The pricing card prints urgansMonthlyCredits (2026-10-15). This file may
     // import only its siblings (credits-guard), so the two are held equal here.
     expect(ALLOWANCE_CREDITS).toEqual({
       solo: PRICING_TIERS.solo.urgansMonthlyCredits,
       manager: PRICING_TIERS.manager.urgansMonthlyCredits,
+      pro: PRICING_TIERS.pro.urgansMonthlyCredits,
       label: PRICING_TIERS.label.urgansMonthlyCredits,
       enterprise: PRICING_TIERS.enterprise.urgansMonthlyCredits,
     });
@@ -55,8 +56,9 @@ describe('creditAccount', () => {
 
 describe('monthlyAllowanceCredits', () => {
   it("gives a paying team its plan's allowance", () => {
-    expect(monthlyAllowanceCredits({ state: 'paid', tier: 'solo' })).toBe(150);
-    expect(monthlyAllowanceCredits({ state: 'paid', tier: 'manager' })).toBe(660);
+    expect(monthlyAllowanceCredits({ state: 'paid', tier: 'solo' })).toBe(100);
+    expect(monthlyAllowanceCredits({ state: 'paid', tier: 'manager' })).toBe(300);
+    expect(monthlyAllowanceCredits({ state: 'paid', tier: 'pro' })).toBe(600);
     expect(monthlyAllowanceCredits({ state: 'paid', tier: 'label' })).toBe(1500);
   });
 

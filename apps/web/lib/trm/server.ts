@@ -18,6 +18,8 @@ import { loadHandoff, type LoadedHandoff } from '../handoff-server';
 import { recordTrmFeeForSend } from './partner-ledger-server';
 import { checkDistributionSend, loadDistributionLimit, recordDistributionSend } from '../distribution-limits-server';
 import type { DistributionLimitView } from '../distribution-limits';
+import { loadTeamDistribution } from '../distribution-team-server';
+import { distributionAccess, teamDistributionPlan, type DistributionAccess as StoreAccess, type TeamDistributionPlan } from '@urganize/pricing';
 import { readTestRelease } from '../test-release';
 import type { BillingEventType } from '../billing-events';
 import {
@@ -280,6 +282,12 @@ export type TrmPayload = {
   /** The plan's distribution allowance for this release, or null when the
    *  team's plan has none (it sends with the artist's own TRM plan). */
   limit: DistributionLimitView | null;
+  /** May this release go to the stores on the team's TRM plan (TRM's rules,
+   *  2026-11-07): a single always, an EP on a monthly or yearly plan, an album
+   *  only on a yearly plan. Pro and Label pay us monthly or yearly and get the
+   *  matching TRM plan; Solo and Manager have none. */
+  storeAccess: StoreAccess;
+  teamDistributionPlan: TeamDistributionPlan;
   title: string;
   checklist: Omit<TrmChecklist, 'blocking' | 'ready'> & { blocking: TrmRowView[]; ready: TrmRowView[] };
   settings: TrmSettings;
@@ -359,7 +367,7 @@ export async function loadTrmPayload(
   const settings = readTrmSettings(submission?.settings);
   const checklist = trmChecklist(loadedFacts.facts, settings, now);
   const decorate = (row: TrmRow): TrmRowView => ({ ...row, owner: ownerFor(loaded, row.ownerItem) });
-  const [artistEmail, limit] = await Promise.all([
+  const [artistEmail, limit, team] = await Promise.all([
     submission?.artist_email ?? rememberedArtistEmail(admin, loadedFacts.artistId),
     loadDistributionLimit(admin, {
       ownerUserId: loadedFacts.ownerUserId,
@@ -367,9 +375,15 @@ export async function loadTrmPayload(
       artistId: loadedFacts.artistId,
       artistName: loadedFacts.facts.primaryArtist || null,
     }).catch(() => null),
+    loadedFacts.ownerUserId ? loadTeamDistribution(admin, loadedFacts.ownerUserId).catch(() => null) : Promise.resolve(null),
   ]);
+  const decision = team?.decision;
+  const teamPlan: TeamDistributionPlan =
+    decision && decision.state === 'included' ? teamDistributionPlan(decision.tier, decision.interval) : 'none';
   return {
     limit: limit?.view ?? null,
+    storeAccess: distributionAccess({ releaseType: loadedFacts.facts.releaseType, teamPlan }),
+    teamDistributionPlan: teamPlan,
     canSend: canSendToTrm(viewer.email),
     releaseType: loadedFacts.facts.releaseType,
     releaseDate: loadedFacts.facts.releaseDate,

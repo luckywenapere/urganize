@@ -1,6 +1,7 @@
 import {
   INTERVAL_MONTHS,
   distributionIncluded,
+  trmOwedFor,
   isPricingTierId,
   type BillingInterval,
   type PricingTierId,
@@ -29,11 +30,19 @@ import {
 //   ledger: those deals set their own TRM terms.
 //
 // Every number is kobo and every result is a whole number of kobo.
+//
+// OUR 20% (TRM, 2026-11-07, #1112): Urganize keeps TRM_MARGIN of every amount a
+// team pays TRM through us, per release and every TRM plan, so on the fixed
+// basis we owe TRM 80% of its plan price (trmOwedFor). The fee config keeps
+// TRM's own list prices; the margin is applied where the amount owed is worked
+// out. The percent basis is a negotiated share and is recorded as set.
 
 export type TrmCostBasis = 'fixed' | 'percent';
 export type TrmBillingMode = 'trm_plan' | 'monthly_prorata' | 'annual_upfront';
 export type TrmPlan = 'single_artist' | 'label';
-export type TrmLedgerPlan = 'manager' | 'label';
+// 'pro' since 2026-11-07 (#1112): Pro includes distribution on TRM Independent
+// Artist and Manager no longer does. 'manager' stays for rows written before.
+export type TrmLedgerPlan = 'manager' | 'pro' | 'label';
 
 /** TRM's Naira prices per entitled team, kobo, when TRM_FEE_* is not set.
  *  Read from TRM's Paystack pay pages on 2026-10-26: Independent Artist
@@ -94,10 +103,13 @@ export function readTrmFeeConfig(env: Env = process.env): TrmFeeConfig {
     billingMode: (BILLING_MODES as readonly string[]).includes(mode) ? (mode as TrmBillingMode) : 'trm_plan',
     feeAnnualKobo: {
       manager: readKobo(env.TRM_FEE_MANAGER_ANNUAL_KOBO, DEFAULT_TRM_FEE_MANAGER_ANNUAL_KOBO),
+      // Pro is on the same TRM plan (Independent Artist), so the same fee vars.
+      pro: readKobo(env.TRM_FEE_MANAGER_ANNUAL_KOBO, DEFAULT_TRM_FEE_MANAGER_ANNUAL_KOBO),
       label: readKobo(env.TRM_FEE_LABEL_ANNUAL_KOBO, DEFAULT_TRM_FEE_LABEL_ANNUAL_KOBO),
     },
     feeMonthlyKobo: {
       manager: readKobo(env.TRM_FEE_MANAGER_MONTHLY_KOBO, DEFAULT_TRM_FEE_MANAGER_MONTHLY_KOBO),
+      pro: readKobo(env.TRM_FEE_MANAGER_MONTHLY_KOBO, DEFAULT_TRM_FEE_MANAGER_MONTHLY_KOBO),
       label: readKobo(env.TRM_FEE_LABEL_MONTHLY_KOBO, DEFAULT_TRM_FEE_LABEL_MONTHLY_KOBO),
     },
     revenueShareBps,
@@ -108,7 +120,7 @@ export function readTrmFeeConfig(env: Env = process.env): TrmFeeConfig {
 
 /** Which TRM plan a tier maps to, or null when it is not in the ledger. */
 export function trmPlanFor(tier: string | null | undefined): TrmPlan | null {
-  if (tier === 'manager') return 'single_artist';
+  if (tier === 'pro' || tier === 'manager') return 'single_artist';
   if (tier === 'label') return 'label';
   return null;
 }
@@ -229,7 +241,7 @@ export function ledgerEntryForPayment(input: {
       revenueShareBps: null,
       serviceMonths: 1,
       amountPaidKobo: paid,
-      owedKobo: feeMonthly,
+      owedKobo: trmOwedFor(feeMonthly),
       periodStart: input.chargedAt,
       periodEnd: addMonths(input.chargedAt, 1),
     };
@@ -247,7 +259,7 @@ export function ledgerEntryForPayment(input: {
       revenueShareBps: null,
       serviceMonths: 12,
       amountPaidKobo: paid,
-      owedKobo: feeAnnual,
+      owedKobo: trmOwedFor(feeAnnual),
       periodStart: input.chargedAt,
       periodEnd: addMonths(input.chargedAt, 12),
     };
@@ -263,7 +275,7 @@ export function ledgerEntryForPayment(input: {
     revenueShareBps: null,
     serviceMonths: months,
     amountPaidKobo: paid,
-    owedKobo: Math.round((feeAnnual * months) / 12),
+    owedKobo: trmOwedFor((feeAnnual * months) / 12),
     periodStart: input.chargedAt,
     periodEnd: addMonths(input.chargedAt, months),
   };
@@ -280,11 +292,14 @@ export function monthlyTrmFeeKobo(
 ): number {
   const trmPlan = trmPlanFor(plan);
   if (!trmPlan) return 0;
+  // Manager stopped including distribution on 2026-11-07, so a Manager team
+  // owes TRM nothing a month; its singles are paid one by one.
+  if (plan === 'manager') return 0;
   const ledgerPlan = plan as TrmLedgerPlan;
   if (config.billingMode === 'trm_plan' && (interval ?? 'monthly') === 'monthly') {
-    return config.feeMonthlyKobo[ledgerPlan];
+    return trmOwedFor(config.feeMonthlyKobo[ledgerPlan]);
   }
-  return Math.round(config.feeAnnualKobo[ledgerPlan] / 12);
+  return trmOwedFor(config.feeAnnualKobo[ledgerPlan] / 12);
 }
 
 // ------------------------------------------------------------------ CSV export
@@ -354,7 +369,7 @@ export function trmLedgerCsv(rows: readonly TrmLedgerCsvRow[]): string {
       [
         row.team_name ?? row.workspace_id ?? '',
         row.charge_reference,
-        row.plan === 'manager' ? 'Pro' : row.plan === 'label' ? 'Label' : row.plan,
+        row.plan === 'pro' ? 'Pro' : row.plan === 'manager' ? 'Manager' : row.plan === 'label' ? 'Label' : row.plan,
         TRM_PLAN_LABEL[row.trm_plan] ?? row.trm_plan,
         row.cost_basis === 'percent' ? 'Percent' : 'Fixed',
         row.entry_kind === 'adjustment' ? 'Extra release' : (BILLING_MODE_LABEL[row.billing_mode] ?? row.billing_mode),

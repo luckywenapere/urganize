@@ -157,8 +157,9 @@ function RecordTransferForm({ onDone }: { onDone: () => void }) {
         <label className="block text-sm text-content-secondary">
           Plan
           <select value={form.plan} onChange={set('plan')} className={FIELD}>
-            <option value="solo">Emerging</option>
-            <option value="manager">Pro</option>
+            <option value="solo">Solo</option>
+            <option value="manager">Manager</option>
+            <option value="pro">Pro</option>
             <option value="label">Label</option>
           </select>
         </label>
@@ -249,8 +250,9 @@ function SendPaymentLinkForm() {
         <label className="block text-sm text-content-secondary">
           Plan
           <select value={form.plan} onChange={set('plan')} className={FIELD}>
-            <option value="solo">Emerging</option>
-            <option value="manager">Pro</option>
+            <option value="solo">Solo</option>
+            <option value="manager">Manager</option>
+            <option value="pro">Pro</option>
             <option value="label">Label</option>
           </select>
         </label>

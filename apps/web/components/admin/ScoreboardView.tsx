@@ -316,7 +316,7 @@ export function ScoreboardView({
         </h2>
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>
-            A paying team has a current Pro or Label subscription. Emerging adds to MRR but is
+            A paying team has a current Manager, Pro or Label subscription. Solo adds to MRR but is
             not a team. Free and allowlisted teams are left out.
           </li>
           <li>

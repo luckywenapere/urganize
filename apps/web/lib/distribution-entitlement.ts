@@ -12,11 +12,11 @@ import { isDistributionEntitled } from './trm/partner-fee';
 // (app/api/billing/distribution); the step renders the answer.
 //
 // THREE ANSWERS
-//   included     Manager or Label (or a period that qualifies while
+//   included     Pro or Label (or a period that qualifies while
 //                DISTRIBUTION_REQUIRES_PREPAY is on), and the team is paying.
-//   needs_prepay A monthly Manager or Label team while the flag is on: it
+//   needs_prepay A monthly Pro or Label team while the flag is on: it
 //                needs a 6-month or yearly period.
-//   not_on_plan  Solo, a legacy plan, a trial, no plan, or a lapsed one. The
+//   not_on_plan  Solo, Manager, a legacy plan, a trial, no plan, or a lapsed one. The
 //                own-TRM-plan path (today's Send to TRM) stays open below.
 //
 // LAPSE IS UNCHANGED: a team in its paid period (including Paystack's retries,
@@ -46,7 +46,7 @@ export function decideDistributionAccess(input: {
   if (isDistributionEntitled({ plan, interval: input.interval, requiresPrepay: input.requiresPrepay })) {
     return { state: 'included', tier: plan, interval: input.interval ?? 'monthly', until: input.expiresAt ?? null };
   }
-  if (input.requiresPrepay && input.interval === 'monthly' && (plan === 'manager' || plan === 'label')) {
+  if (input.requiresPrepay && input.interval === 'monthly' && (plan === 'pro' || plan === 'label')) {
     return { state: 'needs_prepay', tier: plan };
   }
   return { state: 'not_on_plan', reason: 'no_plan' };

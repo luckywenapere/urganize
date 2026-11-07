@@ -25,7 +25,7 @@ export const FUNNEL_STEP_COPY: Record<FunnelStepKey, { label: string; info: stri
   },
   paid: {
     label: 'Paid',
-    info: 'The owner paid for a plan after the trial started (any plan, Emerging included). A team that paid and later stopped still counts here. Comped and allowlisted teams are left out.',
+    info: 'The owner paid for a plan after the trial started (any plan, Solo included). A team that paid and later stopped still counts here. Comped and allowlisted teams are left out.',
   },
 };
 

@@ -25,16 +25,17 @@ export function formatNaira(amount: number): string {
 
 // ---------------------------------------------------------------- the intent
 
-export type CheckoutPlan = Extract<PricingTierId, 'solo' | 'manager' | 'label'>;
-// What checkout offers (2026-10-26): Solo and Manager, monthly or yearly.
+export type CheckoutPlan = Extract<PricingTierId, 'solo' | 'manager' | 'pro' | 'label'>;
+// What checkout offers: Solo, Manager and Pro (2026-11-07, #1112), monthly or
+// yearly.
 // Label and the 6-month period are still valid ids (isCheckoutPlan,
 // isCheckoutPeriod) so teams already on them can renew.
-export const CHECKOUT_PLANS: readonly CheckoutPlan[] = ['solo', 'manager'];
+export const CHECKOUT_PLANS: readonly CheckoutPlan[] = ['solo', 'manager', 'pro'];
 export const CHECKOUT_PERIODS: readonly BillingInterval[] = ['monthly', 'annual'];
 export type PaymentMethodChoice = 'card' | 'transfer';
 
 export function isCheckoutPlan(value: unknown): value is CheckoutPlan {
-  return value === 'solo' || value === 'manager' || value === 'label';
+  return value === 'solo' || value === 'manager' || value === 'pro' || value === 'label';
 }
 
 export function isCheckoutPeriod(value: unknown): value is BillingInterval {
@@ -139,7 +140,10 @@ export function youGet(plan: CheckoutPlan, distributionOn: boolean): YouGetRow[]
     { label: 'People on your team', value: limits.seats === null ? 'No limit' : String(limits.seats) },
     { label: 'AI credits', value: `${ALLOWANCE_CREDITS[plan].toLocaleString('en-NG')} / mo` },
   ];
-  if (distributionOn) rows.push({ label: 'Distribution', value: 'Partner' });
+  // Only a plan that includes distribution (Pro and Label since 2026-11-07).
+  if (distributionOn && PRICING_TIERS[plan].includesDistribution) {
+    rows.push({ label: 'Distribution', value: 'Partner' });
+  }
   return rows;
 }
 
@@ -379,7 +383,7 @@ export function setupCallUrl(): string | null {
 }
 
 export function offersSetupCall(plan: string | null | undefined): boolean {
-  return plan === 'manager' || plan === 'label' || plan === 'enterprise';
+  return plan === 'manager' || plan === 'pro' || plan === 'label' || plan === 'enterprise';
 }
 
 // ---------------------------------------------------------------- copy

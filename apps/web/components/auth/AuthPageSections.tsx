@@ -12,6 +12,7 @@
 import { useState } from 'react';
 import {
   PRICING_TIER_ORDER,
+  formatTierFromPrice,
   getIntroPrice,
   getTier,
   getTierPrice,
@@ -38,7 +39,9 @@ const naira = (amount: number) =>
 /** Same figures as the /pricing card (apps/homepage PricingTierCards). */
 function cardPrice(tierId: PricingTierId, interval: Interval) {
   if (getTier(tierId).contactSales) {
-    return { figure: 'Let’s talk', unit: null, sub: 'A price set with you, for your roster.', was: null };
+    // Label is a custom deal from 2026-11-07: a starting price, never a checkout one.
+    const from = formatTierFromPrice(tierId, interval);
+    return { figure: from ?? 'Let’s talk', unit: null, sub: 'A price set with you, for your roster.', was: null };
   }
   if (interval === 'monthly') {
     const intro = getIntroPrice(tierId);
@@ -93,7 +96,7 @@ export function AuthPlans() {
         })}
       </div>
 
-      <div className="mt-7 grid w-full max-w-[1320px] gap-4 md:mt-[45px] md:grid-cols-3 md:gap-[30px]">
+      <div className="mt-7 grid w-full max-w-[1320px] gap-4 md:mt-[45px] md:grid-cols-2 md:gap-[30px] xl:grid-cols-4">
         {PRICING_TIER_ORDER.map((tierId) => {
           const tier = getTier(tierId);
           const { figure, unit, sub, was } = cardPrice(tierId, interval);
@@ -174,7 +177,7 @@ const QUESTIONS = [
     q: 'How much does it cost?',
     // Read from the pricing package so a reprice can never leave this answer
     // disagreeing with the plan cards above it.
-    a: `Emerging is ${monthlyFigure('solo')} a month and Pro is ${monthlyFigure('manager')} a month. Your first month costs less. Label is priced with you. One price covers your whole team.`,
+    a: `Solo is ${monthlyFigure('solo')} a month, Manager is ${monthlyFigure('manager')} and Pro is ${monthlyFigure('pro')}. Label starts at ${monthlyFigure('label')} a month and is priced with you. One price covers your whole team.`,
   },
 ] as const;
 

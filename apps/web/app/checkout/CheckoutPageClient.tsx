@@ -73,7 +73,7 @@ type Options = {
   current: { plan: CheckoutPlan; period: BillingInterval; card: boolean } | null;
 };
 
-const PLAN_RANK: Record<CheckoutPlan, number> = { solo: 0, manager: 1, label: 2 };
+const PLAN_RANK: Record<CheckoutPlan, number> = { solo: 0, manager: 1, pro: 2, label: 3 };
 
 type TransferInvoice = {
   id: string;
@@ -132,7 +132,7 @@ function CallStep({
 }) {
   const url = setupCallUrl();
   const name = planName(intent.plan);
-  const monthlyPlan: CheckoutPlan = intent.plan === 'label' ? 'manager' : intent.plan;
+  const monthlyPlan: CheckoutPlan = intent.plan === 'label' ? 'pro' : intent.plan;
   const steps = [
     'Pick a time. It takes 15 minutes.',
     'We talk through your team and your releases.',
@@ -638,7 +638,7 @@ function CheckoutStep({
     if (!current) return;
     setError(null);
     setBusy(true);
-    if (current.plan === 'solo' && intent.plan === 'manager') {
+    if ((current.plan === 'solo' && intent.plan === 'manager') || (current.plan === 'manager' && intent.plan === 'pro')) {
       track('upgrade_to_manager_clicked', { plan: intent.plan, period: current.period, source: 'checkout' }, userId);
     }
     track('checkout_started', { plan: intent.plan, period: current.period, method: 'card', kind: 'change' }, userId);

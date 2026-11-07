@@ -46,6 +46,7 @@ import { DistributionPlanCard } from './DistributionPlanCard';
 import { DistributionLimitBlock } from './DistributionLimit';
 import { isExtraReleaseReference, needsPayment } from '@/lib/distribution-limits';
 import { useDistributionPlan } from './useDistributionPlan';
+import { checkoutPath } from '@/lib/self-serve';
 
 /**
  * The Distribute step with Send to TRM (URG-392), built to the approved mocks
@@ -467,9 +468,33 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
 
   // ---- Singles first -----------------------------------------------------------
   if (data.checklist.singlesOnly) {
+    // TRM's rules (2026-11-07): an EP needs a monthly TRM plan, an album a
+    // yearly one. A team without the plan is told so, with the two ways on.
+    const album = data.releaseType === 'album';
+    if (data.storeAccess !== 'allowed') {
+      return wrap(
+        <>
+          <Hero
+            title={album ? 'Albums need a yearly distribution plan.' : 'EPs need a monthly distribution plan.'}
+            meta={
+              album
+                ? 'Pro and Label include it when you pay yearly.'
+                : 'Pro and Label include it, monthly or yearly.'
+            }
+          />
+          <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:gap-3">
+            <a href={checkoutPath({ plan: 'pro', period: album ? 'annual' : 'monthly' })} className={PRIMARY}>
+              {album ? 'Move to Pro, yearly' : 'Move to Pro'}
+            </a>
+          </div>
+          <p className={`mt-3 ${MONO}`}>Or send it from the artist’s own TRM account.</p>
+          <Partners />
+        </>
+      );
+    }
     return wrap(
       <>
-        <Hero title="Singles first." meta={`${data.releaseType === 'album' ? 'Albums' : 'EPs'} are coming to TRM soon`} />
+        <Hero title="Singles first." meta={`${album ? 'Albums' : 'EPs'} are coming to TRM soon`} />
         <Partners />
       </>
     );

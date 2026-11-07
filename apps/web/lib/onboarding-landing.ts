@@ -117,11 +117,14 @@ export function decideTrialSheet(input: TrialSheetInput): 'open' | 'wait' | 'non
 const NUMBER_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'];
 const numberWord = (n: number): string => NUMBER_WORDS[n] ?? String(n);
 
-/** "One artist, you and one other person." / "Up to 3 artists and 5 people." Read from the plan's limits. */
+/** "One artist, you and two others." / "Up to 3 artists and 5 people." Read from the plan's limits. */
 export function planLimitLines(tier: PricingTierId): string[] {
   const { artists, seats, activeReleases } = PRICING_TIERS[tier].limits;
   const lines: string[] = [];
-  if (artists === 1 && seats === 2) lines.push('One artist, you and one other person.');
+  if (artists === 1 && seats !== null && seats > 1) {
+    const others = seats - 1;
+    lines.push(`One artist, you and ${others === 1 ? 'one other person' : `${numberWord(others).toLowerCase()} others`}.`);
+  }
   else if (artists !== null && seats !== null) {
     lines.push(`Up to ${artists} ${artists === 1 ? 'artist' : 'artists'} and ${seats} ${seats === 1 ? 'person' : 'people'}.`);
   }

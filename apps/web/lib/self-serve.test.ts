@@ -75,25 +75,31 @@ describe('checkout intent', () => {
 
 describe('amounts come from the pricing package', () => {
   it('Manager', () => {
-    expect(periodAmount('manager', 'monthly')).toBe(40_000);
-    expect(periodAmount('manager', 'monthly', 1)).toBe(24_000);
-    expect(periodAmount('manager', 'semiannual')).toBe(200_000);
-    expect(periodAmount('manager', 'annual')).toBe(400_000);
+    expect(periodAmount('manager', 'monthly')).toBe(15_000);
+    // No first-month price since 2026-11-07.
+    expect(periodAmount('manager', 'monthly', 1)).toBe(15_000);
+    expect(periodAmount('manager', 'semiannual')).toBe(75_000);
+    expect(periodAmount('manager', 'annual')).toBe(150_000);
+  });
+
+  it('Pro', () => {
+    expect(periodAmount('pro', 'monthly')).toBe(40_000);
+    expect(periodAmount('pro', 'annual')).toBe(400_000);
   });
 
   it('Solo', () => {
-    expect(periodAmount('solo', 'monthly')).toBe(4_000);
-    expect(periodAmount('solo', 'monthly', 1)).toBe(2_600);
-    expect(periodAmount('solo', 'semiannual')).toBe(20_000);
-    expect(periodAmount('solo', 'annual')).toBe(40_000);
+    expect(periodAmount('solo', 'monthly')).toBe(5_000);
+    expect(periodAmount('solo', 'monthly', 1)).toBe(5_000);
+    expect(periodAmount('solo', 'semiannual')).toBe(25_000);
+    expect(periodAmount('solo', 'annual')).toBe(50_000);
   });
 
   it('says the price and the saving plainly', () => {
-    expect(periodHeadline('manager', 'monthly')).toBe('₦40,000 a month');
-    expect(periodHeadline('solo', 'monthly', 1)).toBe('₦2,600 a month');
-    expect(introSubline('solo', 'monthly', 1)).toBe('For your first month, then ₦4,000 a month.');
-    expect(periodHeadline('manager', 'semiannual')).toBe('₦200,000 for 6 months');
-    expect(periodHeadline('manager', 'annual')).toBe('₦400,000 a year');
+    expect(periodHeadline('manager', 'monthly')).toBe('₦15,000 a month');
+    expect(periodHeadline('solo', 'monthly', 1)).toBe('₦5,000 a month');
+    expect(introSubline('solo', 'monthly', 1)).toBeNull();
+    expect(periodHeadline('manager', 'semiannual')).toBe('₦75,000 for 6 months');
+    expect(periodHeadline('pro', 'annual')).toBe('₦400,000 a year');
     expect(periodSaving('semiannual')).toBe('One month free');
     expect(periodSaving('monthly')).toBeNull();
   });
@@ -101,10 +107,12 @@ describe('amounts come from the pricing package', () => {
   it('lists what Manager gets', () => {
     expect(youGet('manager', false)).toEqual([
       { label: 'Artists', value: '3' },
-      { label: 'People on your team', value: '5' },
-      { label: 'AI credits', value: '660 / mo' },
+      { label: 'People on your team', value: '6' },
+      { label: 'AI credits', value: '300 / mo' },
     ]);
-    expect(youGet('manager', true).at(-1)).toEqual({ label: 'Distribution', value: 'Partner' });
+    // Manager pays per single; Pro includes distribution (2026-11-07).
+    expect(youGet('manager', true).some((row) => row.label === 'Distribution')).toBe(false);
+    expect(youGet('pro', true).at(-1)).toEqual({ label: 'Distribution', value: 'Partner' });
   });
 
   it('hides a card period with no Paystack plan, never a transfer one', () => {
@@ -182,10 +190,10 @@ describe('renewal reminders', () => {
 
   it('words the banner', () => {
     expect(renewalBannerText('manager', 3)).toEqual({
-      title: 'Pro ends in 3 days.',
+      title: 'Manager ends in 3 days.',
       body: 'Renew to keep your team working.',
     });
-    expect(renewalBannerText('solo', 1).title).toBe('Emerging ends tomorrow.');
+    expect(renewalBannerText('solo', 1).title).toBe('Solo ends tomorrow.');
   });
 });
 
@@ -286,7 +294,7 @@ describe('email copy', () => {
 
   it('says what a renewal costs and when the plan ends', () => {
     const copy = renewalEmailCopy({ plan: 'manager', expiresAt: '2026-10-24T22:59:00Z', amountNaira: 30000 });
-    expect(copy.subject).toContain('Pro');
+    expect(copy.subject).toContain('Manager');
     expect(copy.body).toContain('30,000');
     expect(copy.body).not.toMatch(/\u2014/);
   });

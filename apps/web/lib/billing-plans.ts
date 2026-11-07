@@ -40,7 +40,7 @@ import {
  * reaches self-serve checkout or the renewal path. (It was removed 2026-09-09
  * and came back 2026-10-02 the same way.)
  */
-export type RecurringPlanId = BillingPlanId | 'manager' | 'solo';
+export type RecurringPlanId = BillingPlanId | 'manager' | 'solo' | 'pro';
 
 /** The tiers a customer can actually buy without talking to us.
  *
@@ -64,12 +64,15 @@ export type RecurringPlanId = BillingPlanId | 'manager' | 'solo';
  * ids renews regardless, because `isRecurringPlan` below is a separate list
  * answering a separate question — whether a tier can be BOUGHT today and
  * whether a live subscription still EXTENDS are meant to be able to disagree. */
-export type SelfServeTierId = Extract<PricingTierId, 'manager' | 'solo' | 'label'>;
+export type SelfServeTierId = Extract<PricingTierId, 'manager' | 'solo' | 'pro' | 'label'>;
 
 export function isSelfServeTier(value: unknown): value is SelfServeTierId {
   // A contact-us tier (Label since 2026-10-26) is not bought here, whatever
   // its id. Its existing subscribers still renew: see isRecurringPlan.
-  return (value === 'manager' || value === 'solo' || value === 'label') && !PRICING_TIERS[value].contactSales;
+  return (
+    (value === 'manager' || value === 'solo' || value === 'pro' || value === 'label') &&
+    !PRICING_TIERS[value].contactSales
+  );
 }
 
 /**
@@ -193,18 +196,28 @@ const PLAN_CODE_ENV_VAR: Record<BillingPlanId, Record<PricingCurrencyCode, strin
 // Label is in this map at all because it stopped being sales-led on 2026-09-08.
 // Its tier price used to be byte-identical to the legacy annual plan, which is
 // why it once shared that Plan object; at ₦50,000 it does not.
+// NEW NAMES AGAIN, 2026-11-07 (#1112): every self-serve tier was repriced
+// (Solo ₦5,000, Manager ₦15,000, the new Pro ₦40,000), so each reads a _V3_
+// var nothing has set before. An unset var withholds the card rather than
+// selling the new price against an old Plan; the previous names move to
+// SUPERSEDED_TIER_PLAN_CODE_ENV_VARS so their subscribers' renewals still
+// check clean. Label is a custom deal (contactSales) and has no _V3_ Plan.
+// The 6-month period is no longer sold, so no _V3_ 6-month var exists.
 const TIER_PLAN_CODE_ENV_VAR: Record<SelfServeTierId, Record<BillingInterval, string>> = {
   solo: {
-    monthly: 'PAYSTACK_PLAN_SOLO_PER_MONTH_NGN',
-    // 6-month prepay (2026-10-22). Optional: card checkout hides the period
-    // until it is set; bank transfer needs no Plan.
+    monthly: 'PAYSTACK_PLAN_SOLO_V3_PER_MONTH_NGN',
     semiannual: 'PAYSTACK_PLAN_SOLO_PER_6_MONTHS_NGN',
-    annual: 'PAYSTACK_PLAN_SOLO_PER_YEAR_NGN',
+    annual: 'PAYSTACK_PLAN_SOLO_V3_PER_YEAR_NGN',
   },
   manager: {
-    monthly: 'PAYSTACK_PLAN_MANAGER_PER_MONTH_NGN',
+    monthly: 'PAYSTACK_PLAN_MANAGER_V3_PER_MONTH_NGN',
     semiannual: 'PAYSTACK_PLAN_MANAGER_PER_6_MONTHS_NGN',
-    annual: 'PAYSTACK_PLAN_MANAGER_PER_YEAR_NGN',
+    annual: 'PAYSTACK_PLAN_MANAGER_V3_PER_YEAR_NGN',
+  },
+  pro: {
+    monthly: 'PAYSTACK_PLAN_PRO_V3_PER_MONTH_NGN',
+    semiannual: 'PAYSTACK_PLAN_PRO_V3_PER_6_MONTHS_NGN',
+    annual: 'PAYSTACK_PLAN_PRO_V3_PER_YEAR_NGN',
   },
   label: {
     monthly: 'PAYSTACK_PLAN_LABEL_PER_MONTH_NGN',
@@ -247,11 +260,18 @@ const TIER_PLAN_CODE_ENV_VAR: Record<SelfServeTierId, Record<BillingInterval, st
  */
 const SUPERSEDED_TIER_PLAN_CODE_ENV_VARS: Record<string, readonly string[]> = {
   solo: [
+    // The 2026-09 to 2026-11 Plans, superseded by the _V3_ names (2026-11-07).
+    'PAYSTACK_PLAN_SOLO_PER_MONTH_NGN',
+    'PAYSTACK_PLAN_SOLO_PER_YEAR_NGN',
+    'PAYSTACK_PLAN_SOLO_PER_MONTH_INTRO_NGN',
     'PAYSTACK_PLAN_SOLO_YEARLY_NGN',
     'PAYSTACK_PLAN_SOLO_ANNUAL_NGN',
     'PAYSTACK_PLAN_SOLO_MONTHLY_NGN',
   ],
   manager: [
+    'PAYSTACK_PLAN_MANAGER_PER_MONTH_NGN',
+    'PAYSTACK_PLAN_MANAGER_PER_YEAR_NGN',
+    'PAYSTACK_PLAN_MANAGER_PER_MONTH_INTRO_NGN',
     'PAYSTACK_PLAN_MANAGER_YEARLY_NGN',
     'PAYSTACK_PLAN_MANAGER_ANNUAL_NGN',
     'PAYSTACK_PLAN_MANAGER_MONTHLY_NGN',
@@ -550,6 +570,7 @@ export const RECURRING_PLAN_IDS: readonly RecurringPlanId[] = [
   'label',
   'manager',
   'solo',
+  'pro',
 ] as const;
 
 /**
@@ -588,7 +609,8 @@ export function isRecurringPlan(plan: string): plan is RecurringPlanId {
     plan === 'annual' ||
     plan === 'label' ||
     plan === 'manager' ||
-    plan === 'solo'
+    plan === 'solo' ||
+    plan === 'pro'
   );
 }
 

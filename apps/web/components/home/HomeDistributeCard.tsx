@@ -78,7 +78,7 @@ export function HomeDistributeCard() {
       captureAnalyticsEvent(
         createPostHogEvent('upgrade_to_manager_clicked', {
           path: 'ask_admin',
-          plan: 'manager',
+          plan: 'pro',
           source: 'home_distribute',
         }),
         { userId }
@@ -93,12 +93,12 @@ export function HomeDistributeCard() {
     captureAnalyticsEvent(
       createPostHogEvent('upgrade_to_manager_clicked', {
         path: 'self_serve',
-        plan: 'manager',
+        plan: 'pro',
         source: 'home_distribute',
       }),
       { userId }
     );
-    router.push(checkoutPath({ plan: 'manager' }));
+    router.push(checkoutPath({ plan: 'pro' }));
   };
 
   const buttonClass =

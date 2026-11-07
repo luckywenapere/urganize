@@ -36,6 +36,8 @@ import { parseReply, type ReplyIntent } from './reply-intent';
 import { decryptSecret } from './secret';
 import { isWhatsappConfigured, sendWhatsapp } from './transport';
 import { logUrgansAction } from '@/lib/urgans-action-log-server';
+import { getWorkspaceTier } from '@/lib/team-billing-server';
+import { whatsappRemindersAllowed } from '@/lib/entitlements';
 import { buildPostNudgeText, isPostPlatform, nextDayWords, nextPlannedPost, type ArtistPost } from '@/lib/posting-plan';
 import { ARTIST_POSTS_TABLE, setPostStatusAsOwner, toArtistPost } from '@/lib/posting-plan-server';
 
@@ -395,6 +397,10 @@ export async function runWhatsappChaseSweep(admin: SupabaseClient, now: Date = n
     let skippedAlreadyChased = 0;
 
     for (const teamRow of teams) {
+      // Solo does not include WhatsApp reminders (2026-11-07, #1112). An
+      // unreadable tier is null, which is allowed: a read failure must not
+      // silence a paying team's reminders.
+      if (!whatsappRemindersAllowed(await getWorkspaceTier(teamRow.workspace_id))) continue;
       const settings = toSettings(teamRow);
       const rules: ChaseSettings = {
         chaseDayBefore: settings.chaseDayBefore,

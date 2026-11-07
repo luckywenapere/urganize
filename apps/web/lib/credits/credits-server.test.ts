@@ -243,18 +243,18 @@ describe('getCreditSnapshot', () => {
 
   describe('a subscriber', () => {
     it("is granted the plan's allowance for the window, and its balance is everything it holds", async () => {
-      const { client, inserted } = fakeClient({ rpc: balancesRpc({ trial: 0, allowance: 660, topup: 40 }) });
+      const { client, inserted } = fakeClient({ rpc: balancesRpc({ trial: 0, allowance: 300, topup: 40 }) });
       const snap = await getCreditSnapshot(client, { ...base, team: { state: 'paid', tier: 'manager' } });
 
-      expect(inserted[0]).toMatchObject({ credits: 660, window_start: '2026-10-01' });
+      expect(inserted[0]).toMatchObject({ credits: 300, window_start: '2026-10-01' });
       expect(snap).toEqual({
         trial: 0,
-        allowance: 660,
+        allowance: 300,
         topup: 40,
-        total: 700,
+        total: 340,
         account: 'subscriber',
-        monthlyAllowance: 660,
-        referenceCredits: 660,
+        monthlyAllowance: 300,
+        referenceCredits: 300,
         nextGrantAt: '2026-11-01T00:00:00.000Z',
       });
     });
@@ -273,7 +273,7 @@ describe('getCreditSnapshot', () => {
       const snap = await getCreditSnapshot(client, { ...base, team: { state: 'paid', tier: 'solo' } });
 
       expect(snap?.nextGrantAt).toBe('2026-11-12T00:00:00.000Z');
-      expect(inserted[0]).toMatchObject({ credits: 150, window_start: '2026-10-12' });
+      expect(inserted[0]).toMatchObject({ credits: 100, window_start: '2026-10-12' });
     });
 
     it('is never given a trial grant', async () => {

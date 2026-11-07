@@ -177,6 +177,9 @@ const ALLOWED = [
   // "Extra releases ₦2,100 each".
   /releases a month/i,
   /extra releases/i,
+  // Distribution priced by release type (founder, 2026-11-07, #1112): TRM
+  // charges per release it sends, so "₦2,000 per release" is its unit too.
+  /\bper release\b/i,
   // Two strings the release spend brief wrote with the word release in them,
   // kept as written: the empty state and the total's label.
   /on this release/i,

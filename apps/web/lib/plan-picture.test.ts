@@ -5,19 +5,24 @@ import { planPictureFacts } from './plan-picture';
 const TIERS = Object.keys(PRICING_TIERS) as PricingTierId[];
 
 describe('planPictureFacts', () => {
-  it('draws Emerging as one artist and two people, with no distribution', () => {
+  it('draws Solo as one artist and three people, with no distribution', () => {
     const facts = planPictureFacts('solo');
     expect(facts.artists).toEqual([{ name: 'Kanmi Gold', distributed: false }]);
-    expect(facts.faces).toHaveLength(2);
-    expect(facts.peopleLabel).toBe('2 people');
+    expect(facts.faces).toHaveLength(3);
+    expect(facts.peopleLabel).toBe('3 people');
   });
 
-  it('draws Pro as three artists, five people and one distributed artist', () => {
+  it('draws Manager as three artists and six people, with no distribution', () => {
     const facts = planPictureFacts('manager');
     expect(facts.artists.map((a) => a.name)).toEqual(['Kanmi Gold', 'Hadiza Moon', 'Lagoon Theory']);
+    expect(facts.artists.some((a) => a.distributed)).toBe(false);
+    expect(facts.peopleLabel).toBe('6 people');
+  });
+
+  it('draws Pro with one distributed artist', () => {
+    const facts = planPictureFacts('pro');
     expect(facts.artists.filter((a) => a.distributed)).toHaveLength(1);
-    expect(facts.faces).toHaveLength(5);
-    expect(facts.peopleLabel).toBe('5 people');
+    expect(facts.peopleLabel).toBe('10 people');
   });
 
   // The picture must never promise more than the plan: every tier, read from

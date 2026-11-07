@@ -38,7 +38,7 @@ export const HOME_DISTRIBUTE_COPY = {
 export const HOME_DISTRIBUTE_HREF = '/dashboard/distribute';
 
 /** The tiers distribution comes with. Group is tier id `enterprise`. */
-const DISTRIBUTION_TIERS: ReadonlySet<PricingTierId> = new Set<PricingTierId>(['manager', 'label', 'enterprise']);
+const DISTRIBUTION_TIERS: ReadonlySet<PricingTierId> = new Set<PricingTierId>(['pro', 'label', 'enterprise']);
 
 /**
  * What the card shows. `access` is the team's access answer from

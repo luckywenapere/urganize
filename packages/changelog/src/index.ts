@@ -67,6 +67,19 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.255.0",
+    title: "New plans and prices",
+    tag: "Account",
+    date: "November 7, 2026",
+    highlights: [
+      "Solo is ₦5,000 a month and Manager is ₦15,000 a month, with more people and credits than before.",
+      "There's a new plan, Pro, at ₦40,000 a month. It covers 5 artists, 10 people and sending music to stores.",
+      "Pay for a year and you get two months free on any plan.",
+      "Pro and Label include sending singles to stores. On Solo and Manager, send from your own TRM account.",
+      "Running a label? Label starts at ₦100,000 a month, and we set it up with you.",
+    ],
+  },
+  {
     version: "1.254.5",
     tag: "Rollouts",
     date: "November 6, 2026",

@@ -68,6 +68,10 @@ export type Entitlements = {
    *  fits the module's own gating philosophy above (a run costs a real model
    *  call to deliver) exactly as cleanly as the countable ones do. */
   urgans_embedded_actions: boolean;
+  /** WhatsApp reminders to task owners (2026-11-07, #1112). Off on Solo, on
+   *  everywhere else. Read by lib/whatsapp/task-reminders-server.ts through
+   *  `whatsappRemindersAllowed`, which fails open on anything it cannot read. */
+  whatsapp_reminders: boolean;
 };
 
 // ── Three keys need a caveat before anyone builds against them ───────────────
@@ -166,6 +170,7 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     sso: false,
     sub_teams: false,
     urgans_embedded_actions: false,
+    whatsapp_reminders: false,
   },
   manager: {
     artists: limitsOf('manager').artists,
@@ -182,6 +187,26 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     sso: false,
     sub_teams: false,
     urgans_embedded_actions: true,
+    whatsapp_reminders: true,
+  },
+  // The new Pro plan (2026-11-07, #1112). Its priority email support is a
+  // promise on the pricing page, not a routing switch.
+  pro: {
+    artists: limitsOf('pro').artists,
+    seats: limitsOf('pro').seats,
+    active_releases: limitsOf('pro').activeReleases,
+    rollout_template_default: true,
+    rollout_template_custom_save: false,
+    urgans_monthly_actions: limitsOf('pro').urgansMonthlyActions,
+    urgans_priority: false,
+    file_attachments: true,
+    data_export: true,
+    concierge_onboarding: false,
+    support_channel: 'email',
+    sso: false,
+    sub_teams: false,
+    urgans_embedded_actions: true,
+    whatsapp_reminders: true,
   },
   label: {
     artists: limitsOf('label').artists,
@@ -198,6 +223,7 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     sso: false,
     sub_teams: false,
     urgans_embedded_actions: true,
+    whatsapp_reminders: true,
   },
   // Group (back 2026-10-02, strategy doc section 8). The same as Label in every
   // key, on purpose: what makes Group different is the price and how it is
@@ -218,6 +244,7 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     sso: false,
     sub_teams: false,
     urgans_embedded_actions: true,
+    whatsapp_reminders: true,
   },
 };
 
@@ -269,6 +296,14 @@ export function getEntitlement<K extends keyof Entitlements>(
   key: K
 ): Entitlements[K] {
   return ENTITLEMENTS[tier][key];
+}
+
+/** May this team's tasks be chased on WhatsApp? Off on Solo only. Null (the
+ *  tier could not be read) is allowed: like every other entitlement read, an
+ *  unknown fails open rather than silencing a paying team. */
+export function whatsappRemindersAllowed(tier: PricingTierId | null | undefined): boolean {
+  if (!tier || !Object.prototype.hasOwnProperty.call(ENTITLEMENTS, tier)) return true;
+  return ENTITLEMENTS[tier].whatsapp_reminders;
 }
 
 export function isUnlimited(limit: Limit): boolean {
@@ -394,52 +429,60 @@ const tierLabel = (tier: PricingTierId): string => PRICING_TIERS[tier].label;
  * Every number comes from the limit rather than being written into the string,
  * so re-cutting a tier cannot leave the copy lying. A test asserts all of that.
  */
-/** Which tier lifts a limit. Solo's is Manager (self-serve checkout,
- *  2026-10-22): the next plan up, bought on the same checkout, with the days
- *  left on Solo coming off the price. Everyone else's is Label. */
+/** Which tier lifts a limit: the next plan up the ladder (2026-11-07, #1112).
+ *  Solo goes to Manager and Manager to Pro, both bought on the same checkout
+ *  with the days left coming off the price. Pro and everyone else go to Label,
+ *  which is a conversation. */
 export function upgradeTargetFor(tier: PricingTierId): PricingTierId {
-  return tier === 'solo' ? 'manager' : 'label';
+  if (tier === 'solo') return 'manager';
+  if (tier === 'manager') return 'pro';
+  return 'label';
 }
 
-/** Solo's refusals name Manager's numbers and monthly price, all read from the
- *  pricing package so a re-cut tier cannot leave the copy lying. */
-function soloLimitMessage(key: CountableLimitKey, limit: number): string {
-  const manager = PRICING_TIERS.manager;
-  const price = manager.monthlyPrice
-    ? ` for ₦${manager.monthlyPrice.amount.toLocaleString('en-US')} a month`
-    : '';
-  const artists = manager.limits.artists;
-  const seats = manager.limits.seats;
-  const both = `${artists === null ? 'unlimited' : artists} artists and ${seats === null ? 'unlimited' : seats} people`;
-  const credit = ' The days left on Emerging come off the price.';
+/** "3 artists and 6 people", read from the target tier's limits. */
+function rosterLine(target: PricingTierId): string {
+  const { artists, seats } = PRICING_TIERS[target].limits;
+  return `${artists === null ? 'unlimited' : artists} artists and ${seats === null ? 'unlimited' : seats} people`;
+}
+
+/** A refusal that names the next plan's numbers and monthly price, all read
+ *  from the pricing package so a re-cut tier cannot leave the copy lying. Used
+ *  when the next plan is bought by card (Solo and Manager). */
+function selfServeLimitMessage(key: CountableLimitKey, limit: number, tier: PricingTierId): string {
+  const target = upgradeTargetFor(tier);
+  const next = PRICING_TIERS[target];
+  const name = tierLabel(tier);
+  const nextName = next.label;
+  const price = next.monthlyPrice ? ` for ₦${next.monthlyPrice.amount.toLocaleString('en-US')} a month` : '';
+  const credit = ` The days left on ${name} come off the price.`;
   switch (key) {
     case 'artists':
-      return `Emerging covers ${limit} ${limit === 1 ? 'artist' : 'artists'}. upgrade to Pro for ${both}${price}.${credit}`;
+      return `${name} covers ${limit} ${limit === 1 ? 'artist' : 'artists'}. Upgrade to ${nextName} for ${rosterLine(target)}${price}.${credit}`;
     case 'seats':
-      return `Emerging includes ${limit} ${limit === 1 ? 'person' : 'people'}. upgrade to Pro for ${both}${price}.${credit}`;
+      return `${name} includes ${limit} ${limit === 1 ? 'person' : 'people'}. Upgrade to ${nextName} for ${rosterLine(target)}${price}.${credit}`;
     case 'active_releases': {
-      const releases = manager.limits.activeReleases;
-      return `Emerging covers ${limit} ${limit === 1 ? 'release' : 'releases'} at a time. Archive one you have finished, or upgrade to Pro for ${releases === null ? 'unlimited releases' : `${releases} at a time`}${price}.${credit}`;
+      const releases = next.limits.activeReleases;
+      return `${name} covers ${limit} ${limit === 1 ? 'rollout' : 'rollouts'} at a time. Archive one you have finished, or upgrade to ${nextName} for ${releases === null ? 'unlimited rollouts' : `${releases} at a time`}${price}.${credit}`;
     }
     case 'urgans_monthly_actions': {
-      const actions = manager.limits.urgansMonthlyActions;
-      return `You have used all ${limit} AI actions on your plan this period. Everything else keeps working normally, and these reset when your billing period does. upgrade to Pro for ${actions === null ? 'unlimited' : `${actions} a month`}.`;
+      const actions = next.limits.urgansMonthlyActions;
+      return `You have used all ${limit} AI actions on your plan this period. Everything else keeps working normally, and these reset when your billing period does. Upgrade to ${nextName} for ${actions === null ? 'unlimited' : `${actions} a month`}.`;
     }
   }
 }
 
 function limitMessage(key: CountableLimitKey, limit: number, tier: PricingTierId): string {
-  if (tier === 'solo') return soloLimitMessage(key, limit);
+  if (tier === 'solo' || tier === 'manager') return selfServeLimitMessage(key, limit, tier);
   const label = tierLabel(tier);
   switch (key) {
     case 'artists':
-      return `${label} plans cover ${limit} ${limit === 1 ? 'artist' : 'artists'}. Upgrade to Label for unlimited artists.`;
+      return `${label} plans cover ${limit} ${limit === 1 ? 'artist' : 'artists'}. Talk to us about Label for unlimited artists.`;
     case 'seats':
-      return `${label} plans include ${limit} ${limit === 1 ? 'person' : 'people'}. Upgrade to Label for unlimited team members.`;
+      return `${label} plans include ${limit} ${limit === 1 ? 'person' : 'people'}. Talk to us about Label for unlimited team members.`;
     case 'active_releases':
-      return `${label} plans cover ${limit} ${limit === 1 ? 'release' : 'releases'} at a time. Archive one you have finished, or upgrade to Label for unlimited releases.`;
+      return `${label} plans cover ${limit} ${limit === 1 ? 'rollout' : 'rollouts'} at a time. Archive one you have finished, or talk to us about Label for unlimited rollouts.`;
     case 'urgans_monthly_actions':
-      return `You have used all ${limit} AI actions on your plan this period. Everything else keeps working normally, and these reset when your billing period does. Upgrade to Label for unlimited.`;
+      return `You have used all ${limit} AI actions on your plan this period. Everything else keeps working normally, and these reset when your billing period does. Talk to us about Label for unlimited.`;
   }
 }
 

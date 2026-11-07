@@ -8,6 +8,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { SOLO_LIMIT_EVENT, type SoloLimitDetail } from '@/lib/access-redirect';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { createPostHogEvent } from '@/lib/analytics/shared';
+import { PRICING_TIERS } from '@urganize/pricing';
 import { checkoutPath, splitLimitMessage } from '@/lib/self-serve';
 
 // Self-serve checkout (2026-10-22). When a Solo team hits a limit (one artist,
@@ -28,7 +29,7 @@ export function SoloLimitSheet() {
       if (!next?.message) return;
       setDetail(next);
       captureAnalyticsEvent(
-        createPostHogEvent('solo_limit_hit', { path: 'self_serve', plan: 'solo', kind: next.key }),
+        createPostHogEvent('solo_limit_hit', { path: 'self_serve', plan: next.plan === 'pro' ? 'manager' : 'solo', kind: next.key }),
         { userId }
       );
     };
@@ -43,11 +44,11 @@ export function SoloLimitSheet() {
 
   const upgrade = () => {
     captureAnalyticsEvent(
-      createPostHogEvent('upgrade_to_manager_clicked', { path: 'self_serve', plan: 'manager', kind: detail.key, source: 'limit' }),
+      createPostHogEvent('upgrade_to_manager_clicked', { path: 'self_serve', plan: detail.plan, kind: detail.key, source: 'limit' }),
       { userId }
     );
     setDetail(null);
-    router.push(checkoutPath({ plan: 'manager' }));
+    router.push(checkoutPath({ plan: detail.plan }));
   };
 
   return createPortal(
@@ -74,7 +75,7 @@ export function SoloLimitSheet() {
             onClick={upgrade}
             className="min-h-12 rounded-full bg-brand px-5 text-sm font-semibold text-content-inverse"
           >
-            Upgrade to Pro
+            Upgrade to {PRICING_TIERS[detail.plan].label}
           </button>
         </div>
       </DialogPanel>

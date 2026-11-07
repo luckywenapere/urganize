@@ -68,7 +68,7 @@ export function ChurnPanel({ churn }: { churn: ChurnSummary }) {
         />
         <Tile
           label="MRR lost"
-          info="Gross MRR churn: the monthly revenue of subscriptions that stopped in the last full month, out of MRR at its start. Emerging is included, as in MRR. Yearly plans count as a twelfth."
+          info="Gross MRR churn: the monthly revenue of subscriptions that stopped in the last full month, out of MRR at its start. Solo is included, as in MRR. Yearly plans count as a twelfth."
           value={last ? rate(last.grossMrrChurn) : 'No data yet'}
           facts={
             last && last.mrrAtStartMinor > 0
