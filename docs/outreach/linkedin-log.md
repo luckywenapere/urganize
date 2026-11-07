@@ -138,3 +138,17 @@ Connection requests from 5 Nov: 3 of 18 accepted so far, 2 of them replied (Afol
 **Late replies, 6 Nov (4 sent):** Ebow Dawson (manages Quoia States, Halifax): asked about her EP. Josephine A.Bonsu (freelancing for a US company): asked label or live. Chisom Ezike (no release coming): what Urganize is, sign-up link for later. Mohamed Babiker Ali said he'll try the app: told him I'll let him in once he signs up. Meghan Kek booked Wed 11 Nov 2pm through the booking link. Abraham confirmed Tuesday 12pm.
 
 **7 Nov, 12am:** Fuad Jamiudeen (manages GeezyShore and Warsheep; album and EP planned) missed the 26 Oct 9pm call and sent his WhatsApp number. Sent the sign-up link and said Oyin will message him on WhatsApp (he's free 9pm or early morning). Oyin to message him.
+
+## 7 Nov 2026
+
+**Rules added today:** no outreach to anyone at Chocolate City (Oyin runs that relationship); phone numbers go in the private WhatsApp follow-ups file, never here.
+
+**Inbox replies sent (5):** Bayo Fatoba sent his email: invite sent for Mon 9 Nov 3pm. Yemi Akinnigbagbe ("I run Krystal"): asked who's on the roster and what's dropping. Lanre Lawal (manages DOTTi The Deity, runs The Bail Entertainment Company): what Urganize is, sign-up link. Tayo Adeniran (label released a TJay KARTEL single on SSYMA Records): congrats, sign-up link. Chisom Ezike proposed a pilot where Urganize funds and markets his project: said we're software and don't fund releases, offered to run his next project on Urganize and share it as a story. Skipped: Unopa ("Will do!"), Abraham (confirmed).
+
+**Cold DMs (6):** Dakail Ester (Kailo Management Group), Steve Adams (Arbor Recordings), Grayson Kirtland (5B Artists+Media), John Cantu (Outrider Artist Management), Clinton Mabulana, Kwao Richard (Amerado's manager; yesterday's invite did go through). Dropped Olatunde Ogunbiyi (Chocolate City).
+
+**Connection requests with a note (16):** Soo Ahn, Elizabeth Sobowale, Allan Siema, Chloe Amore, Reece Bygraves (Crowd Control Records), Sibusiso Sihlenge, Ditso Toni Sekwenyane, Nikki Froneman, Pabalelo Mashego, Oska Tee, Prince Osei Mawunyefia, Pablo Tunez, Princess AJ, T boyzke, Momanyi Ian, Tiffany Ngige. Notes from profile headlines; no likes this batch. Skipped ONErpm and TikTok staff and company pages.
+
+**Calls next week:** Mon 9 Nov 3pm Bayo, Tue 10 Nov 12pm Abraham, Tue 4pm Nicholas, Wed 11 Nov 2pm Meghan Kek. Booking link sent to Lucas, Nkosinathi.
+
+**Evening:** Clinton Mabulana asked what "who else are you working with" meant: clarified (which artists besides SimZo and TWO).
