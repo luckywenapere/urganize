@@ -239,7 +239,7 @@ export function formatPlanCyclePrice(
 // id stays `enterprise` because it is what subscriptions.plan stores and what
 // subscriptions_plan_check (20260823100000) already permits, so bringing Group
 // back on 2026-10-02 needed no migration. Renaming the id would mean one.
-export type PricingTierId = 'solo' | 'manager' | 'label' | 'enterprise';
+export type PricingTierId = 'solo' | 'manager' | 'pro' | 'label' | 'enterprise';
 /** How often a plan is paid. `semiannual` (6 months, paid up front) since
  *  2026-10-22 (self-serve checkout, founder approved): 6 months are billed at
  *  SIX_MONTHS_BILLED months of the monthly price, so one is free. */
@@ -249,7 +249,7 @@ export type BillingInterval = 'monthly' | 'semiannual' | 'annual';
  *  `subscriptions.plan_version` and `subscription_charges.plan_version`, so a
  *  subscriber's row says which prices they locked in. Bump it on every reprice;
  *  rows written before 2026-10-22 read 'legacy'. */
-export const PRICE_LIST_VERSION = '2026-10-31';
+export const PRICE_LIST_VERSION = '2026-11-07';
 
 export type TierPrice = {
   /** Whole naira, for display copy. */
@@ -448,94 +448,66 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
   // plus their env vars — see the note in apps/web/lib/billing-plans.ts.
   solo: {
     id: 'solo',
-    label: 'Emerging',
-    // Career-stage wording since 2026-11-03 (#1053, the founder's new
-    // positioning). Before that:
-    // "For an artist and their manager." since 2026-10-17 (founder-approved
-    // reprice, strategy doc section 8), when Solo went to two seats. It read
-    // "For an independent artist." from 2026-10-02 while Solo was one seat.
-    audience: 'For artists and managers starting out.',
+    // Repriced and renamed 2026-11-07 (founder, issue #1112): "Solo" again,
+    // ₦5,000 a month, no first-month price. It was "Emerging" at ₦4,000 with a
+    // ₦2,600 first month from 2026-11-02. No paying team was on it, so nobody
+    // moves. Card checkout reads the _V3_ env vars (apps/web/lib/billing-plans.ts).
+    label: 'Solo',
+    audience: 'For an artist managing their own music.',
     outcomeHeading: 'Structure from your first rollout',
     outcomes: [
       'A rollout plan made for you, every step and date',
       'An AI assistant for the music business',
       'Find collaborators in the Urganize directory',
     ],
-    // ₦4,000 a month with a ₦2,600 first month since 2026-11-02 (founder
-    // approved docs/mocks/emerging-offer; no paying Emerging team, so nobody
-    // moves). Card checkout needs a ₦2,600 Plan (invoice_limit 1) behind
-    // PAYSTACK_PLAN_SOLO_PER_MONTH_INTRO_NGN and ₦4,000 / ₦40,000 Plans behind
-    // the _PER_MONTH_ / _PER_YEAR_ vars; until then the price check refuses card.
-    // ₦2,600 flat from 2026-10-31 (founder, with the rename to Emerging; no
-    // paying Solo team, so nobody moves). The ₦4,000 starting price is gone.
-    // Card checkout needs ₦2,600 / ₦26,000 Paystack Plans behind the
-    // _PER_MONTH_ / _PER_YEAR_ vars; until then the price check refuses card.
-    // ₦5,000 from 2026-10-23 (founder approved ~02:00 WAT; no paying Solo
-    // customer, so no grandfathering). The _PER_MONTH_ / _PER_6_MONTHS_ /
-    // _PER_YEAR_ vars point at the ₦5,000 / ₦25,000 / ₦50,000 Plans (monthly
-    // and yearly reused from September, 6-month minted that day). Solo
-    // retention bands become ₦2,500 / ₦3,500 / ₦4,500, so the old _5500 /
-    // _7500 retention Plans are no longer read.
-    // ₦8,000 from 2026-10-22 (founder, self-serve checkout; Plans at
-    // ₦8,000 / ₦40,000 / ₦80,000, left in Paystack untouched).
-    // ₦7,500 from 2026-10-17 (founder approved the reprice that day; it was
-    // ₦5,000 from 2026-09-10). Monthly only — the yearly price is ten months of
-    // this, see monthlyPrice. New Paystack Plans were minted at ₦7,500 /
-    // ₦75,000 and the _PER_MONTH_ / _PER_YEAR_ vars repointed before this
-    // shipped; the ₦5,000 Plans stay in Paystack untouched.
-    monthlyPrice: tierPrice(4_000),
-    introMonthlyPrice: tierPrice(2_600),
+    monthlyPrice: tierPrice(5_000),
     includesDistribution: false,
-    urgansMonthlyCredits: 150,
-    // TWO seats since 2026-10-17 (founder-approved reprice: "artist +
-    // manager"). The owner holds one, so a Solo account can invite one person.
-    // It was 1 from 2026-10-02 and 2 from 2026-08-30 before that. Raising it
-    // removes nobody and refuses nobody who was allowed before.
-    limits: { artists: 1, seats: 2, activeReleases: 1, urgansMonthlyActions: 40 },
+    urgansMonthlyCredits: 100,
+    // 3 people since 2026-11-07: the artist, a manager and one helper.
+    limits: { artists: 1, seats: 3, activeReleases: 1, urgansMonthlyActions: 40 },
     perks: [],
-    // `recommended` moved to Manager on 2026-10-17 (founder-approved reprice).
-    // It sat here from 2026-09-09.
   },
   manager: {
     id: 'manager',
+    // "Manager" again since 2026-11-07 (#1112). This id was labelled "Pro" from
+    // 2026-10-31; the new Pro plan below has its own id, `pro`. ₦15,000 a month,
+    // no first-month price, and distribution is now paid per release rather than
+    // included (it moved up to Pro).
+    label: 'Manager',
+    audience: 'For a manager running a few artists with a team.',
+    outcomeHeading: 'Run your roster with your team',
+    outcomes: [
+      'Every artist and rollout in one view',
+      'Your team knows their job till drop day. Nobody chases anybody.',
+      'WhatsApp reminders for every task owner',
+    ],
+    monthlyPrice: tierPrice(15_000),
+    includesDistribution: false,
+    urgansMonthlyCredits: 300,
+    limits: { artists: 3, seats: 6, activeReleases: 3, urgansMonthlyActions: 100 },
+    perks: [],
+    // THE RECOMMENDED PLAN ("Most popular"). Read only by the in-app picker;
+    // see `recommended`.
+    recommended: true,
+  },
+  // NEW 2026-11-07 (#1112): a manager running a roster. Distribution for one
+  // artist is included (TRM Independent Artist: 1 artist, 7 releases a month).
+  // subscriptions.plan accepts it from 20261107100000_subscriptions_allow_pro.sql.
+  pro: {
+    id: 'pro',
     label: 'Pro',
-    // Career-stage wording since 2026-11-03 (#1053). It read "For a manager
-    // running more than one artist." before.
-    audience: 'For managers taking their artists to the next level.',
+    audience: 'For a manager running a roster.',
     outcomeHeading: 'Run your roster at the next level',
     outcomes: [
       'Every artist and rollout in one view',
       'Your team knows their job till drop day. Nobody chases anybody.',
       'Order distribution inside the rollout',
     ],
-    // ₦26,000 flat from 2026-10-31 (founder, with the rename to Pro; no paying
-    // Manager team, so nobody moves). The starting price is gone. Card checkout
-    // needs ₦26,000 / ₦260,000 Paystack Plans behind the vars.
-    // ₦30,000 from 2026-10-22 (founder, no Manager customer had paid yet, so
-    // no grandfathering; Plans at ₦30,000 / ₦150,000 / ₦300,000).
-    // ₦25,000 from 2026-10-17 (founder approved the reprice that day; it was
-    // ₦35,000 earlier the same day and ₦22,000 before that). Monthly only — the
-    // yearly price is ten months of this. New ₦25,000 / ₦250,000 Paystack Plans
-    // were minted and the vars repointed before this shipped.
-    // ₦40,000 a month with a ₦24,000 first month since 2026-11-02 (founder;
-    // no paying Pro team, so nobody moves). Card checkout needs a ₦24,000
-    // Plan (invoice_limit 1) behind PAYSTACK_PLAN_MANAGER_PER_MONTH_INTRO_NGN
-    // and ₦40,000 / ₦400,000 Plans behind the _PER_MONTH_ / _PER_YEAR_ vars.
     monthlyPrice: tierPrice(40_000),
-    introMonthlyPrice: tierPrice(24_000),
     includesDistribution: true,
-    urgansMonthlyCredits: 660,
-    // 3 artists / 5 seats since 2026-10-17 (was 5 artists / 4 seats). Both are
-    // enforced (the artist ceiling since rosters shipped, 2026-08-30). Lowering
-    // artists removes nobody: a team already over 3 keeps its artists and is
-    // only refused a new one.
-    limits: { artists: 3, seats: 5, activeReleases: 3, urgansMonthlyActions: 150 },
+    urgansMonthlyCredits: 600,
+    limits: { artists: 5, seats: 10, activeReleases: 8, urgansMonthlyActions: 150 },
     perks: [],
-    // THE RECOMMENDED PLAN since 2026-10-17 (founder-approved reprice). Manager
-    // is the plan the product is built for — a manager running a roster — and
-    // at ₦25,000 it is the one to point a visitor at. It sat on Solo from
-    // 2026-09-09. Read only by the in-app TierPlanPicker; see `recommended`.
-    recommended: true,
   },
   // SELF-SERVE AGAIN SINCE 2026-09-08 (founder call), at ₦50,000/year. This
   // REVERSES the 2026-08-30 decision that made Label sales-led with no price at
@@ -565,38 +537,29 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
   label: {
     id: 'label',
     label: 'Label',
-    // Career-stage wording since 2026-11-03 (#1053, the founder's new
-    // positioning). Before that:
-    // "For small labels and management teams." since 2026-10-02, the strategy
-    // doc's wording for this tier ("Labels and management companies") in the
-    // site's plain voice. It read "For a label or a team running a roster."
-    // until 2026-09-11, then "For a team running a roster." while labels were
-    // out of the audience.
-    audience: 'For labels organising and scaling.',
+    audience: 'For a label organising and scaling.',
     outcomeHeading: 'Organise and scale your label',
     outcomes: [
       'Your whole catalogue in one place: artists, songs, credits',
       'We set your roster up with you',
       'WhatsApp support, answered same day',
     ],
-    // ₦100,000 since 2026-10-26 (founder, with the call-led onboarding rules;
-    // Paystack Plans at
-    // ₦100,000 / ₦500,000 / ₦1,000,000 are still to be minted.
-    // ₦60,000 from 2026-10-17 (founder approved the reprice that day; it was
-    // ₦50,000 from 2026-09-10). Monthly only — the yearly price is ten months
-    // of this. New ₦60,000 / ₦600,000 Paystack Plans were minted and the vars
-    // repointed before this shipped.
+    // A STARTING PRICE, not a checkout price (founder, 2026-11-07, #1112).
+    // Label is a custom deal: every surface shows "From ₦100,000/month"
+    // (formatTierFromPrice) with the contact CTA, the founder agrees the real
+    // price and records it in /admin with "Mark paid". The number stays in the
+    // data for internal maths and so teams already on Label renew as they are.
     monthlyPrice: tierPrice(100_000),
     includesDistribution: true,
     urgansMonthlyCredits: 1500,
+    // `label` MUST keep unlimited limits: `resolveTeamTier` fails open to this
+    // tier for a walled, legacy or unrecognised plan, so capping it here would
+    // silently cap teams the resolver could not identify.
     limits: { artists: null, seats: null, activeReleases: null, urgansMonthlyActions: null },
     perks: [
-      'Everything in Pro',
       'We set your roster up with you',
       'WhatsApp support, answered same day',
     ],
-    // Contact us since 2026-10-26 (founder): no price on any page and no
-    // checkout. The price stays so teams already on Label renew as they are.
     contactSales: true,
   },
   // GROUP, BACK SINCE 2026-10-02 (strategy doc, section 8: "Group | Custom |
@@ -643,6 +606,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
 export const PRICING_TIER_ORDER: readonly PricingTierId[] = [
   'solo',
   'manager',
+  'pro',
   'label',
 ] as const;
 
@@ -731,7 +695,7 @@ export function tierFeatures(id: PricingTierId): { heading: string; lines: strin
       ],
     };
   }
-  const below = id === 'manager' ? 'Emerging' : id === 'label' ? 'Pro' : 'Label';
+  const below = id === 'manager' ? 'Solo' : id === 'pro' ? 'Manager' : id === 'label' ? 'Pro' : 'Label';
   return { heading: `Everything in ${below}, and:`, lines: highlights };
 }
 
@@ -815,27 +779,100 @@ export function annualSavingCopy(id: PricingTierId): string | null {
  *  these numbers (lib/distribution-limits.ts), so the card cannot promise more
  *  than the product gives. Group agrees its own terms per deal. */
 export const DISTRIBUTION_ALLOWANCE: Partial<Record<PricingTierId, { artists: number; releasesPerMonth: number }>> = {
-  manager: { artists: 1, releasesPerMonth: 7 },
+  // Pro is TRM Independent Artist, Label is TRM Mini Label (2026-11-07, #1112).
+  // Manager included distribution until then; it now pays per release.
+  pro: { artists: 1, releasesPerMonth: 7 },
   label: { artists: 5, releasesPerMonth: 10 },
 };
 
-/** What TRM charges us for one release, naira (its per-release price, read
- *  from its Paystack page on 2026-10-26). */
-export const TRM_PER_RELEASE_NAIRA = 2_100;
+/** What a team pays to send one SINGLE to the stores when its plan does not
+ *  cover it (Solo and Manager, or a Pro or Label send past the allowance),
+ *  naira. TRM's per-release price (founder, 2026-11-07, #1112: TRM confirmed
+ *  pay per release is for singles only). Replaces the ₦2,200 of 2026-10-26. */
+export const EXTRA_RELEASE_PRICE_NAIRA = 2_000;
 
-/** What a team pays for one release beyond its plan's allowance, naira
- *  (founder, 2026-10-26). TRM's ₦2,100 plus a markup, so Paystack's fee
- *  (1.5% card, 1% transfer, about ₦22 to ₦33 here) never makes an extra release
- *  cost us money. Kept below ₦2,500, where Paystack adds its ₦100 card fee. */
-export const EXTRA_RELEASE_PRICE_NAIRA = 2_200;
+/** Urganize's share of every amount a team pays TRM through us: per release and
+ *  every TRM plan (TRM confirmed, 2026-11-07). What we owe TRM is the rest. */
+export const TRM_MARGIN = 0.2;
+
+/** What we owe TRM for an amount a team paid for distribution, in the same unit
+ *  (kobo in, kobo out). Rounded to a whole number. ₦2,000 owes ₦1,600. */
+export function trmOwedFor(amount: number): number {
+  return Math.round(amount * (1 - TRM_MARGIN));
+}
+
+/** What we owe TRM for one single sent past a plan, naira (₦1,600). */
+export const TRM_PER_RELEASE_NAIRA = trmOwedFor(EXTRA_RELEASE_PRICE_NAIRA);
+
+/** The three shapes TRM distributes, by how many songs. */
+export type DistributionReleaseKind = 'single' | 'ep' | 'album';
+
+/** The most songs an EP has; one more is an album (TRM, 2026-11-07). */
+export const EP_MAX_TRACKS = 6;
+
+/** Single, EP or album. The release's own type wins; when it is missing, the
+ *  song count decides (1 a single, 2 to 6 an EP, 7 or more an album). Anything
+ *  unreadable is a single, which is what every rollout starts as. */
+export function distributionReleaseKind(input: {
+  releaseType?: string | null;
+  trackCount?: number | null;
+}): DistributionReleaseKind {
+  if (input.releaseType === 'single' || input.releaseType === 'ep' || input.releaseType === 'album') {
+    return input.releaseType;
+  }
+  const count = typeof input.trackCount === 'number' && Number.isFinite(input.trackCount) ? input.trackCount : 1;
+  if (count > EP_MAX_TRACKS) return 'album';
+  if (count > 1) return 'ep';
+  return 'single';
+}
+
+/** The TRM plan a team sends under: none (pays per single), TRM's monthly plan,
+ *  or TRM's yearly plan. A Pro or Label team's is the one that matches how it
+ *  pays us (monthly or yearly); Solo and Manager have none in this phase. */
+export type TeamDistributionPlan = 'none' | 'monthly' | 'yearly';
+
+export type DistributionAccess = 'allowed' | 'needs_monthly_plan' | 'needs_yearly_plan';
+
+/** May this release go to the stores on this team's TRM plan (TRM's rules,
+ *  2026-11-07)? A single always may (paid per release when there is no plan).
+ *  An EP needs a monthly or yearly plan. An album needs a yearly plan. */
+export function distributionAccess(input: {
+  releaseType?: string | null;
+  trackCount?: number | null;
+  teamPlan: TeamDistributionPlan;
+}): DistributionAccess {
+  const kind = distributionReleaseKind(input);
+  if (kind === 'single') return 'allowed';
+  if (kind === 'ep') return input.teamPlan === 'none' ? 'needs_monthly_plan' : 'allowed';
+  return input.teamPlan === 'yearly' ? 'allowed' : 'needs_yearly_plan';
+}
+
+/** A paying team's TRM plan from its tier and how it pays: Pro and Label get
+ *  TRM's monthly plan when they pay monthly and the yearly one when they pay
+ *  for 6 months or a year; every other tier has none. */
+export function teamDistributionPlan(
+  id: PricingTierId | null | undefined,
+  interval: BillingInterval | null | undefined
+): TeamDistributionPlan {
+  if (!id || !PRICING_TIERS[id]?.includesDistribution) return 'none';
+  return interval === 'annual' || interval === 'semiannual' ? 'yearly' : 'monthly';
+}
+
+/** The AI credit pack on sale today (₦1,500 for 100 credits). */
+export const CREDIT_PACK = { credits: 100, priceNaira: 1_500 } as const;
 
 /** "Distribution for 1 of your artists, 7 releases a month". Numbers from the allowance. */
-export function distributionAllowanceCopy(id: PricingTierId): string | null {
+export function distributionAllowanceCopy(
+  id: PricingTierId,
+  interval: BillingInterval = 'monthly'
+): string | null {
   const allowance = DISTRIBUTION_ALLOWANCE[id];
   if (!allowance) return null;
   // "of your artists": a plan can hold more artists than it distributes for
-  // (Manager holds 3, distributes for 1), so the line says which it means.
+  // (Pro holds 5, distributes for 1), so the line says which it means.
   const artists = allowance.artists === 1 ? '1 of your artists' : `${allowance.artists} of your artists`;
+  // Paying yearly puts the team on TRM's yearly plan, which has no monthly cap.
+  if (teamDistributionPlan(id, interval) === 'yearly') return `Distribution for ${artists}, no monthly cap`;
   return `Distribution for ${artists}, ${allowance.releasesPerMonth} releases a month`;
 }
 
@@ -901,11 +938,33 @@ export function tierHighlights(
     opts.interval ?? DEFAULT_SELLING_INTERVAL,
     opts.distributionRequiresPrepay ?? false
   );
-  const extra =
-    distribution && DISTRIBUTION_ALLOWANCE[id]
-      ? [`Extra releases ₦${EXTRA_RELEASE_PRICE_NAIRA.toLocaleString('en-US')} each`]
+  // A plan without included distribution pays for each release; a plan with it
+  // pays for releases past its allowance. Same per-type price either way.
+  const single = `₦${EXTRA_RELEASE_PRICE_NAIRA.toLocaleString('en-US')}`;
+  const extra = distribution
+    ? [`Extra singles ${single} each`]
+    : monthlyPrice
+      ? ['Send singles to stores from your own TRM account']
       : [];
   return [...lines, ...(distribution ? [distribution] : []), ...extra, ...perks];
+}
+
+/** A sales-led tier's starting price, "From ₦100,000/month", or null when the
+ *  tier has no price at all (Group) or is not sales-led. Label is a custom deal
+ *  (founder, 2026-11-07): the figure is a floor, never a checkout price. */
+export function formatTierFromPrice(
+  id: PricingTierId,
+  interval: BillingInterval = 'monthly'
+): string | null {
+  if (!PRICING_TIERS[id].contactSales) return null;
+  const price = getTierPrice(id, interval);
+  if (!price) return null;
+  const formatted = new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+    maximumFractionDigits: 0,
+  }).format(price.amount);
+  return `From ${formatted}/${interval === 'annual' ? 'year' : 'month'}`;
 }
 
 export function getTier(id: PricingTierId): PricingTierDefinition {
@@ -916,6 +975,7 @@ export function isPricingTierId(value: unknown): value is PricingTierId {
   return (
     value === 'solo' ||
     value === 'manager' ||
+    value === 'pro' ||
     value === 'label'
   );
 }
@@ -926,7 +986,7 @@ export function isPricingTierId(value: unknown): value is PricingTierId {
  *  the founder sends the payment link afterwards. One definition, read by the pricing page, the wall, the checkout
  *  page and the payment routes. */
 export function isSelfServePurchase(tier: PricingTierId, interval: BillingInterval): boolean {
-  return (tier === 'solo' || tier === 'manager') && (interval === 'monthly' || interval === 'annual');
+  return (tier === 'solo' || tier === 'manager' || tier === 'pro') && (interval === 'monthly' || interval === 'annual');
 }
 
 export function isBillingInterval(value: unknown): value is BillingInterval {

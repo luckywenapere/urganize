@@ -1,8 +1,7 @@
 import {
+  formatTierFromPrice,
   formatTierPrice,
-  getIntroPrice,
   getTier,
-  introThenLine,
   PRICING_TIER_ORDER,
   tierHighlights,
 } from "@urganize/pricing";
@@ -32,24 +31,15 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 // too from 2026-09-08 to 2026-09-09, and again since 2026-10-02: Group, the
 // fourth card, with "Let's talk" in place of a price.)
 export function PricingStripSection() {
-  // HOMEPAGE V2 (2026-10-17, URG-334): three cards. Group came off both pages
-  // on 2026-10-26.
-  // Starting price first (2026-10-26), with the full price under it. Label is
-  // contact-us, so it shows "Let's talk" and no figure.
+  // Four cards since 2026-11-07 (#1112): Solo, Manager, Pro and Label. No
+  // first-month price any more. Label is a custom deal, so it shows its
+  // starting price ("From ₦100,000/month"), never a checkout price.
   const tiers = PRICING_TIER_ORDER.map((id) => {
     const tier = getTier(id);
-    const intro = getIntroPrice(id);
     return {
       id,
       tier,
-      price: tier.contactSales
-        ? null
-        : intro
-          ? `${new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(intro.amount)}/month`
-          : formatTierPrice(id),
-      then: tier.contactSales ? null : introThenLine(id),
-      // The full price struck through above the offer (founder, Nov 2, 2026).
-      was: !tier.contactSales && intro ? formatTierPrice(id) : null,
+      price: tier.contactSales ? formatTierFromPrice(id) : formatTierPrice(id),
       highlights: tierHighlights(id).slice(0, 3),
       // What the plan does for the team (#1063, the 3 Nov positioning), read
       // from @urganize/pricing like /pricing and the sign-in page.
@@ -77,10 +67,10 @@ export function PricingStripSection() {
           ) : null}
         </div>
 
-        {/* Solo, Manager and Label ("Let's talk") since 2026-10-26, when Group
-            came off. One column on a phone, three from md, like /pricing. */}
-        <ul className="mx-auto mt-12 grid max-w-[60rem] gap-4 md:grid-cols-3">
-          {tiers.map(({ id, tier, price, then, was, highlights, outcomeHeading, outcomes }) => (
+        {/* Solo, Manager, Pro and Label (from a starting price) since
+            2026-11-07. One column on a phone, two from md, four from xl. */}
+        <ul className="mx-auto mt-12 grid max-w-[76rem] gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {tiers.map(({ id, tier, price, highlights, outcomeHeading, outcomes }) => (
             <li
               key={id}
               className="flex h-full flex-col rounded-[1.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5 sm:p-6"
@@ -96,15 +86,9 @@ export function PricingStripSection() {
               <p className="mt-3 text-sm leading-6 text-[var(--marketing-text-muted)]">
                 {tier.audience}
               </p>
-              {was ? (
-                <p className="mt-4 text-sm text-[var(--marketing-text-muted)] line-through sm:mt-5">{was}</p>
-              ) : null}
-              <p className={`${was ? "mt-0.5" : "mt-4 sm:mt-5"} text-[1.6rem] font-semibold sm:text-[1.75rem] tracking-[-0.03em] text-[var(--marketing-text)]`}>
+              <p className="mt-4 text-[1.6rem] font-semibold tracking-[-0.03em] text-[var(--marketing-text)] sm:mt-5 sm:text-[1.75rem]">
                 {price ?? "Let’s talk"}
               </p>
-              {then ? (
-                <p className="mt-1 text-[0.8rem] leading-5 text-[var(--marketing-text-muted)]">{then}</p>
-              ) : null}
               {outcomeHeading ? (
                 <>
                   <p className="mt-4 text-sm font-semibold text-[var(--marketing-text)] sm:mt-5">{outcomeHeading}</p>

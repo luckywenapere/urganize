@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { teamDistributionPlan } from '@urganize/pricing';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { logBillingEvent } from './billing-events-server';
 import {
@@ -20,7 +21,7 @@ import { recordTrmExtraRelease } from './trm/partner-ledger-server';
 
 // The ONLY reader and writer of distribution_usage. The rules are in
 // lib/distribution-limits.ts; this reads the rows, gates a send, records it,
-// and takes the ₦2,100 for a release beyond the plan. Never trusts the browser:
+// and takes the ₦2,000 for a single beyond the plan (we owe TRM 80% of it). Never trusts the browser:
 // the verdict is worked out here at every step, and a payment counts only once
 // Paystack's own record says it was paid (checkExtraReleasePayment).
 
@@ -72,6 +73,8 @@ export async function loadDistributionLimit(admin: Admin, facts: ReleaseFacts, n
     releaseId: facts.releaseId,
     artistKey,
     now,
+    // Paying yearly puts the team on TRM's yearly plan: no monthly cap.
+    teamPlan: teamDistributionPlan(decision.tier, decision.interval),
   });
   return view ? { view, workspaceId, artistKey } : null;
 }
@@ -243,7 +246,7 @@ export async function settleExtraRelease(admin: Admin, reference: string, via: '
     await recordTrmExtraRelease(admin, {
       workspaceId: found.workspace_id,
       reference,
-      tier: tier && tier.state === 'included' && tier.tier === 'label' ? 'label' : 'manager',
+      tier: tier && tier.state === 'included' && tier.tier === 'label' ? 'label' : 'pro',
       paidKobo: EXTRA_RELEASE_PRICE_KOBO,
       owedKobo: TRM_PER_RELEASE_KOBO,
       paidAt,

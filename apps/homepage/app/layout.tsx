@@ -3,7 +3,7 @@ import Script from "next/script";
 import { Instrument_Sans } from "next/font/google";
 import "./globals.css";
 import { LANDING_DESCRIPTION, LANDING_TITLE, ORGANIZATION_ID } from "@/lib/seo";
-import { PRICING_TIER_ORDER, getIntroPrice, getTier, getTierPrice } from "@urganize/pricing";
+import { PRICING_TIER_ORDER, getTier, getTierPrice } from "@urganize/pricing";
 import { Suspense } from "react";
 import FormbricksProvider from "./formbricks-provider";
 import CursorRefresher from "./components/CursorRefresher";
@@ -154,10 +154,10 @@ const homepageSchema = {
 // price), so the rich-result eligibility this schema exists for was never
 // actually available. Monthly figures, because monthly is the price each tier
 // declares; the yearly one is arithmetic on top of it.
-// Contact-us tiers (Label since 2026-10-26) show no price, so they are left
-// out; the starting price is the low end.
+// Contact-us tiers (Label, a custom deal from a starting price) are left out,
+// so the range is the self-serve plans a visitor can buy by card.
 const monthlyPrices = PRICING_TIER_ORDER.filter((id) => !getTier(id).contactSales)
-  .flatMap((id) => [getIntroPrice(id)?.amount, getTierPrice(id, "monthly")?.amount])
+  .map((id) => getTierPrice(id, "monthly")?.amount)
   .filter((amount): amount is number => typeof amount === "number");
 
 const softwareApplicationSchema = {

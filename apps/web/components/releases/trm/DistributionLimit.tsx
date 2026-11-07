@@ -27,6 +27,17 @@ function artistsLine(limit: DistributionLimitView): string {
 
 /** Inside the "Distribution included" card: the month's count and the artists. */
 export function DistributionUsage({ limit }: { limit: DistributionLimitView }) {
+  // Paying yearly is TRM's yearly plan: no monthly cap, so no bar to fill.
+  if (limit.releasesLimit === null) {
+    return (
+      <div className="mt-1">
+        <p className="text-sm text-content-secondary">
+          {limit.used} sent this month. Your yearly plan has no monthly cap.
+        </p>
+        <p className={`mt-2.5 ${MONO}`}>{artistsLine(limit)}</p>
+      </div>
+    );
+  }
   const share = Math.min(100, Math.round((limit.used / Math.max(1, limit.releasesLimit)) * 100));
   return (
     <div className="mt-1">
@@ -59,8 +70,8 @@ export function DistributionLimitBlock({
     ? `Distribution on your plan covers ${limit.artistsLimit === 1 ? '1 artist' : `${limit.artistsLimit} artists`}`
     : `You’ve used your ${limit.releasesLimit} releases this month`;
   const detail = artistCase
-    ? limit.tier === 'manager'
-      ? `That’s ${limit.planArtists[0] ?? 'your first artist'}. To send for another artist, pay for this release or move to Label for up to 5 artists.`
+    ? limit.tier === 'pro'
+      ? `That’s ${limit.planArtists[0] ?? 'your first artist'}. To send a single for another artist, pay for it or talk to us about Label for 5 artists.`
       : `That’s ${limit.planArtists.join(', ')}. To send for another artist, pay for this release or talk to us.`
     : `This one is ${price}. Your ${limit.releasesLimit} come back on ${resetDay(limit.resetsAt)}.`;
   return (
@@ -73,7 +84,7 @@ export function DistributionLimitBlock({
         </button>
         {artistCase ? (
           <a href={LABEL_MAILTO} className={OUTLINE}>
-            {limit.tier === 'manager' ? 'Talk to us about Label' : 'Talk to us'}
+            {limit.tier === 'pro' ? 'Talk to us about Label' : 'Talk to us'}
           </a>
         ) : null}
       </div>

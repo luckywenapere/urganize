@@ -232,7 +232,7 @@ describe('summarizeBilling', () => {
     // Before tiers were storable these fell through to 'Active plan', so a
     // paying Manager customer was shown no indication of what they bought.
     expect(summarizeBilling(snapshot({ accountStatus: 'paid', plan: 'manager' })).title).toBe(
-      'Pro plan'
+      'Manager plan'
     );
     expect(summarizeBilling(snapshot({ accountStatus: 'paid', plan: 'label' })).title).toBe(
       'Label plan'
@@ -425,7 +425,7 @@ describe('summarizeBilling — team access', () => {
       { team: team({ state: 'read_only', isOwnerOrAdmin: true }) }
     );
     // The owner keeps the richer per-user copy: the plan name and the date.
-    expect(result.title).toBe('Pro plan ended');
+    expect(result.title).toBe('Manager plan ended');
     expect(result.details.join(' ')).toContain('still see everything');
     // 'plans' would land on a bare /locked and bounce straight back.
     expect(result.cta).toBe('reactivate');
@@ -436,7 +436,7 @@ describe('summarizeBilling — team access', () => {
       team: team({ state: 'credits_only', isOwnerOrAdmin: true }),
     });
     expect(result.title).toBe('Using credits');
-    expect(result.details.join(' ')).toContain('Emerging features');
+    expect(result.details.join(' ')).toContain('Solo features');
     // The team has access, so a bare /locked would bounce: reactivate, like read-only.
     expect(result.cta).toBe('reactivate');
   });
@@ -508,9 +508,9 @@ describe('summarizeBilling — a pending plan change', () => {
     );
     // Still the tier they paid for: a downgrade takes nothing away early.
     expect(result.title).toBe('Label plan');
-    expect(result.details[0]).toContain('Moving to Pro');
+    expect(result.details[0]).toContain('Moving to Manager');
     // First, not appended: it is the sentence about what happens next.
-    expect(result.details[0]).toMatch(/Moving to Pro on /);
+    expect(result.details[0]).toMatch(/Moving to Manager on /);
     expect(result.details.some((line) => line.startsWith('Active until'))).toBe(true);
   });
 
@@ -558,7 +558,7 @@ describe('summarizeBilling — the cancel flow (2026-10-14)', () => {
       snapshot({ accountStatus: 'expired', plan: 'manager', rawStatus: 'cancelled', expiresAt: '2026-10-01T12:00:00.000Z' }),
       { pausedUntil: '2026-11-30T12:00:00.000Z' }
     );
-    expect(result.title).toBe('Pro plan paused');
+    expect(result.title).toBe('Manager plan paused');
     expect(result.details[0]).toMatch(/^Paused until /);
   });
 

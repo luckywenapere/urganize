@@ -201,16 +201,16 @@ export async function recordTrmFeeForSend(
 }
 
 /**
- * One extra release a team paid us ₦2,200 for (lib/distribution-limits-server.ts
- * calls this once, when the payment settles): we owe TRM its per-release price,
- * ₦2,100.
+ * One extra single a team paid us ₦2,000 for (lib/distribution-limits-server.ts
+ * calls this once, when the payment settles): we owe TRM 80% of it, ₦1,600
+ * (TRM_MARGIN in @urganize/pricing, 2026-11-07).
  * An 'adjustment' row, so it never counts as a TRM plan covering later sends.
  * Keyed on the Paystack reference, so a webhook and a callback settling the
  * same payment write one row.
  */
 export async function recordTrmExtraRelease(
   admin: Admin,
-  input: { workspaceId: string; reference: string; tier: 'manager' | 'label'; paidKobo: number; owedKobo: number; paidAt: Date }
+  input: { workspaceId: string; reference: string; tier: 'pro' | 'label'; paidKobo: number; owedKobo: number; paidAt: Date }
 ): Promise<'recorded' | 'error'> {
   const reference = `extra:${input.reference}`;
   const end = new Date(input.paidAt);

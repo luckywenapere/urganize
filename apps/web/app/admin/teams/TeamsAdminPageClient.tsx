@@ -434,7 +434,7 @@ export default function TeamsAdminPageClient() {
                     // Credits-only has no date: it lasts while the balance does.
                     <>
                       <span className="text-content-tertiary">While credits last</span>
-                      <p className="text-xs text-content-tertiary">No plan, Emerging features</p>
+                      <p className="text-xs text-content-tertiary">No plan, Solo features</p>
                     </>
                   ) : team.state === 'read_only' ? (
                     // Read-only is permanent: there is no later wall to count

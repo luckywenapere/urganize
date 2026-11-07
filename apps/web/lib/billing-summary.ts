@@ -218,7 +218,7 @@ export function summarizeBilling(
     return {
       title: 'Using credits',
       details: [
-        'Your team uses Urganize with Emerging features while it has credits.',
+        'Your team uses Urganize with Solo features while it has credits.',
         team.isOwnerOrAdmin
           ? 'Pick a plan for monthly credits and more room.'
           : 'Your team admin can pick a plan.',

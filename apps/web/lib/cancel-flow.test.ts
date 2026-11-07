@@ -262,33 +262,39 @@ describe('budget bands', () => {
 });
 
 describe('matchBudgetOffer', () => {
-  const codes = { PAYSTACK_PLAN_MANAGER_RETENTION_25000: 'PLN_m25', PAYSTACK_PLAN_MANAGER_RETENTION_35000: 'PLN_m35' };
+  const codes = { PAYSTACK_PLAN_PRO_RETENTION_25000: 'PLN_p25', PAYSTACK_PLAN_PRO_RETENTION_35000: 'PLN_p35' };
 
   it('the lowest band offers the dearest cheaper plan that fits', () => {
     expect(matchBudgetOffer({ tier: 'manager', band: 'low', planCodes: {} })).toEqual({
       kind: 'switch_plan',
       tier: 'solo',
-      price: 4_000,
+      price: 5_000,
     });
-    // Label at ₦100,000 (2026-10-26) has a lowest band under ₦45,000, so
-    // Pro at ₦40,000 is the dearest cheaper plan that fits.
-    expect(matchBudgetOffer({ tier: 'label', band: 'low', planCodes: {} })).toEqual({
+    // Pro at ₦40,000 (2026-11-07) has a lowest band under ₦20,000, so Manager
+    // at ₦15,000 is the dearest cheaper plan that fits.
+    expect(matchBudgetOffer({ tier: 'pro', band: 'low', planCodes: {} })).toEqual({
       kind: 'switch_plan',
       tier: 'manager',
+      price: 15_000,
+    });
+    // Label at ₦100,000 has a lowest band under ₦45,000, so Pro at ₦40,000 fits.
+    expect(matchBudgetOffer({ tier: 'label', band: 'low', planCodes: {} })).toEqual({
+      kind: 'switch_plan',
+      tier: 'pro',
       price: 40_000,
     });
     expect(matchBudgetOffer({ tier: 'solo', band: 'low', planCodes: {} })).toBeNull();
   });
 
   it('middle and top bands keep the plan at the band price for 3 months', () => {
-    expect(matchBudgetOffer({ tier: 'manager', band: 'mid', planCodes: codes })).toEqual({
+    expect(matchBudgetOffer({ tier: 'pro', band: 'mid', planCodes: codes })).toEqual({
       kind: 'discounted_plan',
-      tier: 'manager',
+      tier: 'pro',
       price: 25_000,
       months: RETENTION_OFFER_MONTHS,
-      planCode: 'PLN_m25',
+      planCode: 'PLN_p25',
     });
-    expect(matchBudgetOffer({ tier: 'manager', band: 'high', planCodes: codes })?.price).toBe(35_000);
+    expect(matchBudgetOffer({ tier: 'pro', band: 'high', planCodes: codes })?.price).toBe(35_000);
   });
 
   it('hides a discounted offer whose Paystack plan is not configured', () => {
@@ -299,20 +305,22 @@ describe('matchBudgetOffer', () => {
   it('names the env vars the setup needs', () => {
     expect(retentionPlanEnvVar('manager', 15000)).toBe('PAYSTACK_PLAN_MANAGER_RETENTION_15000');
     expect(allRetentionPlanEnvVars().map((row) => row.envVar)).toEqual([
-      'PAYSTACK_PLAN_SOLO_RETENTION_2500',
       'PAYSTACK_PLAN_SOLO_RETENTION_3500',
-      'PAYSTACK_PLAN_MANAGER_RETENTION_25000',
-      'PAYSTACK_PLAN_MANAGER_RETENTION_35000',
+      'PAYSTACK_PLAN_SOLO_RETENTION_4500',
+      'PAYSTACK_PLAN_MANAGER_RETENTION_10000',
+      'PAYSTACK_PLAN_MANAGER_RETENTION_14000',
+      'PAYSTACK_PLAN_PRO_RETENTION_25000',
+      'PAYSTACK_PLAN_PRO_RETENTION_35000',
       'PAYSTACK_PLAN_LABEL_RETENTION_70000',
       'PAYSTACK_PLAN_LABEL_RETENTION_90000',
     ]);
   });
 
   it('words the offers plainly', () => {
-    expect(retentionOfferLabel({ kind: 'switch_plan', tier: 'solo', price: 7500 })).toBe('Switch to Emerging for ₦7,500/month');
+    expect(retentionOfferLabel({ kind: 'switch_plan', tier: 'solo', price: 7500 })).toBe('Switch to Solo for ₦7,500/month');
     expect(
       retentionOfferLabel({ kind: 'discounted_plan', tier: 'manager', price: 15000, months: 3, planCode: 'x' })
-    ).toBe('Keep Pro for ₦15,000/month for 3 months');
+    ).toBe('Keep Manager for ₦15,000/month for 3 months');
   });
 });
 

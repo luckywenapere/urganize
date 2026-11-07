@@ -233,19 +233,21 @@ describe('purchasableTiers only names tiers this deployment can charge', () => {
 
     // Monthly alone is not enough. The wall's interval toggle is always live, so
     // a half-configured tier just moves the failure one click later.
-    process.env.PAYSTACK_PLAN_SOLO_PER_MONTH_NGN = 'PLN_solo_monthly';
+    process.env.PAYSTACK_PLAN_SOLO_V3_PER_MONTH_NGN = 'PLN_solo_monthly';
     expect(purchasableTiers()).toEqual([]);
 
-    process.env.PAYSTACK_PLAN_SOLO_PER_YEAR_NGN = 'PLN_solo_annual';
+    process.env.PAYSTACK_PLAN_SOLO_V3_PER_YEAR_NGN = 'PLN_solo_annual';
     expect(purchasableTiers()).toEqual(['solo']);
   });
 
   it('keeps pricing-page order, cheapest first', () => {
-    process.env.PAYSTACK_PLAN_SOLO_PER_MONTH_NGN = 'PLN_a';
-    process.env.PAYSTACK_PLAN_SOLO_PER_YEAR_NGN = 'PLN_b';
-    process.env.PAYSTACK_PLAN_MANAGER_PER_MONTH_NGN = 'PLN_c';
-    process.env.PAYSTACK_PLAN_MANAGER_PER_YEAR_NGN = 'PLN_d';
-    expect(purchasableTiers()).toEqual(['solo', 'manager']);
+    process.env.PAYSTACK_PLAN_SOLO_V3_PER_MONTH_NGN = 'PLN_a';
+    process.env.PAYSTACK_PLAN_SOLO_V3_PER_YEAR_NGN = 'PLN_b';
+    process.env.PAYSTACK_PLAN_MANAGER_V3_PER_MONTH_NGN = 'PLN_c';
+    process.env.PAYSTACK_PLAN_MANAGER_V3_PER_YEAR_NGN = 'PLN_d';
+    process.env.PAYSTACK_PLAN_PRO_V3_PER_MONTH_NGN = 'PLN_e';
+    process.env.PAYSTACK_PLAN_PRO_V3_PER_YEAR_NGN = 'PLN_f';
+    expect(purchasableTiers()).toEqual(['solo', 'manager', 'pro']);
   });
 
   // A SALES-LED TIER IS KEPT OUT BY TWO INDEPENDENT THINGS, and this asserts
@@ -266,8 +268,8 @@ describe('purchasableTiers only names tiers this deployment can charge', () => {
     process.env.PAYSTACK_PLAN_LABEL_NGN = 'PLN_label';
     process.env.PAYSTACK_PLAN_MONTHLY_NGN = 'PLN_legacy_monthly';
     process.env.PAYSTACK_PLAN_ANNUAL_NGN = 'PLN_legacy_annual';
-    process.env.PAYSTACK_PLAN_SOLO_PER_MONTH_NGN = 'PLN_a';
-    process.env.PAYSTACK_PLAN_SOLO_PER_YEAR_NGN = 'PLN_b';
+    process.env.PAYSTACK_PLAN_SOLO_V3_PER_MONTH_NGN = 'PLN_a';
+    process.env.PAYSTACK_PLAN_SOLO_V3_PER_YEAR_NGN = 'PLN_b';
     const offered = purchasableTiers();
     expect(offered).not.toContain('label');
     expect(offered).toContain('solo');
@@ -284,7 +286,7 @@ describe('purchasableTiers only names tiers this deployment can charge', () => {
   });
 
   it('treats an empty env var as unset, not as a code', () => {
-    process.env.PAYSTACK_PLAN_SOLO_PER_YEAR_NGN = '   ';
+    process.env.PAYSTACK_PLAN_SOLO_V3_PER_YEAR_NGN = '   ';
     expect(purchasableTiers()).not.toContain('solo');
   });
 
@@ -293,11 +295,11 @@ describe('purchasableTiers only names tiers this deployment can charge', () => {
     // the sole interval, and both again from 2026-09-10. The requirement tracks
     // what the wall OFFERS: a toggle with two live sides means a tier missing
     // either Plan would 500 on one of them, so it is withheld until both exist.
-    delete process.env.PAYSTACK_PLAN_SOLO_PER_MONTH_NGN;
-    process.env.PAYSTACK_PLAN_SOLO_PER_YEAR_NGN = 'PLN_solo_year';
+    delete process.env.PAYSTACK_PLAN_SOLO_V3_PER_MONTH_NGN;
+    process.env.PAYSTACK_PLAN_SOLO_V3_PER_YEAR_NGN = 'PLN_solo_year';
     expect(purchasableTiers()).not.toContain('solo');
 
-    process.env.PAYSTACK_PLAN_SOLO_PER_MONTH_NGN = 'PLN_solo_month';
+    process.env.PAYSTACK_PLAN_SOLO_V3_PER_MONTH_NGN = 'PLN_solo_month';
     expect(purchasableTiers()).toContain('solo');
   });
 });

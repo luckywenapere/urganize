@@ -123,7 +123,7 @@ export function PlanCards({
         </div>
       </div>
 
-      <div className={`grid gap-4 ${tiers.length > 1 ? 'sm:grid-cols-2' : ''}`}>
+      <div className={`grid gap-4 ${tiers.length > 2 ? 'sm:grid-cols-2 lg:grid-cols-3' : tiers.length > 1 ? 'sm:grid-cols-2' : ''}`}>
         {tiers.map((tierId) => {
           const tier = getTier(tierId);
           const price = planCardPrice(tierId, selectedInterval, introMonthsLeft);
@@ -147,7 +147,7 @@ export function PlanCards({
                 {tier.label}
                 {recommended ? (
                   <span className="whitespace-nowrap rounded-full bg-brand-muted px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-brand">
-                    Most teams
+                    Most popular
                   </span>
                 ) : null}
               </h2>

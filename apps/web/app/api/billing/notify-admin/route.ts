@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
           teamName: team.teamName,
           activateUrl:
             ask === 'distribute'
-              ? `${resolveAppBaseUrl()}${checkoutPath({ plan: 'manager' })}`
+              ? `${resolveAppBaseUrl()}${checkoutPath({ plan: 'pro' })}`
               : `${resolveAppBaseUrl()}/locked`,
           ask,
         },

@@ -1,4 +1,4 @@
-import { PRICING_TIERS } from "@urganize/pricing";
+import { EXTRA_RELEASE_PRICE_NAIRA, PRICING_TIERS } from "@urganize/pricing";
 
 // The homepage FAQ, as data (2026-09-02). One list feeds both the visible
 // <details> accordion in FaqSection and the FAQPage JSON-LD in app/page.tsx,
@@ -13,7 +13,10 @@ import { PRICING_TIERS } from "@urganize/pricing";
 // no Oxford comma — the copy rules every marketing string follows.
 export type FaqItem = { question: string; answer: string };
 
-const managerArtists = PRICING_TIERS.manager.limits.artists;
+const artistsOn = (value: number | null) => (value === null ? "no limit" : `up to ${value}`);
+const managerArtists = artistsOn(PRICING_TIERS.manager.limits.artists);
+const proArtists = artistsOn(PRICING_TIERS.pro.limits.artists);
+const singlePrice = `₦${EXTRA_RELEASE_PRICE_NAIRA.toLocaleString("en-US")}`;
 
 // HOMEPAGE V2 (2026-10-17, URG-334; reworked 2026-10-19, URG-405: WhatsApp
 // adoption and no-release questions replace "Do I pay per person?" and "Does it
@@ -41,11 +44,10 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   },
   {
     question: "Is it for one artist or a roster?",
-    answer: `Both. Emerging covers one artist, Pro up to ${managerArtists ?? "three"} and Label has no limit.`,
+    answer: `Both. Solo covers one artist, Manager ${managerArtists}, Pro ${proArtists} and Label has no limit.`,
   },
   {
     question: "Does it post or distribute for me?",
-    answer:
-      "No. Urganize plans and tracks the release. You still post and distribute.",
+    answer: `It sends your music to stores through our partner, TRM Distro. Pro and Label include it. On Solo and Manager a single is ${singlePrice}. You still post yourself.`,
   },
 ];

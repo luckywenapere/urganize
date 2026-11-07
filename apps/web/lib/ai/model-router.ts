@@ -260,6 +260,10 @@ export function resolveCeiling(team: TeamForRouting | undefined, env: EnvLike = 
       return pick('AI_ROUTER_CEILING_SOLO', 'standard');
     case 'manager':
       return pick('AI_ROUTER_CEILING_MANAGER', 'pro');
+    // Pro (2026-11-07) sits between Manager and Label; it reads Manager's
+    // override so no new env var is needed.
+    case 'pro':
+      return pick('AI_ROUTER_CEILING_MANAGER', 'pro');
     case 'label':
     // Group (back 2026-10-02) is sold above Label, so it gets Label's ceiling
     // and the same override rather than a switch of its own.

@@ -4,15 +4,16 @@ import { describe, expect, it } from 'vitest';
 import { HOME_DISTRIBUTE_COPY, HOME_DISTRIBUTE_HREF, decideDistributeCard } from './distribute-card';
 
 describe('decideDistributeCard', () => {
-  it('sends Manager, Label and Group teams to Distribute, never to an upgrade', () => {
-    expect(decideDistributeCard({ state: 'paid', tier: 'manager' })).toBe('distribute');
+  it('sends Pro, Label and Group teams to Distribute, never to an upgrade', () => {
+    expect(decideDistributeCard({ state: 'paid', tier: 'pro' })).toBe('distribute');
     expect(decideDistributeCard({ state: 'paid', tier: 'label' })).toBe('distribute');
     expect(decideDistributeCard({ state: 'paid', tier: 'enterprise' })).toBe('distribute');
     expect(decideDistributeCard({ state: 'comped', tier: 'label' })).toBe('distribute');
   });
 
-  it('offers Manager to Solo, trial and credits-only teams', () => {
+  it('offers Pro to Solo, Manager, trial and credits-only teams', () => {
     expect(decideDistributeCard({ state: 'paid', tier: 'solo', isOwnerOrAdmin: true })).toBe('upgrade');
+    expect(decideDistributeCard({ state: 'paid', tier: 'manager', isOwnerOrAdmin: true })).toBe('upgrade');
     // A trial resolves to the flagship tier on the server; it has not bought it.
     expect(decideDistributeCard({ state: 'trial', tier: 'label', isOwnerOrAdmin: true })).toBe('upgrade');
     expect(decideDistributeCard({ state: 'grace', tier: 'label', isOwnerOrAdmin: true })).toBe('upgrade');
@@ -26,7 +27,7 @@ describe('decideDistributeCard', () => {
   });
 
   it('still gives every teammate Distribute on a plan that has it', () => {
-    expect(decideDistributeCard({ state: 'paid', tier: 'manager', isOwnerOrAdmin: false })).toBe('distribute');
+    expect(decideDistributeCard({ state: 'paid', tier: 'pro', isOwnerOrAdmin: false })).toBe('distribute');
     expect(decideDistributeCard({ state: 'comped', tier: 'label', isOwnerOrAdmin: false })).toBe('distribute');
   });
 

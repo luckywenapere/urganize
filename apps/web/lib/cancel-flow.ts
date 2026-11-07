@@ -362,10 +362,10 @@ export function budgetBands(monthlyPrice: number): BudgetBand[] {
   ];
 }
 
-export type RetentionTierId = Extract<PricingTierId, 'solo' | 'manager' | 'label'>;
+export type RetentionTierId = Extract<PricingTierId, 'solo' | 'manager' | 'pro' | 'label'>;
 
 export function isRetentionTier(value: unknown): value is RetentionTierId {
-  return value === 'solo' || value === 'manager' || value === 'label';
+  return value === 'solo' || value === 'manager' || value === 'pro' || value === 'label';
 }
 
 export function tierMonthlyPrice(tier: RetentionTierId): number {
@@ -381,7 +381,7 @@ export function retentionPlanEnvVar(tier: RetentionTierId, price: number): strin
 /** Every retention Plan the offers can use, for the setup checklist. */
 export function allRetentionPlanEnvVars(): Array<{ envVar: string; tier: RetentionTierId; price: number }> {
   const out: Array<{ envVar: string; tier: RetentionTierId; price: number }> = [];
-  for (const tier of ['solo', 'manager', 'label'] as const) {
+  for (const tier of ['solo', 'manager', 'pro', 'label'] as const) {
     for (const band of budgetBands(tierMonthlyPrice(tier))) {
       if (band.id === 'low') continue;
       out.push({ envVar: retentionPlanEnvVar(tier, band.max), tier, price: band.max });
@@ -421,7 +421,7 @@ export function matchBudgetOffer(input: {
   if (!band) return null;
 
   if (band.id === 'low') {
-    const cheaper = (['label', 'manager', 'solo'] as const)
+    const cheaper = (['label', 'pro', 'manager', 'solo'] as const)
       .filter((tier) => tier !== input.tier)
       .map((tier) => ({ tier, price: tierMonthlyPrice(tier) }))
       .filter((candidate) => candidate.price > 0 && candidate.price < price && candidate.price <= band.max)

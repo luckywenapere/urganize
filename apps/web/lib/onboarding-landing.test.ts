@@ -88,14 +88,14 @@ describe('the plan on the sheet', () => {
   });
 
   it('says the limits from the plan itself', () => {
-    expect(planLimitLines('solo')).toEqual(['One artist, you and one other person.', 'One rollout at a time.']);
-    expect(planLimitLines('manager')).toEqual(['Up to 3 artists and 5 people.', 'Three rollouts at a time.']);
+    expect(planLimitLines('solo')).toEqual(['One artist, you and two others.', 'One rollout at a time.']);
+    expect(planLimitLines('manager')).toEqual(['Up to 3 artists and 6 people.', 'Three rollouts at a time.']);
   });
 
-  it('prices from @urganize/pricing, starting price first', () => {
+  it('prices from @urganize/pricing, with no first-month price', () => {
     const plan = trialSheetPlan('artist');
-    expect(plan.name).toBe('Emerging');
-    expect(plan.price).toMatch(/\/month$/);
-    expect(plan.then === null || plan.then.startsWith('for your first')).toBe(true);
+    expect(plan.name).toBe('Solo');
+    expect(plan.price).toBe('₦5,000/month');
+    expect(plan.then).toBeNull();
   });
 });
