@@ -227,7 +227,7 @@ describe('the plan cards say the same numbers', () => {
     // sends from its own TRM account; Solo Plus includes singles and EPs.
     expect(tierHighlights('solo')).toContain('Send singles to stores for ₦2,000 each');
     expect(tierHighlights('manager')).toContain('Send singles to stores for ₦2,000 each');
-    expect(tierHighlights('free')).toContain('Send to stores from your own TRM account');
+    expect(tierHighlights('free')).toContain('Send to stores from your own distributor account');
     expect(distributionAllowanceCopy('solo_plus')).toBe('Distribution for 1 of your artists, 7 releases a month');
   });
 });
