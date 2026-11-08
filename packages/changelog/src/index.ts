@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.256.0",
+    title: "Send EPs and albums to stores",
+    tag: "Rollouts",
+    date: "November 7, 2026",
+    highlights: [
+      "A rollout can now hold several songs. Add a second song and it becomes an EP; add a seventh and it is an album.",
+      "Each song gets its own title, ISRC, explicit answer and, if you want, its own credits.",
+      "Send them to stores with one master per song. EPs are included on Pro and Label; albums when you pay yearly.",
+    ],
+  },
+  {
     version: "1.255.0",
     title: "New plans and prices",
     tag: "Account",

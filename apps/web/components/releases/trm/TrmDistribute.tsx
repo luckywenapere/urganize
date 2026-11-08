@@ -21,7 +21,7 @@ import {
   TRM_ARTIST_NOT_FOUND_TEXT,
   type TrmSettings,
 } from '@/lib/trm/release';
-import type { TrmPayload, TrmRowView } from '@/lib/trm/server';
+import type { TrmRowView } from '@/lib/trm/server';
 import {
   Chip,
   Face,
@@ -41,6 +41,7 @@ import {
   Todo,
 } from './TrmParts';
 import { TrmSendSheet, TrmShell } from './TrmSendSheet';
+import { AddSongRow, SongSheet, SongsSection } from './TrmSongs';
 import { useTrm, type TrmPost } from './useTrm';
 import { DistributionPlanCard } from './DistributionPlanCard';
 import { DistributionLimitBlock } from './DistributionLimit';
@@ -54,7 +55,11 @@ import { checkoutPath } from '@/lib/self-serve';
  * one green action, everything TRM needs as quiet rows below. TRM is named on
  * the send action and the status only; the step's entry stays "Distribute".
  *
- * States: singles only (EP/album), N things before it can go, needs a TRM
+ * Songs (#1115): an EP or album lists its songs above everything else; a
+ * single offers "Add a song". An EP or album the team's plan does not cover
+ * shows the way on (Move to Pro, Pay yearly) instead of Send.
+ *
+ * States: plan does not cover it (EP/album), N things before it can go, needs a TRM
  * account, ready (Send to TRM; "opens soon" for teams outside the test
  * allowlist), in flight (Sent / Checking / Accepted / Delivering, live chip),
  * sent back (fix rows, Resend), delivered (UPC/ISRC).
@@ -64,6 +69,8 @@ const SCENE_FLAGS = {
   metadata: process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true',
   coverArt: process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true',
 };
+
+const isSongRow = (row: { key: string }) => row.key.startsWith('song:') || row.key === 'songs';
 
 const ACTION_LABEL = { move: 'Move', upload: 'Upload', ask: 'Ask', fix: 'Fix' } as const;
 const POLL_MS = 120_000;
@@ -95,6 +102,8 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
   const [note, setNote] = useState('');
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState('');
+  const [songSheet, setSongSheet] = useState<string | null>(null);
+  const [songBusy, setSongBusy] = useState(false);
 
   // Back from Paystack for one extra release: settle it, then open the send
   // sheet so the release goes on. The webhook settles it too; a slow Paystack
@@ -210,9 +219,55 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
     );
   }
 
-  const meta = ['Single', data.releaseDate ? `Out ${formatShortDay(data.releaseDate)}` : null, 'All stores'].filter(Boolean).join(' · ');
+  const KIND_LABEL = { single: 'Single', ep: 'EP', album: 'Album' } as const;
+  const songCount = data.checklist.songs.length;
+  const kindLine = `${KIND_LABEL[data.kind]}${songCount > 1 ? ` · ${songCount} songs` : ''}`;
+  const meta = [kindLine, data.releaseDate ? `Out ${formatShortDay(data.releaseDate)}` : null, 'All stores'].filter(Boolean).join(' · ');
   const chip = chipFor(status, received);
   const chipNode = chip ? <Chip label={chip.label} tone={chip.tone} /> : null;
+
+  // ---- Songs (#1115) ------------------------------------------------------------
+  const showSongs = songCount > 1 || data.kind !== 'single';
+  const songsLocked = inFlight || status === 'published' || status === 'takedown_requested' || status === 'taken_down';
+  const addSong = async () => {
+    setNote('');
+    setSongBusy(true);
+    const result = await post('track_add');
+    setSongBusy(false);
+    if (!result.ok) return setNote(String(result.data.error || 'Could not add the song.'));
+    await reload();
+    if (typeof result.data.trackId === 'string') setSongSheet(result.data.trackId);
+  };
+  const reorderSongs = async (trackIds: string[]) => {
+    setSongBusy(true);
+    const result = await post('track_order', { trackIds });
+    setSongBusy(false);
+    if (!result.ok) setNote(String(result.data.error || 'Could not reorder.'));
+    await reload();
+  };
+  const moveSong = (trackId: string, direction: -1 | 1) => {
+    const ids = data.tracks.map((t) => t.id);
+    const at = ids.indexOf(trackId);
+    const to = at + direction;
+    if (at < 0 || to < 0 || to >= ids.length) return;
+    [ids[at], ids[to]] = [ids[to], ids[at]];
+    void reorderSongs(ids);
+  };
+  const rolloutCredits =
+    [...data.checklist.ready, ...data.checklist.blocking].find((r) => r.key === 'credits')?.detail ?? 'The rollout’s credits';
+  const songsSection = showSongs ? (
+    <SongsSection
+      songs={data.checklist.songs}
+      locked={songsLocked}
+      busy={songBusy}
+      onOpen={(id) => id && setSongSheet(id)}
+      onAdd={() => void addSong()}
+      onReorder={(ids) => void reorderSongs(ids)}
+    />
+  ) : null;
+  const addSongRow = !showSongs && !songsLocked ? <AddSongRow busy={songBusy} onAdd={() => void addSong()} /> : null;
+  const openTrack = songSheet ? data.tracks.find((t) => t.id === songSheet) ?? null : null;
+  const openTrackIndex = openTrack ? data.tracks.indexOf(openTrack) : -1;
 
   const pressSend = async () => {
     setNote('');
@@ -237,7 +292,11 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
   };
 
   const blockingRow = (row: TrmRowView) => {
-    const run = fixRun(row.fix);
+    const run = row.trackId
+      ? () => setSongSheet(row.trackId as string)
+      : row.key === 'songs'
+        ? () => void addSong()
+        : fixRun(row.fix);
     const isFirst = data.checklist.blocking[0]?.key === row.key;
     return (
       <Row
@@ -292,6 +351,12 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
           artist={data.primaryArtist}
           releaseDate={data.releaseDate}
           initialEmail={data.artistEmail}
+          kind={data.kind}
+          songs={data.checklist.songs.map((song, i) => ({
+            sequence: song.sequence,
+            title: song.title,
+            hasMaster: Boolean(data.masters[i]),
+          }))}
           planIncluded={plan?.state === 'included'}
           resend={sheet === 'resend'}
           post={post}
@@ -303,6 +368,19 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
             setSheet(null);
             void reload();
           }}
+        />
+      ) : null}
+      {openTrack ? (
+        <SongSheet
+          key={openTrack.id}
+          track={openTrack}
+          sequence={openTrackIndex + 1}
+          count={data.tracks.length}
+          rolloutCredits={rolloutCredits}
+          post={post}
+          onClose={() => setSongSheet(null)}
+          onSaved={() => void reload()}
+          onMove={(direction) => moveSong(openTrack.id, direction)}
         />
       ) : null}
       {sheet === 'settings' ? <SettingsSheet settings={data.settings} post={post} onClose={() => setSheet(null)} onSaved={() => void reload()} /> : null}
@@ -389,8 +467,8 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
           <List>
             <Row
               mark={<Tick />}
-              title="5 items"
-              detail="Master · Cover art · Details · Credits · Rights"
+              title={songCount > 1 ? `${songCount} songs` : '5 items'}
+              detail={songCount > 1 ? 'Masters · Cover art · Details · Credits · Rights' : 'Master · Cover art · Details · Credits · Rights'}
             />
           </List>
         </section>
@@ -466,35 +544,36 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
     );
   }
 
-  // ---- Singles first -----------------------------------------------------------
-  if (data.checklist.singlesOnly) {
+  // ---- The plan does not cover it (EP / album) ------------------------------------
+  if (data.kind !== 'single' && data.storeAccess !== 'allowed') {
     // TRM's rules (2026-11-07): an EP needs a monthly TRM plan, an album a
-    // yearly one. A team without the plan is told so, with the two ways on.
-    const album = data.releaseType === 'album';
-    if (data.storeAccess !== 'allowed') {
-      return wrap(
-        <>
+    // yearly one. The songs can still be filled in; only Send is swapped for
+    // the way on. A Pro or Label team paying monthly is one step away (pay
+    // yearly); Solo and Manager move to Pro.
+    const album = data.kind === 'album';
+    const payYearly = album && data.teamDistributionPlan === 'monthly';
+    const tier = data.teamTier === 'label' ? 'label' : 'pro';
+    return wrap(
+      <>
+        <div>
           <Hero
-            title={album ? 'Albums need a yearly distribution plan.' : 'EPs need a monthly distribution plan.'}
+            title={payYearly ? 'Albums need a yearly plan.' : album ? 'Albums need a yearly distribution plan.' : 'EPs need a distribution plan.'}
             meta={
-              album
-                ? 'Pro and Label include it when you pay yearly.'
-                : 'Pro and Label include it, monthly or yearly.'
+              payYearly
+                ? 'You pay monthly, which covers singles and EPs. Pay yearly and albums are included too.'
+                : album
+                  ? 'Pro and Label include it when you pay yearly.'
+                  : 'Pro and Label include it, monthly or yearly.'
             }
           />
           <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:gap-3">
-            <a href={checkoutPath({ plan: 'pro', period: album ? 'annual' : 'monthly' })} className={PRIMARY}>
-              {album ? 'Move to Pro, yearly' : 'Move to Pro'}
+            <a href={checkoutPath({ plan: payYearly ? tier : 'pro', period: album ? 'annual' : 'monthly' })} className={PRIMARY}>
+              {payYearly ? 'Pay yearly' : album ? 'Move to Pro, yearly' : 'Move to Pro'}
             </a>
           </div>
-          <p className={`mt-3 ${MONO}`}>Or send it from the artist’s own TRM account.</p>
-          <Partners />
-        </>
-      );
-    }
-    return wrap(
-      <>
-        <Hero title="Singles first." meta={`${album ? 'Albums' : 'EPs'} are coming to TRM soon`} />
+          <p className={`mt-3 ${MONO}`}>Or send it from {data.primaryArtist ? `${data.primaryArtist}’s` : 'the artist’s'} own TRM account.</p>
+        </div>
+        {songsSection}
         <Partners />
       </>
     );
@@ -577,16 +656,22 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
     return wrap(
       <>
         <Hero title={`${blocking.length} ${blocking.length === 1 ? 'thing' : 'things'} before it can go.`} meta={meta} />
+        {songsSection}
+        {blocking.some((r) => !(showSongs && isSongRow(r))) ? (
         <section>
           <SectionLabel>Blocking</SectionLabel>
-          <List>{blocking.map(blockingRow)}</List>
+          <List>{blocking.filter((r) => !(showSongs && isSongRow(r))).map(blockingRow)}</List>
           {blocking.some((r) => r.key === 'release_date') ? (
             <p className={`mt-3 ${MONO}`}>TRM takes {formatShortDay(data.checklist.earliestDate)} or later</p>
           ) : null}
         </section>
+        ) : null}
         <section>
           <SectionLabel>Ready</SectionLabel>
-          <List>{data.checklist.ready.filter((r) => r.key === 'details' || r.key === 'rights' || r.key === 'cover_art' || r.key === 'credits').map(readyRow)}</List>
+          <List>
+            {data.checklist.ready.filter((r) => r.key === 'details' || r.key === 'rights' || r.key === 'cover_art' || r.key === 'credits').map(readyRow)}
+            {addSongRow}
+          </List>
         </section>
         <Partners sending />
       </>
@@ -617,15 +702,21 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
           ) : null}
         </div>
       </div>
+      {songsSection}
       <section>
         <SectionLabel>What goes</SectionLabel>
         <List>
           {data.checklist.ready.map(readyRow)}
+          {addSongRow}
           <Row
             mark={<Ring />}
-            title="Master"
+            title={songCount > 1 ? 'Masters' : 'Master'}
             dim={false}
-            detail={<span className="text-content-tertiary">Added at send · WAV ≤ 150 MB</span>}
+            detail={
+              <span className="text-content-tertiary">
+                {songCount > 1 ? 'Added at send · one WAV per song · up to 150 MB each' : 'Added at send · WAV ≤ 150 MB'}
+              </span>
+            }
           />
         </List>
       </section>

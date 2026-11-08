@@ -16,6 +16,7 @@ import {
   submitToTrm,
   type TrmResult,
 } from '@/lib/trm/server';
+import { addTrack, orderTracks, removeTrack, saveTrack } from '@/lib/trm/tracks-server';
 
 /**
  * Send to TRM (URG-392). GET: what the Distribute step shows (TRM's checklist,
@@ -24,7 +25,8 @@ import {
  * readiness is trusted. Any team member may send, a guest is read-only, a
  * non-member gets the existence-hiding 404.
  *
- * Actions: settings (artist TRM email, rights & policies), interest (not on the
+ * Actions: track_add / track_save / track_remove / track_order (the songs,
+ * #1115), settings (artist TRM email, rights & policies), interest (not on the
  * allowlist: remember the press, call nobody), prepare (draft + cover art),
  * presign_master / complete_master (the browser PUTs the master straight to
  * TRM's storage between them), submit, refresh (poll TRM when a webhook is late),
@@ -115,10 +117,19 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
           mimeType: body.mimeType,
           sizeBytes: body.sizeBytes,
           sha256: body.sha256,
+          trackSequence: body.trackSequence,
         })
       );
     case 'complete_master':
-      return reply(await completeMaster(admin, releaseId, actor, { assetId: body.assetId, fileName: body.fileName }));
+      return reply(await completeMaster(admin, releaseId, actor, { assetId: body.assetId, fileName: body.fileName, trackSequence: body.trackSequence }));
+    case 'track_add':
+      return reply(await addTrack(admin, releaseId, actor));
+    case 'track_save':
+      return reply(await saveTrack(admin, releaseId, body));
+    case 'track_remove':
+      return reply(await removeTrack(admin, releaseId, body));
+    case 'track_order':
+      return reply(await orderTracks(admin, releaseId, body));
     case 'submit':
       return reply(await submitToTrm(admin, releaseId, actor));
     case 'refresh':

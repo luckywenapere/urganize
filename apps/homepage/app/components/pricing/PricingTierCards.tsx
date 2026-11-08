@@ -227,7 +227,7 @@ export function PricingTierCards() {
         </div>
 
         <p className="mx-auto mt-8 max-w-2xl text-center text-sm leading-6 text-[var(--marketing-text-muted)]">
-          Each single you send to stores counts as one release. EPs and albums are coming. People you share a brief with, playlist curators and DJs
+          Each single, EP or album you send to stores counts as one release. People you share a brief with, playlist curators and DJs
           are free and never take a place on your team.
         </p>
         <p className="mt-3 text-center text-xs leading-6 text-[var(--marketing-text-subtle)]">

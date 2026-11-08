@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import type { ReactNode, LiHTMLAttributes } from 'react';
 import { Check, ExternalLink } from '@/components/icons';
 import { FAN_PAYMENTS_PARTNER } from '@/lib/fan-payments';
 import { openExternalUrl } from '@/lib/external-link';
@@ -112,6 +112,7 @@ export function Row({
   right,
   dim = false,
   children,
+  itemProps,
 }: {
   mark: ReactNode;
   title: ReactNode;
@@ -119,9 +120,11 @@ export function Row({
   right?: ReactNode;
   dim?: boolean;
   children?: ReactNode;
+  /** Extra props for the <li> (drag and drop on the songs list). */
+  itemProps?: LiHTMLAttributes<HTMLLIElement>;
 }) {
   return (
-    <li className="flex min-h-16 items-center gap-3.5 border-b border-stroke-default px-4 py-3 last:border-b-0 sm:px-[18px]">
+    <li {...itemProps} className="flex min-h-16 items-center gap-3.5 border-b border-stroke-default px-4 py-3 last:border-b-0 sm:px-[18px]">
       {mark}
       <div className="min-w-0 flex-1">
         <p className={`text-[15px] font-semibold ${dim ? 'text-content-secondary' : 'text-content-primary'}`}>{title}</p>
