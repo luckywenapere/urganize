@@ -8,13 +8,16 @@
 // release date (14+ days out), cover art, genre, language, explicit, writers,
 // producers and royalty splits that add up.
 //
-// v1 IS SINGLES ONLY (founder, Oct 19, 2026). A rollout holds one song, which
-// is track 1. An EP or album says "Singles first" rather than sending half.
+// SONGS (#1115, Nov 7, 2026). A rollout with no release_tracks rows is a single
+// whose one song is the rollout itself (title, ISRC, explicit, credits from the
+// rollout). Once songs are added, every song has a row and is sent in order.
+// The count sets the kind: 1 single, 2 to 6 an EP, 7 or more an album.
 
 import { DSP_MIME_TYPES, DSP_MIN_EDGE } from '../cover-art-dsp';
 import type { DistributionFieldPath } from '../distribution-rules';
 import { isDefaultReleaseTitle } from '@/types/releases';
-import type { TrmPolicy, TrmReleaseInput } from './client';
+import { distributionReleaseKind, type DistributionReleaseKind } from '@urganize/pricing';
+import type { TrmPolicy, TrmReleaseInput, TrmTrackInput } from './client';
 import type { TrmStatus } from './webhook';
 
 export const TRM_MIN_LEAD_DAYS = 14;
@@ -84,6 +87,21 @@ export type TrmCredit = {
   masterSplit: number | null;
 };
 
+/** One song row (release_tracks). */
+export type TrmTrackRow = {
+  id: string;
+  position: number;
+  title: string;
+  version: string | null;
+  featuredArtists: string | null;
+  explicit: boolean | null;
+  isrc: string | null;
+  lyrics: string | null;
+  /** 'rollout' = uses the rollout's credits; 'own' = `credits`. */
+  creditsMode: 'rollout' | 'own';
+  credits: TrmCredit[];
+};
+
 export type TrmFacts = {
   releaseId: string;
   title: string;
@@ -100,7 +118,68 @@ export type TrmFacts = {
   lyrics: string | null;
   artwork: { mimeType: string | null; width: number | null; height: number | null; sizeBytes: number | null } | null;
   credits: TrmCredit[];
+  /** The rollout's song rows in order. Empty = the rollout is its one song. */
+  tracks: TrmTrackRow[];
 };
+
+/** A song as it is sent: a row, or the rollout itself when there are none. */
+export type TrmSong = {
+  id: string | null;
+  sequence: number;
+  title: string;
+  version: string | null;
+  featuredArtists: string | null;
+  explicit: boolean | null;
+  isrc: string | null;
+  lyrics: string | null;
+  credits: TrmCredit[];
+  ownCredits: boolean;
+};
+
+export function songsOf(facts: TrmFacts): TrmSong[] {
+  if (facts.tracks.length === 0) {
+    return [
+      {
+        id: null,
+        sequence: 1,
+        title: facts.title,
+        version: null,
+        featuredArtists: facts.featuredArtists,
+        explicit: facts.explicit,
+        isrc: facts.isrc,
+        lyrics: facts.lyrics,
+        credits: facts.credits,
+        ownCredits: false,
+      },
+    ];
+  }
+  return [...facts.tracks]
+    .sort((a, b) => a.position - b.position)
+    .map((t, index) => ({
+      id: t.id,
+      sequence: index + 1,
+      title: t.title,
+      version: t.version,
+      featuredArtists: t.featuredArtists,
+      explicit: t.explicit,
+      isrc: t.isrc,
+      lyrics: t.lyrics,
+      credits: t.creditsMode === 'own' ? t.credits : facts.credits,
+      ownCredits: t.creditsMode === 'own',
+    }));
+}
+
+/** Single, EP or album. With 2 or more songs the count decides; with one, the
+ *  rollout's own type (a rollout planned as an EP still needs its songs). */
+export function releaseKindOf(facts: TrmFacts): DistributionReleaseKind {
+  const count = songsOf(facts).length;
+  if (count >= 2) return distributionReleaseKind({ trackCount: count });
+  return facts.releaseType ?? 'single';
+}
+
+/** The kind a song count makes (what release_type is synced to). */
+export const kindForCount = (count: number): DistributionReleaseKind =>
+  distributionReleaseKind({ trackCount: Math.max(1, count) });
 
 const WRITER_ROLES = ['songwriter', 'composer', 'lyricist'];
 const ROLE_LABEL: Record<string, string> = {
@@ -123,6 +202,14 @@ export const producersOf = (credits: readonly TrmCredit[]) =>
 
 /** Master splits when the team filled them; otherwise 100% to the artist. */
 export function royaltySplits(facts: TrmFacts): { splits: Array<{ name: string; percentage: number }>; total: number; fromCredits: boolean } {
+  return royaltySplitsFor(facts.credits, facts.primaryArtist);
+}
+
+export function royaltySplitsFor(
+  credits: readonly TrmCredit[],
+  primaryArtist: string
+): { splits: Array<{ name: string; percentage: number }>; total: number; fromCredits: boolean } {
+  const facts = { credits, primaryArtist };
   const answered = facts.credits.filter((c) => c.name.trim() && typeof c.masterSplit === 'number' && c.masterSplit > 0);
   if (answered.length === 0) {
     return { splits: [{ name: facts.primaryArtist.trim(), percentage: 100 }], total: 100, fromCredits: false };
@@ -176,6 +263,8 @@ export type TrmRowAction = 'move' | 'upload' | 'ask' | 'fix';
 
 export type TrmRow = {
   key: string;
+  /** Set on a song's row: which song to open. */
+  trackId?: string | null;
   title: string;
   detail: string;
   ok: boolean;
@@ -184,18 +273,78 @@ export type TrmRow = {
   ownerItem: TrmRowOwnerItem;
 };
 
+export type TrmSongView = {
+  id: string | null;
+  sequence: number;
+  title: string;
+  featuredArtists: string | null;
+  detail: string;
+  problem: string | null;
+};
+
 export type TrmChecklist = {
   blocking: TrmRow[];
   ready: TrmRow[];
   earliestDate: string;
-  singlesOnly: boolean;
+  kind: DistributionReleaseKind;
+  /** The songs in order (one for a plain single). */
+  songs: TrmSongView[];
 };
+
+/** What a set of credits still lacks before TRM takes them, or null. */
+export function creditsProblem(credits: readonly TrmCredit[], primaryArtist: string): string | null {
+  const writers = writersOf(credits);
+  const producers = producersOf(credits);
+  const splits = royaltySplitsFor(credits, primaryArtist);
+  if (writers.length === 0 && producers.length === 0) return 'No writers or producers yet';
+  if (writers.length === 0) return 'No writers yet';
+  if (producers.length === 0) return 'No producer yet';
+  if (splits.fromCredits && Math.abs(splits.total - 100) > 0.01) return `Splits add up to ${splits.total}% · need 100%`;
+  return null;
+}
+
+/** What one song still needs (rows only; a plain single uses the rollout rows). */
+export function songProblem(song: TrmSong, primaryArtist: string): string | null {
+  if (!song.title.trim()) return 'No title yet';
+  if (song.explicit !== true && song.explicit !== false) return 'Explicit not answered';
+  if (song.ownCredits) {
+    const problem = creditsProblem(song.credits, primaryArtist);
+    if (problem) return problem;
+  }
+  return null;
+}
 
 export function trmChecklist(facts: TrmFacts, settings: TrmSettings, today: Date): TrmChecklist {
   const blocking: TrmRow[] = [];
   const ready: TrmRow[] = [];
   const earliest = earliestTrmDate(today);
   const block = (row: Omit<TrmRow, 'ok'>) => blocking.push({ ...row, ok: false });
+  const songs = songsOf(facts);
+  const hasRows = facts.tracks.length > 0;
+  const kind = releaseKindOf(facts);
+  const songViews: TrmSongView[] = songs.map((song) => {
+    const problem = hasRows ? songProblem(song, facts.primaryArtist) : null;
+    const detail = [
+      song.explicit === true ? 'Explicit' : song.explicit === false ? 'Clean' : null,
+      song.isrc?.trim() ? `ISRC ${song.isrc.trim()}` : 'TRM gives the ISRC',
+      song.ownCredits ? 'Own credits' : null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    return { id: song.id, sequence: song.sequence, title: song.title.trim(), featuredArtists: song.featuredArtists, detail, problem };
+  });
+  if (hasRows) {
+    for (const view of songViews) {
+      if (view.problem) {
+        block({ key: `song:${view.id}`, trackId: view.id, title: `Song ${view.sequence}`, detail: view.problem, fix: null, action: 'fix', ownerItem: 'metadata' });
+      }
+    }
+  }
+  if (kind !== 'single' && songs.length < 2) {
+    block({ key: 'songs', title: 'Songs', detail: `Only 1 song · an ${kind === 'album' ? 'album' : 'EP'} needs more`, fix: null, action: 'fix', ownerItem: 'metadata' });
+  }
+  // Credits at the rollout level matter only if a song still uses them.
+  const rolloutCreditsUsed = songs.some((s) => !s.ownCredits);
 
   if (isDefaultReleaseTitle(facts.title)) {
     block({ key: 'title', title: 'Title', detail: 'Not set', fix: 'title', action: 'fix', ownerItem: 'metadata' });
@@ -250,12 +399,10 @@ export function trmChecklist(facts: TrmFacts, settings: TrmSettings, today: Date
   const writers = writersOf(facts.credits);
   const producers = producersOf(facts.credits);
   const splits = royaltySplits(facts);
-  let creditProblem: string | null = null;
-  if (writers.length === 0 && producers.length === 0) creditProblem = 'No writers or producers yet';
-  else if (writers.length === 0) creditProblem = 'No writers yet';
-  else if (producers.length === 0) creditProblem = 'No producer yet';
-  else if (splits.fromCredits && Math.abs(splits.total - 100) > 0.01) creditProblem = `Splits add up to ${splits.total}% · need 100%`;
-  if (creditProblem) {
+  const creditProblem = rolloutCreditsUsed ? creditsProblem(facts.credits, facts.primaryArtist) : null;
+  if (!rolloutCreditsUsed) {
+    ready.push({ key: 'credits', title: 'Credits & splits', detail: 'Every song has its own', ok: true, fix: 'credits', action: null, ownerItem: 'metadata' });
+  } else if (creditProblem) {
     block({
       key: 'credits',
       title: 'Credits & splits',
@@ -286,7 +433,9 @@ export function trmChecklist(facts: TrmFacts, settings: TrmSettings, today: Date
   else block({ key: 'genre', title: 'Genre', detail: 'Not set', fix: 'metadata.genre', action: 'fix', ownerItem: 'metadata' });
   if (facts.language?.trim()) shown.push(facts.language.trim());
   else block({ key: 'language', title: 'Language', detail: 'Not set', fix: 'metadata.language', action: 'fix', ownerItem: 'metadata' });
-  if (facts.explicit === true || facts.explicit === false) shown.push(facts.explicit ? 'Explicit' : 'Clean');
+  if (hasRows) {
+    // Explicit is answered per song.
+  } else if (facts.explicit === true || facts.explicit === false) shown.push(facts.explicit ? 'Explicit' : 'Clean');
   else block({ key: 'explicit', title: 'Explicit', detail: 'Not answered', fix: 'metadata.explicit', action: 'fix', ownerItem: 'metadata' });
   shown.push(settings.label ?? facts.labelName?.trim() ?? 'Independent');
   ready.push({ key: 'details', title: 'Details', detail: shown.join(' · '), ok: true, fix: 'metadata.genre', action: null, ownerItem: 'metadata' });
@@ -303,7 +452,7 @@ export function trmChecklist(facts: TrmFacts, settings: TrmSettings, today: Date
 
   const ORDER = ['cover_art', 'details', 'credits', 'rights'];
   ready.sort((a, b) => ORDER.indexOf(a.key) - ORDER.indexOf(b.key));
-  return { blocking, ready, earliestDate: earliest, singlesOnly: facts.releaseType !== null && facts.releaseType !== 'single' };
+  return { blocking, ready, earliestDate: earliest, kind, songs: songViews };
 }
 
 export function isDefaultSettings(s: TrmSettings): boolean {
@@ -343,18 +492,8 @@ export function buildTrmReleaseInput(
 ): TrmReleaseInput {
   const year = Number((facts.releaseDate ?? '').slice(0, 4)) || new Date().getUTCFullYear();
   const featured = splitNames(facts.featuredArtists);
-  const writers = writersOf(facts.credits).map((c) => ({
-    name: c.name.trim(),
-    role: ROLE_LABEL[c.roles.find((r) => WRITER_ROLES.includes(r)) ?? 'songwriter'],
-  }));
-  const producers = producersOf(facts.credits).map((c) => ({ name: c.name.trim(), role: 'Producer' }));
-  const other = facts.credits
-    .filter((c) => c.name.trim())
-    .flatMap((c) =>
-      c.roles
-        .filter((r) => !WRITER_ROLES.includes(r) && r !== 'producer' && r !== 'featured_artist' && ROLE_LABEL[r])
-        .map((r) => ({ name: c.name.trim(), role: ROLE_LABEL[r] }))
-    );
+  const songs = songsOf(facts);
+  const tracks = songs.map((song) => buildTrmTrack(song, facts, settings));
   const upc = facts.upc && /^\d{12,14}$/.test(facts.upc.trim()) ? facts.upc.trim() : null;
   const label = settings.label ?? facts.labelName?.trim() ?? 'Independent';
   return {
@@ -364,7 +503,7 @@ export function buildTrmReleaseInput(
     title: facts.title.trim(),
     primary_artist: facts.primaryArtist.trim(),
     featured_artist: featured.length ? featured.join(', ') : null,
-    release_type: RELEASE_TYPE[facts.releaseType ?? 'single'],
+    release_type: RELEASE_TYPE[releaseKindOf(facts)],
     genre: (facts.genre ?? '').trim(),
     release_date: (facts.releaseDate ?? '').slice(0, 10),
     upc,
@@ -372,34 +511,50 @@ export function buildTrmReleaseInput(
     copyright_name: facts.primaryArtist.trim(),
     copyright_year: year,
     language: (facts.language ?? '').trim(),
-    explicit: facts.explicit === true,
+    explicit: songs.some((s) => s.explicit === true),
     stores: resolveTrmStores(settings.stores, availableStores),
     metadata: { source: 'urganize' },
-    tracks: [
-      {
-        sequence: 1,
-        title: facts.title.trim(),
-        primary_artist: facts.primaryArtist.trim(),
-        featured_artists: featured,
-        isrc: facts.isrc?.trim() || null,
-        genre: (facts.genre ?? '').trim(),
-        language: (facts.language ?? '').trim(),
-        explicit: facts.explicit === true,
-        writers,
-        producers,
-        other_credits: other,
-        royalty_splits: royaltySplits(facts).splits,
-        country_of_recording: settings.countryOfRecording,
-        lyrics: facts.lyrics?.trim() || null,
-        owns_sound_recording: true,
-        sound_recording_territories: ['Worldwide'],
-        collect_publishing_royalties: true,
-        composition_territories: ['Worldwide'],
-        youtube_policy: settings.youtubePolicy,
-        facebook_policy: settings.facebookPolicy,
-        soundexchange_policy: settings.soundexchangePolicy,
-      },
-    ],
+    tracks,
+  };
+}
+
+/** One song as TRM's TrackInput. */
+export function buildTrmTrack(song: TrmSong, facts: TrmFacts, settings: TrmSettings): TrmTrackInput {
+  const writers = writersOf(song.credits).map((c) => ({
+    name: c.name.trim(),
+    role: ROLE_LABEL[c.roles.find((r) => WRITER_ROLES.includes(r)) ?? 'songwriter'],
+  }));
+  const producers = producersOf(song.credits).map((c) => ({ name: c.name.trim(), role: 'Producer' }));
+  const other = song.credits
+    .filter((c) => c.name.trim())
+    .flatMap((c) =>
+      c.roles
+        .filter((r) => !WRITER_ROLES.includes(r) && r !== 'producer' && r !== 'featured_artist' && ROLE_LABEL[r])
+        .map((r) => ({ name: c.name.trim(), role: ROLE_LABEL[r] }))
+    );
+  return {
+    sequence: song.sequence,
+    title: song.title.trim(),
+    ...(song.version?.trim() ? { version: song.version.trim() } : {}),
+    primary_artist: facts.primaryArtist.trim(),
+    featured_artists: splitNames(song.featuredArtists),
+    isrc: song.isrc?.trim() || null,
+    genre: (facts.genre ?? '').trim(),
+    language: (facts.language ?? '').trim(),
+    explicit: song.explicit === true,
+    writers,
+    producers,
+    other_credits: other,
+    royalty_splits: royaltySplitsFor(song.credits, facts.primaryArtist).splits,
+    country_of_recording: settings.countryOfRecording,
+    lyrics: song.lyrics?.trim() || null,
+    owns_sound_recording: true,
+    sound_recording_territories: ['Worldwide'],
+    collect_publishing_royalties: true,
+    composition_territories: ['Worldwide'],
+    youtube_policy: settings.youtubePolicy,
+    facebook_policy: settings.facebookPolicy,
+    soundexchange_policy: settings.soundexchangePolicy,
   };
 }
 

@@ -90,11 +90,11 @@ const GROUPS: Group[] = [
       },
       {
         label: "EPs",
-        value: () => "Coming soon",
+        value: (tier) => (includesDistribution(tier) ? "Included" : "From your own TRM account"),
       },
       {
         label: "Albums",
-        value: () => "Coming soon",
+        value: (tier) => (includesDistribution(tier) ? "Included when you pay yearly" : "From your own TRM account"),
       },
       {
         label: "Artists we send for",

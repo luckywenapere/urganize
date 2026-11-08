@@ -41,6 +41,7 @@ const ready: TrmFacts = {
     { name: 'Tedum', roles: ['songwriter'], songwriterSplit: 50, masterSplit: null },
     { name: 'DJ K', roles: ['producer'], songwriterSplit: null, masterSplit: null },
   ],
+  tracks: [],
 };
 
 describe('trmChecklist', () => {
@@ -74,8 +75,10 @@ describe('trmChecklist', () => {
     const c = trmChecklist({ ...ready, credits }, DEFAULT_TRM_SETTINGS, TODAY);
     expect(c.blocking.map((r) => r.detail)).toEqual(['Splits add up to 80% · need 100%']);
   });
-  it('flags EPs and albums as singles-only', () => {
-    expect(trmChecklist({ ...ready, releaseType: 'ep' }, DEFAULT_TRM_SETTINGS, TODAY).singlesOnly).toBe(true);
+  it('a rollout planned as an EP with one song asks for the rest', () => {
+    const c = trmChecklist({ ...ready, releaseType: 'ep' }, DEFAULT_TRM_SETTINGS, TODAY);
+    expect(c.kind).toBe('ep');
+    expect(c.blocking.map((r) => [r.key, r.detail])).toEqual([['songs', 'Only 1 song · an EP needs more']]);
   });
 });
 

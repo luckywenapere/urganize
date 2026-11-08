@@ -19,7 +19,14 @@ import { recordTrmFeeForSend } from './partner-ledger-server';
 import { checkDistributionSend, loadDistributionLimit, recordDistributionSend } from '../distribution-limits-server';
 import type { DistributionLimitView } from '../distribution-limits';
 import { loadTeamDistribution } from '../distribution-team-server';
-import { distributionAccess, teamDistributionPlan, type DistributionAccess as StoreAccess, type TeamDistributionPlan } from '@urganize/pricing';
+import {
+  distributionAccess,
+  teamDistributionPlan,
+  type DistributionAccess as StoreAccess,
+  type DistributionReleaseKind,
+  type PricingTierId,
+  type TeamDistributionPlan,
+} from '@urganize/pricing';
 import { readTestRelease } from '../test-release';
 import type { BillingEventType } from '../billing-events';
 import {
@@ -51,7 +58,9 @@ import {
   receivedByTrm,
   rejectionFix,
   rejectionTitle,
+  releaseKindOf,
   shouldApply,
+  songsOf,
   trmChecklist,
   type SubmissionStatus,
   type TrmChecklist,
@@ -59,10 +68,12 @@ import {
   type TrmHistoryEntry,
   type TrmRow,
   type TrmSettings,
+  type TrmTrackRow,
 } from './release';
 import { isTrmStatus, type TrmWebhookEvent } from './webhook';
 
 const SUBMISSIONS = 'distribution_submissions';
+export const TRACKS = 'release_tracks';
 const DELIVERIES = 'partner_webhook_deliveries';
 const TASKS = 'tasks';
 export const TRM_REJECTION_TASK_TAG = 'trm_rejection';
@@ -75,6 +86,58 @@ const asNumber = (v: unknown): number | null => {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 };
+
+/** A release_tracks row, read defensively. Own credits are [{name, roles, masterSplit}]. */
+export function readTrackRow(row: Json): TrmTrackRow {
+  const credits = Array.isArray(row.credits) ? (row.credits as unknown[]) : [];
+  return {
+    id: String(row.id),
+    position: asNumber(row.position) ?? 0,
+    title: asText(row.title) ?? '',
+    version: asText(row.version),
+    featuredArtists: asText(row.featured_artists),
+    explicit: typeof row.explicit === 'boolean' ? row.explicit : null,
+    isrc: asText(row.isrc),
+    lyrics: asText(row.lyrics),
+    creditsMode: row.credits_mode === 'own' ? 'own' : 'rollout',
+    credits: credits.map(asRecord).map((c) => ({
+      name: asText(c.name) ?? '',
+      roles: Array.isArray(c.roles) ? c.roles.filter((r): r is string => typeof r === 'string') : [],
+      songwriterSplit: null,
+      masterSplit: asNumber(c.masterSplit),
+    })),
+  };
+}
+
+/** The master at TRM for one song (track_audio). */
+export type TrackAudio = { trackId: string | null; sequence: number; assetId: string; fileName: string | null };
+
+const readTrackAudio = (value: unknown): TrackAudio[] =>
+  (Array.isArray(value) ? value : [])
+    .map(asRecord)
+    .map((a) => ({
+      trackId: asText(a.trackId),
+      sequence: asNumber(a.sequence) ?? 0,
+      assetId: asText(a.assetId) ?? '',
+      fileName: asText(a.fileName),
+    }))
+    .filter((a) => a.assetId && a.sequence > 0);
+
+/** Each song's master in order, or null for a song with none yet. A master
+ *  counts only if it was uploaded for that song at that place in the order. */
+export function mastersFor(facts: TrmFacts, row: Pick<SubmissionRow, 'track_audio' | 'audio_asset_id' | 'audio_file_name'> | null): Array<TrackAudio | null> {
+  const songs = songsOf(facts);
+  const audio = row?.track_audio ?? [];
+  return songs.map((song) => {
+    const match = audio.find((a) => a.sequence === song.sequence && a.trackId === song.id);
+    if (match) return match;
+    // A plain single (and rows from before songs): audio_asset_id is song 1's.
+    if (song.id === null && song.sequence === 1 && row?.audio_asset_id) {
+      return { trackId: null, sequence: 1, assetId: row.audio_asset_id, fileName: row.audio_file_name };
+    }
+    return null;
+  });
+}
 
 export function canSendToTrm(email: string | null | undefined): boolean {
   return trmConfigured() && canSendToTrmEmail(email, process.env.TRM_SEND_ALLOWED_EMAILS);
@@ -89,7 +152,7 @@ type ArtworkSource = { id: string; bucket: string; path: string; mimeType: strin
 export type LoadedTrmFacts = { facts: TrmFacts; artistId: string | null; ownerUserId: string; artworkSource: ArtworkSource | null };
 
 export async function loadTrmFacts(admin: SupabaseClient, releaseId: string): Promise<LoadedTrmFacts | null> {
-  const [releaseResult, metadataResult, creditsResult] = await Promise.all([
+  const [releaseResult, metadataResult, creditsResult, tracksResult] = await Promise.all([
     admin
       .from('releases')
       .select('id,title,artist_name,artist_id,owner_user_id,release_date,release_type,artwork_asset_id')
@@ -105,8 +168,13 @@ export async function loadTrmFacts(admin: SupabaseClient, releaseId: string): Pr
       .from('release_credit_submissions')
       .select('legal_name,stage_name,roles,songwriter_split,master_split,person_hidden')
       .eq('release_id', releaseId),
+    admin
+      .from(TRACKS)
+      .select('id,position,title,version,featured_artists,explicit,isrc,lyrics,credits_mode,credits')
+      .eq('release_id', releaseId)
+      .order('position', { ascending: true }),
   ]);
-  if (releaseResult.error || metadataResult.error || creditsResult.error) return null;
+  if (releaseResult.error || metadataResult.error || creditsResult.error || tracksResult.error) return null;
   const release = releaseResult.data as Json | null;
   if (!release) return null;
   const metadata = asRecord(metadataResult.data);
@@ -167,6 +235,7 @@ export async function loadTrmFacts(admin: SupabaseClient, releaseId: string): Pr
       songwriterSplit: asNumber(row.songwriter_split),
       masterSplit: asNumber(row.master_split),
     })),
+    tracks: ((tracksResult.data as Json[] | null) ?? []).map(readTrackRow),
   };
   return {
     facts,
@@ -190,6 +259,7 @@ export type SubmissionRow = {
   artwork_source_id: string | null;
   audio_asset_id: string | null;
   audio_file_name: string | null;
+  track_audio: TrackAudio[];
   submit_count: number;
   last_event: string | null;
   last_event_at: string | null;
@@ -202,12 +272,12 @@ export type SubmissionRow = {
 };
 
 const SUBMISSION_COLUMNS =
-  'id,release_id,partner,artist_id,artist_email,partner_release_id,status,history,settings,artwork_asset_id,artwork_source_id,audio_asset_id,audio_file_name,submit_count,last_event,last_event_at,upc,isrc,error,terms_accepted_at,submitted_at,updated_at';
+  'id,release_id,partner,artist_id,artist_email,partner_release_id,status,history,settings,artwork_asset_id,artwork_source_id,audio_asset_id,audio_file_name,track_audio,submit_count,last_event,last_event_at,upc,isrc,error,terms_accepted_at,submitted_at,updated_at';
 
 const toRow = (data: unknown): SubmissionRow | null => {
   const r = data as SubmissionRow | null;
   if (!r) return null;
-  return { ...r, history: Array.isArray(r.history) ? r.history : [], settings: asRecord(r.settings) };
+  return { ...r, history: Array.isArray(r.history) ? r.history : [], settings: asRecord(r.settings), track_audio: readTrackAudio(r.track_audio) };
 };
 
 export async function loadSubmission(admin: SupabaseClient, releaseId: string): Promise<SubmissionRow | null | 'error'> {
@@ -288,6 +358,14 @@ export type TrmPayload = {
    *  matching TRM plan; Solo and Manager have none. */
   storeAccess: StoreAccess;
   teamDistributionPlan: TeamDistributionPlan;
+  /** Single, EP or album (the song count decides once there are 2). */
+  kind: DistributionReleaseKind;
+  /** The team's plan, for the "pay yearly" way on. Null when none. */
+  teamTier: PricingTierId | null;
+  /** Each song's master at TRM, in order (null = none yet). */
+  masters: Array<{ fileName: string | null } | null>;
+  /** The song rows (empty for a plain single), for the song sheet. */
+  tracks: TrmTrackRow[];
   title: string;
   checklist: Omit<TrmChecklist, 'blocking' | 'ready'> & { blocking: TrmRowView[]; ready: TrmRowView[] };
   settings: TrmSettings;
@@ -380,10 +458,15 @@ export async function loadTrmPayload(
   const decision = team?.decision;
   const teamPlan: TeamDistributionPlan =
     decision && decision.state === 'included' ? teamDistributionPlan(decision.tier, decision.interval) : 'none';
+  const kind = releaseKindOf(loadedFacts.facts);
   return {
     limit: limit?.view ?? null,
-    storeAccess: distributionAccess({ releaseType: loadedFacts.facts.releaseType, teamPlan }),
+    storeAccess: distributionAccess({ releaseType: kind, teamPlan }),
     teamDistributionPlan: teamPlan,
+    kind,
+    teamTier: decision && 'tier' in decision ? ((decision.tier as PricingTierId | null) ?? null) : null,
+    tracks: loadedFacts.facts.tracks,
+    masters: mastersFor(loadedFacts.facts, submission).map((m) => (m ? { fileName: m.fileName } : null)),
     canSend: canSendToTrm(viewer.email),
     releaseType: loadedFacts.facts.releaseType,
     releaseDate: loadedFacts.facts.releaseDate,
@@ -500,6 +583,21 @@ function trmMessage(error: unknown): string {
   return 'TRM did not answer. Try again.';
 }
 
+/** TRM's plan rule for this release (single always; EP on a monthly or yearly
+ *  plan; album on a yearly plan). Null when it may go. */
+async function storeAccessRefusal(admin: SupabaseClient, loaded: LoadedTrmFacts): Promise<TrmResult<never> | null> {
+  const kind = releaseKindOf(loaded.facts);
+  if (kind === 'single') return null;
+  const team = loaded.ownerUserId ? await loadTeamDistribution(admin, loaded.ownerUserId).catch(() => null) : null;
+  const decision = team?.decision;
+  const teamPlan: TeamDistributionPlan =
+    decision && decision.state === 'included' ? teamDistributionPlan(decision.tier, decision.interval) : 'none';
+  const access = distributionAccess({ releaseType: kind, teamPlan });
+  if (access === 'needs_monthly_plan') return fail(402, 'needs_monthly_plan', 'EPs need a distribution plan.');
+  if (access === 'needs_yearly_plan') return fail(402, 'needs_yearly_plan', 'Albums need a yearly plan.');
+  return null;
+}
+
 /**
  * Create (or refresh) the TRM draft and upload the cover art. Safe to retry:
  * the create key is derived from the exact body, PATCH replaces in place, and
@@ -523,7 +621,8 @@ export async function prepareTrmDraft(
   }
   const settings = readTrmSettings(current?.settings);
   const checklist = trmChecklist(loaded.facts, settings, new Date());
-  if (checklist.singlesOnly) return fail(409, 'singles_only', 'Singles first. EPs and albums are coming.');
+  const refused = await storeAccessRefusal(admin, loaded);
+  if (refused) return refused;
   if (checklist.blocking.length > 0) {
     return fail(409, 'not_ready', `${checklist.blocking.length} things before it can go.`);
   }
@@ -622,11 +721,14 @@ export async function presignMaster(
   admin: SupabaseClient,
   releaseId: string,
   actor: TrmActor,
-  input: { fileName: unknown; mimeType: unknown; sizeBytes: unknown; sha256: unknown }
+  input: { fileName: unknown; mimeType: unknown; sizeBytes: unknown; sha256: unknown; trackSequence?: unknown }
 ): Promise<TrmResult<{ assetId: string; url: string; headers: Record<string, string> }>> {
   if (!canSendToTrm(actor.email)) return fail(403, 'not_open', 'Sending to TRM opens soon.');
-  const current = await loadSubmission(admin, releaseId);
+  const [current, loaded] = await Promise.all([loadSubmission(admin, releaseId), loadTrmFacts(admin, releaseId)]);
   if (current === 'error' || !current?.partner_release_id) return fail(409, 'no_draft', 'Start the send again.');
+  if (!loaded) return fail(500, 'read_failed', 'Could not check this rollout. Try again.');
+  const sequence = asNumber(input.trackSequence ?? 1) ?? 1;
+  if (!Number.isInteger(sequence) || sequence < 1 || sequence > songsOf(loaded.facts).length) return fail(400, 'bad_track', 'That song is not on this rollout.');
   const fileName = asText(input.fileName)?.slice(0, 180) ?? 'master.wav';
   const mimeType = (asText(input.mimeType) ?? '').toLowerCase() || 'audio/wav';
   const size = asNumber(input.sizeBytes);
@@ -634,12 +736,12 @@ export async function presignMaster(
   if (!AUDIO_MIME.includes(mimeType)) return fail(400, 'bad_type', 'The master has to be a WAV.');
   if (!size || size < 1 || size > TRM_AUDIO_MAX_BYTES) return fail(400, 'too_big', 'TRM takes masters up to 150 MB.');
   if (!/^[a-f0-9]{64}$/.test(sha)) return fail(400, 'bad_hash', 'Could not read the file. Try again.');
-  const body = { type: 'audio' as const, file_name: fileName, mime_type: mimeType, size_bytes: size, sha256: sha, track_sequence: 1 };
+  const body = { type: 'audio' as const, file_name: fileName, mime_type: mimeType, size_bytes: size, sha256: sha, track_sequence: sequence };
   try {
     const presign = await presignTrmAsset(
       current.partner_release_id,
       body,
-      idempotencyKey(releaseId, `audio:${current.partner_release_id}:${roundOf(current)}`, body)
+      idempotencyKey(releaseId, `audio:${current.partner_release_id}:${sequence}:${roundOf(current)}`, body)
     );
     return {
       ok: true,
@@ -658,18 +760,31 @@ export async function completeMaster(
   admin: SupabaseClient,
   releaseId: string,
   actor: TrmActor,
-  input: { assetId: unknown; fileName: unknown }
+  input: { assetId: unknown; fileName: unknown; trackSequence?: unknown }
 ): Promise<TrmResult> {
   if (!canSendToTrm(actor.email)) return fail(403, 'not_open', 'Sending to TRM opens soon.');
-  const current = await loadSubmission(admin, releaseId);
+  const [current, loaded] = await Promise.all([loadSubmission(admin, releaseId), loadTrmFacts(admin, releaseId)]);
   const assetId = asText(input.assetId);
   if (current === 'error' || !current?.partner_release_id || !assetId) return fail(409, 'no_draft', 'Start the send again.');
+  if (!loaded) return fail(500, 'read_failed', 'Could not check this rollout. Try again.');
+  const sequence = asNumber(input.trackSequence ?? 1) ?? 1;
+  const song = songsOf(loaded.facts).find((x) => x.sequence === sequence);
+  if (!song) return fail(400, 'bad_track', 'That song is not on this rollout.');
   try {
     await completeTrmAsset(current.partner_release_id, assetId, idempotencyKey(releaseId, `audio-complete:${assetId}:${roundOf(current)}`));
   } catch (error) {
     return fail(502, 'trm_error', trmMessage(error));
   }
-  await saveSubmission(admin, releaseId, { audio_asset_id: assetId, audio_file_name: asText(input.fileName)?.slice(0, 180) ?? null });
+  const fileName = asText(input.fileName)?.slice(0, 180) ?? null;
+  const trackAudio = [
+    ...current.track_audio.filter((a) => a.sequence !== sequence),
+    { trackId: song.id, sequence, assetId, fileName },
+  ].sort((a, b) => a.sequence - b.sequence);
+  await saveSubmission(admin, releaseId, {
+    track_audio: trackAudio,
+    // Song 1's master also stays where singles have always kept it.
+    ...(sequence === 1 ? { audio_asset_id: assetId, audio_file_name: fileName } : {}),
+  });
   return { ok: true, data: {} };
 }
 
@@ -702,9 +817,13 @@ export async function submitToTrm(admin: SupabaseClient, releaseId: string, acto
   if (!current?.partner_release_id) return fail(409, 'no_draft', 'Start the send again.');
   if (IN_FLIGHT.includes(current.status) || current.status === 'published') return { ok: true, data: { status: current.status } };
   if (!current.artwork_asset_id) return fail(409, 'no_artwork', 'The cover art did not reach TRM. Try again.');
-  if (!current.audio_asset_id) return fail(409, 'no_master', 'Add the master.');
+  const masters = mastersFor(loaded.facts, current);
+  const missing = masters.filter((m) => !m).length;
+  if (missing > 0) return fail(409, 'no_master', masters.length === 1 ? 'Add the master.' : `Add ${missing} more ${missing === 1 ? 'master' : 'masters'}.`);
   const checklist = trmChecklist(loaded.facts, readTrmSettings(current.settings), new Date());
   if (checklist.blocking.length > 0) return fail(409, 'not_ready', `${checklist.blocking.length} things before it can go.`);
+  const refused = await storeAccessRefusal(admin, loaded);
+  if (refused) return refused;
   const releaseFacts = {
     ownerUserId: loaded.ownerUserId,
     releaseId,
@@ -723,7 +842,10 @@ export async function submitToTrm(admin: SupabaseClient, releaseId: string, acto
     if (current.submit_count > 0) {
       const round = roundOf(current);
       await completeTrmAsset(current.partner_release_id, current.artwork_asset_id, idempotencyKey(releaseId, `artwork-complete:${current.artwork_asset_id}:${round}`));
-      await completeTrmAsset(current.partner_release_id, current.audio_asset_id, idempotencyKey(releaseId, `audio-complete:${current.audio_asset_id}:${round}`));
+      for (const master of masters) {
+        if (!master) continue;
+        await completeTrmAsset(current.partner_release_id, master.assetId, idempotencyKey(releaseId, `audio-complete:${master.assetId}:${round}`));
+      }
     }
     await submitTrmRelease(current.partner_release_id, idempotencyKey(releaseId, `submit:${current.partner_release_id}:${attempt}`));
   } catch (error) {

@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EPs and albums to stores</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --side:#f0ebe1; --card:#faf5ec; --hover:#ebe6dc; --elev:#fbf7ef;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --err:#961a1a; --err-soft:rgba(150,26,26,.08);
+    --board:#d9d5cc; --board-text:#1a1611; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--board-text); padding:32px 16px 64px; }
+  p { margin:0; }
+  .intro { max-width:1180px; margin:0 auto 28px; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; margin:0 0 6px; }
+  .intro p { color:var(--board-sec); }
+  .board { display:flex; flex-wrap:wrap; gap:28px; justify-content:center; max-width:1180px; margin:0 auto; }
+  .col { width:360px; max-width:100%; }
+  .tag { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin-bottom:6px; }
+  .why { font-size:13px; color:var(--board-sec); margin-bottom:12px; min-height:78px; }
+  .phone { background:var(--bg); color:var(--text); border-radius:28px; padding:18px 16px 16px; min-height:720px; display:flex; flex-direction:column; box-shadow:0 12px 32px rgba(26,22,17,.10); position:relative; overflow:hidden; }
+  .ser { font-family:'Young Serif', serif; font-weight:400; }
+  .mono { font-family:'JetBrains Mono', monospace; }
+  .mu { color:var(--sec); } .ter { color:var(--ter); }
+  .crumb { font-size:13px; color:var(--sec); margin-bottom:12px; display:flex; align-items:center; gap:10px; }
+  .back { width:34px; height:34px; border-radius:50%; border:1px solid var(--line2); display:grid; place-items:center; color:var(--sec); flex:none; }
+  .eyebrow { font-size:11px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--ter); }
+  .meta { font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.06em; color:var(--sec); }
+  .sl { font-family:'JetBrains Mono', monospace; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ter); margin:20px 0 6px; display:flex; justify-content:space-between; }
+  .hero { font-family:'Young Serif', serif; font-size:26px; line-height:1.15; margin-top:6px; }
+  .list { border-top:1px solid var(--line); }
+  .row { display:flex; align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid var(--line); }
+  .row .body { flex:1; min-width:0; }
+  .row .t { font-weight:600; font-size:14px; }
+  .row .d { font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--sec); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .d.err { color:var(--err); }
+  .num { width:22px; font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--ter); text-align:right; flex:none; }
+  .grip { color:var(--ter); font-size:14px; letter-spacing:-2px; flex:none; }
+  .ok { width:18px; height:18px; border-radius:50%; background:var(--brand); flex:none; display:grid; place-items:center; color:#f5f0e6; font-size:11px; }
+  .todo { width:18px; height:18px; border-radius:50%; border:1.5px solid var(--err); flex:none; }
+  .link { font-size:13px; font-weight:600; color:var(--brand); white-space:nowrap; }
+  .btn { display:flex; align-items:center; justify-content:center; min-height:44px; border-radius:999px; font-weight:600; font-size:14px; margin-top:12px; }
+  .green { background:var(--brand); color:#f5f0e6; }
+  .outline { border:1px solid var(--line2); color:var(--text); }
+  .chip { font-size:11px; font-weight:600; border:1px solid var(--line2); border-radius:999px; padding:2px 8px; color:var(--sec); white-space:nowrap; }
+  .chip.g { border-color:rgba(20,100,58,.35); color:var(--brand); background:var(--brand-soft); }
+  .add { display:flex; align-items:center; gap:8px; padding:12px 0; color:var(--brand); font-weight:600; font-size:14px; border-bottom:1px solid var(--line); }
+  .note { font-size:12px; color:var(--sec); margin-top:10px; }
+  .new { outline:2px dashed rgba(20,100,58,.55); outline-offset:3px; border-radius:6px; }
+  .spacer { flex:1; }
+  /* sheet */
+  .dim { position:absolute; inset:0; background:rgba(26,22,17,.45); }
+  .sheet { position:absolute; left:0; right:0; bottom:0; background:var(--elev); border-top-left-radius:20px; border-top-right-radius:20px; padding:10px 18px 20px; max-height:92%; overflow:hidden; }
+  .grab { width:36px; height:4px; border-radius:2px; background:var(--line2); margin:0 auto 14px; }
+  .field { margin-top:12px; }
+  .field label { display:block; font-size:12px; font-weight:600; color:var(--sec); margin-bottom:4px; }
+  .input { border:1px solid var(--line2); border-radius:10px; padding:9px 11px; font-size:14px; background:var(--card); }
+  .input.ph { color:var(--ter); }
+  .seg { display:flex; gap:3px; background:var(--hover); border-radius:10px; padding:3px; }
+  .seg span { flex:1; text-align:center; padding:6px 0; border-radius:7px; font-size:13px; color:var(--sec); }
+  .seg span.on { background:var(--card); color:var(--text); font-weight:600; box-shadow:0 1px 2px rgba(26,22,17,.08); }
+  .hint { font-size:11.5px; color:var(--ter); margin-top:4px; }
+  .file { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .file .n { font-family:'JetBrains Mono', monospace; font-size:11.5px; color:var(--ter); width:16px; }
+  .file .f { flex:1; min-width:0; }
+  .file .f b { font-weight:600; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .file .f span { font-family:'JetBrains Mono', monospace; font-size:10.5px; color:var(--sec); }
+  .bar { height:4px; border-radius:2px; background:var(--hover); margin-top:5px; }
+  .bar i { display:block; height:4px; border-radius:2px; background:var(--brand); }
+  .check { display:flex; gap:8px; align-items:flex-start; font-size:12.5px; color:var(--sec); margin-top:14px; }
+  .box { width:16px; height:16px; border-radius:4px; background:var(--brand); flex:none; margin-top:2px; }
+  .lock { border:1px solid var(--line2); border-radius:14px; padding:14px; margin-top:14px; background:var(--card); }
+  table.cmp { width:100%; border-collapse:collapse; font-size:13px; margin-top:6px; }
+  table.cmp th { font-size:11.5px; text-align:left; color:var(--sec); font-weight:600; padding:8px 6px; border-bottom:1px solid var(--line2); }
+  table.cmp td { padding:9px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
+  table.cmp td:first-child { font-weight:600; }
+  table.cmp tr.new td { background:rgba(20,100,58,.06); }
+  .wide { width:760px; max-width:100%; }
+  .assume { max-width:1180px; margin:32px auto 0; font-size:13px; color:var(--board-sec); }
+  .assume b { color:var(--board-text); }
+  .assume li { margin:4px 0; }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>EPs and albums to stores</h1>
+  <p>Dashed outline = new. Everything else is what the Distribute step shows today. Issue #1115.</p>
+</div>
+
+<div class="board">
+
+  <!-- 1. Songs list -->
+  <div class="col">
+    <div class="tag">1 · Distribute: the songs</div>
+    <p class="why">A rollout now holds its songs. 1 song is a single, 2 to 6 an EP, 7 or more an album. The count sets the type, so nobody has to pick it. Each song shows what it still needs.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">&larr;</span><div><div class="eyebrow">Ada</div><div class="ser" style="font-size:18px;color:var(--text)">Night Shift</div></div></div>
+      <div class="hero">2 things before it can go.</div>
+      <p class="meta" style="margin-top:6px">EP · 5 songs · Fri 4 Dec · All stores</p>
+
+      <div class="new" style="margin-top:4px">
+        <div class="sl"><span>Songs</span><span>Drag to reorder</span></div>
+        <div class="list">
+          <div class="row"><span class="grip">⋮⋮</span><span class="num">1</span><div class="body"><div class="t">Night Shift</div><div class="d">Explicit · ISRC NG-A1B-26-00012</div></div><span class="ok">✓</span></div>
+          <div class="row"><span class="grip">⋮⋮</span><span class="num">2</span><div class="body"><div class="t">Lagos Rain <span class="mu" style="font-weight:400">feat. Kemi</span></div><div class="d">Clean · TRM gives the ISRC</div></div><span class="ok">✓</span></div>
+          <div class="row"><span class="grip">⋮⋮</span><span class="num">3</span><div class="body"><div class="t">Owambe</div><div class="d err">Explicit not answered</div></div><span class="todo"></span></div>
+          <div class="row"><span class="grip">⋮⋮</span><span class="num">4</span><div class="body"><div class="t">Gidi Love</div><div class="d">Clean · Own credits</div></div><span class="ok">✓</span></div>
+          <div class="row"><span class="grip">⋮⋮</span><span class="num">5</span><div class="body"><div class="t">Song 5</div><div class="d err">No title yet</div></div><span class="todo"></span></div>
+          <div class="add">+ Add a song</div>
+        </div>
+      </div>
+
+      <div class="sl"><span>Ready</span></div>
+      <div class="list">
+        <div class="row"><span class="ok">✓</span><div class="body"><div class="t">Cover art</div><div class="d">3000 × 3000 · JPG · 4.1 MB</div></div></div>
+        <div class="row"><span class="ok">✓</span><div class="body"><div class="t">Details</div><div class="d">Afrobeats · English · Independent</div></div></div>
+        <div class="row"><span class="ok">✓</span><div class="body"><div class="t">Credits &amp; splits</div><div class="d">Used by every song unless it has its own</div></div></div>
+        <div class="row"><span class="ok">✓</span><div class="body"><div class="t">Rights &amp; policies</div><div class="d">Defaults · Worldwide</div></div></div>
+      </div>
+      <div class="spacer"></div>
+    </div>
+  </div>
+
+  <!-- 2. One song -->
+  <div class="col">
+    <div class="tag">2 · Tap a song</div>
+    <p class="why">One short sheet per song. Only the title and Explicit are required. Leave ISRC empty and TRM gives one. Credits follow the rollout's credits unless the song has its own.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">&larr;</span><div><div class="eyebrow">Ada</div><div class="ser" style="font-size:18px;color:var(--text)">Night Shift</div></div></div>
+      <div class="hero">2 things before it can go.</div>
+      <div class="dim"></div>
+      <div class="sheet new" style="outline-offset:-3px">
+        <div class="grab"></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><div class="ser" style="font-size:20px">Song 3</div><span class="link" style="color:var(--err);font-weight:500">Remove</span></div>
+        <div class="field"><label>Title</label><div class="input">Owambe</div></div>
+        <div class="field"><label>Featured artists</label><div class="input ph">Optional, e.g. Kemi, Tobi</div></div>
+        <div class="field"><label>Explicit lyrics?</label><div class="seg"><span>Yes</span><span>No</span></div></div>
+        <div class="field"><label>ISRC</label><div class="input ph">Leave empty and TRM gives one</div></div>
+        <div class="field"><label>Credits</label><div class="seg"><span class="on">Same as the rollout</span><span>Its own</span></div>
+          <p class="hint">2 writers · 1 producer · 100% to Ada</p></div>
+        <div class="field"><label>Lyrics</label><div class="input ph">Optional</div></div>
+        <div class="btn green">Save song</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Send sheet -->
+  <div class="col">
+    <div class="tag">3 · Send: one master per song</div>
+    <p class="why">The send sheet asks for each song's WAV, in order. They go from the phone straight to TRM, like the single's master today. If one fails, only that one is tried again.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">&larr;</span><div><div class="eyebrow">Ada</div><div class="ser" style="font-size:18px;color:var(--text)">Night Shift</div></div></div>
+      <div class="hero">Ready for stores.</div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div class="ser" style="font-size:20px">Send Night Shift to TRM</div>
+        <p class="meta" style="margin-top:4px">EP · 5 songs · Fri 4 Dec · Included in your plan</p>
+        <div class="field"><label>Artist's TRM email</label><div class="input">ada@example.com</div></div>
+        <div class="new" style="margin-top:14px">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--sec)">Masters (WAV)</label>
+          <div class="file"><span class="n">1</span><div class="f"><b>Night Shift</b><span>night-shift-master.wav · 48.2 MB</span></div><span class="ok">✓</span></div>
+          <div class="file"><span class="n">2</span><div class="f"><b>Lagos Rain</b><span>lagos-rain.wav · 51.0 MB</span></div><span class="ok">✓</span></div>
+          <div class="file"><span class="n">3</span><div class="f"><b>Owambe</b><span>owambe-final.wav · 44.7 MB</span></div><span class="ok">✓</span></div>
+          <div class="file"><span class="n">4</span><div class="f"><b>Gidi Love</b><span class="mu">No file yet</span></div><span class="link">Add</span></div>
+          <div class="file"><span class="n">5</span><div class="f"><b>Midnight</b><span class="mu">No file yet</span></div><span class="link">Add</span></div>
+        </div>
+        <div class="check"><span class="box"></span><span>I agree to TRM's terms for this release.</span></div>
+        <div class="btn green" style="opacity:.45">Add 2 more masters</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Sending -->
+  <div class="col">
+    <div class="tag">4 · While it sends</div>
+    <p class="why">Same four steps as a single. The master step counts the songs, so a slow upload on a phone never looks stuck.</p>
+    <div class="phone">
+      <div class="crumb"><span class="back">&larr;</span><div><div class="eyebrow">Ada</div><div class="ser" style="font-size:18px;color:var(--text)">Night Shift</div></div></div>
+      <div class="hero">Ready for stores.</div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div class="ser" style="font-size:20px">Sending to TRM</div>
+        <div class="list" style="margin-top:12px">
+          <div class="row"><span class="ok">✓</span><div class="body"><div class="t" style="font-weight:500">Draft created</div></div></div>
+          <div class="row"><span class="ok">✓</span><div class="body"><div class="t" style="font-weight:500">Cover art uploaded</div></div></div>
+          <div class="row new" style="outline-offset:-2px"><span class="todo" style="border-color:var(--brand)"></span><div class="body"><div class="t">Uploading masters · 3 of 5</div><div class="d">Owambe · 31 of 44.7 MB</div><div class="bar"><i style="width:69%"></i></div></div></div>
+          <div class="row"><span class="todo" style="border-color:var(--line2)"></span><div class="body"><div class="t mu" style="font-weight:500">Submit to TRM</div></div></div>
+        </div>
+        <p class="note">Keep this open. 2 min so far.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Plan states -->
+  <div class="col">
+    <div class="tag">5 · When the plan does not cover it</div>
+    <p class="why">TRM's rule: an EP needs a monthly TRM plan, an album a yearly one. The songs can still be filled in; only Send is swapped for the way on.</p>
+    <div class="phone">
+      <div class="eyebrow">Solo or Manager · EP</div>
+      <div class="lock new">
+        <div class="ser" style="font-size:20px;line-height:1.2">EPs need a distribution plan.</div>
+        <p class="mu" style="font-size:13px;margin-top:6px">Pro and Label include it. Or add distribution for Ada on your plan.</p>
+        <div class="btn green">Add distribution for Ada</div>
+        <div class="btn outline">Move to Pro</div>
+        <p class="note">Or send it from Ada's own TRM account.</p>
+      </div>
+
+      <div class="eyebrow" style="margin-top:24px">Pro or Label paying monthly · Album</div>
+      <div class="lock new">
+        <div class="ser" style="font-size:20px;line-height:1.2">Albums need a yearly plan.</div>
+        <p class="mu" style="font-size:13px;margin-top:6px">You pay monthly, which covers singles and EPs. Pay yearly and albums are included too.</p>
+        <div class="btn green">Pay yearly</div>
+        <p class="note">Or send it from Ada's own TRM account.</p>
+      </div>
+
+      <div class="eyebrow" style="margin-top:24px">Pro or Label paying yearly · Album</div>
+      <div class="lock">
+        <div class="ser" style="font-size:20px;line-height:1.2">Ready for stores.</div>
+        <p class="meta" style="margin-top:4px">Album · 11 songs · Included in your plan</p>
+        <div class="btn green">Send to TRM</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Pricing rows -->
+  <div class="col wide">
+    <div class="tag">6 · /pricing, "Send to stores"</div>
+    <p class="why" style="min-height:0">"Coming soon" goes. The rows say what each plan can send today.</p>
+    <div class="phone" style="min-height:0;border-radius:18px;padding:18px 20px">
+      <table class="cmp">
+        <tr><th></th><th>Solo</th><th>Manager</th><th>Pro</th><th>Label</th></tr>
+        <tr><td>Singles</td><td>₦2,000 a release</td><td>₦2,000 a release</td><td>Included</td><td>Included</td></tr>
+        <tr class="new"><td>EPs</td><td>With the distribution add-on</td><td>With the distribution add-on</td><td>Included</td><td>Included</td></tr>
+        <tr class="new"><td>Albums</td><td>With the yearly add-on</td><td>With the yearly add-on</td><td>Included when you pay yearly</td><td>Included when you pay yearly</td></tr>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div class="assume">
+  <p><b>Measured</b> (read from the code and TRM's API spec 1.2.0): TRM's release takes a list of songs, each with its own title, ISRC, explicit flag, credits and splits, and one master per song (uploaded by song number). Today we send one song. The plan rules (single always, EP on a monthly plan, album on a yearly plan) are already in <span class="mono">packages/pricing</span>.</p>
+  <p style="margin-top:6px"><b>Assumed</b> (please check):</p>
+  <ul>
+    <li>The song count sets single, EP or album. Adding a 2nd song to a single makes it an EP; the rollout's type follows.</li>
+    <li>Genre, language, label and cover art stay one per rollout (TRM takes them per release). Title, featured artists, explicit, ISRC, lyrics and credits are per song.</li>
+    <li>A single keeps today's screen. The Songs list shows once there are 2 songs.</li>
+    <li>"Add distribution for Ada" opens the add-on from the billing session (still being built). Until it lands, Solo and Manager see "Move to Pro" only. Its price and the "yearly add-on" for albums come from that work, not this one.</li>
+    <li>No TRM test account exists (production only), so the first real EP send is the end-to-end test.</li>
+  </ul>
+</div>
+
+</body>
+</html>

@@ -242,6 +242,7 @@ Adding a note: create `docs/notes/YYYY-MM-DD-short-slug.md` (start it with a `# 
 - [Release brief (2026-10-16, URG-281, v1.150.0, ships on)](2026-10-16-release-brief.md)
 - [Pitch on credits (2026-10-17, v1.157.0, URG-345 Phase 1, founder approved v2 mocks)](2026-10-17-pitch-on-credits.md)
 - [Send to TRM (URG-392, v1.160.0, 2026-10-19)](2026-10-19-send-to-trm.md)
+- [EPs and albums to stores (#1115, v1.256.0, 2026-11-07)](2026-11-07-eps-and-albums.md)
 - [Curator UrgAns front desk (URG-381, v1.161.0, 2026-10-19)](2026-10-19-curator-urgans-front-desk.md)
 - [Altlink pre-save and smart links (2026-10-22, live, no new flag beyond NEXT_PUBLIC_FEATURE_ALTLINK which ships on)](2026-10-22-altlink-pre-save-and-smart-links.md)
 - [Self-serve checkout (2026-10-22, live, no new flag)](2026-10-22-self-serve-checkout.md)

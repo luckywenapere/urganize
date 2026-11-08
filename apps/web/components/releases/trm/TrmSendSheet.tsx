@@ -77,11 +77,18 @@ export function TrmShell({ label, onClose, locked, children }: { label: string; 
   );
 }
 
+/** One song as the send sheet lists it. `hasMaster`: TRM already has its master. */
+export type SendSong = { sequence: number; title: string; hasMaster: boolean };
+
+const KIND_LABEL = { single: 'Single', ep: 'EP', album: 'Album' } as const;
+
 export function TrmSendSheet({
   title,
   artist,
   releaseDate,
   initialEmail,
+  kind = 'single',
+  songs = [{ sequence: 1, title, hasMaster: false }],
   planIncluded = false,
   resend = false,
   post,
@@ -92,6 +99,9 @@ export function TrmSendSheet({
   artist: string;
   releaseDate: string | null;
   initialEmail: string | null;
+  kind?: 'single' | 'ep' | 'album';
+  /** The songs in order (#1115). One for a single. */
+  songs?: SendSong[];
   /** The team's plan includes distribution (pricing v3): Urganize covers TRM. */
   planIncluded?: boolean;
   /** After a rejection: the master is already at TRM unless they add a new one. */
@@ -102,7 +112,11 @@ export function TrmSendSheet({
   onDone: () => void;
 }) {
   const [email, setEmail] = useState(initialEmail ?? '');
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<Array<File | null>>(() => songs.map(() => null));
+  const file = files[0] ?? null;
+  const many = songs.length > 1;
+  const [current, setCurrent] = useState(0);
+  const pickFor = useRef(0);
   const [agreed, setAgreed] = useState(false);
   const [fileError, setFileError] = useState('');
   const [phase, setPhase] = useState<'form' | 'sending'>('form');
@@ -112,6 +126,7 @@ export function TrmSendSheet({
   const [error, setError] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
   const started = useRef(Date.now());
+  const uploaded = useRef(new Set<number>());
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
@@ -125,10 +140,20 @@ export function TrmSendSheet({
     if (!next) return;
     if (!isWav(next)) return setFileError('The master has to be a WAV.');
     if (next.size > TRM_AUDIO_MAX_BYTES) return setFileError('TRM takes masters up to 150 MB.');
-    setFile(next);
+    const index = pickFor.current;
+    setFiles((list) => list.map((f, i) => (i === index ? next : f)));
+  };
+  const choose = (index: number) => {
+    pickFor.current = index;
+    if (fileInput.current) fileInput.current.value = '';
+    fileInput.current?.click();
   };
 
-  const canSend = EMAIL.test(email.trim()) && agreed && (Boolean(file) || resend);
+  // A song may go when it has a new file, or TRM already has its master (a
+  // resend of a single keeps its master unless a new one is added).
+  const missing = songs.filter((song, i) => !files[i] && !song.hasMaster && !(resend && !many)).length;
+  const canSend = EMAIL.test(email.trim()) && agreed && missing === 0;
+  const uploads = songs.map((song, i) => ({ song, file: files[i] })).filter((u): u is { song: SendSong; file: File } => Boolean(u.file));
 
   const finish = (key: StepKey) => setDone((list) => (list.includes(key) ? list : [...list, key]));
 
@@ -150,19 +175,28 @@ export function TrmSendSheet({
         finish('draft');
         finish('artwork');
       }
-      if (file && !done.includes('master')) {
+      if (uploads.length > 0 && !done.includes('master')) {
         setActive('master');
-        const hash = await sha256Hex(file);
-        const presign = await post('presign_master', {
-          fileName: file.name,
-          mimeType: file.type || 'audio/wav',
-          sizeBytes: file.size,
-          sha256: hash,
-        });
-        if (!presign.ok) throw new Error(String(presign.data.error || 'TRM did not answer. Try again.'));
-        await putWithProgress(String(presign.data.url), (presign.data.headers as Record<string, string>) ?? {}, file, setSent);
-        const completed = await post('complete_master', { assetId: presign.data.assetId, fileName: file.name });
-        if (!completed.ok) throw new Error(String(completed.data.error || 'TRM could not check the master. Try again.'));
+        // One song at a time; a song already sent this run is skipped on retry.
+        for (let i = 0; i < uploads.length; i += 1) {
+          const { song, file: upload } = uploads[i];
+          if (uploaded.current.has(song.sequence)) continue;
+          setCurrent(i);
+          setSent(0);
+          const hash = await sha256Hex(upload);
+          const presign = await post('presign_master', {
+            fileName: upload.name,
+            mimeType: upload.type || 'audio/wav',
+            sizeBytes: upload.size,
+            sha256: hash,
+            trackSequence: song.sequence,
+          });
+          if (!presign.ok) throw new Error(String(presign.data.error || 'TRM did not answer. Try again.'));
+          await putWithProgress(String(presign.data.url), (presign.data.headers as Record<string, string>) ?? {}, upload, setSent);
+          const completed = await post('complete_master', { assetId: presign.data.assetId, fileName: upload.name, trackSequence: song.sequence });
+          if (!completed.ok) throw new Error(String(completed.data.error || 'TRM could not check the master. Try again.'));
+          uploaded.current.add(song.sequence);
+        }
       }
       finish('master');
       setActive('submit');
@@ -182,7 +216,17 @@ export function TrmSendSheet({
   if (phase === 'sending') {
     return (
       <TrmShell label={label} onClose={onClose} locked={!error}>
-        <TrmSendingView done={done} active={active} sent={sent} total={file?.size ?? 0} elapsed={elapsed} error={error} onRetry={() => void run()} onClose={onClose} />
+        <TrmSendingView
+          done={done}
+          active={active}
+          sent={sent}
+          total={uploads[current]?.file.size ?? 0}
+          elapsed={elapsed}
+          error={error}
+          onRetry={() => void run()}
+          onClose={onClose}
+          batch={uploads.length > 1 ? { index: current, count: uploads.length, title: uploads[current]?.song.title ?? '' } : null}
+        />
       </TrmShell>
     );
   }
@@ -190,7 +234,10 @@ export function TrmSendSheet({
   return (
     <TrmShell label={label} onClose={onClose} locked={false}>
       <h3 className="pr-8 font-display text-[26px] leading-tight tracking-[-0.02em] text-content-primary">{label}</h3>
-      <p className={`mt-2 ${MONO}`}>{artist} · Single</p>
+      <p className={`mt-2 ${MONO}`}>
+        {artist} · {KIND_LABEL[kind]}
+        {many ? ` · ${songs.length} songs` : ''}
+      </p>
 
       <div className="mt-5 space-y-2.5">
         <div className="flex h-[46px] items-center justify-between gap-3 border border-stroke-strong px-3.5 text-[15px]">
@@ -217,6 +264,31 @@ export function TrmSendSheet({
 
       <p className="mt-2 font-mono text-[11px] text-content-secondary">{planIncluded ? 'Included in your Urganize plan' : 'Uses the artist’s TRM plan'}</p>
 
+      {many ? (
+        <div className="mt-4">
+          <p className={`mb-1.5 ${MONO}`}>Masters · WAV · up to 150 MB each</p>
+          <ul className="border border-stroke-default">
+            {songs.map((song, i) => {
+              const picked = files[i];
+              return (
+                <li key={song.sequence} className="flex min-h-[52px] items-center gap-3 border-b border-stroke-default px-3.5 py-2 last:border-b-0">
+                  <span className="w-5 shrink-0 text-right font-mono text-[11.5px] text-content-tertiary">{song.sequence}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[14.5px] font-semibold text-content-primary">{song.title || `Song ${song.sequence}`}</p>
+                    <p className="truncate font-mono text-[11px] text-content-secondary">
+                      {picked ? `${picked.name} · ${mb(picked.size)}` : song.hasMaster ? 'With TRM' : 'No file yet'}
+                    </p>
+                  </div>
+                  {picked || song.hasMaster ? <Tick /> : null}
+                  <button type="button" onClick={() => choose(i)} className="motion-focus shrink-0 text-[13px] font-semibold text-brand hover:underline">
+                    {picked || song.hasMaster ? 'Change' : 'Add'}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : (
       <div className="mt-4 flex items-center gap-3.5 border border-dashed border-stroke-strong p-4 sm:p-[18px]">
         <AudioWaveform className="h-5 w-5 shrink-0 text-content-secondary" aria-hidden="true" />
         <div className="min-w-0 flex-1">
@@ -227,17 +299,18 @@ export function TrmSendSheet({
             {file ? `${mb(file.size)} · goes straight to TRM` : resend ? 'Add a new one only if TRM asked' : 'WAV · up to 150 MB · goes straight to TRM'}
           </p>
         </div>
-        <button type="button" onClick={() => fileInput.current?.click()} className="motion-focus motion-press inline-flex h-9 shrink-0 items-center border border-stroke-strong px-3.5 text-[13.5px] font-semibold text-content-primary hover:bg-bg-hover">
+        <button type="button" onClick={() => choose(0)} className="motion-focus motion-press inline-flex h-9 shrink-0 items-center border border-stroke-strong px-3.5 text-[13.5px] font-semibold text-content-primary hover:bg-bg-hover">
           {file ? 'Change' : 'Choose file'}
         </button>
-        <input
-          ref={fileInput}
-          type="file"
-          accept=".wav,audio/wav,audio/x-wav,audio/wave"
-          className="hidden"
-          onChange={(event) => pick(event.target.files?.[0] ?? null)}
-        />
       </div>
+      )}
+      <input
+        ref={fileInput}
+        type="file"
+        accept=".wav,audio/wav,audio/x-wav,audio/wave"
+        className="hidden"
+        onChange={(event) => pick(event.target.files?.[0] ?? null)}
+      />
       {fileError ? (
         <p role="alert" className="mt-2 text-sm text-status-error">
           {fileError}
@@ -260,7 +333,7 @@ export function TrmSendSheet({
       </label>
 
       <button type="button" disabled={!canSend} onClick={() => void run()} className={`mt-5 ${PRIMARY} sm:w-full`}>
-        {resend ? 'Resend to TRM' : 'Send to TRM'}
+        {missing > 0 && many ? `Add ${missing} more ${missing === 1 ? 'master' : 'masters'}` : resend ? 'Resend to TRM' : 'Send to TRM'}
       </button>
     </TrmShell>
   );
@@ -277,7 +350,10 @@ export function TrmSendingView({
   error,
   onRetry,
   onClose,
+  batch = null,
 }: {
+  /** Several masters: which one is going up now. */
+  batch?: { index: number; count: number; title: string } | null;
   done: StepKey[];
   active: StepKey | null;
   sent: number;
@@ -313,8 +389,17 @@ export function TrmSendingView({
                 {isDone ? <Tick /> : isActive ? <Loader2 className="h-[22px] w-[22px] shrink-0 animate-spin text-brand" aria-hidden="true" /> : <Ring />}
                 <div className="min-w-0 flex-1">
                   <p className={`text-[15px] font-semibold ${isDone || isActive ? 'text-content-primary' : 'text-content-secondary'}`}>
-                    {STEP_LABELS[key][isDone ? 1 : 0]}
+                    {key === 'master' && batch
+                      ? isDone
+                        ? 'Masters uploaded'
+                        : isActive
+                          ? `Uploading masters · ${batch.index + 1} of ${batch.count}`
+                          : 'Uploading the masters'
+                      : STEP_LABELS[key][isDone ? 1 : 0]}
                   </p>
+                  {key === 'master' && batch && isActive && batch.title ? (
+                    <p className="mt-0.5 truncate font-mono text-[11px] text-content-secondary">{batch.title}</p>
+                  ) : null}
                   {key === 'master' && isActive && total ? (
                     <div className="mt-2 h-1 w-full max-w-[260px] overflow-hidden bg-stroke-default" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={sent}>
                       <i className="block h-full bg-brand" style={{ width: `${Math.min(100, (sent / total) * 100)}%` }} />
