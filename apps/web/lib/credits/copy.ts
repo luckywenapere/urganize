@@ -1,5 +1,6 @@
 import type { CreditAccount } from './allowance';
 import { isCreditsPurchasable } from './config';
+import { capReachedNotice, noCapNotice, type OverageState } from './overage';
 import { EMBEDDED_ESTIMATE_CREDITS, EMBEDDED_HOLD_CREDITS, embeddedEstimateCredits } from './embedded';
 
 /**
@@ -56,6 +57,22 @@ function quickCommandsLine(account: CreditAccount): string {
 export function outOfCreditsNotice(input: NoticeInput, purchasable: boolean = isCreditsPurchasable()): string {
   const next = whatNext(input, purchasable);
   return ['You are out of AI credits.', quickCommandsLine(input.account), next].filter(Boolean).join(' ');
+}
+
+/**
+ * What the chat says when a turn cannot start. A paying team that can buy
+ * credits past its allowance is told about the cap (overage.ts); everyone else
+ * gets the old line.
+ */
+export function creditsStopNotice(
+  snapshot: NoticeInput & { overage: Pick<OverageState, 'capKobo' | 'windowEnd'> | null },
+  purchasable: boolean = isCreditsPurchasable()
+): string {
+  if (snapshot.overage) {
+    const day = snapshot.overage.windowEnd ? formatGrantDay(snapshot.overage.windowEnd) : null;
+    return snapshot.overage.capKobo > 0 ? capReachedNotice(snapshot.overage, day ?? 'your next billing day') : noCapNotice(day);
+  }
+  return outOfCreditsNotice(snapshot, purchasable);
 }
 
 /**

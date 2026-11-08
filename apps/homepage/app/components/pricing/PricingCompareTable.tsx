@@ -1,6 +1,10 @@
 import { RiCheckLine, RiCloseLine } from "react-icons/ri";
 import {
+  ADDON_PRICES_NAIRA,
+  CREDIT_OVERAGE_NAIRA,
   DISTRIBUTION_ALLOWANCE,
+  EXTRA_RELEASE_PRICE_NAIRA,
+  canBuyAddon,
   PRICING_TIER_ORDER,
   formatTierFromPrice,
   formatTierPrice,
@@ -27,6 +31,8 @@ type Row = { label: string; value: (tier: PricingTierId, interval: BillingInterv
 type Group = { title: string; rows: Row[] };
 
 const includesDistribution = (tier: PricingTierId) => getTier(tier).includesDistribution;
+
+const naira = (value: number) => `₦${value.toLocaleString("en-US")}`;
 
 /** "3", "Unlimited". */
 const count = (value: number | null) => (value === null ? "Unlimited" : value.toLocaleString("en-US"));
@@ -86,15 +92,15 @@ const GROUPS: Group[] = [
     rows: [
       {
         label: "Singles",
-        value: (tier) => (includesDistribution(tier) ? "Included" : "From your own TRM account"),
+        value: (tier) => (includesDistribution(tier) ? "Included" : `${naira(EXTRA_RELEASE_PRICE_NAIRA)} each, or the add-on`),
       },
       {
         label: "EPs",
-        value: (tier) => (includesDistribution(tier) ? "Included" : "From your own TRM account"),
+        value: (tier) => (includesDistribution(tier) ? "Included" : "With the add-on, or your own TRM account"),
       },
       {
         label: "Albums",
-        value: (tier) => (includesDistribution(tier) ? "Included when you pay yearly" : "From your own TRM account"),
+        value: (tier) => (includesDistribution(tier) ? "Included when you pay yearly" : "With the yearly add-on, or your own TRM account"),
       },
       {
         label: "Artists we send for",
@@ -110,6 +116,28 @@ const GROUPS: Group[] = [
           return allowance ? allowance.releasesPerMonth.toLocaleString("en-US") : "None";
         },
       },
+    ],
+  },
+  {
+    // Add-ons (#1112): only what can be bought today.
+    title: "Add-ons",
+    rows: [
+      {
+        label: "Extra person",
+        value: (tier) => (canBuyAddon(tier, "person") ? `${naira(ADDON_PRICES_NAIRA.person)}/month` : tier === "solo" ? false : "Talk to us"),
+      },
+      {
+        label: "Extra artist",
+        value: (tier) => (canBuyAddon(tier, "artist") ? `${naira(ADDON_PRICES_NAIRA.artist)}/month` : tier === "solo" ? false : "Talk to us"),
+      },
+      {
+        label: "Distribution for an artist",
+        value: (tier) =>
+          canBuyAddon(tier, "distribution")
+            ? `${naira(ADDON_PRICES_NAIRA.distribution_monthly)}/month or ${naira(ADDON_PRICES_NAIRA.distribution_yearly)}/year`
+            : "Included",
+      },
+      { label: "AI credits past your monthly credits", value: (tier) => `${naira(CREDIT_OVERAGE_NAIRA[tier])} each, up to your cap` },
     ],
   },
   {

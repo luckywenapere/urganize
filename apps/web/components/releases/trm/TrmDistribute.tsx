@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Copy } from '@/components/icons';
@@ -45,7 +46,7 @@ import { AddSongRow, SongSheet, SongsSection } from './TrmSongs';
 import { useTrm, type TrmPost } from './useTrm';
 import { DistributionPlanCard } from './DistributionPlanCard';
 import { DistributionLimitBlock } from './DistributionLimit';
-import { isExtraReleaseReference, needsPayment } from '@/lib/distribution-limits';
+import { isBlocked, isExtraReleaseReference } from '@/lib/distribution-limits';
 import { useDistributionPlan } from './useDistributionPlan';
 import { checkoutPath } from '@/lib/self-serve';
 
@@ -99,6 +100,11 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
   const router = useRouter();
   const [sheet, setSheet] = useState<'send' | 'resend' | 'settings' | 'email' | null>(null);
   const [busy, setBusy] = useState(false);
+  // Solo and Manager may always send with the artist's own TRM account instead
+  // of paying us (#1112). Remembered for this visit only.
+  const [ownPlan, setOwnPlan] = useState(false);
+  const sheetPost: TrmPost = (action, body) =>
+    post(action, action === 'submit' && ownPlan ? { ...(body ?? {}), ownPlan: true } : body);
   const [note, setNote] = useState('');
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState('');
@@ -357,9 +363,12 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
             title: song.title,
             hasMaster: Boolean(data.masters[i]),
           }))}
-          planIncluded={plan?.state === 'included'}
+          planIncluded={
+            plan?.state === 'included' ||
+            (!ownPlan && !!data.limit && ['ok', 'already_counted', 'paid_extra'].includes(data.limit.verdict))
+          }
           resend={sheet === 'resend'}
-          post={post}
+          post={sheetPost}
           onClose={() => {
             setSheet(null);
             void reload();
@@ -399,7 +408,7 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
   const wrap = (children: React.ReactNode) => (
     <div className="mx-auto mt-8 max-w-[880px] space-y-9">
       {children}
-      <DistributionPlanCard plan={plan} limit={data.limit} />
+      <DistributionPlanCard plan={plan} limit={data.limit} ownPlan={ownPlan} />
       {sheets}
     </div>
   );
@@ -549,8 +558,29 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
     // TRM's rules (2026-11-07): an EP needs a monthly TRM plan, an album a
     // yearly one. The songs can still be filled in; only Send is swapped for
     // the way on. A Pro or Label team paying monthly is one step away (pay
-    // yearly); Solo and Manager move to Pro.
+    // yearly); Solo and Manager buy the Distribution add-on for the artist
+    // (#1112), or use the artist's own TRM account.
     const album = data.kind === 'album';
+    if (data.limit && data.limit.mode !== 'plan') {
+      return wrap(
+        <>
+          <div>
+            <Hero
+              title={`${album ? 'Albums' : 'EPs'} need distribution for ${data.primaryArtist || 'this artist'}.`}
+              meta={album ? '₦25,500 a year. No monthly limit, albums too.' : '₦7,100 a month (7 releases) or ₦25,500 a year.'}
+            />
+            <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:gap-3">
+              <Link href="/dashboard?settings=billing" className={PRIMARY}>
+                Add distribution
+              </Link>
+            </div>
+            <p className={`mt-3 ${MONO}`}>Or send it from {data.primaryArtist ? `${data.primaryArtist}’s` : 'the artist’s'} own TRM account.</p>
+          </div>
+          {songsSection}
+          <Partners />
+        </>
+      );
+    }
     const payYearly = album && data.teamDistributionPlan === 'monthly';
     const tier = data.teamTier === 'label' ? 'label' : 'pro';
     return wrap(
@@ -689,8 +719,14 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
             <p className="border border-stroke-default px-4 py-3 text-sm text-content-secondary">
               Sending to TRM opens soon. We’ll tell you the moment it does.
             </p>
-          ) : data.canSend && data.limit && needsPayment(data.limit.verdict) ? (
-            <DistributionLimitBlock limit={data.limit} paying={paying} error={payError} onPay={() => void payForExtra()} />
+          ) : data.canSend && data.limit && !ownPlan && isBlocked(data.limit.verdict) ? (
+            <DistributionLimitBlock
+              limit={data.limit}
+              paying={paying}
+              error={payError}
+              onPay={() => void payForExtra()}
+              onOwnPlan={data.limit.mode === 'plan' ? undefined : () => setOwnPlan(true)}
+            />
           ) : (
             <button type="button" disabled={busy} onClick={() => void pressSend()} className={PRIMARY}>
               {data.submission?.hasDraft && status === 'draft' ? 'Finish sending to TRM' : 'Send to TRM'}

@@ -35,7 +35,7 @@ import { getTeamAccessForUser } from '@/lib/team-billing-server';
 import { checkUrgansAllowance, recordUrgansAction } from '@/lib/urgans-usage-server';
 import { logBillingEvent } from '@/lib/billing-events-server';
 import { isCreditsEnabled } from '@/lib/credits/config';
-import { outOfCreditsNotice } from '@/lib/credits/copy';
+import { creditsStopNotice } from '@/lib/credits/copy';
 import { getCreditSnapshot, settleTurn, type CreditSnapshot } from '@/lib/credits/credits-server';
 import { canStartTurn, holdCredits, holdOutputTokens, turnCharge } from '@/lib/credits/pricing';
 import { randomUUID } from 'node:crypto';
@@ -244,14 +244,14 @@ export async function POST(request: NextRequest) {
       // The hold assumes the answer the turn is allowed to write, so a long streamed
       // reply on a top rung is held for what it can really cost.
       const holdOutput = holdOutputTokens(plan.mode === 'on' ? plan.routing.decision.maxOutputTokens : undefined);
-      if (credits && !canStartTurn(credits.total, holdCredits(holdModel, holdOutput))) {
+      if (credits && !canStartTurn(credits.spendable ?? credits.total, holdCredits(holdModel, holdOutput))) {
         await logBillingEvent(auth.adminClient, {
           workspaceId: team.primaryWorkspaceId,
           ownerUserId: team.ownerUserId,
           actorUserId: auth.user.id,
           type: 'limit_hit',
           metadata: {
-            entitlement: 'urgans_credits',
+            entitlement: credits.overage && credits.overage.capKobo > 0 ? 'urgans_credit_cap' : 'urgans_credits',
             limit: credits.referenceCredits,
             current: credits.total,
             account: credits.account,
@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             mode: 'deterministic',
-            notice: outOfCreditsNotice({ account: credits.account, nextGrantAt: credits.nextGrantAt }),
+            notice: creditsStopNotice(credits),
           } satisfies ChappiResponse,
           { status: 429 }
         );

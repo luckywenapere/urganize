@@ -1,7 +1,10 @@
 import {
+  DISTRIBUTION_ADDON_RELEASES_PER_MONTH,
   DISTRIBUTION_ALLOWANCE,
+  distributionReleaseKind,
   EXTRA_RELEASE_PRICE_NAIRA,
   TRM_PER_RELEASE_NAIRA,
+  type AddonInterval,
   type PricingTierId,
   type TeamDistributionPlan,
 } from '@urganize/pricing';
@@ -25,8 +28,18 @@ import {
 //   Resends   A release that already counted, or was paid for, never counts or
 //             costs again (a resubmit after a rejection is free).
 //
-// Only a team whose plan includes distribution has limits. Solo, trials and
-// lapsed plans send with the artist's own TRM plan, which is not ours to count.
+// Only a team whose plan includes distribution has limits. Trials and lapsed
+// plans send with the artist's own TRM plan, which is not ours to count.
+//
+// SOLO AND MANAGER (2026-11-07, #1112, mocks docs/mocks/pricing-addons):
+//   No add-on  A single is ₦2,000, paid before it goes (TRM sells only singles
+//              one at a time). An EP or album needs the Distribution add-on.
+//   Add-on     The artist with the Distribution add-on sends under it: TRM's
+//              monthly plan counts 7 releases a month (singles and EPs), the
+//              yearly one has no cap (albums too). A single past the 7 can be
+//              paid for like any other.
+//   Own plan   Sending with the artist's own TRM account stays open on both
+//              (decided at submit, see submitToTrm's ownPlan).
 
 export const EXTRA_RELEASE_PRICE_KOBO = EXTRA_RELEASE_PRICE_NAIRA * 100;
 /** What we owe TRM for that release. */
@@ -62,7 +75,7 @@ export type DistributionUseRow = {
   releaseId: string;
   artistKey: string;
   artistName: string | null;
-  kind: 'plan' | 'extra';
+  kind: 'plan' | 'extra' | 'addon';
   /** Lagos month the send counted in, "2026-10". */
   month: string;
   status: 'pending' | 'paid' | 'used';
@@ -79,10 +92,24 @@ export type DistributionVerdict =
   /** Another artist than the plan's: pay for this release or move up. */
   | 'artist'
   /** The month's releases are used: pay for this release or wait. */
-  | 'releases';
+  | 'releases'
+  /** Solo or Manager, no add-on for this artist: pay ₦2,000 for this single. */
+  | 'single'
+  /** Solo or Manager, an EP or album with no add-on (or an album on the
+   *  monthly add-on): it needs the Distribution add-on. Nothing to pay here. */
+  | 'needs_addon';
+
+/** How the team sends: under its plan (Pro, Label), under an artist's
+ *  Distribution add-on, or paying per single (Solo and Manager without one). */
+export type DistributionMode = 'plan' | 'addon' | 'per_single';
 
 export type DistributionLimitView = {
   tier: PricingTierId;
+  mode: DistributionMode;
+  /** Whether this release can be paid for one at a time (singles only). */
+  canPay: boolean;
+  /** The artist this release is for, by name (the add-on and per-single cards). */
+  artistName: string | null;
   artistsLimit: number;
   /** Releases a month the plan covers, or null on TRM's yearly plan (no cap). */
   releasesLimit: number | null;
@@ -97,7 +124,12 @@ export type DistributionLimitView = {
 };
 
 export function needsPayment(verdict: DistributionVerdict): boolean {
-  return verdict === 'artist' || verdict === 'releases';
+  return verdict === 'artist' || verdict === 'releases' || verdict === 'single';
+}
+
+/** Whether the send is blocked until something is paid or bought. */
+export function isBlocked(verdict: DistributionVerdict): boolean {
+  return needsPayment(verdict) || verdict === 'needs_addon';
 }
 
 export function decideDistributionLimit(input: {
@@ -109,6 +141,8 @@ export function decideDistributionLimit(input: {
   /** The team's TRM plan from how it pays us. 'yearly' lifts the monthly
    *  release count; anything else keeps it. Defaults to monthly. */
   teamPlan?: TeamDistributionPlan;
+  /** 'single' | 'ep' | 'album'; a missing type reads as a single. */
+  releaseType?: string | null;
 }): DistributionLimitView | null {
   const allowance = DISTRIBUTION_ALLOWANCE[input.tier];
   if (!allowance) return null;
@@ -143,11 +177,60 @@ export function decideDistributionLimit(input: {
 
   return {
     tier: input.tier,
+    mode: 'plan',
+    canPay: distributionReleaseKind({ releaseType: input.releaseType }) === 'single',
+    artistName: null,
     artistsLimit: allowance.artists,
     releasesLimit: input.teamPlan === 'yearly' ? null : allowance.releasesPerMonth,
     used,
     resetsAt: nextStartsAt.toISOString(),
     planArtists: planArtistKeys.map((key) => artistNames.get(key) ?? 'An artist'),
+    verdict,
+    extraPriceKobo: EXTRA_RELEASE_PRICE_KOBO,
+  };
+}
+
+/** Solo and Manager: what this release needs, with or without the artist's
+ *  Distribution add-on (rules at the top of this file). Pure. */
+export function decideOwnDistribution(input: {
+  tier: PricingTierId;
+  rows: readonly DistributionUseRow[];
+  releaseId: string;
+  artistKey: string | null;
+  artistName: string | null;
+  /** The artist's Distribution add-on, or null when there is none. */
+  addonPlan: AddonInterval | null;
+  releaseType?: string | null;
+  now: Date;
+}): DistributionLimitView {
+  const { key: month, nextStartsAt } = lagosMonth(input.now);
+  const kind = distributionReleaseKind({ releaseType: input.releaseType });
+  const canPay = kind === 'single';
+  const addonRows = input.rows.filter((row) => row.kind === 'addon' && row.artistKey === input.artistKey);
+  const used = new Set(addonRows.filter((row) => row.month === month).map((row) => row.releaseId)).size;
+  const paidExtra = input.rows.some(
+    (row) => row.kind === 'extra' && row.releaseId === input.releaseId && (row.status === 'paid' || row.status === 'used')
+  );
+  const releasesLimit = input.addonPlan === 'monthly' ? DISTRIBUTION_ADDON_RELEASES_PER_MONTH : null;
+
+  let verdict: DistributionVerdict;
+  if (input.rows.some((row) => row.kind === 'addon' && row.releaseId === input.releaseId)) verdict = 'already_counted';
+  else if (paidExtra) verdict = 'paid_extra';
+  else if (!input.addonPlan) verdict = canPay ? 'single' : 'needs_addon';
+  else if (kind === 'album' && input.addonPlan !== 'yearly') verdict = 'needs_addon';
+  else if (releasesLimit !== null && used >= releasesLimit) verdict = 'releases';
+  else verdict = 'ok';
+
+  return {
+    tier: input.tier,
+    mode: input.addonPlan ? 'addon' : 'per_single',
+    canPay,
+    artistName: input.artistName?.trim() || null,
+    artistsLimit: input.addonPlan ? 1 : 0,
+    releasesLimit,
+    used,
+    resetsAt: nextStartsAt.toISOString(),
+    planArtists: input.addonPlan && input.artistName ? [input.artistName.trim()] : [],
     verdict,
     extraPriceKobo: EXTRA_RELEASE_PRICE_KOBO,
   };

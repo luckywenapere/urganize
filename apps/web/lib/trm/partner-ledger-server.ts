@@ -210,7 +210,7 @@ export async function recordTrmFeeForSend(
  */
 export async function recordTrmExtraRelease(
   admin: Admin,
-  input: { workspaceId: string; reference: string; tier: 'pro' | 'label'; paidKobo: number; owedKobo: number; paidAt: Date }
+  input: { workspaceId: string; reference: string; tier: 'solo' | 'manager' | 'pro' | 'label'; paidKobo: number; owedKobo: number; paidAt: Date }
 ): Promise<'recorded' | 'error'> {
   const reference = `extra:${input.reference}`;
   const end = new Date(input.paidAt);
@@ -236,6 +236,45 @@ export async function recordTrmExtraRelease(
   );
   if (insert.error) {
     console.error('[trm-ledger] could not record an extra release:', insert.error.message, reference);
+    return 'error';
+  }
+  return 'recorded';
+}
+
+/**
+ * One Distribution add-on payment (first period or a renewal, lib/addons-server.ts):
+ * we owe TRM 80% of it. An 'adjustment' row on TRM's Independent Artist plan, a
+ * month or a year long, keyed on the payment reference so it is written once.
+ */
+export async function recordTrmAddonPayment(
+  admin: Admin,
+  input: { workspaceId: string; reference: string; tier: 'solo' | 'manager'; interval: 'monthly' | 'yearly'; paidKobo: number; owedKobo: number; paidAt: Date }
+): Promise<'recorded' | 'error'> {
+  const reference = `addon:${input.reference}`;
+  const months = input.interval === 'yearly' ? 12 : 1;
+  const end = new Date(input.paidAt);
+  end.setMonth(end.getMonth() + months);
+  const insert = await admin.from('trm_partner_ledger').upsert(
+    {
+      workspace_id: input.workspaceId,
+      charge_reference: reference,
+      entry_kind: 'adjustment',
+      plan: input.tier,
+      trm_plan: 'single_artist',
+      cost_basis: 'fixed',
+      billing_mode: 'trm_plan',
+      fee_annual_kobo: null,
+      revenue_share_bps: null,
+      service_months: months,
+      amount_paid_kobo: input.paidKobo,
+      owed_kobo: input.owedKobo,
+      period_start: input.paidAt.toISOString(),
+      period_end: end.toISOString(),
+    },
+    { onConflict: 'charge_reference,entry_kind', ignoreDuplicates: true }
+  );
+  if (insert.error) {
+    console.error('[trm-ledger] could not record a distribution add-on:', insert.error.message, reference);
     return 'error';
   }
   return 'recorded';

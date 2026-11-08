@@ -108,7 +108,7 @@ describe('amounts come from the pricing package', () => {
     expect(youGet('manager', false)).toEqual([
       { label: 'Artists', value: '3' },
       { label: 'People on your team', value: '6' },
-      { label: 'AI credits', value: '300 / mo' },
+      { label: 'AI credits', value: "450 / mo" },
     ]);
     // Manager pays per single; Pro includes distribution (2026-11-07).
     expect(youGet('manager', true).some((row) => row.label === 'Distribution')).toBe(false);

@@ -494,8 +494,13 @@ export function checkLimit(input: {
   tier: PricingTierId;
   key: CountableLimitKey;
   current: number;
+  /** Extra room bought as add-ons (people, artists), on top of a numeric
+   *  ceiling. Ignored when the tier has no ceiling. */
+  extra?: number;
 }): LimitVerdict {
-  const limit = getEntitlement(input.tier, input.key);
+  const base = getEntitlement(input.tier, input.key);
+  const extra = Math.max(0, Math.floor(input.extra ?? 0));
+  const limit = typeof base === 'number' ? base + extra : base;
   if (isWithinLimit(input.current, limit)) {
     return {
       allowed: true,

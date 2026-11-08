@@ -109,6 +109,17 @@ export const BILLING_EVENT_TYPES = [
    *  allowance (lib/distribution-limits-server.ts). Metadata carries the
    *  reference and the release. */
   'distribution_extra_paid',
+  /** Add-ons (lib/addons-server.ts, #1112): the first period paid, a renewal
+   *  charged, a renewal that failed, an add-on removed. */
+  'addon_paid',
+  'addon_renewed',
+  'addon_renewal_failed',
+  'addon_cancelled',
+  /** Credits past the allowance (lib/credits/overage-server.ts, #1112): a
+   *  window's credits charged to the card, or the charge failing. The cap
+   *  being reached is a limit_hit with entitlement 'urgans_credit_cap'. */
+  'credit_overage_charged',
+  'credit_overage_failed',
   /** A team hit the daily embedded-actions cap (EMBEDDED_ACTIONS_DAILY_CAP in
    *  lib/urgans-actions/guard.ts). Drives a founder alert, at most one per
    *  team per 24h — see shouldAlertGuardTrip. */

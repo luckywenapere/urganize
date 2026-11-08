@@ -462,7 +462,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     ],
     monthlyPrice: tierPrice(5_000),
     includesDistribution: false,
-    urgansMonthlyCredits: 100,
+    urgansMonthlyCredits: 150,
     // 3 people since 2026-11-07: the artist, a manager and one helper.
     limits: { artists: 1, seats: 3, activeReleases: 1, urgansMonthlyActions: 40 },
     perks: [],
@@ -483,7 +483,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     ],
     monthlyPrice: tierPrice(15_000),
     includesDistribution: false,
-    urgansMonthlyCredits: 300,
+    urgansMonthlyCredits: 450,
     limits: { artists: 3, seats: 6, activeReleases: 3, urgansMonthlyActions: 100 },
     perks: [],
     // THE RECOMMENDED PLAN ("Most popular"). Read only by the in-app picker;
@@ -505,7 +505,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     ],
     monthlyPrice: tierPrice(40_000),
     includesDistribution: true,
-    urgansMonthlyCredits: 600,
+    urgansMonthlyCredits: 900,
     limits: { artists: 5, seats: 10, activeReleases: 8, urgansMonthlyActions: 150 },
     perks: [],
   },
@@ -551,7 +551,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // data for internal maths and so teams already on Label renew as they are.
     monthlyPrice: tierPrice(100_000),
     includesDistribution: true,
-    urgansMonthlyCredits: 1500,
+    urgansMonthlyCredits: 2000,
     // `label` MUST keep unlimited limits: `resolveTeamTier` fails open to this
     // tier for a walled, legacy or unrecognised plan, so capping it here would
     // silently cap teams the resolver could not identify.
@@ -584,7 +584,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     label: 'Group',
     includesDistribution: true,
     audience: 'For distributors and multi-label groups.',
-    urgansMonthlyCredits: 1500,
+    urgansMonthlyCredits: 2000,
     limits: { artists: null, seats: null, activeReleases: null, urgansMonthlyActions: null },
     perks: [
       'Everything in Label',
@@ -858,8 +858,57 @@ export function teamDistributionPlan(
   return interval === 'annual' || interval === 'semiannual' ? 'yearly' : 'monthly';
 }
 
-/** The AI credit pack on sale today (₦1,500 for 100 credits). */
+/** The old AI credit pack (₦1,500 for 100 credits). Off sale since 2026-11-07
+ *  (#1112): credits past a plan's allowance are paid per credit instead
+ *  (CREDIT_OVERAGE_NAIRA). Kept so old purchases still read. */
 export const CREDIT_PACK = { credits: 100, priceNaira: 1_500 } as const;
+
+/** What one AI credit costs past a plan's monthly credits, naira (founder,
+ *  2026-11-07, #1112). Cheaper on bigger plans. Our cost is about ₦6.88. */
+export const CREDIT_OVERAGE_NAIRA: Record<PricingTierId, number> = {
+  solo: 20,
+  manager: 18,
+  pro: 16,
+  label: 15,
+  enterprise: 15,
+};
+
+/** The add-ons a team can buy on top of its plan (founder, 2026-11-07, #1112). */
+export type AddonKind = 'person' | 'artist' | 'distribution';
+export type AddonInterval = 'monthly' | 'yearly';
+
+/** Add-on prices, naira. People and artists are monthly. Distribution is per
+ *  artist: TRM's monthly plan (7 releases a month, singles and EPs) or its
+ *  yearly plan (no monthly cap, albums too). We keep 20% of distribution
+ *  (TRM_MARGIN) and owe TRM the rest. */
+export const ADDON_PRICES_NAIRA = {
+  person: 3_000,
+  artist: 5_000,
+  distribution_monthly: 7_100,
+  distribution_yearly: 25_500,
+} as const;
+
+/** Releases a month the monthly Distribution add-on covers for its artist. */
+export const DISTRIBUTION_ADDON_RELEASES_PER_MONTH = 7;
+
+/** Which plans can buy which add-on. Solo grows by moving to Manager; Pro
+ *  already includes distribution; Label is set by hand. */
+export const ADDON_TIERS: Record<AddonKind, readonly PricingTierId[]> = {
+  person: ['manager', 'pro'],
+  artist: ['manager', 'pro'],
+  distribution: ['solo', 'manager'],
+};
+
+export function canBuyAddon(tier: PricingTierId | null | undefined, kind: AddonKind): boolean {
+  return !!tier && ADDON_TIERS[kind].includes(tier);
+}
+
+/** One add-on unit's price for its period, naira. */
+export function addonUnitPriceNaira(kind: AddonKind, interval: AddonInterval = 'monthly'): number {
+  if (kind === 'person') return ADDON_PRICES_NAIRA.person;
+  if (kind === 'artist') return ADDON_PRICES_NAIRA.artist;
+  return interval === 'yearly' ? ADDON_PRICES_NAIRA.distribution_yearly : ADDON_PRICES_NAIRA.distribution_monthly;
+}
 
 /** "Distribution for 1 of your artists, 7 releases a month". Numbers from the allowance. */
 export function distributionAllowanceCopy(

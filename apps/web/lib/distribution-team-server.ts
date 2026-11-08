@@ -14,7 +14,14 @@ import { readTrmFeeConfig } from './trm/partner-fee';
 export async function loadTeamDistribution(
   admin: SupabaseClient,
   ownerUserId: string
-): Promise<{ decision: DistributionAccess; workspaceId: string | null }> {
+): Promise<{
+  decision: DistributionAccess;
+  workspaceId: string | null;
+  /** The owner's plan id ('solo', 'manager', ...) and whether the team is paying
+   *  now: Solo and Manager pay per single or buy the Distribution add-on. */
+  plan: string | null;
+  paying: boolean;
+}> {
   const config = readTrmFeeConfig();
   const [access, subscription, team] = await Promise.all([
     getTeamAccessForUser(ownerUserId, null),
@@ -31,5 +38,10 @@ export async function loadTeamDistribution(
     expiresAt: sub?.expires_at ?? null,
     requiresPrepay: config.distributionRequiresPrepay,
   });
-  return { decision, workspaceId: (team.data as { id: string } | null)?.id ?? null };
+  return {
+    decision,
+    workspaceId: (team.data as { id: string } | null)?.id ?? null,
+    plan,
+    paying: access.state === 'paid',
+  };
 }

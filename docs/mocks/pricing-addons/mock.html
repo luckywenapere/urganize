@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Add-ons and AI credits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --side:#f0ebe1; --side-on:#e6e1d6; --card:#faf5ec; --hover:#ebe6dc;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --err:#961a1a; --err-soft:rgba(150,26,26,.08);
+    --board:#d9d5cc; --board-text:#1a1611; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--board-text); padding:32px 16px 64px; }
+  p { margin:0; }
+  .intro, .sec-h, .note, .row { max-width:1160px; margin-left:auto; margin-right:auto; }
+  .intro { margin-bottom:28px; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; margin:0 0 6px; }
+  .intro p, .sec-h p { color:var(--board-sec); }
+  .sec-h { margin-top:44px; margin-bottom:12px; }
+  .sec-h h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:0 0 4px; }
+  .mono { font-family:'JetBrains Mono', monospace; font-size:12.5px; color:var(--sec); }
+  .mu { color:var(--sec); } .ter { color:var(--ter); }
+
+  .row { display:flex; flex-wrap:wrap; gap:28px; }
+  .col { width:340px; max-width:100%; }
+  .col.wide { width:540px; }
+  .tag { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin-bottom:6px; }
+  .why { font-size:13px; color:var(--board-sec); margin-bottom:12px; min-height:40px; }
+  .frame { background:var(--bg); color:var(--text); border-radius:22px; padding:18px 16px 20px; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .crumb { font-size:12.5px; color:var(--ter); margin-bottom:6px; }
+  .h3 { font-family:'Young Serif', serif; font-weight:400; font-size:22px; margin:0 0 12px; }
+
+  .card { background:var(--card); border:1px solid var(--line); padding:14px 14px 16px; margin-top:10px; }
+  .card.sel { border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft); }
+  .card .t { font-size:15px; font-weight:600; }
+  .card .d { font-size:13px; color:var(--sec); margin-top:2px; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; min-height:38px; padding:0 14px; font-weight:600; font-size:13.5px; background:var(--brand); color:#f5f0e6; white-space:nowrap; }
+  .btn.ghost { background:transparent; color:var(--text); border:1px solid var(--line2); }
+  .btn.full { width:100%; }
+  .link { font-size:13px; color:var(--text); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--ter); }
+  .acts { display:flex; flex-direction:column; gap:10px; margin-top:12px; }
+  .acts.h { flex-direction:row; align-items:center; gap:14px; }
+  .opt { display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-top:1px solid var(--line); }
+  .opt:first-of-type { border-top:0; }
+  .radio { width:16px; height:16px; border-radius:50%; border:1.5px solid var(--line2); flex:none; margin-top:3px; }
+  .radio.on { border:5px solid var(--brand); }
+  .opt b { font-weight:600; }
+  .pill { font-size:11.5px; padding:2px 8px; border-radius:99px; background:var(--hover); color:var(--sec); white-space:nowrap; }
+  .pill.g { background:var(--brand-soft); color:var(--brand); font-weight:600; }
+
+  .line { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:11px 0; border-top:1px solid var(--line); }
+  .line:first-child { border-top:0; }
+  .line .nm { font-weight:600; font-size:14px; }
+  .line .sm { font-size:12.5px; color:var(--sec); }
+  .step { display:inline-flex; align-items:center; border:1px solid var(--line2); }
+  .step span { width:30px; height:30px; display:grid; place-items:center; color:var(--sec); }
+  .step b { min-width:28px; text-align:center; font-family:'JetBrains Mono', monospace; font-weight:500; }
+  .sum { background:var(--hover); padding:10px 12px; margin-top:12px; font-size:13px; }
+  .sum .line { padding:5px 0; border-top:0; }
+  .bar { height:7px; background:var(--hover); overflow:hidden; margin:10px 0 6px; }
+  .bar i { display:block; height:100%; background:var(--brand); }
+  .bar.err i { background:var(--err); }
+  .input { border:1px solid var(--line2); background:#fffdf8; padding:8px 11px; font-size:14px; display:flex; justify-content:space-between; }
+  .warn { background:var(--err-soft); border:1px solid rgba(150,26,26,.2); padding:12px 14px; margin-top:10px; font-size:13.5px; }
+  .warn b { color:var(--err); }
+  .bubble { background:var(--card); border:1px solid var(--line); padding:10px 12px; margin-top:10px; font-size:13.5px; }
+  .bubble.me { background:var(--hover); margin-left:40px; }
+  .dim { opacity:.45; }
+
+  table { width:100%; border-collapse:collapse; font-size:13.5px; background:var(--card); }
+  th, td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); }
+  th { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ter); font-weight:600; }
+  td.n { font-family:'JetBrains Mono', monospace; font-size:13px; }
+  .was { color:var(--ter); text-decoration:line-through; margin-right:6px; }
+
+  .site { max-width:1160px; margin:0 auto; background:#fbf8f2; color:var(--text); border-radius:18px; padding:32px 36px 36px; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .site h3 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; margin:0 0 4px; }
+  .agrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; margin-top:20px; }
+  .acard { border:1px solid var(--line); background:var(--card); padding:16px; }
+  .acard .p { font-family:'JetBrains Mono', monospace; font-size:18px; margin-top:6px; }
+  .acard .w { font-size:12.5px; color:var(--ter); margin-top:6px; }
+
+  .outline { outline:2px dashed rgba(20,100,58,.5); outline-offset:6px; }
+  .note { margin-top:40px; font-size:13.5px; color:var(--board-sec); }
+  .note h3 { color:var(--board-text); font-size:15px; margin:0 0 8px; }
+  .note ol, .note ul { margin:0 0 14px; padding-left:20px; }
+  .note li { margin:4px 0; }
+  .note b { color:var(--board-text); }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Add-ons, pay-per-single and AI credits</h1>
+  <p>Phase 2 of the new pricing (issue #1112). Four pieces: pay ₦2,000 to send a single on Solo and Manager, add-ons you can buy (people, artists, distribution), AI credits billed per credit past the plan's allowance with a spend cap, and the add-ons on /pricing. Demo team: Northline Music on Manager. Light theme.</p>
+</div>
+
+<!-- ============ 1. PAY PER SINGLE ============ -->
+<div class="sec-h">
+  <h2>1 · Distribute step on Solo and Manager</h2>
+  <p>Today this card says "Distribution comes with Pro and Label" and sends you away. Now a single can go straight out for ₦2,000. An EP or album needs the Distribution add-on (TRM only sells singles one at a time). Your own TRM account stays a choice in every case.</p>
+</div>
+<div class="row">
+  <div class="col">
+    <div class="tag">a · A single</div>
+    <p class="why">One price, one tap. The ₦2,000 goes to Paystack, then the single goes to TRM right after.</p>
+    <div class="frame">
+      <div class="crumb">Ayo Kings · "Lagos Rain" · Distribute</div>
+      <div class="h3">Send to stores</div>
+      <div class="card sel outline">
+        <p class="t">Send this single for ₦2,000</p>
+        <p class="d">We send it to Spotify, Apple Music, Audiomack, Boomplay and the rest through TRM.</p>
+        <div class="acts">
+          <span class="btn full">Pay ₦2,000 and send</span>
+        </div>
+        <p class="mono" style="margin-top:10px">Paid once. Fixing and resending it later is free.</p>
+      </div>
+      <div class="card">
+        <p class="t">Send a lot of music?</p>
+        <p class="d">Add distribution for Ayo Kings: ₦7,100 a month covers 7 releases a month, singles and EPs.</p>
+        <div class="acts h"><span class="link">See the add-on</span><span class="link">Use my own TRM plan</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="tag">b · An EP</div>
+    <p class="why">No ₦2,000 button here, because TRM won't take an EP one at a time. Two ways out, the add-on first.</p>
+    <div class="frame">
+      <div class="crumb">Ayo Kings · "Sundays" EP · Distribute</div>
+      <div class="h3">Send to stores</div>
+      <div class="card outline">
+        <p class="t">EPs need distribution for this artist</p>
+        <p class="d">Add it for Ayo Kings and send this EP today.</p>
+        <div class="opt"><span class="radio on"></span><div><b>Monthly · ₦7,100 a month</b><p class="mu" style="font-size:12.5px">7 releases a month. Singles and EPs.</p></div></div>
+        <div class="opt"><span class="radio"></span><div><b>Yearly · ₦25,500 a year</b><p class="mu" style="font-size:12.5px">No monthly limit. Albums too.</p></div></div>
+        <div class="acts"><span class="btn full">Add and send · ₦7,100</span></div>
+        <p class="mono" style="margin-top:10px">Renews with your plan. Stop it any time in Settings.</p>
+      </div>
+      <div class="card">
+        <p class="t">Have your own TRM plan?</p>
+        <div class="acts h"><span class="link">Use my own TRM plan</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="tag">c · Paid, sending</div>
+    <p class="why">Back from Paystack. Same screen as a Pro send today, so nothing new to learn.</p>
+    <div class="frame">
+      <div class="crumb">Ayo Kings · "Lagos Rain" · Distribute</div>
+      <div class="h3">Send to stores</div>
+      <div class="card">
+        <p class="t">Paid. Sending to TRM…</p>
+        <div class="bar"><i style="width:60%"></i></div>
+        <p class="mono">₦2,000 paid · receipt sent to your email</p>
+      </div>
+      <div class="card">
+        <p class="t">What happens next</p>
+        <p class="d">TRM checks it in 1 to 3 days. We tell you when it's live and add the store links to your rollout.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 2. ADD-ONS ============ -->
+<div class="sec-h">
+  <h2>2 · Settings → Plan → Add-ons</h2>
+  <p>Everything you can add, on one screen, with the monthly total. Add-ons raise your limits the moment you pay and renew on your plan's renewal day, from the same card.</p>
+</div>
+<div class="row">
+  <div class="col wide">
+    <div class="tag">a · Manager, owner's view</div>
+    <p class="why">Steppers for people and artists. Distribution is per artist, so you pick which artist and monthly or yearly.</p>
+    <div class="frame">
+      <div class="crumb">Settings · Plan</div>
+      <div class="h3">Add-ons</div>
+      <div class="card" style="margin-top:0">
+        <p class="mono" style="margin-bottom:6px">Manager · ₦15,000 a month · renews 1 Dec</p>
+        <div class="line"><div><p class="nm">Extra people</p><p class="sm">₦3,000 a month each · you have 6 + 1</p></div><div class="step"><span>−</span><b>1</b><span>+</span></div></div>
+        <div class="line"><div><p class="nm">Extra artists</p><p class="sm">₦5,000 a month each · you have 3 + 0</p></div><div class="step"><span>−</span><b>0</b><span>+</span></div></div>
+        <div class="line outline"><div><p class="nm">Distribution for Ayo Kings</p><p class="sm">TRM monthly · ₦7,100 a month · 2 of 7 used in Nov</p></div><span class="link">Stop</span></div>
+        <div class="line"><div><p class="nm">Distribution for another artist</p><p class="sm">₦7,100 a month or ₦25,500 a year</p></div><span class="btn ghost">Add</span></div>
+      </div>
+      <div class="sum">
+        <div class="line"><span>Manager plan</span><span class="mono">₦15,000</span></div>
+        <div class="line"><span>Add-ons</span><span class="mono">₦10,100</span></div>
+        <div class="line"><b>Each month from 1 Dec</b><b class="mono" style="color:var(--text)">₦25,100</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="tag">b · Confirm one add-on</div>
+    <p class="why">You pay the first month now so the limit goes up today. After that it joins the plan's bill.</p>
+    <div class="frame">
+      <div class="crumb">Settings · Plan · Add-ons</div>
+      <div class="h3">Add 1 person</div>
+      <div class="card" style="margin-top:0">
+        <div class="line"><span>Today</span><span class="mono">₦3,000</span></div>
+        <div class="line"><span>Then every month on the 1st</span><span class="mono">₦3,000</span></div>
+        <div class="line"><span>People on your team</span><span class="mono">6 → 7</span></div>
+        <div class="acts"><span class="btn full">Pay ₦3,000</span></div>
+        <p class="mono" style="margin-top:10px">Paid by card. Remove it any time; it stops at the next renewal.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row" style="margin-top:24px">
+  <div class="col">
+    <div class="tag">c · Solo</div>
+    <p class="why">Solo can't add people or artists (that is what Manager is for), but it can add distribution.</p>
+    <div class="frame">
+      <div class="crumb">Settings · Plan</div>
+      <div class="h3">Add-ons</div>
+      <div class="card" style="margin-top:0">
+        <div class="line"><div><p class="nm">Distribution for Tems Okon</p><p class="sm">₦7,100 a month or ₦25,500 a year</p></div><span class="btn ghost">Add</span></div>
+        <div class="line dim"><div><p class="nm">More people or artists</p><p class="sm">Come with Manager, ₦15,000 a month</p></div><span class="link">See plans</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="tag">d · Pro</div>
+    <p class="why">Pro already has distribution for 1 artist, so it gets people and artists. Label is set by hand with you.</p>
+    <div class="frame">
+      <div class="crumb">Settings · Plan</div>
+      <div class="h3">Add-ons</div>
+      <div class="card" style="margin-top:0">
+        <div class="line"><div><p class="nm">Extra people</p><p class="sm">₦3,000 a month each · 10 + 0</p></div><div class="step"><span>−</span><b>0</b><span>+</span></div></div>
+        <div class="line"><div><p class="nm">Extra artists</p><p class="sm">₦5,000 a month each · 5 + 2</p></div><div class="step"><span>−</span><b>2</b><span>+</span></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="tag">e · Card payment failed</div>
+    <p class="why">If the renewal charge fails, add-ons pause (limits drop back) after 3 days of retries. Nothing is deleted.</p>
+    <div class="frame">
+      <div class="crumb">Settings · Plan · Add-ons</div>
+      <div class="warn"><b>Your add-ons are paused.</b> We couldn't charge ₦10,100 on 1 Dec. Your 7th person and Ayo Kings' distribution are on hold.</div>
+      <div class="acts"><span class="btn full">Pay ₦10,100 now</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 3. AI CREDITS ============ -->
+<div class="sec-h">
+  <h2>3 · AI credits: pay per credit past your allowance, with a cap</h2>
+  <p>Credit packs go. Every plan gets more credits each month; past them, UrgAns keeps working and each credit costs a small amount, up to a monthly cap you set. Cap at ₦0 means UrgAns stops at the allowance, as it does today.</p>
+</div>
+<div class="row">
+  <div class="col">
+    <div class="tag">a · Settings → AI credits</div>
+    <p class="why">One bar for the allowance, one for money spent past it, live. You set the cap here.</p>
+    <div class="frame">
+      <div class="crumb">Settings</div>
+      <div class="h3">AI credits</div>
+      <div class="card" style="margin-top:0">
+        <p class="nm" style="font-weight:600">450 a month on Manager</p>
+        <div class="bar"><i style="width:100%"></i></div>
+        <p class="mono">450 of 450 used · starts again 1 Dec</p>
+      </div>
+      <div class="card outline">
+        <p class="nm" style="font-weight:600">Past your allowance · ₦18 a credit</p>
+        <div class="bar"><i style="width:25%"></i></div>
+        <p class="mono">70 credits · ₦1,260 of your ₦5,000 cap</p>
+        <p style="font-size:12.5px;color:var(--sec);margin:12px 0 6px">Monthly cap</p>
+        <div class="input"><span>₦5,000</span><span class="ter">a month</span></div>
+        <p class="mono" style="margin-top:8px">Charged to your card on 1 Dec with your plan.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="tag">b · Hit the cap, in UrgAns</div>
+    <p class="why">A hard stop, said plainly, with the one thing to do. The plan and tasks keep working without AI.</p>
+    <div class="frame">
+      <div class="crumb">UrgAns</div>
+      <div class="bubble me">Draft the press release for Lagos Rain</div>
+      <div class="warn"><b>You've hit your ₦5,000 cap for November.</b> UrgAns is paused until 1 Dec. The owner can raise the cap.</div>
+      <div class="acts"><span class="btn full">Raise the cap</span></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="tag">c · New allowances (please confirm)</div>
+    <p class="why">The numbers you approved in the thesis. They cost us ₦6.88 a credit, so the margin past the allowance is 54 to 66%.</p>
+    <div class="frame">
+      <table>
+        <tr><th>Plan</th><th>A month</th><th>Then</th></tr>
+        <tr><td>Solo</td><td class="n"><span class="was">100</span>150</td><td class="n">₦20</td></tr>
+        <tr><td>Manager</td><td class="n"><span class="was">300</span>450</td><td class="n">₦18</td></tr>
+        <tr><td>Pro</td><td class="n"><span class="was">600</span>900</td><td class="n">₦16</td></tr>
+        <tr><td>Label</td><td class="n"><span class="was">1,500</span>2,000</td><td class="n">₦15</td></tr>
+      </table>
+      <p class="mono" style="margin-top:10px">Default cap for a new team: ₦0 (off) until the owner sets one.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 4. PRICING PAGE ============ -->
+<div class="sec-h">
+  <h2>4 · urganize.app/pricing, under the four plans</h2>
+  <p>Only what can be bought. Same list appears as rows at the bottom of the compare table.</p>
+</div>
+<div class="site">
+  <h3>Add to any plan</h3>
+  <p class="mu">Pay for what you need, when you need it. Add-ons renew with your plan.</p>
+  <div class="agrid">
+    <div class="acard"><p class="nm" style="font-weight:600">Send a single</p><p class="p">₦2,000</p><p class="mu" style="font-size:13px;margin-top:4px">per single, to every store</p><p class="w">Solo and Manager</p></div>
+    <div class="acard"><p class="nm" style="font-weight:600">Distribution for an artist</p><p class="p">₦7,100<span style="font-size:13px"> /month</span></p><p class="mu" style="font-size:13px;margin-top:4px">7 releases a month, singles and EPs. Or ₦25,500 a year with albums.</p><p class="w">Solo and Manager</p></div>
+    <div class="acard"><p class="nm" style="font-weight:600">Extra person</p><p class="p">₦3,000<span style="font-size:13px"> /month</span></p><p class="mu" style="font-size:13px;margin-top:4px">one more person on your team</p><p class="w">Manager and Pro</p></div>
+    <div class="acard"><p class="nm" style="font-weight:600">Extra artist</p><p class="p">₦5,000<span style="font-size:13px"> /month</span></p><p class="mu" style="font-size:13px;margin-top:4px">one more artist on your team</p><p class="w">Manager and Pro</p></div>
+    <div class="acard"><p class="nm" style="font-weight:600">More AI credits</p><p class="p">from ₦15</p><p class="mu" style="font-size:13px;margin-top:4px">per credit past your plan's monthly credits, up to a cap you set</p><p class="w">Every plan</p></div>
+  </div>
+</div>
+
+<div class="note">
+  <h3>How it works behind the screens</h3>
+  <ul>
+    <li><b>First payment</b> of an add-on goes through Paystack like any checkout. That also saves the card.</li>
+    <li><b>Each month</b> we charge add-ons plus any credits used past the allowance on that card, on the plan's renewal day, in one charge. Bank transfer payers can't take add-ons until they add a card.</li>
+    <li><b>Money we owe TRM:</b> 80% of every single (₦1,600) and every distribution add-on (₦5,680 a month, ₦20,400 a year) goes on the TRM ledger, same as today's extra releases.</li>
+    <li><b>Credits already bought</b> in a pack stay and are used before any paid credits.</li>
+  </ul>
+  <h3>One thing to decide</h3>
+  <ol>
+    <li><b>Are these screens and the new allowances (150 / 450 / 900 / 2,000) right?</b> Yes builds all four pieces as drawn.</li>
+  </ol>
+</div>
+
+</body>
+</html>

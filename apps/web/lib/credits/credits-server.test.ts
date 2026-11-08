@@ -246,17 +246,19 @@ describe('getCreditSnapshot', () => {
       const { client, inserted } = fakeClient({ rpc: balancesRpc({ trial: 0, allowance: 300, topup: 40 }) });
       const snap = await getCreditSnapshot(client, { ...base, team: { state: 'paid', tier: 'manager' } });
 
-      expect(inserted[0]).toMatchObject({ credits: 300, window_start: '2026-10-01' });
-      expect(snap).toEqual({
+      expect(inserted[0]).toMatchObject({ credits: 450, window_start: '2026-10-01' });
+      expect(snap).toMatchObject({
         trial: 0,
         allowance: 300,
         topup: 40,
         total: 340,
         account: 'subscriber',
-        monthlyAllowance: 300,
-        referenceCredits: 300,
+        monthlyAllowance: 450,
+        referenceCredits: 450,
         nextGrantAt: '2026-11-01T00:00:00.000Z',
       });
+      // No cap set: nothing past the balance.
+      expect(snap?.spendable).toBe(340);
     });
 
     it('rolls over: last month\'s unused credits are still in the balance when this month\'s arrive', async () => {
@@ -273,7 +275,7 @@ describe('getCreditSnapshot', () => {
       const snap = await getCreditSnapshot(client, { ...base, team: { state: 'paid', tier: 'solo' } });
 
       expect(snap?.nextGrantAt).toBe('2026-11-12T00:00:00.000Z');
-      expect(inserted[0]).toMatchObject({ credits: 100, window_start: '2026-10-12' });
+      expect(inserted[0]).toMatchObject({ credits: 150, window_start: '2026-10-12' });
     });
 
     it('is never given a trial grant', async () => {

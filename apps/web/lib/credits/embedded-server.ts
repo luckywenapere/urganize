@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isCreditsEnabled } from './config';
-import { embeddedRefusalNotice } from './copy';
+import { creditsStopNotice, embeddedRefusalNotice } from './copy';
 import { getCreditSnapshot, settleTurn, type CreditSnapshot } from './credits-server';
 import { EMBEDDED_HOLD_CREDITS, embeddedCharge, type EmbeddedCharge } from './embedded';
 import { canStartTurn, type UsageCall } from './pricing';
@@ -39,11 +39,11 @@ export async function beginEmbeddedRun(
     team: input.team,
   });
   if (!snapshot) return { metered: false };
-  if (!canStartTurn(snapshot.total, EMBEDDED_HOLD_CREDITS)) {
+  if (!canStartTurn(snapshot.spendable ?? snapshot.total, EMBEDDED_HOLD_CREDITS)) {
     return {
       metered: true,
       ok: false,
-      message: embeddedRefusalNotice({
+      message: snapshot.overage ? creditsStopNotice(snapshot) : embeddedRefusalNotice({
         account: snapshot.account,
         nextGrantAt: snapshot.nextGrantAt,
         needed: EMBEDDED_HOLD_CREDITS,

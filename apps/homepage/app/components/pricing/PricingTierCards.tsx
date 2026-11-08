@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { RiCheckLine } from "react-icons/ri";
 import {
-  CREDIT_PACK,
+  ADDON_PRICES_NAIRA,
+  CREDIT_OVERAGE_NAIRA,
+  DISTRIBUTION_ADDON_RELEASES_PER_MONTH,
   DEFAULT_SELLING_INTERVAL,
   EXTRA_RELEASE_PRICE_NAIRA,
   PRICING_TIER_ORDER,
@@ -237,27 +239,52 @@ export function PricingTierCards() {
 
         <PricingCompareTable interval={interval} />
 
-        {/* Add-ons: only what can be bought today. */}
-        <div className="mx-auto mt-16 max-w-3xl">
-          <h2 className="text-center text-2xl md:text-3xl">Add-ons</h2>
-          <ul className="mt-6 grid gap-4 sm:grid-cols-2">
+        {/* Add-ons (#1112): only what can be bought today. Prices from @urganize/pricing. */}
+        <div className="mx-auto mt-16 max-w-4xl">
+          <h2 className="text-center text-2xl md:text-3xl">Add to any plan</h2>
+          <p className="mt-2 text-center text-sm text-[var(--marketing-text-muted)]">
+            Pay for what you need, when you need it. Add-ons renew with your plan.
+          </p>
+          <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <li className="rounded-[1.25rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
-              <p className="text-sm font-semibold text-[var(--marketing-text)]">More AI credits</p>
-              <p className="mt-1 text-2xl font-black tracking-tighter text-[var(--marketing-text)]">
-                {naira(CREDIT_PACK.priceNaira)}
-              </p>
-              <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">
-                {`For ${CREDIT_PACK.credits} credits, on any plan.`}
-              </p>
-            </li>
-            <li className="rounded-[1.25rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
-              <p className="text-sm font-semibold text-[var(--marketing-text)]">Send a single to stores</p>
+              <p className="text-sm font-semibold text-[var(--marketing-text)]">Send a single</p>
               <p className="mt-1 text-2xl font-black tracking-tighter text-[var(--marketing-text)]">
                 {naira(EXTRA_RELEASE_PRICE_NAIRA)}
               </p>
-              <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">
-                Each, on Solo and Manager, or past what Pro and Label include.
+              <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">Per single, to every store.</p>
+              <p className="mt-2 text-xs text-[var(--marketing-text-subtle)]">Solo and Manager, or past what Pro and Label include</p>
+            </li>
+            <li className="rounded-[1.25rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
+              <p className="text-sm font-semibold text-[var(--marketing-text)]">Distribution for an artist</p>
+              <p className="mt-1 text-2xl font-black tracking-tighter text-[var(--marketing-text)]">
+                <>{naira(ADDON_PRICES_NAIRA.distribution_monthly)}<span className="text-sm font-semibold"> /month</span></>
               </p>
+              <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">{`${DISTRIBUTION_ADDON_RELEASES_PER_MONTH} releases a month, singles and EPs. Or ${naira(ADDON_PRICES_NAIRA.distribution_yearly)} a year with albums too.`}</p>
+              <p className="mt-2 text-xs text-[var(--marketing-text-subtle)]">Solo and Manager</p>
+            </li>
+            <li className="rounded-[1.25rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
+              <p className="text-sm font-semibold text-[var(--marketing-text)]">Extra person</p>
+              <p className="mt-1 text-2xl font-black tracking-tighter text-[var(--marketing-text)]">
+                <>{naira(ADDON_PRICES_NAIRA.person)}<span className="text-sm font-semibold"> /month</span></>
+              </p>
+              <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">One more person on your team.</p>
+              <p className="mt-2 text-xs text-[var(--marketing-text-subtle)]">Manager and Pro</p>
+            </li>
+            <li className="rounded-[1.25rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
+              <p className="text-sm font-semibold text-[var(--marketing-text)]">Extra artist</p>
+              <p className="mt-1 text-2xl font-black tracking-tighter text-[var(--marketing-text)]">
+                <>{naira(ADDON_PRICES_NAIRA.artist)}<span className="text-sm font-semibold"> /month</span></>
+              </p>
+              <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">One more artist on your team.</p>
+              <p className="mt-2 text-xs text-[var(--marketing-text-subtle)]">Manager and Pro</p>
+            </li>
+            <li className="rounded-[1.25rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
+              <p className="text-sm font-semibold text-[var(--marketing-text)]">More AI credits</p>
+              <p className="mt-1 text-2xl font-black tracking-tighter text-[var(--marketing-text)]">
+                {`from ${naira(Math.min(...Object.values(CREDIT_OVERAGE_NAIRA)))}`}
+              </p>
+              <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">Per credit past your plan's monthly credits, up to a cap you set.</p>
+              <p className="mt-2 text-xs text-[var(--marketing-text-subtle)]">Every plan</p>
             </li>
           </ul>
         </div>
