@@ -239,9 +239,9 @@ describe('the copy is held to the house bar', () => {
     }
   });
 
-  it('says rollout, never workspace, ship or release', () => {
+  it('says rollout, never ship or release', () => {
     for (const text of strings) {
-      expect(text, text).not.toMatch(/\bworkspace\b|\bship(s|ped|ping)?\b|\breleases?\b/i);
+      expect(text, text).not.toMatch(/\bship(s|ped|ping)?\b|\breleases?\b/i);
     }
     expect(PROFILE_GROWTH_COPY.managerCta).toContain('rollouts');
   });

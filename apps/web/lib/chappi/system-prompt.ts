@@ -28,7 +28,7 @@ import type { ChappiToolContext } from './tools';
  */
 export const URGANS_COPY_RULES =
   'House copy rules for everything you write: use no em dashes, a comma or a full stop instead. ' +
-  'Say a rollout is DELIVERED, never shipped. Never call Urganize a workspace. '
+  'Say a rollout is DELIVERED, never shipped. '
   + 'The user calls the thing they are running a ROLLOUT: say rollout, never release, when you '
   + 'mean that object. The tools are still named create_release, get_release and so on, which is '
   + 'fine. "Release date" and "release day" stay as they are: they name the day the music comes out.';

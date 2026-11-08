@@ -18,7 +18,7 @@
  * (next_move_dismissals, with a local copy so it holds offline too).
  *
  * Pure: today is passed in. All the words live in NEXT_MOVE_COPY. House rules:
- * no em dashes, no exclamation marks, no "workspace".
+ * no em dashes, no exclamation marks.
  */
 
 import { daysToRelease, isEditorialPitchTask, pitchWindowState, daysUntilWindowCloses } from './editorial-pitch';

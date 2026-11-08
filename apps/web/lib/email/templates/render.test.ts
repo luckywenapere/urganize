@@ -335,11 +335,10 @@ describe('NotifyAdminEmail', () => {
   });
 
   // The founder's copy rules for CUSTOMER mail, enforced rather than reviewed.
-  it('never says workspace, uses no em dash, and applies no pressure', async () => {
+  it('uses no em dash and applies no pressure', async () => {
     const { html, text } = await render(NotifyAdminEmail(input));
     const subject = notifyAdminSubject(input.requesterLabel, input.teamName);
     for (const body of [subject, text, html]) {
-      expect(body.toLowerCase()).not.toContain('workspace');
       expect(body).not.toContain('—');
     }
     const pressureCorpus = `${subject} ${text}`.toLowerCase();

@@ -38,11 +38,10 @@ describe('the five steps', () => {
     }
   });
 
-  it('keeps the house copy rules: no em dash, never "workspace"', () => {
+  it('keeps the house copy rules: no em dash', () => {
     for (const step of ONBOARDING_STEPS) {
       const all = `${step.subject}\n${step.preview}\n${step.body}`;
       expect(all).not.toContain('—');
-      expect(all.toLowerCase()).not.toContain('workspace');
     }
   });
 

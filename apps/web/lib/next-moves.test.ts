@@ -273,7 +273,6 @@ describe('copy', () => {
     ];
     for (const text of strings) {
       expect(text).not.toMatch(/[—!]/);
-      expect(text.toLowerCase()).not.toContain('workspace');
     }
   });
 });

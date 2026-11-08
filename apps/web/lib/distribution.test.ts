@@ -47,14 +47,13 @@ describe('releaseDateWarning', () => {
     expect(releaseDateWarning('not a date', today)).toBeNull();
   });
 
-  it('uses no em dash and never says workspace or ship', () => {
+  it('uses no em dash and never says ship', () => {
     for (const line of [
       releaseDateWarning('2026-10-05', new Date('2026-10-03')) ?? '',
       releaseDateWarning('2026-09-01', new Date('2026-10-03')) ?? '',
     ]) {
       expect(line).not.toMatch(/[—–]/);
       expect(line).not.toMatch(/\bship(ped|ping)?\b/i);
-      expect(line).not.toMatch(/workspace/i);
     }
   });
 });

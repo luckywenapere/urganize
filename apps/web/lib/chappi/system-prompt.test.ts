@@ -76,10 +76,9 @@ describe('the system prompt', () => {
     expect(ROLE).not.toMatch(/Music Business Manager/i);
     // The 2026-09-24 line, replaced on 2026-10-17 (URG-344).
     expect(ROLE).not.toMatch(/everything after the music/i);
-    // The word is banned everywhere a person reads it. The one place the prompt
-    // may name it is the instruction that forbids it.
-    expect(URGANS_COPY_RULES).toContain('workspace');
-    expect(ROLE.split(URGANS_COPY_RULES).join(' ')).not.toMatch(/\bworkspaces?\b(?![_\w])/i);
+    // "Workspace" was allowed again on 2026-11-08, so the rules no longer
+    // tell the model to avoid it.
+    expect(URGANS_COPY_RULES).not.toMatch(/workspace/i);
   });
 
   it('tells the model to admit it has no streaming, audience, or campaign data', () => {

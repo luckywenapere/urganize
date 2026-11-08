@@ -41,14 +41,14 @@ describe('buildAttentionItems', () => {
     expect(many[0].title).toBe('2 playlists added your song');
   });
 
-  it('never uses an em dash or the word workspace in copy', () => {
+  it('never uses an em dash in copy', () => {
     const items = buildAttentionItems({
       yourTasks: { late: [task('a')], today: [task('b')], week: [] },
       waiting: { tasks: [{ id: 'w' } as never] },
       placements: { placed: [{ id: 'p' } as never], underReview: [] },
     });
     for (const item of items) {
-      expect(`${item.title} ${item.detail} ${item.action}`).not.toMatch(/\u2014|workspace/i);
+      expect(`${item.title} ${item.detail} ${item.action}`).not.toMatch(/\u2014/);
     }
   });
 });

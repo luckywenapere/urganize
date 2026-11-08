@@ -76,7 +76,6 @@ describe('what the chat says', () => {
     expect(noCapNotice('1 December')).toMatch(/set a monthly cap/);
     for (const text of [line, noCapNotice(null)]) {
       expect(text).not.toMatch(/—/);
-      expect(text.toLowerCase()).not.toContain('workspace');
     }
   });
 

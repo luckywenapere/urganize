@@ -65,6 +65,6 @@ describe('copy', () => {
     expect(editorialStateCopy(editorialRow(input({ releaseDate: '2026-10-19' }), NOW))).toBe('Needs writing. 2 days left.');
   });
   it('keeps the empty line short and plain', () => {
-    expect(EDITORIAL_EMPTY_COPY).not.toMatch(/—|ship|workspace/i);
+    expect(EDITORIAL_EMPTY_COPY).not.toMatch(/—|ship/i);
   });
 });

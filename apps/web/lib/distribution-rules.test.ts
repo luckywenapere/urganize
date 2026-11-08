@@ -319,7 +319,7 @@ describe('levels, copy and order', () => {
     expect(fired('artwork_missing', { artwork: null })[0].message).toBe('Add artwork.');
   });
 
-  it('never uses an em dash, and never says workspace', () => {
+  it('never uses an em dash', () => {
     const worst = run(
       {
         title: 'LAGOS NIGHTS FEAT. TEMS',
@@ -334,7 +334,6 @@ describe('levels, copy and order', () => {
     );
     for (const issue of [...worst.errors, ...worst.warnings]) {
       expect(issue.message, issue.message).not.toMatch(/[—–]/);
-      expect(issue.message, issue.message).not.toMatch(/workspace/i);
     }
   });
 

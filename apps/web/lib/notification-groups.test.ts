@@ -240,7 +240,7 @@ describe('digest copy', () => {
     expect(describeDigestTitles(['Solo'])).toBe('Solo');
   });
 
-  it('follows the house copy rules: no em dash, never "task" or "workspace"', () => {
+  it('follows the house copy rules: no em dash, never "task"', () => {
     const lines = [
       getDigestMessage('task_overdue', 4),
       getDigestMessage('task_due_soon', 4),
@@ -249,7 +249,7 @@ describe('digest copy', () => {
       describeDigestTitles(['A', 'B', 'C', 'D']),
     ].join(' ');
     expect(lines).not.toMatch(/[—–]/);
-    expect(lines.toLowerCase()).not.toMatch(/\btasks?\b|workspace/);
+    expect(lines.toLowerCase()).not.toMatch(/\btasks?\b/);
   });
 });
 

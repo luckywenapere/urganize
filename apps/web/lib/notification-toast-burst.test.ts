@@ -94,14 +94,14 @@ describe('describeToastBurst', () => {
     expect(describeToastBurst(['x', 'y'], [])).toEqual({ message: '2 new notifications', tier: null });
   });
 
-  it('never says task or workspace, and never uses an em dash', () => {
+  it('never says task, and never uses an em dash', () => {
     const rows = Array.from({ length: 4 }, () => row('task_due_3d'));
     const text = [
       describeToastBurst(rows.map((r) => r.id), rows).message,
       describeToastBurst(['a', 'b'], []).message,
     ].join(' ');
     expect(text).not.toMatch(/[—–]/);
-    expect(text.toLowerCase()).not.toMatch(/\btasks?\b|workspace/);
+    expect(text.toLowerCase()).not.toMatch(/\btasks?\b/);
   });
 });
 
