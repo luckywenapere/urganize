@@ -77,7 +77,11 @@ When to send it: they say what they're working on, ask what Urganize is, or soun
 
 > Oh nice that's exciting. Urganize is where music teams work, from the idea to everything that comes after. Think of it like project management for the music industry. You can create your account here https://team.urganize.app/auth?mode=signup and I'll let you in once you're on. Let me know when you've signed up
 
-After sending: add them to the log's "Waiting for Oyin to let them in" table and name them in your summary, so he lets them in and sends the WhatsApp message from `/admin`. If they say they've signed up, flag it to him straight away.
+**Better: a personal invite link (since 8 Nov 2026).** The general link lands people on "You're on the list" until Oyin lets them in. A personal link lets one person straight in. With Oyin signed in to `/admin` in the browser, make one per interested person: `POST /api/admin/access` with `{"action":"invite","name":"<Name> (LinkedIn)"}` and his session token (what the Let in panel on `/admin/waitlist` does). Each link is `https://team.urganize.app/start/<code>`, works once and expires in 14 days. Never open a link yourself: his signed-in browser could use it up. Keep the links in the "Personal invite links" table of the private WhatsApp follow-ups file, never in the repo or the log, and mark each one sent. If he isn't signed in, use the general link and ask him to sign in for next time. Don't send a second message the same day to someone you already nudged; hold their link for their next reply. Message: "Here's your own link, it lets you straight in without waiting: <link>".
+
+Pricing is being restructured (Nov 2026): quote no prices until the new plans are live. Once the free tier is live, say "you can start free".
+
+After sending the general link: add them to the log's "Waiting for Oyin to let them in" table and name them in your summary, so he lets them in and sends the WhatsApp message from `/admin`. If they say they've signed up, flag it to him straight away.
 
 ## Names
 
