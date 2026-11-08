@@ -67,6 +67,18 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.258.0",
+    title: "Prices in US dollars outside Nigeria",
+    tag: "Account",
+    date: "November 8, 2026",
+    highlights: [
+      "Outside Nigeria, plans are in US dollars: Solo $9, Manager $29 and Pro $79 a month. A year costs ten months.",
+      "Pay by card, or with USDT or USDC.",
+      "More AI credits are $2 for 100 outside Nigeria.",
+      "Label has no set price any more. It is priced with you, in Naira or dollars.",
+    ],
+  },
+  {
     version: "1.257.0",
     title: "Add-ons, singles and more AI credits",
     tag: "Account",

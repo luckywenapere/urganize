@@ -52,3 +52,19 @@ export function creditsForPack(account: CreditAccount, priceNaira: unknown): num
   if (!pack) return null;
   return account === 'subscriber' ? pack.subscriberCredits : pack.creditsOnlyCredits;
 }
+
+/**
+ * A pack's price in US dollars, for buyers outside Nigeria who pay through
+ * Bachs (#1120): 100 credits for $2, so the four packs are $2, $4, $10 and
+ * $20. The pack is still identified by its Naira price; this is only what a
+ * dollar buyer is charged for it. The credits it buys follow the same two
+ * rates as in Naira (subscriber or credits-only).
+ */
+export function packPriceUsd(pack: TopupPack): number {
+  return (pack.subscriberCredits / 100) * USD_PER_100_CREDITS;
+}
+
+/** Dollars for 100 credits. Kept here because this module imports only its
+ *  siblings; packs.test.ts holds it equal to CREDIT_PACK_USD in
+ *  @urganize/pricing, which the pricing page shows. */
+export const USD_PER_100_CREDITS = 2;

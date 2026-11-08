@@ -3,7 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, getAuthenticatedUser } from '@/app/api/_shared/auth';
 import { isCreditsPurchasable } from '@/lib/credits/config';
 import { getCreditSnapshot } from '@/lib/credits/credits-server';
-import { creditsForPack, findPack } from '@/lib/credits/packs';
+import { creditsForPack, findPack, packPriceUsd } from '@/lib/credits/packs';
+import { isBachsConfigured, payerCurrency } from '@/lib/bachs';
+import { startBachsCreditsCheckout } from '@/lib/bachs-server';
 import { buildPurchaseMetadata, creditsReference, resolveCreditsReturnPath } from '@/lib/credits/purchase';
 import { initializePaystackTransaction, isPaystackConfigured } from '@/lib/paystack-server';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
@@ -11,7 +13,8 @@ import { getTeamAccessForUser } from '@/lib/team-billing-server';
 /**
  * POST /api/credits/checkout { priceNaira }
  *
- * Open Paystack for one UrgAns credit pack. A one-off charge, no plan code: this
+ * Open Paystack for one UrgAns credit pack, or Bachs in US dollars for a buyer
+ * outside Nigeria (#1120; the pack is still named by its Naira price). A one-off charge, no plan code: this
  * must never create a subscription.
  *
  * WHAT THE CLIENT DECIDES, AND WHAT IT DOES NOT. It sends a price. That price has
@@ -47,7 +50,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  if (!isPaystackConfigured()) {
+  // Outside Nigeria a pack is bought in US dollars through Bachs (#1120); in
+  // Nigeria, in Naira through Paystack.
+  const currency = payerCurrency(isBachsConfigured(), request.headers.get('x-vercel-ip-country'));
+  if (currency === 'NGN' && !isPaystackConfigured()) {
     return NextResponse.json({ error: 'Payments are not available right now. Try again later.' }, { status: 503 });
   }
 
@@ -99,6 +105,30 @@ export async function POST(request: NextRequest) {
   // A team behind the wall buys from /locked/urgans and has to come back there.
   const returnPath = resolveCreditsReturnPath(body?.returnTo);
   const reference = creditsReference(randomBytes(16).toString('hex'));
+
+  if (currency === 'USD') {
+    const priceUsd = packPriceUsd(pack);
+    const started = await startBachsCreditsCheckout(admin, {
+      userId: auth.user.id,
+      email,
+      workspaceId: team.primaryWorkspaceId,
+      ownerUserId: team.ownerUserId,
+      packPriceNaira: pack.priceNaira,
+      priceUsd,
+      credits,
+      reference,
+      returnUrl: `${base}${returnPath}`,
+    });
+    if (!started.ok) return NextResponse.json({ error: started.error }, { status: 502 });
+    return NextResponse.json({
+      authorizationUrl: started.checkoutUrl,
+      reference,
+      credits,
+      priceNaira: pack.priceNaira,
+      priceUsd,
+      currency,
+    });
+  }
 
   const initialized = await initializePaystackTransaction({
     email,

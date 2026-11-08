@@ -12,7 +12,7 @@ import { isCardTrialEnabled, resolveCardTrialRequirement } from '@/lib/trial-car
 import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { getTeamAccessForUser, toTeamAccessPayload } from '@/lib/team-billing-server';
 import { purchasableTiers } from '@/lib/billing-plans';
-import { isBachsConfigured, shouldOfferBachs } from '@/lib/bachs';
+import { isBachsConfigured, payerCurrency, shouldOfferBachs } from '@/lib/bachs';
 import { loadIntroMonthsLeft } from '@/lib/referrals-server';
 import { resolveOnboardingSetupRequired } from '@/lib/onboarding-setup';
 
@@ -244,5 +244,7 @@ export async function GET(request: NextRequest) {
     introMonthsLeft,
     // Outside Nigeria only, the same rule as checkout (#1103).
     payWithBachs: shouldOfferBachs(isBachsConfigured(), request.headers.get('x-vercel-ip-country')),
+    // Dollars outside Nigeria, Naira in it (#1120). Same rule as payWithBachs.
+    currency: payerCurrency(isBachsConfigured(), request.headers.get('x-vercel-ip-country')),
   });
 }

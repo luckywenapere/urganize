@@ -1,3 +1,4 @@
+import { VisitorPrice } from "@/app/components/pricing/VisitorPrice";
 import {
   formatTierFromPrice,
   formatTierPrice,
@@ -33,7 +34,7 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 export function PricingStripSection() {
   // Four cards since 2026-11-07 (#1112): Solo, Manager, Pro and Label. No
   // first-month price any more. Label is a custom deal, so it shows its
-  // starting price ("From ₦100,000/month"), never a checkout price.
+  // "Custom", never a price (#1120). Prices show in the visitor's currency.
   const tiers = PRICING_TIER_ORDER.map((id) => {
     const tier = getTier(id);
     return {
@@ -62,7 +63,7 @@ export function PricingStripSection() {
           <h2 className={centeredHeadlineClass}>Cheaper than one missed deadline.</h2>
           {tiers[0]?.price ? (
             <p className="mx-auto mt-5 max-w-[36rem] text-[1.05rem] leading-8 text-[var(--marketing-text-muted)] sm:text-[1.15rem]">
-              From {tiers[0].price}. Pick the plan that fits your team.
+              From <VisitorPrice tierId={tiers[0].id} />. Pick the plan that fits your team.
             </p>
           ) : null}
         </div>
@@ -87,7 +88,7 @@ export function PricingStripSection() {
                 {tier.audience}
               </p>
               <p className="mt-4 text-[1.6rem] font-semibold tracking-[-0.03em] text-[var(--marketing-text)] sm:mt-5 sm:text-[1.75rem]">
-                {price ?? "Let’s talk"}
+                <VisitorPrice tierId={id} fallback={price ?? "Let’s talk"} />
               </p>
               {outcomeHeading ? (
                 <>

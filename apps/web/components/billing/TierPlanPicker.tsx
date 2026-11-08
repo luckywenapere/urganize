@@ -2,13 +2,16 @@
 
 import {
   SELLABLE_INTERVALS,
+  formatMoney,
   formatTierPrice,
   getChargePrice,
+  getTierPriceUsd,
   getIntroPrice,
   getTier,
   getTierPrice,
   tierFeatures,
   type BillingInterval,
+  type PricingCurrencyCode,
   type PricingTierId,
 } from '@urganize/pricing';
 import { Check } from '@/components/icons';
@@ -54,8 +57,18 @@ const naira = (amount: number) =>
 export function planPriceLines(
   tierId: PricingTierId,
   interval: BillingInterval,
-  introMonthsLeft: number
+  introMonthsLeft: number,
+  currency: PricingCurrencyCode = 'NGN'
 ): { price: string | null; sub: string | null } {
+  // Dollars outside Nigeria (#1120): one fixed price, no starting price.
+  if (currency === 'USD') {
+    const usd = getTierPriceUsd(tierId, interval);
+    if (!usd) return { price: null, sub: null };
+    if (interval === 'annual') {
+      return { price: formatTierPrice(tierId, 'annual', 'USD'), sub: `${formatMoney(Math.round(usd.amount / 12), 'USD')} a month` };
+    }
+    return { price: formatTierPrice(tierId, interval, 'USD'), sub: null };
+  }
   const charge = getChargePrice(tierId, interval, introMonthsLeft);
   if (!charge) return { price: null, sub: null };
   if (interval === 'annual') {
@@ -77,8 +90,17 @@ export function planPriceLines(
 export function planChargeNote(
   tierId: PricingTierId,
   interval: BillingInterval,
-  introMonthsLeft: number
+  introMonthsLeft: number,
+  currency: PricingCurrencyCode = 'NGN'
 ): string | null {
+  // A dollar payment covers one period and does not renew by itself yet, so
+  // the note says so rather than promising a monthly charge (#1120).
+  if (currency === 'USD') {
+    const usd = getTierPriceUsd(tierId, interval);
+    if (!usd) return null;
+    const span = interval === 'annual' ? 'one year' : interval === 'monthly' ? 'one month' : '6 months';
+    return `${formatMoney(usd.amount, 'USD')} for ${span}. We remind you before it ends.`;
+  }
   const charge = getChargePrice(tierId, interval, introMonthsLeft);
   if (!charge) return null;
   if (interval === 'annual') return `${naira(charge.amount)} today, then once a year. Cancel any time.`;
@@ -100,6 +122,8 @@ type TierPlanPickerProps = {
   onSelectInterval: (interval: BillingInterval) => void;
   /** Starting-price months the paying owner has left; 0 shows full prices. */
   introMonthsLeft: number;
+  /** Dollars outside Nigeria (#1120). Naira when absent. */
+  currency?: PricingCurrencyCode;
   disabled?: boolean;
 };
 
@@ -110,10 +134,11 @@ export function TierPlanPicker({
   selectedInterval,
   onSelectInterval,
   introMonthsLeft,
+  currency = 'NGN',
   disabled,
 }: TierPlanPickerProps) {
   const selected = getTier(selectedTier);
-  const features = tierFeatures(selectedTier);
+  const features = tierFeatures(selectedTier, currency);
   // "Manager includes everything in Solo, and:" / "Solo includes:".
   const lead =
     selectedTier === 'solo'
@@ -161,7 +186,7 @@ export function TierPlanPicker({
       {tiers.map((tierId) => {
         const tier = getTier(tierId);
         const isActive = selectedTier === tierId;
-        const { price, sub } = planPriceLines(tierId, selectedInterval, introMonthsLeft);
+        const { price, sub } = planPriceLines(tierId, selectedInterval, introMonthsLeft, currency);
         return (
           <label
             key={tierId}

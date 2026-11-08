@@ -34,7 +34,18 @@ export function shouldOfferBachs(configured: boolean, country: string | null | u
   return code !== 'NG';
 }
 
-/** Bachs writes money as a decimal string in major units: 2,600,00 kobo -> "2600.00". */
+/**
+ * Which currency this person sees prices in and pays in (#1120): US dollars
+ * when they pay through Bachs (outside Nigeria), Naira otherwise. Tied to
+ * shouldOfferBachs on purpose: a dollar price is only shown to someone we can
+ * actually charge in dollars, so with Bachs off everyone sees Naira.
+ */
+export function payerCurrency(configured: boolean, country: string | null | undefined): 'NGN' | 'USD' {
+  return shouldOfferBachs(configured, country) ? 'USD' : 'NGN';
+}
+
+/** Bachs writes money as a decimal string in major units: 2,600,00 kobo -> "2600.00".
+ *  Works the same for cents: 2,900 cents -> "29.00". */
 export function koboToBachsAmount(kobo: number): string {
   return (Math.round(kobo) / 100).toFixed(2);
 }
@@ -162,13 +173,33 @@ export type RemoteCheckout = {
   charge?: { amount?: string | number; currency?: string; status?: string } | null;
 };
 
-/** Bachs says this checkout is paid, for exactly our amount in Naira. */
-export function remoteCheckoutIsPaid(remote: RemoteCheckout, row: { amount_kobo: number; reference: string }): boolean {
+/** The currency a checkout row was priced in. Rows from before #1120 have none
+ *  and are Naira. */
+export function bachsRowCurrency(row: { currency?: string | null }): 'NGN' | 'USD' {
+  return String(row.currency ?? '').toUpperCase() === 'USD' ? 'USD' : 'NGN';
+}
+
+/** What a checkout row asked Bachs for, in that currency's minor unit (kobo or
+ *  cents). Rows from before #1120 have no amount_minor and asked amount_kobo. */
+export function bachsRowAmountMinor(row: { amount_kobo: number; amount_minor?: number | null }): number {
+  return typeof row.amount_minor === 'number' && row.amount_minor > 0 ? row.amount_minor : row.amount_kobo;
+}
+
+/**
+ * Bachs says this checkout is paid, for exactly what we priced it at: the same
+ * currency (Naira, or US dollars since #1120) and the same amount to the minor
+ * unit. Under Bachs's adaptive pricing a payer may see their own money, but the
+ * checkout's own amount and currency stay what we sent.
+ */
+export function remoteCheckoutIsPaid(
+  remote: RemoteCheckout,
+  row: { amount_kobo: number; amount_minor?: number | null; currency?: string | null; reference: string }
+): boolean {
   const status = String(remote.status ?? '').toLowerCase();
   const paymentStatus = String(remote.payment_status ?? '').toLowerCase();
   if (status !== 'completed') return false;
   if (paymentStatus !== 'succeeded' && paymentStatus !== 'paid') return false;
   if (remote.reference && remote.reference !== row.reference) return false;
-  if (String(remote.currency ?? '').toUpperCase() !== 'NGN') return false;
-  return bachsAmountToKobo(remote.amount) === row.amount_kobo;
+  if (String(remote.currency ?? '').toUpperCase() !== bachsRowCurrency(row)) return false;
+  return bachsAmountToKobo(remote.amount) === bachsRowAmountMinor(row);
 }

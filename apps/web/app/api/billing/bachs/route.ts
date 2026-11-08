@@ -5,13 +5,16 @@ import { isBachsConfigured } from '@/lib/bachs';
 import { fulfilBachsCheckout, loadBachsCheckout, startBachsCheckout } from '@/lib/bachs-server';
 import { CALL_REQUIRED_ERROR } from '@/lib/call-led';
 import { mayPay } from '@/lib/call-led-server';
+import { pricingCurrencyForCountry } from '@urganize/pricing';
 
 // Pay through Bachs (2026-11-01, #946).
 //
 // POST { plan, period }
 //   Opens a Bachs checkout for one month or one year and returns its URL. The
 //   payer picks how to pay on Bachs's page (Naira card or transfer, mobile
-//   money, dollar card, crypto).
+//   money, dollar card, crypto). Priced in US dollars for a payer outside
+//   Nigeria (#1120), from the country Vercel puts on the request; Naira when
+//   the country is Nigeria or unknown.
 // GET ?reference=
 //   What the return page polls. Asks Bachs too, so a payer who comes back
 //   before the webhook still gets in, and only if Bachs says it is paid.
@@ -63,6 +66,7 @@ export async function POST(request: NextRequest) {
     plan,
     period,
     appUrl: appUrl(request),
+    currency: pricingCurrencyForCountry(request.headers.get('x-vercel-ip-country')),
   });
   if (!started.ok) return NextResponse.json({ error: started.error }, { status: 502 });
   return NextResponse.json({ checkoutUrl: started.checkoutUrl, reference: started.reference });

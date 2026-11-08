@@ -5,20 +5,25 @@ import { RiCheckLine } from "react-icons/ri";
 import {
   ADDON_PRICES_NAIRA,
   CREDIT_OVERAGE_NAIRA,
+  CREDIT_PACK_USD,
   DISTRIBUTION_ADDON_RELEASES_PER_MONTH,
   DEFAULT_SELLING_INTERVAL,
   EXTRA_RELEASE_PRICE_NAIRA,
+  EXTRA_RELEASE_PRICE_USD,
   PRICING_TIER_ORDER,
   SELLABLE_INTERVALS,
   annualSavingCopy,
+  formatMoney,
   formatTierFromPrice,
   getTier,
-  getTierPrice,
+  getTierPriceIn,
   isSelfServePurchase,
   tierFeatures,
   type BillingInterval,
+  type PricingCurrencyCode,
   type PricingTierId,
 } from "@urganize/pricing";
+import { useVisitorCurrency } from "@/lib/visitor-currency";
 import { APP_ORIGIN } from "@/lib/app-urls";
 import { salesMailto } from "@/lib/sales-mailto";
 import { PlanPicture } from "@urganize/ui/PlanPicture";
@@ -36,8 +41,9 @@ import { PricingCompareTable } from "./PricingCompareTable";
 //
 // PRICING V3 (founder, 2026-11-07, #1112): four cards. Solo, Manager and Pro
 // are bought here by card, monthly by default or yearly with two months free.
-// Label is a custom deal: it shows its starting price ("From ₦100,000/month")
-// and its button opens an email to us, never a checkout. There is no
+// Label is a custom deal: it shows "Custom", no price in Naira or dollars
+// (#1120), and its button opens an email to us, never a checkout. Outside
+// Nigeria the self-serve plans show fixed US dollar prices (#1120). There is no
 // first-month price on any plan any more.
 //
 // `tier.recommended` puts a "Most popular" badge on Manager. It was ignored on
@@ -56,36 +62,35 @@ const INTERVAL_LABEL: Record<BillingInterval, string> = {
   annual: "Yearly",
 };
 
-const naira = (amount: number) =>
-  new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(amount);
+const money = (amount: number, currency: PricingCurrencyCode) => formatMoney(amount, currency);
+const naira = (amount: number) => money(amount, "NGN");
 
 /** The big figure, its unit, and the line under it, for one card. */
 function cardPrice(
   tierId: PricingTierId,
-  interval: BillingInterval
+  interval: BillingInterval,
+  currency: PricingCurrencyCode
 ): { figure: string; unit: string | null; sub: string | null } {
   if (!isSelfServe(tierId)) {
-    // "From ₦100,000/month": a floor, agreed per deal.
-    const from = formatTierFromPrice(tierId, interval);
-    if (!from) return { figure: "Let's talk", unit: null, sub: "A price set with you, for your roster." };
-    const [figure, unit] = from.split("/");
-    return { figure, unit: unit ? `/${unit}` : null, sub: "A price set with you, for your roster." };
+    // "Custom": agreed per deal, no figure shown.
+    return { figure: formatTierFromPrice(tierId, interval) ?? "Let's talk", unit: null, sub: "A price set with you, for your roster." };
   }
   if (interval === "monthly") {
-    const monthly = getTierPrice(tierId, "monthly");
-    return { figure: monthly ? naira(monthly.amount) : "", unit: "/month", sub: null };
+    const monthly = getTierPriceIn(tierId, "monthly", currency);
+    return { figure: monthly ? money(monthly.amount, currency) : "", unit: "/month", sub: null };
   }
-  const yearly = getTierPrice(tierId, interval);
+  const yearly = getTierPriceIn(tierId, interval, currency);
   if (!yearly) return { figure: "", unit: null, sub: null };
   return {
-    figure: naira(yearly.amount),
+    figure: money(yearly.amount, currency),
     unit: "/year",
-    sub: `${naira(Math.round(yearly.amount / 12))} a month, paid once a year`,
+    sub: `${money(Math.round(yearly.amount / 12), currency)} a month, paid once a year`,
   };
 }
 
 export function PricingTierCards() {
   const [interval, setInterval] = useState<BillingInterval>(DEFAULT_SELLING_INTERVAL);
+  const currency = useVisitorCurrency();
   // "2 months free", from the same constant that computes the yearly price.
   const yearlySaving = annualSavingCopy("solo");
 
@@ -129,8 +134,8 @@ export function PricingTierCards() {
           {PRICING_TIER_ORDER.map((tierId) => {
             const tier = getTier(tierId);
             const priced = isSelfServe(tierId);
-            const { figure, unit, sub } = cardPrice(tierId, interval);
-            const features = tierFeatures(tierId);
+            const { figure, unit, sub } = cardPrice(tierId, interval, currency);
+            const features = tierFeatures(tierId, currency);
             // Outcomes first, then the limits. A limit already said as an
             // outcome is not said twice.
             const outcomes = tier.outcomes ?? [];
@@ -233,11 +238,12 @@ export function PricingTierCards() {
           are free and never take a place on your team.
         </p>
         <p className="mt-3 text-center text-xs leading-6 text-[var(--marketing-text-subtle)]">
-          Prices are in Naira. One price covers your whole team, not each person. Pay monthly or once a year, by card
-          or bank transfer.
+          {currency === "USD"
+            ? "Prices are in US dollars. One price covers your whole team, not each person. Pay monthly or once a year, by card or with USDT or USDC. In Nigeria? You pay in Naira."
+            : "Prices are in Naira. One price covers your whole team, not each person. Pay monthly or once a year, by card or bank transfer."}
         </p>
 
-        <PricingCompareTable interval={interval} />
+        <PricingCompareTable interval={interval} currency={currency} />
 
         {/* Add-ons (#1112): only what can be bought today. Prices from @urganize/pricing. */}
         <div className="mx-auto mt-16 max-w-4xl">
@@ -249,11 +255,13 @@ export function PricingTierCards() {
             <li className="rounded-[1.25rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
               <p className="text-sm font-semibold text-[var(--marketing-text)]">Send a single</p>
               <p className="mt-1 text-2xl font-black tracking-tighter text-[var(--marketing-text)]">
-                {naira(EXTRA_RELEASE_PRICE_NAIRA)}
+                {currency === "USD" ? money(EXTRA_RELEASE_PRICE_USD, "USD") : money(EXTRA_RELEASE_PRICE_NAIRA, "NGN")}
               </p>
               <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">Per single, to every store.</p>
               <p className="mt-2 text-xs text-[var(--marketing-text-subtle)]">Solo and Manager, or past what Pro and Label include</p>
             </li>
+            {/* These add-ons are priced in Naira only (#1123), so a dollar visitor does not see them. */}
+            {currency !== "USD" && (<>
             <li className="rounded-[1.25rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
               <p className="text-sm font-semibold text-[var(--marketing-text)]">Distribution for an artist</p>
               <p className="mt-1 text-2xl font-black tracking-tighter text-[var(--marketing-text)]">
@@ -278,12 +286,19 @@ export function PricingTierCards() {
               <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">One more artist on your team.</p>
               <p className="mt-2 text-xs text-[var(--marketing-text-subtle)]">Manager and Pro</p>
             </li>
+            </>)}
             <li className="rounded-[1.25rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
               <p className="text-sm font-semibold text-[var(--marketing-text)]">More AI credits</p>
               <p className="mt-1 text-2xl font-black tracking-tighter text-[var(--marketing-text)]">
-                {`from ${naira(Math.min(...Object.values(CREDIT_OVERAGE_NAIRA)))}`}
+                {currency === "USD"
+                  ? money(CREDIT_PACK_USD.priceUsd, "USD")
+                  : `from ${naira(Math.min(...Object.values(CREDIT_OVERAGE_NAIRA)))}`}
               </p>
-              <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">Per credit past your plan's monthly credits, up to a cap you set.</p>
+              <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">
+                {currency === "USD"
+                  ? `For ${CREDIT_PACK_USD.credits} credits, on any plan.`
+                  : "Per credit past your plan's monthly credits, up to a cap you set."}
+              </p>
               <p className="mt-2 text-xs text-[var(--marketing-text-subtle)]">Every plan</p>
             </li>
           </ul>

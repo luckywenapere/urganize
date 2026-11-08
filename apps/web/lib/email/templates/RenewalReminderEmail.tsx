@@ -9,6 +9,8 @@ export type RenewalReminderEmailProps = {
   plan: CheckoutPlan;
   expiresAt: string;
   amountNaira: number | null;
+  /** A team paying in US dollars through Bachs (#1120). */
+  amountUsd?: number | null;
   /** The payer's own account number, when they have one. */
   account: { bankName: string; accountNumber: string; accountName: string } | null;
   renewUrl: string;
@@ -43,6 +45,6 @@ export function RenewalReminderEmail(props: RenewalReminderEmailProps) {
   );
 }
 
-export function renewalReminderSubject(props: Pick<RenewalReminderEmailProps, 'plan' | 'expiresAt' | 'amountNaira'>): string {
+export function renewalReminderSubject(props: Pick<RenewalReminderEmailProps, 'plan' | 'expiresAt' | 'amountNaira' | 'amountUsd'>): string {
   return renewalEmailCopy(props).subject;
 }
