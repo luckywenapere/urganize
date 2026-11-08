@@ -63,6 +63,7 @@ type TeamsPayload = {
 const FILTERS = [
   { value: 'all', label: 'All' },
   { value: 'trial', label: 'On trial' },
+  { value: 'free', label: 'Free plan' },
   { value: 'walled', label: 'Walled' },
   { value: 'read_only', label: 'Read only' },
   { value: 'credits_only', label: 'Credits only' },
@@ -435,6 +436,12 @@ export default function TeamsAdminPageClient() {
                     <>
                       <span className="text-content-tertiary">While credits last</span>
                       <p className="text-xs text-content-tertiary">No plan, Solo features</p>
+                    </>
+                  ) : team.state === 'free' ? (
+                    // The Free plan (pricing v4, 2026-11-08): never paid, no wall.
+                    <>
+                      <span className="text-content-tertiary">No wall</span>
+                      <p className="text-xs text-content-tertiary">Free plan, never paid</p>
                     </>
                   ) : team.state === 'read_only' ? (
                     // Read-only is permanent: there is no later wall to count

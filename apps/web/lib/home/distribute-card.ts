@@ -24,11 +24,12 @@ export type DistributeCardView = 'hidden' | 'upgrade' | 'ask_admin' | 'distribut
 export const HOME_DISTRIBUTE_COPY = {
   label: 'Distribute',
   title: 'Get your music to Spotify, Apple Music, Audiomack and more',
-  upgradeLine: 'Comes with the Pro plan.',
-  upgradeAction: 'Upgrade to Pro',
+  // "Pro Plus" since pricing v4 (2026-11-08): the checkout is still plan id 'pro'.
+  upgradeLine: 'Comes with the Pro Plus plan.',
+  upgradeAction: 'Upgrade to Pro Plus',
   // The offer can be put away for a month (founder, Oct 31, 2026, #919).
   notNow: 'Not now',
-  askAdminLine: 'Comes with the Pro plan. Your admin can upgrade the team.',
+  askAdminLine: 'Comes with the Pro Plus plan. Your admin can upgrade the team.',
   askAdminAction: 'Ask your admin to upgrade',
   askAdminSent: 'Your admin has been asked',
   askAdminFailed: 'Could not reach your admin. Try again.',
@@ -38,7 +39,7 @@ export const HOME_DISTRIBUTE_COPY = {
 export const HOME_DISTRIBUTE_HREF = '/dashboard/distribute';
 
 /** The tiers distribution comes with. Group is tier id `enterprise`. */
-const DISTRIBUTION_TIERS: ReadonlySet<PricingTierId> = new Set<PricingTierId>(['pro', 'label', 'enterprise']);
+const DISTRIBUTION_TIERS: ReadonlySet<PricingTierId> = new Set<PricingTierId>(['solo_plus', 'pro', 'label', 'enterprise']);
 
 /**
  * What the card shows. `access` is the team's access answer from
@@ -67,6 +68,8 @@ function decideDistributeOffer(
     case 'trial':
     case 'grace':
     case 'credits_only':
+    // The Free plan (2026-11-08): never paid, so the offer is to buy a plan.
+    case 'free':
       return 'upgrade';
     case 'paid':
       if (!access.tier) return 'hidden';

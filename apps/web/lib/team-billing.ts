@@ -106,7 +106,13 @@ export type TeamAccessState =
    *  zero. At zero the team falls back to 'read_only' or 'walled', whichever it
    *  would otherwise be. See resolveTeamAccess. */
   | 'credits_only'
-  /** The wall. */
+  /** The Free plan (pricing v4, 2026-11-08). Never paid, trial over: the team
+   *  keeps using Urganize inside Free's limits instead of meeting the wall.
+   *  Resolves to the `free` tier (resolveTeamTier). See resolveTeamAccess. */
+  | 'free'
+  /** The wall. Since Free (2026-11-08) resolveTeamAccess never returns it; the
+   *  state stays because the multi-team combination, the admin filters and older
+   *  cached answers still name it. */
   | 'walled';
 
 export type TeamAccessReason =
@@ -123,6 +129,8 @@ export type TeamAccessReason =
   | 'trial_cancelled'
   /** No plan, credits in the balance. The credits-only state. */
   | 'credits_funded'
+  /** Never paid and the trial is over (or was cancelled): the Free plan. */
+  | 'free_plan'
   /** trial_ends_at was never stamped. Fails OPEN — see resolveTeamAccess. */
   | 'no_trial_stamp'
   /** The owner's paid period ended, and the team is inside the bonus days it
@@ -394,26 +402,22 @@ export function resolveTeamAccess(input: {
     };
   }
 
-  // A cancelled trial is read-only rather than walled (founder call,
-  // 2026-10-14). Below the paid lapse so a team that both paid and cancelled
-  // keeps the payment reason, and below credits for the same reason as above.
-  if (input.team.trialCancelledAt) {
-    return {
-      state: 'read_only',
-      hasAccess: true,
-      canWrite: false,
-      reason: 'trial_cancelled',
-      trialEndsAt,
-      trialDaysLeft: 0,
-      inGrace: false,
-    };
-  }
-
+  // THE FREE PLAN (pricing v4, founder, 2026-11-08). This used to be the wall
+  // (and, for a cancelled trial, read-only since 2026-10-14). A team reaches
+  // this line only when it has NEVER PAID: no owner access, no comp, no bonus
+  // days, no unexpired trial, no grace, no credits that count for access, and
+  // not lapsed from a payment (that is read-only above and stays so). So the one
+  // state that changes is exactly "never paid, trial over", which now keeps
+  // working inside Free's limits instead of being walled.
+  //
+  // A cancelled trial is Free too: it never paid either, and Free is strictly
+  // more than the read-only it had, so nothing is taken from anyone. The reason
+  // stays 'trial_cancelled' so the cancel flow's numbers still read.
   return {
-    state: 'walled',
-    hasAccess: false,
-    canWrite: false,
-    reason: 'trial_expired',
+    state: 'free',
+    hasAccess: true,
+    canWrite: true,
+    reason: input.team.trialCancelledAt ? 'trial_cancelled' : 'free_plan',
     trialEndsAt,
     trialDaysLeft: 0,
     inGrace: false,
@@ -445,7 +449,9 @@ export function isFundedForAccess(
  *  the balance. Only the two no-plan answers can; everything else already has
  *  access of its own and must not be narrowed to Solo. */
 export function couldBeCreditsOnly(state: TeamAccessState): boolean {
-  return state === 'walled' || state === 'read_only';
+  // Free too: a team with bought credits works on Solo features (credits-only),
+  // which is more than Free gives, so the balance is worth reading.
+  return state === 'walled' || state === 'read_only' || state === 'free';
 }
 
 /** Does this state grant reads? Everything except the wall. */

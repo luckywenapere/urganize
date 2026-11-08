@@ -145,7 +145,7 @@ async function billingGroupCandidates(
     const matches =
       (group === 'trial' && resolution.state === 'trial' && resolution.reason === 'trial_active') ||
       (group === 'paying' && resolution.state === 'paid' && resolution.reason === 'owner_paid') ||
-      (group === 'trial_ended' && resolution.state === 'walled');
+      (group === 'trial_ended' && (resolution.state === 'walled' || resolution.state === 'free'));
     if (matches) out.push(toCandidate(owner));
   }
   return out;

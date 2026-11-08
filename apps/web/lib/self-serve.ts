@@ -28,17 +28,18 @@ export function formatNaira(amount: number): string {
 
 // ---------------------------------------------------------------- the intent
 
-export type CheckoutPlan = Extract<PricingTierId, 'solo' | 'manager' | 'pro' | 'label'>;
+export type CheckoutPlan = Extract<PricingTierId, 'solo' | 'solo_plus' | 'manager' | 'pro' | 'label'>;
 // What checkout offers: Solo, Manager and Pro (2026-11-07, #1112), monthly or
 // yearly.
 // Label and the 6-month period are still valid ids (isCheckoutPlan,
 // isCheckoutPeriod) so teams already on them can renew.
-export const CHECKOUT_PLANS: readonly CheckoutPlan[] = ['solo', 'manager', 'pro'];
+// Solo Plus joined 2026-11-08 (pricing v4). Free is never bought.
+export const CHECKOUT_PLANS: readonly CheckoutPlan[] = ['solo', 'solo_plus', 'manager', 'pro'];
 export const CHECKOUT_PERIODS: readonly BillingInterval[] = ['monthly', 'annual'];
 export type PaymentMethodChoice = 'card' | 'transfer';
 
 export function isCheckoutPlan(value: unknown): value is CheckoutPlan {
-  return value === 'solo' || value === 'manager' || value === 'pro' || value === 'label';
+  return value === 'solo' || value === 'solo_plus' || value === 'manager' || value === 'pro' || value === 'label';
 }
 
 export function isCheckoutPeriod(value: unknown): value is BillingInterval {

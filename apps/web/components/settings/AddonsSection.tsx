@@ -334,7 +334,7 @@ export function AddonsSection() {
           <li className="flex items-center justify-between gap-3 py-3 opacity-70">
             <div>
               <p className="text-sm font-semibold text-content-primary">More people or artists</p>
-              <p className="text-[12.5px] text-content-secondary">Come with Manager, ₦15,000 a month</p>
+              <p className="text-[12.5px] text-content-secondary">Come with Pro, ₦15,000 a month</p>
             </div>
             <Link href="/locked?intent=upgrade" className={LINK}>
               See plans

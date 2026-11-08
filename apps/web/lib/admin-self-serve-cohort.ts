@@ -93,8 +93,10 @@ export function cohortCell(teams: CohortTeam[], now: Date): CohortCell {
 
 const PLAN_ROWS: Array<{ key: string; label: string }> = [
   { key: 'solo', label: 'Solo' },
-  { key: 'manager', label: 'Manager' },
-  { key: 'pro', label: 'Pro' },
+  { key: 'solo_plus', label: 'Solo Plus' },
+  // Display names since pricing v4 (2026-11-08); the ids did not move.
+  { key: 'manager', label: 'Pro' },
+  { key: 'pro', label: 'Pro Plus' },
   { key: 'label', label: 'Label' },
 ];
 
@@ -128,13 +130,13 @@ export type RecordTransferInput = {
   amountKobo: number;
   receivedAt: Date;
   bankReference: string;
-  plan: 'solo' | 'manager' | 'pro' | 'label';
+  plan: 'solo' | 'solo_plus' | 'manager' | 'pro' | 'label';
   period: 'monthly' | 'semiannual' | 'annual';
   periodEnd: Date | null;
   note: string | null;
 };
 
-const PLANS = ['solo', 'manager', 'pro', 'label'] as const;
+const PLANS = ['solo', 'solo_plus', 'manager', 'pro', 'label'] as const;
 const PERIODS = ['monthly', 'semiannual', 'annual'] as const;
 
 function readDay(value: unknown): Date | null {

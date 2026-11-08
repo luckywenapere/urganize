@@ -257,6 +257,7 @@ export function resolveCeiling(team: TeamForRouting | undefined, env: EnvLike = 
   if (!team || team.state !== 'paid') return unpaid;
   switch (team.tier) {
     case 'solo':
+    case 'solo_plus':
       return pick('AI_ROUTER_CEILING_SOLO', 'standard');
     case 'manager':
       return pick('AI_ROUTER_CEILING_MANAGER', 'pro');

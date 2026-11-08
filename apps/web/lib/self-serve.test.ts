@@ -190,7 +190,8 @@ describe('renewal reminders', () => {
 
   it('words the banner', () => {
     expect(renewalBannerText('manager', 3)).toEqual({
-      title: 'Manager ends in 3 days.',
+      // Id `manager` shows as "Pro" since pricing v4 (2026-11-08).
+      title: 'Pro ends in 3 days.',
       body: 'Renew to keep your team working.',
     });
     expect(renewalBannerText('solo', 1).title).toBe('Solo ends tomorrow.');
@@ -294,7 +295,7 @@ describe('email copy', () => {
 
   it('says what a renewal costs and when the plan ends', () => {
     const copy = renewalEmailCopy({ plan: 'manager', expiresAt: '2026-10-24T22:59:00Z', amountNaira: 30000 });
-    expect(copy.subject).toContain('Manager');
+    expect(copy.subject).toContain('Pro');
     expect(copy.body).toContain('30,000');
     expect(copy.body).not.toMatch(/\u2014/);
   });

@@ -96,7 +96,7 @@ export const SOLO_LIMIT_EVENT = 'urganize:solo-limit';
 
 /** `plan` is the self-serve plan that lifts the limit: Manager for a Solo
  *  team, Pro for a Manager team (2026-11-07). */
-export type SoloLimitDetail = { key: string; message: string; plan: 'manager' | 'pro' };
+export type SoloLimitDetail = { key: string; message: string; plan: 'solo' | 'solo_plus' | 'manager' | 'pro' };
 
 const announceUpgradeLimit = async (response: Response): Promise<void> => {
   try {
@@ -105,11 +105,18 @@ const announceUpgradeLimit = async (response: Response): Promise<void> => {
       limitKey?: unknown;
       error?: unknown;
     };
-    if ((payload.upgradeTo !== 'manager' && payload.upgradeTo !== 'pro') || typeof payload.limitKey !== 'string') return;
+    // Pricing v4 (2026-11-08): Free lifts to Solo, Solo to Solo Plus.
+    const plan = payload.upgradeTo;
+    if (
+      (plan !== 'solo' && plan !== 'solo_plus' && plan !== 'manager' && plan !== 'pro') ||
+      typeof payload.limitKey !== 'string'
+    ) {
+      return;
+    }
     const detail: SoloLimitDetail = {
       key: payload.limitKey,
       message: typeof payload.error === 'string' ? payload.error : '',
-      plan: payload.upgradeTo,
+      plan,
     };
     window.dispatchEvent(new CustomEvent<SoloLimitDetail>(SOLO_LIMIT_EVENT, { detail }));
   } catch {

@@ -592,13 +592,13 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
               payYearly
                 ? 'You pay monthly, which covers singles and EPs. Pay yearly and albums are included too.'
                 : album
-                  ? 'Pro and Label include it when you pay yearly.'
-                  : 'Pro and Label include it, monthly or yearly.'
+                  ? 'Solo Plus, Pro Plus and Label include it when you pay yearly.'
+                  : 'Solo Plus, Pro Plus and Label include it, monthly or yearly.'
             }
           />
           <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:gap-3">
             <a href={checkoutPath({ plan: payYearly ? tier : 'pro', period: album ? 'annual' : 'monthly' })} className={PRIMARY}>
-              {payYearly ? 'Pay yearly' : album ? 'Move to Pro, yearly' : 'Move to Pro'}
+              {payYearly ? 'Pay yearly' : album ? 'Move to Pro Plus, yearly' : 'Move to Pro Plus'}
             </a>
           </div>
           <p className={`mt-3 ${MONO}`}>Or send it from {data.primaryArtist ? `${data.primaryArtist}’s` : 'the artist’s'} own TRM account.</p>

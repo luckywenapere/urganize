@@ -464,3 +464,72 @@ whether it is on today is not answerable from the repo" — which is what the
 sections corrected in this sweep now say.
 
 ---
+
+## Pricing v4: six plans, a Free plan, Solo Plus (2026-11-08, v1.261.0, #1112)
+
+Founder-approved mock: `docs/mocks/pricing-v4/mock.html`.
+
+- **Six plans in two groups.** "Just you": Free (₦0), Solo (₦5,000/mo), Solo
+  Plus (₦12,000/mo). "Your team": Pro (₦15,000/mo), Pro Plus (₦40,000/mo),
+  Label (Custom, sales-led). Yearly is ten months. `TIER_GROUPS`,
+  `TIER_GROUP_LABEL` and `tierGroupOf` in `@urganize/pricing` are the grouping.
+- **Renamed on screen only.** Code id `manager` shows as "Pro" and id `pro`
+  shows as "Pro Plus". The ids are stored in `subscriptions.plan` and named by
+  Paystack env vars, so they never move. New ids: `free`, `solo_plus`.
+- **Limits** (from `PRICING_TIERS[...].limits`, artists / people / rollouts /
+  AI credits a month): Free 1/1/1/30, Solo 1/3/1/150, Solo Plus 1/3/3/400, Pro
+  3/6/3/450, Pro Plus 5/10/8/900, Label unlimited/2,000. `ALLOWANCE_CREDITS`
+  matches. Upgrade path: Free, Solo, Solo Plus, Pro, Pro Plus, Label.
+- **Distribution.** Free sends from its own TRM account. Solo and Pro pay
+  ₦2,000 a single. Solo Plus and Pro Plus include singles and EPs for one
+  artist (TRM Independent Artist, `DISTRIBUTION_ALLOWANCE`), and owe TRM like
+  Pro Plus does. Label is unchanged.
+- **Not on the page, because not built:** every "Soon" row in the mock (briefs,
+  WhatsApp chasing, routines, research lookups, talking to other teams, best
+  model priority) and curator pitch quotas (pitching is paid per pitch in
+  credits; no quota exists). Shows and DJ packs are not gated by plan, so the
+  mock's "No shows on Free" is not shown either.
+
+### The Free plan decision
+
+`resolveTeamAccess` (`lib/team-billing.ts`) used to end in the wall. Its last
+branch is reached only by a team that has **never paid**: no owner access, no
+comp, no bonus days, no live trial, no grace, no credits that count for access,
+and not lapsed from a payment. That branch now returns state `free` (hasAccess
+and canWrite true, reason `free_plan`), which `resolveTeamTier` maps to tier
+`free`. So the one state that changed is exactly "never paid, trial over".
+
+- **Paid and lapsed stays read-only.** The read-only branch sits above and is
+  untouched.
+- **A cancelled trial is Free too** (reason stays `trial_cancelled`). It never
+  paid, and Free is strictly more than the read-only it had since 2026-10-14.
+- **New teams land on Free.** `TEAM_TRIAL_DAYS` is 0 (pay first, 2026-10-31),
+  so a new team used to meet the plan wall straight away; now it starts on Free
+  and can upgrade from the wall or the pricing page. This reverses the
+  2026-10-31 "no free access" call, by the founder's 2026-11-08 decision.
+- **Everything else still fails open to `label`.** Trial, grace, comped,
+  founding, legacy and unknown plans are unchanged. Credits-only (bought or
+  monthly credits) is still checked before Free and is still Solo.
+- **Credits:** `monthlyAllowanceCredits` grants 30 a month to state `free`
+  (calendar-month window, no billing anchor). Free is not a subscriber: no
+  overage, credits-only top-up prices. Leftover trial credits are removed for a
+  Free team the same way they were for a walled one.
+- **The wall never offers Free** (`WALL_TIERS` excludes it) and Free is not a
+  `SelfServeTierId`, so nothing can resolve a Paystack Plan for it.
+- `walled` stays in the state union (multi-team combination, admin filters),
+  but `resolveTeamAccess` no longer returns it.
+
+### Payments and data
+
+- Paystack Plans for Solo Plus, live account, minted 2026-11-08:
+  `PLN_hqvg6asurmm038a` (₦12,000 monthly) and `PLN_45a76826d431tb8`
+  (₦120,000 annually). Set on Vercel `urganize` Production as
+  `PAYSTACK_PLAN_SOLO_PLUS_V3_PER_MONTH_NGN` / `_PER_YEAR_NGN` (non-sensitive).
+- Solo Plus in dollars is $19 a month (`USD_MONTHLY_PRICE`); the founder set
+  no dollar figure, so check it.
+- Migration `20261108120000_subscriptions_allow_solo_plus.sql` widens the six
+  plan CHECK constraints for `solo_plus` (not `free`: nothing writes it).
+  Applied to production 2026-11-08 after backing up `subscriptions`,
+  `payment_invoices`, `checkout_clearances`, `trm_partner_ledger` (`*_backup_20261108`)
+  and `bachs_checkouts` (`bachs_checkouts_backup_20261108b`).
+- Not done: retention offers (`lib/cancel-flow.ts`) do not cover Solo Plus.

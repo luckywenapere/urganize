@@ -31,7 +31,7 @@ export const PAYWALL_CTA = 'Start my free trial';
 export const PAYWALL_CHAT_LINE = 'Questions? Chat with us';
 
 /** The plans offered on the paywall, cheapest first. Label is contact-us and absent. */
-export const PAYWALL_TIERS: readonly PricingTierId[] = ['solo', 'manager', 'pro'] as const;
+export const PAYWALL_TIERS: readonly PricingTierId[] = ['solo', 'solo_plus', 'manager', 'pro'] as const;
 
 /**
  * The plan that starts selected (founder call, 2026-10-14):

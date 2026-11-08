@@ -135,6 +135,26 @@ export type Entitlements = {
 const limitsOf = (tier: PricingTierId) => PRICING_TIERS[tier].limits;
 
 export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
+  // Free (pricing v4, 2026-11-08). A team that has not paid, once its trial is
+  // over (resolveTeamAccess state 'free'). One artist, one person, one rollout
+  // at a time, 30 AI credits a month. Nothing here costs a paid feature.
+  free: {
+    artists: limitsOf('free').artists,
+    seats: limitsOf('free').seats,
+    active_releases: limitsOf('free').activeReleases,
+    rollout_template_default: true,
+    rollout_template_custom_save: false,
+    urgans_monthly_actions: limitsOf('free').urgansMonthlyActions,
+    urgans_priority: false,
+    file_attachments: true,
+    data_export: true,
+    concierge_onboarding: false,
+    support_channel: 'email',
+    sso: false,
+    sub_teams: false,
+    urgans_embedded_actions: false,
+    whatsapp_reminders: false,
+  },
   // Solo (2026-08-30; LIVE since 2026-09-01). It shipped inert — absent from
   // SelfServeTierId and from subscriptions_plan_check, so `resolveTeamTier` could
   // never return it and all four ceilings were unreachable dead code while the
@@ -162,6 +182,25 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     rollout_template_default: true,
     rollout_template_custom_save: false,
     urgans_monthly_actions: limitsOf('solo').urgansMonthlyActions,
+    urgans_priority: false,
+    file_attachments: true,
+    data_export: true,
+    concierge_onboarding: false,
+    support_channel: 'email',
+    sso: false,
+    sub_teams: false,
+    urgans_embedded_actions: false,
+    whatsapp_reminders: false,
+  },
+  // Solo Plus (pricing v4, 2026-11-08): Solo with more rollouts and credits,
+  // and distribution for its one artist. Same booleans as Solo.
+  solo_plus: {
+    artists: limitsOf('solo_plus').artists,
+    seats: limitsOf('solo_plus').seats,
+    active_releases: limitsOf('solo_plus').activeReleases,
+    rollout_template_default: true,
+    rollout_template_custom_save: false,
+    urgans_monthly_actions: limitsOf('solo_plus').urgansMonthlyActions,
     urgans_priority: false,
     file_attachments: true,
     data_export: true,
@@ -270,8 +309,8 @@ export type BooleanEntitlementKey = {
 export function minimumTierWith<K extends BooleanEntitlementKey>(key: K): PricingTierId | null {
   for (const tier of PRICING_TIER_ORDER) {
     // A tier with no price at all (Group) is never the answer; Label, contact-us
-    // since 2026-10-26, still is.
-    if (!PRICING_TIERS[tier].monthlyPrice) continue;
+    // since 2026-10-26, still is. Free is never an upgrade either.
+    if (!PRICING_TIERS[tier].monthlyPrice?.amount) continue;
     if (ENTITLEMENTS[tier][key]) return tier;
   }
   return null;
@@ -355,7 +394,7 @@ const LEGACY_PLAN_IDS = new Set([
 
 export function resolveTeamTier(input: {
   /** TeamAccessResolution.state. */
-  state: 'paid' | 'comped' | 'trial' | 'grace' | 'read_only' | 'credits_only' | 'walled';
+  state: 'paid' | 'comped' | 'trial' | 'grace' | 'read_only' | 'credits_only' | 'free' | 'walled';
   /** subscriptions.plan for the team OWNER, or null. */
   ownerPlan?: string | null;
   /** workspaces.billing_plan — the deal marker, not an access grant. */
@@ -370,6 +409,14 @@ export function resolveTeamTier(input: {
   // ceilings, not Label's. A founding deal is a price lock, not access; a
   // founding team that lapsed and runs on credits is on Solo like anyone else.
   if (input.state === 'credits_only') return 'solo';
+
+  // Free (pricing v4, 2026-11-08): never paid, trial over. The ONE state that
+  // resolves to a capped tier without a subscription, and only because
+  // resolveTeamAccess positively placed the team there. Checked before the
+  // founding deal for the same reason as credits-only: a founding team on Free
+  // writes under Free's ceilings. Every other uncertain state below still fails
+  // OPEN to label.
+  if (input.state === 'free') return 'free';
 
   if (input.billingPlan === 'founding') return LEGACY_FOUNDING_TIER;
 
@@ -433,9 +480,25 @@ const tierLabel = (tier: PricingTierId): string => PRICING_TIERS[tier].label;
  *  Solo goes to Manager and Manager to Pro, both bought on the same checkout
  *  with the days left coming off the price. Pro and everyone else go to Label,
  *  which is a conversation. */
-export function upgradeTargetFor(tier: PricingTierId): PricingTierId {
-  if (tier === 'solo') return 'manager';
-  if (tier === 'manager') return 'pro';
+// Pricing v4 (2026-11-08): Free, Solo, Solo Plus, Pro (id manager), Pro Plus
+// (id pro), Label. Group (enterprise) is above Label and is never a target.
+const UPGRADE_LADDER: readonly PricingTierId[] = ['free', 'solo', 'solo_plus', 'manager', 'pro', 'label'];
+
+export function upgradeTargetFor(tier: PricingTierId, key?: CountableLimitKey): PricingTierId {
+  // With a limit named, the target is the cheapest plan above this one that
+  // actually raises THAT limit. Solo and Solo Plus both cover one artist, so a
+  // Solo team at its artist limit is sent to Pro, not to Solo Plus, and a
+  // refusal never names a plan that would refuse the same thing.
+  const start = UPGRADE_LADDER.indexOf(tier);
+  if (start < 0) return 'label';
+  for (const next of UPGRADE_LADDER.slice(start + 1)) {
+    if (!key) return next;
+    const current = getEntitlement(tier, key);
+    const lifted = getEntitlement(next, key);
+    if (lifted === UNLIMITED || (typeof current === 'number' && typeof lifted === 'number' && lifted > current)) {
+      return next;
+    }
+  }
   return 'label';
 }
 
@@ -449,12 +512,13 @@ function rosterLine(target: PricingTierId): string {
  *  from the pricing package so a re-cut tier cannot leave the copy lying. Used
  *  when the next plan is bought by card (Solo and Manager). */
 function selfServeLimitMessage(key: CountableLimitKey, limit: number, tier: PricingTierId): string {
-  const target = upgradeTargetFor(tier);
+  const target = upgradeTargetFor(tier, key);
   const next = PRICING_TIERS[target];
   const name = tierLabel(tier);
   const nextName = next.label;
   const price = next.monthlyPrice ? ` for ₦${next.monthlyPrice.amount.toLocaleString('en-US')} a month` : '';
-  const credit = ` The days left on ${name} come off the price.`;
+  // Free has no days to credit: there is nothing paid to come off the price.
+  const credit = tier === 'free' ? '' : ` The days left on ${name} come off the price.`;
   switch (key) {
     case 'artists':
       return `${name} covers ${limit} ${limit === 1 ? 'artist' : 'artists'}. Upgrade to ${nextName} for ${rosterLine(target)}${price}.${credit}`;
@@ -472,7 +536,11 @@ function selfServeLimitMessage(key: CountableLimitKey, limit: number, tier: Pric
 }
 
 function limitMessage(key: CountableLimitKey, limit: number, tier: PricingTierId): string {
-  if (tier === 'solo' || tier === 'manager') return selfServeLimitMessage(key, limit, tier);
+  // A plan bought by card names the next plan up, with its price; Label is a
+  // conversation, so a refusal that would point there says "talk to us".
+  if (!PRICING_TIERS[upgradeTargetFor(tier, key)].contactSales) {
+    return selfServeLimitMessage(key, limit, tier);
+  }
   const label = tierLabel(tier);
   switch (key) {
     case 'artists':
@@ -517,7 +585,7 @@ export function checkLimit(input: {
     limit: numericLimit,
     current: input.current,
     message: limitMessage(input.key, numericLimit, input.tier),
-    upgradeTo: upgradeTargetFor(input.tier),
+    upgradeTo: upgradeTargetFor(input.tier, input.key),
   };
 }
 

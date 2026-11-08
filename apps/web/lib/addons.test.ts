@@ -58,7 +58,8 @@ describe('who can buy what', () => {
     expect(addonRefusal({ tier: 'pro', paying: true, kind: 'artist' })).toBeNull();
     expect(addonRefusal({ tier: 'solo', paying: true, kind: 'distribution' })).toBeNull();
     expect(addonRefusal({ tier: 'manager', paying: true, kind: 'distribution' })).toBeNull();
-    expect(addonRefusal({ tier: 'solo', paying: true, kind: 'person' })).toMatch(/Manager/);
+    // Manager shows as "Pro" since pricing v4 (2026-11-08).
+    expect(addonRefusal({ tier: 'solo', paying: true, kind: 'person' })).toMatch(/come with Pro/);
     expect(addonRefusal({ tier: 'pro', paying: true, kind: 'distribution' })).toMatch(/already includes/);
     expect(addonRefusal({ tier: 'label', paying: true, kind: 'person' })).toMatch(/Talk to us/);
   });

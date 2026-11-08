@@ -1,194 +1,79 @@
-import { RiCheckLine, RiCloseLine } from "react-icons/ri";
 import {
-  ADDON_PRICES_NAIRA,
-  CREDIT_OVERAGE_NAIRA,
-  DISTRIBUTION_ALLOWANCE,
-  EXTRA_RELEASE_PRICE_NAIRA,
-  canBuyAddon,
-  PRICING_TIER_ORDER,
-  formatTierFromPrice,
-  formatTierPrice,
+  TIER_GROUPS,
+  TIER_GROUP_LABEL,
+  TIER_SUPPORT,
   getTier,
-  type BillingInterval,
+  tierStoresCell,
   type PricingCurrencyCode,
   type PricingTierId,
+  type TierGroupId,
 } from "@urganize/pricing";
 
-// "Compare all features" (founder, 2026-11-07, #1112).
+// "Compare plans", one table per side of the switch (pricing v4, founder mock
+// 2026-11-08, docs/mocks/pricing-v4/mock.html).
 //
-// EVERY NUMBER COMES FROM @urganize/pricing: prices, limits, credits, the
-// distribution allowance and the per-single price. Nothing countable is typed
-// here, so a reprice or a re-cut tier moves this table with the cards.
+// EVERY NUMBER COMES FROM @urganize/pricing: limits, credits and how music
+// reaches the stores. Rows the mock marked "Soon" (briefs, WhatsApp chasing,
+// routines, research lookups, talking to other teams, the best AI model) are not
+// built and are not here. Curator pitch quotas are not here either: pitching is
+// paid per pitch in credits, and no plan has a pitch quota in the product.
 //
-// Distribution follows TRM's rules (2026-11-07): a single can be paid for one
-// at a time; an EP needs a monthly TRM plan and an album a yearly one. Pro and
-// Label include the TRM plan that matches how the team pays us.
-//
-// On a phone the table scrolls sideways inside its own box, with the feature
-// names pinned on the left, so the page itself never scrolls sideways.
+// On a phone the table scrolls sideways inside its own box, with the row names
+// pinned on the left, so the page itself never scrolls sideways.
 
-type Cell = string | boolean;
-type Row = { label: string; value: (tier: PricingTierId, interval: BillingInterval, currency: PricingCurrencyCode) => Cell };
+type Row = { label: string; value: (tier: PricingTierId, currency: PricingCurrencyCode) => string };
 type Group = { title: string; rows: Row[] };
-
-const includesDistribution = (tier: PricingTierId) => getTier(tier).includesDistribution;
-
-const naira = (value: number) => `₦${value.toLocaleString("en-US")}`;
 
 /** "3", "Unlimited". */
 const count = (value: number | null) => (value === null ? "Unlimited" : value.toLocaleString("en-US"));
 
-const SUPPORT: Record<PricingTierId, string> = {
-  solo: "Help centre",
-  manager: "Email",
-  pro: "Priority email",
-  label: "Same-day WhatsApp",
-  enterprise: "Same-day WhatsApp",
-};
-
 const GROUPS: Group[] = [
   {
-    title: "Plan",
+    title: "Size",
     rows: [
-      {
-        label: "Price",
-        value: (tier, interval, currency) =>
-          getTier(tier).contactSales ? (formatTierFromPrice(tier, interval) ?? "Let's talk") : (formatTierPrice(tier, interval, currency) ?? ""),
-      },
       { label: "Artists", value: (tier) => count(getTier(tier).limits.artists) },
-      { label: "People on your team", value: (tier) => count(getTier(tier).limits.seats) },
-      { label: "Rollouts at a time", value: (tier) => count(getTier(tier).limits.activeReleases) },
-    ],
-  },
-  {
-    title: "Plan and run every rollout",
-    rows: [
-      { label: "AI-built rollout plan", value: () => true },
-      { label: "Timeline and tasks", value: () => true },
-      { label: "Brief board and idea round", value: () => true },
-      { label: "Share a brief with 5 guests", value: () => true },
+      { label: "People", value: (tier) => count(getTier(tier).limits.seats) },
+      { label: "Rollouts at once", value: (tier) => count(getTier(tier).limits.activeReleases) },
     ],
   },
   {
     title: "AI",
     rows: [
       { label: "AI credits a month", value: (tier) => getTier(tier).urgansMonthlyCredits.toLocaleString("en-US") },
-      { label: "Chat, voice and saved chats", value: () => true },
-      { label: "AI that makes changes for you", value: (tier) => tier !== "solo" },
-      { label: "WhatsApp reminders", value: (tier) => tier !== "solo" },
+      // Only a paying team can go past its credits (overage, apps/web).
+      { label: "Keep going past your credits", value: (tier) => (tier === "free" ? "No" : "Yes, with a limit") },
     ],
   },
   {
-    title: "Get it out",
+    title: "Your releases",
     rows: [
-      { label: "Release details, cover art and song credits", value: () => true },
-      { label: "Smart link", value: () => true },
-      { label: "Press kit and pitch kit", value: () => true },
-      { label: "Pitch to playlists", value: () => "Credits per pitch" },
-      { label: "Share to socials", value: () => true },
-    ],
-  },
-  {
-    title: "Send to stores",
-    rows: [
-      {
-        label: "Singles",
-        value: (tier) => (includesDistribution(tier) ? "Included" : `${naira(EXTRA_RELEASE_PRICE_NAIRA)} each, or the add-on`),
-      },
-      {
-        label: "EPs",
-        value: (tier) => (includesDistribution(tier) ? "Included" : "With the add-on, or your own TRM account"),
-      },
-      {
-        label: "Albums",
-        value: (tier) => (includesDistribution(tier) ? "Included when you pay yearly" : "With the yearly add-on, or your own TRM account"),
-      },
-      {
-        label: "Artists we send for",
-        value: (tier) => {
-          const allowance = DISTRIBUTION_ALLOWANCE[tier];
-          return allowance ? allowance.artists.toLocaleString("en-US") : "None";
-        },
-      },
-      {
-        label: "Releases included a month",
-        value: (tier) => {
-          const allowance = DISTRIBUTION_ALLOWANCE[tier];
-          return allowance ? allowance.releasesPerMonth.toLocaleString("en-US") : "None";
-        },
-      },
-    ],
-  },
-  {
-    // Add-ons (#1112): only what can be bought today.
-    title: "Add-ons",
-    rows: [
-      {
-        label: "Extra person",
-        value: (tier) => (canBuyAddon(tier, "person") ? `${naira(ADDON_PRICES_NAIRA.person)}/month` : tier === "solo" ? false : "Talk to us"),
-      },
-      {
-        label: "Extra artist",
-        value: (tier) => (canBuyAddon(tier, "artist") ? `${naira(ADDON_PRICES_NAIRA.artist)}/month` : tier === "solo" ? false : "Talk to us"),
-      },
-      {
-        label: "Distribution for an artist",
-        value: (tier) =>
-          canBuyAddon(tier, "distribution")
-            ? `${naira(ADDON_PRICES_NAIRA.distribution_monthly)}/month or ${naira(ADDON_PRICES_NAIRA.distribution_yearly)}/year`
-            : "Included",
-      },
-      { label: "AI credits past your monthly credits", value: (tier) => `${naira(CREDIT_OVERAGE_NAIRA[tier])} each, up to your cap` },
-    ],
-  },
-  {
-    title: "Team and help",
-    rows: [
-      { label: "Urganize directory", value: () => true },
-      { label: "Support", value: (tier) => SUPPORT[tier] },
-      { label: "We set your roster up with you", value: (tier) => tier === "label" },
+      { label: "Send to stores", value: (tier, currency) => tierStoresCell(tier, currency) },
+      { label: "Help", value: (tier) => TIER_SUPPORT[tier] },
     ],
   },
 ];
 
-function CellValue({ value }: { value: Cell }) {
-  if (value === true) {
-    return (
-      <>
-        <RiCheckLine className="mx-auto size-5 text-[var(--marketing-accent)]" aria-hidden="true" />
-        <span className="sr-only">Yes</span>
-      </>
-    );
-  }
-  if (value === false) {
-    return (
-      <>
-        <RiCloseLine className="mx-auto size-5 text-[var(--marketing-text-subtle)]" aria-hidden="true" />
-        <span className="sr-only">No</span>
-      </>
-    );
-  }
-  return <span>{value}</span>;
-}
-
 export function PricingCompareTable({
-  interval,
+  group,
   currency = "NGN",
 }: {
-  interval: BillingInterval;
+  group: TierGroupId;
   currency?: PricingCurrencyCode;
 }) {
-  const tiers = PRICING_TIER_ORDER;
+  const tiers = TIER_GROUPS[group];
   return (
-    <div className="mx-auto mt-16 max-w-6xl">
-      <h2 className="text-center text-2xl md:text-3xl">Compare all features</h2>
+    <div className="mx-auto mt-16 max-w-4xl">
+      <h2 className="text-center text-2xl md:text-3xl">Compare plans</h2>
+      <p className="mt-2 text-center text-sm text-[var(--marketing-text-muted)]">
+        Showing the plans for {TIER_GROUP_LABEL[group].toLowerCase()}.
+      </p>
       <div className="mt-8 overflow-x-auto rounded-[1.25rem] border border-[var(--marketing-border)]">
-        <table className="w-full min-w-[44rem] border-collapse text-left text-sm">
+        <table className="w-full min-w-[36rem] border-collapse text-left text-sm">
           <thead>
             <tr className="bg-[var(--marketing-surface-muted)]">
               <th
                 scope="col"
-                className="sticky left-0 z-10 w-[36%] bg-[var(--marketing-surface-muted)] px-4 py-3 font-medium text-[var(--marketing-text-subtle)]"
+                className="sticky left-0 z-10 w-[34%] bg-[var(--marketing-surface-muted)] px-4 py-3 font-medium text-[var(--marketing-text-subtle)]"
               >
                 <span className="sr-only">Feature</span>
               </th>
@@ -203,18 +88,18 @@ export function PricingCompareTable({
               ))}
             </tr>
           </thead>
-          {GROUPS.map((group) => (
-            <tbody key={group.title}>
+          {GROUPS.map((section) => (
+            <tbody key={section.title}>
               <tr>
                 <th
                   scope="colgroup"
                   colSpan={tiers.length + 1}
                   className="sticky left-0 bg-[var(--marketing-bg)] px-4 pb-2 pt-6 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--marketing-text)]"
                 >
-                  {group.title}
+                  {section.title}
                 </th>
               </tr>
-              {group.rows.map((row) => (
+              {section.rows.map((row) => (
                 <tr key={row.label} className="border-t border-[var(--marketing-border)]">
                   <th
                     scope="row"
@@ -224,7 +109,7 @@ export function PricingCompareTable({
                   </th>
                   {tiers.map((tier) => (
                     <td key={tier} className="px-3 py-3 text-center text-[var(--marketing-text)]">
-                      <CellValue value={row.value(tier, interval, currency)} />
+                      {row.value(tier, currency)}
                     </td>
                   ))}
                 </tr>

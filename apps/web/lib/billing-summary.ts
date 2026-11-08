@@ -253,6 +253,23 @@ export function summarizeBilling(
     };
   }
 
+  // The Free plan (pricing v4, 2026-11-08): never paid, trial over. They keep
+  // working inside Free's limits. 'reactivate', not 'plans', for the same reason
+  // as credits-only: this team HAS access, so a bare /locked would bounce them.
+  if (team && team.state === 'free') {
+    return {
+      title: 'Free plan',
+      details: [
+        'One artist, one rollout at a time and 30 AI credits a month, for as long as you like.',
+        team.isOwnerOrAdmin
+          ? 'Pick a plan for more rollouts, more people and more credits.'
+          : 'Your team admin can pick a plan.',
+      ],
+      cta: team.isOwnerOrAdmin ? 'reactivate' : null,
+      secondaryCta: null,
+    };
+  }
+
   if (team && team.state === 'walled') {
     return {
       title: 'No plan yet',

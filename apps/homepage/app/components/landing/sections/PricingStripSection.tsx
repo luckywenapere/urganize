@@ -32,7 +32,9 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 // too from 2026-09-08 to 2026-09-09, and again since 2026-10-02: Group, the
 // fourth card, with "Let's talk" in place of a price.)
 export function PricingStripSection() {
-  // Four cards since 2026-11-07 (#1112): Solo, Manager, Pro and Label. No
+  // SIX cards since pricing v4 (2026-11-08): Free, Solo, Solo Plus, Pro (id
+  // manager), Pro Plus (id pro) and Label, three a row. Before that, four
+  // cards since 2026-11-07 (#1112): Solo, Manager, Pro and Label. No
   // first-month price any more. Label is a custom deal, so it shows its
   // "Custom", never a price (#1120). Prices show in the visitor's currency.
   const tiers = PRICING_TIER_ORDER.map((id) => {
@@ -49,6 +51,8 @@ export function PricingStripSection() {
     };
   });
 
+  const firstPaid = tiers.find(({ tier }) => !tier.contactSales && (tier.monthlyPrice?.amount ?? 0) > 0);
+
   return (
     <ScrollReveal>
       <SectionShell
@@ -61,16 +65,18 @@ export function PricingStripSection() {
               the first priced tier, rendered from @urganize/pricing like the
               cards, never typed. */}
           <h2 className={centeredHeadlineClass}>Cheaper than one missed deadline.</h2>
-          {tiers[0]?.price ? (
+          {/* "From" is the cheapest PAID plan: Free (pricing v4) costs nothing
+              and has its own card, so "From ₦0" would say nothing. */}
+          {firstPaid?.price ? (
             <p className="mx-auto mt-5 max-w-[36rem] text-[1.05rem] leading-8 text-[var(--marketing-text-muted)] sm:text-[1.15rem]">
-              From <VisitorPrice tierId={tiers[0].id} />. Pick the plan that fits your team.
+              There is a Free plan, and paid plans from <VisitorPrice tierId={firstPaid.id} />. Pick the one that fits you.
             </p>
           ) : null}
         </div>
 
         {/* Solo, Manager, Pro and Label (from a starting price) since
             2026-11-07. One column on a phone, two from md, four from xl. */}
-        <ul className="mx-auto mt-12 grid max-w-[76rem] gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <ul className="mx-auto mt-12 grid max-w-[76rem] gap-4 md:grid-cols-2 xl:grid-cols-3">
           {tiers.map(({ id, tier, price, highlights, outcomeHeading, outcomes }) => (
             <li
               key={id}

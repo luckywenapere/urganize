@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.261.0",
+    title: "A Free plan, and Solo Plus",
+    tag: "Account",
+    date: "November 8, 2026",
+    highlights: [
+      "There is a Free plan now. If you have not picked a plan, you keep using Urganize with 1 artist, 1 rollout at a time and 30 AI credits a month.",
+      "New Solo Plus plan, ₦12,000 a month: 3 rollouts at a time, 400 AI credits a month, and your singles and EPs sent to stores.",
+      "Plans now come in two groups: Just you, and Your team. Manager is now called Pro, and Pro is now called Pro Plus. Your price and what you get did not change.",
+    ],
+  },
+  {
     version: "1.260.0",
     title: "Paste an artist's link",
     tag: "Rollouts",

@@ -46,7 +46,11 @@ export function decideDistributionAccess(input: {
   if (isDistributionEntitled({ plan, interval: input.interval, requiresPrepay: input.requiresPrepay })) {
     return { state: 'included', tier: plan, interval: input.interval ?? 'monthly', until: input.expiresAt ?? null };
   }
-  if (input.requiresPrepay && input.interval === 'monthly' && (plan === 'pro' || plan === 'label')) {
+  if (
+    input.requiresPrepay &&
+    input.interval === 'monthly' &&
+    (plan === 'solo_plus' || plan === 'pro' || plan === 'label')
+  ) {
     return { state: 'needs_prepay', tier: plan };
   }
   return { state: 'not_on_plan', reason: 'no_plan' };

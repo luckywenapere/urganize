@@ -210,7 +210,8 @@ describe('tier prices and the sales-led tier', () => {
     // order rather than named, so this keeps holding if a tier is added.
     const priced = PRICING_TIER_ORDER.filter((tier) => !PRICING_TIERS[tier].contactSales);
     expect(priced.length).toBeGreaterThan(1);
-    let previous = 0;
+    // Free (pricing v4, 2026-11-08) leads at ₦0, so the first card may be 0.
+    let previous = -1;
     for (const tier of priced) {
       const amount = getTierPrice(tier, DEFAULT_SELLING_INTERVAL)?.amount ?? 0;
       expect(amount, tier).toBeGreaterThan(previous);
@@ -283,7 +284,8 @@ describe('tier prices and the sales-led tier', () => {
     // free" is something a manager can check against their own statement.
     for (const tier of PRICING_TIER_ORDER) {
       // A sales-led tier has no price, so there is no saving to state.
-      if (PRICING_TIERS[tier].contactSales) {
+      // Free costs nothing, so there is nothing to save either.
+      if (PRICING_TIERS[tier].contactSales || tier === 'free') {
         expect(annualSavingCopy(tier), tier).toBeNull();
         continue;
       }
@@ -346,9 +348,12 @@ describe('tier prices and the sales-led tier', () => {
   });
 
   it('orders the cards cheapest first and ends on the one conversation', () => {
-    // FOUR cards since 2026-11-07: Solo, Manager and Pro are bought on the
-    // page, Label is a custom deal, and Group is off the page.
-    expect(PRICING_TIER_ORDER).toEqual(['solo', 'manager', 'pro', 'label']);
+    // SIX cards since pricing v4 (2026-11-08): Free, Solo, Solo Plus, Pro (id
+    // manager) and Pro Plus (id pro) are on the page, Label is a custom deal,
+    // and Group is off the page.
+    expect(PRICING_TIER_ORDER).toEqual(['free', 'solo', 'solo_plus', 'manager', 'pro', 'label']);
+    expect(PRICING_TIERS.manager.label).toBe('Pro');
+    expect(PRICING_TIERS.pro.label).toBe('Pro Plus');
     for (const tier of PRICING_TIER_ORDER.slice(0, -1)) {
       expect(PRICING_TIERS[tier].contactSales, tier).toBeUndefined();
     }
@@ -420,7 +425,8 @@ describe('minimumTierWith', () => {
     // Asserted against data_export (true everywhere) to confirm the search
     // starts at the cheapest displayed tier rather than skipping into the
     // middle of the ladder.
-    expect(minimumTierWith('data_export')).toBe(PRICING_TIER_ORDER[0]);
+    // Free (₦0) is never an upgrade target, so the answer is the first PAID tier.
+    expect(minimumTierWith('data_export')).toBe('solo');
   });
 });
 
@@ -801,7 +807,8 @@ describe('the seat cap is reachable, and only for a team that bought Manager', (
   it('the wall and checkout agree on which tiers are self-serve', () => {
     for (const tier of Object.keys(PRICING_TIERS) as PricingTierId[]) {
       const salesLed = Boolean(PRICING_TIERS[tier].contactSales);
-      expect(isSelfServeTier(tier), `${tier} self-serve`).toBe(!salesLed);
+      // Free is neither sold by card nor sales-led: nothing is bought on it.
+      expect(isSelfServeTier(tier), `${tier} self-serve`).toBe(!salesLed && tier !== 'free');
     }
   });
 
@@ -971,27 +978,45 @@ describe('credits-only teams are on Solo (2026-10-02)', () => {
   });
 });
 
-describe('Solo limits point at Manager (self-serve checkout)', () => {
-  it('names Manager, its price and the proration', () => {
-    for (const key of ['seats', 'artists', 'active_releases'] as const) {
-      const limit = getEntitlement('solo', key) as number;
-      const verdict = checkLimit({ tier: 'solo', key, current: limit });
+// Pricing v4 (2026-11-08): a limit points at the cheapest plan above that
+// actually raises THAT limit. Ids: manager shows as "Pro", pro as "Pro Plus".
+describe('limits point at the next plan that lifts them (self-serve checkout)', () => {
+  it('Solo: more rollouts with Solo Plus; more people or artists with Pro', () => {
+    const at = (key: 'seats' | 'artists' | 'active_releases') =>
+      checkLimit({ tier: 'solo', key, current: getEntitlement('solo', key) as number });
+    const rollouts = at('active_releases');
+    expect(!rollouts.allowed && rollouts.upgradeTo).toBe('solo_plus');
+    if (!rollouts.allowed) {
+      expect(rollouts.message.toLowerCase()).toContain('upgrade to solo plus');
+      expect(rollouts.message).toContain('12,000');
+    }
+    for (const key of ['seats', 'artists'] as const) {
+      const verdict = at(key);
       expect(verdict.allowed).toBe(false);
       if (verdict.allowed) continue;
       expect(verdict.upgradeTo).toBe('manager');
-      expect(verdict.message.toLowerCase()).toContain('upgrade to manager');
+      expect(verdict.message.toLowerCase()).toContain('upgrade to pro');
       expect(verdict.message).toContain('15,000');
       expect(verdict.message).toContain('come off the price');
       expect(verdict.message).not.toMatch(/\u2014|workspace/i);
     }
   });
 
-  it('points Manager at Pro, by card, with its price', () => {
+  it('Free points at Solo and names no days to credit', () => {
+    const verdict = checkLimit({ tier: 'free', key: 'seats', current: getEntitlement('free', 'seats') as number });
+    expect(!verdict.allowed && verdict.upgradeTo).toBe('solo');
+    if (!verdict.allowed) {
+      expect(verdict.message).toContain('Upgrade to Solo');
+      expect(verdict.message).not.toContain('come off the price');
+    }
+  });
+
+  it('points Pro (id manager) at Pro Plus (id pro), by card, with its price', () => {
     const limit = getEntitlement('manager', 'seats') as number;
     const verdict = checkLimit({ tier: 'manager', key: 'seats', current: limit });
     expect(!verdict.allowed && verdict.upgradeTo).toBe('pro');
     if (!verdict.allowed) {
-      expect(verdict.message).toContain('Upgrade to Pro');
+      expect(verdict.message).toContain('Upgrade to Pro Plus');
       expect(verdict.message).toContain('40,000');
     }
   });
@@ -1001,5 +1026,37 @@ describe('Solo limits point at Manager (self-serve checkout)', () => {
     const verdict = checkLimit({ tier: 'pro', key: 'seats', current: limit });
     expect(!verdict.allowed && verdict.upgradeTo).toBe('label');
     if (!verdict.allowed) expect(verdict.message).toContain('Talk to us about Label');
+  });
+});
+
+// The Free plan (pricing v4, 2026-11-08). Only the state resolveTeamAccess
+// gives a never-paid team past its trial resolves to the capped `free` tier;
+// every uncertain state still fails open to label.
+describe('the Free plan', () => {
+  it('resolves state free to the free tier, whatever plan or deal the row carries', () => {
+    expect(resolveTeamTier({ state: 'free' })).toBe('free');
+    expect(resolveTeamTier({ state: 'free', ownerPlan: 'label', billingPlan: 'founding' })).toBe('free');
+  });
+
+  it('caps Free at 1 artist, 1 person and 1 rollout, with 30 AI credits a month', () => {
+    expect(getEntitlement('free', 'artists')).toBe(1);
+    expect(getEntitlement('free', 'seats')).toBe(1);
+    expect(getEntitlement('free', 'active_releases')).toBe(1);
+    expect(PRICING_TIERS.free.urgansMonthlyCredits).toBe(30);
+    expect(getTierPrice('free', 'monthly')?.amount).toBe(0);
+  });
+
+  it('never moves trial, grace, comped, walled or read-only onto Free', () => {
+    for (const state of ['trial', 'grace', 'comped', 'walled', 'read_only'] as const) {
+      expect(resolveTeamTier({ state }), state).toBe('label');
+    }
+  });
+
+  it('Solo Plus sits between Solo and Pro (id manager)', () => {
+    expect(PRICING_TIERS.solo_plus.monthlyPrice?.amount).toBe(12_000);
+    expect(getTierPrice('solo_plus', 'annual')?.amount).toBe(120_000);
+    expect(getEntitlement('solo_plus', 'active_releases')).toBe(3);
+    expect(PRICING_TIERS.solo_plus.urgansMonthlyCredits).toBe(400);
+    expect(PRICING_TIERS.solo_plus.includesDistribution).toBe(true);
   });
 });

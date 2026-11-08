@@ -11,7 +11,9 @@
 
 import { useState } from 'react';
 import {
-  PRICING_TIER_ORDER,
+  TIER_GROUPS,
+  TIER_GROUP_LABEL,
+  TIER_GROUP_ORDER,
   formatTierFromPrice,
   getIntroPrice,
   getTier,
@@ -42,6 +44,10 @@ const naira = (amount: number) =>
 
 /** Same figures as the /pricing card (apps/homepage PricingTierCards). */
 function cardPrice(tierId: PricingTierId, interval: Interval, currency: PricingCurrencyCode = 'NGN') {
+  // Free (pricing v4, 2026-11-08): nothing to pay, in any currency or period.
+  if (tierId === 'free') {
+    return { figure: formatMoney(0, currency), unit: null, sub: 'Free for as long as you like', was: null };
+  }
   if (getTier(tierId).contactSales) {
     // Label is a custom deal: no price shown, in Naira or dollars (#1120).
     const custom = formatTierFromPrice(tierId, interval);
@@ -114,8 +120,13 @@ export function AuthPlans() {
         })}
       </div>
 
-      <div className="mt-7 grid w-full max-w-[1320px] gap-4 md:mt-[45px] md:grid-cols-2 md:gap-[30px] xl:grid-cols-4">
-        {PRICING_TIER_ORDER.map((tierId) => {
+      {/* Two groups since pricing v4 (2026-11-08): "Just you" and "Your team",
+          three plans each, the same as urganize.app/pricing. */}
+      {TIER_GROUP_ORDER.map((groupId) => (
+      <div key={groupId} className="mt-7 flex w-full max-w-[1320px] flex-col md:mt-[45px]">
+      <h3 className="mb-4 text-[13px] font-semibold uppercase tracking-[0.14em] text-content-tertiary">{TIER_GROUP_LABEL[groupId]}</h3>
+      <div className="grid w-full gap-4 md:grid-cols-2 md:gap-[30px] xl:grid-cols-3">
+        {TIER_GROUPS[groupId].map((tierId) => {
           const tier = getTier(tierId);
           const { figure, unit, sub, was } = cardPrice(tierId, interval, currency);
           const { heading, outcomes, includes } = tierOutcomes(tierId, currency);
@@ -169,6 +180,8 @@ export function AuthPlans() {
           );
         })}
       </div>
+      </div>
+      ))}
       <p className="mt-6 max-w-[42rem] text-center text-xs leading-[18px] text-content-tertiary md:mt-10">
         {currency === 'USD'
           ? 'Prices are in US dollars. One price covers your whole team, not each person.'
@@ -196,7 +209,7 @@ const questions = (currency: PricingCurrencyCode) => [
     q: 'How much does it cost?',
     // Read from the pricing package so a reprice can never leave this answer
     // disagreeing with the plan cards above it.
-    a: `Solo is ${monthlyFigure('solo', currency)} a month, Manager is ${monthlyFigure('manager', currency)} and Pro is ${monthlyFigure('pro', currency)}. Label is priced with you. One price covers your whole team.`,
+    a: `Free costs nothing. Solo is ${monthlyFigure('solo', currency)} a month and Solo Plus is ${monthlyFigure('solo_plus', currency)}. For a team, Pro is ${monthlyFigure('manager', currency)} and Pro Plus is ${monthlyFigure('pro', currency)}. Label is priced with you. One price covers your whole team.`,
   },
 ];
 

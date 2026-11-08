@@ -79,9 +79,9 @@ export function PricingPageClient() {
             </p>
 
             <h1 className="hero-fade-in hero-delay-1 mb-8 mt-8 text-[2.25rem] leading-[1.06] sm:text-[3.6rem] md:text-[4.2rem]">
-              Pay for the roster,
+              Plans for the way
               <br />
-              <span className="text-[var(--marketing-accent)]">not the headcount.</span>
+              <span className="text-[var(--marketing-accent)]">you work.</span>
             </h1>
 
             {/* Plain-language pass 2026-08-30. The headline used to be "Priced
@@ -92,8 +92,8 @@ export function PricingPageClient() {
                 what the headline now says. Composed from lib/positioning, so it
                 cannot drift from the homepage and the footer. */}
             <p className="hero-fade-in hero-delay-2 mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl">
-              Your whole team is covered by one price. Join the waitlist and
-              we&rsquo;ll set your roster up with you.
+              Every plan writes your rollout plan for you. Pick the one that
+              fits who you are.
             </p>
 
             <div className="hero-fade-in hero-delay-3 mt-10">
