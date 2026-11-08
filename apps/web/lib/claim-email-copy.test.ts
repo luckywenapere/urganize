@@ -117,8 +117,8 @@ describe('house rules for every sentence', () => {
     for (const sample of samples) expect(sample).not.toMatch(/[\u2013\u2014]/);
   });
 
-  it('never "workspace", "ship" or "users"', () => {
-    for (const sample of samples) expect(sample).not.toMatch(/\b(workspace|ship|shipped|users)\b/i);
+  it('never "ship" or "users"', () => {
+    for (const sample of samples) expect(sample).not.toMatch(/\b(ship|shipped|users)\b/i);
   });
 
   it('short sentences a fifth grader reads in one go', () => {

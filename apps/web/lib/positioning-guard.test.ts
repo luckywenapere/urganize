@@ -136,10 +136,11 @@ const PROSE = [
 /**
  * The retired phrases, as patterns.
  *
- * `workspace` is the one that needs care: it is banned in anything a user, a
- * visitor or an app store reviewer can read, while code identifiers, routes,
- * database columns and env vars keep it. That distinction is why this scans
- * extracted strings rather than raw source.
+ * Scanned as extracted strings rather than raw source, so code identifiers,
+ * routes, database columns and env vars never trip a pattern. The bare word
+ * "workspace" was banned on 2026-09-09 and allowed again on 2026-11-08
+ * (founder: "i like workspace please unretire it"). "AI workspace for music"
+ * stays retired, as an old line rather than a word.
  */
 const RETIRED = [
   /AI workspace for music/i,
@@ -154,7 +155,6 @@ const RETIRED = [
   /music rollouts/i,
   /Global standard, from here/i,
   /\bLet['’]s build\b/i,
-  /\bworkspaces?\b/i,
   // 2026-09-11 retired "small labels", the artists-managers-labels triple and
   // "for labels". The 2026-09-24 brief brought the last two back, and
   // "small labels" followed on 2026-10-02: the strategy doc names small labels

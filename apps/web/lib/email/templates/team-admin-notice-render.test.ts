@@ -61,12 +61,11 @@ describe('TeamAdminNoticeEmail', () => {
     expect(teamAdminNoticeSubject('pause_ended', 'now')).toBe('Your Urganize pause has ended');
   });
 
-  it('never uses an em dash, and never says workspace', async () => {
+  it('never uses an em dash', async () => {
     const { text } = await renderEmail(
       TeamAdminNoticeEmail({ recipientName: '', kind: 'comped', when: 'now', trialEndsAt: null })
     );
     expect(text).not.toContain('—');
-    expect(text.toLowerCase()).not.toContain('workspace');
   });
 
   it('has a subject for each kind and each moment', () => {

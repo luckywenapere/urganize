@@ -12,7 +12,7 @@ import { BANNED_COPY_CHARS, BANNED_COPY_WORDS, bannedCopyInstruction } from './p
  * chosen by name, and its header says why: the rest of the product predates the
  * rules and was not to be retrofitted. That left every OTHER screen free to
  * drift, and it did: an audit on 2026-09-30 found 186 em dashes, 34 uses of the
- * banned product word, and a handful of sentences that assumed a person's
+ * then-banned word "workspace" (allowed again 2026-11-08), and a handful of sentences that assumed a person's
  * gender, all in screens nobody had listed.
  *
  * So the older screens were cleaned in one pass, and this guard closes the door
@@ -52,12 +52,6 @@ const rel = (path: string) => relative(WEB, path).split(sep).join('/');
 const BASELINE: Record<string, string> = {
   'components/providers/ChunkRecoveryBridge.tsx':
     'The em dashes are in console lines for developers. Nothing here is rendered.',
-  'components/settings/segments/ArtistsBrandSegment.tsx':
-    'Wiring code. The reader mistakes the `workspace` prop for prose.',
-  'components/settings/useWorkspaceSettings.ts':
-    'An API path (/api/workspace/artists/...) that the reader mistakes for prose.',
-  'components/workspace/WorkspaceDesktopFocused.tsx':
-    'A CSS class name, workspace-mode-enter.',
 };
 
 const ROOTS = ['components', 'app', 'stores'].map((dir) => join(WEB, dir));
@@ -96,10 +90,6 @@ const RULES: Array<{ name: string; hits: (source: string) => string[] }> = [
       const pattern = new RegExp(`\\b(${BANNED_COPY_WORDS.join('|')})\\b`, 'i');
       return readableCopy(source).filter((value) => value !== allowed && pattern.test(value));
     },
-  },
-  {
-    name: 'workspace',
-    hits: (source) => readableCopy(source).filter((value) => /\bworkspaces?\b/i.test(value)),
   },
   {
     name: 'gendered pronoun',

@@ -62,7 +62,7 @@ export const isSignupSource = (value: unknown): value is SignupSource =>
 
 // ---------------------------------------------------------------------------
 // Copy. Fifth-grade words, no em dashes, "rollout" for the thing a team runs,
-// never "workspace" or "ship". lib/profile-growth.test.ts holds the bar.
+// never "ship". lib/profile-growth.test.ts holds the bar.
 // ---------------------------------------------------------------------------
 
 export const PROFILE_GROWTH_COPY = {

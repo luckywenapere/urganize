@@ -14,7 +14,7 @@ import { BANNED_COPY_CHARS, BANNED_COPY_WORDS, bannedCopyInstruction } from './p
  *
  * Scope is the surfaces NAMED below, which get every rule in this file. The
  * older screens were retrofitted on 2026-09-30 and are held to the em dash,
- * ship, workspace and pronoun rules by lib/house-copy-ratchet.test.ts, which
+ * ship and pronoun rules by lib/house-copy-ratchet.test.ts, which
  * sweeps every component and page so a screen is covered without being listed.
  * What this file adds is the rules that only make sense on these surfaces (the
  * invented-number and job-title rules) and the lib modules a person reads.
@@ -42,12 +42,10 @@ const FILES = [
   join(WEB, 'components', 'home', 'SpendCard.tsx'),
   join(WEB, 'lib', 'email', 'templates', 'ReleasePaybackQuestionEmail.tsx'),
   // The settings pop-up (2026-09-29): a new surface born under the house rules.
-  // ArtistsBrandSegment is left out: it is all wiring for the `workspace` state
-  // object and holds no copy, and the JSX-text reader mistakes that prop name
-  // for prose.
-  ...walk(join(WEB, 'components', 'settings', 'segments')).filter(
-    (path) => !path.endsWith('ArtistsBrandSegment.tsx')
-  ),
+  // ArtistsBrandSegment was left out while "workspace" was banned (the reader
+  // took its `workspace` prop for prose). The word is allowed again since
+  // 2026-11-08, so the whole folder is walked.
+  ...walk(join(WEB, 'components', 'settings', 'segments')),
   'components/settings/SettingsModal.tsx',
   'components/settings/SettingsNav.tsx',
   'lib/settings-nav.ts',
@@ -74,8 +72,8 @@ const FILES = [
   // manager, and it is a NEW surface, so it is born under the house rules
   // rather than grandfathered out of them like the older copy this guard's
   // header excludes. Its own guard, lib/help-copy.test.ts, adds the
-  // readability caps on top; this one supplies the em dash, the banned words
-  // and the "never says workspace" rule so there is one definition of each.
+  // readability caps on top; this one supplies the em dash and the banned
+  // words so there is one definition of each.
   join(WEB, 'lib', 'help-copy.ts'),
   // Chappi Speaks (2026-09-29): the daily line on a quiet Home. Chappi's voice
   // is the brand's voice, so it is born under the same house rules.
@@ -203,18 +201,6 @@ describe('press kit copy', () => {
       for (const value of readableCopy(readFileSync(path, 'utf8'))) {
         if (value === allowed) continue;
         if (pattern.test(value)) found.push(report(path, value));
-      }
-    }
-    expect(found).toEqual([]);
-  });
-
-  it('never says workspace', () => {
-    // The word is for positioning and messaging. It is banned inside product
-    // copy, where a manager would have to work out what it means.
-    const found: string[] = [];
-    for (const path of FILES) {
-      for (const value of readableCopy(readFileSync(path, 'utf8'))) {
-        if (/\bworkspaces?\b/i.test(value)) found.push(report(path, value));
       }
     }
     expect(found).toEqual([]);

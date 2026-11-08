@@ -56,9 +56,9 @@ describe('buildOnboardingProgress', () => {
     }
   });
 
-  it('never uses an em dash or the word workspace in a label', () => {
+  it('never uses an em dash in a label', () => {
     for (const step of buildOnboardingProgress([]).steps) {
-      expect(step.label).not.toMatch(/\u2014|workspace/i);
+      expect(step.label).not.toMatch(/\u2014/);
     }
   });
 });

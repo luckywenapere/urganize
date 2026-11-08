@@ -112,10 +112,9 @@ describe('the lines a person reads', () => {
     expect(outOfCreditsNotice(subscriber, false)).toContain('Quick commands still work');
   });
 
-  it('keep to the house rules: no em dash and no workspace', () => {
+  it('keep to the house rules: no em dash', () => {
     for (const line of [outOfCreditsNotice(subscriber, true), outOfCreditsNotice(creditsOnly, true), creditsNextLine(0, subscriber, true)]) {
       expect(line, line).not.toMatch(/—|–/);
-      expect(line, line).not.toMatch(/workspace/i);
     }
   });
 });
@@ -144,7 +143,7 @@ describe('the estimate shown before an embedded action runs', () => {
 
   it('keeps to the house rules, and says nothing about buying', () => {
     for (const line of [embeddedEstimateLine('release.draft_plan'), embeddedEstimateLine('x')]) {
-      expect(line, line).not.toMatch(/—|–|workspace|\b(buy|purchase|top up)\b/i);
+      expect(line, line).not.toMatch(/—|–|\b(buy|purchase|top up)\b/i);
     }
   });
 });

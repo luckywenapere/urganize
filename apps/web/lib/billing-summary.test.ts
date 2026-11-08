@@ -477,12 +477,11 @@ describe('summarizeBilling — team access', () => {
     expect(result.details.join(' ')).not.toContain('still see everything');
   });
 
-  it('obeys the copy rules: no "workspace", no em dashes, no loss threats', () => {
+  it('obeys the copy rules: no em dashes, no loss threats', () => {
     for (const state of ['trial', 'grace', 'comped', 'walled', 'paid', 'read_only'] as const) {
       for (const isOwnerOrAdmin of [true, false]) {
         const result = summarizeBilling(snapshot(), { team: team({ state, isOwnerOrAdmin }) });
         const all = [result.title, ...result.details].join(' ');
-        expect(all.toLowerCase()).not.toContain('workspace');
         expect(all).not.toContain('—');
         expect(all).not.toMatch(/lose access|locked out|will be locked/i);
       }

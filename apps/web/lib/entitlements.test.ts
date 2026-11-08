@@ -566,9 +566,8 @@ describe('limit copy obeys the house rules', () => {
     }
   );
 
-  it('never says workspace and never uses an em dash', () => {
+  it('never uses an em dash', () => {
     for (const message of blockedMessages) {
-      expect(message.toLowerCase()).not.toContain('workspace');
       expect(message).not.toContain('—');
     }
   });
@@ -918,16 +917,13 @@ describe('public tier copy tells the truth', () => {
     }
   });
 
-  it('carries no percentage, no em dash and no "workspace" in the tier copy', () => {
+  it('carries no percentage, and no em dash in the tier copy', () => {
     // The pricing spec forbids a percentage saving, the marketing copy rules
-    // forbid em dashes in house copy, and "workspace" is banned from tier copy
-    // specifically: it is what WE call the thing, not what a manager calls the
-    // place their releases live.
+    // forbid em dashes in house copy.
     for (const tier of PRICING_TIER_ORDER) {
       const copy = [PRICING_TIERS[tier].audience, ...tierHighlights(tier)].join(' ');
       expect(copy, tier).not.toContain('%');
       expect(copy, tier).not.toContain('\u2014');
-      expect(copy.toLowerCase(), tier).not.toContain('workspace');
     }
   });
 });
@@ -998,7 +994,7 @@ describe('limits point at the next plan that lifts them (self-serve checkout)', 
       expect(verdict.message.toLowerCase()).toContain('upgrade to pro');
       expect(verdict.message).toContain('15,000');
       expect(verdict.message).toContain('come off the price');
-      expect(verdict.message).not.toMatch(/\u2014|workspace/i);
+      expect(verdict.message).not.toMatch(/\u2014/);
     }
   });
 

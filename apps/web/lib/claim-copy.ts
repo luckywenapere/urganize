@@ -1,6 +1,6 @@
 // Words for the claim flow, kept apart from lib/claim.ts so client components
 // can import them without pulling in Node's crypto. Fifth-grade wording, no em
-// dashes, "rollout" for the object, never "workspace" or "ship".
+// dashes, "rollout" for the object, never "ship".
 
 export const CLAIM_COPY = {
   heading: 'This is you? Claim it.',

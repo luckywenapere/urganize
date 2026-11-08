@@ -15,8 +15,8 @@
 // paragraph and [words](url) is a link. The greeting ("Hey Ada,") and the
 // sign-off are added by the template, not written here. The positioning and
 // rollout-vocabulary guards scan this file, so it is held to the house rules:
-// "rollout" for the work, "release" only as a date, never "workspace", and no em
-// dashes (a test below checks the last two directly).
+// "rollout" for the work, "release" only as a date, and no em
+// dashes (a test below checks that directly).
 //
 // SWITCHED OFF UNTIL THE COPY IS APPROVED: EMAIL_ONBOARDING_SEQUENCE=on turns it
 // on. With it off, signup sends the old welcome note exactly as before and

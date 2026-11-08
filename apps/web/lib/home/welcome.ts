@@ -3,7 +3,7 @@
 // to look at, so every list and strip stays out until there is something to show.
 //
 // All the words live here so they can be edited without touching a component.
-// House rules: warm, plain, no exclamation marks, no em dash, never "workspace".
+// House rules: warm, plain, no exclamation marks, no em dash.
 // lib/house-copy-ratchet.test.ts and press-kit-copy-guard.test.ts enforce them.
 
 export const WELCOME_EYEBROW = 'Welcome to Urganize';
