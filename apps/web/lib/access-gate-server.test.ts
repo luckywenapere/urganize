@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/team-billing-server', () => ({ invalidateTeamAccess: vi.fn() }));
+// These cases cover closed sign-up, the rule every invite path was built for.
+// Open sign-up is covered in access-gate.test.ts, where the decision lives.
+vi.mock('@/lib/access-gate', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/access-gate')>()),
+  SIGNUP_OPEN: false,
+}));
 
 import {
   clearAccessApprovalCache,

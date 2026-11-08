@@ -18,7 +18,12 @@ const none = { approvedAt: null, allowlisted: false, hasForeignMembership: false
 
 describe('decideAppAccess', () => {
   it('holds an account that matches no rule', () => {
-    expect(decideAppAccess(none)).toEqual({ allowed: false });
+    expect(decideAppAccess({ ...none, signupOpen: false })).toEqual({ allowed: false });
+  });
+
+  it('lets a brand-new account in while sign-up is open', () => {
+    expect(decideAppAccess({ ...none, signupOpen: true })).toEqual({ allowed: true, stamp: 'open_signup' });
+    expect(decideAppAccess(none)).toEqual({ allowed: true, stamp: 'open_signup' });
   });
   it('lets in an approved account without restamping it', () => {
     expect(decideAppAccess({ ...none, approvedAt: '2026-10-15T00:00:00Z' })).toEqual({ allowed: true, stamp: null });
