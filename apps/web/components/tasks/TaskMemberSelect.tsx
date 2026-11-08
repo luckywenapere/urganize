@@ -32,6 +32,11 @@ type TaskMemberSelectProps = {
    * expanded form squeezes it instead of being pushed off the bottom.
    */
   footer?: ReactNode;
+  /**
+   * Shown on the trigger when no teammate is picked but someone outside the
+   * app has the activity (chase by number, #1119), e.g. "Kemi · WhatsApp".
+   */
+  selectedLabel?: string | null;
 };
 
 // Replaces the old TaskMemberCombobox, which was a text input doubling as a
@@ -99,6 +104,7 @@ export function TaskMemberSelect({
   isLoading = false,
   density = 'comfortable',
   footer,
+  selectedLabel = null,
 }: TaskMemberSelectProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -162,7 +168,7 @@ export function TaskMemberSelect({
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         // Carries the words shown on the button, so voice control can reach it.
-        aria-label={selectedMember ? `${label}: ${selectedMember.name}` : `${label}: ${placeholder}`}
+        aria-label={selectedMember ? `${label}: ${selectedMember.name}` : `${label}: ${selectedLabel || placeholder}`}
         className={triggerClass}
       >
         {selectedMember ? (
@@ -172,10 +178,10 @@ export function TaskMemberSelect({
         )}
         <span
           className={`min-w-0 flex-1 truncate ${
-            selectedMember ? 'text-content-primary' : 'text-content-tertiary'
+            selectedMember || selectedLabel ? 'text-content-primary' : 'text-content-tertiary'
           }`}
         >
-          {selectedMember ? selectedMember.name : placeholder}
+          {selectedMember ? selectedMember.name : selectedLabel || placeholder}
         </span>
         <ChevronDown
           className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${
@@ -204,7 +210,7 @@ export function TaskMemberSelect({
 
             <button
               type="button"
-              aria-current={!selectedMember ? 'true' : undefined}
+              aria-current={!selectedMember && !selectedLabel ? 'true' : undefined}
               onClick={() => choose(null)}
               className={`motion-focus flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors hover:bg-bg-hover ${
                 !selectedMember ? 'text-content-primary' : 'text-content-secondary'
@@ -214,7 +220,7 @@ export function TaskMemberSelect({
                 --
               </span>
               <span className="min-w-0 flex-1">Unassigned</span>
-              {!selectedMember ? <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" /> : null}
+              {!selectedMember && !selectedLabel ? <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" /> : null}
             </button>
 
             {visibleMembers.map((member) => {

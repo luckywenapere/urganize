@@ -31,7 +31,8 @@ import {
   type ChaseKind,
   type ChaseSettings,
 } from './chase-rules';
-import { normalizePhone, stripWhatsappPrefix } from './phone';
+import { maskPhone, normalizePhone, stripWhatsappPrefix } from './phone';
+import { seedRelationship } from '@/lib/relationships-server';
 import { parseReply, type ReplyIntent } from './reply-intent';
 import { decryptSecret } from './secret';
 import { isWhatsappConfigured, sendWhatsapp } from './transport';
@@ -181,7 +182,12 @@ export type ContactStatus = 'pending' | 'opted_in' | 'stopped';
 export type WhatsappContact = {
   id: string;
   workspaceId: string;
-  userId: string;
+  /** Set for a teammate with an account. Exactly one of userId and personId is set. */
+  userId: string | null;
+  /** Set for someone with no account, chased by number (2026-11-08, #1119). */
+  personId: string | null;
+  /** The name the manager typed, for a person with no account. */
+  name: string | null;
   phone: string;
   status: ContactStatus;
   lastTaskId: string | null;
@@ -193,7 +199,9 @@ export type WhatsappContact = {
 type ContactRow = {
   id: string;
   workspace_id: string;
-  user_id: string;
+  user_id: string | null;
+  person_id?: string | null;
+  name?: string | null;
   phone: string;
   status: ContactStatus;
   last_task_id: string | null;
@@ -206,12 +214,39 @@ function toContact(row: ContactRow): WhatsappContact {
     id: row.id,
     workspaceId: row.workspace_id,
     userId: row.user_id,
+    personId: row.person_id ?? null,
+    name: row.name ?? null,
     phone: row.phone,
     status: row.status,
     lastTaskId: row.last_task_id,
     lastPostId: row.last_post_id ?? null,
     awaiting: row.awaiting,
   };
+}
+
+/**
+ * Narrows a tasks query to the ones this contact is chased about. A teammate's
+ * are the tasks assigned to them. A person with no account's are the ones
+ * given to them by number: assigned_person_id is theirs and no teammate owns
+ * it, so a task a teammate owns is never chased twice.
+ */
+type Filterable = { eq(column: string, value: string): Filterable; is(column: string, value: null): Filterable };
+
+function ownedBy<Q>(query: Q, contact: WhatsappContact): Q {
+  const q = query as unknown as Filterable;
+  if (contact.userId) return q.eq('assigned_to_user_id', contact.userId) as unknown as Q;
+  return q.eq('assigned_person_id', contact.personId ?? '').is('assigned_to_user_id', null) as unknown as Q;
+}
+
+/** The column and value a contact's messages are filed under. */
+function messageOwner(contact: WhatsappContact): [string, string] {
+  return contact.userId ? ['user_id', contact.userId] : ['person_id', contact.personId ?? ''];
+}
+
+async function contactFirstName(admin: SupabaseClient, contact: WhatsappContact): Promise<string> {
+  if (!contact.userId) return firstName(contact.name);
+  const profiles = await loadProfilesByIds(admin, [contact.userId]);
+  return firstName(profiles.get(contact.userId)?.name);
 }
 
 export async function listContacts(admin: SupabaseClient, workspaceId: string): Promise<WhatsappContact[]> {
@@ -224,6 +259,7 @@ async function logMessage(
   input: {
     workspaceId: string | null;
     userId: string | null;
+    personId?: string | null;
     taskId?: string | null;
     postId?: string | null;
     direction: 'in' | 'out';
@@ -240,6 +276,7 @@ async function logMessage(
     .insert({
       workspace_id: input.workspaceId,
       user_id: input.userId,
+      person_id: input.personId ?? null,
       task_id: input.taskId ?? null,
       post_id: input.postId ?? null,
       direction: input.direction,
@@ -325,12 +362,12 @@ async function sendOptIn(
   const result = await sendWhatsapp({
     to: contact.phone,
     body,
-    contentSid: process.env.WHATSAPP_OPTIN_CONTENT_SID?.trim() || null,
-    contentVariables: { '1': name, '2': inviterName },
+    template: { key: 'opt_in', variables: [name, inviterName] },
   });
   await logMessage(admin, {
     workspaceId: contact.workspaceId,
     userId: contact.userId,
+    personId: contact.personId,
     direction: 'out',
     kind: 'opt_in',
     body,
@@ -419,7 +456,7 @@ export async function runWhatsappChaseSweep(admin: SupabaseClient, now: Date = n
       for (const contact of contacts) {
         let outcome = await chaseOneContact(admin, contact, rules, today, now);
         // Tasks first. A day with no task to chase can carry today's post.
-        if (outcome === 'none' && settings.remindPosts) outcome = await nudgeOnePost(admin, contact, today);
+        if (outcome === 'none' && settings.remindPosts && contact.userId) outcome = await nudgeOnePost(admin, contact, today);
         if (outcome === 'sent') sent += 1;
         else if (outcome === 'failed') failed += 1;
         else if (outcome === 'already') skippedAlreadyChased += 1;
@@ -443,24 +480,26 @@ async function chaseOneContact(
   const { count } = await admin
     .from(MESSAGES_TABLE)
     .select('id', { count: 'exact', head: true })
-    .eq('user_id', contact.userId)
+    .eq(...messageOwner(contact))
     .eq('chase_day', today);
   if ((count ?? 0) > 0) return 'already';
 
-  const { data: taskData } = await admin
-    .from('tasks')
-    .select('id,title,due_date,status,release_id,assigned_to_user_id')
-    .eq('workspace_id', contact.workspaceId)
-    .eq('assigned_to_user_id', contact.userId)
-    .in('status', CHASEABLE_STATUSES)
-    .not('due_date', 'is', null);
+  const { data: taskData } = await ownedBy(
+    admin
+      .from('tasks')
+      .select('id,title,due_date,status,release_id,assigned_to_user_id')
+      .eq('workspace_id', contact.workspaceId)
+      .in('status', CHASEABLE_STATUSES)
+      .not('due_date', 'is', null),
+    contact
+  );
   const live = await dropRowsOfDeletedReleases(admin, (taskData as TaskRow[] | null) ?? [], (t) => t.release_id);
   if (!live.length) return 'none';
 
   const { data: lastOverdue } = await admin
     .from(MESSAGES_TABLE)
     .select('task_id,chase_day')
-    .eq('user_id', contact.userId)
+    .eq(...messageOwner(contact))
     .eq('kind', 'overdue')
     .in('task_id', live.map((t) => t.id))
     .order('chase_day', { ascending: false });
@@ -484,13 +523,12 @@ async function chaseOneContact(
   const pick = candidates[0];
   if (!pick) return 'none';
 
-  const [profiles, releaseRow] = await Promise.all([
-    loadProfilesByIds(admin, [contact.userId]),
+  const [name, releaseRow] = await Promise.all([
+    contactFirstName(admin, contact),
     pick.task.release_id
       ? admin.from('releases').select('title').eq('id', pick.task.release_id).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
-  const name = firstName(profiles.get(contact.userId)?.name);
   const releaseTitle = ((releaseRow.data as { title?: string } | null)?.title || '').trim() || null;
   const title = (pick.task.title || 'Your task').trim();
   const dueDay = lagosDay(new Date(pick.task.due_date as string));
@@ -500,6 +538,7 @@ async function chaseOneContact(
   const claim = await logMessage(admin, {
     workspaceId: contact.workspaceId,
     userId: contact.userId,
+    personId: contact.personId,
     taskId: pick.task.id,
     direction: 'out',
     kind: pick.kind,
@@ -513,8 +552,10 @@ async function chaseOneContact(
   const result = await sendWhatsapp({
     to: contact.phone,
     body: text,
-    contentSid: process.env.WHATSAPP_CHASE_CONTENT_SID?.trim() || null,
-    contentVariables: { '1': name, '2': releaseTitle ? `${title} for ${releaseTitle}` : title, '3': dueWords(pick.kind, dueDay) },
+    template: {
+      key: 'chase',
+      variables: [name, releaseTitle ? `${title} for ${releaseTitle}` : title, dueWords(pick.kind, dueDay)],
+    },
   });
   await admin
     .from(MESSAGES_TABLE)
@@ -557,6 +598,7 @@ async function nudgeOnePost(
   contact: WhatsappContact,
   today: string
 ): Promise<'sent' | 'failed' | 'already' | 'none'> {
+  if (!contact.userId) return 'none';
   const { data: postRows } = await admin
     .from(ARTIST_POSTS_TABLE)
     .select('id,artist_id,release_id,post_day,what,platform,owner_user_id,status,done_at')
@@ -581,6 +623,7 @@ async function nudgeOnePost(
   const claim = await logMessage(admin, {
     workspaceId: contact.workspaceId,
     userId: contact.userId,
+    personId: contact.personId,
     postId: post.id,
     direction: 'out',
     kind: 'post_day',
@@ -595,8 +638,7 @@ async function nudgeOnePost(
   const result = await sendWhatsapp({
     to: contact.phone,
     body: text,
-    contentSid: process.env.WHATSAPP_POST_CONTENT_SID?.trim() || null,
-    contentVariables: { '1': name, '2': post.what, '3': `${artistName}${where}` },
+    template: { key: 'post_day', variables: [name, post.what, `${artistName}${where}`] },
   });
   await admin
     .from(MESSAGES_TABLE)
@@ -621,6 +663,7 @@ async function actOnPostReply(
   rawText: string,
   now: Date
 ) {
+  if (!contact.userId) return;
   const updated = await setPostStatusAsOwner(admin, postId, contact.userId, status);
   await logUrgansAction(admin, {
     source: 'whatsapp',
@@ -672,6 +715,7 @@ async function replyTo(admin: SupabaseClient, contact: WhatsappContact, body: st
   await logMessage(admin, {
     workspaceId: contact.workspaceId,
     userId: contact.userId,
+    personId: contact.personId,
     taskId,
     direction: 'out',
     kind: 'reply',
@@ -698,12 +742,10 @@ async function tellOwner(admin: SupabaseClient, ownerId: string | null, title: s
 /** The task a reply is about, only if it still belongs to the person replying. */
 async function loadTaskFor(admin: SupabaseClient, contact: WhatsappContact): Promise<TaskRow | null> {
   if (!contact.lastTaskId) return null;
-  const { data } = await admin
-    .from('tasks')
-    .select('id,title,due_date,status,release_id,assigned_to_user_id')
-    .eq('id', contact.lastTaskId)
-    .eq('assigned_to_user_id', contact.userId)
-    .maybeSingle();
+  const { data } = await ownedBy(
+    admin.from('tasks').select('id,title,due_date,status,release_id,assigned_to_user_id').eq('id', contact.lastTaskId),
+    contact
+  ).maybeSingle();
   return (data as TaskRow | null) ?? null;
 }
 
@@ -767,6 +809,32 @@ export async function testOwnAi(config: { provider: ByoProvider; baseUrl: string
   return callOwnModel(config, [{ role: 'user', content: 'Reply with the word ok.' }], { maxTokens: 5, timeoutMs: 15_000 });
 }
 
+/**
+ * Delivery updates from Meta (sent, delivered, read, failed) on a message we
+ * sent. They can arrive out of order, so a status only ever moves forward:
+ * read is never turned back into delivered. This is what the 2-week test
+ * reads to tell "not read" from "read and ignored" (#1119).
+ */
+const STATUS_BEFORE: Record<'sent' | 'delivered' | 'read' | 'failed', string[]> = {
+  sent: ['sending'],
+  delivered: ['sending', 'sent'],
+  read: ['sending', 'sent', 'delivered'],
+  failed: ['sending', 'sent', 'delivered'],
+};
+
+export async function recordWhatsappStatus(
+  admin: SupabaseClient,
+  update: { id: string; status: 'sent' | 'delivered' | 'read' | 'failed'; error: string | null }
+): Promise<void> {
+  const { error } = await admin
+    .from(MESSAGES_TABLE)
+    .update(update.status === 'failed' ? { status: 'failed', error: update.error } : { status: update.status })
+    .eq('provider_message_id', update.id)
+    .eq('direction', 'out')
+    .in('status', STATUS_BEFORE[update.status]);
+  if (error) console.error('[whatsapp] status update failed:', error.message);
+}
+
 export type InboundInput = { from: string; body: string; providerMessageId: string | null };
 
 /**
@@ -783,6 +851,7 @@ export async function handleInboundWhatsapp(admin: SupabaseClient, input: Inboun
   const logged = await logMessage(admin, {
     workspaceId: contact.workspaceId,
     userId: contact.userId,
+    personId: contact.personId,
     taskId: contact.lastTaskId,
     direction: 'in',
     kind: 'reply',
@@ -831,8 +900,7 @@ async function actOnReply(admin: SupabaseClient, contact: WhatsappContact, inten
     loadOwner(admin, contact.workspaceId),
     loadSettings(admin, contact.workspaceId),
   ]);
-  const profiles = await loadProfilesByIds(admin, [contact.userId]);
-  const who = firstName(profiles.get(contact.userId)?.name);
+  const who = await contactFirstName(admin, contact);
 
   switch (intent.type) {
     case 'yes':
@@ -844,11 +912,10 @@ async function actOnReply(admin: SupabaseClient, contact: WhatsappContact, inten
         await replyTo(admin, contact, "Which task is done? I'll check when I next message you about one.");
         return;
       }
-      const { error } = await admin
-        .from('tasks')
-        .update({ status: 'done', completed_at: now.toISOString() })
-        .eq('id', task.id)
-        .eq('assigned_to_user_id', contact.userId);
+      const { error } = await ownedBy(
+        admin.from('tasks').update({ status: 'done', completed_at: now.toISOString() }).eq('id', task.id),
+        contact
+      );
       await logUrgansAction(admin, {
         source: 'whatsapp',
         trigger: 'whatsapp_reply',
@@ -874,7 +941,7 @@ async function actOnReply(admin: SupabaseClient, contact: WhatsappContact, inten
       await logTaskActivity(admin, {
         taskId: task.id,
         actorId: contact.userId,
-        message: 'Marked done on WhatsApp',
+        message: contact.userId ? 'Marked done on WhatsApp' : `${who} marked it done on WhatsApp`,
         metadata: { kind: 'whatsapp_done' },
       });
       await admin.from(CONTACTS_TABLE).update({ awaiting: null }).eq('id', contact.id);
@@ -945,11 +1012,10 @@ async function moveDueDate(
   // A new date has to be ahead of today, or the next chase would fire at once.
   const today = lagosDay(new Date());
   const chosen = day < today ? addDays(today, 1) : day;
-  const { error } = await admin
-    .from('tasks')
-    .update({ due_date: `${chosen}T11:00:00Z` })
-    .eq('id', task.id)
-    .eq('assigned_to_user_id', contact.userId);
+  const { error } = await ownedBy(
+    admin.from('tasks').update({ due_date: `${chosen}T11:00:00Z` }).eq('id', task.id),
+    contact
+  );
   await logUrgansAction(admin, {
     source: 'whatsapp',
     trigger: 'whatsapp_reply',
@@ -975,7 +1041,7 @@ async function moveDueDate(
   await logTaskActivity(admin, {
     taskId: task.id,
     actorId: contact.userId,
-    message: `Moved the due date to ${formatDayShort(chosen)} on WhatsApp`,
+    message: `${contact.userId ? '' : `${who} `}${contact.userId ? 'Moved' : 'moved'} the due date to ${formatDayShort(chosen)} on WhatsApp`,
     metadata: { kind: 'whatsapp_date', date: chosen },
   });
   await admin.from(CONTACTS_TABLE).update({ awaiting: null }).eq('id', contact.id);
@@ -988,4 +1054,187 @@ async function moveDueDate(
     `Moved to ${formatDayShort(chosen)}. I told ${owner.name}. I'll check again that morning.`,
     task.id
   );
+}
+
+// ---- chase by number (2026-11-08, #1119) -----------------------------------
+//
+// A manager gives a task to someone with just a name and a WhatsApp number.
+// That person never signs up: they become one of the team's people (an
+// unclaimed, private profile), the task points at them through
+// tasks.assigned_person_id, and their number is a contact with person_id set.
+// Only teams with chasing switched on see this, which is how each team in the
+// first test is let in one at a time.
+
+/** Whether a team may give tasks to a number right now. */
+export async function canChaseByNumber(admin: SupabaseClient, workspaceId: string): Promise<boolean> {
+  if (!isWhatsappConfigured()) return false;
+  const settings = await loadSettings(admin, workspaceId);
+  if (!settings.enabled) return false;
+  return whatsappRemindersAllowed(await getWorkspaceTier(workspaceId));
+}
+
+export type TaskChasePerson = { personId: string; name: string; phone: string; status: ContactStatus };
+
+export type TaskChaseTrailItem = {
+  at: string;
+  direction: 'in' | 'out';
+  kind: string;
+  body: string;
+  status: string;
+};
+
+/** Who a task was given to by number, and its WhatsApp messages, oldest first. */
+export async function loadTaskChase(
+  admin: SupabaseClient,
+  workspaceId: string,
+  taskId: string
+): Promise<{ person: TaskChasePerson | null; trail: TaskChaseTrailItem[] }> {
+  const { data: task } = await admin
+    .from('tasks')
+    .select('assigned_person_id,assigned_to_user_id')
+    .eq('id', taskId)
+    .eq('workspace_id', workspaceId)
+    .maybeSingle();
+  const row = task as { assigned_person_id: string | null; assigned_to_user_id: string | null } | null;
+
+  let person: TaskChasePerson | null = null;
+  if (row?.assigned_person_id && !row.assigned_to_user_id) {
+    const { data: contactRow } = await admin
+      .from(CONTACTS_TABLE)
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .eq('person_id', row.assigned_person_id)
+      .maybeSingle();
+    if (contactRow) {
+      const contact = toContact(contactRow as ContactRow);
+      person = {
+        personId: row.assigned_person_id,
+        name: contact.name || 'Them',
+        phone: maskPhone(contact.phone),
+        status: contact.status,
+      };
+    }
+  }
+
+  const { data: messages } = await admin
+    .from(MESSAGES_TABLE)
+    .select('created_at,direction,kind,body,status')
+    .eq('workspace_id', workspaceId)
+    .eq('task_id', taskId)
+    .order('created_at', { ascending: true })
+    .limit(40);
+  type MessageRow = { created_at: string; direction: 'in' | 'out'; kind: string; body: string; status: string };
+  const trail = ((messages as MessageRow[] | null) ?? []).map((m) => ({
+    at: m.created_at,
+    direction: m.direction,
+    kind: m.kind,
+    body: m.body,
+    status: m.status,
+  }));
+  return { person, trail };
+}
+
+/**
+ * Gives a task to someone by name and number. Takes the task off any teammate
+ * (one owner, one chase), and sends the one-time YES message unless the number
+ * already said YES.
+ */
+export async function giveTaskToNumber(
+  admin: SupabaseClient,
+  input: { workspaceId: string; taskId: string; actorUserId: string; name: string; phoneRaw: string; inviterName: string }
+): Promise<
+  { ok: true; person: TaskChasePerson; sent: boolean; warning?: string } | { ok: false; error: string; status: number }
+> {
+  const name = input.name.trim().replace(/\s+/g, ' ').slice(0, 80);
+  if (!name) return { ok: false, error: 'Add their name.', status: 400 };
+  const phone = normalizePhone(input.phoneRaw);
+  if (!phone) return { ok: false, error: 'That number does not look right. Add the country code, like +234.', status: 400 };
+  if (!(await canChaseByNumber(admin, input.workspaceId))) {
+    return { ok: false, error: 'WhatsApp reminders are not on for your team yet.', status: 403 };
+  }
+
+  const { data: task } = await admin
+    .from('tasks')
+    .select('id')
+    .eq('id', input.taskId)
+    .eq('workspace_id', input.workspaceId)
+    .maybeSingle();
+  if (!task) return { ok: false, error: 'Activity not found.', status: 404 };
+
+  // One number is one person on one team.
+  const { data: clashRow } = await admin.from(CONTACTS_TABLE).select('*').eq('phone', phone).maybeSingle();
+  const clash = clashRow ? toContact(clashRow as ContactRow) : null;
+  if (clash && (clash.userId || clash.workspaceId !== input.workspaceId)) {
+    return { ok: false, error: 'That number is already used by another person.', status: 409 };
+  }
+
+  let personId = clash?.personId ?? null;
+  if (!personId) {
+    const seeded = await seedRelationship(admin, {
+      workspaceId: input.workspaceId,
+      actorUserId: input.actorUserId,
+      data: { label: name, role: '', email: null, phone, tags: [], notes: '', rateNote: null, lastContactAt: null },
+      source: 'manual',
+    });
+    if (!seeded.ok) return { ok: false, error: 'Could not save that person. Try again.', status: 500 };
+    personId = seeded.personId;
+  }
+
+  // The same person may already have a contact under another number.
+  const { data: existingRow } = await admin.from(CONTACTS_TABLE).select('*').eq('person_id', personId).maybeSingle();
+  const existing = existingRow ? toContact(existingRow as ContactRow) : null;
+  if (existing && existing.workspaceId !== input.workspaceId) {
+    return { ok: false, error: 'That person is already reminded by another team.', status: 409 };
+  }
+  const keepStatus: ContactStatus = existing && existing.phone === phone ? existing.status : 'pending';
+  const payload = {
+    workspace_id: input.workspaceId,
+    user_id: null,
+    person_id: personId,
+    name,
+    phone,
+    status: keepStatus,
+    awaiting: null,
+    ...(keepStatus === 'pending' ? { opted_in_at: null, stopped_at: null } : {}),
+  };
+  const saved = existing
+    ? await admin.from(CONTACTS_TABLE).update(payload).eq('id', existing.id).select('*').single()
+    : await admin.from(CONTACTS_TABLE).insert(payload).select('*').single();
+  if (saved.error || !saved.data) {
+    console.error('[whatsapp] giveTaskToNumber contact failed:', saved.error?.message);
+    return { ok: false, error: 'Could not save that number. Try again.', status: 500 };
+  }
+  const contact = toContact(saved.data as ContactRow);
+
+  const { error: taskError } = await admin
+    .from('tasks')
+    .update({ assigned_person_id: personId, assigned_to_user_id: null })
+    .eq('id', input.taskId)
+    .eq('workspace_id', input.workspaceId);
+  if (taskError) {
+    console.error('[whatsapp] giveTaskToNumber task failed:', taskError.message);
+    return { ok: false, error: 'Could not give the task. Try again.', status: 500 };
+  }
+  await logTaskActivity(admin, {
+    taskId: input.taskId,
+    actorId: input.actorUserId,
+    message: `Gave this to ${name} on WhatsApp`,
+    metadata: { kind: 'whatsapp_person', personId },
+  });
+
+  const person: TaskChasePerson = { personId, name, phone: maskPhone(phone), status: contact.status };
+  if (contact.status !== 'pending') return { ok: true, person, sent: false };
+  const sent = await sendOptIn(admin, contact, firstName(name), input.inviterName);
+  if (!sent.ok) return { ok: true, person, sent: false, warning: `Saved, but the message did not send: ${sent.error}` };
+  return { ok: true, person, sent: true };
+}
+
+/** Takes a task back from a person chased by number. Their contact stays. */
+export async function takeTaskFromNumber(admin: SupabaseClient, workspaceId: string, taskId: string): Promise<boolean> {
+  const { error } = await admin
+    .from('tasks')
+    .update({ assigned_person_id: null })
+    .eq('id', taskId)
+    .eq('workspace_id', workspaceId);
+  return !error;
 }

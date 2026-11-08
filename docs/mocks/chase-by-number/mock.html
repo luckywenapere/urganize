@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chase by number</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --side:#f0ebe1; --card:#faf5ec; --hover:#ebe6dc;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --board:#d9d5cc; --wa:#e7ddd3; --wa-in:#ffffff; --wa-out:#d9fdd3;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--text); padding:32px 16px 64px; }
+  p { margin:0; }
+  .wrap { max-width:1100px; margin:0 auto; }
+  h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; margin:0 0 6px; }
+  .lead { color:#4f4a42; max-width:720px; }
+  .row { display:flex; flex-wrap:wrap; gap:24px; margin-top:28px; }
+  .col { flex:1 1 320px; max-width:360px; }
+  .cap { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:0 0 4px; }
+  .capsub { color:#4f4a42; font-size:13px; margin-bottom:12px; min-height:40px; }
+  .phone { background:var(--bg); border-radius:28px; padding:18px 16px 22px; box-shadow:0 12px 32px rgba(26,22,17,.12); min-height:560px; }
+  .sheet-h { font-family:'Young Serif', serif; font-size:20px; margin:4px 0 2px; }
+  .mu { color:var(--sec); } .ter { color:var(--ter); font-size:12.5px; }
+  .opt { display:flex; align-items:center; gap:10px; padding:10px; border-radius:12px; border:1px solid var(--line); background:var(--card); margin-top:8px; }
+  .av { width:32px; height:32px; border-radius:50%; background:var(--hover); display:grid; place-items:center; font-weight:600; font-size:12.5px; color:var(--sec); flex:none; }
+  .opt.on { border-color:var(--brand); background:var(--brand-soft); }
+  .label { font-size:12.5px; font-weight:600; color:var(--sec); margin:14px 0 4px; }
+  .input { border:1px solid var(--line2); border-radius:10px; padding:10px 12px; background:#fffdf8; }
+  .btn { display:flex; align-items:center; justify-content:center; min-height:44px; border-radius:12px; font-weight:600; background:var(--brand); color:#f5f0e6; margin-top:16px; }
+  .hint { background:var(--brand-soft); color:var(--brand); border-radius:10px; padding:10px 12px; font-size:13px; margin-top:12px; }
+  .wa { background:var(--wa); border-radius:28px; padding:0 0 18px; min-height:560px; overflow:hidden; box-shadow:0 12px 32px rgba(26,22,17,.12); }
+  .wa-top { background:#075e54; color:#fff; padding:14px 16px; font-weight:600; }
+  .wa-top span { display:block; font-weight:400; font-size:12px; opacity:.8; }
+  .msgs { padding:12px; display:flex; flex-direction:column; gap:8px; }
+  .b { max-width:86%; padding:8px 10px; border-radius:10px; font-size:13.5px; background:var(--wa-in); box-shadow:0 1px 1px rgba(0,0,0,.08); }
+  .b.me { align-self:flex-end; background:var(--wa-out); }
+  .qr { display:flex; flex-direction:column; gap:4px; max-width:86%; }
+  .qr div { background:#fff; color:#027eb5; text-align:center; padding:7px; border-radius:10px; font-size:13.5px; box-shadow:0 1px 1px rgba(0,0,0,.08); }
+  .day { align-self:center; background:#fff; border-radius:8px; padding:2px 10px; font-size:11.5px; color:#54656f; }
+  .task { border:1px solid var(--line); background:var(--card); border-radius:14px; padding:14px; margin-top:12px; }
+  .task h4 { margin:0 0 2px; font-size:15px; }
+  .trail { margin-top:10px; border-top:1px solid var(--line); padding-top:10px; display:flex; flex-direction:column; gap:6px; font-size:13px; }
+  .trail div { display:flex; gap:8px; }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--brand); margin-top:6px; flex:none; }
+  .dot.g { background:var(--line2); }
+  .pill { display:inline-block; font-size:12px; font-weight:600; padding:2px 8px; border-radius:999px; background:var(--brand-soft); color:var(--brand); }
+  .notes { margin-top:36px; max-width:760px; color:#4f4a42; }
+  .notes li { margin-bottom:6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Chase by number</h1>
+  <p class="lead">For the WhatsApp test (#1119). Today Urganize only chases people who have an Urganize account, and on real teams nobody but the manager has one. This lets the manager give a task to anyone with just a name and a WhatsApp number. That person never signs up.</p>
+
+  <div class="row">
+    <div class="col">
+      <p class="cap">1. Give the task to someone</p>
+      <p class="capsub">The usual "Who does this?" sheet, with one new choice at the bottom.</p>
+      <div class="phone">
+        <p class="ter">Cover art · Sunrise (single)</p>
+        <p class="sheet-h">Who does this?</p>
+        <div class="opt"><div class="av">TA</div><div><b>You</b><br><span class="ter">Tolu Adeyemi</span></div></div>
+        <div class="opt on"><div class="av">+</div><div><b>Someone not on Urganize</b><br><span class="ter">We chase them on WhatsApp</span></div></div>
+        <p class="label">Their name</p>
+        <div class="input">Kemi</div>
+        <p class="label">Their WhatsApp number</p>
+        <div class="input">0803 123 4567</div>
+        <div class="hint">We send Kemi one message asking if it's OK to remind her here. Nothing else goes out until she says YES.</div>
+        <div class="btn">Give to Kemi</div>
+      </div>
+    </div>
+
+    <div class="col">
+      <p class="cap">2. What Kemi sees</p>
+      <p class="capsub">From Urganize's WhatsApp number. She taps a button to answer. No app, no link to sign up.</p>
+      <div class="wa">
+        <div class="wa-top">Urganize<span>Business account</span></div>
+        <div class="msgs">
+          <span class="day">Today</span>
+          <div class="b">Hi Kemi, Tolu added you to their team on Urganize. I'll message you here when a task of yours is due. Reply YES to allow it, or STOP any time.</div>
+          <div class="qr"><div>YES</div><div>STOP</div></div>
+          <div class="b me">YES</div>
+          <div class="b">Thanks Kemi. You're set.</div>
+          <span class="day">Thursday, 8:00</span>
+          <div class="b">Hi Kemi. "Cover art for Sunrise" is due today, Thu 12 Nov. Is it done?</div>
+          <div class="qr"><div>Done</div><div>Need more time</div><div>Not mine</div></div>
+          <div class="b me">Need more time</div>
+          <div class="b">No problem. What day can it be ready?</div>
+          <div class="b me">saturday</div>
+          <div class="b">Moved to Sat 14 Nov. I'll let Tolu know.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <p class="cap">3. What Tolu sees</p>
+      <p class="capsub">On the task, a short trail of the chase. Tolu gets a notification when a date moves.</p>
+      <div class="phone">
+        <p class="sheet-h">Sunrise</p>
+        <p class="ter">Single · out Fri 27 Nov</p>
+        <div class="task">
+          <h4>Cover art</h4>
+          <p class="ter">Kemi · due Sat 14 Nov</p>
+          <div class="trail">
+            <div><span class="dot"></span><span>Kemi said YES to reminders <span class="ter">· Mon</span></span></div>
+            <div><span class="dot"></span><span>Chased on WhatsApp, read <span class="ter">· Thu 8:00</span></span></div>
+            <div><span class="dot"></span><span>Kemi: Need more time. Moved to Sat 14 Nov <span class="ter">· Thu 9:12</span></span></div>
+            <div><span class="dot g"></span><span class="mu">Next chase Fri 13 Nov, 8:00</span></div>
+          </div>
+        </div>
+        <div class="task">
+          <h4>Send master to distributor</h4>
+          <p class="ter">You · due Mon 16 Nov</p>
+          <p style="margin-top:8px"><span class="pill">Not chased: it's yours</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ul class="notes">
+    <li>Works on every plan except Solo, the same as WhatsApp reminders today.</li>
+    <li>If Kemi joins Urganize later, her tasks and her YES move to her account.</li>
+    <li>One number belongs to one person on one team, as now.</li>
+  </ul>
+</div>
+</body>
+</html>

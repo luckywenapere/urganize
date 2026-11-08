@@ -16,6 +16,7 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
 import { TaskMemberSelect } from '@/components/tasks/TaskMemberSelect';
 import { TaskPersonSelect } from '@/components/tasks/TaskPersonSelect';
+import { ChaseByNumberForm, TaskChaseTrail, useTaskWhatsappChase } from '@/components/tasks/TaskWhatsappChase';
 import { EditorialPitchPanel } from '@/components/tasks/EditorialPitchPanel';
 import { SmartLinkTaskPanel } from '@/components/tasks/SmartLinkTaskPanel';
 import { isSmartLinkTask } from '@/lib/smart-link-task';
@@ -195,6 +196,8 @@ export function TaskDetailView({
   const [description, setDescription] = useState('');
   const [selectedAssignee, setSelectedAssignee] = useState<WorkspaceMember | null>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
+  // Chase by number (#1119): someone outside the app, chased on WhatsApp.
+  const chase = useTaskWhatsappChase(task?.id ?? null);
 
   // Invite-a-teammate-by-email, right from the task drawer (founder request,
   // 2026-08-17): a manager who's assigning work and realizes the person isn't
@@ -400,6 +403,17 @@ export function TaskDetailView({
   // occasionally wanted should not hold a line of the pop-up at all times.
   const inviteFooter = (
     <div className="p-2">
+      {chase.available ? (
+        <div className="mb-1 border-b border-stroke-subtle pb-1">
+          <ChaseByNumberForm
+            onGive={async (name, phone) => {
+              const result = await chase.give(name, phone);
+              if (!('error' in result)) setSelectedAssignee(null);
+              return result;
+            }}
+          />
+        </div>
+      ) : null}
       {inviteUrl ? (
         <div className="space-y-2 p-1">
           <p className="text-xs text-content-secondary">{inviteMessage}</p>
@@ -665,14 +679,17 @@ export function TaskDetailView({
                   members={members}
                   selectedMember={selectedAssignee}
                   isLoading={isLoadingMembers}
+                  selectedLabel={chase.person ? `${chase.person.name} · WhatsApp` : null}
                   onSelectMember={(member) => {
                     setSelectedAssignee(member);
+                    if (chase.person) void chase.takeBack();
                     void onSavePatch({ assignedToUserId: member?.userId || null });
                   }}
                   footer={inviteFooter}
                 />
               </div>
             </div>
+            <TaskChaseTrail person={chase.person} trail={chase.trail} />
 
             {/* Who did the work, from My People (Vouch, slice 1). Renders
                 nothing when the feature is off or the team has no people. */}
