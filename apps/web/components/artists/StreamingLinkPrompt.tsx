@@ -8,7 +8,7 @@
 // "Not now" puts it away for this visit (sessionStorage). "Not on streaming yet"
 // stops asking about that artist until one of their rollouts comes out.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Loader2, Search } from '@/components/icons';
 import { DialogPanel } from '@/components/shared/DialogPanel';
@@ -16,6 +16,8 @@ import { supabase } from '@/lib/supabase/client';
 import { isBodyScrollLocked } from '@/lib/body-scroll-lock';
 import { pickSuggestion, streamingLinkUrl } from '@/lib/artist-streaming/rules';
 import type { ImportArtistCandidate } from '@/lib/artist-import/providers';
+import { extractLink, LINK_UNREACHABLE, looksLikeLink, PASTE_LINK_HELP } from '@/lib/artist-import/artist-link';
+import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { formatFans, initials } from './ImportParts';
 
 const NOT_NOW_KEY = 'urganize.streaming-link.not-now';
@@ -122,17 +124,43 @@ function LinkOne({
   const [latest, setLatest] = useState<string | null>(null);
   const [saving, setSaving] = useState<'link' | 'skip' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Paste their link (#1129): the box can wait for a link instead of a name.
+  const [pasteMode, setPasteMode] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const searchSeq = useRef(0);
 
+  // A name lists matches; a link (#1129) opens its one artist as the answer to "Is this them?".
   const search = useCallback(async (q: string) => {
+    const seq = ++searchSeq.current;
+    const isLink = looksLikeLink(q);
     setSearching(true);
+    setSearchError(null);
     try {
       const response = await fetch(`/api/artist-import/search?q=${encodeURIComponent(q)}`);
-      const body = (await response.json().catch(() => ({}))) as { artists?: ImportArtistCandidate[] };
-      setResults(response.ok ? (body.artists ?? []) : []);
+      const body = (await response.json().catch(() => ({}))) as {
+        artists?: ImportArtistCandidate[];
+        fromLink?: boolean;
+        error?: string;
+      };
+      if (seq !== searchSeq.current) return;
+      const found = response.ok ? (body.artists ?? []) : [];
+      setResults(found);
+      if (!response.ok) setSearchError(body.error ?? (isLink ? LINK_UNREACHABLE : null));
+      if (isLink) {
+        const fromLink = body.fromLink ? (found[0] ?? null) : null;
+        captureAnalyticsEvent({ name: 'artist_link_pasted', properties: { from: 'streaming_popup', ok: Boolean(fromLink) } });
+        if (fromLink) {
+          setChosen(fromLink);
+          setLatest(null);
+        }
+      }
     } catch {
+      if (seq !== searchSeq.current) return;
       setResults([]);
+      if (isLink) setSearchError(LINK_UNREACHABLE);
     } finally {
-      setSearching(false);
+      if (seq === searchSeq.current) setSearching(false);
     }
   }, []);
 
@@ -141,7 +169,9 @@ function LinkOne({
   }, [artist.name, search]);
 
   const guess = useMemo(() => (results ? pickSuggestion(artist.name, results) : null), [results, artist.name]);
-  const showing = mode === 'guess' ? guess : chosen;
+  // A pick from the list (or a pasted link) wins over the guess. Before #1129 a
+  // pick made when there was no guess showed nothing, and no Yes button.
+  const showing = chosen ?? (mode === 'guess' ? guess : null);
 
   // The suggested artist's newest release, so a manager can tell two people with one name apart.
   useEffect(() => {
@@ -193,6 +223,58 @@ function LinkOne({
 
   const loading = results === null;
   const searchMode = mode === 'search' || (!loading && !guess);
+  const isLink = looksLikeLink(query);
+  const waitingForLink = pasteMode && !query.trim();
+  const linkBox = isLink || waitingForLink;
+
+  const startPaste = () => {
+    // A search still on its way would land on top of the empty box.
+    searchSeq.current += 1;
+    setSearching(false);
+    setPasteMode(true);
+    setQuery('');
+    setSearchError(null);
+    inputRef.current?.focus();
+  };
+
+  const searchByName = () => {
+    setPasteMode(false);
+    setQuery(artist.name);
+    void search(artist.name);
+  };
+
+  const pasteButton = (label: string) => (
+    <button type="button" onClick={startPaste} className="motion-focus font-semibold text-brand hover:underline underline-offset-2">
+      {label}
+    </button>
+  );
+
+  const resultList = (
+    <ul className="mt-3 space-y-1">
+      {(results ?? []).map((candidate) => (
+        <li key={`${candidate.provider}:${candidate.id}`}>
+          <button
+            type="button"
+            onClick={() => {
+              setChosen(candidate);
+              setLatest(null);
+            }}
+            className="motion-focus flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-bg-hover"
+          >
+            <Face candidate={candidate} size={44} />
+            <span className="min-w-0">
+              <span className="block truncate font-semibold text-content-primary">{candidate.name}</span>
+              <span className="block truncate text-[13px] text-content-secondary">
+                {[formatFans(candidate.followers), candidate.provider === 'deezer' ? 'Deezer' : 'Apple Music']
+                  .filter(Boolean)
+                  .join(' · ')}
+              </span>
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
 
   return (
     <div>
@@ -223,13 +305,26 @@ function LinkOne({
             className="flex gap-2"
           >
             <label className="sr-only" htmlFor={`stream-search-${artist.id}`}>
-              Artist name
+              Artist name or link
             </label>
             <input
+              ref={inputRef}
               id={`stream-search-${artist.id}`}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              className="h-11 min-w-0 flex-1 rounded-xl border border-stroke-control bg-bg-base px-3 text-base text-content-primary"
+              onPaste={(event) => {
+                // A pasted link is read at once, without pressing search. The box
+                // keeps just the link, without the words a share sheet adds.
+                const link = extractLink(event.clipboardData.getData('text'));
+                if (!link) return;
+                event.preventDefault();
+                setQuery(link);
+                void search(link);
+              }}
+              placeholder={waitingForLink ? 'Paste their artist link' : 'Artist name or link'}
+              aria-invalid={searchError ? true : undefined}
+              maxLength={600}
+              className={`h-11 min-w-0 flex-1 rounded-xl border ${searchError ? 'border-status-error' : 'border-stroke-control'} bg-bg-base px-3 text-base text-content-primary placeholder:text-content-tertiary`}
             />
             <button
               type="submit"
@@ -239,34 +334,40 @@ function LinkOne({
               {searching ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Search className="h-4 w-4" aria-hidden="true" />}
             </button>
           </form>
-          {results.length === 0 ? (
-            <p className="mt-3 text-sm text-content-secondary">No one by that name on Deezer or Apple Music.</p>
+          {searchError ? (
+            <p role="alert" className="mt-3 text-sm text-status-error">
+              {searchError}
+            </p>
+          ) : linkBox ? (
+            searching ? (
+              <p role="status" className="mt-3 flex items-center gap-2 text-sm text-content-secondary">
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                Reading your link…
+              </p>
+            ) : waitingForLink || results.length === 0 ? (
+              <p className="mt-3 text-[13px] leading-5 text-content-secondary">{PASTE_LINK_HELP}</p>
+            ) : (
+              resultList
+            )
+          ) : results.length === 0 ? (
+            <p className="mt-3 text-sm text-content-secondary">
+              No one by that name on Deezer or Apple Music. {pasteButton('Paste their link')}
+            </p>
           ) : (
-            <ul className="mt-3 space-y-1">
-              {results.map((candidate) => (
-                <li key={`${candidate.provider}:${candidate.id}`}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setChosen(candidate);
-                      setLatest(null);
-                    }}
-                    className="motion-focus flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-bg-hover"
-                  >
-                    <Face candidate={candidate} size={44} />
-                    <span className="min-w-0">
-                      <span className="block truncate font-semibold text-content-primary">{candidate.name}</span>
-                      <span className="block truncate text-[13px] text-content-secondary">
-                        {[formatFans(candidate.followers), candidate.provider === 'deezer' ? 'Deezer' : 'Apple Music']
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <>
+              {resultList}
+              <p className="mt-2 px-2 text-sm text-content-secondary">Not them? {pasteButton('Paste their link')}</p>
+            </>
           )}
+          {linkBox ? (
+            <button
+              type="button"
+              onClick={searchByName}
+              className="motion-focus mt-2 text-[13px] font-semibold text-brand hover:underline underline-offset-2"
+            >
+              Search by name instead
+            </button>
+          ) : null}
         </div>
       ) : showing ? (
         <div className="mt-4 flex items-center gap-4 rounded-2xl border border-stroke-default bg-bg-base p-4">

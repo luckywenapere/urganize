@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState, type ClipboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from '@/components/icons';
@@ -17,6 +17,7 @@ import { useShellStore } from '@/stores/useShellStore';
 import { ProfileFace } from '@/components/shared/ProfileFace';
 import { Cover, formatFans, initials } from './ImportParts';
 import { streamingLinkUrl } from '@/lib/artist-streaming/rules';
+import { extractLink, looksLikeLink, PASTE_LINK_HELP } from '@/lib/artist-import/artist-link';
 
 type Phase = 'search' | 'check';
 type Lookup = { ok: boolean; body: { releases?: ImportRelease[]; error?: string } };
@@ -100,6 +101,16 @@ export function AddArtistDialog({
   // and "Dorian", #865) waits here for the answer.
   const [asking, setAsking] = useState<{ candidate: ImportArtistCandidate; matches: RosterArtist[] } | null>(null);
   const searchSeq = useRef(0);
+  // Paste their link (#1129): "Paste their link" empties the box and waits for
+  // a link. Only a PASTED link opens its artist straight away (a link typed by
+  // hand could match a different artist halfway through), and only once: after
+  // Back it shows as one result. Each paste counts, so the same link can be
+  // tried again after "Try again".
+  const [pasteMode, setPasteMode] = useState(false);
+  const [pasteCount, setPasteCount] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pastedLink = useRef('');
+  const linkSeenFor = useRef('');
   const roster = useArtistRosterStore((state) => state.artists);
   const loadRoster = useArtistRosterStore((state) => state.load);
 
@@ -120,36 +131,6 @@ export function AddArtistDialog({
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
-
-  // Search as they type, after a short pause. The latest request wins.
-  useEffect(() => {
-    if (phase !== 'search') return;
-    const q = query.trim();
-    if (q.length < 2) {
-      setCandidates(null);
-      setSearching(false);
-      return;
-    }
-    const seq = ++searchSeq.current;
-    setSearching(true);
-    const timer = window.setTimeout(async () => {
-      try {
-        const response = await fetch(`/api/artist-import/search?q=${encodeURIComponent(q)}`);
-        const payload = (await response.json().catch(() => ({}))) as { artists?: ImportArtistCandidate[]; error?: string };
-        if (seq !== searchSeq.current) return;
-        setError(response.ok ? '' : payload.error || 'Could not search right now.');
-        setCandidates(response.ok ? payload.artists ?? [] : []);
-      } catch {
-        if (seq === searchSeq.current) {
-          setError('Could not search right now.');
-          setCandidates([]);
-        }
-      } finally {
-        if (seq === searchSeq.current) setSearching(false);
-      }
-    }, 350);
-    return () => window.clearTimeout(timer);
-  }, [query, phase]);
 
   const check = (candidate: ImportArtistCandidate, ontoArtist: RosterArtist | null) => {
     setAsking(null);
@@ -173,6 +154,90 @@ export function AddArtistDialog({
     }
     setAsking({ candidate, matches });
     captureAnalyticsEvent({ name: 'artist_import_match_asked', properties: { matches: matches.length } });
+  };
+
+  // A pasted link opens its artist straight away, the same as choosing them.
+  const onLinkRead = useEffectEvent((candidate: ImportArtistCandidate | null) => {
+    captureAnalyticsEvent({ name: 'artist_link_pasted', properties: { from: 'add_artist', ok: Boolean(candidate) } });
+    if (candidate) choose(candidate);
+  });
+
+  // Search as they type, after a short pause. The latest request wins.
+  useEffect(() => {
+    if (phase !== 'search') {
+      searchSeq.current += 1;
+      return;
+    }
+    const q = query.trim();
+    if (q.length < 2) {
+      // Nothing to search: an answer still on its way is no longer wanted.
+      searchSeq.current += 1;
+      setCandidates(null);
+      setSearching(false);
+      return;
+    }
+    const isLink = looksLikeLink(q);
+    const pasted = isLink && pastedLink.current === q;
+    // A link replaces the name results while it is read, so a stale list never shows under it.
+    if (isLink && linkSeenFor.current !== q) setCandidates(null);
+    const seq = ++searchSeq.current;
+    setSearching(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/artist-import/search?q=${encodeURIComponent(q)}`);
+        const payload = (await response.json().catch(() => ({}))) as {
+          artists?: ImportArtistCandidate[];
+          fromLink?: boolean;
+          error?: string;
+        };
+        if (seq !== searchSeq.current) return;
+        setError(response.ok ? '' : payload.error || 'Could not search right now.');
+        setCandidates(response.ok ? payload.artists ?? [] : []);
+        if (pasted && linkSeenFor.current !== q) {
+          const found = response.ok && payload.fromLink ? payload.artists?.[0] ?? null : null;
+          if (found) linkSeenFor.current = q;
+          onLinkRead(found);
+        }
+      } catch {
+        if (seq === searchSeq.current) {
+          setError('Could not search right now.');
+          setCandidates([]);
+        }
+      } finally {
+        if (seq === searchSeq.current) setSearching(false);
+      }
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [query, phase, pasteCount]);
+
+  const onPasteLink = (event: ClipboardEvent<HTMLInputElement>) => {
+    const link = extractLink(event.clipboardData.getData('text'));
+    if (!link) return;
+    // The box holds just the link, without the words a share sheet adds around it.
+    event.preventDefault();
+    pastedLink.current = link;
+    linkSeenFor.current = '';
+    setError('');
+    setQuery(link);
+    setPasteCount((count) => count + 1);
+  };
+
+  const startPaste = () => {
+    pastedLink.current = '';
+    linkSeenFor.current = '';
+    setPasteMode(true);
+    setQuery('');
+    setError('');
+    inputRef.current?.focus();
+  };
+
+  const searchByName = () => {
+    pastedLink.current = '';
+    linkSeenFor.current = '';
+    setPasteMode(false);
+    setQuery('');
+    setError('');
+    inputRef.current?.focus();
   };
 
   const add = async () => {
@@ -225,6 +290,10 @@ export function AddArtistDialog({
   if (typeof document === 'undefined') return null;
 
   const summary = releases ? describeImportedMusic(releases) : null;
+  const isLink = looksLikeLink(query);
+  // The box is waiting for a link, or holds one: say how to get it, hide the name-only parts.
+  const linkBox = isLink || (pasteMode && !query.trim());
+  const pasteButtonClass = 'motion-focus font-semibold text-brand hover:underline underline-offset-2';
   // The button says what it brings: "Add Dorian and 14 releases" (#890).
   const count = releases && releases.length > 0 ? ` and ${releases.length} ${releases.length === 1 ? 'release' : 'releases'}` : '';
   const addLabel = linking
@@ -259,20 +328,32 @@ export function AddArtistDialog({
                 : 'Find them on streaming to bring in what they released before Urganize.'}
             </p>
             <input
+              ref={inputRef}
               type="text"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Artist name"
-              aria-label="Artist name"
+              onPaste={onPasteLink}
+              placeholder={pasteMode && !query.trim() ? 'Paste their artist link' : 'Artist name or link'}
+              aria-label="Artist name or link"
+              aria-invalid={isLink && error ? true : undefined}
               autoComplete="off"
               autoFocus
-              maxLength={80}
-              className="mt-4 block w-full rounded-xl border border-stroke-control bg-bg-base px-3.5 py-2.5 text-base text-content-primary placeholder:text-content-tertiary outline-none transition-colors duration-fast ease-standard focus:border-brand"
+              maxLength={600}
+              className={`mt-4 block w-full rounded-xl border ${isLink && error ? 'border-status-error' : 'border-stroke-control'} bg-bg-base px-3.5 py-2.5 text-base text-content-primary placeholder:text-content-tertiary outline-none transition-colors duration-fast ease-standard focus:border-brand`}
             />
+            {linkBox && !error ? <p className="mt-2 px-1 text-[13px] leading-5 text-content-secondary">{PASTE_LINK_HELP}</p> : null}
             <div className="mt-2 space-y-1" aria-live="polite">
-              {searching && !candidates ? <p className="px-2 py-2 text-sm text-content-tertiary">Searching…</p> : null}
-              {candidates && candidates.length === 0 && !searching && !error ? (
-                <p className="px-2 py-2 text-sm text-content-secondary">No profile found for that name. Check the spelling.</p>
+              {searching && !candidates ? (
+                <p className="px-2 py-2 text-sm text-content-tertiary">{isLink ? 'Reading your link…' : 'Searching…'}</p>
+              ) : null}
+              {candidates && candidates.length === 0 && !searching && !error && !isLink ? (
+                <p className="px-2 py-2 text-sm text-content-secondary">
+                  No profile found for that name. Check the spelling, or{' '}
+                  <button type="button" onClick={startPaste} className={pasteButtonClass}>
+                    paste their link
+                  </button>
+                  .
+                </p>
               ) : null}
               {candidates?.map((candidate) => {
                 const open =
@@ -313,14 +394,27 @@ export function AddArtistDialog({
                   </div>
                 );
               })}
+              {candidates && candidates.length > 0 && !linkBox ? (
+                <p className="px-2 pt-1 text-sm text-content-secondary">
+                  Not them?{' '}
+                  <button type="button" onClick={startPaste} className={pasteButtonClass}>
+                    Paste their link
+                  </button>
+                </p>
+              ) : null}
               {error ? (
                 <p role="alert" className="px-2 text-sm text-status-error">
                   {error}
                 </p>
               ) : null}
+              {linkBox ? (
+                <button type="button" onClick={searchByName} className={`${pasteButtonClass} px-2 pt-1 text-[13px]`}>
+                  Search by name instead
+                </button>
+              ) : null}
             </div>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-stroke-subtle pt-4">
-              {!linking && query.trim().length >= 2 ? (
+              {!linking && query.trim().length >= 2 && !linkBox ? (
                 <p className="text-[13px] text-content-secondary">
                   Not on streaming yet?{' '}
                   <button
