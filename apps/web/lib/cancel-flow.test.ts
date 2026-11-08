@@ -320,7 +320,7 @@ describe('matchBudgetOffer', () => {
     expect(retentionOfferLabel({ kind: 'switch_plan', tier: 'solo', price: 7500 })).toBe('Switch to Solo for ₦7,500/month');
     expect(
       retentionOfferLabel({ kind: 'discounted_plan', tier: 'manager', price: 15000, months: 3, planCode: 'x' })
-    ).toBe('Keep Manager for ₦15,000/month for 3 months');
+    ).toBe('Keep Pro for ₦15,000/month for 3 months');
   });
 });
 

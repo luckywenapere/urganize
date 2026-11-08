@@ -64,8 +64,8 @@ describe('TRM fee config', () => {
     const c = readTrmFeeConfig({});
     expect(c.costBasis).toBe('fixed');
     expect(c.billingMode).toBe('trm_plan');
-    expect(c.feeAnnualKobo).toEqual({ manager: 2_550_000, pro: 2_550_000, label: 9_000_000 });
-    expect(c.feeMonthlyKobo).toEqual({ manager: 710_000, pro: 710_000, label: 2_050_000 });
+    expect(c.feeAnnualKobo).toEqual({ manager: 2_550_000, solo_plus: 2_550_000, pro: 2_550_000, label: 9_000_000 });
+    expect(c.feeMonthlyKobo).toEqual({ manager: 710_000, solo_plus: 710_000, pro: 710_000, label: 2_050_000 });
     expect(c.distributionRequiresPrepay).toBe(false);
   });
 
@@ -89,7 +89,7 @@ describe('TRM fee config', () => {
   it('reads an unset or blank fee as the default, never as zero', () => {
     for (const blank of [undefined, '', '  ']) {
       const c = readTrmFeeConfig({ TRM_FEE_MANAGER_ANNUAL_KOBO: blank, TRM_FEE_LABEL_ANNUAL_KOBO: blank });
-      expect(c.feeAnnualKobo).toEqual({ manager: 2_550_000, pro: 2_550_000, label: 9_000_000 });
+      expect(c.feeAnnualKobo).toEqual({ manager: 2_550_000, solo_plus: 2_550_000, pro: 2_550_000, label: 9_000_000 });
     }
   });
 
@@ -198,7 +198,7 @@ describe('what one payment owes TRM', () => {
 
   // The pro-rata and upfront modes, at the ₦20,100 / ₦101,000 yearly quote of
   // 2026-10-22. trm_plan replaced them as the default on 2026-10-26.
-  const OLD_QUOTE = { manager: 2_010_000, pro: 2_010_000, label: 10_100_000 };
+  const OLD_QUOTE = { manager: 2_010_000, solo_plus: 2_010_000, pro: 2_010_000, label: 10_100_000 };
   const prorata = (over: Partial<TrmFeeConfig> = {}) =>
     config({ billingMode: 'monthly_prorata', feeAnnualKobo: OLD_QUOTE, ...over });
 

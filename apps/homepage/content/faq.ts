@@ -44,10 +44,11 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   },
   {
     question: "Is it for one artist or a roster?",
-    answer: `Both. Solo covers one artist, Manager ${managerArtists}, Pro ${proArtists} and Label has no limit.`,
+    // Plan names since pricing v4 (2026-11-08): id manager is "Pro", id pro is "Pro Plus".
+    answer: `Both. Free, Solo and Solo Plus cover one artist, ${PRICING_TIERS.manager.label} ${managerArtists}, ${PRICING_TIERS.pro.label} ${proArtists} and Label has no limit.`,
   },
   {
     question: "Does it post or distribute for me?",
-    answer: `It sends your music to stores through our partner, TRM Distro. Pro and Label include it. On Solo and Manager a single is ${singlePrice}. You still post yourself.`,
+    answer: `It sends your music to stores through our partner, TRM Distro. Solo Plus, ${PRICING_TIERS.pro.label} and Label include it. On Solo and ${PRICING_TIERS.manager.label} a single is ${singlePrice}. You still post yourself.`,
   },
 ];

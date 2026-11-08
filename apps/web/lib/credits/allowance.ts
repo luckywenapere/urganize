@@ -37,7 +37,16 @@ import { NAIRA_PER_CREDIT_CREDITS_ONLY, NAIRA_PER_CREDIT_SUBSCRIBER } from './pr
 // (urgansMonthlyCredits, 2026-10-15). This file may import only its siblings
 // (credits-guard.test.ts), so allowance.test.ts holds the two equal.
 // 150 / 450 / 900 / 2,000 since 2026-11-07 (founder approved the phase 2 mocks, #1112).
-export const ALLOWANCE_CREDITS = { solo: 150, manager: 450, pro: 900, label: 2000, enterprise: 2000 } as const;
+// Free 30 and Solo Plus 400 since 2026-11-08 (pricing v4).
+export const ALLOWANCE_CREDITS = {
+  free: 30,
+  solo: 150,
+  solo_plus: 400,
+  manager: 450,
+  pro: 900,
+  label: 2000,
+  enterprise: 2000,
+} as const;
 
 /** What a trial is given, once. */
 export const TRIAL_CREDITS = 50;
@@ -83,9 +92,15 @@ export function creditAccount(team: TeamForAllowance | undefined): CreditAccount
  * Label allowance.
  */
 export function monthlyAllowanceCredits(team: TeamForAllowance | undefined): number {
+  // The Free plan (pricing v4, 2026-11-08) is granted its 30 a month although it
+  // is not a subscriber: it pays nothing, so it keeps credits-only top-up prices
+  // and no overage (overage is for state 'paid' only).
+  if (team?.state === 'free') return ALLOWANCE_CREDITS.free;
   if (creditAccount(team) !== 'subscriber') return 0;
   if (team?.state !== 'paid') return ALLOWANCE_CREDITS.solo;
   switch (team.tier) {
+    case 'solo_plus':
+      return ALLOWANCE_CREDITS.solo_plus;
     case 'manager':
       return ALLOWANCE_CREDITS.manager;
     case 'pro':

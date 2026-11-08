@@ -6,13 +6,15 @@ import {
   ADDON_PRICES_NAIRA,
   CREDIT_OVERAGE_NAIRA,
   CREDIT_PACK_USD,
-  DISTRIBUTION_ADDON_RELEASES_PER_MONTH,
   DEFAULT_SELLING_INTERVAL,
-  EXTRA_RELEASE_PRICE_NAIRA,
-  EXTRA_RELEASE_PRICE_USD,
-  PRICING_TIER_ORDER,
+  PRICING_TIERS,
   SELLABLE_INTERVALS,
+  TIER_GROUPS,
+  TIER_GROUP_HINT,
+  TIER_GROUP_LABEL,
+  TIER_GROUP_ORDER,
   annualSavingCopy,
+  canBuyAddon,
   formatMoney,
   formatTierFromPrice,
   getTier,
@@ -22,39 +24,28 @@ import {
   type BillingInterval,
   type PricingCurrencyCode,
   type PricingTierId,
+  type TierGroupId,
 } from "@urganize/pricing";
 import { useVisitorCurrency } from "@/lib/visitor-currency";
-import { APP_ORIGIN } from "@/lib/app-urls";
+import { APP_ORIGIN, APP_SIGNUP_URL } from "@/lib/app-urls";
 import { salesMailto } from "@/lib/sales-mailto";
-import { PlanPicture } from "@urganize/ui/PlanPicture";
 import { PricingCompareTable } from "./PricingCompareTable";
 
-// The price table.
+// The price table, PRICING V4 (founder-approved mock, 2026-11-08, #1112,
+// docs/mocks/pricing-v4/mock.html).
 //
-// EVERY NUMBER ON THIS PAGE COMES OUT OF @urganize/pricing, and none of it is
-// written here. The prices come from the tier definitions and the ceilings come
-// from `tierFeatures` / `tierHighlights`, which build their lines from the same
-// `limits` field apps/web enforces against. So this page cannot advertise a
-// seat count, a rollout count or a credit allowance the product does not
-// actually apply. Note this site only rebuilds when apps/homepage changes, so a
-// change in packages/pricing alone needs a nudge here to reach urganize.app.
+// Six plans in two groups behind a "Just you | Your team" switch: Free, Solo
+// and Solo Plus for an artist working alone; Pro, Pro Plus and Label for a
+// team. Pro is the code id `manager` and Pro Plus is `pro`: only the names on
+// screen moved, so payments and stored plans did not.
 //
-// PRICING V3 (founder, 2026-11-07, #1112): four cards. Solo, Manager and Pro
-// are bought here by card, monthly by default or yearly with two months free.
-// Label is a custom deal: it shows "Custom", no price in Naira or dollars
-// (#1120), and its button opens an email to us, never a checkout. Outside
-// Nigeria the self-serve plans show fixed US dollar prices (#1120). There is no
-// first-month price on any plan any more.
+// EVERY NUMBER COMES FROM @urganize/pricing (prices, limits, credits, the
+// distribution allowance), so this page cannot advertise a ceiling the app does
+// not apply. Lines the mock marked "Soon" are not built and are not shown.
 //
-// `tier.recommended` puts a "Most popular" badge on Manager. It was ignored on
-// this page from 2026-09-11 (every card identical); the founder brought the
-// badge back with this ladder.
-
-/** Tiers a visitor can start on their own. Everything else talks to us first.
- *  Derived from `contactSales`, the same fact checkout reads. */
-function isSelfServe(tierId: PricingTierId): boolean {
-  return !getTier(tierId).contactSales;
-}
+// Free is never bought: its button opens the app. Solo, Solo Plus, Pro and Pro
+// Plus go to checkout for that plan and period. Label is a custom deal and its
+// button emails us.
 
 const INTERVAL_LABEL: Record<BillingInterval, string> = {
   monthly: "Monthly",
@@ -63,7 +54,6 @@ const INTERVAL_LABEL: Record<BillingInterval, string> = {
 };
 
 const money = (amount: number, currency: PricingCurrencyCode) => formatMoney(amount, currency);
-const naira = (amount: number) => money(amount, "NGN");
 
 /** The big figure, its unit, and the line under it, for one card. */
 function cardPrice(
@@ -71,33 +61,86 @@ function cardPrice(
   interval: BillingInterval,
   currency: PricingCurrencyCode
 ): { figure: string; unit: string | null; sub: string | null } {
-  if (!isSelfServe(tierId)) {
-    // "Custom": agreed per deal, no figure shown.
-    return { figure: formatTierFromPrice(tierId, interval) ?? "Let's talk", unit: null, sub: "A price set with you, for your roster." };
+  if (tierId === "free") {
+    return { figure: money(0, currency), unit: null, sub: "Free for as long as you like" };
+  }
+  if (getTier(tierId).contactSales) {
+    // "Custom", with the Naira starting price for a visitor paying in Naira.
+    const from = PRICING_TIERS[tierId].monthlyPrice;
+    return {
+      figure: formatTierFromPrice(tierId, interval) ?? "Let's talk",
+      unit: null,
+      sub: currency === "NGN" && from ? `From ${money(from.amount, "NGN")}/month, priced with you` : "Priced with you",
+    };
   }
   if (interval === "monthly") {
     const monthly = getTierPriceIn(tierId, "monthly", currency);
-    return { figure: monthly ? money(monthly.amount, currency) : "", unit: "/month", sub: null };
+    const yearly = getTierPriceIn(tierId, "annual", currency);
+    return {
+      figure: monthly ? money(monthly.amount, currency) : "",
+      unit: "/month",
+      sub: yearly ? `Or ${money(yearly.amount, currency)} a year, ${annualSavingCopy(tierId) ?? ""}`.replace(/, $/, "") : null,
+    };
   }
   const yearly = getTierPriceIn(tierId, interval, currency);
   if (!yearly) return { figure: "", unit: null, sub: null };
   return {
     figure: money(yearly.amount, currency),
     unit: "/year",
-    sub: `${money(Math.round(yearly.amount / 12), currency)} a month, paid once a year`,
+    sub: `Works out to ${money(Math.round(yearly.amount / 12), currency)} a month`,
   };
 }
 
+/** The one plan per side that carries "Most ..." on the mock. */
+const BADGE: Partial<Record<PricingTierId, string>> = {
+  solo: "Most artists",
+  manager: "Most managers",
+};
+
 export function PricingTierCards() {
+  const [group, setGroup] = useState<TierGroupId>("you");
   const [interval, setInterval] = useState<BillingInterval>(DEFAULT_SELLING_INTERVAL);
   const currency = useVisitorCurrency();
   // "2 months free", from the same constant that computes the yearly price.
   const yearlySaving = annualSavingCopy("solo");
+  const tiers = TIER_GROUPS[group];
 
   return (
     <section className="relative px-6 pb-20">
       <div className="mx-auto max-w-6xl">
-        {/* Above the cards, because it reprices every one of them. */}
+        {/* Who it is for first, then how often you pay: both reprice the cards. */}
+        <div className="mb-3 flex justify-center">
+          <div
+            role="group"
+            aria-label="Who the plans are for"
+            className="inline-flex overflow-hidden rounded-full border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-1"
+          >
+            {TIER_GROUP_ORDER.map((option) => {
+              const isActive = group === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  aria-pressed={isActive}
+                  onClick={() => setGroup(option)}
+                  data-track="pricing_group_switched"
+                  data-group={option}
+                  className={`rounded-full px-5 py-2 text-sm font-medium tracking-[-0.01em] transition-colors ${
+                    isActive
+                      ? "bg-[var(--marketing-primary)] text-[var(--marketing-primary-text)]"
+                      : "text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)]"
+                  }`}
+                >
+                  {TIER_GROUP_LABEL[option]}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <p className="mb-6 text-center text-sm text-[var(--marketing-text-muted)]" aria-live="polite">
+          {TIER_GROUP_HINT[group]}
+        </p>
+
         <div className="mb-10 flex justify-center">
           <div
             role="radiogroup"
@@ -129,52 +172,47 @@ export function PricingTierCards() {
           </div>
         </div>
 
-        {/* One column on a phone, two from md, four from xl. */}
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {PRICING_TIER_ORDER.map((tierId) => {
+        {/* Three cards a side: one column on a phone, three from lg. */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          {tiers.map((tierId) => {
             const tier = getTier(tierId);
-            const priced = isSelfServe(tierId);
             const { figure, unit, sub } = cardPrice(tierId, interval, currency);
             const features = tierFeatures(tierId, currency);
-            // Outcomes first, then the limits. A limit already said as an
-            // outcome is not said twice.
-            const outcomes = tier.outcomes ?? [];
-            const featureLines = features.lines.filter((line) => !outcomes.includes(line));
-            const recommended = Boolean(tier.recommended);
+            const badge = BADGE[tierId];
             return (
               <div
                 key={tierId}
                 className={`flex h-full flex-col rounded-[1.5rem] border bg-[var(--marketing-surface-muted)] p-6 ${
-                  recommended ? "border-[var(--marketing-accent)]" : "border-[var(--marketing-border)]"
+                  badge ? "border-[var(--marketing-accent)]" : "border-[var(--marketing-border)]"
                 }`}
               >
-                {/* What the plan looks like in the app, before the words. */}
-                <PlanPicture
-                  activeReleases={tier.limits.activeReleases}
-                  seats={tier.limits.seats}
-                  monthlyCredits={tier.urgansMonthlyCredits}
-                />
-
-                <p className="mt-5 flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.22em] text-[var(--marketing-accent)]">
+                <p className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.22em] text-[var(--marketing-accent)]">
                   {tier.label}
-                  {recommended ? (
+                  {badge ? (
                     <span className="rounded-full bg-[var(--marketing-accent)]/10 px-2 py-0.5 text-[0.62rem] tracking-[0.08em]">
-                      Most popular
+                      {badge}
                     </span>
                   ) : null}
                 </p>
 
-                <p className="mt-4 flex flex-wrap items-baseline gap-x-1">
+                <p className="mt-3 text-sm leading-6 text-[var(--marketing-text-muted)] md:min-h-12">{tier.audience}</p>
+
+                <p className="mt-3 flex flex-wrap items-baseline gap-x-1">
                   <span className="text-3xl font-black tracking-tighter text-[var(--marketing-text)]">{figure}</span>
                   {unit ? <span className="text-sm text-[var(--marketing-text-muted)]">{unit}</span> : null}
                 </p>
                 <p className="mt-2 text-[0.8rem] leading-5 text-[var(--marketing-text-muted)] md:min-h-10">{sub}</p>
 
-                <p className="mt-3 text-sm leading-6 text-[var(--marketing-text-muted)] md:min-h-12">{tier.audience}</p>
-
-                {/* Solo, Manager and Pro go straight to checkout for that plan
-                    and period; Label opens an email to us. */}
-                {priced && isSelfServePurchase(tierId, interval) ? (
+                {tierId === "free" ? (
+                  <a
+                    href={APP_SIGNUP_URL}
+                    data-track="pricing_plan_clicked"
+                    data-plan={tierId}
+                    className="mt-6 inline-flex items-center justify-center rounded-full border border-[var(--marketing-border)] px-5 py-3 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text)] transition-colors hover:bg-[var(--marketing-surface)]"
+                  >
+                    Choose Free
+                  </a>
+                ) : isSelfServePurchase(tierId, interval) ? (
                   <a
                     href={`${APP_ORIGIN}/checkout?plan=${tierId}&period=${interval}`}
                     data-track="pricing_plan_clicked"
@@ -195,30 +233,13 @@ export function PricingTierCards() {
                   </a>
                 )}
 
-                {tier.outcomeHeading ? (
-                  <>
-                    <p className="mt-6 text-sm font-semibold text-[var(--marketing-text)]">{tier.outcomeHeading}</p>
-                    <ul className="mt-3 flex flex-col gap-2.5">
-                      {outcomes.map((line) => (
-                        <li
-                          key={line}
-                          className="flex items-start gap-2 text-sm leading-6 text-[var(--marketing-text-muted)]"
-                        >
-                          <RiCheckLine className="mt-1 size-4 shrink-0 text-[var(--marketing-accent)]" aria-hidden="true" />
-                          <span>{line}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                ) : null}
-
                 {/* What the plan includes: each card adds to the one before it.
                     Every line is true of the product today. */}
                 <p className="mt-6 border-b border-[var(--marketing-border)] pb-2.5 text-[0.8rem] text-[var(--marketing-text-subtle)]">
                   {features.heading}
                 </p>
                 <ul className="mt-3 flex flex-1 flex-col gap-2.5">
-                  {featureLines.map((line) => (
+                  {features.lines.map((line) => (
                     <li
                       key={line}
                       className="flex items-start gap-2 text-sm leading-6 text-[var(--marketing-text-muted)]"
@@ -234,8 +255,13 @@ export function PricingTierCards() {
         </div>
 
         <p className="mx-auto mt-8 max-w-2xl text-center text-sm leading-6 text-[var(--marketing-text-muted)]">
-          Each single, EP or album you send to stores counts as one release. People you share a brief with, playlist curators and DJs
-          are free and never take a place on your team.
+          {currency === "USD"
+            ? `Need more? Add AI credits (${money(CREDIT_PACK_USD.priceUsd, "USD")} for ${CREDIT_PACK_USD.credits}) on any paid plan.`
+            : `Need more? Add AI credits (from ${money(Math.min(...Object.values(CREDIT_OVERAGE_NAIRA)), "NGN")} each, up to a limit you set) on any paid plan${
+                canBuyAddon("manager", "person")
+                  ? `, or a person (${money(ADDON_PRICES_NAIRA.person, "NGN")}/month) or an artist (${money(ADDON_PRICES_NAIRA.artist, "NGN")}/month) on Pro and Pro Plus`
+                  : ""
+              }.`}
         </p>
         <p className="mt-3 text-center text-xs leading-6 text-[var(--marketing-text-subtle)]">
           {currency === "USD"
@@ -243,66 +269,7 @@ export function PricingTierCards() {
             : "Prices are in Naira. One price covers your whole team, not each person. Pay monthly or once a year, by card or bank transfer."}
         </p>
 
-        <PricingCompareTable interval={interval} currency={currency} />
-
-        {/* Add-ons (#1112): only what can be bought today. Prices from @urganize/pricing. */}
-        <div className="mx-auto mt-16 max-w-4xl">
-          <h2 className="text-center text-2xl md:text-3xl">Add to any plan</h2>
-          <p className="mt-2 text-center text-sm text-[var(--marketing-text-muted)]">
-            Pay for what you need, when you need it. Add-ons renew with your plan.
-          </p>
-          <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <li className="rounded-[1.25rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
-              <p className="text-sm font-semibold text-[var(--marketing-text)]">Send a single</p>
-              <p className="mt-1 text-2xl font-black tracking-tighter text-[var(--marketing-text)]">
-                {currency === "USD" ? money(EXTRA_RELEASE_PRICE_USD, "USD") : money(EXTRA_RELEASE_PRICE_NAIRA, "NGN")}
-              </p>
-              <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">Per single, to every store.</p>
-              <p className="mt-2 text-xs text-[var(--marketing-text-subtle)]">Solo and Manager, or past what Pro and Label include</p>
-            </li>
-            {/* These add-ons are priced in Naira only (#1123), so a dollar visitor does not see them. */}
-            {currency !== "USD" && (<>
-            <li className="rounded-[1.25rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
-              <p className="text-sm font-semibold text-[var(--marketing-text)]">Distribution for an artist</p>
-              <p className="mt-1 text-2xl font-black tracking-tighter text-[var(--marketing-text)]">
-                <>{naira(ADDON_PRICES_NAIRA.distribution_monthly)}<span className="text-sm font-semibold"> /month</span></>
-              </p>
-              <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">{`${DISTRIBUTION_ADDON_RELEASES_PER_MONTH} releases a month, singles and EPs. Or ${naira(ADDON_PRICES_NAIRA.distribution_yearly)} a year with albums too.`}</p>
-              <p className="mt-2 text-xs text-[var(--marketing-text-subtle)]">Solo and Manager</p>
-            </li>
-            <li className="rounded-[1.25rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
-              <p className="text-sm font-semibold text-[var(--marketing-text)]">Extra person</p>
-              <p className="mt-1 text-2xl font-black tracking-tighter text-[var(--marketing-text)]">
-                <>{naira(ADDON_PRICES_NAIRA.person)}<span className="text-sm font-semibold"> /month</span></>
-              </p>
-              <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">One more person on your team.</p>
-              <p className="mt-2 text-xs text-[var(--marketing-text-subtle)]">Manager and Pro</p>
-            </li>
-            <li className="rounded-[1.25rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
-              <p className="text-sm font-semibold text-[var(--marketing-text)]">Extra artist</p>
-              <p className="mt-1 text-2xl font-black tracking-tighter text-[var(--marketing-text)]">
-                <>{naira(ADDON_PRICES_NAIRA.artist)}<span className="text-sm font-semibold"> /month</span></>
-              </p>
-              <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">One more artist on your team.</p>
-              <p className="mt-2 text-xs text-[var(--marketing-text-subtle)]">Manager and Pro</p>
-            </li>
-            </>)}
-            <li className="rounded-[1.25rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
-              <p className="text-sm font-semibold text-[var(--marketing-text)]">More AI credits</p>
-              <p className="mt-1 text-2xl font-black tracking-tighter text-[var(--marketing-text)]">
-                {currency === "USD"
-                  ? money(CREDIT_PACK_USD.priceUsd, "USD")
-                  : `from ${naira(Math.min(...Object.values(CREDIT_OVERAGE_NAIRA)))}`}
-              </p>
-              <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">
-                {currency === "USD"
-                  ? `For ${CREDIT_PACK_USD.credits} credits, on any plan.`
-                  : "Per credit past your plan's monthly credits, up to a cap you set."}
-              </p>
-              <p className="mt-2 text-xs text-[var(--marketing-text-subtle)]">Every plan</p>
-            </li>
-          </ul>
-        </div>
+        <PricingCompareTable group={group} currency={currency} />
       </div>
     </section>
   );

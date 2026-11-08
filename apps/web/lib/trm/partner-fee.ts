@@ -42,7 +42,9 @@ export type TrmBillingMode = 'trm_plan' | 'monthly_prorata' | 'annual_upfront';
 export type TrmPlan = 'single_artist' | 'label';
 // 'pro' since 2026-11-07 (#1112): Pro includes distribution on TRM Independent
 // Artist and Manager no longer does. 'manager' stays for rows written before.
-export type TrmLedgerPlan = 'manager' | 'pro' | 'label';
+// 'solo_plus' since 2026-11-08 (pricing v4): it includes distribution for its
+// one artist on TRM Independent Artist, the same as Pro.
+export type TrmLedgerPlan = 'manager' | 'solo_plus' | 'pro' | 'label';
 
 /** TRM's Naira prices per entitled team, kobo, when TRM_FEE_* is not set.
  *  Read from TRM's Paystack pay pages on 2026-10-26: Independent Artist
@@ -103,12 +105,15 @@ export function readTrmFeeConfig(env: Env = process.env): TrmFeeConfig {
     billingMode: (BILLING_MODES as readonly string[]).includes(mode) ? (mode as TrmBillingMode) : 'trm_plan',
     feeAnnualKobo: {
       manager: readKobo(env.TRM_FEE_MANAGER_ANNUAL_KOBO, DEFAULT_TRM_FEE_MANAGER_ANNUAL_KOBO),
+      // Solo Plus (2026-11-08) is TRM Independent Artist too.
+      solo_plus: readKobo(env.TRM_FEE_MANAGER_ANNUAL_KOBO, DEFAULT_TRM_FEE_MANAGER_ANNUAL_KOBO),
       // Pro is on the same TRM plan (Independent Artist), so the same fee vars.
       pro: readKobo(env.TRM_FEE_MANAGER_ANNUAL_KOBO, DEFAULT_TRM_FEE_MANAGER_ANNUAL_KOBO),
       label: readKobo(env.TRM_FEE_LABEL_ANNUAL_KOBO, DEFAULT_TRM_FEE_LABEL_ANNUAL_KOBO),
     },
     feeMonthlyKobo: {
       manager: readKobo(env.TRM_FEE_MANAGER_MONTHLY_KOBO, DEFAULT_TRM_FEE_MANAGER_MONTHLY_KOBO),
+      solo_plus: readKobo(env.TRM_FEE_MANAGER_MONTHLY_KOBO, DEFAULT_TRM_FEE_MANAGER_MONTHLY_KOBO),
       pro: readKobo(env.TRM_FEE_MANAGER_MONTHLY_KOBO, DEFAULT_TRM_FEE_MANAGER_MONTHLY_KOBO),
       label: readKobo(env.TRM_FEE_LABEL_MONTHLY_KOBO, DEFAULT_TRM_FEE_LABEL_MONTHLY_KOBO),
     },
@@ -120,7 +125,7 @@ export function readTrmFeeConfig(env: Env = process.env): TrmFeeConfig {
 
 /** Which TRM plan a tier maps to, or null when it is not in the ledger. */
 export function trmPlanFor(tier: string | null | undefined): TrmPlan | null {
-  if (tier === 'pro' || tier === 'manager') return 'single_artist';
+  if (tier === 'solo_plus' || tier === 'pro' || tier === 'manager') return 'single_artist';
   if (tier === 'label') return 'label';
   return null;
 }
@@ -369,7 +374,17 @@ export function trmLedgerCsv(rows: readonly TrmLedgerCsvRow[]): string {
       [
         row.team_name ?? row.workspace_id ?? '',
         row.charge_reference,
-        row.plan === 'pro' ? 'Pro' : row.plan === 'manager' ? 'Manager' : row.plan === 'label' ? 'Label' : row.plan,
+        // Display names since pricing v4 (2026-11-08): id 'pro' is "Pro Plus",
+        // 'manager' is "Pro".
+        row.plan === 'pro'
+          ? 'Pro Plus'
+          : row.plan === 'manager'
+            ? 'Pro'
+            : row.plan === 'solo_plus'
+              ? 'Solo Plus'
+              : row.plan === 'label'
+                ? 'Label'
+                : row.plan,
         TRM_PLAN_LABEL[row.trm_plan] ?? row.trm_plan,
         row.cost_basis === 'percent' ? 'Percent' : 'Fixed',
         row.entry_kind === 'adjustment' ? 'Extra release' : (BILLING_MODE_LABEL[row.billing_mode] ?? row.billing_mode),

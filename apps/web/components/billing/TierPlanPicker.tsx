@@ -9,7 +9,9 @@ import {
   getIntroPrice,
   getTier,
   getTierPrice,
+  TIER_GROUP_LABEL,
   tierFeatures,
+  tierGroupOf,
   type BillingInterval,
   type PricingCurrencyCode,
   type PricingTierId,
@@ -141,7 +143,7 @@ export function TierPlanPicker({
   const features = tierFeatures(selectedTier, currency);
   // "Manager includes everything in Solo, and:" / "Solo includes:".
   const lead =
-    selectedTier === 'solo'
+    features.heading === 'What you get:'
       ? `${selected.label} includes:`
       : `${selected.label} includes ${features.heading.charAt(0).toLowerCase()}${features.heading.slice(1)}`;
 
@@ -183,13 +185,24 @@ export function TierPlanPicker({
           })}
         </div>
       </div>
-      {tiers.map((tierId) => {
+      {tiers.map((tierId, index) => {
         const tier = getTier(tierId);
         const isActive = selectedTier === tierId;
         const { price, sub } = planPriceLines(tierId, selectedInterval, introMonthsLeft, currency);
+        // Pricing v4 (2026-11-08): plans come in two groups, "Just you" and
+        // "Your team", the same as the pricing page. A heading opens each group,
+        // only when the list holds plans from both.
+        const group = tierGroupOf(tierId);
+        const showsBothGroups = new Set(tiers.map(tierGroupOf)).size > 1;
+        const opensGroup = showsBothGroups && (index === 0 || tierGroupOf(tiers[index - 1]) !== group);
         return (
+          <div key={tierId} className="contents">
+          {opensGroup ? (
+            <p className={`text-xs font-semibold text-content-secondary ${index === 0 ? '' : 'mt-2'}`}>
+              {TIER_GROUP_LABEL[group]}
+            </p>
+          ) : null}
           <label
-            key={tierId}
             className={`flex min-h-11 cursor-pointer flex-wrap items-start gap-x-3 gap-y-1.5 rounded-lg border p-4 text-left transition-colors sm:flex-nowrap ${
               isActive
                 ? 'border-brand bg-brand/8'
@@ -226,6 +239,7 @@ export function TierPlanPicker({
               </span>
             ) : null}
           </label>
+          </div>
         );
       })}
 

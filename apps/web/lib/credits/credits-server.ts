@@ -295,7 +295,9 @@ export async function getCreditSnapshot(
   let balances = await readBalances(client, input.workspaceId);
   if (!balances) return null;
 
-  if (input.team.state === 'walled' && balances.trial > 0) {
+  // A trial that ended unpaid: walled before 2026-11-08, Free since. Either way
+  // the leftover trial credits go (Free has its own monthly 30).
+  if ((input.team.state === 'walled' || input.team.state === 'free') && balances.trial > 0) {
     const purchased = await hasEverPurchased(client, input);
     if (!purchased && (await expireTrialCredits(client, { ...input, credits: balances.trial }))) {
       balances = { ...balances, trial: 0, total: balances.allowance + balances.topup };

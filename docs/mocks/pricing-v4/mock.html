@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pricing v4 mock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f0e6; --side: #f0ebe1; --surface: #faf5ec; --brand: #14643a;
+    --ink: #1a1611; --ink2: #4b4740; --ink3: #6a665f; --line: #d9d2c4; --line2: #e6dfd2;
+    --brand-soft: #e3eee4; --soon: #8a5a12; --soon-soft: #f6ead4;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 'Space Grotesk', system-ui, sans-serif; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 16px 80px; }
+  .center { text-align: center; }
+  h1 { font: 600 42px/1.1 'Fraunces', serif; margin: 0 0 10px; }
+  h2 { font: 600 26px/1.2 'Fraunces', serif; margin: 56px 0 6px; }
+  .lead { color: var(--ink2); margin: 0 auto 26px; max-width: 560px; }
+  .seg { display: inline-flex; background: var(--side); border: 1px solid var(--line); border-radius: 999px; padding: 4px; gap: 4px; }
+  .seg button { all: unset; cursor: pointer; padding: 9px 20px; border-radius: 999px; font-size: 15px; color: var(--ink2); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+  .seg.small button { padding: 6px 14px; font-size: 13px; }
+  .seg.small button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .seg em { font-style: normal; color: var(--brand); font-size: 12px; margin-left: 4px; }
+  .seg.small button[aria-pressed="true"] em { color: var(--brand); }
+  .controls { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-bottom: 28px; }
+  .hint { color: var(--ink3); font-size: 14px; margin: -4px 0 0; }
+  .cards { display: grid; gap: 14px; grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 860px) { .cards { grid-template-columns: 1fr; max-width: 440px; margin: 0 auto; } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 22px; display: flex; flex-direction: column; }
+  .card.pick { border: 2px solid var(--brand); }
+  .badge { align-self: flex-start; background: var(--brand); color: #fff; font-size: 12px; border-radius: 999px; padding: 2px 10px; margin-bottom: 10px; }
+  .name { font-weight: 600; font-size: 19px; }
+  .for { color: var(--ink2); font-size: 14px; min-height: 42px; }
+  .price { font: 600 34px/1 'Fraunces', serif; margin: 14px 0 4px; }
+  .price small { font: 400 14px 'Space Grotesk', sans-serif; color: var(--ink3); }
+  .sub { color: var(--ink3); font-size: 13px; margin-bottom: 16px; min-height: 20px; }
+  .btn { display: block; text-align: center; border-radius: 999px; padding: 11px; font-weight: 500; border: 1px solid var(--ink); color: var(--ink); text-decoration: none; margin-bottom: 18px; }
+  .pick .btn { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .group { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink3); margin: 6px 0 4px; }
+  ul { list-style: none; padding: 0; margin: 0 0 12px; }
+  li { padding: 6px 0 6px 22px; position: relative; font-size: 14px; color: var(--ink2); border-top: 1px solid var(--line2); }
+  li::before { content: ""; position: absolute; left: 2px; top: 13px; width: 10px; height: 6px; border-left: 2px solid var(--brand); border-bottom: 2px solid var(--brand); transform: rotate(-45deg); }
+  li.no { color: var(--ink3); }
+  li.no::before { border: none; width: 9px; height: 2px; background: var(--ink3); top: 16px; transform: none; }
+  li b { color: var(--ink); font-weight: 600; }
+  .soon { display: inline-block; font-size: 11px; color: var(--soon); background: var(--soon-soft); border-radius: 999px; padding: 0 7px; margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
+  .tablewrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+  table { width: 100%; border-collapse: collapse; min-width: 640px; font-size: 14px; }
+  th, td { text-align: left; padding: 11px 14px; border-top: 1px solid var(--line2); vertical-align: top; }
+  thead th { border-top: none; font-weight: 600; background: var(--side); }
+  thead th:first-child { width: 34%; }
+  tbody th { font-weight: 400; color: var(--ink2); }
+  tr.sec td { background: var(--side); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink3); }
+  .key { color: var(--ink3); font-size: 13px; margin-top: 10px; }
+  .note { background: var(--surface); border: 1px dashed var(--line); border-radius: 12px; padding: 14px 16px; color: var(--ink2); font-size: 14px; margin-top: 40px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="center">
+    <h1>Plans for the way you work</h1>
+    <p class="lead">Every plan writes your rollout plan for you. Pick the one that fits who you are.</p>
+  </div>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Who is this for">
+      <button type="button" data-seg="you" aria-pressed="true">Just you</button>
+      <button type="button" data-seg="team" aria-pressed="false">Your team</button>
+    </div>
+    <p class="hint" id="seg-hint">For an artist running their own music.</p>
+    <div class="seg small" role="group" aria-label="Billing">
+      <button type="button" data-bill="month" aria-pressed="true">Monthly</button>
+      <button type="button" data-bill="year" aria-pressed="false">Yearly <em>2 months free</em></button>
+    </div>
+  </div>
+
+  <!-- JUST YOU -->
+  <div class="cards" data-panel="you">
+    <div class="card">
+      <div class="name">Free</div>
+      <div class="for">Try Urganize on your next release.</div>
+      <div class="price" data-m="0" data-y="0">₦0</div>
+      <div class="sub">Free for as long as you like</div>
+      <a class="btn" href="#">Choose Free</a>
+      <ul>
+        <li>1 rollout at a time</li>
+        <li>Your rollout plan, written for you</li>
+        <li><b>30</b> AI credits a month</li>
+        <li>A weekly brief from your Chap<span class="soon">Soon</span></li>
+        <li>2 curator pitches a month</li>
+        <li>A basic press kit</li>
+        <li>Send to stores from your own TRM account</li>
+        <li class="no">No shows or DJ packs</li>
+      </ul>
+    </div>
+
+    <div class="card pick">
+      <span class="badge">Most artists</span>
+      <div class="name">Solo</div>
+      <div class="for">For an artist with a release coming.</div>
+      <div class="price" data-m="5000" data-y="50000">₦5,000 <small>/month</small></div>
+      <div class="sub" data-sub></div>
+      <a class="btn" href="#">Choose Solo</a>
+      <div class="group">Everything in Free, plus</div>
+      <ul>
+        <li>Add <b>2</b> people to help you</li>
+        <li><b>150</b> AI credits a month</li>
+        <li>A brief from your Chap every morning<span class="soon">Soon</span></li>
+        <li>WhatsApp reminders when something is due<span class="soon">Soon</span></li>
+        <li><b>2</b> routines, like a Friday update<span class="soon">Soon</span></li>
+        <li><b>5</b> research lookups a month<span class="soon">Soon</span></li>
+        <li><b>10</b> curator pitches a month</li>
+        <li>Shows, setlists and DJ packs</li>
+        <li>Send singles to stores for ₦2,000 each</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="name">Solo Plus</div>
+      <div class="for">For an artist who releases often.</div>
+      <div class="price" data-m="12000" data-y="120000">₦12,000 <small>/month</small></div>
+      <div class="sub" data-sub></div>
+      <a class="btn" href="#">Choose Solo Plus</a>
+      <div class="group">Everything in Solo, plus</div>
+      <ul>
+        <li><b>3</b> rollouts at a time</li>
+        <li><b>400</b> AI credits a month</li>
+        <li><b>5</b> routines<span class="soon">Soon</span></li>
+        <li><b>20</b> research lookups a month<span class="soon">Soon</span></li>
+        <li><b>30</b> curator pitches a month</li>
+        <li>UrgAns writes your press kit</li>
+        <li><b>Singles and EPs to stores, included</b></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- YOUR TEAM -->
+  <div class="cards" data-panel="team" hidden>
+    <div class="card pick">
+      <span class="badge">Most managers</span>
+      <div class="name">Pro</div>
+      <div class="for">For a manager with a few artists.</div>
+      <div class="price" data-m="15000" data-y="150000">₦15,000 <small>/month</small></div>
+      <div class="sub" data-sub></div>
+      <a class="btn" href="#">Choose Pro</a>
+      <ul>
+        <li><b>3</b> artists, <b>6</b> people</li>
+        <li><b>3</b> rollouts at a time</li>
+        <li><b>450</b> AI credits a month</li>
+        <li>Your Chap chases your team on WhatsApp<span class="soon">Soon</span></li>
+        <li>A brief from your Chap every morning<span class="soon">Soon</span></li>
+        <li><b>10</b> routines<span class="soon">Soon</span></li>
+        <li><b>20</b> research lookups a month<span class="soon">Soon</span></li>
+        <li><b>30</b> curator pitches a month</li>
+        <li>A press kit for each artist</li>
+        <li>Shows, setlists and DJ packs</li>
+        <li>Send singles to stores for ₦2,000 each</li>
+        <li>Help on WhatsApp</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="name">Pro Plus</div>
+      <div class="for">For a manager running a roster.</div>
+      <div class="price" data-m="40000" data-y="400000">₦40,000 <small>/month</small></div>
+      <div class="sub" data-sub></div>
+      <a class="btn" href="#">Choose Pro Plus</a>
+      <div class="group">Everything in Pro, plus</div>
+      <ul>
+        <li><b>5</b> artists, <b>10</b> people</li>
+        <li><b>8</b> rollouts at a time</li>
+        <li><b>900</b> AI credits a month</li>
+        <li><b>Unlimited</b> routines<span class="soon">Soon</span></li>
+        <li><b>50</b> research lookups a month<span class="soon">Soon</span></li>
+        <li><b>100</b> curator pitches a month</li>
+        <li>Your Chap talks to other teams' Chaps<span class="soon">Soon</span></li>
+        <li>The best AI model when a job needs it</li>
+        <li><b>Singles and EPs to stores for 1 artist, included</b></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="name">Label</div>
+      <div class="for">For a label with a full roster.</div>
+      <div class="price" data-fixed>Custom <small>from ₦100,000/month</small></div>
+      <div class="sub">Priced with you</div>
+      <a class="btn" href="#">Talk to us</a>
+      <div class="group">Everything in Pro Plus, plus</div>
+      <ul>
+        <li><b>Unlimited</b> artists, people and rollouts</li>
+        <li><b>2,000</b> AI credits a month</li>
+        <li>A morning brief for each artist<span class="soon">Soon</span></li>
+        <li><b>150</b> research lookups a month<span class="soon">Soon</span></li>
+        <li><b>Unlimited</b> curator pitches</li>
+        <li>The best AI model, first in line</li>
+        <li><b>Singles, EPs and albums for 5 artists, included</b></li>
+        <li>A person who sets it up with you</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="key center">Need more? Add AI credits, a person (₦3,000/month) or an artist (₦5,000/month) on any paid plan, and set a spending limit.</p>
+
+  <h2>Compare plans</h2>
+  <p class="hint" style="margin:0 0 14px">Showing the plans for <span id="cmp-label">just you</span>.</p>
+
+  <div class="tablewrap" data-panel="you">
+    <table>
+      <thead><tr><th></th><th>Free</th><th>Solo</th><th>Solo Plus</th></tr></thead>
+      <tbody>
+        <tr class="sec"><td colspan="4">Size</td></tr>
+        <tr><th>Artists</th><td>1</td><td>1</td><td>1</td></tr>
+        <tr><th>People</th><td>1</td><td>3</td><td>3</td></tr>
+        <tr><th>Rollouts at once</th><td>1</td><td>1</td><td>3</td></tr>
+        <tr class="sec"><td colspan="4">Your Chap</td></tr>
+        <tr><th>AI credits a month</th><td>30</td><td>150</td><td>400</td></tr>
+        <tr><th>Brief <span class="soon">Soon</span></th><td>Weekly</td><td>Every morning</td><td>Every morning</td></tr>
+        <tr><th>WhatsApp reminders <span class="soon">Soon</span></th><td>No</td><td>To you</td><td>To you</td></tr>
+        <tr><th>Routines <span class="soon">Soon</span></th><td>None</td><td>2</td><td>5</td></tr>
+        <tr><th>Research lookups a month <span class="soon">Soon</span></th><td>None</td><td>5</td><td>20</td></tr>
+        <tr><th>Keep going past your credits</th><td>No</td><td>Yes, with a limit</td><td>Yes, with a limit</td></tr>
+        <tr class="sec"><td colspan="4">Your release</td></tr>
+        <tr><th>Curator pitches a month</th><td>2</td><td>10</td><td>30</td></tr>
+        <tr><th>Press kit</th><td>Basic</td><td>Yes</td><td>Written for you</td></tr>
+        <tr><th>Shows, setlists, DJ packs</th><td>No</td><td>Yes</td><td>Yes</td></tr>
+        <tr><th>Send to stores</th><td>Own TRM account</td><td>₦2,000 a single</td><td>Singles and EPs included</td></tr>
+        <tr><th>Help</th><td>Email</td><td>Email</td><td>Email</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="tablewrap" data-panel="team" hidden>
+    <table>
+      <thead><tr><th></th><th>Pro</th><th>Pro Plus</th><th>Label</th></tr></thead>
+      <tbody>
+        <tr class="sec"><td colspan="4">Size</td></tr>
+        <tr><th>Artists</th><td>3</td><td>5</td><td>Unlimited</td></tr>
+        <tr><th>People</th><td>6</td><td>10</td><td>Unlimited</td></tr>
+        <tr><th>Rollouts at once</th><td>3</td><td>8</td><td>Unlimited</td></tr>
+        <tr class="sec"><td colspan="4">Your Chap</td></tr>
+        <tr><th>AI credits a month</th><td>450</td><td>900</td><td>2,000</td></tr>
+        <tr><th>Brief <span class="soon">Soon</span></th><td>Every morning</td><td>Every morning</td><td>Every morning, per artist</td></tr>
+        <tr><th>Chases your team on WhatsApp <span class="soon">Soon</span></th><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+        <tr><th>Routines <span class="soon">Soon</span></th><td>10</td><td>Unlimited</td><td>Unlimited</td></tr>
+        <tr><th>Research lookups a month <span class="soon">Soon</span></th><td>20</td><td>50</td><td>150</td></tr>
+        <tr><th>Talks to other teams' Chaps <span class="soon">Soon</span></th><td>No</td><td>Yes</td><td>Yes</td></tr>
+        <tr><th>AI model</th><td>Standard</td><td>Best when needed</td><td>Best, first in line</td></tr>
+        <tr><th>Keep going past your credits</th><td>Yes, with a limit</td><td>Yes, with a limit</td><td>Yes, with a limit</td></tr>
+        <tr class="sec"><td colspan="4">Your releases</td></tr>
+        <tr><th>Curator pitches a month</th><td>30</td><td>100</td><td>Unlimited</td></tr>
+        <tr><th>Press kits</th><td>One per artist</td><td>One per artist</td><td>One per artist</td></tr>
+        <tr><th>Shows, setlists, DJ packs</th><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+        <tr><th>Send to stores</th><td>₦2,000 a single</td><td>Singles and EPs, 1 artist</td><td>Singles, EPs, albums, 5 artists</td></tr>
+        <tr><th>Help</th><td>WhatsApp</td><td>WhatsApp</td><td>A person who sets it up with you</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note"><b>Mock note, not page copy.</b> "Soon" rows are Chaps, not built yet. On the real page each one stays hidden until it works. The ₦15,000 plan keeps the code id <code>manager</code> and the ₦40,000 plan keeps <code>pro</code>, so payments do not move.</div>
+</div>
+
+<script>
+  const hints = { you: 'For an artist running their own music.', team: "For a manager or label running other people's music." };
+  let seg = 'you', bill = 'month';
+  const naira = n => '₦' + n.toLocaleString('en');
+  function render() {
+    document.querySelectorAll('[data-seg]').forEach(b => b.setAttribute('aria-pressed', b.dataset.seg === seg));
+    document.querySelectorAll('[data-bill]').forEach(b => b.setAttribute('aria-pressed', b.dataset.bill === bill));
+    document.querySelectorAll('[data-panel]').forEach(p => p.hidden = p.dataset.panel !== seg);
+    document.getElementById('seg-hint').textContent = hints[seg];
+    document.getElementById('cmp-label').textContent = seg === 'you' ? 'just you' : 'your team';
+    document.querySelectorAll('.price[data-m]').forEach(el => {
+      const m = +el.dataset.m, y = +el.dataset.y;
+      if (m === 0) return;
+      el.innerHTML = bill === 'month' ? naira(m) + ' <small>/month</small>' : naira(y) + ' <small>/year</small>';
+      const sub = el.parentElement.querySelector('[data-sub]');
+      if (sub) sub.textContent = bill === 'month' ? 'Or ' + naira(y) + ' a year, 2 months free' : 'Works out to ' + naira(Math.round(y / 12)) + ' a month';
+    });
+  }
+  document.querySelectorAll('[data-seg]').forEach(b => b.onclick = () => { seg = b.dataset.seg; render(); });
+  document.querySelectorAll('[data-bill]').forEach(b => b.onclick = () => { bill = b.dataset.bill; render(); });
+  render();
+</script>
+</body>
+</html>

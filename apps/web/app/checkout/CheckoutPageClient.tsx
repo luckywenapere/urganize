@@ -81,7 +81,7 @@ type Options = {
   current: { plan: CheckoutPlan; period: BillingInterval; card: boolean } | null;
 };
 
-const PLAN_RANK: Record<CheckoutPlan, number> = { solo: 0, manager: 1, pro: 2, label: 3 };
+const PLAN_RANK: Record<CheckoutPlan, number> = { solo: 0, solo_plus: 1, manager: 2, pro: 3, label: 4 };
 
 type TransferInvoice = {
   id: string;

@@ -23,7 +23,8 @@ export const metadata: Metadata = buildPageMetadata({
   // The root template adds " | Urganize".
   title: "Pricing for artist managers and their teams",
   description:
-    "From idea to execution, at one price for your whole team, from a single manager to a full roster. What each plan includes and how to join the waitlist.",
+    // Pricing v4 (2026-11-08): six plans in two groups, Free among them.
+    "From idea to execution, with a Free plan and paid plans for an artist on their own or a team with a roster. See what each plan includes.",
   path: "/pricing",
   shareCard: "pricing",
 });

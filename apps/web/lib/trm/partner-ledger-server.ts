@@ -210,7 +210,7 @@ export async function recordTrmFeeForSend(
  */
 export async function recordTrmExtraRelease(
   admin: Admin,
-  input: { workspaceId: string; reference: string; tier: 'solo' | 'manager' | 'pro' | 'label'; paidKobo: number; owedKobo: number; paidAt: Date }
+  input: { workspaceId: string; reference: string; tier: 'solo' | 'solo_plus' | 'manager' | 'pro' | 'label'; paidKobo: number; owedKobo: number; paidAt: Date }
 ): Promise<'recorded' | 'error'> {
   const reference = `extra:${input.reference}`;
   const end = new Date(input.paidAt);

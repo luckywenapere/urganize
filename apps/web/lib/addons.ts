@@ -141,11 +141,13 @@ export function addonRefusal(input: {
   if (!input.paying || !input.tier) return 'Add-ons need a paid plan.';
   if (canBuyAddon(input.tier, input.kind)) return null;
   if (input.kind === 'distribution') {
-    return input.tier === 'pro' || input.tier === 'label' || input.tier === 'enterprise'
+    return input.tier === 'solo_plus' || input.tier === 'pro' || input.tier === 'label' || input.tier === 'enterprise'
       ? 'Your plan already includes distribution.'
-      : 'Distribution add-ons are for Solo and Manager.';
+      : 'Distribution add-ons are for Solo and Pro.';
   }
-  return input.tier === 'solo' ? 'More people and artists come with Manager.' : 'Talk to us to add more to your plan.';
+  return input.tier === 'solo' || input.tier === 'solo_plus'
+    ? 'More people and artists come with Pro.'
+    : 'Talk to us to add more to your plan.';
 }
 
 export function addonPriceKobo(request: AddonRequest): number {

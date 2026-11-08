@@ -40,7 +40,7 @@ import {
  * reaches self-serve checkout or the renewal path. (It was removed 2026-09-09
  * and came back 2026-10-02 the same way.)
  */
-export type RecurringPlanId = BillingPlanId | 'manager' | 'solo' | 'pro';
+export type RecurringPlanId = BillingPlanId | 'manager' | 'solo' | 'solo_plus' | 'pro';
 
 /** The tiers a customer can actually buy without talking to us.
  *
@@ -64,13 +64,15 @@ export type RecurringPlanId = BillingPlanId | 'manager' | 'solo' | 'pro';
  * ids renews regardless, because `isRecurringPlan` below is a separate list
  * answering a separate question — whether a tier can be BOUGHT today and
  * whether a live subscription still EXTENDS are meant to be able to disagree. */
-export type SelfServeTierId = Extract<PricingTierId, 'manager' | 'solo' | 'pro' | 'label'>;
+// 'solo_plus' joined 2026-11-08 (pricing v4). 'free' is NOT here and never may
+// be: nothing is bought on it, so nothing may resolve a Paystack Plan for it.
+export type SelfServeTierId = Extract<PricingTierId, 'manager' | 'solo' | 'solo_plus' | 'pro' | 'label'>;
 
 export function isSelfServeTier(value: unknown): value is SelfServeTierId {
   // A contact-us tier (Label since 2026-10-26) is not bought here, whatever
   // its id. Its existing subscribers still renew: see isRecurringPlan.
   return (
-    (value === 'manager' || value === 'solo' || value === 'pro' || value === 'label') &&
+    (value === 'manager' || value === 'solo' || value === 'solo_plus' || value === 'pro' || value === 'label') &&
     !PRICING_TIERS[value].contactSales
   );
 }
@@ -208,6 +210,14 @@ const TIER_PLAN_CODE_ENV_VAR: Record<SelfServeTierId, Record<BillingInterval, st
     monthly: 'PAYSTACK_PLAN_SOLO_V3_PER_MONTH_NGN',
     semiannual: 'PAYSTACK_PLAN_SOLO_PER_6_MONTHS_NGN',
     annual: 'PAYSTACK_PLAN_SOLO_V3_PER_YEAR_NGN',
+  },
+  // Solo Plus (pricing v4, 2026-11-08): ₦12,000 a month, ₦120,000 a year. No
+  // 6-month Plan exists; the var below is named so the map stays total and is
+  // never set.
+  solo_plus: {
+    monthly: 'PAYSTACK_PLAN_SOLO_PLUS_V3_PER_MONTH_NGN',
+    semiannual: 'PAYSTACK_PLAN_SOLO_PLUS_V3_PER_6_MONTHS_NGN',
+    annual: 'PAYSTACK_PLAN_SOLO_PLUS_V3_PER_YEAR_NGN',
   },
   manager: {
     monthly: 'PAYSTACK_PLAN_MANAGER_V3_PER_MONTH_NGN',
@@ -570,6 +580,7 @@ export const RECURRING_PLAN_IDS: readonly RecurringPlanId[] = [
   'label',
   'manager',
   'solo',
+  'solo_plus',
   'pro',
 ] as const;
 
@@ -610,6 +621,7 @@ export function isRecurringPlan(plan: string): plan is RecurringPlanId {
     plan === 'label' ||
     plan === 'manager' ||
     plan === 'solo' ||
+    plan === 'solo_plus' ||
     plan === 'pro'
   );
 }
