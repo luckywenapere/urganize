@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.260.0",
+    title: "Paste an artist's link",
+    tag: "Rollouts",
+    date: "November 8, 2026",
+    highlights: [
+      "Can't find your artist when you search? Paste the link to their artist page on Apple Music or Deezer instead.",
+      "It works when you add an artist and when Home asks you to link one.",
+    ],
+  },
+  {
     version: "1.259.0",
     title: "Change a release date",
     tag: "Rollouts",

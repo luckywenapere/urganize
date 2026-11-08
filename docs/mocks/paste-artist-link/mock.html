@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Paste their link</title>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme, same as docs/mocks/artist-streaming-link. */
+  :root { --bg:#f5f0e6; --card:#faf5ec; --hover:#ebe6dc; --tile:#e3ddd0; --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10); --err:#b3261e; --board:#d9d5cc; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--board); font:14px/1.5 'Instrument Sans',system-ui,sans-serif; color:var(--text); padding:32px 16px 64px; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; }
+  p,h1,h2,h3 { margin:0; font-weight:400; }
+  .wrap { max-width:1240px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif',serif; font-size:28px; margin-bottom:6px; }
+  .intro p { color:#4f4a42; max-width:800px; }
+  .intro p + p { margin-top:8px; }
+  .intro b { color:var(--text); }
+  .key { display:inline-block; outline:2px dashed var(--brand); outline-offset:2px; border-radius:6px; padding:0 4px; color:var(--brand); font-weight:600; }
+  .part { margin-top:44px; }
+  .part > h2 { font-family:'Young Serif',serif; font-size:22px; }
+  .part > p { color:#4f4a42; max-width:800px; margin-top:4px; }
+  .row { display:flex; gap:28px; flex-wrap:wrap; margin-top:20px; align-items:flex-start; }
+  .opt { flex:1 1 340px; max-width:380px; min-width:0; }
+  .opt > h3 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+  .opt > .why { color:#4f4a42; margin:4px 0 12px; min-height:63px; }
+  .phone { background:var(--bg); border-radius:34px; padding:20px 16px 24px; box-shadow:0 12px 32px rgba(26,22,17,.12); border:8px solid #1a1611; height:700px; position:relative; overflow:hidden; }
+  .dim { position:absolute; inset:0; background:rgba(26,22,17,.35); }
+  .sheet { position:absolute; left:0; right:0; bottom:0; background:var(--card); border-radius:22px 22px 0 0; padding:18px 18px 22px; }
+  .grab { width:40px; height:4px; border-radius:4px; background:var(--line2); margin:0 auto 14px; }
+  .serif { font-family:'Young Serif',serif; }
+  .mono { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ter); }
+  .sec { color:var(--sec); }
+  .ter { color:var(--ter); }
+  .btn { display:flex; align-items:center; justify-content:center; height:48px; border-radius:99px; background:var(--brand); color:#f5f0e6; font-weight:600; font-size:15px; }
+  .btn.sm { height:44px; font-size:14px; padding:0 18px; }
+  .ghost { display:flex; align-items:center; justify-content:center; height:44px; padding:0 18px; border-radius:99px; border:1px solid var(--line2); font-weight:600; }
+  .quiet { display:flex; align-items:center; justify-content:center; height:40px; color:var(--sec); font-weight:500; }
+  .field { height:46px; border-radius:12px; border:1px solid rgba(26,22,17,.35); background:var(--bg); display:flex; align-items:center; padding:0 14px; font-size:16px; min-width:0; overflow:hidden; white-space:nowrap; }
+  .field.focus { border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft); }
+  .field .ph { color:var(--ter); }
+  .field .caret { display:inline-block; width:1.5px; height:20px; background:var(--text); margin-left:1px; vertical-align:middle; }
+  .field.bad { border-color:var(--err); }
+  .searchrow { display:flex; gap:8px; }
+  .sbtn { width:46px; height:46px; border-radius:12px; border:1px solid rgba(26,22,17,.35); display:grid; place-items:center; flex:none; }
+  .face { border-radius:50%; flex:none; display:grid; place-items:center; overflow:hidden; background:var(--tile); }
+  .face svg, .cv svg { width:100%; height:100%; display:block; }
+  .res { display:flex; align-items:center; gap:12px; padding:8px; border-radius:14px; }
+  .res + .res { margin-top:2px; }
+  .res b { display:block; font-weight:600; font-size:15px; }
+  .res span.s { display:block; font-size:13px; color:var(--sec); }
+  .new { outline:2px dashed var(--brand); outline-offset:3px; border-radius:10px; }
+  .link { color:var(--brand); font-weight:600; }
+  .err { color:var(--err); font-size:14px; }
+  .spin { width:16px; height:16px; border-radius:50%; border:2px solid var(--line2); border-top-color:var(--brand); flex:none; }
+  .foot { display:flex; align-items:center; justify-content:space-between; gap:10px; border-top:1px solid var(--line); margin-top:14px; padding-top:14px; font-size:13px; }
+  .card { background:var(--bg); border:1px solid var(--line); border-radius:20px; }
+  .cv { flex:none; border-radius:8px; overflow:hidden; background:var(--tile); }
+  .strip { display:flex; gap:8px; margin-top:16px; }
+  .strip .cv, .strip .more { width:58px; height:58px; }
+  .strip .more { border-radius:8px; background:var(--hover); display:grid; place-items:center; font-weight:600; color:var(--sec); font-size:13px; }
+  .facts { margin-top:14px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .fact { background:var(--hover); border-radius:12px; padding:8px 10px; }
+  .fact b { display:block; font-size:16px; line-height:22px; }
+  .fact span { font-size:12px; color:var(--sec); }
+  .dots { display:flex; gap:5px; justify-content:center; margin-top:12px; }
+  .dots i { width:6px; height:6px; border-radius:50%; background:var(--line2); }
+  .dots i.on { background:var(--brand); }
+  .note { margin-top:44px; background:#efe9dd; border-radius:16px; padding:18px 20px; color:#3d3933; max-width:940px; }
+  .note h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text); margin-top:14px; }
+  .note h2:first-child { margin-top:0; }
+  .note b { color:var(--text); }
+  .note ul { margin:6px 0 0; padding-left:18px; }
+  .note li + li { margin-top:4px; }
+  table { border-collapse:collapse; margin-top:8px; width:100%; }
+  td { padding:7px 10px; border-top:1px solid var(--line2); vertical-align:top; }
+  td:first-child { width:34%; color:var(--text); font-weight:600; }
+  @media (max-width:420px) { .phone { height:auto; min-height:640px; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="dorian" viewBox="0 0 100 100"><rect width="100" height="100" fill="#cfc6b6"/><circle cx="50" cy="41" r="17" fill="#3a2a22"/><path d="M16 100c4-22 18-33 34-33s30 11 34 33z" fill="#1d1d1f"/></symbol>
+  <symbol id="other1" viewBox="0 0 100 100"><rect width="100" height="100" fill="#b9c6d6"/><circle cx="50" cy="41" r="17" fill="#d9b48f"/><path d="M16 100c4-22 18-33 34-33s30 11 34 33z" fill="#5a3a7a"/></symbol>
+  <symbol id="other2" viewBox="0 0 100 100"><rect width="100" height="100" fill="#c9d6b9"/><circle cx="50" cy="41" r="17" fill="#e2c3a0"/><path d="M16 100c4-22 18-33 34-33s30 11 34 33z" fill="#2c4029"/></symbol>
+  <symbol id="other3" viewBox="0 0 100 100"><rect width="100" height="100" fill="#e0c9c0"/><circle cx="50" cy="41" r="17" fill="#6b4a32"/><path d="M16 100c4-22 18-33 34-33s30 11 34 33z" fill="#8a3b2b"/></symbol>
+  <symbol id="cov1" viewBox="0 0 100 100"><rect width="100" height="100" fill="#26344d"/><circle cx="68" cy="34" r="16" fill="#e8b24a"/><rect y="70" width="100" height="30" fill="#18233a"/></symbol>
+  <symbol id="cov2" viewBox="0 0 100 100"><rect width="100" height="100" fill="#8a3b2b"/><circle cx="50" cy="50" r="26" fill="none" stroke="#f0d9c4" stroke-width="5"/><circle cx="50" cy="50" r="6" fill="#f0d9c4"/></symbol>
+  <symbol id="cov3" viewBox="0 0 100 100"><rect width="100" height="100" fill="#3f5a3a"/><path d="M0 72 30 44l22 20 18-14 30 26v24H0z" fill="#2c4029"/></symbol>
+  <symbol id="cov4" viewBox="0 0 100 100"><rect width="100" height="100" fill="#5b4a7a"/><rect x="20" y="20" width="60" height="60" fill="none" stroke="#e6dcf2" stroke-width="5"/></symbol>
+  <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="#1a1611" stroke-width="2"/><path d="m20 20-4-4" stroke="#1a1611" stroke-width="2" stroke-linecap="round"/></symbol>
+</svg>
+
+<div class="wrap">
+  <div class="intro">
+    <h1>Paste their link</h1>
+    <p>Issue #1129. When the search can't find the right artist, you can paste the link to their artist page instead. If we can read the link, you go straight to the screen where you check it's them.</p>
+    <p>It works in both places that search for an artist: <b>Add an artist</b> (and "Bring in older songs" from an artist page), and the <b>Home popup</b> that asks "Is this Dorian on streaming?". Everything new has a <span class="key">dashed green outline</span>. Names, faces and covers are sample data.</p>
+  </div>
+
+  <!-- ───────────── Part 1: Add an artist ───────────── -->
+  <div class="part">
+    <h2>1. Add an artist</h2>
+    <p>Shown on a phone. On a computer it is the same box in the middle of the screen.</p>
+  </div>
+  <div class="row">
+    <!-- 1a -->
+    <div class="opt">
+      <h3>1a · The right one isn't there</h3>
+      <p class="why">The box now says it takes a link too. Under the results, one line: "Not them? Paste their link."</p>
+      <div class="phone">
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <h3 class="serif" style="font-size:22px;">Add an artist</h3>
+          <p class="sec" style="margin-top:4px;">Find them on streaming to bring in what they released before Urganize.</p>
+          <div class="field focus new" style="margin-top:14px;">Dorian<span class="caret"></span></div>
+          <p class="ter new" style="font-size:12px;margin-top:8px;display:inline-block;padding:0 4px;">Hint when empty: <i>Artist name or link</i></p>
+          <div style="margin-top:8px;">
+            <div class="res"><span class="face" style="width:44px;height:44px;"><svg><use href="#other1"/></svg></span><div style="min-width:0;"><b>Dorian Electra</b><span class="s">Electronic · 310K fans</span></div></div>
+            <div class="res"><span class="face" style="width:44px;height:44px;"><svg><use href="#other2"/></svg></span><div style="min-width:0;"><b>Dorian Concept</b><span class="s">Jazz · 48K fans</span></div></div>
+            <div class="res"><span class="face" style="width:44px;height:44px;"><svg><use href="#other3"/></svg></span><div style="min-width:0;"><b>Dorian Rossini</b><span class="s">Pop · 9K fans</span></div></div>
+          </div>
+          <p class="new" style="margin-top:12px;padding:6px 8px;font-size:14px;">Not them? <span class="link">Paste their link</span></p>
+          <div class="foot">
+            <span class="sec">Not on streaming yet? <span class="link">Add &ldquo;Dorian&rdquo; by name</span></span>
+            <span class="ghost" style="height:40px;font-size:13px;">Cancel</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1b -->
+    <div class="opt">
+      <h3>1b · They paste the link</h3>
+      <p class="why">"Paste their link" empties the box and says where to get the link. Paste, and we read it at once. "Add by name" hides while the box holds a link.</p>
+      <div class="phone">
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <h3 class="serif" style="font-size:22px;">Add an artist</h3>
+          <p class="sec" style="margin-top:4px;">Find them on streaming to bring in what they released before Urganize.</p>
+          <div class="field focus new" style="margin-top:14px;">music.apple.com/ng/artist/dorian/154…</div>
+          <p class="sec new" style="font-size:13px;margin-top:10px;padding:2px 6px;">Open their artist page on Apple Music or Deezer, tap Share, then Copy link.</p>
+          <p class="sec" style="display:flex;align-items:center;gap:8px;margin-top:16px;"><span class="spin"></span>Reading your link…</p>
+          <p class="link new" style="font-size:13px;margin-top:16px;display:inline-block;padding:2px 6px;">Search by name instead</p>
+          <div class="foot">
+            <span></span>
+            <span class="ghost" style="height:40px;font-size:13px;">Cancel</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1c -->
+    <div class="opt">
+      <h3>1c · Same check screen as today</h3>
+      <p class="why">The link opens the screen you already know. You see the face and the music before anything is added. Back goes to the search.</p>
+      <div class="phone">
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <div style="display:flex;align-items:center;gap:14px;">
+            <span class="face" style="width:72px;height:72px;"><svg><use href="#dorian"/></svg></span>
+            <div style="min-width:0;"><h3 class="serif" style="font-size:24px;">Dorian</h3><p class="sec">Afrobeats · 12.4K fans</p></div>
+          </div>
+          <div class="strip"><span class="cv"><svg><use href="#cov1"/></svg></span><span class="cv"><svg><use href="#cov2"/></svg></span><span class="cv"><svg><use href="#cov3"/></svg></span><span class="cv"><svg><use href="#cov4"/></svg></span><span class="more">+10</span></div>
+          <div class="facts"><div class="fact"><b>14</b><span>releases</span></div><div class="fact"><b>Aug 2026</b><span>latest</span></div><div class="fact"><b>2019</b><span>first</span></div></div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
+            <span class="ghost">Back</span><span class="btn sm">Add Dorian and 14 releases</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1d -->
+    <div class="opt">
+      <h3>1d · A link we can't read</h3>
+      <p class="why">We say which links work. The box stays as it is so they can fix it. The other messages are listed at the end.</p>
+      <div class="phone">
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <h3 class="serif" style="font-size:22px;">Add an artist</h3>
+          <p class="sec" style="margin-top:4px;">Find them on streaming to bring in what they released before Urganize.</p>
+          <div class="field bad" style="margin-top:14px;">audiomack.com/dorian</div>
+          <p class="err new" role="alert" style="margin-top:10px;padding:2px 6px;">We can't read Audiomack links. Paste their Apple Music or Deezer link.</p>
+          <p class="link" style="font-size:13px;margin-top:16px;display:inline-block;padding:2px 6px;">Search by name instead</p>
+          <div class="foot">
+            <span></span>
+            <span class="ghost" style="height:40px;font-size:13px;">Cancel</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────────── Part 2: the Home popup ───────────── -->
+  <div class="part">
+    <h2>2. The Home popup</h2>
+    <p>Same idea in "Find Dorian on streaming". Today a wrong guess or no match leaves you with only "Not on streaming yet" or "Not now".</p>
+  </div>
+  <div class="row">
+    <!-- 2a -->
+    <div class="opt">
+      <h3>2a · The search can't find them</h3>
+      <p class="why">The same line under the results. With no results at all it reads: "No one by that name on Deezer or Apple Music. Paste their link."</p>
+      <div class="phone">
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <p class="mono">Artist 1 of 4</p>
+          <h3 class="serif" style="font-size:22px;margin-top:6px;">Find Dorian on streaming</h3>
+          <p class="sec" style="margin-top:4px;">Linking them lets us find their songs and make smart links for you.</p>
+          <div class="searchrow" style="margin-top:14px;">
+            <div class="field new" style="flex:1;">Dorian</div>
+            <span class="sbtn"><svg width="18" height="18"><use href="#search"/></svg></span>
+          </div>
+          <div style="margin-top:8px;">
+            <div class="res"><span class="face" style="width:44px;height:44px;"><svg><use href="#other1"/></svg></span><div><b>Dorian Electra</b><span class="s">310K fans · Deezer</span></div></div>
+            <div class="res"><span class="face" style="width:44px;height:44px;"><svg><use href="#other2"/></svg></span><div><b>Dorian Concept</b><span class="s">48K fans · Deezer</span></div></div>
+          </div>
+          <p class="new" style="margin-top:12px;padding:6px 8px;font-size:14px;">Not them? <span class="link">Paste their link</span></p>
+          <div style="display:flex;justify-content:space-between;margin-top:10px;">
+            <div class="quiet">Not on streaming yet</div>
+            <div class="quiet">Not now</div>
+          </div>
+          <div class="dots"><i class="on"></i><i></i><i></i><i></i></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2b -->
+    <div class="opt">
+      <h3>2b · After the link is read</h3>
+      <p class="why">The question they already know, with the profile from their link. "Yes" links them, same as today.</p>
+      <div class="phone">
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <p class="mono">Artist 1 of 4</p>
+          <h3 class="serif" style="font-size:22px;margin-top:6px;">Is this Dorian on streaming?</h3>
+          <p class="sec" style="margin-top:4px;">Linking them lets us find their songs and make smart links for you.</p>
+          <div class="card" style="margin-top:14px;padding:14px;display:flex;align-items:center;gap:14px;">
+            <span class="face" style="width:64px;height:64px;"><svg><use href="#dorian"/></svg></span>
+            <div style="min-width:0;">
+              <p style="font-weight:600;font-size:16px;">Dorian</p>
+              <p class="sec" style="font-size:13px;">12.4K fans</p>
+              <p class="sec" style="font-size:13px;">Latest: Lagos Nights</p>
+            </div>
+          </div>
+          <div class="btn" style="margin-top:14px;">Yes, that's Dorian</div>
+          <div class="ghost" style="margin-top:8px;">No, search again</div>
+          <div style="display:flex;justify-content:space-between;margin-top:6px;">
+            <div class="quiet">Not on streaming yet</div>
+            <div class="quiet">Not now</div>
+          </div>
+          <div class="dots"><i class="on"></i><i></i><i></i><i></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <h2>Which links work</h2>
+    <ul>
+      <li><b>Apple Music and Deezer artist links: yes, from day one.</b> Urganize already reads both. That is where the search looks today.</li>
+      <li><b>Spotify: not yet.</b> The code to read Spotify is there, but the Spotify keys are not set on the live app (checked 8 Nov). They come from a free Spotify developer account. Once they are added, a Spotify link works too and the help line names Spotify first. Until then a Spotify link gets the "can't read" message. Adding the keys is a separate yes.</li>
+      <li><b>Audiomack, Boomplay, YouTube and others: no.</b> Their songs can't be brought in, so we say which links to use instead.</li>
+    </ul>
+
+    <h2>Messages</h2>
+    <table>
+      <tr><td>Audiomack, Boomplay, YouTube or Spotify link</td><td>We can't read Audiomack links. Paste their Apple Music or Deezer link.</td></tr>
+      <tr><td>A link to a song or album, not the artist</td><td>That's a link to a song. Paste the link to their artist page.</td></tr>
+      <tr><td>The link opens nothing</td><td>That link didn't open an artist. Check it and try again.</td></tr>
+      <tr><td>Deezer or Apple not answering</td><td>Could not reach the music service. (Same as today.)</td></tr>
+    </table>
+
+    <h2>What stays the same</h2>
+    <ul>
+      <li>The check screen, the "Is this the same person?" question when someone on the roster has a close name, and "Add by name".</li>
+      <li>The Home popup's guess. Pasting a link is only for when the guess and the search both miss.</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>
