@@ -27,6 +27,7 @@ const ALL_ON: RolloutMenuFlags = {
  *  disabled flag — never a handler. */
 const MODALS = {
   share: { label: 'Share' },
+  releaseDate: { label: 'Change release date' },
   changeArtist: { label: 'Change artist' },
   archive: { label: 'Archive' },
   deleteRollout: { label: 'Delete rollout' },
@@ -136,6 +137,7 @@ describe('buildRolloutMenu', () => {
     expect(keysOf(build({ flags: allOff, showSpend: false }))).toEqual([
       'distribute',
       'share',
+      'release-date',
       'change-artist',
       'archive',
       'delete',
@@ -159,6 +161,7 @@ describe('buildRolloutMenu', () => {
   it('shows each dialog row only when its action is passed', () => {
     const cases: [keyof typeof MODALS, ReleaseMenuKey][] = [
       ['share', 'share'],
+      ['releaseDate', 'release-date'],
       ['changeArtist', 'change-artist'],
       ['archive', 'archive'],
       ['deleteRollout', 'delete'],
@@ -266,7 +269,7 @@ describe('what each row does', () => {
   });
 
   it('opens a dialog from the last three, identified by their key', () => {
-    for (const key of ['share', 'change-artist', 'archive', 'delete'] as const) {
+    for (const key of ['share', 'release-date', 'change-artist', 'archive', 'delete'] as const) {
       const entry = build().find((row) => row.key === key);
       expect(entry?.target, key).toEqual({ kind: 'modal' });
     }

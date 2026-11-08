@@ -20,6 +20,8 @@ type RolloutTabsProps = {
    *  Rollouts (URG-254, founder call 2026-10-14). */
   variant?: 'row' | 'side';
   share?: RolloutMenuDialogInput | null;
+  /** Change release date (#1128). Owner-only; WorkspaceView owns the sheet. */
+  releaseDate?: RolloutMenuDialogInput | null;
   archive?: RolloutMenuDialogInput | null;
   /** Delete rollout (to Trash). Owner-only; WorkspaceView owns the dialog. */
   deleteRollout?: RolloutMenuDialogInput | null;
@@ -45,6 +47,7 @@ export function RolloutTabs({
   releaseId,
   variant = 'row',
   share,
+  releaseDate,
   archive,
   deleteRollout,
 }: RolloutTabsProps) {
@@ -52,6 +55,7 @@ export function RolloutTabs({
     releaseId,
     variant: 'rail',
     share,
+    releaseDate,
     archive,
     deleteRollout,
   });

@@ -166,6 +166,9 @@ export const RELEASE_MENU_ORDER = [
   // with it as the other "send this outward" item — his pairing, kept from the
   // desktop footer row.
   'capture',
+  // Change release date (#1128, Nov 8, 2026). An edit to the rollout itself,
+  // so it leads the corrections. Owner-only and only once a date is set.
+  'release-date',
   // A correction, not a place to work.
   'change-artist',
   // Terminal.
@@ -258,6 +261,7 @@ const GROUP_BY_KEY: Record<ReleaseMenuKey, RolloutMenuGroupKey> = {
   promo: 'promote',
   share: 'promote',
   capture: 'promote',
+  'release-date': 'manage',
   'change-artist': 'manage',
   archive: 'manage',
   delete: 'manage',

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ChevronLeft, Menu, Search } from '@/components/icons';
+import { CalendarDays, ChevronLeft, Menu, Search } from '@/components/icons';
 import { rolloutMetaLine } from '@/lib/release-timeline';
 import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
 import { usePlanMenuFold } from '@/stores/usePlanMenuFold';
@@ -28,6 +28,7 @@ export function RolloutPhoneHeader({
   artistName,
   title,
   releaseDate,
+  onEditDate,
   done,
   total,
   backLabel,
@@ -44,6 +45,9 @@ export function RolloutPhoneHeader({
   artistName: string | null | undefined;
   title: string;
   releaseDate: string | null | undefined;
+  /** Opens Change release date (#1128). Passed only for the owner of a dated
+   *  rollout; without it the line stays plain text. */
+  onEditDate?: () => void;
   done: number;
   total: number;
   backLabel: string;
@@ -144,7 +148,21 @@ export function RolloutPhoneHeader({
         <>
           {showMeta ? (
             <div data-rollout-meta className="mb-[13px] flex h-[34px] items-center justify-between gap-3">
-              <p className="min-w-0 truncate text-sm text-content-secondary">{meta}</p>
+              {onEditDate && releaseDate ? (
+                // The date line is the door to changing it (#1128, founder
+                // approved mock, Nov 8, 2026): tap "drops 12 Dec".
+                <button
+                  type="button"
+                  onClick={onEditDate}
+                  aria-label={`${meta}. Change release date`}
+                  className="motion-focus motion-press -ml-2 inline-flex min-h-[34px] min-w-0 items-center gap-1.5 rounded-lg px-2 text-left text-sm text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+                >
+                  <span className="truncate">{meta}</span>
+                  <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                </button>
+              ) : (
+                <p className="min-w-0 truncate text-sm text-content-secondary">{meta}</p>
+              )}
               {planView ? <PlanViewToggle releaseId={releaseId} view={planView} /> : null}
             </div>
           ) : (

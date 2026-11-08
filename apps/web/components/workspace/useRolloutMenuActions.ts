@@ -70,6 +70,7 @@ const ICONS: Record<ReleaseMenuKey, ComponentType<LucideProps>> = {
   share: Share2,
   // The pre-save / smart link (with fan capture inside): a link.
   capture: Link2,
+  'release-date': CalendarDays,
   'change-artist': Users,
   archive: Archive,
   delete: Trash2,
@@ -111,6 +112,7 @@ type UseRolloutMenuActionsInput = {
   releaseId: string | null;
   variant: RolloutMenuVariant;
   share?: RolloutMenuDialogInput | null;
+  releaseDate?: RolloutMenuDialogInput | null;
   changeArtist?: RolloutMenuDialogInput | null;
   archive?: RolloutMenuDialogInput | null;
   deleteRollout?: RolloutMenuDialogInput | null;
@@ -135,6 +137,7 @@ export function useRolloutMenuActions({
   releaseId,
   variant,
   share,
+  releaseDate,
   changeArtist,
   archive,
   deleteRollout,
@@ -178,6 +181,7 @@ export function useRolloutMenuActions({
     showSpend,
     captureLabel: captureRowLabel(smartLinkReady),
     share,
+    releaseDate,
     changeArtist,
     archive,
     deleteRollout,
@@ -191,7 +195,7 @@ export function useRolloutMenuActions({
     .map((entry) => (entry.key === 'activities' ? { ...entry, isActive: isPlanView(activeScene) } : entry));
 
   const dialogFor =(key: ReleaseMenuKey): RolloutMenuDialogInput | null | undefined =>
-    key === 'share' ? share : key === 'change-artist' ? changeArtist : key === 'archive' ? archive : key === 'delete' ? deleteRollout : null;
+    key === 'share' ? share : key === 'release-date' ? releaseDate : key === 'change-artist' ? changeArtist : key === 'archive' ? archive : key === 'delete' ? deleteRollout : null;
 
   return entries.map((entry): RolloutMenuAction => {
     const base = { key: entry.key, label: entry.label, icon: ICONS[entry.key] };

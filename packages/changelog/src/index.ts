@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.259.0",
+    title: "Change a release date",
+    tag: "Rollouts",
+    date: "November 8, 2026",
+    highlights: [
+      "You can change a rollout's release date. Open the rollout menu and pick Change release date, or on your phone tap the date under the title.",
+      "Before you save, it tells you how many activities will move with the date. Done ones and ones you added yourself stay where they are.",
+    ],
+  },
+  {
     version: "1.258.0",
     title: "Prices in US dollars outside Nigeria",
     tag: "Account",

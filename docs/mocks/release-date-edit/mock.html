@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Change release date</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=JetBrains+Mono:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f3efe7; --surface: #f8f5ee; --tile: #ebe5d8; --ink: #1e1b16;
+    --ink-2: #5c574e; --ink-3: #8a847a; --brand: #2e6b3a; --line: #ddd6c8;
+    --hl: #e6efe3;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e4ded2; font-family: Inter, system-ui, sans-serif; color: var(--ink); padding: 24px 16px 48px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .lede { color: var(--ink-2); font-size: 14px; margin: 0 0 24px; max-width: 760px; line-height: 1.5; }
+  .grid { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+  .card { width: 390px; max-width: 100%; }
+  .card.wide { width: 620px; }
+  .card h2 { font-size: 15px; margin: 0 0 4px; }
+  .card p.note { font-size: 13px; color: var(--ink-2); margin: 0 0 10px; line-height: 1.45; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 500; background: var(--brand); color: #fff; padding: 2px 8px; border-radius: 99px; margin-left: 6px; vertical-align: 2px; }
+  .screen { background: var(--bg); border-radius: 20px; padding: 16px; box-shadow: 0 1px 0 var(--line); overflow: hidden; position: relative; }
+
+  /* Phone header */
+  .row1 { display: flex; align-items: center; gap: 4px; height: 44px; margin: 0 -8px; }
+  .ib { width: 44px; height: 44px; display: grid; place-items: center; color: var(--ink-2); flex-shrink: 0; }
+  .ttl { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; }
+  .ttl b { font-family: Fraunces, Georgia, serif; font-size: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ttl span { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ink-3); }
+  .meta { display: flex; align-items: center; justify-content: space-between; height: 34px; margin-bottom: 13px; font-size: 14px; color: var(--ink-2); }
+  .datebtn { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; font: inherit; color: var(--ink-2); padding: 4px 8px; margin-left: -8px; border-radius: 8px; }
+  .datebtn.lit { background: var(--hl); color: var(--ink); outline: 2px dashed var(--brand); outline-offset: 1px; }
+  .datebtn u { text-decoration: underline; text-decoration-color: var(--ink-3); text-underline-offset: 3px; }
+  .toggle { font-size: 12px; border: 1px solid var(--line); border-radius: 99px; padding: 4px 10px; }
+  .task { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 8px; font-size: 14px; display: flex; justify-content: space-between; }
+  .task small { color: var(--ink-3); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+
+  /* Menu */
+  .menu { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 6px; }
+  .menu .mi { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px; font-size: 14px; }
+  .menu .sep { height: 1px; background: var(--line); margin: 6px 4px; }
+  .menu .mi.lit { background: var(--hl); outline: 2px dashed var(--brand); outline-offset: -2px; font-weight: 500; }
+  .menu .mi.danger { color: #9b2c2c; }
+  .menu svg { width: 18px; height: 18px; color: var(--ink-2); flex-shrink: 0; }
+
+  /* Desktop */
+  .bar { display: flex; align-items: center; gap: 13px; font-size: 14px; color: var(--ink-2); height: 44px; border-bottom: 1px solid var(--line); margin-bottom: 13px; }
+  .bar b { color: var(--ink); }
+  .pill { font-size: 12px; background: var(--hl); color: var(--brand); border-radius: 99px; padding: 2px 8px; }
+  .tabs { display: flex; gap: 4px; align-items: center; font-size: 13px; }
+  .tabs span { padding: 7px 12px; border-radius: 99px; color: var(--ink-2); }
+  .tabs span.on { background: var(--ink); color: #fff; }
+  .tabs .more { margin-left: auto; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 99px; background: var(--tile); }
+  .pop { position: absolute; right: 16px; top: 112px; width: 240px; box-shadow: 0 18px 40px -20px rgba(0,0,0,.35); }
+
+  /* Sheet */
+  .sheet { background: var(--surface); border-radius: 20px 20px 0 0; padding: 16px 20px 20px; border-top: 1px solid var(--line); }
+  .eyebrow { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--brand); }
+  .sheet h3 { font-family: Fraunces, Georgia, serif; font-size: 22px; margin: 10px 0 4px; }
+  .sheet .sub { font-size: 13px; color: var(--ink-2); margin: 0 0 16px; }
+  .lbl { font-size: 12px; font-weight: 500; margin: 0 0 6px; }
+  .input { height: 44px; border: 1px solid var(--line); background: #fff; border-radius: 10px; display: flex; align-items: center; padding: 0 12px; font-size: 15px; justify-content: space-between; }
+  .input.focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--hl); }
+  .moves { margin-top: 12px; background: var(--hl); border-radius: 12px; padding: 12px; font-size: 13px; line-height: 1.5; }
+  .moves b { font-weight: 600; }
+  .quiet { margin-top: 12px; font-size: 13px; color: var(--ink-3); line-height: 1.5; }
+  .namefold { margin-top: 16px; font-size: 13px; color: var(--ink-2); display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 12px; }
+  .save { margin-top: 16px; height: 44px; border-radius: 99px; background: var(--brand); color: #fff; display: grid; place-items: center; font-weight: 600; font-size: 14px; }
+  .save.off { opacity: .45; }
+  .toast { margin-top: 12px; background: var(--ink); color: #fff; font-size: 13px; border-radius: 12px; padding: 10px 14px; }
+  .dim { position: absolute; inset: 0; background: rgba(30,27,22,.5); }
+  .sheetwrap { position: relative; z-index: 2; margin: 120px -16px -16px; }
+
+  .spec { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-3); margin-top: 10px; line-height: 1.6; }
+  .spec b { color: var(--ink-2); }
+</style>
+</head>
+<body>
+<h1>Change a rollout's release date</h1>
+<p class="lede">Today the date can only be changed from a late Spotify pitch warning, a Distribute checklist row, or by asking UrgAns. This adds two plain doors on the rollout page, both opening one sheet that says what will move before you save. Owner only, same as today. Rollouts with no date keep their "Set your release date" row and are not changed.</p>
+
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></symbol>
+</svg>
+
+<div class="grid">
+
+  <!-- 1. Phone: tap the date line -->
+  <div class="card">
+    <h2>1. Phone: tap the date <span class="tag">new</span></h2>
+    <p class="note">The line under the title already says when it drops. It becomes a button with a small calendar mark. Teammates who are not the owner see the same line as plain text.</p>
+    <div class="screen">
+      <div class="row1">
+        <div class="ib">‹</div>
+        <div class="ttl"><b>Midnight Call</b><span>18/64</span></div>
+        <div class="ib">⌕</div><div class="ib">☰</div>
+      </div>
+      <div class="meta">
+        <button class="datebtn lit"><span>Tems · Pre-release · drops <u>12 Dec</u></span><svg width="14" height="14"><use href="#cal"/></svg></button>
+        <span class="toggle">List</span>
+      </div>
+      <div class="task"><span>Send master to distributor</span><small>21 Nov</small></div>
+      <div class="task"><span>Pitch to Spotify editors</span><small>24 Nov</small></div>
+      <div class="task"><span>Teaser clip, 15s</span><small>5 Dec</small></div>
+    </div>
+  </div>
+
+  <!-- 2. Phone menu -->
+  <div class="card">
+    <h2>2. Rollout menu, phone <span class="tag">new row</span></h2>
+    <p class="note">"Change release date" sits with Change artist, so the things that edit the rollout itself are together.</p>
+    <div class="screen">
+      <div class="menu">
+        <div class="mi">See the timeline</div>
+        <div class="mi">Work the plan</div>
+        <div class="mi">Read the brief</div>
+        <div class="mi">Distribute now</div>
+        <div class="mi">Pitch this!</div>
+        <div class="mi">Note this</div>
+        <div class="sep"></div>
+        <div class="mi lit"><svg><use href="#cal"/></svg>Change release date</div>
+        <div class="mi">Change artist</div>
+        <div class="mi danger">Delete rollout</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Desktop -->
+  <div class="card wide">
+    <h2>3. Computer: the ⋯ at the end of the tabs <span class="tag">new row</span></h2>
+    <p class="note">The same row, from the same menu list, so phone and computer cannot drift. The page bar stays as it is (the date left it on 15 Oct and does not come back).</p>
+    <div class="screen" style="height: 330px">
+      <div class="bar">Home › <b>Midnight Call</b> <span style="color:var(--line)">|</span> Tems <span class="pill">● In progress</span></div>
+      <div class="tabs">
+        <span>Timeline</span><span class="on">Plan</span><span>Brief</span><span>Distribute</span><span>Pitch this!</span><span>Notes</span>
+        <span class="more">⋯</span>
+      </div>
+      <div style="margin-top:16px">
+        <div class="task" style="max-width:330px"><span>Send master to distributor</span><small>21 Nov</small></div>
+        <div class="task" style="max-width:330px"><span>Pitch to Spotify editors</span><small>24 Nov</small></div>
+      </div>
+      <div class="menu pop">
+        <div class="mi lit"><svg><use href="#cal"/></svg>Change release date</div>
+        <div class="mi">Change artist</div>
+        <div class="mi danger">Delete rollout</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Sheet, opened -->
+  <div class="card">
+    <h2>4. The sheet, just opened <span class="tag">reworked</span></h2>
+    <p class="note">Same sheet that exists today, now headed for what you came to do. The date comes first. The name moves under a small "Rename" link so it does not get in the way.</p>
+    <div class="screen" style="padding:16px; height: 520px">
+      <div class="dim"></div>
+      <div class="sheetwrap">
+        <div class="sheet">
+          <div class="eyebrow"><span>Midnight Call</span><span style="color:var(--ink-3); font-size:18px">×</span></div>
+          <h3>Change release date</h3>
+          <p class="sub">Now dropping Friday 12 Dec.</p>
+          <p class="lbl">New release date</p>
+          <div class="input focus"><span>12/12/2026</span><svg width="18" height="18" style="color:var(--ink-3)"><use href="#cal"/></svg></div>
+          <p class="quiet">Pick a day and we'll show what moves with it.</p>
+          <div class="namefold"><span>Name: Midnight Call</span><span style="color:var(--brand)">Rename</span></div>
+          <div class="save off">Move release date</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Sheet, date picked -->
+  <div class="card">
+    <h2>5. After picking a new day</h2>
+    <p class="note">Before you save, it says what the plan will do. Worked out on your screen from the plan you can see, using the same rule the save uses.</p>
+    <div class="screen" style="padding:16px; height: 520px">
+      <div class="dim"></div>
+      <div class="sheetwrap" style="margin-top: 92px">
+        <div class="sheet">
+          <div class="eyebrow"><span>Midnight Call</span><span style="color:var(--ink-3); font-size:18px">×</span></div>
+          <h3>Change release date</h3>
+          <p class="sub">Now dropping Friday 12 Dec.</p>
+          <p class="lbl">New release date</p>
+          <div class="input"><span>19/12/2026</span><svg width="18" height="18" style="color:var(--ink-3)"><use href="#cal"/></svg></div>
+          <div class="moves"><b>46 activities move 7 days later.</b><br>18 done and 3 you added yourself stay where they are.</div>
+          <div class="namefold"><span>Name: Midnight Call</span><span style="color:var(--brand)">Rename</span></div>
+          <div class="save">Move release date</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Saved -->
+  <div class="card">
+    <h2>6. Saved</h2>
+    <p class="note">The sheet closes, the date line and the plan update, and the usual toast confirms it.</p>
+    <div class="screen">
+      <div class="row1">
+        <div class="ib">‹</div>
+        <div class="ttl"><b>Midnight Call</b><span>18/64</span></div>
+        <div class="ib">⌕</div><div class="ib">☰</div>
+      </div>
+      <div class="meta">
+        <button class="datebtn"><span>Tems · Pre-release · drops <u>19 Dec</u></span><svg width="14" height="14"><use href="#cal"/></svg></button>
+        <span class="toggle">List</span>
+      </div>
+      <div class="task"><span>Send master to distributor</span><small>28 Nov</small></div>
+      <div class="task"><span>Pitch to Spotify editors</span><small>1 Dec</small></div>
+      <div class="toast">Release date moved to 19 Dec. 46 activities moved with it.</div>
+    </div>
+    <div class="spec">
+      <b>Rules kept:</b> owner only · saves through the one schedule route · done and hand-added activities never move · past days allowed only if the rollout already dropped (to fix a wrong date)
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

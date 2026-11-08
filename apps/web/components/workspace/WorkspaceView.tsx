@@ -192,8 +192,9 @@ const ReleaseSetupSheet = dynamic(
   { ssr: false }
 );
 
-// Edits the title and release day of a rollout that already has both. Opened
-// from the Spotify pitch's closed-window banner ("Move release date").
+// Edits the release day (and title) of a rollout that already has a date.
+// Opened from the Rollout menu, the phone's date line, the Spotify pitch's
+// closed-window banner and the Distribute checklist (#1128).
 const ReleaseDetailsSheet = dynamic(
   () => import('@/components/releases/ReleaseDetailsSheet').then((m) => m.ReleaseDetailsSheet),
   { ssr: false }
@@ -982,6 +983,15 @@ export function WorkspaceView() {
               isTest: Boolean(scopedReleaseSlim.isTest),
             }),
         }
+      : null;
+
+  // Change release date (#1128, founder approved mock, Nov 8, 2026). Before
+  // this the sheet opened only from the Spotify pitch banner and a Distribute
+  // row. Owner-only, like the schedule route; and only once a date is set,
+  // since a rollout with none keeps its "Set your release date" row.
+  const releaseDateAction =
+    scopedReleaseId && scopedReleaseIsOwn && scopedReleaseSlim?.releaseDate
+      ? { label: 'Change release date', onClick: () => setIsDetailsOpen(true) }
       : null;
 
   // Moving a release to another artist. Offered only when there is somewhere to
@@ -1806,6 +1816,7 @@ export function WorkspaceView() {
                   artistName={scopedReleaseSlim.artistName}
                   title={scopedReleaseSlim.title}
                   releaseDate={scopedReleaseSlim.releaseDate}
+                  onEditDate={releaseDateAction?.onClick}
                   done={scopedProgress.done}
                   total={scopedProgress.total}
                   backLabel={backLabel}
@@ -1858,6 +1869,7 @@ export function WorkspaceView() {
                   scopedRelease={scopedReleaseSlim}
                   archiveAction={archiveAction}
                   shareAction={shareAction}
+                  releaseDateAction={releaseDateAction}
                   deleteAction={deleteAction}
                   sceneContent={isDesktopViewport ? undefined : scenePanel}
                   pageBarTools={false}
@@ -1895,6 +1907,7 @@ export function WorkspaceView() {
                 scopedRelease={scopedReleaseSlim}
                 card={selectedCard}
                 share={shareAction}
+                releaseDate={releaseDateAction}
                 archive={archiveAction}
                 deleteRollout={deleteAction}
                 onClose={goBack}
@@ -2084,6 +2097,7 @@ export function WorkspaceView() {
           releaseId={scopedReleaseSlim.id}
           releaseTitle={scopedReleaseSlim.title}
           releaseDate={scopedReleaseSlim.releaseDate ?? null}
+          tasks={scopedTasks}
           onDismiss={() => setIsDetailsOpen(false)}
           onSaved={(message) => {
             setIsDetailsOpen(false);
