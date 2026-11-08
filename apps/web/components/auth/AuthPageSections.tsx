@@ -153,11 +153,11 @@ export function AuthPlans() {
               </p>
               <p className="mt-1 min-h-[17px] text-[13px] leading-[18px] text-content-secondary md:text-xs md:leading-[17px]">{sub ?? ''}</p>
               <a
-                href={WAITLIST_URL}
+                href="/auth?mode=signup"
                 data-plan={tierId}
                 className="mt-[18px] flex h-11 items-center justify-center rounded-lg bg-content-primary text-[15px] font-semibold text-bg-base transition-opacity hover:opacity-90 md:mt-5 md:h-[38px] md:text-[13px]"
               >
-                Join the waitlist
+                Start free
               </a>
               <div className="mt-[18px] border-t border-stroke-default md:mt-[22px]" />
               {heading ? (

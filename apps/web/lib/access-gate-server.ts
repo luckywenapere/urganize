@@ -29,6 +29,7 @@ import {
   looksLikeAccessCode,
   normalizeAccessEmail,
   resolveAccessInviteState,
+  SIGNUP_OPEN,
   type AccessSource,
 } from '@/lib/access-gate';
 
@@ -215,6 +216,7 @@ export async function getAppAccess(
       allowlisted,
       hasForeignMembership: foreign,
       hasEmailInvite: Boolean(emailInvite),
+      signupOpen: SIGNUP_OPEN,
     });
     if (!decision.allowed) return { allowed: false };
 

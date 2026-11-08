@@ -44,7 +44,18 @@ export type AccessSource =
   /** Paid at self-serve checkout (2026-10-22): paying skips the waitlist. */
   | 'paid_self_serve'
   /** Three friends joined through the waitlist share link (2026-10-23). */
-  | 'friends';
+  | 'friends'
+  /** Signed up while sign-up was open (2026-11-08). */
+  | 'open_signup';
+
+/**
+ * Open sign-up (2026-11-08, founder call). Closed sign-up held every new
+ * account on "You're on the list" until the founder let it in, and about 60
+ * sign-up links sent in one week produced no new users. While this is true,
+ * anyone who signs up gets straight into the app on the Free plan. Set it to
+ * false to close sign-up again; nothing else changes.
+ */
+export const SIGNUP_OPEN = true;
 
 export function normalizeAccessEmail(value: unknown): string {
   if (typeof value !== 'string') return '';
@@ -71,6 +82,8 @@ export type AppAccessFacts = {
   allowlisted: boolean;
   hasForeignMembership: boolean;
   hasEmailInvite: boolean;
+  /** Defaults to SIGNUP_OPEN; tests pass it to cover both states. */
+  signupOpen?: boolean;
 };
 
 export type AppAccessDecision =
@@ -82,6 +95,7 @@ export function decideAppAccess(facts: AppAccessFacts): AppAccessDecision {
   if (facts.allowlisted) return { allowed: true, stamp: 'allowlist' };
   if (facts.hasForeignMembership) return { allowed: true, stamp: 'team_invite' };
   if (facts.hasEmailInvite) return { allowed: true, stamp: 'invite_email' };
+  if (facts.signupOpen ?? SIGNUP_OPEN) return { allowed: true, stamp: 'open_signup' };
   return { allowed: false };
 }
 
