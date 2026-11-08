@@ -15,9 +15,9 @@ import { isCreditsEnabled } from './config';
 import { NAIRA_PER_CREDIT_CREDITS_ONLY, NAIRA_PER_CREDIT_SUBSCRIBER } from './pricing';
 
 describe('the founder rules in numbers', () => {
-  it('give a trial 50 credits and the plans 100, 300, 600 and 1,500, Group the same as Label', () => {
+  it('give a trial 50 credits and the plans 150, 450, 900 and 2,000, Group the same as Label', () => {
     expect(TRIAL_CREDITS).toBe(50);
-    expect(ALLOWANCE_CREDITS).toEqual({ solo: 100, manager: 300, pro: 600, label: 1500, enterprise: 1500 });
+    expect(ALLOWANCE_CREDITS).toEqual({ solo: 150, manager: 450, pro: 900, label: 2000, enterprise: 2000 });
     // The pricing card prints urgansMonthlyCredits (2026-10-15). This file may
     // import only its siblings (credits-guard), so the two are held equal here.
     expect(ALLOWANCE_CREDITS).toEqual({
@@ -56,10 +56,10 @@ describe('creditAccount', () => {
 
 describe('monthlyAllowanceCredits', () => {
   it("gives a paying team its plan's allowance", () => {
-    expect(monthlyAllowanceCredits({ state: 'paid', tier: 'solo' })).toBe(100);
-    expect(monthlyAllowanceCredits({ state: 'paid', tier: 'manager' })).toBe(300);
-    expect(monthlyAllowanceCredits({ state: 'paid', tier: 'pro' })).toBe(600);
-    expect(monthlyAllowanceCredits({ state: 'paid', tier: 'label' })).toBe(1500);
+    expect(monthlyAllowanceCredits({ state: 'paid', tier: 'solo' })).toBe(150);
+    expect(monthlyAllowanceCredits({ state: 'paid', tier: 'manager' })).toBe(450);
+    expect(monthlyAllowanceCredits({ state: 'paid', tier: 'pro' })).toBe(900);
+    expect(monthlyAllowanceCredits({ state: 'paid', tier: 'label' })).toBe(2000);
   });
 
   it('gives a team that is not subscribed nothing, however big its tier reads', () => {
@@ -81,8 +81,8 @@ describe('monthlyAllowanceCredits', () => {
     expect(monthlyAllowanceCredits({ state: 'paid', tier: null })).toBe(ALLOWANCE_CREDITS.solo);
   });
 
-  it('gives a paying Group team 1,500 a month, and a Group trial nothing monthly', () => {
-    expect(monthlyAllowanceCredits({ state: 'paid', tier: 'enterprise' })).toBe(1500);
+  it('gives a paying Group team 2,000 a month, and a Group trial nothing monthly', () => {
+    expect(monthlyAllowanceCredits({ state: 'paid', tier: 'enterprise' })).toBe(2000);
     expect(monthlyAllowanceCredits({ state: 'trial', tier: 'enterprise' })).toBe(0);
   });
 

@@ -239,6 +239,8 @@ export async function initializePaystackTransaction(input: {
   metadata: Record<string, unknown>;
   split?: PaystackSplitInput | null;
   splitCode?: string | null;
+  /** Limit how the payer can pay, e.g. ['card'] when the card is to be saved. */
+  channels?: string[];
 }): Promise<PaystackResult<{ authorizationUrl: string; accessCode: string; reference: string }>> {
   const result = await paystackRequest<{ authorization_url?: string; access_code?: string; reference?: string }>(
     '/transaction/initialize',
@@ -251,6 +253,7 @@ export async function initializePaystackTransaction(input: {
         reference: input.reference,
         callback_url: input.callbackUrl,
         metadata: input.metadata,
+        ...(input.channels ? { channels: input.channels } : {}),
         ...(input.splitCode ? { split_code: input.splitCode } : input.split ? { split: input.split } : {}),
       },
     }
@@ -287,7 +290,26 @@ export type VerifiedPaystackTransaction = {
   transactionId: number | null;
   paidAt: string | null;
   metadata: Record<string, unknown> | null;
+  /** The card, when it can be charged again later (add-on renewals, credits
+   *  past the allowance). Null for transfers and one-off cards. */
+  authorization: SavedCard | null;
 };
+
+/** A card Paystack lets us charge again without the payer. */
+export type SavedCard = { authorizationCode: string; email: string; label: string };
+
+function savedCardFrom(raw: unknown, email: unknown): SavedCard | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const auth = raw as Record<string, unknown>;
+  const code = String(auth.authorization_code || '').trim();
+  const reusable = auth.reusable === true || auth.reusable === 'true';
+  const channel = String(auth.channel || 'card');
+  const to = String(email || '').trim().toLowerCase();
+  if (!code || !reusable || channel !== 'card' || !to) return null;
+  const brand = String(auth.card_type || auth.brand || 'Card').trim();
+  const last4 = String(auth.last4 || '').trim();
+  return { authorizationCode: code, email: to, label: last4 ? `${brand} ending ${last4}` : brand };
+}
 
 /**
  * The only thing that ever marks a pitch paid. A webhook body is a claim; this
@@ -318,6 +340,10 @@ export async function verifyPaystackTransaction(
       transactionId: Number.isFinite(id) && id > 0 ? id : null,
       paidAt: typeof data.paid_at === 'string' ? data.paid_at : typeof data.paidAt === 'string' ? data.paidAt : null,
       metadata,
+      authorization: savedCardFrom(
+        data.authorization,
+        data.customer && typeof data.customer === 'object' ? (data.customer as Record<string, unknown>).email : null
+      ),
     },
   };
 }
@@ -421,6 +447,60 @@ export async function listPaystackTransactions(input: {
         };
       }),
       hasMore: rows.length >= perPage,
+    },
+  };
+}
+
+// ─── saved cards ─────────────────────────────────────────────────────────────
+
+/** The newest reusable card Paystack holds for a customer (by email), so a
+ *  team that pays its plan by card can be charged for add-ons and credits
+ *  without paying through a checkout again. Null when there is none. */
+export async function findSavedCard(email: string): Promise<SavedCard | null> {
+  const to = email.trim().toLowerCase();
+  if (!to) return null;
+  const result = await paystackRequest<{ email?: string; authorizations?: unknown[] }>(`/customer/${encodeURIComponent(to)}`);
+  if (!result.ok) return null;
+  const cards = Array.isArray(result.data?.authorizations) ? result.data.authorizations : [];
+  for (const card of [...cards].reverse()) {
+    const saved = savedCardFrom(card, result.data?.email || to);
+    if (saved) return saved;
+  }
+  return null;
+}
+
+export type CardCharge = { status: string; reference: string; amountKobo: number };
+
+/** Charge a saved card. 'success' is paid; anything else is not (yet). The
+ *  answer is checked again with verifyPaystackTransaction before it counts. */
+export async function chargeSavedCard(input: {
+  card: SavedCard;
+  amountKobo: number;
+  reference: string;
+  metadata: Record<string, unknown>;
+}): Promise<PaystackResult<CardCharge>> {
+  const result = await paystackRequest<{ status?: string; reference?: string; amount?: number }>(
+    '/transaction/charge_authorization',
+    {
+      method: 'POST',
+      body: {
+        email: input.card.email,
+        amount: input.amountKobo,
+        currency: 'NGN',
+        authorization_code: input.card.authorizationCode,
+        reference: input.reference,
+        metadata: input.metadata,
+      },
+      timeoutMs: 30_000,
+    }
+  );
+  if (!result.ok) return result;
+  return {
+    ok: true,
+    data: {
+      status: String(result.data?.status || ''),
+      reference: String(result.data?.reference || input.reference),
+      amountKobo: Number(result.data?.amount) || 0,
     },
   };
 }

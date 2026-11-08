@@ -220,6 +220,7 @@ describe('verifyPaystackTransaction', () => {
         transactionId: 4099260516,
         paidAt: '2026-09-25T10:00:00.000Z',
         metadata: { quote_id: 'q1' },
+        authorization: null,
       },
     });
   });

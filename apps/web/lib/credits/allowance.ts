@@ -36,8 +36,8 @@ import { NAIRA_PER_CREDIT_CREDITS_ONLY, NAIRA_PER_CREDIT_SUBSCRIBER } from './pr
 // The pricing cards print these same numbers from @urganize/pricing
 // (urgansMonthlyCredits, 2026-10-15). This file may import only its siblings
 // (credits-guard.test.ts), so allowance.test.ts holds the two equal.
-// 100 / 300 / 600 / 1,500 since 2026-11-07 (founder, #1112); Pro is new.
-export const ALLOWANCE_CREDITS = { solo: 100, manager: 300, pro: 600, label: 1500, enterprise: 1500 } as const;
+// 150 / 450 / 900 / 2,000 since 2026-11-07 (founder approved the phase 2 mocks, #1112).
+export const ALLOWANCE_CREDITS = { solo: 150, manager: 450, pro: 900, label: 2000, enterprise: 2000 } as const;
 
 /** What a trial is given, once. */
 export const TRIAL_CREDITS = 50;

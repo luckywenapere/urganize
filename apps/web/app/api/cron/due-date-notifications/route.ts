@@ -1,3 +1,4 @@
+import { runDailyBilling } from '@/lib/billing-run-server';
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, createDueDateNotificationsForAllUsers } from '@/lib/tasks-server';
 import { sendWeeklyMotivationalNudges } from '@/lib/motivation-server';
@@ -169,8 +170,13 @@ export async function GET(request: NextRequest) {
   // exists is emailed that the song is out, once. Own time budget, never throws.
   const outNowSweep = await runOutNowSweep(adminClient);
 
+  // Add-on renewals and credits past the allowance (#1112): charged to each
+  // team's saved card once a day. Another passenger on this cron. Never throws.
+  const billingRun = await runDailyBilling(adminClient);
+
   return NextResponse.json({
     ok: true,
+    billingRun,
     outNowSweep,
     whatsappSweep,
     trashPurge,

@@ -37,7 +37,16 @@ const formatLongDay = (iso: string | null): string => {
 
 const SWITCH_MAILTO = 'mailto:contact@urganize.app?subject=Switch%20to%206%20months';
 
-export function DistributionPlanCard({ plan, limit = null }: { plan: DistributionPlan | null; limit?: DistributionLimitView | null }) {
+export function DistributionPlanCard({
+  plan,
+  limit = null,
+  ownPlan = false,
+}: {
+  plan: DistributionPlan | null;
+  limit?: DistributionLimitView | null;
+  /** The team chose to send with the artist's own TRM account this visit. */
+  ownPlan?: boolean;
+}) {
   const [dismissed, setDismissed] = useState(false);
   const shownRef = useRef(false);
 
@@ -51,6 +60,22 @@ export function DistributionPlanCard({ plan, limit = null }: { plan: Distributio
   }, [plan]);
 
   if (!plan || dismissed) return null;
+
+  // Solo and Manager (#1112): the artist's Distribution add-on, or paying per
+  // single. The pay block above the fold already says what to do.
+  if (limit && limit.mode === 'addon') {
+    return (
+      <div className="border border-stroke-default bg-bg-surface px-4 py-3.5">
+        <p className="text-[15px] font-semibold text-content-primary">Distribution for {limit.artistName || 'this artist'}</p>
+        <DistributionUsage limit={limit} />
+      </div>
+    );
+  }
+  if (limit && limit.mode === 'per_single') {
+    return ownPlan ? (
+      <p className="text-sm text-content-secondary">Sending with the artist’s own TRM plan.</p>
+    ) : null;
+  }
 
   if (plan.state === 'included') {
     const until = formatLongDay(plan.until);

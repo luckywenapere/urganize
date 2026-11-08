@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2 } from '@/components/icons';
 import { BuyCredits } from '@/components/credits/BuyCredits';
+import { CreditCap } from '@/components/credits/CreditCap';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { authHeaders, readError } from '@/components/press-kits/press-kit-client';
 import { useCreditBalance } from '@/components/urgans-actions/useCreditBalance';
@@ -108,7 +109,9 @@ export default function CreditsPageClient() {
         ) : null}
       </header>
 
-      <BuyCredits account={account} onPurchased={handlePurchased} />
+      {/* A paying team buys credits one at a time past its monthly credits, up to
+          a cap (#1112). Teams with no plan still buy packs. */}
+      <CreditCap fallback={<BuyCredits account={account} onPurchased={handlePurchased} />} onChange={handlePurchased} />
 
       {authLoading || isLoading ? (
         <div className="space-y-3" aria-busy="true">

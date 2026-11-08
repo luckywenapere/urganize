@@ -66,6 +66,14 @@ export async function POST(request: NextRequest) {
   if (!team.primaryWorkspaceId) {
     return NextResponse.json({ error: 'You are not on a team yet.' }, { status: 400 });
   }
+  // Paying teams buy credits one at a time past their monthly credits, up to a
+  // cap (#1112). Packs stay only for teams with no plan (credits-only).
+  if (team.state === 'paid') {
+    return NextResponse.json(
+      { error: 'Your plan pays for extra credits one at a time. Set a monthly cap on the AI credits page.' },
+      { status: 409 }
+    );
+  }
   if (!team.isOwnerOrAdmin) {
     return NextResponse.json(
       { error: 'Ask the person who runs your team to buy credits.' },

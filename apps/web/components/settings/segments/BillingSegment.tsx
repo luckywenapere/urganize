@@ -1,6 +1,7 @@
 'use client';
 
 import { memo } from 'react';
+import { AddonsSection } from '../AddonsSection';
 import { BillingSection } from '../BillingSection';
 
 /**
@@ -14,6 +15,7 @@ function BillingSegmentView() {
   return (
     <div className="divide-y divide-stroke-subtle">
       <BillingSection />
+      <AddonsSection />
     </div>
   );
 }

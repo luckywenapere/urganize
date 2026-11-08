@@ -67,6 +67,18 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.257.0",
+    title: "Add-ons, singles and more AI credits",
+    tag: "Account",
+    date: "November 7, 2026",
+    highlights: [
+      "On Solo and Manager you can send a single to stores for ₦2,000. Your own TRM account still works too.",
+      "Add more to your plan in Settings, Plan: extra people for ₦3,000 a month, extra artists for ₦5,000 a month, or distribution for an artist.",
+      "Every plan gets more AI credits a month: Solo 150, Manager 450, Pro 900, Label 2,000.",
+      "Run out of AI credits? Set a monthly cap and AI keeps going, from ₦15 a credit. It stops at your cap.",
+    ],
+  },
+  {
     version: "1.256.0",
     title: "Send EPs and albums to stores",
     tag: "Rollouts",

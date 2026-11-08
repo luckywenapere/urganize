@@ -6,6 +6,8 @@ import {
   artistKeyFor,
   checkExtraReleasePayment,
   decideDistributionLimit,
+  decideOwnDistribution,
+  isBlocked,
   EXTRA_RELEASE_PRICE_KOBO,
   EXTRA_RELEASE_REFERENCE_PREFIX,
   EXTRA_RELEASE_SOURCE,
@@ -15,6 +17,8 @@ import {
   type DistributionLimitView,
   type DistributionUseRow,
 } from './distribution-limits';
+import { distributionAddonPlanFor } from './addons';
+import { loadTeamAddons } from './addons-server';
 import { loadTeamDistribution } from './distribution-team-server';
 import { initializePaystackTransaction, isPaystackConfigured, verifyPaystackTransaction } from './paystack-server';
 import { recordTrmExtraRelease } from './trm/partner-ledger-server';
@@ -27,7 +31,14 @@ import { recordTrmExtraRelease } from './trm/partner-ledger-server';
 
 type Admin = SupabaseClient;
 
-type ReleaseFacts = { ownerUserId: string; releaseId: string; artistId: string | null; artistName: string | null };
+type ReleaseFacts = {
+  ownerUserId: string;
+  releaseId: string;
+  artistId: string | null;
+  artistName: string | null;
+  /** 'single' | 'ep' | 'album'. A missing type reads as a single. */
+  releaseType?: string | null;
+};
 
 export type LoadedLimit = {
   view: DistributionLimitView;
@@ -42,20 +53,25 @@ function toRow(raw: Record<string, unknown>): DistributionUseRow {
     releaseId: String(raw.release_id),
     artistKey: String(raw.artist_key),
     artistName: typeof raw.artist_name === 'string' ? raw.artist_name : null,
-    kind: raw.kind === 'extra' ? 'extra' : 'plan',
+    kind: raw.kind === 'extra' ? 'extra' : raw.kind === 'addon' ? 'addon' : 'plan',
     month: String(raw.month),
     status: raw.status === 'pending' ? 'pending' : raw.status === 'paid' ? 'paid' : 'used',
     createdAt: String(raw.created_at),
   };
 }
 
-/** The team's limit view for one release, or null when its plan has no
- *  allowance (Solo, trial, lapsed: the artist's own TRM plan, nothing to count)
- *  or the rows cannot be read (the step then works as before). */
+/** The team's limit view for one release, or null when nothing is ours to
+ *  count: a trial or a lapsed plan (the artist's own TRM plan), or rows that
+ *  cannot be read (the step then works as before). Pro and Label send under
+ *  their plan; Solo and Manager pay per single or send under the artist's
+ *  Distribution add-on (decideOwnDistribution). */
 export async function loadDistributionLimit(admin: Admin, facts: ReleaseFacts, now: Date = new Date()): Promise<LoadedLimit | null> {
   if (!facts.ownerUserId) return null;
-  const { decision, workspaceId } = await loadTeamDistribution(admin, facts.ownerUserId);
-  if (decision.state !== 'included' || !workspaceId) return null;
+  const team = await loadTeamDistribution(admin, facts.ownerUserId);
+  const { decision, workspaceId } = team;
+  if (!workspaceId) return null;
+  const ownPath = decision.state !== 'included' && team.paying && (team.plan === 'solo' || team.plan === 'manager');
+  if (decision.state !== 'included' && !ownPath) return null;
   const rows = await admin
     .from(USAGE)
     .select('release_id, artist_key, artist_name, kind, month, status, created_at')
@@ -67,32 +83,62 @@ export async function loadDistributionLimit(admin: Admin, facts: ReleaseFacts, n
     return null;
   }
   const artistKey = artistKeyFor(facts.artistId, facts.artistName) ?? `release:${facts.releaseId}`;
+  const useRows = ((rows.data ?? []) as Array<Record<string, unknown>>).map(toRow);
+  if (decision.state !== 'included') {
+    const addons = await loadTeamAddons(admin, workspaceId);
+    const view = decideOwnDistribution({
+      tier: team.plan === 'solo' ? 'solo' : 'manager',
+      rows: useRows,
+      releaseId: facts.releaseId,
+      artistKey,
+      artistName: facts.artistName,
+      addonPlan: addons ? distributionAddonPlanFor(addons, artistKey, now) : null,
+      releaseType: facts.releaseType,
+      now,
+    });
+    return { view, workspaceId, artistKey };
+  }
   const view = decideDistributionLimit({
     tier: decision.tier,
-    rows: ((rows.data ?? []) as Array<Record<string, unknown>>).map(toRow),
+    rows: useRows,
     releaseId: facts.releaseId,
     artistKey,
     now,
     // Paying yearly puts the team on TRM's yearly plan: no monthly cap.
     teamPlan: teamDistributionPlan(decision.tier, decision.interval),
+    releaseType: facts.releaseType,
   });
   return view ? { view, workspaceId, artistKey } : null;
 }
 
-/** Before a send reaches TRM: null when it may go, else the refusal. */
+/** Before a send reaches TRM: null when it may go, else the refusal.
+ *  `ownPlan`: the team chose to send with the artist's own TRM account, which
+ *  Solo and Manager may always do (nothing of ours to count or charge). */
 export async function checkDistributionSend(
   admin: Admin,
-  facts: ReleaseFacts
+  facts: ReleaseFacts,
+  options: { ownPlan?: boolean } = {}
 ): Promise<{ loaded: LoadedLimit | null; refusal: string | null }> {
   const loaded = await loadDistributionLimit(admin, facts);
-  if (!loaded || !needsPayment(loaded.view.verdict)) return { loaded, refusal: null };
-  return {
-    loaded,
-    refusal:
-      loaded.view.verdict === 'artist'
-        ? `Your plan covers ${loaded.view.planArtists.join(', ')}. Pay for this release to send it.`
-        : `You've used your ${loaded.view.releasesLimit} releases this month. Pay for this release to send it.`,
-  };
+  if (loaded && options.ownPlan && loaded.view.mode !== 'plan') return { loaded: null, refusal: null };
+  if (!loaded || !isBlocked(loaded.view.verdict)) return { loaded, refusal: null };
+  return { loaded, refusal: sendRefusal(loaded.view) };
+}
+
+function sendRefusal(view: DistributionLimitView): string {
+  const price = `₦${(view.extraPriceKobo / 100).toLocaleString('en-US')}`;
+  switch (view.verdict) {
+    case 'artist':
+      return `Your plan covers ${view.planArtists.join(', ')}. Pay for this release to send it.`;
+    case 'single':
+      return `Pay ${price} to send this single, or send it with your own TRM plan.`;
+    case 'needs_addon':
+      return `Add distribution for ${view.artistName || 'this artist'} to send this, or use your own TRM plan.`;
+    default:
+      return view.canPay
+        ? `You've used your ${view.releasesLimit} releases this month. Pay for this release to send it.`
+        : `You've used your ${view.releasesLimit} releases this month. They come back on the 1st.`;
+  }
 }
 
 /** After TRM took a send: count it under the plan, or use up its paid extra.
@@ -107,21 +153,22 @@ export async function recordDistributionSend(
   if (!loaded) return;
   try {
     if (loaded.view.verdict === 'ok') {
-      const insert = await admin.from(USAGE).upsert(
+      // A plain insert: the one-row-per-release keys are partial indexes, which an
+      // upsert's ON CONFLICT cannot name. A repeat hits 23505 and is fine.
+      const insert = await admin.from(USAGE).insert(
         {
           workspace_id: loaded.workspaceId,
           release_id: facts.releaseId,
           artist_key: loaded.artistKey,
           artist_name: facts.artistName,
-          kind: 'plan',
+          kind: loaded.view.mode === 'addon' ? 'addon' : 'plan',
           month: lagosMonth(sentAt).key,
           status: 'used',
           created_by: facts.actorUserId,
           used_at: sentAt.toISOString(),
-        },
-        { onConflict: 'release_id', ignoreDuplicates: true }
+        }
       );
-      if (insert.error) console.error('[distribution-limits] could not count a send:', insert.error.message, facts.releaseId);
+      if (insert.error && insert.error.code !== '23505') console.error('[distribution-limits] could not count a send:', insert.error.message, facts.releaseId);
     } else if (loaded.view.verdict === 'paid_extra') {
       const update = await admin
         .from(USAGE)
@@ -152,6 +199,7 @@ export async function startExtraReleaseCheckout(
   const loaded = await loadDistributionLimit(admin, facts);
   if (!loaded) return { ok: false, status: 409, error: 'This release does not need paying for.' };
   if (!needsPayment(loaded.view.verdict)) return { ok: false, status: 409, error: 'Your plan covers this release. Send it.' };
+  if (!loaded.view.canPay) return { ok: false, status: 409, error: 'Only singles can be paid for one at a time.' };
 
   const reference = `${EXTRA_RELEASE_REFERENCE_PREFIX}${randomBytes(16).toString('hex')}`;
   const pending = await admin.from(USAGE).insert({
@@ -242,11 +290,19 @@ export async function settleExtraRelease(admin: Admin, reference: string, via: '
   if (Array.isArray(update.data) && update.data.length > 0) {
     const team = await admin.from('workspaces').select('owner_id').eq('id', found.workspace_id).maybeSingle();
     const ownerUserId = (team.data as { owner_id: string } | null)?.owner_id ?? null;
-    const tier = ownerUserId ? (await loadTeamDistribution(admin, ownerUserId)).decision : null;
+    const owner = ownerUserId ? await loadTeamDistribution(admin, ownerUserId) : null;
+    const tier =
+      owner?.decision.state === 'included'
+        ? owner.decision.tier === 'label'
+          ? 'label'
+          : 'pro'
+        : owner?.plan === 'solo'
+          ? 'solo'
+          : 'manager';
     await recordTrmExtraRelease(admin, {
       workspaceId: found.workspace_id,
       reference,
-      tier: tier && tier.state === 'included' && tier.tier === 'label' ? 'label' : 'pro',
+      tier,
       paidKobo: EXTRA_RELEASE_PRICE_KOBO,
       owedKobo: TRM_PER_RELEASE_KOBO,
       paidAt,

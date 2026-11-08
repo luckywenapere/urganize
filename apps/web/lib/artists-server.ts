@@ -1,3 +1,4 @@
+import { loadAddonExtras } from './addons-server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { normalizeReleaseSlug } from '@/lib/release-ops';
 import { checkLimit, type LimitVerdict } from '@/lib/entitlements';
@@ -110,7 +111,8 @@ export async function checkArtistAllowance(
   const current = await countWorkspaceArtists(adminClient, workspaceId);
   if (current === null) return allowed;
 
-  return checkLimit({ tier, key: 'artists', current });
+  const extras = await loadAddonExtras(adminClient, workspaceId);
+  return checkLimit({ tier, key: 'artists', current, extra: extras.artists });
 }
 
 /**

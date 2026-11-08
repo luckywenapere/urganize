@@ -44,6 +44,9 @@ import { TRANSFER_CHECKOUT_SOURCE } from '@/lib/self-serve';
 import { validatePaystackSignature } from '@/lib/paystack-signature';
 import { isPitchPaymentReference } from '@/lib/pitch-payments';
 import { isExtraReleaseReference } from '@/lib/distribution-limits';
+import { isAddonReference, isAddonRenewalReference, isCardCheckReference } from '@/lib/addons';
+import { settleAddonCheckout } from '@/lib/addons-server';
+import { isOverageReference } from '@/lib/credits/overage';
 import { settleExtraRelease } from '@/lib/distribution-limits-server';
 import { isCreditsReference } from '@/lib/credits/purchase';
 import { settleCreditsPurchase } from '@/lib/credits/purchase-server';
@@ -1474,6 +1477,25 @@ async function handleExtraReleaseCharge(payload: PaystackWebhookPayload) {
   return ack({ event: 'charge.success', extraRelease: outcome.state });
 }
 
+// ─── add-ons and charges to a saved card (#1112) ──────────────────────────────
+//
+// An add-on's first payment settles like an extra release. Renewals, credits
+// past the allowance and the ₦100 card check are charged and settled by our own
+// code (lib/addons-server.ts, lib/credits/overage-server.ts, the credit cap
+// route), so their webhooks are only acknowledged, never matched to a plan.
+
+async function handleAddonCharge(payload: PaystackWebhookPayload) {
+  const admin = createAdminClient();
+  if (!admin) return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
+  const outcome = await settleAddonCheckout(admin, String(payload.data?.reference || ''), 'webhook');
+  if (outcome.state === 'error' && outcome.transient) return NextResponse.json({ error: 'Try again' }, { status: 500 });
+  return ack({ event: 'charge.success', addon: outcome.state });
+}
+
+function isOwnCardCharge(reference: unknown): boolean {
+  return isAddonRenewalReference(reference) || isOverageReference(reference) || isCardCheckReference(reference);
+}
+
 // ─── entrypoint ──────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -1506,6 +1528,12 @@ export async function POST(req: NextRequest) {
   }
   if (event === 'charge.success' && isExtraReleaseReference(payload.data?.reference)) {
     return handleExtraReleaseCharge(payload);
+  }
+  if (event === 'charge.success' && isAddonReference(payload.data?.reference)) {
+    return handleAddonCharge(payload);
+  }
+  if (event === 'charge.success' && isOwnCardCharge(payload.data?.reference)) {
+    return ack({ event, settledBy: 'server' });
   }
   // Refunds from any other flow (the card-trial check) are acknowledged there.
   if (event.startsWith('refund.')) {

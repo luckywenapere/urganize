@@ -452,12 +452,20 @@ export async function loadTrmPayload(
       releaseId,
       artistId: loadedFacts.artistId,
       artistName: loadedFacts.facts.primaryArtist || null,
+      releaseType: releaseKindOf(loadedFacts.facts),
     }).catch(() => null),
     loadedFacts.ownerUserId ? loadTeamDistribution(admin, loadedFacts.ownerUserId).catch(() => null) : Promise.resolve(null),
   ]);
   const decision = team?.decision;
+  // Solo and Manager: the artist's Distribution add-on is their TRM plan.
   const teamPlan: TeamDistributionPlan =
-    decision && decision.state === 'included' ? teamDistributionPlan(decision.tier, decision.interval) : 'none';
+    decision && decision.state === 'included'
+      ? teamDistributionPlan(decision.tier, decision.interval)
+      : limit?.view.mode === 'addon'
+        ? limit.view.releasesLimit === null
+          ? 'yearly'
+          : 'monthly'
+        : 'none';
   const kind = releaseKindOf(loadedFacts.facts);
   return {
     limit: limit?.view ?? null,
@@ -585,13 +593,24 @@ function trmMessage(error: unknown): string {
 
 /** TRM's plan rule for this release (single always; EP on a monthly or yearly
  *  plan; album on a yearly plan). Null when it may go. */
-async function storeAccessRefusal(admin: SupabaseClient, loaded: LoadedTrmFacts): Promise<TrmResult<never> | null> {
+async function storeAccessRefusal(admin: SupabaseClient, loaded: LoadedTrmFacts, releaseId: string): Promise<TrmResult<never> | null> {
   const kind = releaseKindOf(loaded.facts);
   if (kind === 'single') return null;
   const team = loaded.ownerUserId ? await loadTeamDistribution(admin, loaded.ownerUserId).catch(() => null) : null;
   const decision = team?.decision;
-  const teamPlan: TeamDistributionPlan =
+  let teamPlan: TeamDistributionPlan =
     decision && decision.state === 'included' ? teamDistributionPlan(decision.tier, decision.interval) : 'none';
+  if (teamPlan === 'none') {
+    // Solo and Manager: the artist's Distribution add-on is their TRM plan (#1112).
+    const limit = await loadDistributionLimit(admin, {
+      ownerUserId: loaded.ownerUserId,
+      releaseId,
+      artistId: loaded.artistId,
+      artistName: loaded.facts.primaryArtist || null,
+      releaseType: kind,
+    }).catch(() => null);
+    if (limit?.view.mode === 'addon') teamPlan = limit.view.releasesLimit === null ? 'yearly' : 'monthly';
+  }
   const access = distributionAccess({ releaseType: kind, teamPlan });
   if (access === 'needs_monthly_plan') return fail(402, 'needs_monthly_plan', 'EPs need a distribution plan.');
   if (access === 'needs_yearly_plan') return fail(402, 'needs_yearly_plan', 'Albums need a yearly plan.');
@@ -621,7 +640,7 @@ export async function prepareTrmDraft(
   }
   const settings = readTrmSettings(current?.settings);
   const checklist = trmChecklist(loaded.facts, settings, new Date());
-  const refused = await storeAccessRefusal(admin, loaded);
+  const refused = await storeAccessRefusal(admin, loaded, releaseId);
   if (refused) return refused;
   if (checklist.blocking.length > 0) {
     return fail(409, 'not_ready', `${checklist.blocking.length} things before it can go.`);
@@ -810,7 +829,12 @@ async function markHandoffSent(admin: SupabaseClient, releaseId: string, actorId
 }
 
 /** Submit to stores. Allowlisted accounts only (see the top of this file). */
-export async function submitToTrm(admin: SupabaseClient, releaseId: string, actor: TrmActor): Promise<TrmResult<{ status: SubmissionStatus }>> {
+export async function submitToTrm(
+  admin: SupabaseClient,
+  releaseId: string,
+  actor: TrmActor,
+  options: { ownPlan?: boolean } = {}
+): Promise<TrmResult<{ status: SubmissionStatus }>> {
   if (!canSendToTrm(actor.email)) return fail(403, 'not_open', 'Sending to TRM opens soon.');
   const [current, loaded] = await Promise.all([loadSubmission(admin, releaseId), loadTrmFacts(admin, releaseId)]);
   if (current === 'error' || !loaded) return fail(500, 'read_failed', 'Could not check this rollout. Try again.');
@@ -822,15 +846,16 @@ export async function submitToTrm(admin: SupabaseClient, releaseId: string, acto
   if (missing > 0) return fail(409, 'no_master', masters.length === 1 ? 'Add the master.' : `Add ${missing} more ${missing === 1 ? 'master' : 'masters'}.`);
   const checklist = trmChecklist(loaded.facts, readTrmSettings(current.settings), new Date());
   if (checklist.blocking.length > 0) return fail(409, 'not_ready', `${checklist.blocking.length} things before it can go.`);
-  const refused = await storeAccessRefusal(admin, loaded);
+  const refused = await storeAccessRefusal(admin, loaded, releaseId);
   if (refused) return refused;
   const releaseFacts = {
     ownerUserId: loaded.ownerUserId,
     releaseId,
     artistId: loaded.artistId,
     artistName: loaded.facts.primaryArtist || null,
+    releaseType: releaseKindOf(loaded.facts),
   };
-  const gate = await checkDistributionSend(admin, releaseFacts);
+  const gate = await checkDistributionSend(admin, releaseFacts, { ownPlan: options.ownPlan === true });
   if (gate.refusal) return fail(402, 'over_limit', gate.refusal);
 
   const attempt = current.submit_count + 1;
@@ -864,7 +889,7 @@ export async function submitToTrm(admin: SupabaseClient, releaseId: string, acto
   await markHandoffSent(admin, releaseId, actor.id);
   await recordDistributionSend(admin, { ...releaseFacts, actorUserId: actor.id }, gate.loaded, new Date(nowIso));
   // A paid extra release is already in the TRM ledger (its ₦2,100); it buys no TRM plan.
-  if (gate.loaded?.view.verdict !== 'paid_extra') {
+  if (gate.loaded?.view.verdict !== 'paid_extra' && gate.loaded?.view.mode !== 'addon') {
     await recordTrmFeeForSend(admin, { ownerUserId: loaded.ownerUserId, releaseId, attempt, sentAt: new Date(nowIso) });
   }
   await logEvent(admin, loaded.ownerUserId, actor.id, 'trm_submitted', { releaseId, trmReleaseId: current.partner_release_id, attempt });

@@ -1,3 +1,4 @@
+import { loadAddonExtras } from './addons-server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { checkLimit, type CountableLimitKey, type LimitVerdict } from './entitlements';
 import { getWorkspaceTier } from './team-billing-server';
@@ -95,7 +96,8 @@ export async function checkSeatAllowance(
   const current = await countTeamSeats(client, workspaceId);
   if (current === null) return allowed;
 
-  return checkLimit({ tier, key: 'seats', current });
+  const extras = await loadAddonExtras(client, workspaceId);
+  return checkLimit({ tier, key: 'seats', current, extra: extras.seats });
 }
 
 /**

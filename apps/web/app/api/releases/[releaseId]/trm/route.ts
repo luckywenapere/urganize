@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, requireActiveAuthenticatedUser } from '@/app/api/_shared/auth';
 import { isExtraReleaseReference } from '@/lib/distribution-limits';
+import { releaseKindOf } from '@/lib/trm/release';
 import { settleExtraRelease, startExtraReleaseCheckout } from '@/lib/distribution-limits-server';
 import { ensureReleaseTeamReadAccess, ensureReleaseTeamWriteAccess } from '@/lib/release-access-server';
 import {
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
         releaseId,
         artistId: facts.artistId,
         artistName: facts.facts.primaryArtist || null,
+        releaseType: releaseKindOf(facts.facts),
         user: actor,
         callbackUrl: `${appBase(request)}/dashboard/distribute/${releaseId}`,
       });
@@ -131,7 +133,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
     case 'track_order':
       return reply(await orderTracks(admin, releaseId, body));
     case 'submit':
-      return reply(await submitToTrm(admin, releaseId, actor));
+      return reply(await submitToTrm(admin, releaseId, actor, { ownPlan: body.ownPlan === true }));
     case 'refresh':
       return reply(await refreshFromTrm(admin, releaseId));
     default:

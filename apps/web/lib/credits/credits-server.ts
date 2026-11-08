@@ -14,6 +14,8 @@ import type { LedgerHistoryRow } from './history';
 import { purchaseDedupeKey } from './purchase';
 import { readBillingAnchor } from '@/lib/urgans-usage-server';
 import { resolveUsageWindow } from '@/lib/urgans-usage';
+import { shortfall, type OverageState } from './overage';
+import { readOverageState, recordOverage } from './overage-server';
 
 /**
  * The credit ledger: reading what a team has, granting what it is owed, and
@@ -60,6 +62,12 @@ export type CreditSnapshot = CreditBalances & {
   referenceCredits: number;
   /** When the next monthly grant lands, ISO. Null unless the account is a subscriber. */
   nextGrantAt: string | null;
+  /** Paying for credits past the allowance (overage.ts): the cap, what was used
+   *  this window and the room left. Null when the team cannot. */
+  overage: OverageState | null;
+  /** What a turn may spend: the balance (never below zero) plus the credits the
+   *  cap still allows. Admission reads this, never `total`. */
+  spendable: number;
 };
 
 const toDay = (date: Date): string => date.toISOString().slice(0, 10);
@@ -262,11 +270,18 @@ export async function getCreditSnapshot(
   const account = creditAccount(input.team);
   const monthlyAllowance = monthlyAllowanceCredits(input.team);
   let nextGrantAt: string | null = null;
+  let overage: OverageState | null = null;
 
   if (monthlyAllowance > 0) {
     const anchorIso = await readBillingAnchor(client, input.ownerUserId);
     const window = resolveUsageWindow({ now: input.now ?? new Date(), anchorIso });
     nextGrantAt = window.end.toISOString();
+    overage = await readOverageState(client, {
+      workspaceId: input.workspaceId,
+      team: input.team,
+      windowStart: toDay(window.start),
+      windowEnd: window.end.toISOString(),
+    });
     await ensureAllowance(client, {
       workspaceId: input.workspaceId,
       ownerUserId: input.ownerUserId,
@@ -293,6 +308,8 @@ export async function getCreditSnapshot(
     monthlyAllowance,
     referenceCredits: monthlyAllowance > 0 ? monthlyAllowance : TRIAL_CREDITS,
     nextGrantAt,
+    overage,
+    spendable: Math.max(0, balances.total) + (overage?.headroomCredits ?? 0),
   };
 }
 
@@ -339,6 +356,30 @@ export async function settleTurn(client: SupabaseClient, input: SettleInput): Pr
     // carries the share it covers.
     const costFor = (credits: number): number =>
       Math.round(input.charge.rodi * (credits / input.charge.credits) * 1000) / 1000;
+
+    // Past the allowance: what the balance did not cover is bought at the plan's
+    // rate (overage.ts). It is added back to the top-up pool so the balance
+    // stays at zero rather than going negative, and counted in credit_overage,
+    // which is charged to the card when the window ends.
+    const overage = (input.balances as Partial<CreditSnapshot> | null | undefined)?.overage ?? null;
+    const paidPast = overage && balances ? shortfall(input.charge.credits, balances.trial + balances.allowance + balances.topup) : 0;
+    if (overage && paidPast > 0) {
+      const { error } = await client.from(TABLE).insert({
+        workspace_id: input.workspaceId,
+        owner_user_id: input.ownerUserId,
+        actor_user_id: input.actorUserId,
+        pool: 'topup',
+        kind: 'adjust',
+        credits: paidPast,
+        dedupe_key: `overage:${input.requestId}`,
+        metadata: { source: 'overage', rate_kobo: overage.rateKobo, window_start: overage.windowStart },
+      });
+      if (error && error.code !== UNIQUE_VIOLATION) {
+        console.error(`[credits] could not add paid credits for ${input.requestId}:`, error.message);
+      } else if (!error) {
+        await recordOverage(client, { workspaceId: input.workspaceId, state: overage, credits: paidPast, requestId: input.requestId });
+      }
+    }
 
     for (const source of CREDIT_SOURCES) {
       const credits = split[source];
