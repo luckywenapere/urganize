@@ -10,6 +10,7 @@ import {
   formatTierPrice,
   getTier,
   type BillingInterval,
+  type PricingCurrencyCode,
   type PricingTierId,
 } from "@urganize/pricing";
 
@@ -27,7 +28,7 @@ import {
 // names pinned on the left, so the page itself never scrolls sideways.
 
 type Cell = string | boolean;
-type Row = { label: string; value: (tier: PricingTierId, interval: BillingInterval) => Cell };
+type Row = { label: string; value: (tier: PricingTierId, interval: BillingInterval, currency: PricingCurrencyCode) => Cell };
 type Group = { title: string; rows: Row[] };
 
 const includesDistribution = (tier: PricingTierId) => getTier(tier).includesDistribution;
@@ -51,8 +52,8 @@ const GROUPS: Group[] = [
     rows: [
       {
         label: "Price",
-        value: (tier, interval) =>
-          getTier(tier).contactSales ? (formatTierFromPrice(tier, interval) ?? "Let's talk") : (formatTierPrice(tier, interval) ?? ""),
+        value: (tier, interval, currency) =>
+          getTier(tier).contactSales ? (formatTierFromPrice(tier, interval) ?? "Let's talk") : (formatTierPrice(tier, interval, currency) ?? ""),
       },
       { label: "Artists", value: (tier) => count(getTier(tier).limits.artists) },
       { label: "People on your team", value: (tier) => count(getTier(tier).limits.seats) },
@@ -170,7 +171,13 @@ function CellValue({ value }: { value: Cell }) {
   return <span>{value}</span>;
 }
 
-export function PricingCompareTable({ interval }: { interval: BillingInterval }) {
+export function PricingCompareTable({
+  interval,
+  currency = "NGN",
+}: {
+  interval: BillingInterval;
+  currency?: PricingCurrencyCode;
+}) {
   const tiers = PRICING_TIER_ORDER;
   return (
     <div className="mx-auto mt-16 max-w-6xl">
@@ -217,7 +224,7 @@ export function PricingCompareTable({ interval }: { interval: BillingInterval })
                   </th>
                   {tiers.map((tier) => (
                     <td key={tier} className="px-3 py-3 text-center text-[var(--marketing-text)]">
-                      <CellValue value={row.value(tier, interval)} />
+                      <CellValue value={row.value(tier, interval, currency)} />
                     </td>
                   ))}
                 </tr>

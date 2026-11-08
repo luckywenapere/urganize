@@ -15,15 +15,19 @@ import {
   formatTierFromPrice,
   getIntroPrice,
   getTier,
+  formatMoney,
   getTierPrice,
+  getTierPriceIn,
   introThenLine,
   tierOutcomes,
+  type PricingCurrencyCode,
   type PricingTierId,
 } from '@urganize/pricing';
 import { PlanPicture } from '@urganize/ui/PlanPicture';
 import { SiInstagram, SiTiktok, SiX, SiYoutube } from 'react-icons/si';
 import { FaLinkedin } from 'react-icons/fa6';
 import { Check, ChevronRight } from '@/components/icons';
+import { useVisitorCurrency } from '@/lib/visitor-currency';
 
 const SITE = 'https://urganize.app';
 export const WAITLIST_URL = `${SITE}/#waitlist`;
@@ -37,11 +41,24 @@ const naira = (amount: number) =>
   new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(amount);
 
 /** Same figures as the /pricing card (apps/homepage PricingTierCards). */
-function cardPrice(tierId: PricingTierId, interval: Interval) {
+function cardPrice(tierId: PricingTierId, interval: Interval, currency: PricingCurrencyCode = 'NGN') {
   if (getTier(tierId).contactSales) {
-    // Label is a custom deal from 2026-11-07: a starting price, never a checkout one.
-    const from = formatTierFromPrice(tierId, interval);
-    return { figure: from ?? 'Let’s talk', unit: null, sub: 'A price set with you, for your roster.', was: null };
+    // Label is a custom deal: no price shown, in Naira or dollars (#1120).
+    const custom = formatTierFromPrice(tierId, interval);
+    return { figure: custom ?? 'Let’s talk', unit: null, sub: 'A price set with you, for your roster.', was: null };
+  }
+  // Dollars outside Nigeria (#1120): one fixed price, no starting price.
+  if (currency === 'USD') {
+    const usd = getTierPriceIn(tierId, interval, 'USD');
+    if (!usd) return { figure: '', unit: null, sub: null, was: null };
+    return interval === 'monthly'
+      ? { figure: formatMoney(usd.amount, 'USD'), unit: '/month', sub: null, was: null }
+      : {
+          figure: formatMoney(usd.amount, 'USD'),
+          unit: '/year',
+          sub: `${formatMoney(Math.round(usd.amount / 12), 'USD')} a month, paid once a year`,
+          was: null,
+        };
   }
   if (interval === 'monthly') {
     const intro = getIntroPrice(tierId);
@@ -67,6 +84,7 @@ function CheckLine({ children }: { children: string }) {
 
 export function AuthPlans() {
   const [interval, setInterval] = useState<Interval>('monthly');
+  const currency = useVisitorCurrency();
 
   return (
     <section aria-labelledby="auth-plans" className="mt-[72px] flex flex-col items-center px-4 md:mt-[176px] md:px-[60px]">
@@ -99,8 +117,8 @@ export function AuthPlans() {
       <div className="mt-7 grid w-full max-w-[1320px] gap-4 md:mt-[45px] md:grid-cols-2 md:gap-[30px] xl:grid-cols-4">
         {PRICING_TIER_ORDER.map((tierId) => {
           const tier = getTier(tierId);
-          const { figure, unit, sub, was } = cardPrice(tierId, interval);
-          const { heading, outcomes, includes } = tierOutcomes(tierId);
+          const { figure, unit, sub, was } = cardPrice(tierId, interval, currency);
+          const { heading, outcomes, includes } = tierOutcomes(tierId, currency);
           return (
             <article
               key={tierId}
@@ -152,19 +170,20 @@ export function AuthPlans() {
         })}
       </div>
       <p className="mt-6 max-w-[42rem] text-center text-xs leading-[18px] text-content-tertiary md:mt-10">
-        Prices are in Naira. One price covers your whole team, not each person. The first month offer is for teams paying
-        for the first time.
+        {currency === 'USD'
+          ? 'Prices are in US dollars. One price covers your whole team, not each person.'
+          : 'Prices are in Naira. One price covers your whole team, not each person. The first month offer is for teams paying for the first time.'}
       </p>
     </section>
   );
 }
 
-const monthlyFigure = (tierId: PricingTierId) => {
-  const price = getTierPrice(tierId, 'monthly');
-  return price ? naira(price.amount) : '';
+const monthlyFigure = (tierId: PricingTierId, currency: PricingCurrencyCode) => {
+  const price = getTierPriceIn(tierId, 'monthly', currency);
+  return price ? formatMoney(price.amount, currency) : '';
 };
 
-const QUESTIONS = [
+const questions = (currency: PricingCurrencyCode) => [
   {
     q: 'What is Urganize?',
     a: 'Urganize helps music professionals run their music businesses better, wherever they are in their careers. Add a release and you get the plan: who does what, and by when.',
@@ -177,18 +196,19 @@ const QUESTIONS = [
     q: 'How much does it cost?',
     // Read from the pricing package so a reprice can never leave this answer
     // disagreeing with the plan cards above it.
-    a: `Solo is ${monthlyFigure('solo')} a month, Manager is ${monthlyFigure('manager')} and Pro is ${monthlyFigure('pro')}. Label starts at ${monthlyFigure('label')} a month and is priced with you. One price covers your whole team.`,
+    a: `Solo is ${monthlyFigure('solo', currency)} a month, Manager is ${monthlyFigure('manager', currency)} and Pro is ${monthlyFigure('pro', currency)}. Label is priced with you. One price covers your whole team.`,
   },
-] as const;
+];
 
 export function AuthQuestions() {
+  const currency = useVisitorCurrency();
   return (
     <section aria-labelledby="auth-faq" className="mt-[72px] flex flex-col items-center px-4 md:mt-[125px]">
       <h2 id="auth-faq" className="font-display text-[26px] font-normal leading-8 text-content-primary md:text-[30px] md:leading-[38px]">
         Questions people ask
       </h2>
       <div className="mt-5 w-full max-w-[656px] md:mt-[26px]">
-        {QUESTIONS.map(({ q, a }) => (
+        {questions(currency).map(({ q, a }) => (
           <details key={q} className="group border-b border-stroke-default">
             <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between text-[15px] text-content-primary md:min-h-[38px] md:text-[13px] [&::-webkit-details-marker]:hidden">
               {q}

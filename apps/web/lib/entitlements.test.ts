@@ -271,10 +271,11 @@ describe('tier prices and the sales-led tier', () => {
     expect(formatTierPrice('solo', 'annual')).toBe('₦50,000/year');
     expect(formatTierPrice('pro', 'annual')).toBe('₦400,000/year');
     expect(formatTierPrice('label', 'annual')).toBeNull();
-    expect(formatTierFromPrice('label')).toBe('From ₦100,000/month');
-    expect(formatTierFromPrice('label', 'annual')).toBe('From ₦1,000,000/year');
+    // No price is shown for Label at all since #1120, in Naira or dollars.
+    expect(formatTierFromPrice('label')).toBe('Custom');
+    expect(formatTierFromPrice('label', 'annual')).toBe('Custom');
     expect(formatTierFromPrice('pro')).toBeNull();
-    expect(formatTierFromPrice('enterprise')).toBeNull();
+    expect(formatTierFromPrice('enterprise')).toBe('Custom');
   });
 
   it('phrases the yearly saving in months and never as a percentage', () => {

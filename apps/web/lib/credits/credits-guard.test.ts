@@ -217,11 +217,18 @@ describe('nothing sells credits yet', () => {
     expect(server).toMatch(/dedupe_key:\s*purchaseDedupeKey\(/);
   });
 
-  it('lets only the purchase settler call creditPurchase', () => {
+  it('lets only the two purchase settlers call creditPurchase (Paystack, and Bachs for dollar packs since #1120)', () => {
     const callers = [...sources]
       .filter(([file, source]) => file !== 'lib/credits/credits-server.ts' && /\bcreditPurchase\s*\(/.test(source))
       .map(([file]) => file);
-    expect(callers).toEqual(['lib/credits/purchase-server.ts']);
+    expect(callers.sort()).toEqual(['lib/bachs-server.ts', 'lib/credits/purchase-server.ts']);
+  });
+
+  it('credits a Bachs pack only after Bachs has confirmed the dollar amount and the row is claimed', () => {
+    const bachs = sources.get('lib/bachs-server.ts') ?? '';
+    expect(bachs.indexOf('remoteCheckoutIsPaid(')).toBeGreaterThan(-1);
+    expect(bachs.indexOf('remoteCheckoutIsPaid(')).toBeLessThan(bachs.indexOf('creditPurchase('));
+    expect(bachs.indexOf(".eq('status', 'open')")).toBeLessThan(bachs.indexOf('creditPurchase('));
   });
 
   it('credits only after Paystack has confirmed, never on a webhook body alone', () => {

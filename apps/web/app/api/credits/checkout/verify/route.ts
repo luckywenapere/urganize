@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, getAuthenticatedUser } from '@/app/api/_shared/auth';
 import { isCreditsReference } from '@/lib/credits/purchase';
 import { settleCreditsPurchase } from '@/lib/credits/purchase-server';
+import { isBachsConfigured } from '@/lib/bachs';
+import { fulfilBachsCheckout, loadBachsCheckout } from '@/lib/bachs-server';
 
 /**
  * GET /api/credits/checkout/verify?reference=...
@@ -30,6 +32,20 @@ export async function GET(request: NextRequest) {
   const reference = (url.searchParams.get('reference') || url.searchParams.get('trxref') || '').trim();
   if (!isCreditsReference(reference)) {
     return NextResponse.json({ error: 'That payment reference is not one of ours.' }, { status: 400 });
+  }
+
+  // A dollar pack paid through Bachs (#1120): Bachs is asked, not Paystack.
+  const bachsRow = await loadBachsCheckout(admin, reference);
+  if (bachsRow) {
+    if (bachsRow.user_id !== auth.user.id) {
+      return NextResponse.json({ error: 'That payment reference is not one of ours.' }, { status: 400 });
+    }
+    if (bachsRow.status === 'paid') return NextResponse.json({ state: 'paid', credits: bachsRow.credits ?? 0 });
+    const result = isBachsConfigured() ? await fulfilBachsCheckout(admin, reference) : 'not_paid';
+    if (result === 'applied' || result === 'already') {
+      return NextResponse.json({ state: 'paid', credits: bachsRow.credits ?? 0 });
+    }
+    return NextResponse.json({ state: result === 'error' ? 'pending' : 'not_paid' });
   }
 
   const outcome = await settleCreditsPurchase(admin, reference, 'callback');

@@ -33,7 +33,8 @@ import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { publishReleaseKitLink } from '@/lib/pitch-kit-client';
 import { longestKitUrl, noteRoom, noteWithKit } from '@/lib/pitch-kit-link';
 import { isCreditsReference } from '@/lib/credits/purchase';
-import { TOPUP_PACKS, creditsForPack } from '@/lib/credits/packs';
+import { TOPUP_PACKS, creditsForPack, packPriceUsd } from '@/lib/credits/packs';
+import { useVisitorCurrency } from '@/lib/visitor-currency';
 import type { CreditAccount } from '@/lib/credits/allowance';
 import { canPayForPitchesHere, openPaystackCheckout } from '@/lib/pitch-payments-client';
 import {
@@ -688,6 +689,7 @@ function TopUpSheet({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const onWeb = canPayForPitchesHere();
+  const currency = useVisitorCurrency();
 
   useEffect(() => lockBodyScroll(), []);
 
@@ -761,7 +763,7 @@ function TopUpSheet({
                       >
                         <span className="flex-1 text-[17px] text-content-primary">{packCredits(packCreditCount)}</span>
                         <span className="text-[17px] tabular-nums text-content-primary/55">
-                          ₦{pack.priceNaira.toLocaleString('en')}
+                          {currency === 'USD' ? `$${packPriceUsd(pack)}` :`₦${pack.priceNaira.toLocaleString('en')}`}
                         </span>
                         <span className="grid w-5 place-items-center text-brand" aria-hidden="true">
                           {active ? <CheckMark size={17} width={2.6} /> : null}

@@ -422,6 +422,8 @@ export async function creditPurchase(
     credits: number;
     reference: string;
     priceNaira: number;
+    /** Who took the money: Paystack, or Bachs for dollar packs (#1120). */
+    source?: 'paystack' | 'bachs';
   }
 ): Promise<'credited' | 'already' | 'error'> {
   const credits = Math.floor(input.credits);
@@ -435,7 +437,7 @@ export async function creditPurchase(
       kind: 'topup',
       credits,
       dedupe_key: purchaseDedupeKey(input.reference),
-      metadata: { source: 'paystack', reference: input.reference, price_naira: input.priceNaira },
+      metadata: { source: input.source ?? 'paystack', reference: input.reference, price_naira: input.priceNaira },
     });
     if (!error) return 'credited';
     // The reference is already on the ledger: told twice, credited once.

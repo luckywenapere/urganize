@@ -669,20 +669,20 @@ export function introThenLine(id: PricingTierId): string | null {
 /** The plan's outcome block (heading plus lines) and the limits that follow
  *  it, with any limit line already said as an outcome left out so a card
  *  never repeats itself. null outcomes for a tier that has none (Group). */
-export function tierOutcomes(id: PricingTierId): {
+export function tierOutcomes(id: PricingTierId, currency: PricingCurrencyCode = 'NGN'): {
   heading: string | null;
   outcomes: readonly string[];
   includes: string[];
 } {
   const { outcomeHeading, outcomes = [] } = PRICING_TIERS[id];
-  const includes = tierHighlights(id).filter((line) => !outcomes.includes(line));
+  const includes = tierHighlights(id, { currency }).filter((line) => !outcomes.includes(line));
   return { heading: outcomeHeading ?? null, outcomes, includes };
 }
 
 /** The feature list under a pricing card: a lead-in line, then what this plan
  *  adds. Each line must be true of the product today. */
-export function tierFeatures(id: PricingTierId): { heading: string; lines: string[] } {
-  const highlights = tierHighlights(id).filter((line) => !line.startsWith('Everything in'));
+export function tierFeatures(id: PricingTierId, currency: PricingCurrencyCode = 'NGN'): { heading: string; lines: string[] } {
+  const highlights = tierHighlights(id, { currency }).filter((line) => !line.startsWith('Everything in'));
   if (id === 'solo') {
     return {
       heading: 'What you get:',
@@ -945,7 +945,7 @@ export function distributionHighlight(
 
 export function tierHighlights(
   id: PricingTierId,
-  opts: { interval?: BillingInterval; distributionRequiresPrepay?: boolean } = {}
+  opts: { interval?: BillingInterval; distributionRequiresPrepay?: boolean; currency?: PricingCurrencyCode } = {}
 ): string[] {
   const { limits, perks, urgansMonthlyCredits, monthlyPrice } = PRICING_TIERS[id];
   const lines: string[] = [];
@@ -989,7 +989,10 @@ export function tierHighlights(
   );
   // A plan without included distribution pays for each release; a plan with it
   // pays for releases past its allowance. Same per-type price either way.
-  const single = `₦${EXTRA_RELEASE_PRICE_NAIRA.toLocaleString('en-US')}`;
+  const single =
+    opts.currency === 'USD'
+      ? formatMoney(EXTRA_RELEASE_PRICE_USD, 'USD')
+      : `₦${EXTRA_RELEASE_PRICE_NAIRA.toLocaleString('en-US')}`;
   const extra = distribution
     ? [`Extra singles ${single} each`]
     : monthlyPrice
@@ -998,23 +1001,97 @@ export function tierHighlights(
   return [...lines, ...(distribution ? [distribution] : []), ...extra, ...perks];
 }
 
-/** A sales-led tier's starting price, "From ₦100,000/month", or null when the
- *  tier has no price at all (Group) or is not sales-led. Label is a custom deal
- *  (founder, 2026-11-07): the figure is a floor, never a checkout price. */
+/** The word a sales-led plan shows where a price would go. */
+export const CUSTOM_PRICE_LABEL = 'Custom';
+
+/** What a sales-led tier shows instead of a price: "Custom", or null for a
+ *  tier that is not sales-led. Label is a deal set with each team (founder,
+ *  2026-11-07), and since #1120 no price is shown for it at all, in naira or
+ *  dollars; it said "From ₦100,000/month" before. The interval argument is
+ *  kept so no caller changed shape. */
 export function formatTierFromPrice(
   id: PricingTierId,
-  interval: BillingInterval = 'monthly'
+  _interval: BillingInterval = 'monthly'
 ): string | null {
-  if (!PRICING_TIERS[id].contactSales) return null;
-  const price = getTierPrice(id, interval);
-  if (!price) return null;
-  const formatted = new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    maximumFractionDigits: 0,
-  }).format(price.amount);
-  return `From ${formatted}/${interval === 'annual' ? 'year' : 'month'}`;
+  return PRICING_TIERS[id].contactSales ? CUSTOM_PRICE_LABEL : null;
 }
+
+// ---------------------------------------------------------------- dollar prices
+//
+// Fixed US dollar prices for everyone outside Nigeria (founder, 2026-11-07,
+// #1112 and #1120). One price for every other country, not a conversion: a
+// straight conversion made Solo about $3.60, far below what music tools abroad
+// charge. Nigeria keeps naira and Paystack; everyone else pays these through
+// Bachs. Yearly is ten months of the monthly figure, the same rule as naira.
+// Label has no dollar price: it is Custom in both currencies.
+
+/** Whole dollars a month. A tier missing here has no dollar price. */
+export const USD_MONTHLY_PRICE: Partial<Record<PricingTierId, number>> = {
+  solo: 9,
+  manager: 29,
+  pro: 79,
+};
+
+/** Naira per dollar, for our own books only: every amount the app stores
+ *  (subscriptions, charges, margins) is in kobo, so a dollar payment is
+ *  recorded at this rate. It never sets a price anyone pays. Same rate as the
+ *  unit economics on #1112. */
+export const NAIRA_PER_DOLLAR = 1_500;
+
+/** A dollar amount in cents, as the naira equivalent in kobo for our books. */
+export function usdCentsToKoboEquivalent(cents: number): number {
+  return Math.round(cents * NAIRA_PER_DOLLAR);
+}
+
+/** Which currency a visitor pays in. Nigeria pays naira. Any other real
+ *  two-letter country code pays dollars. Unknown (no header, local dev) is
+ *  naira, because most of our buyers are in Nigeria and it still works. */
+export function pricingCurrencyForCountry(country: string | null | undefined): PricingCurrencyCode {
+  const code = (country ?? '').trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code)) return 'NGN';
+  return code === 'NG' ? 'NGN' : 'USD';
+}
+
+/** A tier's dollar price for one interval, amount in whole dollars and
+ *  minorUnit in cents. Null for a tier with no dollar price (Label) or a
+ *  sales-led tier. */
+export function getTierPriceUsd(id: PricingTierId, interval: BillingInterval): TierPrice | null {
+  if (PRICING_TIERS[id].contactSales) return null;
+  const monthly = USD_MONTHLY_PRICE[id];
+  if (!monthly) return null;
+  const amount = interval === 'monthly' ? monthly : intervalAmount(monthly, interval);
+  return { amount, minorUnit: Math.round(amount * 100) };
+}
+
+/** A tier's price in either currency. TierPrice.minorUnit is kobo for NGN and
+ *  cents for USD. */
+export function getTierPriceIn(
+  id: PricingTierId,
+  interval: BillingInterval,
+  currency: PricingCurrencyCode
+): TierPrice | null {
+  return currency === 'USD' ? getTierPriceUsd(id, interval) : getTierPrice(id, interval);
+}
+
+/** "₦15,000" or "$29". Whole units; a dollar amount with cents keeps them
+ *  ("$1.50"). */
+export function formatMoney(amount: number, currency: PricingCurrencyCode): string {
+  const whole = Number.isInteger(amount);
+  return new Intl.NumberFormat(currency === 'NGN' ? 'en-NG' : 'en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: whole ? 0 : 2,
+    maximumFractionDigits: whole ? 0 : 2,
+  }).format(amount);
+}
+
+/** A single release sent to stores, in dollars. TRM's own public price is
+ *  $1.50 a song, and our agreement says we may not charge more than that. */
+export const EXTRA_RELEASE_PRICE_USD = 1.5;
+
+/** The extra AI credits on sale outside Nigeria: 100 credits for $2, every
+ *  plan (founder, 2026-11-07). A credit costs us about $0.0046. */
+export const CREDIT_PACK_USD = { credits: 100, priceUsd: 2 } as const;
 
 export function getTier(id: PricingTierId): PricingTierDefinition {
   return PRICING_TIERS[id];
@@ -1073,18 +1150,15 @@ export function getTierPrice(
  *  abbreviation is one more thing to decode. */
 export function formatTierPrice(
   id: PricingTierId,
-  interval: BillingInterval = DEFAULT_SELLING_INTERVAL
+  interval: BillingInterval = DEFAULT_SELLING_INTERVAL,
+  currency: PricingCurrencyCode = 'NGN'
 ): string | null {
   // A contact-us tier keeps a price for the teams already on it, but no page
   // shows it (Label, 2026-10-26).
   if (PRICING_TIERS[id].contactSales) return null;
-  const price = getTierPrice(id, interval);
+  const price = getTierPriceIn(id, interval, currency);
   if (!price) return null;
-  const formatted = new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    maximumFractionDigits: 0,
-  }).format(price.amount);
+  const formatted = formatMoney(price.amount, currency);
   return interval === 'semiannual'
     ? `${formatted} for 6 months`
     : `${formatted}/${interval === 'monthly' ? 'month' : 'year'}`;

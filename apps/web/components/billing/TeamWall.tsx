@@ -14,7 +14,8 @@ import {
   getIntroPrice,
   getPlan,
   getTier,
-  getTierPrice,
+  formatMoney,
+  getTierPriceIn,
   isSellableInterval,
   type BillingInterval,
   type PricingTierId,
@@ -544,15 +545,19 @@ export function TeamWall() {
   // The X-style plan cards (2026-10-26) whenever an owner can pay by card here.
   // iOS, the legacy picker and "nothing to buy" keep the single card below.
   const showCards = isOwner && PRICING_V2 && canCheckOut && !isIOSNativeApp;
-  const introMonthsLeft = team?.introMonthsLeft ?? 0;
+  // Dollars outside Nigeria (#1120): the server says which, from where the
+  // payer is and whether Bachs can charge them. Naira when it does not say.
+  const currency = team?.currency === 'USD' ? 'USD' : 'NGN';
+  // No starting price in dollars.
+  const introMonthsLeft = currency === 'USD' ? 0 : (team?.introMonthsLeft ?? 0);
   // A team that has never paid (2026-10-31, no trial): this is its first
   // screen after "Your team", so it reads as a start, not as a lapse.
   const isFirstPlan =
     !isUpgradeIntent && !isReadOnlyTeam && team?.state === 'walled' && introMonthsLeft >= INTRO_MONTHS;
   const anyIntroPrice = offeredTiers.some((tier) => getIntroPrice(tier) !== null);
   const payLabel = (tier: PricingTierId): string => {
-    const price = getTierPrice(tier, selectedInterval);
-    return price ? `Pay ₦${price.amount.toLocaleString('en-US')} and start` : `Get ${getTier(tier).label}`;
+    const price = getTierPriceIn(tier, selectedInterval, currency);
+    return price ? `Pay ${formatMoney(price.amount, currency)} and start` : `Get ${getTier(tier).label}`;
   };
 
   return (
@@ -617,6 +622,7 @@ export function TeamWall() {
                   selectedInterval={selectedInterval}
                   onSelectInterval={setSelectedInterval}
                   introMonthsLeft={introMonthsLeft}
+                  currency={currency}
                   currentTier={isUpgradeIntent ? (team?.tier ?? null) : null}
                   onChoose={(tier) => {
                     setSelectedTier(tier);
@@ -734,7 +740,8 @@ export function TeamWall() {
                         onSelectTier={setSelectedTier}
                         selectedInterval={selectedInterval}
                         onSelectInterval={setSelectedInterval}
-                        introMonthsLeft={team?.introMonthsLeft ?? 0}
+                        introMonthsLeft={introMonthsLeft}
+                        currency={currency}
                         disabled={isStartingCheckout}
                       />
                     ) : (
@@ -811,7 +818,7 @@ export function TeamWall() {
 
                     {canCheckOut && PRICING_V2 && !needsOnboardingCall(effectiveTier, selectedInterval) ? (
                       <p className="text-center text-xs text-content-tertiary">
-                        {planChargeNote(effectiveTier, selectedInterval, team?.introMonthsLeft ?? 0)}
+                        {planChargeNote(effectiveTier, selectedInterval, introMonthsLeft, currency)}
                       </p>
                     ) : null}
 
@@ -838,7 +845,7 @@ export function TeamWall() {
                 tap, right under the thing they are deciding about. */}
             {LABEL_FROM ? (
               <p className="text-center text-sm text-content-secondary">
-                Running a label? Label is {LABEL_FROM.replace(/^From/, 'from')}, set up with you.
+                Running a label? Label is priced with you and set up with you.
               </p>
             ) : null}
             <div className="flex flex-wrap items-center justify-center gap-x-4 text-sm">

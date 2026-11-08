@@ -21,7 +21,7 @@ import { settingsDeepLink } from '@/lib/settings-nav';
 import { loadChecklistTeam } from '@/lib/self-serve-checklist-server';
 import { loadPaymentAccount, trackSelfServe } from '@/lib/self-serve-server';
 import { loadIntroMonthsLeft } from '@/lib/referrals-server';
-import { getChargePrice } from '@urganize/pricing';
+import { getChargePrice, getTierPriceUsd } from '@urganize/pricing';
 import {
   checkoutPath,
   isCheckoutPeriod,
@@ -153,6 +153,23 @@ export async function runSelfServeNudgeSweep(admin: Admin, now = new Date()): Pr
   return result;
 }
 
+/** Whether this owner's last paid plan checkout was in US dollars (#1120).
+ *  False on any doubt, so the reminder falls back to the Naira wording. */
+async function lastPaidInDollars(admin: Admin, ownerUserId: string): Promise<boolean> {
+  const last = await admin
+    .from('bachs_checkouts')
+    .select('currency,purpose')
+    .eq('user_id', ownerUserId)
+    .eq('status', 'paid')
+    .order('paid_at', { ascending: false })
+    .limit(5);
+  if (last.error) return false;
+  const plan = ((last.data ?? []) as Array<{ currency: string | null; purpose: string | null }>).find(
+    (row) => (row.purpose ?? 'plan') === 'plan'
+  );
+  return String(plan?.currency ?? '').toUpperCase() === 'USD';
+}
+
 export async function runRenewalReminderSweep(admin: Admin, now = new Date()): Promise<LifecycleRunResult> {
   const result: LifecycleRunResult = { sent: 0, skipped: 0, deferred: 0 };
   try {
@@ -193,8 +210,13 @@ export async function runRenewalReminderSweep(admin: Admin, now = new Date()): P
       if (!sendId) continue;
       budget -= 1;
       const period = isCheckoutPeriod(row.billing_interval) ? row.billing_interval : 'monthly';
-      const account = await loadPaymentAccount(admin, team.owner_id);
-      const renewPath = `${checkoutPath({ plan: row.plan, period })}&method=transfer`;
+      // A team that last paid in US dollars through Bachs (#1120) is reminded
+      // in dollars and sent to the checkout page, not to a bank transfer.
+      const usdPrice = (await lastPaidInDollars(admin, team.owner_id)) ? getTierPriceUsd(row.plan, period) : null;
+      const account = usdPrice ? null : await loadPaymentAccount(admin, team.owner_id);
+      const renewPath = usdPrice
+        ? checkoutPath({ plan: row.plan, period })
+        : `${checkoutPath({ plan: row.plan, period })}&method=transfer`;
       const send = await sendEmail(admin, {
         templateId: 'renewal_reminder',
         to: owner.email,
@@ -205,8 +227,10 @@ export async function runRenewalReminderSweep(admin: Admin, now = new Date()): P
           recipientName: owner.name,
           plan: row.plan,
           expiresAt: row.expires_at,
-          amountNaira:
-            getChargePrice(row.plan, period, await loadIntroMonthsLeft(admin, team.owner_id))?.amount ?? null,
+          amountNaira: usdPrice
+            ? null
+            : (getChargePrice(row.plan, period, await loadIntroMonthsLeft(admin, team.owner_id))?.amount ?? null),
+          amountUsd: usdPrice?.amount ?? null,
           account: account
             ? { bankName: account.bankName, accountNumber: account.accountNumber, accountName: account.accountName }
             : null,

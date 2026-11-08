@@ -24,6 +24,7 @@ import {
   SELF_SERVE_COPY,
   checkoutPath,
   formatNaira,
+  formatPrice,
   parseCheckoutIntent,
   partPaidCopy,
   periodAmount,
@@ -39,6 +40,7 @@ import {
   type CheckoutPlan,
   type PaymentMethodChoice,
 } from '@/lib/self-serve';
+import { useVisitorCurrency } from '@/lib/visitor-currency';
 
 /** What Bachs takes (docs.bachs.io, 2026-11-01). Its own page shows the
  *  amount in the payer's money. */
@@ -50,6 +52,10 @@ const BACHS_WAYS_TO_PAY = [
   'USDT or USDC',
 ] as const;
 
+/** Outside Nigeria the checkout is priced in US dollars (#1120). Mobile money
+ *  is left off until we have seen Bachs offer it on a dollar checkout. */
+const BACHS_WAYS_TO_PAY_USD = ['Visa or Mastercard', 'USDT or USDC'] as const;
+
 type Options = {
   /** Call-led plans this person may pay for now, as "plan:period": a payment link from the founder, or a renewal. */
   callLedAllowed: string[];
@@ -59,6 +65,8 @@ type Options = {
   transferAccounts: boolean;
   /** Bachs (2026-11-01): one Pay button, any currency or way to pay. */
   payWithBachs?: boolean;
+  /** Dollars outside Nigeria (#1120), Naira in it. */
+  currency?: 'NGN' | 'USD';
   distributionOn: boolean;
   approved: boolean;
   openInvoice: {
@@ -270,6 +278,7 @@ function PlanChip({
   setOpen,
   suffix,
   introMonthsLeft = 0,
+  currency = 'NGN',
 }: {
   plan: CheckoutPlan;
   onChange: (plan: CheckoutPlan) => void;
@@ -277,6 +286,7 @@ function PlanChip({
   setOpen: (open: boolean) => void;
   suffix?: string;
   introMonthsLeft?: number;
+  currency?: 'NGN' | 'USD';
 }) {
   return (
     <div>
@@ -312,7 +322,7 @@ function PlanChip({
                   : 'border-stroke-control text-content-secondary hover:bg-bg-hover'
               }`}
             >
-              {planName(option)} · {formatNaira(periodAmount(option, 'monthly', introMonthsLeft) ?? 0)}/month
+              {planName(option)} · {formatPrice(periodAmount(option, 'monthly', introMonthsLeft, currency) ?? 0, currency)}/month
             </button>
           ))}
         </div>
@@ -343,6 +353,7 @@ function SignupStep({
   const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [resent, setResent] = useState(false);
+  const currency = useVisitorCurrency();
 
   const here = checkoutPath(intent);
 
@@ -422,7 +433,7 @@ function SignupStep({
           <div>
             <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">Your plan</div>
             <div className="mt-0.5 font-semibold text-content-primary">
-              {planName(intent.plan)} · {periodHeadline(intent.plan, intent.period, INTRO_MONTHS)}
+              {planName(intent.plan)} · {periodHeadline(intent.plan, intent.period, INTRO_MONTHS, currency)}
             </div>
           </div>
           <button
@@ -611,6 +622,7 @@ function CheckoutStep({
   const cardPeriods = options?.cardPeriods[intent.plan] ?? [];
   const cardAvailable = cardPeriods.length > 0;
   const bachs = options?.payWithBachs === true;
+  const currency = options?.currency === 'USD' ? 'USD' : 'NGN';
   // Bachs offers every period whatever they pay with, as transfer does here.
   const effectiveMethod: PaymentMethodChoice =
     bachs || (method === 'card' && options && !cardAvailable) ? 'transfer' : method;
@@ -624,8 +636,8 @@ function CheckoutStep({
   }, [changing, current, effectiveMethod, cardPeriods, intent.plan]);
   const period = periods.includes(intent.period) ? intent.period : (periods[0] ?? 'monthly');
   const introMonthsLeft = options?.introMonthsLeft ?? 0;
-  const amount = periodAmount(intent.plan, period, introMonthsLeft) ?? 0;
-  const saving = introSubline(intent.plan, period, introMonthsLeft) ?? periodSaving(period);
+  const amount = periodAmount(intent.plan, period, introMonthsLeft, currency) ?? 0;
+  const saving = introSubline(intent.plan, period, introMonthsLeft, currency) ?? periodSaving(period);
 
   const pickMethod = (next: PaymentMethodChoice) => {
     setMethod(next);
@@ -789,14 +801,16 @@ function CheckoutStep({
       ? 'Opening Paystack…'
       : 'Getting your account number…'
     : bachs || effectiveMethod === 'card'
-      ? `Pay ${formatNaira(amount)}`
+      ? `Pay ${formatPrice(amount, currency)}`
       : 'Get my account number';
   const fineprint = changing
     ? upgrading && current
       ? `The days left on ${planName(current.plan)} come off the price.`
       : 'The change starts when your current period ends.'
     : bachs
-      ? 'You see the amount in your own money on the next page. Each payment covers the time you pick, and we remind you before it ends.'
+      ? currency === 'USD'
+        ? 'Prices are in US dollars. Each payment covers the time you pick, and we remind you before it ends.'
+        : 'You see the amount in your own money on the next page. Each payment covers the time you pick, and we remind you before it ends.'
       : effectiveMethod === 'card'
       ? SELF_SERVE_COPY.cardFine
       : SELF_SERVE_COPY.transferFine;
@@ -822,10 +836,11 @@ function CheckoutStep({
               setOpen={setPickingPlan}
               onChange={(plan) => setIntent((current) => ({ ...current, plan }))}
               introMonthsLeft={introMonthsLeft}
+              currency={currency}
             />
             <div>
               <h1 className="font-display text-[34px] leading-tight text-content-primary lg:text-[44px]">
-                {periodHeadline(intent.plan, period, introMonthsLeft)}
+                {periodHeadline(intent.plan, period, introMonthsLeft, currency)}
               </h1>
               {saving ? <p className="mt-1.5 text-content-secondary">{saving}</p> : null}
             </div>
@@ -849,7 +864,7 @@ function CheckoutStep({
                 >
                   {periodLabel(option)}
                   <small className="mt-0.5 font-mono text-xs font-normal">
-                    {formatNaira(periodAmount(intent.plan, option, introMonthsLeft) ?? 0)}
+                    {formatPrice(periodAmount(intent.plan, option, introMonthsLeft, currency) ?? 0, currency)}
                   </small>
                 </button>
               ))}
@@ -901,7 +916,7 @@ function CheckoutStep({
               <>
                 <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">Pay your way</div>
                 <ul className="grid grid-cols-2 gap-2 text-sm text-content-primary" aria-label="Ways to pay">
-                  {BACHS_WAYS_TO_PAY.map((way) => (
+                  {(currency === 'USD' ? BACHS_WAYS_TO_PAY_USD : BACHS_WAYS_TO_PAY).map((way) => (
                     <li key={way} className="rounded-2xl border border-stroke-default px-4 py-3">
                       {way}
                     </li>
@@ -991,7 +1006,7 @@ function CheckoutStep({
             <hr className="border-stroke-default" />
             <div className="flex items-center justify-between">
               <span className="font-semibold text-content-primary">{period === 'monthly' ? 'Total today' : 'Total'}</span>
-              <span className="font-display text-[22px] text-content-primary">{formatNaira(amount)}</span>
+              <span className="font-display text-[22px] text-content-primary">{formatPrice(amount, currency)}</span>
             </div>
             {error ? (
               <p role="alert" className="text-sm text-status-error">

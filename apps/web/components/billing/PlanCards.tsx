@@ -2,12 +2,15 @@
 
 import {
   SELLABLE_INTERVALS,
+  formatMoney,
   getChargePrice,
+  getTierPriceUsd,
   getIntroPrice,
   getTier,
   getTierPrice,
   tierFeatures,
   type BillingInterval,
+  type PricingCurrencyCode,
   type PricingTierId,
 } from '@urganize/pricing';
 import { PlanPicture } from '@/components/billing/PlanPicture';
@@ -41,8 +44,18 @@ const naira = (amount: number) =>
 export function planCardPrice(
   tierId: PricingTierId,
   interval: BillingInterval,
-  introMonthsLeft: number
+  introMonthsLeft: number,
+  currency: PricingCurrencyCode = 'NGN'
 ): { figure: string; sub: string | null; was?: string } | null {
+  // Dollars outside Nigeria (#1120): one fixed price, no starting price.
+  if (currency === 'USD') {
+    const usd = getTierPriceUsd(tierId, interval);
+    if (!usd) return null;
+    if (interval === 'annual') {
+      return { figure: formatMoney(Math.round(usd.amount / 12), 'USD'), sub: `${formatMoney(usd.amount, 'USD')} billed once a year` };
+    }
+    return { figure: formatMoney(usd.amount, 'USD'), sub: null };
+  }
   const charge = getChargePrice(tierId, interval, introMonthsLeft);
   if (!charge) return null;
   if (interval === 'annual') {
@@ -64,6 +77,8 @@ type PlanCardsProps = {
   selectedInterval: BillingInterval;
   onSelectInterval: (interval: BillingInterval) => void;
   introMonthsLeft: number;
+  /** Dollars outside Nigeria (#1120). Naira when absent. */
+  currency?: PricingCurrencyCode;
   /** Called with the plan whose button was tapped. */
   onChoose: (tier: PricingTierId) => void;
   /** The plan whose checkout is opening, if any. */
@@ -80,6 +95,7 @@ export function PlanCards({
   selectedInterval,
   onSelectInterval,
   introMonthsLeft,
+  currency = 'NGN',
   onChoose,
   busyTier,
   disabled,
@@ -126,8 +142,8 @@ export function PlanCards({
       <div className={`grid gap-4 ${tiers.length > 2 ? 'sm:grid-cols-2 lg:grid-cols-3' : tiers.length > 1 ? 'sm:grid-cols-2' : ''}`}>
         {tiers.map((tierId) => {
           const tier = getTier(tierId);
-          const price = planCardPrice(tierId, selectedInterval, introMonthsLeft);
-          const features = tierFeatures(tierId);
+          const price = planCardPrice(tierId, selectedInterval, introMonthsLeft, currency);
+          const features = tierFeatures(tierId, currency);
           // Solo has no plan below it, so its list opens with who it is for.
           const lead = features.heading.startsWith('Everything in') ? features.heading : tier.audience;
           const recommended = Boolean(tier.recommended);

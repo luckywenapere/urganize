@@ -15,6 +15,9 @@ import {
   intervalLabel,
   type BillingInterval,
   type PricingTierId,
+  type PricingCurrencyCode,
+  formatMoney,
+  getTierPriceUsd,
 } from '@urganize/pricing';
 import { ALLOWANCE_CREDITS } from '@/lib/credits/allowance';
 
@@ -94,13 +97,31 @@ export function planName(plan: CheckoutPlan): string {
 
 /** Naira for one period of a plan, or null when the plan has no price.
  *  `introMonthsLeft` > 0 gives the starting price on monthly. */
-export function periodAmount(plan: CheckoutPlan, period: BillingInterval, introMonthsLeft = 0): number | null {
+export function periodAmount(
+  plan: CheckoutPlan,
+  period: BillingInterval,
+  introMonthsLeft = 0,
+  currency: PricingCurrencyCode = 'NGN'
+): number | null {
+  // Dollars (#1120) have no starting price: the fixed dollar price from day one.
+  if (currency === 'USD') return getTierPriceUsd(plan, period)?.amount ?? null;
   return getChargePrice(plan, period, introMonthsLeft)?.amount ?? null;
+}
+
+/** "₦30,000" or "$29": an amount in the payer's currency. */
+export function formatPrice(amount: number, currency: PricingCurrencyCode = 'NGN'): string {
+  return currency === 'USD' ? formatMoney(amount, 'USD') : formatNaira(amount);
 }
 
 /** "For your first 6 months, then ₦30,000 a month." when this payment is at
  *  the starting price, else null. */
-export function introSubline(plan: CheckoutPlan, period: BillingInterval, introMonthsLeft: number): string | null {
+export function introSubline(
+  plan: CheckoutPlan,
+  period: BillingInterval,
+  introMonthsLeft: number,
+  currency: PricingCurrencyCode = 'NGN'
+): string | null {
+  if (currency === 'USD') return null;
   const intro = getIntroPrice(plan);
   const full = getTierPrice(plan, 'monthly');
   if (period !== 'monthly' || !intro || !full || introMonthsLeft <= 0) return null;
@@ -109,10 +130,15 @@ export function introSubline(plan: CheckoutPlan, period: BillingInterval, introM
 }
 
 /** "₦30,000 a month", "₦150,000 for 6 months", "₦300,000 a year". */
-export function periodHeadline(plan: CheckoutPlan, period: BillingInterval, introMonthsLeft = 0): string {
-  const amount = periodAmount(plan, period, introMonthsLeft);
+export function periodHeadline(
+  plan: CheckoutPlan,
+  period: BillingInterval,
+  introMonthsLeft = 0,
+  currency: PricingCurrencyCode = 'NGN'
+): string {
+  const amount = periodAmount(plan, period, introMonthsLeft, currency);
   if (amount === null) return '';
-  const naira = formatNaira(amount);
+  const naira = formatPrice(amount, currency);
   if (period === 'semiannual') return `${naira} for 6 months`;
   if (period === 'annual') return `${naira} a year`;
   return `${naira} a month`;
@@ -478,7 +504,13 @@ export function renewalDates(expiresAt: string): { long: string; short: string }
   };
 }
 
-export function renewalEmailCopy(input: { plan: CheckoutPlan; expiresAt: string; amountNaira: number | null }): {
+export function renewalEmailCopy(input: {
+  plan: CheckoutPlan;
+  expiresAt: string;
+  amountNaira: number | null;
+  /** Set for a team that pays in US dollars through Bachs (#1120). */
+  amountUsd?: number | null;
+}): {
   subject: string;
   preview: string;
   body: string;
@@ -487,7 +519,9 @@ export function renewalEmailCopy(input: { plan: CheckoutPlan; expiresAt: string;
   const name = planName(input.plan);
   const { long, short } = renewalDates(input.expiresAt);
   const pay =
-    input.amountNaira && input.amountNaira > 0
+    input.amountUsd && input.amountUsd > 0
+      ? `To keep going, pay ${formatMoney(input.amountUsd, 'USD')} on Urganize.`
+      : input.amountNaira && input.amountNaira > 0
       ? `To keep going, transfer ${formatNaira(input.amountNaira)} to your Urganize account, or pay by card.`
       : 'To keep going, transfer to your Urganize account, or pay by card.';
   return {
