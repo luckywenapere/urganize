@@ -76,6 +76,9 @@ export type RolloutMenuInput = {
   variant: RolloutMenuVariant;
   flags: RolloutMenuFlags;
   share?: RolloutMenuDialogAction | null;
+  /** Change release date (#1128). Owner-only, and only once the rollout has a
+   *  date: a rollout with none keeps its "Set your release date" row. */
+  releaseDate?: RolloutMenuDialogAction | null;
   changeArtist?: RolloutMenuDialogAction | null;
   archive?: RolloutMenuDialogAction | null;
   /** Delete rollout (moves it to Trash). Owner-only; the caller passes it only
@@ -131,7 +134,7 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
   });
 
   const dialog = (
-    key: 'share' | 'change-artist' | 'archive' | 'delete',
+    key: 'share' | 'release-date' | 'change-artist' | 'archive' | 'delete',
     action: RolloutMenuDialogAction
   ): RolloutMenuEntry => ({
     key,
@@ -191,6 +194,7 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     input.share ? dialog('share', input.share) : null,
     flags.capture ? scene('capture', input.captureLabel ?? 'Smart link') : null,
     // What UrgAns did moved to the UrgAns page (2026-10-29, #849).
+    input.releaseDate ? dialog('release-date', input.releaseDate) : null,
     input.changeArtist ? dialog('change-artist', input.changeArtist) : null,
     input.archive ? dialog('archive', input.archive) : null,
     input.deleteRollout ? dialog('delete', input.deleteRollout) : null,

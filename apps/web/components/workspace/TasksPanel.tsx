@@ -210,6 +210,8 @@ type TasksPanelProps = {
    */
   archiveAction?: TaskPanelAction | null;
   shareAction?: TaskPanelAction | null;
+  /** Change release date (#1128), owner-only, once the rollout has a date. */
+  releaseDateAction?: TaskPanelAction | null;
   /** Delete rollout (to Trash), owner-only. Drawn in red, apart from the rest. */
   deleteAction?: TaskPanelAction | null;
   /**
@@ -302,6 +304,7 @@ export function TasksPanel({
   id,
   archiveAction,
   shareAction,
+  releaseDateAction,
   deleteAction,
   sceneContent,
   activitiesBanner,
@@ -568,6 +571,7 @@ export function TasksPanel({
     releaseId: scopedRelease?.id ?? null,
     variant: 'phone',
     share: shareAction,
+    releaseDate: releaseDateAction,
     archive: archiveAction,
     deleteRollout: deleteAction,
   });

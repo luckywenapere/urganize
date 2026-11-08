@@ -43,6 +43,8 @@ type WorkspaceDesktopFocusedProps = {
    * row's overflow button. Change artist left the menu on Oct 18, 2026; it is
    * offered only in the distribution issue list now. */
   share?: RolloutMenuDialogInput | null;
+  /** Change release date (#1128), owner-only, behind the same overflow. */
+  releaseDate?: RolloutMenuDialogInput | null;
   archive?: RolloutMenuDialogInput | null;
   /** Delete rollout (to Trash), owner-only. */
   deleteRollout?: RolloutMenuDialogInput | null;
@@ -116,6 +118,7 @@ export function WorkspaceDesktopFocused({
   onNewActivity,
   onAddIdea,
   share,
+  releaseDate,
   archive,
   deleteRollout,
   banner,
@@ -305,6 +308,7 @@ export function WorkspaceDesktopFocused({
         <RolloutTabs
           releaseId={scopedRelease.id}
           share={share}
+          releaseDate={releaseDate}
           archive={archive}
           deleteRollout={deleteRollout}
         />
