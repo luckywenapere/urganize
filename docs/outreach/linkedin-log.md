@@ -152,3 +152,17 @@ Connection requests from 5 Nov: 3 of 18 accepted so far, 2 of them replied (Afol
 **Calls next week:** Mon 9 Nov 3pm Bayo, Tue 10 Nov 12pm Abraham, Tue 4pm Nicholas, Wed 11 Nov 2pm Meghan Kek. Booking link sent to Lucas, Nkosinathi.
 
 **Evening:** Clinton Mabulana asked what "who else are you working with" meant: clarified (which artists besides SimZo and TWO).
+
+## 8 Nov 2026
+
+**Sign-ups from the links so far: 0.** Live database, last 5 days: one new account (6 Nov, from an email invite). The sign-up link works signed out (opens "Create your account"). Pricing is being restructured (free tier, Solo, Solo Plus, Pro, Pro Plus, Label), so outreach quotes no prices until it is live.
+
+**Inbox replies sent (4):** Yemi Akinnigbagbe asked "is this leading somewhere": straight pitch and sign-up link. Dakail Ester (Big Muvaa; KMG hiring): pitch and link. Clinton Mabulana (manages Dr. Smama): pitch and link. Jennifer Ohaeri-Ehiem pitched Winnov8: polite no. Skipped Tayo ("I will check it out").
+
+**Nudges to link-holders (3):** Scott Steele, John Sadek, Mohamed Babiker Ali ("I'll let you in the same day").
+
+**Cold DM (1):** Charles Mchunu (A&R, South Africa). He replied within the hour (Dj Jaivane's album, new artist uZondi; asked what we do). Replied: what Urganize is for an A&R with new artists, sign-up link.
+
+**Connection requests with a note (12):** Adrian Silva, Dominique Cook, Tatiyanna G., Darnell D. (Rare Circle Entertainment), Ami Gordon (Serendipity), Tobias Metzger, Tess Hart, Sharon Tapper (Executive Director, Music Managers Forum US), Muhso Dio (Lephway Records), Shehu Raji, Cecilia Ovonji, Manuel J. R. All confirmed pending.
+
+**Personal invite links (new tactic, 8 Nov):** made 10 single-use links in /admin (expire 22 Nov) so a prospect skips "You're on the list". Sent to 7 on LinkedIn: Fuad Jamiudeen, Lanre Lawal, Tayo Adeniran, Dakail Ester, Clinton Mabulana, Yemi Akinnigbagbe, Charles Mchunu. Held for their next reply: Scott Steele, John Sadek, Mohamed Babiker Ali (nudged this morning). The links themselves are kept in Oyin's private follow-ups file, not here.
