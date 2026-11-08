@@ -1,24 +1,33 @@
-// Sending and receiving WhatsApp through Twilio. Server only.
+// Sending WhatsApp. Server only.
 //
-// Twilio first because its sandbox lets a team test in a day with no Meta
-// approval. Everything else in lib/whatsapp talks to sendWhatsapp(), so moving
-// to the Meta Cloud API later changes this one file.
+// Two ways out, picked by env (2026-11-07, #1119):
+//   meta    the WhatsApp Cloud API directly (lib/whatsapp/meta.ts). The default
+//           once WHATSAPP_META_TOKEN and WHATSAPP_META_PHONE_NUMBER_ID are set,
+//           because it is the cheapest.
+//   twilio  the fallback, used when Meta is not set up, or when
+//           WHATSAPP_PROVIDER=twilio forces it (for example if the Meta number
+//           is restricted for a day).
+// Everything else in lib/whatsapp calls sendWhatsapp() and never knows which.
 //
-// Env:
+// Twilio env:
 //   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN   the Twilio account
 //   WHATSAPP_FROM                           e.g. whatsapp:+14155238886 (sandbox) or the approved number
-//   WHATSAPP_OPTIN_CONTENT_SID              approved template for the opt-in message (optional in the sandbox)
-//   WHATSAPP_CHASE_CONTENT_SID              approved template for a chase (optional in the sandbox)
+//   WHATSAPP_OPTIN_CONTENT_SID, WHATSAPP_CHASE_CONTENT_SID, WHATSAPP_POST_CONTENT_SID
+//                                           approved Twilio templates (optional in the sandbox)
 //   WHATSAPP_WEBHOOK_URL                    the public URL Twilio posts replies to, for signature checks
 //
 // Free text only reaches a person inside the 24 hours after they last wrote to
-// us. Outside it WhatsApp needs a template, which is what the two content SIDs
-// are for. Without them a send outside the window fails and is logged.
+// us. Outside it WhatsApp needs an approved template, which is what `template`
+// is for: on Meta it names the template, on Twilio it picks the content SID.
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { toWhatsappAddress } from './phone';
+import { buildMetaPayload, isMetaConfigured, metaTemplateName, sendViaMeta, type TemplateKey } from './meta';
 
-export function isWhatsappConfigured(): boolean {
+export type { TemplateKey } from './meta';
+export type WhatsappProvider = 'meta' | 'twilio';
+
+function isTwilioConfigured(): boolean {
   return Boolean(
     process.env.TWILIO_ACCOUNT_SID?.trim() &&
       process.env.TWILIO_AUTH_TOKEN?.trim() &&
@@ -26,13 +35,62 @@ export function isWhatsappConfigured(): boolean {
   );
 }
 
+/** Which way messages go out right now, or null when neither is set up. */
+export function whatsappProvider(): WhatsappProvider | null {
+  const forced = process.env.WHATSAPP_PROVIDER?.trim().toLowerCase();
+  if (forced === 'twilio' && isTwilioConfigured()) return 'twilio';
+  if (isMetaConfigured()) return 'meta';
+  if (isTwilioConfigured()) return 'twilio';
+  return null;
+}
+
+export function isWhatsappConfigured(): boolean {
+  return whatsappProvider() !== null;
+}
+
 export type SendResult = { ok: true; sid: string } | { ok: false; error: string };
 
+const TWILIO_CONTENT_SID_ENV: Record<TemplateKey, string> = {
+  opt_in: 'WHATSAPP_OPTIN_CONTENT_SID',
+  chase: 'WHATSAPP_CHASE_CONTENT_SID',
+  post_day: 'WHATSAPP_POST_CONTENT_SID',
+};
+
+/**
+ * `body` is the plain text, always logged and used for free-text sends.
+ * `template` is how the same words go out when a template is needed: its
+ * variables are {{1}}, {{2}}, ... in order.
+ */
 export async function sendWhatsapp(input: {
   to: string;
   body: string;
-  contentSid?: string | null;
-  contentVariables?: Record<string, string>;
+  template?: { key: TemplateKey; variables: string[] } | null;
+}): Promise<SendResult> {
+  const provider = whatsappProvider();
+  if (!provider) return { ok: false, error: 'WhatsApp is not set up on the server.' };
+
+  if (provider === 'meta') {
+    const lang = process.env.WHATSAPP_META_TEMPLATE_LANG?.trim() || 'en';
+    const payload = input.template
+      ? buildMetaPayload(input.to, {
+          template: { name: metaTemplateName(input.template.key), lang, variables: input.template.variables },
+        })
+      : buildMetaPayload(input.to, { text: input.body });
+    return sendViaMeta(payload);
+  }
+
+  const contentSid = input.template ? process.env[TWILIO_CONTENT_SID_ENV[input.template.key]]?.trim() || null : null;
+  const contentVariables = input.template
+    ? Object.fromEntries(input.template.variables.map((v, i) => [String(i + 1), v]))
+    : {};
+  return sendViaTwilio({ to: input.to, body: input.body, contentSid, contentVariables });
+}
+
+async function sendViaTwilio(input: {
+  to: string;
+  body: string;
+  contentSid: string | null;
+  contentVariables: Record<string, string>;
 }): Promise<SendResult> {
   const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim();
   const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
@@ -44,7 +102,7 @@ export async function sendWhatsapp(input: {
   form.set('To', toWhatsappAddress(input.to));
   if (input.contentSid) {
     form.set('ContentSid', input.contentSid);
-    form.set('ContentVariables', JSON.stringify(input.contentVariables ?? {}));
+    form.set('ContentVariables', JSON.stringify(input.contentVariables));
   } else {
     form.set('Body', input.body);
   }

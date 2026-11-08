@@ -44,3 +44,27 @@ In Twilio, point the WhatsApp sender's "when a message comes in" URL at the webh
 ## Not done
 
 Migration not applied. No changelog entry or version bump (it is not true for users until Twilio is connected). No Linear issue opened. Meta Cloud API transport is a later swap inside `transport.ts`.
+
+## Meta Cloud API, Twilio as fallback (2026-11-07, #1119)
+
+Messages now go through the Meta WhatsApp Cloud API directly when it is set up (`lib/whatsapp/meta.ts`), because Twilio adds about $0.005 on every message, in and out. Twilio stays as the fallback: it is used when Meta's env is missing, or when `WHATSAPP_PROVIDER=twilio` forces it. `whatsappProvider()` in `transport.ts` picks. Callers pass `template: { key, variables }`; on Meta the key names the template, on Twilio it picks the content SID.
+
+- **Replies and delivery updates** arrive at `/api/webhooks/whatsapp/meta` (GET is Meta's one-time verify, POST is signed with the app secret, `X-Hub-Signature-256`). Delivered, read and failed are written onto the message row (`recordWhatsappStatus`), only ever moving forward, so the test can tell "not read" from "read and ignored".
+- **Env (Vercel, product app):** `WHATSAPP_META_TOKEN` (permanent system-user token), `WHATSAPP_META_PHONE_NUMBER_ID`, `WHATSAPP_META_APP_SECRET`, `WHATSAPP_META_VERIFY_TOKEN`. Optional: `WHATSAPP_META_TEMPLATE_LANG` (default `en`), `WHATSAPP_META_TEMPLATE_OPT_IN` / `_CHASE` / `_POST_DAY` to rename a template.
+- **Templates** (Utility, English), submitted under these names:
+  - `urganize_opt_in`: `Hi {{1}}, {{2}} added you to their team on Urganize. I'll message you here when a task of yours is due. Reply YES to allow it, or STOP any time.` Quick replies: YES, STOP.
+  - `urganize_task_chase`: `Hi {{1}}. "{{2}}" is due {{3}}. Is it done?` Quick replies: Done, Need more time, Not mine.
+  - `urganize_post_day`: `Morning {{1}}. Post "{{2}}" for {{3}} today?` Quick replies: Done, Skip.
+- **Trap: consent.** Meta wants opt-in before a business messages someone first. The opt-in template is itself a first message, sent because a manager typed the number. Safer: the teammate taps a wa.me link and sends YES first, which is both consent and an open 24-hour window. Not built.
+- **Not verified live.** No Meta number was connected when this was written; the payloads, signature and webhook parsing are unit tested.
+
+## Chase by number (2026-11-08, #1119, founder approved mock `docs/mocks/chase-by-number`)
+
+A manager gives an activity to someone with just a name and a WhatsApp number; that person never signs up. Built because production had no team where a teammate with an account owned dated tasks (measured 7 Nov), so the 5-team test had nobody to chase.
+
+- **Data:** the person is a My People profile made by `seedRelationship` (unclaimed, private); the task gets `assigned_person_id` and loses `assigned_to_user_id`; their number is a `whatsapp_contacts` row with `person_id` and `name` set and `user_id` null (check: exactly one of the two). `whatsapp_messages.person_id` files their messages. Migration `20261108100000_whatsapp_chase_by_number.sql`, applied 8 Nov (backups `whatsapp_contacts_backup_20261108`, `whatsapp_messages_backup_20261108`, both 0 rows).
+- **Chasing:** the sweep treats them like a teammate, but only on tasks where `assigned_person_id` is theirs AND no teammate owns it (`ownedBy` in `server.ts`), so a task is never chased twice. No posting-plan nudges for them (posts are owned by users).
+- **Who sees it:** "Someone not on Urganize" shows at the bottom of the assignee menu only when WhatsApp is set up on the server, the team switched chasing on, and the plan allows reminders (`canChaseByNumber`). That switch is how each test team is let in, one at a time, after the founder's yes. Owners and admins only.
+- **Route:** `GET/POST/DELETE /api/tasks/[id]/whatsapp`. Picking a teammate or Unassigned takes the activity back from the person (DELETE); their contact and YES stay.
+- **Trail:** under the assignee row, the number (masked), YES status and the last six messages with delivered/read.
+- **Gaps:** the task list rows still show "Unassigned" for these activities (only the open activity shows the name). One number is one person on one team. Not clicked through in a browser: Docker would not start, so the local test app could not run.

@@ -160,7 +160,8 @@ export async function GET(request: NextRequest) {
   // late get one message each, and only if they said YES. Another passenger on
   // this cron, for the same reason (two schedule slots, one run a day), so it
   // goes out at 08:00 Lagos, just after quiet hours end. Does nothing unless the
-  // Twilio env is set and a team has switched it on. Never throws.
+  // WhatsApp env (Meta, or the Twilio fallback) is set and a team has switched
+  // it on. Never throws.
   const whatsappSweep = await runWhatsappChaseSweep(adminClient);
 
   // Release day on its own (#1090): songs out today or yesterday. A linked
