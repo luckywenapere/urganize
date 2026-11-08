@@ -1179,8 +1179,8 @@ export function formatTierFromPrice(
 export const USD_MONTHLY_PRICE: Partial<Record<PricingTierId, number>> = {
   free: 0,
   solo: 9,
-  // Solo Plus in dollars (2026-11-08). The founder set no dollar figure: this
-  // sits between Solo and Pro on the same ratio as the naira prices.
+  // Solo Plus in dollars (decided 2026-11-08): $19, the usual price step
+  // between Solo $9 and the first team plan at $29.
   solo_plus: 19,
   manager: 29,
   pro: 79,
