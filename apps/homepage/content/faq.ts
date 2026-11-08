@@ -49,6 +49,6 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   },
   {
     question: "Does it post or distribute for me?",
-    answer: `It sends your music to stores through our partner, TRM Distro. Solo Plus, ${PRICING_TIERS.pro.label} and Label include it. On Solo and ${PRICING_TIERS.manager.label} a single is ${singlePrice}. You still post yourself.`,
+    answer: `It sends your music to stores through our distribution partner. Solo Plus, ${PRICING_TIERS.pro.label} and Label include it. On Solo and ${PRICING_TIERS.manager.label} a single is ${singlePrice}. You still post yourself.`,
   },
 ];

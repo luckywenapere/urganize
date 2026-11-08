@@ -805,7 +805,7 @@ export function tierFeatures(id: PricingTierId, currency: PricingCurrencyCode = 
 export function tierStoresLine(id: PricingTierId, currency: PricingCurrencyCode = 'NGN'): string {
   const single = currency === 'USD' ? formatMoney(EXTRA_RELEASE_PRICE_USD, 'USD') : formatMoney(EXTRA_RELEASE_PRICE_NAIRA, 'NGN');
   const allowance = DISTRIBUTION_ALLOWANCE[id];
-  if (id === 'free') return 'Send to stores from your own TRM account';
+  if (id === 'free') return 'Send to stores from your own distributor account';
   if (id === 'solo_plus') return 'Singles and EPs to stores, included';
   if (id === 'label' || id === 'enterprise') {
     const artists = DISTRIBUTION_ALLOWANCE.label?.artists ?? 5;
@@ -821,7 +821,7 @@ export function tierStoresLine(id: PricingTierId, currency: PricingCurrencyCode 
 export function tierStoresCell(id: PricingTierId, currency: PricingCurrencyCode = 'NGN'): string {
   const single = currency === 'USD' ? formatMoney(EXTRA_RELEASE_PRICE_USD, 'USD') : formatMoney(EXTRA_RELEASE_PRICE_NAIRA, 'NGN');
   const allowance = DISTRIBUTION_ALLOWANCE[id];
-  if (id === 'free') return 'Own TRM account';
+  if (id === 'free') return 'Own distributor account';
   if (id === 'solo_plus') return 'Singles and EPs included';
   if (id === 'label' || id === 'enterprise') {
     return `Singles, EPs, albums, ${DISTRIBUTION_ALLOWANCE.label?.artists ?? 5} artists`;
@@ -1144,7 +1144,7 @@ export function tierHighlights(
   const extra = distribution
     ? [`Extra singles ${single} each`]
     : id === 'free'
-      ? ['Send to stores from your own TRM account']
+      ? ['Send to stores from your own distributor account']
       : monthlyPrice
         ? [`Send singles to stores for ${single} each`]
         : [];
