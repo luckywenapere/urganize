@@ -525,11 +525,14 @@ and canWrite true, reason `free_plan`), which `resolveTeamTier` maps to tier
   `PLN_hqvg6asurmm038a` (₦12,000 monthly) and `PLN_45a76826d431tb8`
   (₦120,000 annually). Set on Vercel `urganize` Production as
   `PAYSTACK_PLAN_SOLO_PLUS_V3_PER_MONTH_NGN` / `_PER_YEAR_NGN` (non-sensitive).
-- Solo Plus in dollars is $19 a month (`USD_MONTHLY_PRICE`); the founder set
-  no dollar figure, so check it.
+- Solo Plus in dollars is $19 a month (`USD_MONTHLY_PRICE`), decided
+  2026-11-08: the usual step between Solo $9 and the first team plan at $29.
 - Migration `20261108120000_subscriptions_allow_solo_plus.sql` widens the six
   plan CHECK constraints for `solo_plus` (not `free`: nothing writes it).
   Applied to production 2026-11-08 after backing up `subscriptions`,
   `payment_invoices`, `checkout_clearances`, `trm_partner_ledger` (`*_backup_20261108`)
   and `bachs_checkouts` (`bachs_checkouts_backup_20261108b`).
-- Not done: retention offers (`lib/cancel-flow.ts`) do not cover Solo Plus.
+- Retention offers (`lib/cancel-flow.ts`) cover Solo Plus since 2026-11-08:
+  `RETENTION_TIERS` is the one list. Its low band offers Solo; its two
+  discounted offers need `PAYSTACK_PLAN_SOLO_PLUS_RETENTION_{8000,11000}`
+  minted, and stay hidden until then, like every other tier's.

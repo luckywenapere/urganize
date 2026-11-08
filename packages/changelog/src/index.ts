@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.261.1",
+    title: "Solo Plus, everywhere it belongs",
+    tag: "Account",
+    date: "November 8, 2026",
+    highlights: [
+      "If you leave Solo Plus, we can offer you Solo instead.",
+      "Outside Nigeria, Solo Plus is $19 a month.",
+    ],
+  },
+  {
     version: "1.261.0",
     title: "A Free plan, and Solo Plus",
     tag: "Account",

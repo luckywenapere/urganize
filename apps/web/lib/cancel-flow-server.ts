@@ -39,6 +39,7 @@ import {
   isInviteExtensionAvailable,
   isPauseActive,
   isRetentionTier,
+  RETENTION_TIERS,
   matchBudgetOffer,
   pauseSweepAction,
   retentionPlanEnvVar,
@@ -131,7 +132,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 function readPlanCodes(): Record<string, string | undefined> {
   const out: Record<string, string | undefined> = {};
-  for (const tier of ['solo', 'manager', 'pro', 'label'] as const) {
+  for (const tier of RETENTION_TIERS) {
     for (const band of budgetBands(tierMonthlyPrice(tier))) {
       const name = retentionPlanEnvVar(tier, band.max);
       out[name] = process.env[name];

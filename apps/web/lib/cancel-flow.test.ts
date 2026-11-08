@@ -284,6 +284,12 @@ describe('matchBudgetOffer', () => {
       price: 40_000,
     });
     expect(matchBudgetOffer({ tier: 'solo', band: 'low', planCodes: {} })).toBeNull();
+    // Solo Plus at ₦12,000 has a lowest band under ₦5,000, so Solo fits.
+    expect(matchBudgetOffer({ tier: 'solo_plus', band: 'low', planCodes: {} })).toEqual({
+      kind: 'switch_plan',
+      tier: 'solo',
+      price: 5_000,
+    });
   });
 
   it('middle and top bands keep the plan at the band price for 3 months', () => {
@@ -307,6 +313,8 @@ describe('matchBudgetOffer', () => {
     expect(allRetentionPlanEnvVars().map((row) => row.envVar)).toEqual([
       'PAYSTACK_PLAN_SOLO_RETENTION_3500',
       'PAYSTACK_PLAN_SOLO_RETENTION_4500',
+      'PAYSTACK_PLAN_SOLO_PLUS_RETENTION_8000',
+      'PAYSTACK_PLAN_SOLO_PLUS_RETENTION_11000',
       'PAYSTACK_PLAN_MANAGER_RETENTION_10000',
       'PAYSTACK_PLAN_MANAGER_RETENTION_14000',
       'PAYSTACK_PLAN_PRO_RETENTION_25000',
