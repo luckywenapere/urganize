@@ -28,7 +28,7 @@ const baseUrl = process.env.WAITLIST_SMOKE_URL ?? "http://localhost:3000";
 // 2026-10-31, #944), so a copy pass that rewords
 // one sentence does not break the test. If the positioning line ever changes,
 // change this string with it.
-const heroText = "from idea to execution";
+const heroText = "tell it your goals";
 const smokeEmail = "smoke-test@example.com";
 const viewports = [
   { label: "desktop 1280x900", width: 1280, height: 900, mobile: false },

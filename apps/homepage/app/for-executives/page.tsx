@@ -19,7 +19,7 @@ import type { ProductShot } from "@/content/product-shots";
 export const metadata: Metadata = buildPageMetadata({
   title: "Planning and task tracking for record labels",
   description:
-    "From idea to execution, across your roster. Each artist's plan fits their goals, every task has an owner and Urganize learns from how each one went.",
+    "Plan new music across your roster. Each artist's plan fits their goals, every task has an owner and you see what worked for each one.",
   path: "/for-executives",
 });
 
@@ -91,8 +91,8 @@ const compactBlocks = [
   },
   {
     kicker: "Feedback",
-    title: "It learns from you.",
-    body: "After every task, Urganize asks how it went, so the next plan for each artist fits better.",
+    title: "See what worked.",
+    body: "After every task, Urganize asks how it went, so you can see what worked for each artist when the release is out.",
   },
   {
     kicker: "Press kit",

@@ -110,7 +110,7 @@ describe('EmailLayout footer', () => {
         footer: createElement('span', null, 'UNSUBSCRIBE-LINE'),
       })
     );
-    const tagline = html.indexOf('From idea to execution');
+    const tagline = html.indexOf('Plan new music. Track every task.');
     const follow = html.indexOf('Follow us');
     const unsubscribe = html.indexOf('UNSUBSCRIBE-LINE');
     expect(tagline).toBeGreaterThan(-1);

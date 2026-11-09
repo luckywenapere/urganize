@@ -19,7 +19,7 @@ import type { ProductShot } from "@/content/product-shots";
 export const metadata: Metadata = buildPageMetadata({
   title: "Release planning software for artist managers",
   description:
-    "From idea to execution, for artist managers. Urganize asks about each artist's goals, makes a plan that fits and keeps track of every task.",
+    "For artist managers. Urganize asks about each artist's goals, makes a plan that fits and keeps track of every task.",
   path: "/for-managers",
   shareCard: "for-managers",
 });
@@ -62,8 +62,8 @@ const compactBlocks = [
   },
   {
     kicker: "Feedback",
-    title: "It learns from you.",
-    body: "After every task, Urganize asks how it went, so each artist\u2019s next plan fits better.",
+    title: "See what worked.",
+    body: "After every task, Urganize asks how it went, so you can see what worked for each artist when the release is out.",
   },
   {
     kicker: "Press kit",

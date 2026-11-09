@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   ...buildPageMetadata({
     title: "Release planning for AI artists",
     description:
-      "Making the song got fast. The rollout did not. From idea to execution: tell Urganize your goals and get a plan that fits, or make your own, with an owner on every activity.",
+      "Making the song got fast. The rollout did not. Tell Urganize your goals and get a plan that fits, or make your own, with an owner on every activity.",
     path: "/for-ai-artists",
     shareCard: "for-ai-artists",
   }),
@@ -88,8 +88,8 @@ const compactBlocks = [
   },
   {
     kicker: "Feedback",
-    title: "It learns from you.",
-    body: "After every task, Urganize asks how it went, so the next plan fits better.",
+    title: "See what worked.",
+    body: "After every task, Urganize asks how it went, so you can see what worked when the release is out.",
   },
   {
     kicker: "Whoever helps",

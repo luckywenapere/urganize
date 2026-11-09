@@ -499,10 +499,10 @@ export default function AuthPage() {
             <div className="flex flex-col items-center px-4 pt-12 text-center lg:px-0 lg:pt-[71px]">
               {/* Young Serif at its real weight, never a fake bold. */}
               <h1 className="text-balance font-display text-[34px] font-normal leading-10 tracking-[-0.012em] text-content-primary lg:text-[48px] lg:leading-[53px]">
-                From idea to execution.
+                Plan new music. Track every task.
               </h1>
               <p className="mt-3 text-base leading-[23px] text-content-secondary lg:mt-[18px] lg:text-[17px] lg:leading-6">
-                Plan every release with your team, in one place.
+                Tell it your goals and get a plan that fits. Use it solo or with your team.
               </p>
 
               {/* Signing in needs JavaScript. Say so instead of leaving the user

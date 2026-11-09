@@ -13,7 +13,7 @@ import type { ProductShot } from "@/content/product-shots";
 export const metadata: Metadata = buildPageMetadata({
   title: "Plan new music, track every task, pitch with a press kit",
   description:
-    "From idea to execution. Tell Urganize your goals and get a plan that fits, or make your own. Track every task, solo or with a team. After each task it asks how it went.",
+    "Tell Urganize your goals and get a plan that fits, or make your own. Track every task, solo or with a team. After each task it asks how it went.",
   path: "/features",
 });
 
@@ -79,7 +79,7 @@ const compactFeatures = [
   {
     kicker: "Tasks",
     title: "Nobody gets to say \u201cI didn\u2019t know.\u201d",
-    body: "Every task has an owner, a due date and a priority. Finish one and Urganize asks how it went, so the next plan fits better.",
+    body: "Every task has an owner, a due date and a priority. Finish one and Urganize asks how it went, so you can see what worked when the release is out.",
     still: {
       ...featureStill("tasks"),
       alt: "A task list in Urganize: Lock the master file done, Upload to distributor open now, the next tasks locked, and a card showing its owner, its due date and High priority.",
