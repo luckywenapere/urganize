@@ -4,6 +4,7 @@ import {
   ARCHIVED_STATUS,
   INACTIVE_RELEASE_STATUSES,
   RESTORED_STATUS,
+  decideArchiveToggle,
   isReleaseActive,
   isValidReleaseStatusValue,
 } from './release-activity';
@@ -70,5 +71,42 @@ describe('isValidReleaseStatusValue', () => {
     for (const value of ['Archived', 'done', '', null, undefined, 7, {}]) {
       expect(isValidReleaseStatusValue(value), String(value)).toBe(false);
     }
+  });
+});
+
+describe('decideArchiveToggle', () => {
+  it('archives any status that is not archived yet, remembering where it came from', () => {
+    for (const status of ['draft', 'planning', 'in_progress', 'ready', 'released']) {
+      expect(decideArchiveToggle(status, true), status).toEqual({
+        write: true,
+        from: status,
+        to: ARCHIVED_STATUS,
+      });
+    }
+  });
+
+  it('restores only an archived rollout, to draft', () => {
+    expect(decideArchiveToggle('archived', false)).toEqual({
+      write: true,
+      from: 'archived',
+      to: RESTORED_STATUS,
+    });
+  });
+
+  // The bug this exists for: "restore" on a released rollout used to write
+  // draft over released.
+  it('never restores a rollout that is not archived', () => {
+    for (const status of ['draft', 'in_progress', 'ready', 'released']) {
+      expect(decideArchiveToggle(status, false), status).toEqual({ write: false, status });
+    }
+  });
+
+  it('does nothing when archiving an archived rollout', () => {
+    expect(decideArchiveToggle('archived', true)).toEqual({ write: false, status: 'archived' });
+  });
+
+  it('reads a missing status as draft, the column default', () => {
+    expect(decideArchiveToggle(null, true)).toEqual({ write: true, from: 'draft', to: ARCHIVED_STATUS });
+    expect(decideArchiveToggle(undefined, false)).toEqual({ write: false, status: 'draft' });
   });
 });

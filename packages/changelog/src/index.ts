@@ -67,6 +67,19 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.261.5",
+    title: "Fewer screens that contradict themselves",
+    tag: "App",
+    date: "November 10, 2026",
+    highlights: [
+      "Ticking off two activities in a row no longer stacks two questions at the bottom of the screen.",
+      "Switching between active and archived notes always shows the list you picked.",
+      "Restoring a rollout only works on an archived one, so a released rollout can't turn back into a draft.",
+      "Managers' edits to a team's rollouts now save. Some were quietly lost before.",
+      "Deleting your account now stops your plan's card payments too.",
+    ],
+  },
+  {
     version: "1.261.4",
     tag: "App",
     date: "November 10, 2026",

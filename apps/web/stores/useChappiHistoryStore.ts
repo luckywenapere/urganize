@@ -598,11 +598,24 @@ async function reloadChat(id: string) {
  */
 async function openInternal(id: string, auto: boolean): Promise<boolean> {
   if (!sessionUserId) return false;
+  // EVERY open supersedes one still fetching, not only another fetch. Before
+  // this, opening a chat this session already held (shown at once, no fetch)
+  // left an earlier slow fetch alive, and it then replaced the chat on screen
+  // and kept its row marked as loading.
+  const seq = (openSeq += 1);
   const chappi = useChappiStore.getState();
-  if (chappi.conversationId === id) return true;
+  if (chappi.conversationId === id) {
+    if (useChappiHistoryStore.getState().openingId !== null) {
+      useChappiHistoryStore.setState({ openingId: null });
+    }
+    return true;
+  }
 
   const local = auto ? undefined : detached.get(id);
   if (local) {
+    if (useChappiHistoryStore.getState().openingId !== null) {
+      useChappiHistoryStore.setState({ openingId: null });
+    }
     activityAt.set(id, Date.now());
     chappi.loadConversation({ id, messages: local });
     scheduleSync(id, 0);
@@ -610,7 +623,6 @@ async function openInternal(id: string, auto: boolean): Promise<boolean> {
   }
 
   const expectedCurrent = chappi.conversationId;
-  const seq = (openSeq += 1);
   useChappiHistoryStore.setState({ openingId: id });
   const detail = (await takePrefetchedChat(id)) ?? (await fetchChat(id));
   // A later open (or a sign-out) superseded this one while it was fetching.

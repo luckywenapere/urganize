@@ -691,7 +691,12 @@ export async function applyUrgansAction(
     const fail = await admin
       .from(URGANS_ACTIONS_TABLE)
       .update({ status: 'failed', error: applyOutcome.error })
-      .eq('id', row.id);
+      .eq('id', row.id)
+      // Only the claim this run holds: applied, with no result yet. Without
+      // this a slow failure could land on top of a row a retry had already
+      // settled as a success.
+      .eq('status', 'applied')
+      .is('applied_result', null);
     if (fail.error) {
       console.error('[urgans-actions] apply failed and could not stamp the failure:', fail.error);
     }
@@ -701,12 +706,17 @@ export async function applyUrgansAction(
   const settle = await admin
     .from(URGANS_ACTIONS_TABLE)
     .update({ applied_result: applyOutcome.result, applied_at: new Date().toISOString() })
-    .eq('id', row.id);
+    .eq('id', row.id)
+    .eq('status', 'applied')
+    .is('applied_result', null);
   if (settle.error) {
     // The real work already happened (approvePlanDraft already created the
     // tasks, e.g.) — tell the caller it worked even though the log write
-    // failed. A retry lands on decideApplyClaim's in_progress/reclaim path
-    // rather than re-running the action.
+    // failed. CAUTION: a retry within APPLY_CLAIM_STALE_MS gets in_progress,
+    // but one after it RECLAIMS the resultless row and runs apply() again
+    // (lib/urgans-actions/claim.ts). Every action's apply() must be safe to
+    // run twice; making reclaim refuse instead would strand any action whose
+    // first run died mid-way.
     console.error('[urgans-actions] applied but could not stamp the result:', settle.error);
   }
 

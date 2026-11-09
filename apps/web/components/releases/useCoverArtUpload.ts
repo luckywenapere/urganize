@@ -62,13 +62,22 @@ export function useCoverArtUpload(params: {
   const [retryFile, setRetryFile] = useState<File | null>(null);
   const [grade, setGrade] = useState<CoverArtGrade | null>(null);
   const [queued, setQueued] = useState(false);
+  // One upload at a time. `isUploading` used to drop to false while the image
+  // was measured and again between the enlarge step and the upload, so a
+  // second drop or pick in those gaps started a second upload whose result
+  // could land after the first. The ref is the guard (it updates
+  // synchronously); `isUploading` now spans the whole run so the spinner and
+  // the disabled input tell the truth.
+  const busyRef = useRef(false);
 
-  const begin = useCallback(
+  const run = useCallback(
     async (pickedFile: File) => {
       let file = pickedFile;
       setError('');
       setRetryFile(null);
       setQueued(false);
+      // The previous file's verdict must not sit above this file's error.
+      setGrade(null);
 
       const validation = validateCoverArtFile({
         name: file.name,
@@ -79,6 +88,7 @@ export function useCoverArtUpload(params: {
         setError(validation.error);
         return;
       }
+      setIsUploading(true);
 
       // Measure before uploading, so a file no DSP would accept never becomes
       // the release's cover in the first place. Dimensions are then handed to
@@ -101,9 +111,7 @@ export function useCoverArtUpload(params: {
       // original goes up and grades as it always did.
       const upscaleTarget = coverArtUpscaleTarget(dimensions);
       if (upscaleTarget) {
-        setIsUploading(true);
         const enlarged = await upscaleCoverArt(file, upscaleTarget);
-        setIsUploading(false);
         if (enlarged) {
           file = enlarged.file;
           dimensions = enlarged.dimensions;
@@ -145,9 +153,7 @@ export function useCoverArtUpload(params: {
         return;
       }
 
-      setIsUploading(true);
       const result = await uploadCoverArt({ releaseId, file, token, dimensions });
-      setIsUploading(false);
 
       if (result.ok) {
         onUploaded(result.coverArt);
@@ -175,6 +181,20 @@ export function useCoverArtUpload(params: {
       else onToast?.(result.error, 'error');
     },
     [onToast, onUploaded, releaseId]
+  );
+
+  const begin = useCallback(
+    async (pickedFile: File) => {
+      if (busyRef.current) return;
+      busyRef.current = true;
+      try {
+        await run(pickedFile);
+      } finally {
+        busyRef.current = false;
+        setIsUploading(false);
+      }
+    },
+    [run]
   );
 
   const handleChange = useCallback(

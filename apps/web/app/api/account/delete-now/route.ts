@@ -5,6 +5,8 @@ import { IN_LIST_CHUNK, inChunks, readAllPages, type PageResult } from '@/lib/pa
 import { TASK_ATTACHMENTS_BUCKET } from '@/lib/tasks-server';
 import { withThumbPaths } from '@/lib/image-thumb';
 import { listAccountPhotoObjects } from '@/lib/account-photo-server';
+import { disablePaystackSubscription } from '@/lib/paystack-subscription-server';
+import { isLiveSubscriptionStatus } from '@/lib/subscription-status';
 
 // Storage objects don't cascade with the DB rows deleted below, so they are
 // enumerated and removed first. Unlike the per-release DELETE, a storage
@@ -182,6 +184,34 @@ async function removeUserStorageObjects(supabaseAdmin: SupabaseClient, userId: s
   }
 }
 
+/** Disable every subscription Paystack would still renew. Never throws. */
+async function disableLiveSubscriptionsBeforeDelete(admin: SupabaseClient, userId: string) {
+  const secretKey = process.env.PAYSTACK_SECRET_KEY?.trim() || '';
+  const { data, error } = await admin
+    .from('subscriptions')
+    .select('status, paystack_subscription_code, paystack_reference')
+    .eq('user_id', userId);
+  if (error) {
+    console.error('[account/delete-now] could not read subscriptions before delete:', error.message);
+    return;
+  }
+  for (const row of data ?? []) {
+    if (!isLiveSubscriptionStatus(row.status) || !row.paystack_subscription_code) continue;
+    if (!secretKey) {
+      console.error('[account/delete-now] PAYSTACK_SECRET_KEY unset; stop by hand:', row.paystack_subscription_code);
+      continue;
+    }
+    try {
+      const result = await disablePaystackSubscription(admin, row, secretKey);
+      if (!result.ok) {
+        console.error('[account/delete-now] Paystack disable failed; stop by hand:', row.paystack_subscription_code, result.error);
+      }
+    } catch (caught) {
+      console.error('[account/delete-now] Paystack disable threw; stop by hand:', row.paystack_subscription_code, caught);
+    }
+  }
+}
+
 export async function POST(req: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -218,11 +248,14 @@ export async function POST(req: NextRequest) {
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
   const nowIso = new Date().toISOString();
 
-  await supabaseAdmin
-    .from('subscriptions')
-    .update({ status: 'canceled', updated_at: nowIso })
-    .eq('user_id', user.id)
-    .eq('status', 'active');
+  // Stop the card being charged before the subscription row goes. This used
+  // to write status 'canceled' (one l), which the CHECK constraint refuses,
+  // and the error was ignored; the row was then deleted with the Paystack
+  // subscription still live, so later renewals charged a deleted account and
+  // landed as "unmatched". Best effort: a provider failure must not trap
+  // someone in an account they asked to delete, so it is logged with the code
+  // needed to stop it by hand.
+  await disableLiveSubscriptionsBeforeDelete(supabaseAdmin, user.id);
 
   // The two trial-ledger sentinels survive account deletion on purpose:
   // they're what stops delete-and-resignup from reclaiming a free trial
