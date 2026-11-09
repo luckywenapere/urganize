@@ -248,6 +248,11 @@ export const useChappiStore = create<ChappiStore>((set) => ({
   resetForSignOut: () =>
     set((current) => ({
       input: '',
+      // A message handed over from Home and not yet sent belongs to the
+      // account that wrote it. Left set, the next account's first chat sent
+      // the previous account's files.
+      sendInputOnOpen: false,
+      pendingAttachments: [],
       reply: null,
       messages: [],
       conversationId: null,

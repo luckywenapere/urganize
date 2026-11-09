@@ -406,7 +406,25 @@ export async function openTransferInvoice(
   let carriedPaid = 0;
   if (open) {
     carriedPaid = open.paid_kobo;
-    await admin.from('payment_invoices').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', open.id);
+    // Cancel only the invoice exactly as it was just read: still open, with
+    // the same amount paid. A transfer that settled (or part-paid) it in
+    // between used to be cancelled anyway, turning a paid invoice into a
+    // cancelled one and carrying a stale paid amount into the new one. The
+    // same guard recordIncomingTransfer already uses on the paying side.
+    const cancelled = await admin
+      .from('payment_invoices')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', open.id)
+      .eq('status', 'open')
+      .eq('paid_kobo', open.paid_kobo)
+      .select('id');
+    if (cancelled.error || (cancelled.data ?? []).length === 0) {
+      console.warn(
+        '[self-serve] open invoice changed before it could be replaced',
+        cancelled.error?.message ?? open.id
+      );
+      return null;
+    }
   }
 
   const credit = creditToApply(price.minorUnit, await loadCarriedCreditKobo(admin, input.userId));

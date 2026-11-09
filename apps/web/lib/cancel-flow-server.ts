@@ -15,6 +15,7 @@
 //   cancel          Paystack disable (paid / card trial); workspaces.trial_cancelled_at (trials)
 // Every one also writes cancel_flow_events and a PostHog event.
 
+import { isLiveSubscriptionStatus } from '@/lib/subscription-status';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { invalidateSubscriptionSnapshot } from './subscription-access';
 import { getTeamAccessForUser, invalidateAllTeamAccess } from './team-billing-server';
@@ -661,7 +662,7 @@ export async function cancelPlan(
   const disableSubscription =
     subscription &&
     subscription.paystack_subscription_code &&
-    (subscription.status === 'active' || subscription.status === 'past_due' || subscription.status === 'trialing');
+    isLiveSubscriptionStatus(subscription.status);
 
   if (disableSubscription) {
     const key = paystackKey();

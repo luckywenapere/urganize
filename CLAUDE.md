@@ -538,3 +538,16 @@ and canWrite true, reason `free_plan`), which `resolveTeamTier` maps to tier
   `RETENTION_TIERS` is the one list. Its low band offers Solo; its two
   discounted offers need `PAYSTACK_PLAN_SOLO_PLUS_RETENTION_{8000,11000}`
   minted, and stay hidden until then, like every other tier's.
+
+---
+
+## State machines: one rule per flow (2026-11-09, #1148)
+
+Read `docs/state-machines.md` before adding a status, a busy flag, or a second
+"open" slot. In short: the decision of which state comes next lives in ONE pure
+function in `lib/` with a test; a database status moves with
+`.eq('status', <from>)` plus `.select('id')`, and zero rows means someone else
+moved it; prefer one union over several flags; a request that can be
+superseded carries a token captured at its start; anything holding one
+account's data registers a sign-out reset. That file also ranks the machines
+still open, `subscriptions.status` and the `tasks.status` PATCH first.

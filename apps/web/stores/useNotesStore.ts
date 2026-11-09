@@ -1,5 +1,6 @@
 'use client';
 
+import { registerSignOutReset } from '@/lib/sign-out-resets';
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
@@ -117,6 +118,16 @@ function cacheNotes(userId: string, notes: Note[], view: NotesView) {
   }
 }
 
+/**
+ * Which list a response belongs to. Bumped every time the view switches, so a
+ * fetch started under the old view can tell it no longer owns the screen and
+ * drops its result instead of painting active notes under "Archived" (or
+ * caching them as the wrong list). A counter rather than a view compare,
+ * because Active -> Archived -> Active would otherwise let a slow first
+ * request land over the fresh one.
+ */
+let notesListEpoch = 0;
+
 export const useNotesStore = create<NotesStore>((set, get) => ({
   notes: [],
   hydrated: false,
@@ -130,7 +141,15 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     // Hard reset. The two lists share no rows, so keeping the old ones on
     // screen would show active notes under an "Archived" heading until the
     // fetch landed. isInitialLoading puts the skeleton back for the gap.
-    set({ view, notes: [], hasMore: false, nextCursor: null, isInitialLoading: true });
+    notesListEpoch += 1;
+    set({
+      view,
+      notes: [],
+      hasMore: false,
+      nextCursor: null,
+      isInitialLoading: true,
+      isLoadingMore: false,
+    });
     void get().load({ force: true });
   },
   load: async (options) => {
@@ -162,8 +181,11 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
         return;
       }
 
+      const requestEpoch = notesListEpoch;
+      const requestView = get().view;
+      const stillCurrent = () => requestEpoch === notesListEpoch;
       try {
-        const archivedParam = get().view === 'archived' ? '?archived=1' : '';
+        const archivedParam = requestView === 'archived' ? '?archived=1' : '';
         const response = await fetch(`/api/notes${archivedParam}`, {
           headers: { Authorization: `Bearer ${accessToken}` },
           cache: 'no-store',
@@ -176,12 +198,15 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
           nextCursor?: string | null;
         } | null;
         if (!payload || !Array.isArray(payload.notes)) return;
+        // The view switched while this was in flight: the newer load owns
+        // the screen now.
+        if (!stillCurrent()) return;
 
         // A fetch replaces the list, and a note captured offline is not in
         // it — without this it would vanish the moment anything refreshed,
         // before the flush had a chance to send it.
         const notes = sortNotes(mergePendingNotes(payload.notes, get().notes));
-        cacheNotes(userId, notes, get().view);
+        cacheNotes(userId, notes, requestView);
         notesLoadedAt = Date.now();
         // A fresh load is page one, so any pages appended earlier are
         // dropped along with their cursor — otherwise the list would keep
@@ -200,7 +225,9 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
         // swallowed here.
         if (!isNetworkFailure(error)) throw error;
       } finally {
-        set({ isInitialLoading: false });
+        // Only the load that owns the screen ends the skeleton; a stale one
+        // finishing early would flash an empty list before the right one.
+        if (stillCurrent()) set({ isInitialLoading: false });
       }
     })();
 
@@ -219,11 +246,14 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     if (!hasMore || !nextCursor || isLoadingMore) return;
 
     set({ isLoadingMore: true });
+    const requestEpoch = notesListEpoch;
+    const requestView = get().view;
+    const stillCurrent = () => requestEpoch === notesListEpoch;
     try {
       const { accessToken, userId } = await getSession();
       if (!accessToken) return;
 
-      const archivedParam = get().view === 'archived' ? '&archived=1' : '';
+      const archivedParam = requestView === 'archived' ? '&archived=1' : '';
       const response = await fetch(
         `/api/notes?cursor=${encodeURIComponent(nextCursor)}${archivedParam}`,
         {
@@ -239,6 +269,9 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
         nextCursor?: string | null;
       } | null;
       if (!payload || !Array.isArray(payload.notes)) return;
+      // The reader switched lists mid-request: this page belongs to the old
+      // one, and `notes` above is the old list too.
+      if (!stillCurrent()) return;
 
       // Merge by id rather than concatenating. A note edited between the two
       // requests jumps to the top of the server's ordering, so it can arrive
@@ -248,7 +281,7 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       payload.notes.forEach((note) => byId.set(note.id, note));
       const merged = sortNotes([...byId.values()]);
 
-      cacheNotes(userId, merged, get().view);
+      cacheNotes(userId, merged, requestView);
       set({
         notes: merged,
         hasMore: payload.hasMore === true,
@@ -259,7 +292,7 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       // on screen alone. The button stays, so the reader can try again.
       if (!isNetworkFailure(error)) throw error;
     } finally {
-      set({ isLoadingMore: false });
+      if (stillCurrent()) set({ isLoadingMore: false });
     }
   },
   create: async (input) => {
@@ -466,3 +499,24 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     set({ notes });
   },
 }));
+
+/**
+ * Same-tab sign-out then sign-in as another account must not paint the first
+ * account's notebook. The browser cache is already keyed by user id; this
+ * clears what is in memory, and bumps the list epoch so a fetch still in
+ * flight for the old account drops its result.
+ */
+registerSignOutReset('notes', () => {
+  notesListEpoch += 1;
+  notesLoadedAt = 0;
+  notesInFlight = null;
+  useNotesStore.setState({
+    notes: [],
+    hydrated: false,
+    isInitialLoading: true,
+    hasMore: false,
+    nextCursor: null,
+    isLoadingMore: false,
+    view: 'active',
+  });
+});

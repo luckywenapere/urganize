@@ -1,5 +1,6 @@
 'use client';
 
+import { nextCompletionSurfaces } from '@/lib/completion-surfaces';
 import { registerSignOutReset } from '@/lib/sign-out-resets';
 import { requestTaskUiEngine } from '@/lib/task-ui-demand';
 import { create } from 'zustand';
@@ -616,10 +617,14 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         ...state.pendingCompletionIds,
         [taskId]: taskBeforeComplete.status,
       },
-      completionToast: toastSnapshot ?? state.completionToast,
-      outcomePrompt: outcomeSnapshot ?? state.outcomePrompt,
-      coverArtPrompt: coverArtSnapshot ?? state.coverArtPrompt,
-      vouchPrompt: vouchSnapshot ?? state.vouchPrompt,
+      // One surface at a time: a new one closes whatever an earlier
+      // completion left open (lib/completion-surfaces.ts).
+      ...nextCompletionSurfaces(state, {
+        completionToast: toastSnapshot,
+        outcomePrompt: outcomeSnapshot,
+        coverArtPrompt: coverArtSnapshot,
+        vouchPrompt: vouchSnapshot,
+      }),
       error: '',
     }));
 
@@ -786,15 +791,17 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       completionToastTimers.set(firstId, toastTimer);
       completionToastTick += 1;
       const firstTitle = get().tasks.find((candidate) => candidate.id === firstId)?.title ?? '';
-      set({
-        completionToast: {
-          taskId: firstId,
-          title: doneIds.length === 1 ? firstTitle : `${doneIds.length} done`,
-          tick: completionToastTick,
-          taskIds: doneIds,
-        },
+      set((state) => ({
+        ...nextCompletionSurfaces(state, {
+          completionToast: {
+            taskId: firstId,
+            title: doneIds.length === 1 ? firstTitle : `${doneIds.length} done`,
+            tick: completionToastTick,
+            taskIds: doneIds,
+          },
+        }),
         error: skipped > 0 ? `${skipped} couldn't be marked done yet.` : '',
-      });
+      }));
     }
 
     return { done: doneIds.length, skipped };
