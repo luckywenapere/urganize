@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "Urganize",
-  "description": "Help for Urganize, where music teams manage everything from idea to execution.",
+  "description": "Help for Urganize, an app that helps artists, managers and record labels plan new music and keep track of every task.",
   "colors": {
     "primary": "#14643A",
     "light": "#7FD99A",

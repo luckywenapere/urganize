@@ -10,6 +10,7 @@
 // closed, so every plan button goes to the waitlist, never to checkout.
 
 import { useState } from 'react';
+import { CANONICAL_DESCRIPTION } from '@/lib/positioning';
 import {
   TIER_GROUPS,
   TIER_GROUP_LABEL,
@@ -199,11 +200,11 @@ const monthlyFigure = (tierId: PricingTierId, currency: PricingCurrencyCode) => 
 const questions = (currency: PricingCurrencyCode) => [
   {
     q: 'What is Urganize?',
-    a: 'Urganize helps music professionals run their music businesses better, wherever they are in their careers. Add a release and you get the plan: who does what, and by when.',
+    a: CANONICAL_DESCRIPTION,
   },
   {
     q: 'Who is it for?',
-    a: 'Artists and managers starting out, managers taking their artists to the next level, and labels organising and scaling.',
+    a: 'Artists and managers starting out, managers taking their artists to the next level, and record labels organising and scaling. Use it solo or with a team.',
   },
   {
     q: 'How much does it cost?',

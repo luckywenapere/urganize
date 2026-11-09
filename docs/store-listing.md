@@ -1,7 +1,8 @@
 # App store listings
 
-Paste-ready listing copy for the Urganize mobile app. Rewritten 2026-10-31
-(#944) for the current positioning: from idea to execution. The 2026-10-17
+Paste-ready listing copy for the Urganize mobile app. Rewritten 2026-11-09
+(#1153) for the founder's new positioning. The 2026-10-31 listing (#944) is in
+git history. The 2026-10-17
 and 2026-09-24 listings and the 2026-09-09 one, which introduced the product by a category,
 are in git history.
 
@@ -12,7 +13,7 @@ defined once in `apps/web/lib/positioning.ts`, and
 phrases, so a listing that drifted from the product would fail the build rather
 than sit here quietly disagreeing with it.
 
-Do not reorder the audience. It is artists, then managers, then labels,
+Do not reorder the audience. It is artists, then managers, then record labels,
 everywhere. Labels were dropped on 2026-09-11 and came back on 2026-09-24 with
 the founder's long description.
 
@@ -40,39 +41,50 @@ where a long name is truncated anyway.
 ### Short description (80 characters max)
 
 ```
-Urganize is where music teams manage everything from idea to execution.
+Plan new music and track every task. For artists, managers and record labels.
 ```
 
-71 characters. This is the core line from `positioning.ts` (`CORE_LINE`),
-unchanged.
+77 characters. The core line (`CORE_LINE`) is 110 characters and does not fit
+Play's 80, so this says the same thing in fewer words, same audience order. The
+full core line opens the full description below and is the promotional text on
+the App Store.
 
 ### Full description (4000 characters max)
 
 ```
-From idea to execution. Add a release and get the plan, week by week to release day, so your team knows what to do and when. Built for artist managers.
+Urganize is an app that helps artists, managers and record labels plan new music and keep track of every task. It asks about your goals, then makes a plan that fits. You can also make your own. Use it solo or with a team. After every task, Urganize asks how it went, so it keeps learning from you.
 
-PLAN THE ROLLOUT
-Every release starts with a real plan, not a blank board. Pick what you are putting out and Urganize lays out the whole rollout, sized to the format, with every activity dated around release day. The plans come from playbooks written by working managers, and you can edit or delete anything that does not apply to you.
+PLAN FROM YOUR GOALS
+Tell Urganize what you want from the release. It asks a few questions, then lays out a plan that fits, week by week, with every task dated around release day. The plans come from playbooks written by working managers, and you can edit or delete anything that does not apply to you.
 
-GIVE EVERY ACTIVITY AN OWNER
-Put a name and a date on each piece of work. Your team sees what is theirs, what is late and what is coming. Nobody has to ask where things stand.
+OR MAKE YOUR OWN
+Start from scratch and add your own tasks and dates.
 
-KEEP THE FILES AND THE DETAILS TOGETHER
-The artwork and the release details live with the release. Collect credits and splits from producers, writers and engineers through one link, and they do not need an account to fill it in.
+TRACK EVERY TASK
+Every task has an owner and a date. Your team sees what is theirs, what is late and what is coming. Nobody has to ask where things stand.
 
-BUILD A PRESS KIT YOU CAN SEND
-Every artist gets one standing page you can send to writers, radio and playlist curators. It stays current as your releases land.
+IT LEARNS FROM YOU
+After every task, Urganize asks how it went, so the next plan fits better.
+
+SOLO OR WITH A TEAM
+Use it on your own, or bring in your manager, your designer and the rest of the team.
+
+KEEP THE COVER ART AND THE DETAILS TOGETHER
+The cover art and the release details live with the release. Collect credits and splits from producers, writers and engineers through one link, and they do not need an account to fill it in.
 
 ASK URGANS
-Urganize has a personal AI for music professionals built in. Ask it what is late, have it build your rollout plan, or tell it to create an activity in plain words. It asks before anything that cannot be undone.
+Urganize has a personal AI for music professionals built in. Ask it what is late, have it build your plan, or tell it to create a task in plain words. It asks before anything that cannot be undone.
 
 WHO IT IS FOR
-Artists running their own releases. Managers running more than one artist at a time. Labels running a full roster.
-
-Start free for 3 days. No card needed.
+Artists running their own releases. Managers running more than one artist at a time. Record labels running a full roster.
 ```
 
-1,461 characters.
+1,613 characters.
+
+Rewritten 2026-11-09 (#1153): the first paragraph is the new long
+description, the sections follow the new positioning, the press kit block came
+out (the standalone press kit is hidden since 2026-10-17) and the trial line
+came out (waitlist copy rule).
 
 Recounted 2026-10-17 (URG-344): the first paragraph is now the current long
 description, and the shows block and "the master" came out because neither is
@@ -139,10 +151,10 @@ Apple's subtitle is the one field on either store that holds it whole.
 ### Promotional text (170 characters max)
 
 ```
-Urganize is where music teams manage everything from idea to execution.
+Urganize is an app that helps artists, managers and record labels plan new music and keep track of every task.
 ```
 
-71 characters. This is `SHORT_DESCRIPTION` from `positioning.ts`, which is the
+110 characters. This is `SHORT_DESCRIPTION` from `positioning.ts`, which is the
 core line, unchanged.
 
 ### Description
@@ -153,10 +165,10 @@ Apple's 4,000-character limit and carries no Play-specific wording.
 ### Keywords (100 characters max, comma separated)
 
 ```
-music manager,release planning,artist manager,rollout,press kit,music team
+music manager,release planning,artist manager,rollout,task tracker,music team
 ```
 
-74 characters. No spaces after the commas: Apple counts them, and the field is
+77 characters. No spaces after the commas: Apple counts them, and the field is
 tight.
 
 THE TAGS AND KEYWORDS DID NOT MOVE WITH THE 2026-09-24 LINE, and that is the

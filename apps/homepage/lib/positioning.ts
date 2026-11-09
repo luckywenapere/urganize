@@ -17,6 +17,10 @@
  * 2026-10-31 (#944): "From idea to execution." and "Urganize is where music
  * teams manage everything from idea to execution." replaced both.
  *
+ * 2026-11-09 (#1153): the core line is "Urganize is an app that helps artists,
+ * managers and record labels plan new music and keep track of every task." and
+ * the long description is the founder's new positioning. The short line stays.
+ *
  * THIS IS THE MIRROR. The canonical copy, with the full reasoning, is
  * apps/web/lib/positioning.ts. `apps/homepage` cannot import from `apps/web`
  * (separate Next apps, no shared path alias), and a package for eight strings
@@ -31,7 +35,11 @@
  * marketing site and the product two different descriptions.
  */
 
-export const CORE_CLAUSE = 'where music teams manage everything from idea to execution';
+export const AUDIENCE = ['artists', 'managers', 'record labels'] as const;
+
+export const AUDIENCE_LINE = `${AUDIENCE.slice(0, -1).join(', ')} and ${AUDIENCE[AUDIENCE.length - 1]}`;
+
+export const CORE_CLAUSE = `an app that helps ${AUDIENCE_LINE} plan new music and keep track of every task`;
 
 export const CORE_LINE = `Urganize is ${CORE_CLAUSE}.`;
 
@@ -39,9 +47,9 @@ export const SHORT_LINE = 'From idea to execution.';
 
 export const PROMISE_LINE = 'Everyone knows their job till drop day. Nobody has to chase anybody.';
 
-export const AUDIENCE = ['artists', 'managers', 'labels'] as const;
 
-export const AUDIENCE_LINE = `${AUDIENCE.slice(0, -1).join(', ')} and ${AUDIENCE[AUDIENCE.length - 1]}`;
+
+
 
 export const BRAND_LINE = `Urganize: ${SHORT_LINE.slice(0, -1)}`;
 
@@ -50,8 +58,8 @@ export const ONE_LINER = SHORT_LINE;
 export const SHORT_DESCRIPTION = CORE_LINE;
 
 export const CANONICAL_DESCRIPTION =
-  `${CORE_LINE} Add a release and everyone knows their job till drop day. ` +
-  'Built for artists and their teams.';
+  `${CORE_LINE} It asks about your goals, then makes a plan that fits. You can also make your own. ` +
+  'Use it solo or with a team. After every task, Urganize asks how it went, so it keeps learning from you.';
 
 // The link preview (#939, #944). See the web copy for the note.
 export const SHARE_HEADLINE = SHORT_LINE;

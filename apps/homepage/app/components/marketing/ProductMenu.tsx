@@ -22,7 +22,10 @@ const productLinks = [
   // Pruned 2026-10-18 (founder call): artist managers are the audience; the
   // executives and curators pages stay live but leave the menu. The
   // AI-artist page was hidden outright on 2026-10-18 (URG-385; it 404s).
+  // "For record labels" came back 2026-11-09 (new positioning: artists,
+  // managers, record labels); it points at the executives page.
   { href: "/for-managers", label: "For managers" },
+  { href: "/for-executives", label: "For record labels" },
   { href: "/why-urganize", label: "Why Urganize" },
 ] as const;
 

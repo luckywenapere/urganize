@@ -18,10 +18,11 @@ import { PricingPageClient } from "./PricingPageClient";
 // Group's goes to an email, so the snippet promised a step the page does not
 // have. Name the step the page does have.
 export const metadata: Metadata = buildPageMetadata({
-  // "Pricing for artist managers and their teams" since 2026-10-18 (founder
-  // approved, artist-managers-first); it named artists, managers and labels.
+  // "Pricing for artists, managers and record labels" since 2026-11-09 (founder
+  // positioning: artists, managers, record labels, in that order). It was
+  // "Pricing for artist managers and their teams" from 2026-10-18.
   // The root template adds " | Urganize".
-  title: "Pricing for artist managers and their teams",
+  title: "Pricing for artists, managers and record labels",
   description:
     // Pricing v4 (2026-11-08): six plans in two groups, Free among them.
     "From idea to execution, with a Free plan and paid plans for an artist on their own or a team with a roster. See what each plan includes.",

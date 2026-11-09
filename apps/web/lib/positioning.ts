@@ -47,6 +47,22 @@
  */
 
 /**
+ * Who it is for, in the fixed order artists, managers, labels.
+ *
+ * ARTISTS ALWAYS LEAD, and the order is never reordered for emphasis. It is
+ * data rather than a baked string so the guard can pin the order rather than
+ * pin one sentence that happens to contain it. Labels were dropped on
+ * 2026-09-11 and came back on 2026-09-24 with the founder's long description.
+ *
+ * "Record labels" since 2026-11-09 (founder positioning, #1153).
+ */
+export const AUDIENCE = ['artists', 'managers', 'record labels'] as const;
+
+/** "artists, managers and record labels", built from the list above so the order
+ * cannot be rewritten in prose without rewriting the list. No Oxford comma. */
+export const AUDIENCE_LINE = `${AUDIENCE.slice(0, -1).join(', ')} and ${AUDIENCE[AUDIENCE.length - 1]}`;
+
+/**
  * The core line without its subject: "where music teams manage everything from
  * idea to execution". For a sentence that already names Urganize ("Urganize,
  * where music teams...", "Urganize is where music teams...") so a page can say it
@@ -63,8 +79,14 @@
  *
  * "Manage everything from idea to execution" since 2026-10-31 (founder
  * approved, #944), after the link preview took it first (#939).
+ *
+ * "An app that helps artists, managers and record labels plan new music and
+ * keep track of every task" since 2026-11-09 (founder positioning, #1153). It
+ * is built from AUDIENCE_LINE so the audience is written once. "Urganize, an
+ * app that..." and "Urganize is an app that..." both read, so every call site
+ * that composes it still works. The short line stays "From idea to execution."
  */
-export const CORE_CLAUSE = 'where music teams manage everything from idea to execution';
+export const CORE_CLAUSE = `an app that helps ${AUDIENCE_LINE} plan new music and keep track of every task`;
 
 /** The core line. Introduces the product anywhere a whole sentence fits. */
 export const CORE_LINE = `Urganize is ${CORE_CLAUSE}.`;
@@ -84,20 +106,6 @@ export const SHORT_LINE = 'From idea to execution.';
  * 2026-10-31 (#944): it says how the team gets there.
  */
 export const PROMISE_LINE = 'Everyone knows their job till drop day. Nobody has to chase anybody.';
-
-/**
- * Who it is for, in the fixed order artists, managers, labels.
- *
- * ARTISTS ALWAYS LEAD, and the order is never reordered for emphasis. It is
- * data rather than a baked string so the guard can pin the order rather than
- * pin one sentence that happens to contain it. Labels were dropped on
- * 2026-09-11 and came back on 2026-09-24 with the founder's long description.
- */
-export const AUDIENCE = ['artists', 'managers', 'labels'] as const;
-
-/** "artists, managers and labels", built from the list above so the order
- * cannot be rewritten in prose without rewriting the list. No Oxford comma. */
-export const AUDIENCE_LINE = `${AUDIENCE.slice(0, -1).join(', ')} and ${AUDIENCE[AUDIENCE.length - 1]}`;
 
 /** The brand line. The homepage title and, since 2026-10-18, the app's default title. */
 export const BRAND_LINE = `Urganize: ${SHORT_LINE.slice(0, -1)}`;
@@ -128,10 +136,14 @@ export const SHORT_DESCRIPTION = CORE_LINE;
  *
  * Since 2026-10-31 (#944) it opens with the core line, "manage everything from
  * idea to execution", and keeps the drop-day promise and the audience.
+ *
+ * Since 2026-11-09 (#1153) it is the founder's new positioning word for word:
+ * the core line, then how it works (goals, a plan that fits or your own, solo
+ * or team, and it asks how each task went so it keeps learning).
  */
 export const CANONICAL_DESCRIPTION =
-  `${CORE_LINE} Add a release and everyone knows their job till drop day. ` +
-  'Built for artists and their teams.';
+  `${CORE_LINE} It asks about your goals, then makes a plan that fits. You can also make your own. ` +
+  'Use it solo or with a team. After every task, Urganize asks how it went, so it keeps learning from you.';
 
 /**
  * The link preview: the share card's headline and the title and text

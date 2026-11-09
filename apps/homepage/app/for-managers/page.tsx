@@ -19,7 +19,7 @@ import type { ProductShot } from "@/content/product-shots";
 export const metadata: Metadata = buildPageMetadata({
   title: "Release planning software for artist managers",
   description:
-    "From idea to execution, for artist managers running more than one artist. Add a release, get the plan and your team knows what to do and when.",
+    "From idea to execution, for artist managers. Urganize asks about each artist's goals, makes a plan that fits and keeps track of every task.",
   path: "/for-managers",
   shareCard: "for-managers",
 });
@@ -40,9 +40,9 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "You don't start from a blank page for artist number three.",
-    body: "Add a release and Urganize lays out the whole plan, sized to the format: 64 tasks for a single, 90 for an EP, 113 for an album. Every artist gets the same starting plan and you can edit or delete any task.",
+    body: "Urganize starts from what each artist wants and makes a plan that fits: 64 tasks for a single, 90 for an EP, 113 for an album. Or make your own, and edit or delete any task.",
     points: [
-      "One template, shaped for each release",
+      "A plan shaped to your goals, or your own",
       "Every task dated back from that drop day",
       // Never "reorder" — reordering has no UI (CLAUDE.md: the endpoint
       // was deleted 2026-07-10) and the honesty rule bans advertising it.
@@ -61,9 +61,9 @@ const compactBlocks = [
     body: "Every task has an owner, a due date and a priority. Nothing starts before the step it needs is done.",
   },
   {
-    kicker: "Press kit",
-    title: "One link, ready whenever press asks.",
-    body: "Urganize builds each artist a press kit from the work you already put in, and tells you when a new release is missing from it. It works the same for any artist you run.",
+    kicker: "Feedback",
+    title: "It learns from you.",
+    body: "After every task, Urganize asks how it went, so each artist\u2019s next plan fits better.",
   },
   {
     kicker: "Status",
@@ -114,9 +114,9 @@ export default function ForManagersPage() {
               </span>
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
-              One artist, one release? A group chat and a Drive folder hold
-              up. Add a second artist and a team, and chasing everyone becomes
-              the real job. Urganize takes that job off you.
+              One artist or five, the plan and the tasks live in one place,
+              not in five chats. Urganize keeps track of every task, so
+              chasing everyone stops being your job.
             </p>
             {/* CTA moved into the hero (2026-08-05, URG-218): the page
                 previously had no ask until the very bottom, ~6 screens
@@ -130,7 +130,7 @@ export default function ForManagersPage() {
             <div className="mt-8 flex w-full flex-col items-center gap-4">
               <TrialButton location="for_managers_hero" size="lg" className="w-full sm:w-auto" />
               <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                We are letting teams in from the waitlist.
+                We are letting people in from the waitlist.
               </p>
             </div>
           </PageDawn>
@@ -244,7 +244,7 @@ export default function ForManagersPage() {
               <div className="mt-10 flex w-full flex-col items-center gap-4">
                 <TrialButton location="for_managers_cta" size="lg" className="w-full sm:w-auto" />
                 <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                  We are letting teams in from the waitlist.
+                  We are letting people in from the waitlist.
                 </p>
               </div>
             </div>

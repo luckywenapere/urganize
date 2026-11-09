@@ -1,4 +1,5 @@
 import { Text } from 'react-email';
+import { CORE_LINE } from '@/lib/positioning';
 import { EmailLayout } from './Layout';
 import { FootnoteText, Heading, Paragraph, PrimaryButton } from './components';
 import { BODY_TEXT, MUTED_TEXT } from './theme';
@@ -33,8 +34,7 @@ export function WorkspaceInviteEmail({
         {inviter} invited you to {workspace}
       </Heading>
       <Paragraph>
-        Urganize is where the team runs a rollout: the plan, the work, and who is doing what, in one
-        place. You&rsquo;ll have {access}.
+        {CORE_LINE} You&rsquo;ll have {access}.
       </Paragraph>
       <PrimaryButton href={inviteUrl}>Accept the invite</PrimaryButton>
       <Text style={{ margin: '22px 0 0', color: MUTED_TEXT, fontSize: '13px', lineHeight: '1.6' }}>

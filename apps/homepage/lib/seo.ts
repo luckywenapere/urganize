@@ -92,7 +92,9 @@ const SHARE_IMAGE = {
   // 2026-09-09 for the release-to-rollout rename and before that for the
   // first category line. Earlier cards used retired taglines, including a
   // banned container metaphor.
-  alt: `Urganize. ${SHARE_HEADLINE} ${SHARE_DESCRIPTION}`,
+  // 2026-11-09: the alt describes the picture (headline plus the drop-day
+  // track) and no longer appends SHARE_DESCRIPTION, which the card never showed.
+  alt: `Urganize. ${SHARE_HEADLINE} A release timeline ending in a gold drop-day diamond, with plan steps curving around it.`,
 };
 
 // Each main page's own share card (#964, mock approved by the founder
@@ -106,6 +108,10 @@ const SHARE_IMAGE = {
 //  - bump SHARE_CARDS_VERSION whenever any file in public/share/ changes, or
 //    WhatsApp and X keep showing the old picture.
 const SHARE_CARDS_VERSION = "2026-11-01-page-cards";
+// 2026-11-09 (#1153): /features and /for-executives changed their H1s to the
+// new positioning, so their cards (features.jpg, for-executives.jpg) show old
+// headlines. Both pages use the default SHARE_IMAGE until the cards are
+// redrawn; their entries below stay so the files still resolve.
 
 const SHARE_CARDS = {
   home: "Urganize. From idea to execution. A rollout timeline for Harmattan Gold by Kanmi Gold, with tasks dated to release day and today marked.",

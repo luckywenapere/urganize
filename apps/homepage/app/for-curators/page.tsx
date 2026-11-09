@@ -77,7 +77,7 @@ const valueBlocks = [
   {
     kicker: "Your privacy",
     title: "You see pitches. You see nothing else.",
-    body: "A curator account is walled off from the teams that pitch you. You cannot see their releases, their files, their activities or their team, and they cannot see your other pitches. That is enforced in the database itself, not just hidden in the screens.",
+    body: "A curator account is walled off from the teams that pitch you. You cannot see their releases, their tasks or their team, and they cannot see your other pitches. That is enforced in the database itself, not just hidden in the screens.",
     points: [
       "No team can read your inbox",
       "No other curator can see your playlists",

@@ -56,7 +56,9 @@ const shareImage = {
   url: `/opengraph-image.jpg?v=${SHARE_IMAGE_VERSION}`,
   width: 1200,
   height: 630,
-  alt: `Urganize. ${SHARE_HEADLINE} ${SHARE_DESCRIPTION}`,
+  // Describes the picture, which shows only the headline and a timeline
+  // (2026-11-09, #1153); same alt as apps/homepage/lib/seo.ts.
+  alt: `Urganize. ${SHARE_HEADLINE} A release timeline ending in a gold drop-day diamond, with plan steps curving around it.`,
 };
 
 function getMetadataBase() {

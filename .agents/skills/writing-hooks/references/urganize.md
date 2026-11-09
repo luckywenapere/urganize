@@ -8,9 +8,9 @@ First: artist managers running more than one artist, small management teams and 
 
 ## What the product is (say it this way)
 
-"Urganize is where music teams manage everything from idea to execution." Longer, in Oyin's words: "Think of it like project management for the music industry: you add a release, you get the plan, and your team knows what to do and when."
+"Urganize is an app that helps artists, managers and record labels plan new music and keep track of every task. It asks about your goals, then makes a plan that fits. You can also make your own. Use it solo or with a team. After every task, Urganize asks how it went, so it keeps learning from you." (founder positioning, 9 Nov 2026). Tagline: "From idea to execution."
 
-Retired lines, never use: "the team app for music release", "AI workspace for music executives", "AI Music Business Manager", "Everything after the music", "Every release, on plan".
+Retired lines, never use: "where music teams manage everything from idea to execution", "plan every release and deliver it on time", "the team app for music release", "AI workspace for music executives", "AI Music Business Manager", "Everything after the music", "Every release, on plan".
 
 ## Copy rules
 

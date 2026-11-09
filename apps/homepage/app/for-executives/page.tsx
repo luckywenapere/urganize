@@ -17,11 +17,10 @@ import { PageDawn } from "../components/marketing/PageDawn";
 import type { ProductShot } from "@/content/product-shots";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Release planning for teams running a roster",
+  title: "Planning and task tracking for record labels",
   description:
-    "From idea to execution, across your whole roster. Each release gets the same plan, every activity has an owner and you see where they all stand without chasing anyone.",
+    "From idea to execution, across your roster. Each artist's plan fits their goals, every task has an owner and Urganize learns from how each one went.",
   path: "/for-executives",
-  shareCard: "for-executives",
 });
 
 // This is the persona page for the team running a roster. It was written for
@@ -70,9 +69,9 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "Every rollout runs the same way, whoever runs it.",
-    body: "Create a rollout and Urganize lays out the whole plan, sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Your newest manager delivers a rollout the same way your best one does, and anyone can edit or delete an activity that does not apply.",
+    body: "Urganize asks about each artist's goals and makes a plan that fits: 64 activities for a single, 90 for an EP, 113 for an album. Or make your own. Your newest manager delivers a rollout the same way your best one does, and anyone can edit or delete an activity that does not apply.",
     points: [
-      "One template, shaped for each rollout",
+      "A plan shaped to each artist’s goals",
       "Every activity dated around that release day",
       "The same starting plan for every artist and every team",
     ],
@@ -91,9 +90,9 @@ const compactBlocks = [
     body: "One list shows every rollout you have going: progress, what is overdue and what is due this week. You stop booking a call just to find out where things stand.",
   },
   {
-    kicker: "Press kit",
-    title: "One link per rollout, ready before anyone asks.",
-    body: "Urganize builds each artist a press kit from the work you already put in, and tells you when a new rollout is missing from it. One link for press, curators and bookers, and it stays the same link.",
+    kicker: "Feedback",
+    title: "It learns from you.",
+    body: "After every task, Urganize asks how it went, so the next plan for each artist fits better.",
   },
 ] as const;
 
@@ -110,15 +109,15 @@ export default function ForExecutivesPage() {
         >
           <PageDawn className="mx-auto max-w-[46rem] text-center">
             <p className="mono-label text-[var(--marketing-text-subtle)]">
-              For roster teams
+              For record labels
             </p>
             {/* The hero line is the OG card's baked tagline (see
                 SHARE_IMAGE in lib/seo.ts). Same words on the card and on
                 the executive page on purpose. */}
             <h1 className="mt-8 text-balance text-[2.25rem] leading-[1.06] text-[var(--marketing-text)] sm:text-[3.6rem]">
-              Every artist. Every rollout.{" "}
+              Every artist&apos;s new music.{" "}
               <span className="text-[var(--marketing-accent)]">
-                On plan.
+                Every task tracked.
               </span>
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
@@ -134,7 +133,7 @@ export default function ForExecutivesPage() {
             <div className="mt-8 flex w-full flex-col items-center gap-4">
               <TrialButton location="for_executives_hero" size="lg" className="w-full sm:w-auto" />
               <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                We are letting teams in from the waitlist.
+                We are letting people in from the waitlist.
               </p>
             </div>
           </PageDawn>
@@ -178,7 +177,7 @@ export default function ForExecutivesPage() {
                 Everything else
               </p>
               <h2 className={`mt-5 max-w-[40rem] ${PERSONA_HEADLINE_CLASS}`}>
-                Ownership, status and the press kit come with it.
+                Ownership, status and feedback come with it.
               </h2>
 
               <div className="mt-10 divide-y divide-[color:var(--marketing-border)]">
@@ -245,7 +244,7 @@ export default function ForExecutivesPage() {
               <div className="mt-10 flex w-full flex-col items-center gap-4">
                 <TrialButton location="for_executives_cta" size="lg" className="w-full sm:w-auto" />
                 <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                  We are letting teams in from the waitlist.
+                  We are letting people in from the waitlist.
                 </p>
               </div>
             </div>

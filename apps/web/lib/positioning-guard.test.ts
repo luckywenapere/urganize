@@ -183,6 +183,10 @@ const RETIRED = [
   // "On plan" alone stays allowed where it describes a plan.
   /every release, on plan/i,
   /plan every release and deliver it on time/i,
+  // 2026-11-09 (#1153): the 2026-10-31 core clause, replaced by "an app that
+  // helps artists, managers and record labels plan new music and keep track of
+  // every task". The short line "From idea to execution." stays allowed.
+  /manage everything from idea to execution/i,
 ] as const;
 
 /**
@@ -256,7 +260,11 @@ describe('positioning', () => {
     // Since 2026-10-31 (founder approved, #944): "From idea to execution."
     // and "manage everything from idea to execution", after the link preview
     // took them first (#939). The promise line stays as the hero's subhead.
-    expect(CORE_LINE).toBe('Urganize is where music teams manage everything from idea to execution.');
+    // Since 2026-11-09 (founder positioning, #1153) the core line and the long
+    // description are his new words; the short line and promise stay.
+    expect(CORE_LINE).toBe(
+      'Urganize is an app that helps artists, managers and record labels plan new music and keep track of every task.',
+    );
     expect(SHORT_LINE).toBe('From idea to execution.');
     expect(PROMISE_LINE).toBe('Everyone knows their job till drop day. Nobody has to chase anybody.');
     // 2026-10-27 (founder approved): artists and their teams, not managers
@@ -264,8 +272,9 @@ describe('positioning', () => {
     // 2026-10-18 (founder approved): the long description leads with artist
     // managers, the buyer, and names them as its own last sentence.
     expect(CANONICAL_DESCRIPTION).toBe(
-      'Urganize is where music teams manage everything from idea to execution. ' +
-        'Add a release and everyone knows their job till drop day. Built for artists and their teams.',
+      'Urganize is an app that helps artists, managers and record labels plan new music and keep track of every task. ' +
+        'It asks about your goals, then makes a plan that fits. You can also make your own. ' +
+        'Use it solo or with a team. After every task, Urganize asks how it went, so it keeps learning from you.',
     );
     expect(CORE_LINE).toBe(`Urganize is ${CORE_CLAUSE}.`);
     expect(BRAND_LINE).toBe('Urganize: From idea to execution');
@@ -277,8 +286,9 @@ describe('positioning', () => {
     // a sentence containing it, so a reorder fails here rather than in review.
     // Labels were dropped on 2026-09-11 and came back on 2026-09-24 with the
     // founder's long description; artists led both times.
-    expect([...AUDIENCE]).toEqual(['artists', 'managers', 'labels']);
-    expect(AUDIENCE_LINE).toBe('artists, managers and labels');
+    // "Record labels" since 2026-11-09 (#1153).
+    expect([...AUDIENCE]).toEqual(['artists', 'managers', 'record labels']);
+    expect(AUDIENCE_LINE).toBe('artists, managers and record labels');
     // The long description stopped composing this list on 2026-10-18: it is
     // built for artist managers, and says so in its own words.
   });
@@ -291,7 +301,9 @@ describe('positioning', () => {
     expect(SHORT_DESCRIPTION.length).toBeLessThan(160);
     // Every short-form line says the one idea, so no surface can quote a
     // line that forgot it. (The core line keeps its own wording.)
-    for (const line of [SHORT_LINE, CANONICAL_DESCRIPTION, BRAND_LINE]) {
+    // The long description stopped carrying it on 2026-11-09 (#1153): it is the
+    // founder's new positioning word for word.
+    for (const line of [SHORT_LINE, BRAND_LINE]) {
       expect(line.toLowerCase()).toContain('from idea to execution');
     }
     expect(PROMISE_LINE.length).toBeLessThan(80);
@@ -303,10 +315,12 @@ describe('positioning', () => {
     expect(SHARE_HEADLINE).toBe('From idea to execution.');
     expect(SHARE_TITLE).toBe('Urganize: From idea to execution');
     expect(SHARE_DESCRIPTION).toBe(
-      'Urganize is where music teams manage everything from idea to execution.',
+      'Urganize is an app that helps artists, managers and record labels plan new music and keep track of every task.',
     );
-    // Short enough that WhatsApp and X show the description whole.
-    expect(SHARE_DESCRIPTION.length).toBeLessThan(100);
+    // Short enough that WhatsApp and X show the description whole. 120 since
+    // 2026-11-09 (#1153): the founder's core line is 111 characters and is
+    // used word for word rather than cut to fit the old 100.
+    expect(SHARE_DESCRIPTION.length).toBeLessThan(120);
   });
 
   it('uses no em dash in the positioning itself', () => {
@@ -423,6 +437,8 @@ describe('positioning', () => {
       const expression = declared[1];
       const declaresPositioning =
         /from idea to execution/i.test(expression) ||
+        // The founder's 2026-11-09 core line, in words (#1153).
+        /plan new music and keep track of every task/i.test(expression) ||
         // Composed from the shared constants rather than written out.
         /\b(?:CORE_LINE|CORE_CLAUSE|SHORT_LINE|PROMISE_LINE|SHORT_DESCRIPTION|CANONICAL_DESCRIPTION|ONE_LINER|LANDING_DESCRIPTION)\b/.test(
           expression,

@@ -11,7 +11,7 @@ import { TrialButton } from "../components/landing/TrialButton";
 export const metadata: Metadata = buildPageMetadata({
   title: "Guides to planning a music release",
   description:
-    `Plain guides for artists and managers: the release timeline, who does what and how to pitch playlists. ${SHORT_LINE}`,
+    `Plain guides for artists, managers and record labels: the release timeline, who does what and how to pitch playlists. ${SHORT_LINE}`,
   path: "/guides",
   shareCard: "guides",
 });
@@ -29,7 +29,7 @@ export default function GuidesPage() {
               Plan a music release, step by step
             </h1>
             <p className="mt-4 max-w-[38rem] text-[var(--marketing-text-muted)]">
-              Plain answers for managers who&rsquo;d rather not learn the hard way. Each one
+              Plain answers for anyone planning new music. Each one
               comes from the plan Urganize builds for a single.
             </p>
           </PageDawn>

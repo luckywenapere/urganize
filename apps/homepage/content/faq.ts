@@ -30,12 +30,16 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   {
     question: "When can I start?",
     answer:
-      "We are letting teams in from the waitlist. Join and we will message you when your spot opens.",
+      "We are letting people in from the waitlist. Join and we will message you when your spot opens.",
   },
   {
     question: "My team lives on WhatsApp. Will they actually use it?",
     answer:
       "Yes, there’s almost nothing to learn. Send them an invite link and each person sees what’s theirs and when it’s due. It works in the phone browser too.",
+  },
+  {
+    question: "Can I use it on my own?",
+    answer: "Yes. Use it solo, or invite your team when you need them.",
   },
   {
     question: "What if I don’t have a release right now?",

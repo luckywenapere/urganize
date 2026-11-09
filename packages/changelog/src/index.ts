@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.261.2",
+    title: "A clearer way to say what Urganize does",
+    tag: "App",
+    date: "November 9, 2026",
+    highlights: [
+      "Urganize now introduces itself as an app that helps artists, managers and record labels plan new music and keep track of every task.",
+      "UrgAns, the sign-in page and our emails describe it the same way.",
+    ],
+  },
+  {
     version: "1.261.1",
     title: "Solo Plus, everywhere it belongs",
     tag: "Account",

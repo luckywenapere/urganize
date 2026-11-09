@@ -14,7 +14,7 @@ import type { ProductShot } from "@/content/product-shots";
 export const metadata: Metadata = buildPageMetadata({
   title: "Why Urganize over WhatsApp and Google Drive",
   description:
-    "WhatsApp and Google Drive work for one artist and one release. Running more than one? From idea to execution: a real plan, an owner on every task and status you can see without asking.",
+    "WhatsApp and Drive hold the chat. Urganize helps you plan new music and keep track of every task: a plan built from your goals, solo or with a team.",
   path: "/why-urganize",
 });
 
@@ -40,7 +40,7 @@ const comparisons = [
     // content/testimonials.ts — that file owns the string, this page
     // mirrors it. Change both together or not at all.
     them: "Your plan is spread across a pinned chat, an old spreadsheet and your memory. Every new release starts from scratch.",
-    us: "Add a release and Urganize lays out the whole plan, written by real managers and sized to the format: 64 tasks for a single, 90 for an EP, 113 for an album. Edit or delete any task.",
+    us: "Urganize asks about your goals and lays out a plan that fits. Or make your own. Edit or delete any task.",
     // The before/after still belongs to this claim only (it shows a single's
     // 64-task plan), so it is opted in here rather than drawn for every item.
     showBeforeAfter: true,
@@ -80,9 +80,9 @@ const compactComparisons = [
     us: "Every task has an owner and a due date, and unlocks the moment what it's waiting on is done.",
   },
   {
-    kicker: "Press kit",
-    them: "The press kit is a doc full of dead links you rebuild from scratch every time someone asks.",
-    us: "Urganize builds one from your release, keeps it current and lets you turn it off anytime.",
+    kicker: "Feedback",
+    them: "Nobody asks how a task went, so the same problems come back every release.",
+    us: "After every task, Urganize asks how it went.",
   },
   {
     kicker: "Status",
@@ -116,10 +116,9 @@ export default function WhyUrganizePage() {
               </span>
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
-              For one artist and one release, a group chat and a Drive folder
-              really do work. Add a second release, a third artist and a
-              team passing work around. The system that got you here starts
-              to drop things.
+              A group chat is good for talking. It is bad at holding a plan,
+              even for one artist. Add a second release, a third artist and a
+              team passing work around, and things start to drop.
             </p>
             {/* CTA moved into the hero (2026-08-05): the page previously had
                 no ask until the very bottom, five screens down, so anyone
@@ -205,7 +204,7 @@ export default function WhyUrganizePage() {
                 Everything else
               </p>
               <h2 className={`mt-5 max-w-[40rem] ${headlineClass}`}>
-                Ownership, your press kit and status change too.
+                Ownership, status and feedback change too.
               </h2>
 
               <div className="mt-10 divide-y divide-[color:var(--marketing-border)]">

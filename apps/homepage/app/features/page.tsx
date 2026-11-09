@@ -11,11 +11,10 @@ import { PageDawn } from "../components/marketing/PageDawn";
 import type { ProductShot } from "@/content/product-shots";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Music release plan, tasks and press kit",
+  title: "Plan new music and track every task",
   description:
-    "From idea to execution. Add a release and get the plan, week by week to release day, with an owner on every task. Plus an AI assistant.",
+    "From idea to execution. Tell Urganize your goals and get a plan that fits, or make your own. Track every task, solo or with a team. After each task it asks how it went.",
   path: "/features",
-  shareCard: "features",
 });
 
 // One small still per feature section (#962, mock approved by the founder
@@ -53,12 +52,12 @@ function featureStill(name: FeatureStillName): { desktop: ProductShot; phone: Pr
 const features = [
   {
     kicker: "The plan",
-    title: "Stop starting every release from zero.",
+    title: "Start from your goals, not from zero.",
     // Numbers are the live playbooks (CLAUDE.md, shipped v0.55.0): single
     // 64 activities / 11 weeks, EP 90 / 16, album 113 / 21. The still
     // below has the EP one picked, so the copy names all three rather than
     // describing a single next to a 90-activity image.
-    body: "Add a release and real managers have already written the plan: 64 tasks for a single, 90 for an EP, 113 for an album. Change anything.",
+    body: "Urganize asks about your goals and makes a plan that fits: 64 tasks for a single, 90 for an EP, 113 for an album. Or start from a blank plan of your own.",
     points: [
       "Singles, EPs and albums each get their own playbook",
       "Every task dated back from drop day",
@@ -80,19 +79,10 @@ const compactFeatures = [
   {
     kicker: "Tasks",
     title: "Nobody gets to say \u201cI didn\u2019t know.\u201d",
-    body: "Every task has an owner, a due date and a priority. Finish one step and the next one unlocks.",
+    body: "Every task has an owner, a due date and a priority. Finish one and Urganize asks how it went, so the next plan fits better.",
     still: {
       ...featureStill("tasks"),
       alt: "A task list in Urganize: Lock the master file done, Upload to distributor open now, the next tasks locked, and a card showing its owner, its due date and High priority.",
-    },
-  },
-  {
-    kicker: "Press kit",
-    title: "Stop rebuilding the EPK every drop.",
-    body: "One link, built from work you\u2019ve already done. It tells you when your new release is missing, and you can take it down anytime.",
-    still: {
-      ...featureStill("presskit"),
-      alt: "A public press kit page for Temi Ivory, with a card saying Ife Mi is not on the kit yet, an Add it link, and a switch showing the kit is live.",
     },
   },
   {
@@ -160,9 +150,9 @@ export default function FeaturesPage() {
               Features
             </p>
             <h1 className="mt-8 text-balance text-[2.25rem] leading-[1.06] text-[var(--marketing-text)] sm:text-[3.6rem]">
-              Everything your release needs.{" "}
+              Plan new music.{" "}
               <span className="text-[var(--marketing-accent)]">
-                None of the chasing.
+                Keep track of every task.
               </span>
             </h1>
             {/* The 2026-08-19 brief banned container metaphors ("live in one
@@ -171,8 +161,8 @@ export default function FeaturesPage() {
                 banned in anything a person reads, and "from one place" is the
                 product's own promise, so it is the sanctioned phrasing now. */}
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
-              The plan, who&rsquo;s on what and what&rsquo;s late, for every
-              artist on your roster.
+              Your plan, your tasks and what&rsquo;s late, whether you work
+              alone or with a team.
             </p>
             {/* CTA moved into the hero (2026-08-05, URG-218): the page
                 previously had no ask until the very bottom, ~7 screens
@@ -185,7 +175,7 @@ export default function FeaturesPage() {
             <div className="mt-8 flex w-full flex-col items-center gap-4">
               <TrialButton location="features_hero" size="lg" className="w-full sm:w-auto" />
               <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                We are letting teams in from the waitlist.
+                We are letting people in from the waitlist.
               </p>
             </div>
           </PageDawn>
@@ -223,7 +213,7 @@ export default function FeaturesPage() {
                           className="font-mono text-[0.72rem] text-[var(--marketing-accent)]"
                           aria-hidden
                         >
-                          —
+                          ·
                         </span>
                         {point}
                       </li>
@@ -288,7 +278,7 @@ export default function FeaturesPage() {
               <div className="mt-10 flex w-full flex-col items-center gap-4">
                 <TrialButton location="features_cta" size="lg" className="w-full sm:w-auto" />
                 <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                  We are letting teams in from the waitlist.
+                  We are letting people in from the waitlist.
                 </p>
                 <ProofLine id="antoine" className="mt-2" />
               </div>

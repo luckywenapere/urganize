@@ -1,6 +1,6 @@
 # Urganize
 
-From idea to execution. Add a release and get the plan, week by week to release day, so your team knows what to do and when. Built for artist managers.
+Urganize is an app that helps artists, managers and record labels plan new music and keep track of every task. It asks about your goals, then makes a plan that fits. You can also make your own. Use it solo or with a team. After every task, Urganize asks how it went, so it keeps learning from you.
 
 The target user is an independent music manager handling 1–3 artists, planning their next release in the next 90 days. The central object is the release; every feature ties back to one.
 

@@ -35,7 +35,7 @@ export default function InterviewPage() {
             </h1>
             <p className="mx-auto mt-4 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
               Fill in your details and pick a weekday slot below. Every interview runs at 6pm
-              West Africa Time — once a day is taken, it&apos;s off the list.
+              West Africa Time. Once a day is taken, it&apos;s off the list.
             </p>
           </PageDawn>
 

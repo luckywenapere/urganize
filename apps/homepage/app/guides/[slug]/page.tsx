@@ -176,8 +176,8 @@ export default async function GuidePage({
               Let Urganize lay out the plan for you.
             </p>
             <p className={`mt-2 ${bodyText}`}>
-              Create a rollout and get the whole plan, with an owner and a due date on every
-              activity. Join the waitlist to get in.
+              Tell Urganize your goals and get a plan that fits, with an owner and a due date
+              on every task. Join the waitlist to get in.
             </p>
             <div className="mt-5">
               <TrialButton location="guide_cta" />

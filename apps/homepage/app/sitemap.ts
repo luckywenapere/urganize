@@ -10,16 +10,16 @@ const SITE_URL = "https://urganize.app";
 // day that page's own content or metadata changed (taken from git on
 // 2026-10-18). WHEN YOU CHANGE A PAGE, BUMP ITS DATE HERE in the same commit.
 const LAST_MODIFIED = {
-  home: "2026-10-18",
-  signup: "2026-10-07",
-  features: "2026-10-17",
-  pricing: "2026-10-18",
-  whyUrganize: "2026-10-18",
-  forExecutives: "2026-10-17",
-  forManagers: "2026-10-17",
-  forCurators: "2026-10-17",
-  brand: "2026-10-18",
-  guides: "2026-10-07",
+  home: "2026-11-09",
+  signup: "2026-11-09",
+  features: "2026-11-09",
+  pricing: "2026-11-09",
+  whyUrganize: "2026-11-09",
+  forExecutives: "2026-11-09",
+  forManagers: "2026-11-09",
+  forCurators: "2026-11-09",
+  brand: "2026-11-09",
+  guides: "2026-11-09",
 } as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {

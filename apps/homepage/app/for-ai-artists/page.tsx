@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   ...buildPageMetadata({
     title: "Release planning for AI artists",
     description:
-      "Making the song got fast. The rollout did not. From idea to execution: add a drop, get the plan week by week to release day and an owner on every activity.",
+      "Making the song got fast. The rollout did not. From idea to execution: tell Urganize your goals and get a plan that fits, or make your own, with an owner on every activity.",
     path: "/for-ai-artists",
     shareCard: "for-ai-artists",
   }),
@@ -61,9 +61,9 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "The song took an afternoon. The rollout still takes weeks.",
-    body: "Create a rollout and Urganize lays out the whole plan, sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. You did not have to think of any of it, and you can delete whatever does not apply to how you work.",
+    body: "Urganize asks about your goals and makes a plan that fits: 64 activities for a single, 90 for an EP, 113 for an album. Or make your own, and delete whatever does not apply to how you work.",
     points: [
-      "One template, shaped for each rollout",
+      "A plan shaped to your goals, or your own",
       "Every activity dated around that release day",
       "Edit or delete anything. It is your plan",
     ],
@@ -82,9 +82,9 @@ const valueBlocks = [
 
 const compactBlocks = [
   {
-    kicker: "Press kit",
-    title: "You will be asked for a press kit. Have one.",
-    body: "Urganize builds one from the rollout and keeps it current when the rollout changes. Send the same link to a blog, a curator or a booker instead of assembling a folder every time.",
+    kicker: "Feedback",
+    title: "It learns from you.",
+    body: "After every task, Urganize asks how it went, so the next plan fits better.",
   },
   {
     kicker: "Whoever helps",
@@ -154,7 +154,7 @@ export default function ForAiArtistsPage() {
             <div className="mt-8 flex w-full flex-col items-center gap-4">
               <TrialButton location="for_ai_artists_hero" size="lg" className="w-full sm:w-auto" />
               <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                We are letting teams in from the waitlist.
+                We are letting artists in from the waitlist.
               </p>
             </div>
           </PageDawn>
@@ -195,7 +195,7 @@ export default function ForAiArtistsPage() {
                 Everything else
               </p>
               <h2 className={`mt-5 max-w-[40rem] ${PERSONA_HEADLINE_CLASS}`}>
-                The press kit, your helpers and status come with it.
+                Your helpers, status and feedback come with it.
               </h2>
 
               <div className="mt-10 divide-y divide-[color:var(--marketing-border)]">
@@ -235,9 +235,8 @@ export default function ForAiArtistsPage() {
                 Urganize does not make the music.
               </h2>
               <p className="mx-auto mt-6 max-w-[38rem] text-balance text-base leading-8 text-[var(--marketing-text-muted)]">
-                Keep whatever you use to write, generate, mix and master. Keep
-                your distributor. Urganize is the part after that: the plan,
-                who is doing what and where every rollout stands.
+                Keep whatever you use to make music. Urganize plans the release
+                and keeps track of every task.
               </p>
             </div>
           </SectionShell>
@@ -266,7 +265,7 @@ export default function ForAiArtistsPage() {
               <div className="mt-10 flex w-full flex-col items-center gap-4">
                 <TrialButton location="for_ai_artists_cta" size="lg" className="w-full sm:w-auto" />
                 <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                  We are letting teams in from the waitlist.
+                  We are letting artists in from the waitlist.
                 </p>
               </div>
             </div>

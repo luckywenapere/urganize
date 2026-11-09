@@ -26,25 +26,25 @@ export const metadata: Metadata = buildPageMetadata({
 const VOICE_PILLARS = [
   {
     title: "Plain-spoken, no jargon",
-    body: "We say “the plan, the tasks and the files for your release,” not “a synergistic platform.” If a sentence needs a decoder, rewrite it.",
+    body: "We say “the plan and the tasks for your new music,” not “a synergistic platform.” If a sentence needs a decoder, rewrite it.",
     say: "Every task has an owner and a date.",
     avoid: "Holistic asset-lifecycle management.",
   },
   {
     title: "Concrete, never overclaiming",
-    body: "We don’t advertise what isn’t built. Unshipped work is marked “coming soon,” and screenshots show the real app.",
+    body: "We don’t advertise what isn’t built. Work not built yet is marked “coming soon,” and screenshots show the real app.",
     say: "64 tasks, generated from a template.",
     avoid: "AI runs your whole release for you.",
   },
   {
     title: "Name the problem",
-    body: "We say the quiet part out loud: releases run on group chats and “Final v3 ACTUAL final” in Drive. The enemy is chaos — we name it.",
+    body: "We say the quiet part out loud: releases run on group chats and “Final v3 ACTUAL final” in Drive. The enemy is chaos, and we name it.",
     say: "No more “I thought you were handling it.”",
     avoid: "Streamline your creative workflow.",
   },
   {
     title: "Operator to operator",
-    body: "We write like a manager talking to a manager — benefit-first, active, specific. We’ve run releases; the copy shows it.",
+    body: "We write like someone who has run releases, talking to someone who runs them. Benefit first, active, specific. The copy shows it.",
     say: "No more “who’s doing the art again?”",
     avoid: "Empower your creative journey.",
   },
@@ -62,9 +62,9 @@ const COLORS = [
 ] as const;
 
 const FONTS = [
-  { name: "Cormorant Garamond", role: "Headlines (the serif)" },
+  { name: "Young Serif", role: "Headlines (the serif)" },
   { name: "Instrument Sans", role: "Body text" },
-  { name: "IBM Plex Mono", role: "Small uppercase labels" },
+  { name: "Space Mono", role: "Small uppercase labels" },
 ] as const;
 
 const LOGO_DOWNLOADS = [
@@ -149,10 +149,9 @@ export default function BrandPage() {
               <div>
                 <h3 className="text-sm text-[var(--marketing-text)]">Mission</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  The music industry runs on chaos: knowledge stuck in people’s heads, scattered
-                  group chats, spreadsheets and one overworked manager chasing everyone till
-                  drop day. Urganize ends that. Every release runs to plan, with the work and
-                  the status in one place.
+                  Planning new music runs on chats, spreadsheets and memory. Urganize gives
+                  artists, managers and record labels one plan that fits their goals, and
+                  keeps track of every task.
                 </p>
               </div>
 
@@ -171,10 +170,9 @@ export default function BrandPage() {
               <div>
                 <h3 className="text-sm text-[var(--marketing-text)]">Who it’s for</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  Artists and their teams, from the artist to the manager to the designer. One release is a lot of moving parts; a roster is
-                  many calendars, many releases at once and a pile of chats holding it
-                  together. Urganize is what runs that. Labels and teams with a bigger roster get the
-                  Label plan, with the founders working alongside them.
+                  Artists, managers and record labels. Use it on your own or with a team.
+                  Record labels with a bigger roster get the Label plan, with the founders
+                  working alongside them.
                 </p>
               </div>
 
@@ -183,11 +181,11 @@ export default function BrandPage() {
                   What we believe
                 </h3>
                 <ul className={`mt-1.5 list-disc space-y-1 pl-5 ${bodyText}`}>
-                  <li>The release is the spine. Every feature serves a release.</li>
+                  <li>New music is the spine. Every feature helps you plan it and finish every task.</li>
                   <li>We are opinionated on purpose: if it doesn’t cut the chaos, it’s out.</li>
                   <li>
                     That’s why we don’t do revenue tracking, legal contracts or analytics
-                    dashboards. We stay focused on the release.
+                    dashboards. We stay focused on the plan and the work.
                   </li>
                 </ul>
               </div>
@@ -344,8 +342,7 @@ export default function BrandPage() {
               ))}
             </div>
             <p className={`mt-3 text-xs ${bodyText}`}>
-              The product app (team.urganize.app) uses its own fonts: IBM Plex Sans, Space Grotesk,
-              and JetBrains Mono.
+              The product app (team.urganize.app) uses the same three fonts.
             </p>
 
             {/* Motifs */}
