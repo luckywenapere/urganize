@@ -94,6 +94,11 @@ const compactBlocks = [
     title: "It learns from you.",
     body: "After every task, Urganize asks how it went, so the next plan for each artist fits better.",
   },
+  {
+    kicker: "Press kit",
+    title: "One link per artist, ready before anyone asks.",
+    body: "Each artist gets a press kit with its own link, and it goes along with every pitch your team sends to a curator.",
+  },
 ] as const;
 
 export default function ForExecutivesPage() {
@@ -177,7 +182,7 @@ export default function ForExecutivesPage() {
                 Everything else
               </p>
               <h2 className={`mt-5 max-w-[40rem] ${PERSONA_HEADLINE_CLASS}`}>
-                Ownership, status and feedback come with it.
+                Ownership, status, feedback and a press kit come with it.
               </h2>
 
               <div className="mt-10 divide-y divide-[color:var(--marketing-border)]">

@@ -11,7 +11,7 @@ import { PageDawn } from "../components/marketing/PageDawn";
 import type { ProductShot } from "@/content/product-shots";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Plan new music and track every task",
+  title: "Plan new music, track every task, pitch with a press kit",
   description:
     "From idea to execution. Tell Urganize your goals and get a plan that fits, or make your own. Track every task, solo or with a team. After each task it asks how it went.",
   path: "/features",
@@ -83,6 +83,18 @@ const compactFeatures = [
     still: {
       ...featureStill("tasks"),
       alt: "A task list in Urganize: Lock the master file done, Upload to distributor open now, the next tasks locked, and a card showing its owner, its due date and High priority.",
+    },
+  },
+  {
+    kicker: "Press kit",
+    title: "Your press kit goes with every pitch.",
+    body: "Each artist gets a press kit with its own link, and Urganize sends it along when you pitch a curator.",
+    still: {
+      desktop: { light: "/images/product/guide-pitch.webp", dark: "/images/product/guide-pitch-dark.webp", width: 1360, height: 1200 },
+      // The wide shot on phones too: the tall phone shot (716x1200) is twice the
+      // height of the other stills and left a gap in the list.
+      phone: { light: "/images/product/guide-pitch.webp", dark: "/images/product/guide-pitch-dark.webp", width: 1360, height: 1200 },
+      alt: "A pitch to the curator Lola Adeyemi for Lagos Late Nights, with a private song link, a short note, a tick saying your kit goes with it, and a Send pitch button.",
     },
   },
   {

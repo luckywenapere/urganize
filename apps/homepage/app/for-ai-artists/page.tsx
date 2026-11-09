@@ -82,6 +82,11 @@ const valueBlocks = [
 
 const compactBlocks = [
   {
+    kicker: "Press kit",
+    title: "You will be asked for a press kit. Have one.",
+    body: "You get a press kit with its own link, and it goes along with every pitch you send to a curator.",
+  },
+  {
     kicker: "Feedback",
     title: "It learns from you.",
     body: "After every task, Urganize asks how it went, so the next plan fits better.",
@@ -195,7 +200,7 @@ export default function ForAiArtistsPage() {
                 Everything else
               </p>
               <h2 className={`mt-5 max-w-[40rem] ${PERSONA_HEADLINE_CLASS}`}>
-                Your helpers, status and feedback come with it.
+                A press kit, your helpers, status and feedback come with it.
               </h2>
 
               <div className="mt-10 divide-y divide-[color:var(--marketing-border)]">
