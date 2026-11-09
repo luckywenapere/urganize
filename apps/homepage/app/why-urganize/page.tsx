@@ -85,6 +85,11 @@ const compactComparisons = [
     us: "After every task, Urganize asks how it went.",
   },
   {
+    kicker: "Press kit",
+    them: "The press kit is a doc full of dead links you rebuild from scratch every time someone asks.",
+    us: "Each artist gets a press kit with its own link, and it goes along with every pitch you send.",
+  },
+  {
     kicker: "Status",
     them: "Finding out where a release stands means scrolling weeks of chat, for every release you run.",
     us: "One list shows progress, what's overdue and what's due this week, for everything you have going.",
@@ -204,7 +209,7 @@ export default function WhyUrganizePage() {
                 Everything else
               </p>
               <h2 className={`mt-5 max-w-[40rem] ${headlineClass}`}>
-                Ownership, status and feedback change too.
+                Ownership, your press kit, status and feedback change too.
               </h2>
 
               <div className="mt-10 divide-y divide-[color:var(--marketing-border)]">

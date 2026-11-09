@@ -66,6 +66,11 @@ const compactBlocks = [
     body: "After every task, Urganize asks how it went, so each artist\u2019s next plan fits better.",
   },
   {
+    kicker: "Press kit",
+    title: "One link, ready whenever press asks.",
+    body: "Each artist gets a press kit with its own link, and it goes along with every pitch you send to a curator.",
+  },
+  {
     kicker: "Status",
     title: "Answer \u201cwhere are we on that release?\u201d without scrolling WhatsApp.",
     body: "One list shows every release you run: progress, what\u2019s overdue, what\u2019s due this week and which artist it belongs to.",
