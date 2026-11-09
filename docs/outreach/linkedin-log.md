@@ -166,3 +166,17 @@ Connection requests from 5 Nov: 3 of 18 accepted so far, 2 of them replied (Afol
 **Connection requests with a note (12):** Adrian Silva, Dominique Cook, Tatiyanna G., Darnell D. (Rare Circle Entertainment), Ami Gordon (Serendipity), Tobias Metzger, Tess Hart, Sharon Tapper (Executive Director, Music Managers Forum US), Muhso Dio (Lephway Records), Shehu Raji, Cecilia Ovonji, Manuel J. R. All confirmed pending.
 
 **Personal invite links (new tactic, 8 Nov):** made 10 single-use links in /admin (expire 22 Nov) so a prospect skips "You're on the list". Sent to 7 on LinkedIn: Fuad Jamiudeen, Lanre Lawal, Tayo Adeniran, Dakail Ester, Clinton Mabulana, Yemi Akinnigbagbe, Charles Mchunu. Held for their next reply: Scott Steele, John Sadek, Mohamed Babiker Ali (nudged this morning). The links themselves are kept in Oyin's private follow-ups file, not here.
+
+## 9 Nov 2026
+
+**Sign-up opened on the evening of 8 Nov (#1140).** New accounts now go straight in on Free, so replies use the general sign-up link and "you can start free". No new personal links today.
+
+**Sign-ups (live database, last 3 days):** Clinton Mabulana signed up through his personal link on 8 Nov at 11:45am, the first sign-up from LinkedIn. He signed in once and has no artist or release yet. Samuel Ndukwe joined from the waitlist through an email invite on 8 Nov at 10:40pm. Nobody is waiting to be let in, and nobody has signed up since sign-up opened.
+
+**Inbox replies sent (6):** Ayodeji Oyedeji (liked the idea, asked how it started): told the origin story, start-free link. Tayo Adeniran (team doesn't see it as a necessity): asked how they track releases now. Snumari Datnayi (asked if Tangent covers the deck and numbers): answered. Samuel Babayemi and Elvis Ofurum (replied to connection notes): asked who they work with. Clinton Mabulana: checked in on adding Dr. Smama's next release. Skipped ended chats: Henrik, Nicholas, Unopa, Abraham.
+
+**Cold DMs (4):** Allan Siema (liked his post on Shai Sevin's The Pixel), Dan Biddle (manages Casey Barnes and Sara Berki; liked his NRLW pre-game post), Yasin Ben (Tangier, no posts), Emmanuel David (producer and A&R, reposts only). Neil Mason and Richard M. Ajayi had already been DMed on 8 Nov, which that day's log missed. Skipped media profiles: Viktor Oyediran (WeTalkSound), Peter Ojochenemi (Splash Plus Magazine).
+
+**Connection requests with a note (13):** Paul Sonkamble, George Meyer, John Baccoli, Colton Ward (773 Management), Daniel Byelich, Marcel Schulz (Marzera), Troy Jackson (98 Entertainment), Emmanuel Nde, Peter Tega Oghenejobo (Mavin), Raymond Ifie, Manuel Pahl (Black Bird Records), Georges Kande, Damilola Alabi-Isama (King Isama Entertainment). All confirmed pending. Skipped as already pending: Sharon Ntan, Tega Eboh.
+
+**Calls this week:** Nkosinathi Jele today at 11:30am (booked through the link as "Nkosinathi Mdluli"; he also took Tue 11:30, which looks like a double booking; not messaged today), Bayo Fatoba today at 3pm, Abraham Tue 12pm, Nicholas Tue 4pm, Meghan Kek Wed 2pm.
