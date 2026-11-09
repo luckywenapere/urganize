@@ -180,3 +180,5 @@ Connection requests from 5 Nov: 3 of 18 accepted so far, 2 of them replied (Afol
 **Connection requests with a note (13):** Paul Sonkamble, George Meyer, John Baccoli, Colton Ward (773 Management), Daniel Byelich, Marcel Schulz (Marzera), Troy Jackson (98 Entertainment), Emmanuel Nde, Peter Tega Oghenejobo (Mavin), Raymond Ifie, Manuel Pahl (Black Bird Records), Georges Kande, Damilola Alabi-Isama (King Isama Entertainment). All confirmed pending. Skipped as already pending: Sharon Ntan, Tega Eboh.
 
 **Calls this week:** Nkosinathi Jele today at 11:30am (booked through the link as "Nkosinathi Mdluli"; he also took Tue 11:30, which looks like a double booking; not messaged today), Bayo Fatoba today at 3pm, Abraham Tue 12pm, Nicholas Tue 4pm, Meghan Kek Wed 2pm.
+
+**No-show:** Nkosinathi did not join the 11:30am call. Emailed him at 11:38am saying Oyin was waiting and offering to keep Tue 10 Nov 11:30 instead; waiting on his reply.
