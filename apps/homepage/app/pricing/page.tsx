@@ -25,7 +25,7 @@ export const metadata: Metadata = buildPageMetadata({
   title: "Pricing for artists, managers and record labels",
   description:
     // Pricing v4 (2026-11-08): six plans in two groups, Free among them.
-    "From idea to execution, with a Free plan and paid plans for an artist on their own or a team with a roster. See what each plan includes.",
+    "Plan new music and keep track of every task, with a Free plan and paid plans for an artist on their own or a team with a roster. See what each plan includes.",
   path: "/pricing",
   shareCard: "pricing",
 });

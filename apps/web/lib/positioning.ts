@@ -47,68 +47,73 @@
  */
 
 /**
- * Who it is for, in the fixed order artists, managers, labels.
+ * POSITIONING SINCE 2026-11-09 (founder, issue #1153): "Urganize is an app that
+ * helps artists, managers and record labels plan new music and keep track of
+ * every task. It asks about your goals, then makes a plan that fits. You can
+ * also make your own. Use it solo or with a team. After every task, Urganize
+ * asks how it went..." The founder's last clause, "so it keeps learning from
+ * you", was swapped for "so you can see what worked when the release is out"
+ * (founder approved): the answers feed the post-release review, and nothing
+ * yet feeds them back into the next plan. Put "keeps learning" back only once
+ * the planner reads task outcomes.
  *
- * ARTISTS ALWAYS LEAD, and the order is never reordered for emphasis. It is
- * data rather than a baked string so the guard can pin the order rather than
- * pin one sentence that happens to contain it. Labels were dropped on
- * 2026-09-11 and came back on 2026-09-24 with the founder's long description.
- *
- * "Record labels" since 2026-11-09 (founder positioning, #1153).
+ * Retired the same day: "From idea to execution." (2026-10-31 to 2026-11-09),
+ * "where music teams manage everything from idea to execution", the hero
+ * promise "Everyone knows their job till drop day. Nobody has to chase
+ * anybody." and "Built for artists and their teams.". Their history is in git.
  */
-export const AUDIENCE = ['artists', 'managers', 'record labels'] as const;
-
-/** "artists, managers and record labels", built from the list above so the order
- * cannot be rewritten in prose without rewriting the list. No Oxford comma. */
-export const AUDIENCE_LINE = `${AUDIENCE.slice(0, -1).join(', ')} and ${AUDIENCE[AUDIENCE.length - 1]}`;
 
 /**
- * The core line without its subject: "where music teams manage everything from
- * idea to execution". For a sentence that already names Urganize ("Urganize,
- * where music teams...", "Urganize is where music teams...") so a page can say it
- * without repeating the name twice in a row.
- *
- * "Music teams" since 2026-10-02, the strategy doc's one-line version
- * (docs/strategy/company-strategy.md, section 1). It said "your team" from
- * 2026-09-24. The long description below says it too, from the same day.
- *
- * "Plan every release and deliver it on time" since 2026-10-17 (founder
- * approved, URG-344), to follow the homepage v2 hero; it said "do everything
- * after the music is made" from 2026-09-24. "Deliver", never "ship": a
- * release is delivered (URGANS_COPY_RULES and the guard's deliver rule).
- *
- * "Manage everything from idea to execution" since 2026-10-31 (founder
- * approved, #944), after the link preview took it first (#939).
- *
- * "An app that helps artists, managers and record labels plan new music and
- * keep track of every task" since 2026-11-09 (founder positioning, #1153). It
- * is built from AUDIENCE_LINE so the audience is written once. "Urganize, an
- * app that..." and "Urganize is an app that..." both read, so every call site
- * that composes it still works. The short line stays "From idea to execution."
+ * The core line without its subject, for a sentence that already names
+ * Urganize ("Urganize, an app that helps...", "inside Urganize, an app that
+ * helps...").
  */
-export const CORE_CLAUSE = `an app that helps ${AUDIENCE_LINE} plan new music and keep track of every task`;
+export const CORE_CLAUSE =
+  'an app that helps artists, managers and record labels plan new music and keep track of every task';
 
-/** The core line. Introduces the product anywhere a whole sentence fits. */
+/** The core line, the founder's words. Introduces the product anywhere a whole sentence fits. */
 export const CORE_LINE = `Urganize is ${CORE_CLAUSE}.`;
 
 /**
- * The short line. Page titles, meta titles, tight bios, the share card.
- * "Every release, on plan." since 2026-10-17 (founder approved the homepage
- * v2 hero, URG-334); it was "Everything after the music." from 2026-09-24.
- * "From idea to execution." since 2026-10-31 (founder approved, #944).
+ * The short line. Page titles, meta titles, tight bios, the footer, the share
+ * card. Founder approved 2026-11-09.
  */
-export const SHORT_LINE = 'From idea to execution.';
+export const SHORT_LINE = 'Plan new music. Track every task.';
 
 /**
- * The promise under the short line: the three steps the homepage then shows
- * as A, B and C. The homepage subhead. Founder-approved with the homepage v2
- * hero on 2026-10-17 (URG-334), and kept under "From idea to execution." on
- * 2026-10-31 (#944): it says how the team gets there.
+ * The homepage headline. It leads with the one new idea in the positioning:
+ * Urganize asks about your goals before it plans. Founder approved 2026-11-09.
  */
-export const PROMISE_LINE = 'Everyone knows their job till drop day. Nobody has to chase anybody.';
+export const HERO_HEADLINE = 'Tell it your goals. Get a plan that fits.';
 
-/** The brand line. The homepage title and, since 2026-10-18, the app's default title. */
-export const BRAND_LINE = `Urganize: ${SHORT_LINE.slice(0, -1)}`;
+/**
+ * The line under the headline: the rest of the positioning in one breath.
+ * Founder approved 2026-11-09.
+ */
+export const PROMISE_LINE = 'Or make your own. Use it solo or with your team, and keep track of every task.';
+
+/**
+ * The learning loop, in words that are true today: the "how did it go?" sheet
+ * after a task is live, and its answers feed the post-release review.
+ */
+export const LEARNING_LINE =
+  'After every task, Urganize asks how it went, so you can see what worked when the release is out.';
+
+/**
+ * Who it is for, in the fixed order artists, managers, record labels.
+ *
+ * ARTISTS ALWAYS LEAD, and the order is never reordered for emphasis. It is
+ * data rather than a baked string so the guard can pin the order rather than
+ * pin one sentence that happens to contain it. "Record labels" since
+ * 2026-11-09, the founder's word.
+ */
+export const AUDIENCE = ['artists', 'managers', 'record labels'] as const;
+
+/** "artists, managers and record labels", built from the list above. No Oxford comma. */
+export const AUDIENCE_LINE = `${AUDIENCE.slice(0, -1).join(', ')} and ${AUDIENCE[AUDIENCE.length - 1]}`;
+
+/** The brand line. The homepage title and the app's default title. */
+export const BRAND_LINE = 'Urganize: Plan new music, track every task';
 
 /**
  * Under 80 characters. Bios, the footer tagline, anywhere a single line is all
@@ -123,34 +128,26 @@ export const ONE_LINER = SHORT_LINE;
 export const SHORT_DESCRIPTION = CORE_LINE;
 
 /**
- * The long description, verbatim from the founder. Used where there is room to
- * say what the product actually does rather than only what it is.
- *
- * Written out in full since 2026-10-18 (founder approved, artist-managers-first
- * positioning): it names its own audience, "Built for artist managers.",
- * instead of composing the three-part AUDIENCE list, which still drives the
- * visible pages that name artists, managers and labels.
- * "Release" is the founder's word here and it is right: it is the unit that
- * gets planned and put out, which is the vocabulary rule (rollout is the work,
- * release is the unit).
- *
- * Since 2026-10-31 (#944) it opens with the core line, "manage everything from
- * idea to execution", and keeps the drop-day promise and the audience.
- *
- * Since 2026-11-09 (#1153) it is the founder's new positioning word for word:
- * the core line, then how it works (goals, a plan that fits or your own, solo
- * or team, and it asks how each task went so it keeps learning).
+ * The search description: the homepage meta description and JSON-LD. Under
+ * 160 characters so Google shows it whole. Founder approved 2026-11-09.
+ */
+export const META_DESCRIPTION =
+  'Urganize helps artists, managers and record labels plan new music and keep track of every task. ' +
+  'Tell it your goals and it makes a plan that fits.';
+
+/**
+ * The long description: the founder's positioning in full, with the learning
+ * line in its true form. Used wherever there is room: the brand page, UrgAns,
+ * the store listing.
  */
 export const CANONICAL_DESCRIPTION =
-  `${CORE_LINE} It asks about your goals, then makes a plan that fits. You can also make your own. ` +
-  'Use it solo or with a team. After every task, Urganize asks how it went, so it keeps learning from you.';
+  `${CORE_LINE} It asks about your goals, then makes a plan that fits. ` +
+  'You can also make your own. Use it solo or with a team. ' +
+  LEARNING_LINE;
 
 /**
  * The link preview: the share card's headline and the title and text
- * WhatsApp, X and LinkedIn show under it. They said "From idea to execution"
- * first (#939) and were their own strings for a day; since the rest of the
- * positioning followed (#944) they are the short line, the brand line and the
- * core line, kept as names so the share surfaces read as what they are.
+ * WhatsApp, X and LinkedIn show under it.
  */
 export const SHARE_HEADLINE = SHORT_LINE;
 export const SHARE_TITLE = BRAND_LINE;
@@ -164,4 +161,3 @@ export const SHARE_DESCRIPTION = CORE_LINE;
  * positioning error every brief since 2026-09-09 has been careful to avoid.
  */
 export const URGANS_LINE = 'personal AI for music professionals';
-

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import {
   BRAND_LINE,
-  CANONICAL_DESCRIPTION,
+  META_DESCRIPTION,
   SHARE_DESCRIPTION,
   SHARE_HEADLINE,
   SHARE_TITLE,
@@ -43,7 +43,7 @@ export const SHARE_IMAGE_URL = `${SITE_URL}/opengraph-image.jpg`;
 //
 // The same string feeds the JSON-LD and the tags.
 export const LANDING_TITLE = BRAND_LINE;
-export const LANDING_DESCRIPTION = CANONICAL_DESCRIPTION;
+export const LANDING_DESCRIPTION = META_DESCRIPTION;
 
 // What a shared urganize.app link previews as (#939): the share card's line,
 // while search keeps LANDING_TITLE and LANDING_DESCRIPTION above.
@@ -65,7 +65,7 @@ export const LANDING_SHARE_DESCRIPTION = SHARE_DESCRIPTION;
 // Bump this string every time public/opengraph-image.jpg changes so the
 // URL is new to every platform and the very next fetch pulls fresh bytes,
 // instead of depending on a manual re-scrape request or an unknown TTL.
-const SHARE_IMAGE_VERSION = "2026-10-31-idea-to-execution";
+const SHARE_IMAGE_VERSION = "2026-11-09-plan-new-music";
 
 const SHARE_IMAGE = {
   url: `${SITE_URL}/opengraph-image.jpg?v=${SHARE_IMAGE_VERSION}`,
@@ -114,7 +114,6 @@ const SHARE_CARDS_VERSION = "2026-11-01-page-cards";
 // redrawn; their entries below stay so the files still resolve.
 
 const SHARE_CARDS = {
-  home: "Urganize. From idea to execution. A rollout timeline for Harmattan Gold by Kanmi Gold, with tasks dated to release day and today marked.",
   pricing: "Urganize pricing. Pay for the roster, not the headcount. The Northline Music team list on one plan.",
   features: "Urganize features. Everything your release needs. None of the chasing. A task list where every task has an owner and a due date.",
   "for-managers": "Urganize for artist managers. Every artist’s release. One screen, not five chats. Five artists’ rollouts on one list, with progress.",

@@ -1,3 +1,4 @@
+import { PROMISE_LINE } from "@/lib/positioning";
 import { ProofLine } from "../ProofLine";
 import { ResponsiveProductShot } from "../ResponsiveProductShot";
 import { SectionShell } from "../SectionShell";
@@ -44,16 +45,14 @@ export function HeroSection() {
         className="relative mx-auto flex max-w-[60rem] scroll-mt-28 flex-col items-center text-center"
       >
         <HeroCards />
-        <p className="hero-fade-in hero-delay-1 mono-label text-[var(--marketing-accent)]">
+        <p className="hero-fade-in hero-delay-1 mono-label text-balance text-[var(--marketing-accent)]">
           For artists, managers and record labels
         </p>
         <h1 className="hero-fade-in hero-delay-1 mt-6 text-balance text-[2.6rem] leading-[1.05] text-[var(--marketing-text)] sm:text-[3.8rem] lg:text-[4.6rem]">
-          From idea <span className="text-[var(--marketing-accent)]">to execution.</span>
+          Tell it your goals. <span className="block text-[var(--marketing-accent)]">Get a plan that fits.</span>
         </h1>
-        <p className="hero-fade-in hero-delay-2 mx-auto mt-6 max-w-[40rem] text-[1.05rem] leading-8 text-[var(--marketing-text-muted)] sm:text-[1.25rem] sm:leading-9">
-          Tell it your goals and get a plan that fits, or make your own.
-          <br />
-          Use it solo or with a team.
+        <p className="hero-fade-in hero-delay-2 mx-auto mt-6 max-w-[40rem] text-balance text-[1.05rem] leading-8 text-[var(--marketing-text-muted)] sm:text-[1.25rem] sm:leading-9">
+          {PROMISE_LINE}
         </p>
 
         {/* z-[60] keeps the form above the hero-fade-in transform stack and

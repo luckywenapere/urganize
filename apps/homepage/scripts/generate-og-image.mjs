@@ -61,8 +61,8 @@ const FONTS = join(WEB, 'assets', 'fonts');
 
 // Kept in step with SHARE_HEADLINE in lib/positioning.ts by hand: this script
 // runs outside the TypeScript build and cannot import it.
-const LINE_ONE = 'From idea';
-const LINE_TWO = 'to execution.';
+const LINE_ONE = 'Plan new music.';
+const LINE_TWO = 'Track every task.';
 
 // Real steps from the single playbook, so the ribbons show the product's own
 // words. Two ribbons, each one long line that runs off both edges.

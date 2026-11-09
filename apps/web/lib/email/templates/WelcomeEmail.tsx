@@ -37,8 +37,8 @@ export function WelcomeEmail({ recipientName, unsubscribeUrl }: WelcomeEmailProp
       <Paragraph>
         I built this because running a rollout across group chats and spreadsheets kept breaking my
         own team. In Urganize you tell it your goals and get a plan that fits, with every task in
-        order and dated, or you make your own. After every task it asks how it went, so it keeps
-        learning from you.
+        order and dated, or you make your own. After every task it asks how it went, so you can see
+        what worked once it’s out.
       </Paragraph>
       <Paragraph>
         If anything feels confusing or missing,{' '}

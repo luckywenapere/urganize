@@ -31,11 +31,9 @@ Urganize
 
 8 characters.
 
-The name is the brand alone. "Urganize: From idea to execution" is 32
-characters against a hard 30-character cap that both stores enforce. Rather
-than cut the founder's short line to fit, it goes where there is room for it
-whole: the subtitle on the App Store, with the core line as the short
-description here. Play shows the app name under the icon,
+The name is the brand alone. "Urganize: Plan new music, track every task" is
+42 characters against a hard 30-character cap that both stores enforce, so the
+line goes in the subtitle on the App Store and the short description here. Play shows the app name under the icon,
 where a long name is truncated anyway.
 
 ### Short description (80 characters max)
@@ -52,7 +50,7 @@ the App Store.
 ### Full description (4000 characters max)
 
 ```
-Urganize is an app that helps artists, managers and record labels plan new music and keep track of every task. It asks about your goals, then makes a plan that fits. You can also make your own. Use it solo or with a team. After every task, Urganize asks how it went, so it keeps learning from you.
+Urganize is an app that helps artists, managers and record labels plan new music and keep track of every task. It asks about your goals, then makes a plan that fits. You can also make your own. Use it solo or with a team. After every task, Urganize asks how it went, so you can see what worked when the release is out.
 
 PLAN FROM YOUR GOALS
 Tell Urganize what you want from the release. It asks a few questions, then lays out a plan that fits, week by week, with every task dated around release day. The plans come from playbooks written by working managers, and you can edit or delete anything that does not apply to you.
@@ -63,8 +61,8 @@ Start from scratch and add your own tasks and dates.
 TRACK EVERY TASK
 Every task has an owner and a date. Your team sees what is theirs, what is late and what is coming. Nobody has to ask where things stand.
 
-IT LEARNS FROM YOU
-After every task, Urganize asks how it went, so the next plan fits better.
+SEE WHAT WORKED
+After every task, Urganize asks how it went, so you can see what worked when the release is out.
 
 SOLO OR WITH A TEAM
 Use it on your own, or bring in your manager, your designer and the rest of the team.
@@ -79,7 +77,7 @@ WHO IT IS FOR
 Artists running their own releases. Managers running more than one artist at a time. Record labels running a full roster.
 ```
 
-1,613 characters.
+1,653 characters.
 
 Rewritten 2026-11-09 (#1153): the first paragraph is the new long
 description, the sections follow the new positioning, the press kit block came
@@ -142,11 +140,11 @@ Same as Play, for the same reason. See the note under the Play app name above.
 ### Subtitle (30 characters max)
 
 ```
-From idea to execution.
+Plan music. Track every task.
 ```
 
-23 characters. This is the founder's short line (`SHORT_LINE`), unchanged, and
-Apple's subtitle is the one field on either store that holds it whole.
+29 characters. The short line (`SHORT_LINE`, "Plan new music. Track every
+task.") is 33 characters, three over Apple's 30, so the subtitle drops "new".
 
 ### Promotional text (170 characters max)
 

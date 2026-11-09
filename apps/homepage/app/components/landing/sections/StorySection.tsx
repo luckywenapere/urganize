@@ -79,14 +79,14 @@ const STEPS: readonly {
     alt: "A new rollout's plan in Urganize: four weeks of activities down to release day, each with an owner, 18 activities in all.",
   },
   {
-    title: "Everyone can see who\u2019s holding the ball.",
-    line: "Every task has one owner and one date. No more \u201cI thought you were handling it.\u201d",
+    title: "Keep track of every task.",
+    line: "Every task has one owner and one date. Work solo, or bring your team in and each person sees what\u2019s theirs.",
     demo: "owner",
     alt: "An activity open in Urganize with Ife Bassey as its owner and Fri 13 Nov as its date.",
   },
   {
-    title: "Catch the delay before it kills the drop.",
-    line: "One timeline shows what\u2019s done, what\u2019s late and what\u2019s next, while there\u2019s still time to fix it.",
+    title: "See what\u2019s late, and what worked.",
+    line: "One timeline shows what\u2019s done, what\u2019s late and what\u2019s next. After every task, Urganize asks how it went, so you can see what worked when the release is out.",
     demo: "late",
     alt: "A rollout's timeline in Urganize: Pitch to curators is marked Overdue once today passes its date, then moved to a later day that still lands before release day.",
   },
