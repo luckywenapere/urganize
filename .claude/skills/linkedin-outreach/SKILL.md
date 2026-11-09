@@ -55,6 +55,10 @@ So the first message:
 - uses their first name, and "I'm Oyin" (never "Lucky"),
 - has no em dashes and no hype.
 
+## Opening lines
+
+Before showing any DM, connection note or post draft, run its first line through the `writing-hooks` skill's 5 checks (mirror the reader, half guess, one surprise, exact numbers, one breath). His voice rules below still win on wording.
+
 ## His voice
 
 Write only in phrases he uses. From his DMs:
