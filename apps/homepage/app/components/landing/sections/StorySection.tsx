@@ -73,8 +73,8 @@ const STEPS: readonly {
   alt: string;
 }[] = [
   {
-    title: "Stop planning releases in your head.",
-    line: "Add a release and every week till drop day is mapped. Nothing forgotten, no last-minute rush.",
+    title: "Start from your goals.",
+    line: "Urganize asks what you want, then makes a plan that fits. Or build your own.",
     demo: "plan",
     alt: "A new rollout's plan in Urganize: four weeks of activities down to release day, each with an owner, 18 activities in all.",
   },

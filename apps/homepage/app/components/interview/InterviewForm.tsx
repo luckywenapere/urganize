@@ -102,7 +102,7 @@ export function InterviewForm() {
         className="mx-auto w-full max-w-[28rem] rounded-2xl border border-[color:var(--marketing-border)] bg-[var(--marketing-surface)] px-6 py-5 text-center"
       >
         <p className="text-base font-medium text-[var(--marketing-text)]">
-          You&apos;re booked — we&apos;ll reach out on iMessage before the interview.
+          You&apos;re booked. We&apos;ll reach out on iMessage before the interview.
         </p>
       </div>
     );
@@ -149,7 +149,7 @@ export function InterviewForm() {
 
       <div className="mt-2">
         <p className="mb-3 text-center font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
-          PICK A DAY — {SLOT_TIME_LABEL}
+          PICK A DAY · {SLOT_TIME_LABEL}
         </p>
 
         {isLoadingSlots ? (

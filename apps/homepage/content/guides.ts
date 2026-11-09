@@ -251,7 +251,7 @@ export const GUIDES: readonly Guide[] = [
           },
           {
             type: "p",
-            text: "Urganize builds this plan for you when you create a rollout: 64 activities for a single, 90 for an EP and 113 for an album. Every activity has an owner and a due date, and you can edit or delete any of them.",
+            text: "Urganize builds this plan for you when you create a rollout: 64 activities for a single, 90 for an EP and 113 for an album. It asks about your goals first, and you can also make your own. Every activity has an owner and a due date, and you can edit or delete any of them.",
           },
         ],
       },

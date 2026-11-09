@@ -89,7 +89,7 @@ export function AuthPanel({ onClose }: { onClose?: () => void }) {
         {mode === "sign_in" ? "Sign in to vote" : "Create an account to vote"}
       </h3>
       <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">
-        Same account works across Urganize — one email, one password.
+        Same account works across Urganize: one email, one password.
       </p>
 
       <button
@@ -146,7 +146,7 @@ export function AuthPanel({ onClose }: { onClose?: () => void }) {
         }}
         className="mt-4 w-full text-center text-sm text-[var(--marketing-text-subtle)] hover:text-[var(--marketing-text)]"
       >
-        {mode === "sign_in" ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+        {mode === "sign_in" ? "Don't have an account? Create one" : "Already have an account? Sign in"}
       </button>
     </div>
   );

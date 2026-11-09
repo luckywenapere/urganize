@@ -36,7 +36,7 @@ export function CommunityLinks({ close }: { close: () => void }) {
             <OutArrow />
           </span>
           <span className="block text-xs font-normal text-[var(--marketing-text-subtle)]">
-            Talk with other artist managers
+            Talk with other music people
           </span>
         </span>
       </a>

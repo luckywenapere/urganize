@@ -64,8 +64,8 @@ export default function SignupPage() {
                 Join the waitlist
               </h1>
               <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
-                Add your first release and get a plan built from a real playbook,
-                not a blank board you have to fill in yourself.
+                Tell Urganize your goals and get a plan that fits. Or make
+                your own.
               </p>
 
               <div className="mt-10">
@@ -76,7 +76,7 @@ export default function SignupPage() {
                   Join waitlist
                 </a>
                 <p className="mt-4 text-sm text-[var(--marketing-text-subtle)]">
-                  We are letting teams in from the waitlist.
+                  We are letting people in from the waitlist.
                 </p>
               </div>
             </div>
@@ -96,10 +96,8 @@ export default function SignupPage() {
               Who Urganize is for
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">
-              Artists running their own rollouts, managers running more than
-              one artist at once, small management teams and small labels. If
-              you&apos;re coordinating handoffs, files and status across a
-              roster, that&apos;s the problem this was built for. See{" "}
+              Artists, managers and record labels. Use it on your own or with
+              a team to plan new music and keep track of every task. See{" "}
               <Link
                 href="/features"
                 className="underline underline-offset-4 hover:text-[var(--marketing-text)]"

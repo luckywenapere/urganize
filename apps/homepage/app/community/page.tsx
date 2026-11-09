@@ -20,7 +20,7 @@ import { PageDawn } from "../components/marketing/PageDawn";
 export const metadata: Metadata = buildPageMetadata({
   title: "Community",
   description:
-    `${CORE_LINE} Join our community, a group chat for managers running releases.`,
+    `${CORE_LINE} Join our community, a group chat for artists, managers and record labels planning new music.`,
   path: "/community",
   // Kept out of search so the homepage's sitelinks stay commercial
   // (Features / Pricing / For executives / For managers). The page stays public
@@ -40,7 +40,7 @@ export default function CommunityPage() {
               Community
             </p>
             <h1 className="mt-6 text-[2.25rem] leading-[1.08] sm:text-[3rem]">
-              Managers comparing notes on real releases.
+              Artists, managers and record labels comparing notes on real releases.
             </h1>
             <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
               A group chat for managers and artists running releases. Ask how
@@ -65,7 +65,7 @@ export default function CommunityPage() {
               Who it&apos;s for
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">
-              Managers and small teams running more than one artist. No
+              Artists, managers and record labels, solo or with a team. No
               pitches, no spam.
             </p>
           </section>

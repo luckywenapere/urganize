@@ -89,11 +89,13 @@ export function PricingPageClient() {
                 where the concrete promise (one price, not per person) was buried
                 in the lead below it. The lead keeps the locked positioning
                 sentence (the founder's core line since 2026-09-24) and drops
-                what the headline now says. Composed from lib/positioning, so it
-                cannot drift from the homepage and the footer. */}
+                what the headline now says. Hand-written, not composed from
+                lib/positioning: since 2026-11-09 it follows the founder's new
+                positioning (asks about your goals, or make your own), so check
+                it against lib/positioning by eye when that changes. */}
             <p className="hero-fade-in hero-delay-2 mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl">
-              Every plan writes your rollout plan for you. Pick the one that
-              fits who you are.
+              Every plan asks about your goals and makes a plan that fits.
+              You can also make your own.
             </p>
 
             <div className="hero-fade-in hero-delay-3 mt-10">

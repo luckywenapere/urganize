@@ -66,7 +66,7 @@ export function PersonaValueBlocks({
                           className="font-mono text-[0.72rem] text-[var(--marketing-accent)]"
                           aria-hidden
                         >
-                          —
+                          ·
                         </span>
                         {point}
                       </li>
