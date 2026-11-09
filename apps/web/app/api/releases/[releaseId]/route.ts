@@ -293,7 +293,10 @@ export async function PATCH(
     .from('releases')
     .update({ ...plan.update, updated_at: new Date().toISOString() })
     .eq('id', releaseId)
-    .eq('owner_user_id', auth.user.id);
+    // The row's real owner, as resolved by the ownership check. The caller's
+    // own id matched nothing for a team Manager (#854), so their edit
+    // answered "saved" and wrote nothing.
+    .eq('owner_user_id', ownership.release.ownerUserId);
 
   if (releaseUpdate.error) {
     if (isOptionalTableMissingError(releaseUpdate.error)) return buildMissingTableResponse();

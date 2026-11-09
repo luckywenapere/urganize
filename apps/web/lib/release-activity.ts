@@ -48,6 +48,33 @@ export function isReleaseActive(status: string | null | undefined): boolean {
 export const ARCHIVED_STATUS: ReleaseStatus = 'archived';
 export const RESTORED_STATUS: ReleaseStatus = 'draft';
 
+export type ArchiveToggleDecision =
+  | { write: true; from: string; to: ReleaseStatus }
+  | { write: false; status: string };
+
+/**
+ * The archive action's whole state machine. Archive moves anything that is not
+ * archived yet to `archived`; restore moves ONLY `archived` back, to `draft`.
+ * Restoring anything else is a no-op, because the old route wrote `draft`
+ * unconditionally and a stray `{ archived: false }` turned a released rollout
+ * back into a draft. `from` is what the write must still find (a conditional
+ * update), so two taps or two tabs cannot both move it.
+ */
+export function decideArchiveToggle(
+  current: string | null | undefined,
+  archived: boolean
+): ArchiveToggleDecision {
+  const status = current || 'draft';
+  if (archived) {
+    return status === ARCHIVED_STATUS
+      ? { write: false, status }
+      : { write: true, from: status, to: ARCHIVED_STATUS };
+  }
+  return status === ARCHIVED_STATUS
+    ? { write: true, from: status, to: RESTORED_STATUS }
+    : { write: false, status };
+}
+
 export function isValidReleaseStatusValue(value: unknown): value is ReleaseStatus {
   return typeof value === 'string' && (RELEASE_STATUS_OPTIONS as readonly string[]).includes(value);
 }

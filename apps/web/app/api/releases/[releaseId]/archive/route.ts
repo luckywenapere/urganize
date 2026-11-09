@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAuthenticatedUser, createAdminClient } from '@/app/api/_shared/auth';
 import { ensureReleaseOwnership } from '@/app/api/releases/_shared';
-import { ARCHIVED_STATUS, RESTORED_STATUS } from '@/lib/release-activity';
+import { decideArchiveToggle } from '@/lib/release-activity';
 
 // POST /api/releases/[releaseId]/archive — shelve a finished release, or bring
 // one back. Body: { archived: boolean }.
@@ -60,15 +60,33 @@ export async function POST(
   const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
   if ('error' in ownership) return ownership.error;
 
-  const status = archived ? ARCHIVED_STATUS : RESTORED_STATUS;
+  // lib/release-activity.ts decides the move. Restoring something that was
+  // never archived is a no-op now rather than a write of `draft` over it.
+  const decision = decideArchiveToggle(ownership.release.status, archived);
+  if (!decision.write) {
+    return NextResponse.json({ releaseId, status: decision.status, archived });
+  }
+  const status = decision.to;
 
-  const { error } = await adminClient
+  const { data: written, error } = await adminClient
     .from('releases')
     .update({ status, updated_at: new Date().toISOString() })
     .eq('id', releaseId)
-    // Re-asserted even though ownership was just checked, matching the PATCH
-    // handler: it makes the write itself unable to touch another owner's row.
-    .eq('owner_user_id', auth.user.id);
+    // The row's REAL owner, which the ownership check just resolved. Filtering
+    // on the caller's id matched nothing for a team Manager (#854 lets them
+    // archive), so their archive answered success and changed nothing.
+    .eq('owner_user_id', ownership.release.ownerUserId)
+    // Still in the state the decision was made from: two taps, or two tabs,
+    // cannot both move it.
+    .eq('status', decision.from)
+    .select('id');
+
+  if (!error && (written ?? []).length === 0) {
+    return NextResponse.json(
+      { error: 'This rollout changed while you were looking at it. Refresh and try again.' },
+      { status: 409 }
+    );
+  }
 
   if (error) {
     console.error('[releases/archive] could not update status:', error.message);

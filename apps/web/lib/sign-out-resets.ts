@@ -35,7 +35,8 @@ export type SignOutResetId =
   | 'tab-memory'
   | 'settings-page'
   | 'last-seen'
-  | 'needs-you';
+  | 'needs-you'
+  | 'notes';
 
 /**
  * The order resets run in. Order matters in one place: the chat history
@@ -63,6 +64,7 @@ export const SIGN_OUT_RESET_ORDER: readonly SignOutResetId[] = [
   'settings-page',
   'last-seen',
   'needs-you',
+  'notes',
 ];
 
 const resets = new Map<SignOutResetId, () => void>();
