@@ -14,7 +14,7 @@ Retired lines, never use: "From idea to execution", "keeps learning from you", "
 
 ## Copy rules
 
-- Urganize is a waitlist beta. Never "start free", "sign up", "get started".
+- Sign-up is open (since 8 Nov): the button says "Start free", and "Free for as long as you like" under it. Never "get started".
 - Say "deliver", not "ship".
 - No em dashes. No hype, no startup cliches.
 - "Interaction app" is internal only.
