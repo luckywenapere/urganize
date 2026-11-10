@@ -15,6 +15,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "Tell Urganize your goals and get a plan that fits, or make your own. Track every task, solo or with a team. After each task it asks how it went.",
   path: "/features",
+  shareCard: "features",
 });
 
 // One small still per feature section (#962, mock approved by the founder
