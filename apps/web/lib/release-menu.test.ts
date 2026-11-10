@@ -22,6 +22,7 @@ describe('RELEASE_MENU_ORDER', () => {
       'timeline',
       'activities',
       'brief',
+      'add-idea',
       'chat',
       'calendar',
       'coverart',

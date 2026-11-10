@@ -686,6 +686,12 @@ export function formatTimelineDay(releaseDate: string, dayOffset: number): strin
   return parts ? `${parts.weekday} ${parts.day} ${parts.month}` : '';
 }
 
+/** "23 Oct": the short date beside a late activity's name (#1179). */
+export function formatTimelineDate(releaseDate: string, dayOffset: number): string {
+  const parts = utcParts(releaseDate, dayOffset);
+  return parts ? `${parts.day} ${parts.month}` : '';
+}
+
 /** "Fri 16 – Thu 22 Oct", or "Fri 30 Oct – Thu 5 Nov" across a month end. */
 export function formatWeekRange(releaseDate: string, weekIndex: number): string {
   const start = utcParts(releaseDate, weekIndex * 7);

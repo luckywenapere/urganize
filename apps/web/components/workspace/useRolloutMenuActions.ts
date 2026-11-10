@@ -19,6 +19,7 @@ import {
   NotebookPen,
   Radio,
   Share2,
+  Sparkles,
   Trash2,
   Users,
   Wallet2,
@@ -53,6 +54,8 @@ const ICONS: Record<ReleaseMenuKey, ComponentType<LucideProps>> = {
   timeline: CalendarClock,
   // The brief is a page you read: an open book.
   brief: BookOpen,
+  // The same spark the Add idea button carried on the top line.
+  'add-idea': Sparkles,
   chat: MessageCircle,
   calendar: CalendarDays,
   pitch: Radio,
@@ -112,6 +115,8 @@ type UseRolloutMenuActionsInput = {
   releaseId: string | null;
   variant: RolloutMenuVariant;
   share?: RolloutMenuDialogInput | null;
+  /** Add idea (#1179). Passed on the computer only. */
+  addIdea?: RolloutMenuDialogInput | null;
   releaseDate?: RolloutMenuDialogInput | null;
   changeArtist?: RolloutMenuDialogInput | null;
   archive?: RolloutMenuDialogInput | null;
@@ -137,6 +142,7 @@ export function useRolloutMenuActions({
   releaseId,
   variant,
   share,
+  addIdea,
   releaseDate,
   changeArtist,
   archive,
@@ -181,6 +187,7 @@ export function useRolloutMenuActions({
     showSpend,
     captureLabel: captureRowLabel(smartLinkReady),
     share,
+    addIdea,
     releaseDate,
     changeArtist,
     archive,
@@ -195,7 +202,7 @@ export function useRolloutMenuActions({
     .map((entry) => (entry.key === 'activities' ? { ...entry, isActive: isPlanView(activeScene) } : entry));
 
   const dialogFor =(key: ReleaseMenuKey): RolloutMenuDialogInput | null | undefined =>
-    key === 'share' ? share : key === 'release-date' ? releaseDate : key === 'change-artist' ? changeArtist : key === 'archive' ? archive : key === 'delete' ? deleteRollout : null;
+    key === 'share' ? share : key === 'add-idea' ? addIdea : key === 'release-date' ? releaseDate : key === 'change-artist' ? changeArtist : key === 'archive' ? archive : key === 'delete' ? deleteRollout : null;
 
   return entries.map((entry): RolloutMenuAction => {
     const base = { key: entry.key, label: entry.label, icon: ICONS[entry.key] };

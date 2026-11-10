@@ -6,6 +6,7 @@ import {
   daysForDragDelta,
   foldPastWeeks,
   formatCatchUpRange,
+  formatTimelineDate,
   formatTimelineDay,
   formatWeekRange,
   groupItemsByWeek,
@@ -569,6 +570,10 @@ describe('the phone list folds past weeks (rollout declutter, Oct 18, 2026)', ()
 describe('human dates on the phone list', () => {
   it('says days and week spans the way people say them', () => {
     expect(formatTimelineDay(RELEASE_DATE, 0)).toBe('Fri 20 Nov');
+    // The short date beside a late activity's name on the grid (#1179).
+    expect(formatTimelineDate(RELEASE_DATE, 0)).toBe('20 Nov');
+    expect(formatTimelineDate(RELEASE_DATE, -21)).toBe('30 Oct');
+    expect(formatTimelineDate('not a date', 0)).toBe('');
     expect(formatWeekRange(RELEASE_DATE, -1)).toBe('Fri 13 – Thu 19 Nov');
     expect(formatWeekRange(RELEASE_DATE, -3)).toBe('Fri 30 Oct – Thu 5 Nov');
     expect(formatCatchUpRange(RELEASE_DATE, -42, -15)).toBe('Oct 9 – Nov 5');

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { usePageBarToolsSlot } from '@/components/shell/PageBar';
+import { useRolloutTabsToolsSlot } from './RolloutTabs';
 import { Search, SlidersHorizontal, X } from '@/components/icons';
 import { FilterPopover, FilterSheet } from '@/components/shell/ListToolbar';
 import { useAuthStore } from '@/lib/auth-store';
@@ -182,11 +182,14 @@ const PANEL_QUERY = '(min-width: 1024px)';
  * searches (founder, 2026-10-15). With it set, the field shows below lg only.
  *
  * `inPageBar` (founder, 2026-10-15): on a computer the row's buttons (Filter,
- * `extra` such as Group by, and `trailing` such as Legend and Full screen)
- * move up onto the page bar line, beside the breadcrumb, sized and spaced on
- * the line's golden-ratio scale (34px controls, 8 / 13 / 21px gaps). Below lg
- * the row stays in the page as it was. Full screen covers the page bar, so it
- * never passes this.
+ * `extra` such as Group by, and `trailing` such as Legend) leave the page,
+ * sized and spaced on the golden-ratio scale (34px controls, 8 / 13 / 21px
+ * gaps). They went up onto the page bar line, beside the breadcrumb, until
+ * Nov 10, 2026 (#1179, founder approved mock): that line held about ten
+ * things, so the rollout's name was cut off and Select ran into the count.
+ * They sit at the right end of the rollout's tab row now (RolloutTabs'
+ * slot); the prop keeps its name. Below lg the row stays in the page as it
+ * was, and so it does when no tab row is drawn.
  */
 export function PlanListControls({
   plan,
@@ -210,7 +213,7 @@ export function PlanListControls({
   /** A "Done" text button at the row's end that closes the search. */
   onDone?: () => void;
 }) {
-  const toolsSlot = usePageBarToolsSlot(inPageBar);
+  const toolsSlot = useRolloutTabsToolsSlot(inPageBar);
   if (!toolsSlot) {
     return (
       <PlanListRow

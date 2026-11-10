@@ -264,7 +264,8 @@ type TasksPanelProps = {
    */
   simple?: boolean;
   /**
-   * Lets the plan tools move up into the desktop page bar. False on the
+   * Lets the plan tools move up into the rollout's tab row on a computer
+   * (#1179; the page bar before, hence the name). False on the
    * phone-only instance WorkspaceView keeps mounted (hidden) on a computer:
    * its portal escaped the `lg:hidden` wrapper and put a second Filter and a
    * stray Group by on the page bar beside the timeline's own (2026-10-16).
@@ -768,7 +769,8 @@ export function TasksPanel({
       <div className="space-y-[13px]">
         {/* 13 between the rows, on the golden scale (#926). */}
         {/* No search row on a phone (founder, Oct 31, 2026): hidden below lg.
-            On a computer the tools still portal up to the page bar. */}
+            On a computer the tools portal up to the rollout's tab row
+            (#1179; the page bar before). */}
         {scopedRelease && tasks.length > 0 && !simple && !(menuFolded && !plan.filtering) ? (
           <div className="hidden lg:contents" data-activities-phone-search-hidden>
           <PlanListControls
@@ -787,7 +789,8 @@ export function TasksPanel({
         ) : null}
         {/* Below lg, Group by and Select are in the Rollout menu (slim header,
             founder approved mock, Oct 31, 2026); on a computer they are on the
-            page bar line with the other plan tools (2026-10-15). */}
+            tab row with the other plan tools (#1179; the page bar line
+            from 2026-10-15 until then). */}
         {/* Every rollout at once has no plan tools row, so Select gets its own. */}
         {!scopedRelease && tasks.length > 0 ? (
           <div className="flex justify-end">{selectControl(false)}</div>

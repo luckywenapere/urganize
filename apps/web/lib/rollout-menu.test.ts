@@ -27,6 +27,7 @@ const ALL_ON: RolloutMenuFlags = {
  *  disabled flag — never a handler. */
 const MODALS = {
   share: { label: 'Share' },
+  addIdea: { label: 'Add idea' },
   releaseDate: { label: 'Change release date' },
   changeArtist: { label: 'Change artist' },
   archive: { label: 'Archive' },
@@ -135,6 +136,7 @@ describe('buildRolloutMenu', () => {
       Object.keys(ALL_ON).map((flag) => [flag, false])
     ) as RolloutMenuFlags;
     expect(keysOf(build({ flags: allOff, showSpend: false }))).toEqual([
+      'add-idea',
       'distribute',
       'share',
       'release-date',
@@ -161,6 +163,7 @@ describe('buildRolloutMenu', () => {
   it('shows each dialog row only when its action is passed', () => {
     const cases: [keyof typeof MODALS, ReleaseMenuKey][] = [
       ['share', 'share'],
+      ['addIdea', 'add-idea'],
       ['releaseDate', 'release-date'],
       ['changeArtist', 'change-artist'],
       ['archive', 'archive'],
@@ -269,7 +272,7 @@ describe('what each row does', () => {
   });
 
   it('opens a dialog from the last three, identified by their key', () => {
-    for (const key of ['share', 'release-date', 'change-artist', 'archive', 'delete'] as const) {
+    for (const key of ['share', 'add-idea', 'release-date', 'change-artist', 'archive', 'delete'] as const) {
       const entry = build().find((row) => row.key === key);
       expect(entry?.target, key).toEqual({ kind: 'modal' });
     }
@@ -328,6 +331,26 @@ describe('purity', () => {
     expect(first).not.toBe(second);
     expect(first).toEqual(second);
     expect(JSON.stringify({ flags, MODALS })).toBe(snapshot);
+  });
+});
+
+describe('the Add idea row (#1179)', () => {
+  it('is a dialog row straight after the brief, so it lands behind the three dots with it', () => {
+    const entries = build();
+    const keys = keysOf(entries);
+    expect(keys.indexOf('add-idea')).toBe(keys.indexOf('brief') + 1);
+    const row = entries.find((entry) => entry.key === 'add-idea');
+    expect(row?.label).toBe('Add idea');
+    expect(row?.target).toEqual({ kind: 'modal' });
+    // Not a place: it must never read as a tab or as a pressed toggle.
+    expect(row?.isActive).toBeUndefined();
+  });
+
+  it('is absent unless the caller passes it (the phone has its own Add idea row)', () => {
+    for (const variant of ['rail', 'phone'] as const) {
+      expect(keysOf(build({ variant, addIdea: null })), variant).not.toContain('add-idea');
+      expect(keysOf(build({ variant, addIdea: undefined })), variant).not.toContain('add-idea');
+    }
   });
 });
 

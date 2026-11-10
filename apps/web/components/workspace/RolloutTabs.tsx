@@ -20,12 +20,31 @@ type RolloutTabsProps = {
    *  Rollouts (URG-254, founder call 2026-10-14). */
   variant?: 'row' | 'side';
   share?: RolloutMenuDialogInput | null;
+  /** Add idea (#1179): opens the idea box. It sits behind the three dots. */
+  addIdea?: RolloutMenuDialogInput | null;
   /** Change release date (#1128). Owner-only; WorkspaceView owns the sheet. */
   releaseDate?: RolloutMenuDialogInput | null;
   archive?: RolloutMenuDialogInput | null;
   /** Delete rollout (to Trash). Owner-only; WorkspaceView owns the dialog. */
   deleteRollout?: RolloutMenuDialogInput | null;
 };
+
+/** Where the plan's tools sit on a computer (#1179, Nov 10, 2026): the right
+ *  end of the tab row, before the three dots. PlanListControls portals the
+ *  List / Timeline switch, Filter, Hide done, Select and the rest into it, so
+ *  they show only while the plan is what the panel is showing. */
+export const ROLLOUT_TABS_SLOT_TOOLS = 'rollout-tabs-slot-tools';
+
+/** The tab row's tools slot, once it is in the document; null when no rollout's
+ *  tab row is drawn, and the tools then stay in the page. */
+export function useRolloutTabsToolsSlot(enabled: boolean): HTMLElement | null {
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSlot(enabled ? document.getElementById(ROLLOUT_TABS_SLOT_TOOLS) : null);
+  }, [enabled]);
+  return slot;
+}
 
 /**
  * A rollout's places, as one row of tabs under its header (design overhaul,
@@ -47,6 +66,7 @@ export function RolloutTabs({
   releaseId,
   variant = 'row',
   share,
+  addIdea,
   releaseDate,
   archive,
   deleteRollout,
@@ -55,6 +75,7 @@ export function RolloutTabs({
     releaseId,
     variant: 'rail',
     share,
+    addIdea,
     releaseDate,
     archive,
     deleteRollout,
@@ -108,12 +129,15 @@ export function RolloutTabs({
   const more = [...places.filter((action) => action.key === 'brief'), ...dialogs];
 
   return (
-    <nav aria-label="Rollout" data-tour="rollout-menu" className="flex items-center gap-1">
+    <nav aria-label="Rollout" data-tour="rollout-menu" className="flex items-center gap-[13px]">
       <ScrollRow>
         {tabs.map((action) => (
           <Tab key={action.key} action={action} />
         ))}
       </ScrollRow>
+      {/* The plan's tools (#1179): tabs on the left, tools on the right, the
+          three dots last. Empty off the plan, so it takes no room there. */}
+      <div id={ROLLOUT_TABS_SLOT_TOOLS} className="flex shrink-0 items-center empty:hidden" />
       {more.length > 0 ? <OverflowMenu actions={more} /> : null}
     </nav>
   );

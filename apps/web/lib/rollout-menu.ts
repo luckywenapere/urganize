@@ -76,6 +76,10 @@ export type RolloutMenuInput = {
   variant: RolloutMenuVariant;
   flags: RolloutMenuFlags;
   share?: RolloutMenuDialogAction | null;
+  /** Add idea (#1179): opens the idea box on a planned rollout. The computer
+   *  passes it (it left the top line for the three-dots menu); the phone does
+   *  not, because its Rollout menu has its own Add idea row. */
+  addIdea?: RolloutMenuDialogAction | null;
   /** Change release date (#1128). Owner-only, and only once the rollout has a
    *  date: a rollout with none keeps its "Set your release date" row. */
   releaseDate?: RolloutMenuDialogAction | null;
@@ -134,7 +138,7 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
   });
 
   const dialog = (
-    key: 'share' | 'release-date' | 'change-artist' | 'archive' | 'delete',
+    key: 'share' | 'add-idea' | 'release-date' | 'change-artist' | 'archive' | 'delete',
     action: RolloutMenuDialogAction
   ): RolloutMenuEntry => ({
     key,
@@ -167,6 +171,7 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     flags.timeline ? scene('timeline', 'See the timeline') : null,
     flags.timeline ? scene('activities', 'Work the plan') : null,
     flags.releaseBrief ? scene('brief', 'Read the brief') : null,
+    input.addIdea ? dialog('add-idea', input.addIdea) : null,
     flags.releaseChat ? scene('chat', 'Talk to the team') : null,
     flags.contentCalendar ? scene('calendar', 'Plan content') : null,
     // Release prep in the order the work happens (2026-10-16).
