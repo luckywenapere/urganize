@@ -210,8 +210,7 @@ describe('tier prices and the sales-led tier', () => {
     // order rather than named, so this keeps holding if a tier is added.
     const priced = PRICING_TIER_ORDER.filter((tier) => !PRICING_TIERS[tier].contactSales);
     expect(priced.length).toBeGreaterThan(1);
-    // Free (pricing v4, 2026-11-08) leads at ₦0, so the first card may be 0.
-    let previous = -1;
+    let previous = 0;
     for (const tier of priced) {
       const amount = getTierPrice(tier, DEFAULT_SELLING_INTERVAL)?.amount ?? 0;
       expect(amount, tier).toBeGreaterThan(previous);
@@ -284,8 +283,7 @@ describe('tier prices and the sales-led tier', () => {
     // free" is something a manager can check against their own statement.
     for (const tier of PRICING_TIER_ORDER) {
       // A sales-led tier has no price, so there is no saving to state.
-      // Free costs nothing, so there is nothing to save either.
-      if (PRICING_TIERS[tier].contactSales || tier === 'free') {
+      if (PRICING_TIERS[tier].contactSales) {
         expect(annualSavingCopy(tier), tier).toBeNull();
         continue;
       }
@@ -348,10 +346,10 @@ describe('tier prices and the sales-led tier', () => {
   });
 
   it('orders the cards cheapest first and ends on the one conversation', () => {
-    // SIX cards since pricing v4 (2026-11-08): Free, Solo, Solo Plus, Pro (id
-    // manager) and Pro Plus (id pro) are on the page, Label is a custom deal,
-    // and Group is off the page.
-    expect(PRICING_TIER_ORDER).toEqual(['free', 'solo', 'solo_plus', 'manager', 'pro', 'label']);
+    // FIVE cards since 2026-11-09, when the founder removed Free: Solo, Solo
+    // Plus, Pro (id manager) and Pro Plus (id pro) are on the page, Label is a
+    // custom deal, and Group is off the page.
+    expect(PRICING_TIER_ORDER).toEqual(['solo', 'solo_plus', 'manager', 'pro', 'label']);
     expect(PRICING_TIERS.manager.label).toBe('Pro');
     expect(PRICING_TIERS.pro.label).toBe('Pro Plus');
     for (const tier of PRICING_TIER_ORDER.slice(0, -1)) {
@@ -425,7 +423,6 @@ describe('minimumTierWith', () => {
     // Asserted against data_export (true everywhere) to confirm the search
     // starts at the cheapest displayed tier rather than skipping into the
     // middle of the ladder.
-    // Free (₦0) is never an upgrade target, so the answer is the first PAID tier.
     expect(minimumTierWith('data_export')).toBe('solo');
   });
 });
@@ -806,8 +803,7 @@ describe('the seat cap is reachable, and only for a team that bought Manager', (
   it('the wall and checkout agree on which tiers are self-serve', () => {
     for (const tier of Object.keys(PRICING_TIERS) as PricingTierId[]) {
       const salesLed = Boolean(PRICING_TIERS[tier].contactSales);
-      // Free is neither sold by card nor sales-led: nothing is bought on it.
-      expect(isSelfServeTier(tier), `${tier} self-serve`).toBe(!salesLed && tier !== 'free');
+      expect(isSelfServeTier(tier), `${tier} self-serve`).toBe(!salesLed);
     }
   });
 
@@ -966,14 +962,6 @@ describe('limit copy reads correctly at a limit of one', () => {
   });
 });
 
-describe('credits-only teams are on Solo (2026-10-02)', () => {
-  it('resolves to Solo, whatever plan or deal the team had before', () => {
-    expect(resolveTeamTier({ state: 'credits_only' })).toBe('solo');
-    expect(resolveTeamTier({ state: 'credits_only', ownerPlan: 'label' })).toBe('solo');
-    expect(resolveTeamTier({ state: 'credits_only', ownerPlan: 'manager', billingPlan: 'founding' })).toBe('solo');
-  });
-});
-
 // Pricing v4 (2026-11-08): a limit points at the cheapest plan above that
 // actually raises THAT limit. Ids: manager shows as "Pro", pro as "Pro Plus".
 describe('limits point at the next plan that lifts them (self-serve checkout)', () => {
@@ -998,15 +986,6 @@ describe('limits point at the next plan that lifts them (self-serve checkout)', 
     }
   });
 
-  it('Free points at Solo and names no days to credit', () => {
-    const verdict = checkLimit({ tier: 'free', key: 'seats', current: getEntitlement('free', 'seats') as number });
-    expect(!verdict.allowed && verdict.upgradeTo).toBe('solo');
-    if (!verdict.allowed) {
-      expect(verdict.message).toContain('Upgrade to Solo');
-      expect(verdict.message).not.toContain('come off the price');
-    }
-  });
-
   it('points Pro (id manager) at Pro Plus (id pro), by card, with its price', () => {
     const limit = getEntitlement('manager', 'seats') as number;
     const verdict = checkLimit({ tier: 'manager', key: 'seats', current: limit });
@@ -1025,24 +1004,19 @@ describe('limits point at the next plan that lifts them (self-serve checkout)', 
   });
 });
 
-// The Free plan (pricing v4, 2026-11-08). Only the state resolveTeamAccess
-// gives a never-paid team past its trial resolves to the capped `free` tier;
-// every uncertain state still fails open to label.
-describe('the Free plan', () => {
-  it('resolves state free to the free tier, whatever plan or deal the row carries', () => {
-    expect(resolveTeamTier({ state: 'free' })).toBe('free');
-    expect(resolveTeamTier({ state: 'free', ownerPlan: 'label', billingPlan: 'founding' })).toBe('free');
+// Pricing v4 (2026-11-08). The Free plan it added was removed outright on
+// 2026-11-09, so no tier is free and no state resolves to one.
+describe('pricing v4 without Free', () => {
+  it('has no free tier on the price list', () => {
+    expect(PRICING_TIER_ORDER as readonly string[]).not.toContain('free');
+    expect(Object.keys(PRICING_TIERS)).not.toContain('free');
+    for (const tier of PRICING_TIER_ORDER) {
+      if (PRICING_TIERS[tier].contactSales) continue;
+      expect(getTierPrice(tier, 'monthly')?.amount ?? 0, tier).toBeGreaterThan(0);
+    }
   });
 
-  it('caps Free at 1 artist, 1 person and 1 rollout, with 30 AI credits a month', () => {
-    expect(getEntitlement('free', 'artists')).toBe(1);
-    expect(getEntitlement('free', 'seats')).toBe(1);
-    expect(getEntitlement('free', 'active_releases')).toBe(1);
-    expect(PRICING_TIERS.free.urgansMonthlyCredits).toBe(30);
-    expect(getTierPrice('free', 'monthly')?.amount).toBe(0);
-  });
-
-  it('never moves trial, grace, comped, walled or read-only onto Free', () => {
+  it('leaves every uncertain state on label', () => {
     for (const state of ['trial', 'grace', 'comped', 'walled', 'read_only'] as const) {
       expect(resolveTeamTier({ state }), state).toBe('label');
     }

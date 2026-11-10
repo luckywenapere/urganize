@@ -364,8 +364,8 @@ export function budgetBands(monthlyPrice: number): BudgetBand[] {
 
 export type RetentionTierId = Extract<PricingTierId, 'solo' | 'solo_plus' | 'manager' | 'pro' | 'label'>;
 
-/** Every plan the cancel flow can make an offer on, cheapest first. Free is
- *  not here (nothing to cancel), and neither is a sales-led price. */
+/** Every plan the cancel flow can make an offer on, cheapest first. A
+ *  sales-led price is not here. */
 export const RETENTION_TIERS = ['solo', 'solo_plus', 'manager', 'pro', 'label'] as const;
 
 export function isRetentionTier(value: unknown): value is RetentionTierId {

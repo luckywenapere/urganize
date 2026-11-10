@@ -17,9 +17,8 @@ import { NAIRA_PER_CREDIT_CREDITS_ONLY, NAIRA_PER_CREDIT_SUBSCRIBER } from './pr
 describe('the founder rules in numbers', () => {
   it('give a trial 50 credits and the plans 150, 450, 900 and 2,000, Group the same as Label', () => {
     expect(TRIAL_CREDITS).toBe(50);
-    // Free 30 and Solo Plus 400 since pricing v4 (2026-11-08).
+    // Solo Plus 400 since pricing v4 (2026-11-08). Free (30) was removed 2026-11-09.
     expect(ALLOWANCE_CREDITS).toEqual({
-      free: 30,
       solo: 150,
       solo_plus: 400,
       manager: 450,
@@ -30,7 +29,6 @@ describe('the founder rules in numbers', () => {
     // The pricing card prints urgansMonthlyCredits (2026-10-15). This file may
     // import only its siblings (credits-guard), so the two are held equal here.
     expect(ALLOWANCE_CREDITS).toEqual({
-      free: PRICING_TIERS.free.urgansMonthlyCredits,
       solo: PRICING_TIERS.solo.urgansMonthlyCredits,
       solo_plus: PRICING_TIERS.solo_plus.urgansMonthlyCredits,
       manager: PRICING_TIERS.manager.urgansMonthlyCredits,
@@ -68,8 +66,8 @@ describe('creditAccount', () => {
 describe('monthlyAllowanceCredits', () => {
   it("gives a paying team its plan's allowance", () => {
     expect(monthlyAllowanceCredits({ state: 'paid', tier: 'solo' })).toBe(150);
-    // Pricing v4 (2026-11-08): the Free plan gets 30 a month without paying.
-    expect(monthlyAllowanceCredits({ state: 'free', tier: 'free' })).toBe(30);
+    // The Free plan was removed on 2026-11-09: a walled team is granted nothing.
+    expect(monthlyAllowanceCredits({ state: 'walled', tier: null })).toBe(0);
     expect(monthlyAllowanceCredits({ state: 'paid', tier: 'solo_plus' })).toBe(400);
     expect(monthlyAllowanceCredits({ state: 'paid', tier: 'manager' })).toBe(450);
     expect(monthlyAllowanceCredits({ state: 'paid', tier: 'pro' })).toBe(900);

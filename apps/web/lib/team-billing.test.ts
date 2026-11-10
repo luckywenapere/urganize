@@ -15,8 +15,6 @@ import {
   isReadOnlySafeMethod,
   lapsedFromPayment,
   resolveTeamAccess,
-  couldBeCreditsOnly,
-  isFundedForAccess,
   resolveWallVariant,
   shouldConsultHardPaywallGate,
   type HardPaywallGateInput,
@@ -99,19 +97,16 @@ describe('resolveTeamAccess — trial expiry boundary and grace', () => {
     expect(result.trialDaysLeft).toBe(0);
   });
 
-// Since pricing v4 (2026-11-08) a never-paid team past its trial is on the
-  // Free plan rather than walled (resolveTeamAccess's last branch).
-  it('the same instant is already on Free for a client, which passes no grace', () => {
+  it('the same instant is already walled for a client, which passes no grace', () => {
     const result = resolveTeamAccess({
       ownerHasAccess: false,
       team: expiring,
       now: new Date(NOW.getTime() + 1),
       graceMs: 0,
     });
-    expect(result.state).toBe('free');
-    expect(result.hasAccess).toBe(true);
-    expect(result.canWrite).toBe(true);
-    expect(result.reason).toBe('free_plan');
+    expect(result.state).toBe('walled');
+    expect(result.hasAccess).toBe(false);
+    expect(result.reason).toBe('trial_expired');
   });
 
   it('defaults to no grace when graceMs is omitted', () => {
@@ -120,18 +115,18 @@ describe('resolveTeamAccess — trial expiry boundary and grace', () => {
       team: expiring,
       now: new Date(NOW.getTime() + 1),
     });
-    expect(result.state).toBe('free');
+    expect(result.state).toBe('walled');
   });
 
-  it('moves to Free once the grace window closes', () => {
+  it('walls once the grace window closes', () => {
     const result = resolveTeamAccess({
       ownerHasAccess: false,
       team: expiring,
       now: new Date(NOW.getTime() + TEAM_TRIAL_EXPIRY_GRACE_MS + 1),
       graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
     });
-    expect(result.state).toBe('free');
-    expect(result.inGrace).toBe(false);
+    expect(result.state).toBe('walled');
+    expect(result.hasAccess).toBe(false);
   });
 
   it('grace never applies to a team that simply never paid', () => {
@@ -144,7 +139,7 @@ describe('resolveTeamAccess — trial expiry boundary and grace', () => {
       now: NOW,
       graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
     });
-    expect(result.state).toBe('free');
+    expect(result.state).toBe('walled');
   });
 });
 
@@ -163,13 +158,13 @@ describe('resolveTeamAccess — comped', () => {
     expect(result.reason).toBe('comped');
   });
 
-  it('uncomping puts an expired trial on the Free plan', () => {
+  it('uncomping restores the wall for an expired trial', () => {
     const result = resolveTeamAccess({
       ownerHasAccess: false,
       team: { ...compedExpired, compedAt: null },
       now: NOW,
     });
-    expect(result.state).toBe('free');
+    expect(result.state).toBe('walled');
   });
 
   it('paid outranks comped, so a paying team reads as paid even with a stale comp', () => {
@@ -222,16 +217,14 @@ describe('resolveTeamAccess — migration assignment matrix', () => {
     expect(result.trialDaysLeft).toBe(3);
   });
 
-  // A new team still gets no trial (2026-10-31); since pricing v4 (2026-11-08)
-  // it starts on the Free plan instead of meeting the wall.
-  it('a new team stamped with no trial starts on Free straight away', () => {
+  it('a new team stamped with no trial is walled straight away (2026-10-31)', () => {
     const result = resolveTeamAccess({
       ownerHasAccess: false,
       team: { ...trialingTeam, trialStartedAt: NOW.toISOString(), trialEndsAt: at(TEAM_TRIAL_DAYS * DAY) },
       now: NOW,
       graceMs: 0,
     });
-    expect(result.state).toBe('free');
+    expect(result.hasAccess).toBe(false);
     // The server passes the 15-minute grace; a zero-length trial gets none.
     const withGrace = resolveTeamAccess({
       ownerHasAccess: false,
@@ -239,8 +232,7 @@ describe('resolveTeamAccess — migration assignment matrix', () => {
       now: new Date(NOW.getTime() + 1000),
       graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
     });
-    // No grace either: straight to Free, never a 15-minute trial.
-    expect(withGrace.state).toBe('free');
+    expect(withGrace.hasAccess).toBe(false);
   });
 
   it('an unstamped team fails OPEN rather than walling on our own bug', () => {
@@ -553,7 +545,7 @@ describe('resolveTeamAccess — read-only', () => {
     expect(resolution.inGrace).toBe(false);
   });
 
-  it('a lapsed TRIALIST is on Free, never read-only (read-only is for a paid lapse)', () => {
+  it('a lapsed TRIALIST still hits the wall', () => {
     const resolution = resolveTeamAccess({
       ownerHasAccess: false,
       ownerLapsedFromPayment: false,
@@ -561,9 +553,9 @@ describe('resolveTeamAccess — read-only', () => {
       now: NOW,
       graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
     });
-    expect(resolution.state).toBe('free');
-    expect(resolution.hasAccess).toBe(true);
-    expect(resolution.canWrite).toBe(true);
+    expect(resolution.state).toBe('walled');
+    expect(resolution.hasAccess).toBe(false);
+    expect(resolution.canWrite).toBe(false);
   });
 
   it('omitting the input behaves exactly as before this feature existed', () => {
@@ -572,7 +564,7 @@ describe('resolveTeamAccess — read-only', () => {
       team: lapsedTeam,
       now: NOW,
     });
-    expect(resolution.state).toBe('free');
+    expect(resolution.state).toBe('walled');
   });
 
   it('every state that grants access grants writes, except read-only', () => {
@@ -747,7 +739,7 @@ describe('the read-only refusal', () => {
   });
 });
 
-describe('credits-only access (2026-10-02)', () => {
+describe('credits do not open the app (2026-11-10, #1164)', () => {
   const ended = {
     trialStartedAt: '2026-08-01T00:00:00.000Z',
     trialEndsAt: '2026-08-04T00:00:00.000Z',
@@ -757,74 +749,20 @@ describe('credits-only access (2026-10-02)', () => {
   };
   const now = new Date('2026-10-02T12:00:00.000Z');
 
-  it('opens the app to a team whose trial ended, while it holds credits', () => {
-    const result = resolveTeamAccess({ ownerHasAccess: false, team: ended, now, creditsFunded: true });
-    expect(result).toMatchObject({ state: 'credits_only', hasAccess: true, canWrite: true, reason: 'credits_funded' });
-  });
-
-  it('turns a lapsed plan with credits into credits-only, so it can still write', () => {
-    const result = resolveTeamAccess({
-      ownerHasAccess: false,
-      ownerLapsedFromPayment: true,
-      team: ended,
-      now,
-      creditsFunded: true,
-    });
-    expect(result.state).toBe('credits_only');
-    expect(result.canWrite).toBe(true);
-  });
-
-  it('falls back to Free, or read-only, with no credits', () => {
-    expect(resolveTeamAccess({ ownerHasAccess: false, team: ended, now }).state).toBe('free');
-    expect(resolveTeamAccess({ ownerHasAccess: false, team: ended, now, creditsFunded: false }).state).toBe('free');
+  // From 2026-10-02 a no-plan team holding credits got the whole app with Solo
+  // features. Credits now pay for UrgAns only, so the resolver takes no balance
+  // and a no-plan team is walled, or read-only after a paid lapse.
+  it('walls a team whose trial ended, and leaves a lapsed plan read-only', () => {
+    expect(resolveTeamAccess({ ownerHasAccess: false, team: ended, now }).state).toBe('walled');
     expect(
       resolveTeamAccess({ ownerHasAccess: false, ownerLapsedFromPayment: true, team: ended, now }).state
     ).toBe('read_only');
   });
 
-  it('never narrows a paid, comped or trialing team to credits-only', () => {
-    expect(resolveTeamAccess({ ownerHasAccess: true, team: ended, now, creditsFunded: true }).state).toBe('paid');
-    expect(
-      resolveTeamAccess({ ownerHasAccess: false, team: { ...ended, compedAt: '2026-09-01T00:00:00.000Z' }, now, creditsFunded: true }).state
-    ).toBe('comped');
-    expect(
-      resolveTeamAccess({
-        ownerHasAccess: false,
-        team: { ...ended, trialEndsAt: '2026-10-05T00:00:00.000Z' },
-        now,
-        creditsFunded: true,
-      }).state
-    ).toBe('trial');
-  });
-
-  it('counts bought and monthly credits for access, never trial credits, and an unreadable balance as none', () => {
-    expect(isFundedForAccess({ allowance: 0, topup: 5 })).toBe(true);
-    expect(isFundedForAccess({ allowance: 3, topup: 0 })).toBe(true);
-    expect(isFundedForAccess({ allowance: 0, topup: 0, trial: 50 } as { allowance: number; topup: number })).toBe(false);
-    expect(isFundedForAccess({ allowance: 0, topup: 0 })).toBe(false);
-    expect(isFundedForAccess({ allowance: -2, topup: 1 })).toBe(false);
-    expect(isFundedForAccess(null)).toBe(false);
-    expect(isFundedForAccess(undefined)).toBe(false);
-  });
-
-  it('only asks for a balance when the answer would otherwise be the wall or read-only', () => {
-    expect(couldBeCreditsOnly('walled')).toBe(true);
-    // A Free team with bought credits works on Solo features instead.
-    expect(couldBeCreditsOnly('free')).toBe(true);
-    expect(couldBeCreditsOnly('read_only')).toBe(true);
-    for (const state of ['paid', 'comped', 'trial', 'grace', 'credits_only'] as const) {
-      expect(couldBeCreditsOnly(state), state).toBe(false);
-    }
-  });
-
-  it('grants a credits-only team through combineTeamAccess, for a teammate too', () => {
-    expect(combineTeamAccess({ own: { state: 'credits_only' }, foreign: [], ownReleaseCount: null })).toMatchObject({
-      hasAccess: true,
-      canWrite: true,
-    });
-    expect(
-      combineTeamAccess({ own: { state: 'walled' }, foreign: [{ state: 'credits_only' }], ownReleaseCount: null })
-    ).toMatchObject({ hasAccess: true, canWrite: true });
+  it('has no credits-only state or balance input left', async () => {
+    const mod = await import('./team-billing');
+    expect('isFundedForAccess' in mod).toBe(false);
+    expect('couldBeCreditsOnly' in mod).toBe(false);
   });
 });
 
@@ -837,24 +775,22 @@ describe('resolveTeamAccess — a cancelled trial lands in read-only (2026-10-14
     billingLockedAmount: null,
   };
 
-  // Pricing v4 (2026-11-08): a cancelled trial never paid, so it is on Free
-  // (more than the read-only it had since 2026-10-14). The reason stays.
-  it('a team that cancelled its trial is on Free once the trial ends', () => {
+  it('a team that cancelled its trial is read-only, not walled, once the trial ends', () => {
     const result = resolveTeamAccess({
       ownerHasAccess: false,
       team: { ...ended, trialCancelledAt: at(-2 * DAY) },
       now: NOW,
     });
-    expect(result.state).toBe('free');
+    expect(result.state).toBe('read_only');
     expect(result.reason).toBe('trial_cancelled');
     expect(result.hasAccess).toBe(true);
-    expect(result.canWrite).toBe(true);
+    expect(result.canWrite).toBe(false);
   });
 
-  it('a never-cancelled unpaid trial is on the Free plan', () => {
+  it('a never-cancelled unpaid trial still meets the wall', () => {
     const result = resolveTeamAccess({ ownerHasAccess: false, team: ended, now: NOW });
-    expect(result.state).toBe('free');
-    expect(result.reason).toBe('free_plan');
+    expect(result.state).toBe('walled');
+    expect(result.reason).toBe('trial_expired');
   });
 
   it('cancelling never cuts a running trial short', () => {
@@ -886,16 +822,6 @@ describe('resolveTeamAccess — a cancelled trial lands in read-only (2026-10-14
     });
     expect(result.state).toBe('read_only');
     expect(result.reason).toBe('payment_failed');
-  });
-
-  it('credits still outrank read-only for a cancelled trial', () => {
-    const result = resolveTeamAccess({
-      ownerHasAccess: false,
-      creditsFunded: true,
-      team: { ...ended, trialCancelledAt: at(-2 * DAY) },
-      now: NOW,
-    });
-    expect(result.state).toBe('credits_only');
   });
 
   it('a paused paid team (subscription disabled, period over) is read-only', () => {

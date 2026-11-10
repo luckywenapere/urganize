@@ -45,10 +45,6 @@ const naira = (amount: number) =>
 
 /** Same figures as the /pricing card (apps/homepage PricingTierCards). */
 function cardPrice(tierId: PricingTierId, interval: Interval, currency: PricingCurrencyCode = 'NGN') {
-  // Free (pricing v4, 2026-11-08): nothing to pay, in any currency or period.
-  if (tierId === 'free') {
-    return { figure: formatMoney(0, currency), unit: null, sub: 'Free for as long as you like', was: null };
-  }
   if (getTier(tierId).contactSales) {
     // Label is a custom deal: no price shown, in Naira or dollars (#1120).
     const custom = formatTierFromPrice(tierId, interval);
@@ -158,7 +154,7 @@ export function AuthPlans() {
                 data-plan={tierId}
                 className="mt-[18px] flex h-11 items-center justify-center rounded-lg bg-content-primary text-[15px] font-semibold text-bg-base transition-opacity hover:opacity-90 md:mt-5 md:h-[38px] md:text-[13px]"
               >
-                Start free
+                Choose {tier.label}
               </a>
               <div className="mt-[18px] border-t border-stroke-default md:mt-[22px]" />
               {heading ? (
@@ -210,7 +206,7 @@ const questions = (currency: PricingCurrencyCode) => [
     q: 'How much does it cost?',
     // Read from the pricing package so a reprice can never leave this answer
     // disagreeing with the plan cards above it.
-    a: `Free costs nothing. Solo is ${monthlyFigure('solo', currency)} a month and Solo Plus is ${monthlyFigure('solo_plus', currency)}. For a team, Pro is ${monthlyFigure('manager', currency)} and Pro Plus is ${monthlyFigure('pro', currency)}. Label is priced with you. One price covers your whole team.`,
+    a: `Solo is ${monthlyFigure('solo', currency)} a month and Solo Plus is ${monthlyFigure('solo_plus', currency)}. For a team, Pro is ${monthlyFigure('manager', currency)} and Pro Plus is ${monthlyFigure('pro', currency)}. Label is priced with you. One price covers your whole team.`,
   },
 ];
 

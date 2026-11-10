@@ -85,14 +85,13 @@ export default function TermsPage() {
 
             <Section number="04" title="Trial, subscriptions, and billing">
               <p>
-                Anyone can create an account and use Urganize on the Free plan
-                for as long as they like. A team may also get a free trial of a
-                paid plan, with no card required. A trial covers the whole
-                team, not each person, so joining an existing team does not
-                start a new one. Paid plans are a subscription,
-                priced per team and paid monthly or once a year through
-                Paystack, whichever you pick. We never see or store your card
-                details.
+                Urganize is in public beta, so features may change as we
+                improve it. Anyone can create an account. To plan rollouts and
+                run tasks, your team needs a paid plan. Without a plan, you can
+                still buy credits and use them for AI. Paid plans are a
+                subscription, priced per team and paid monthly or once a year
+                through Paystack, whichever you pick. We never see or store your
+                card details.
               </p>
               <p>
                 Subscriptions renew at the end of each period. If we change our

@@ -14,7 +14,8 @@ import { NAIRA_PER_CREDIT_CREDITS_ONLY, NAIRA_PER_CREDIT_SUBSCRIBER } from './pr
  *     top-up bought, what is left is removed; if either happened, it stays.
  *   - A subscription gets its monthly allowance each billing window. When the
  *     subscription ends the whole balance stays, and the account carries on as a
- *     credits-only account (Solo features, dearer top-ups) until it subscribes.
+ *     credits-only account (AI only since 2026-11-10, #1164; dearer top-ups)
+ *     until it subscribes.
  *
  * Plan allowances are sized so a team's whole allowance costs about 15% of what it
  * pays, at the 3x markup (pricing.ts), assuming 1,500 naira to the dollar:
@@ -37,9 +38,10 @@ import { NAIRA_PER_CREDIT_CREDITS_ONLY, NAIRA_PER_CREDIT_SUBSCRIBER } from './pr
 // (urgansMonthlyCredits, 2026-10-15). This file may import only its siblings
 // (credits-guard.test.ts), so allowance.test.ts holds the two equal.
 // 150 / 450 / 900 / 2,000 since 2026-11-07 (founder approved the phase 2 mocks, #1112).
-// Free 30 and Solo Plus 400 since 2026-11-08 (pricing v4).
+// Solo Plus 400 since 2026-11-08 (pricing v4). The Free plan's 30 a month was
+// removed with the plan on 2026-11-09 (FREE_PLAN_GRANT_CREDITS in
+// credits-server.ts takes back what it granted).
 export const ALLOWANCE_CREDITS = {
-  free: 30,
   solo: 150,
   solo_plus: 400,
   manager: 450,
@@ -92,10 +94,6 @@ export function creditAccount(team: TeamForAllowance | undefined): CreditAccount
  * Label allowance.
  */
 export function monthlyAllowanceCredits(team: TeamForAllowance | undefined): number {
-  // The Free plan (pricing v4, 2026-11-08) is granted its 30 a month although it
-  // is not a subscriber: it pays nothing, so it keeps credits-only top-up prices
-  // and no overage (overage is for state 'paid' only).
-  if (team?.state === 'free') return ALLOWANCE_CREDITS.free;
   if (creditAccount(team) !== 'subscriber') return 0;
   if (team?.state !== 'paid') return ALLOWANCE_CREDITS.solo;
   switch (team.tier) {

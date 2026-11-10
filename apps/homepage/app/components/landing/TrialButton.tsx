@@ -43,7 +43,7 @@ export function TrialButton({
 }: {
   location: TrialButtonLocation;
   size?: "md" | "lg";
-  /** Every mount reads PRIMARY_CTA.label: "Start free" while sign-up is open (2026-11-10), "Join waitlist" when it is not (URG-407). */
+  /** Every mount reads PRIMARY_CTA.label: "Create your account" while sign-up is open (public beta, 2026-11-10), "Join waitlist" when it is not (URG-407). */
   label?: string;
   className?: string;
 }) {

@@ -30,7 +30,7 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   {
     question: "When can I start?",
     answer:
-      "Today. Start free and you are in straight away, on the Free plan for as long as you like.",
+      "Today. Create your account and pick a plan.",
   },
   {
     question: "My team lives on WhatsApp. Will they actually use it?",
@@ -49,7 +49,7 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   {
     question: "Is it for one artist or a roster?",
     // Plan names since pricing v4 (2026-11-08): id manager is "Pro", id pro is "Pro Plus".
-    answer: `Both. Free, Solo and Solo Plus cover one artist, ${PRICING_TIERS.manager.label} ${managerArtists}, ${PRICING_TIERS.pro.label} ${proArtists} and Label has no limit.`,
+    answer: `Both. Solo and Solo Plus cover one artist, ${PRICING_TIERS.manager.label} ${managerArtists}, ${PRICING_TIERS.pro.label} ${proArtists} and Label has no limit.`,
   },
   {
     question: "Does it post or distribute for me?",

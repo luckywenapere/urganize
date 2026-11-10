@@ -238,7 +238,7 @@ export default function ForExecutivesPage() {
                 See every rollout without asking.
               </h2>
               <p className="mx-auto mt-6 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
-                Start free, and move to a paid plan when you need more. See{" "}
+                Create your account and pick the plan that fits. See{" "}
                 <Link
                   href="/pricing"
                   className="text-[var(--marketing-text)] underline underline-offset-4 hover:text-[var(--marketing-accent)]"

@@ -32,8 +32,9 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 // too from 2026-09-08 to 2026-09-09, and again since 2026-10-02: Group, the
 // fourth card, with "Let's talk" in place of a price.)
 export function PricingStripSection() {
-  // SIX cards since pricing v4 (2026-11-08): Free, Solo, Solo Plus, Pro (id
-  // manager), Pro Plus (id pro) and Label, three a row. Before that, four
+  // FIVE cards since 2026-11-09, when the founder removed Free: Solo, Solo
+  // Plus, Pro (id manager), Pro Plus (id pro) and Label. Six (with Free) from
+  // pricing v4 on 2026-11-08. Before that, four
   // cards since 2026-11-07 (#1112): Solo, Manager, Pro and Label. No
   // first-month price any more. Label is a custom deal, so it shows its
   // "Custom", never a price (#1120). Prices show in the visitor's currency.
@@ -65,11 +66,10 @@ export function PricingStripSection() {
               the first priced tier, rendered from @urganize/pricing like the
               cards, never typed. */}
           <h2 className={centeredHeadlineClass}>Cheaper than one missed deadline.</h2>
-          {/* "From" is the cheapest PAID plan: Free (pricing v4) costs nothing
-              and has its own card, so "From ₦0" would say nothing. */}
+          {/* "From" is the cheapest paid plan. */}
           {firstPaid?.price ? (
             <p className="mx-auto mt-5 max-w-[36rem] text-[1.05rem] leading-8 text-[var(--marketing-text-muted)] sm:text-[1.15rem]">
-              There is a Free plan, and paid plans from <VisitorPrice tierId={firstPaid.id} />. Pick the one that fits you.
+              Plans from <VisitorPrice tierId={firstPaid.id} />. Pick the one that fits you.
             </p>
           ) : null}
         </div>

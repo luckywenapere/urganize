@@ -432,24 +432,16 @@ describe('summarizeBilling — team access', () => {
     expect(result.cta).toBe('reactivate');
   });
 
-  it('tells a credits-only OWNER they are on credits, and points at plans that work', () => {
+  // Credits without a plan no longer open the app (#1164, 2026-11-10): a team
+  // with credits and no plan is walled, so Settings says "No plan yet", never
+  // "Using credits".
+  it('shows a no-plan team with credits as having no plan', () => {
     const result = summarizeBilling(snapshot({ accountStatus: 'expired', plan: 'manager' }), {
-      team: team({ state: 'credits_only', isOwnerOrAdmin: true }),
+      team: team({ state: 'walled', isOwnerOrAdmin: true }),
     });
-    expect(result.title).toBe('Using credits');
-    expect(result.details.join(' ')).toContain('Solo features');
-    // The team has access, so a bare /locked would bounce: reactivate, like read-only.
-    expect(result.cta).toBe('reactivate');
-  });
-
-  it('never offers a trial or a payment to a MEMBER of a credits-only team', () => {
-    const result = summarizeBilling(snapshot({ accountStatus: 'unpaid', trialUsed: false }), {
-      team: team({ state: 'credits_only', isOwnerOrAdmin: false }),
-    });
-    const all = [result.title, ...result.details].join(' ');
-    expect(all).not.toMatch(/free trial/i);
-    expect(all).toMatch(/team admin/i);
-    expect(result.cta).toBeNull();
+    expect(result.title).toBe('No plan yet');
+    expect(result.details.join(' ')).not.toMatch(/credits|Solo features/i);
+    expect(result.cta).toBe('plans');
   });
 
   it('never offers a trial to a MEMBER of a read-only team', () => {

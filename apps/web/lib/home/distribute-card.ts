@@ -67,9 +67,6 @@ function decideDistributeOffer(
   switch (access.state) {
     case 'trial':
     case 'grace':
-    case 'credits_only':
-    // The Free plan (2026-11-08): never paid, so the offer is to buy a plan.
-    case 'free':
       return 'upgrade';
     case 'paid':
       if (!access.tier) return 'hidden';

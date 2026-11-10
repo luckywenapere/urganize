@@ -223,11 +223,10 @@ describe('the plan cards say the same numbers', () => {
     expect(distributionAllowanceCopy('pro', 'annual')).toBe('Distribution for 1 of your artists, no monthly cap');
     expect(distributionAllowanceCopy('manager')).toBeNull();
     expect(tierHighlights('pro')).toContain('Extra singles ₦2,000 each');
-    // Pricing v4 (2026-11-08): Solo and Pro (id manager) pay per single; Free
-    // sends from its own TRM account; Solo Plus includes singles and EPs.
+    // Pricing v4 (2026-11-08): Solo and Pro (id manager) pay per single; Solo
+    // Plus includes singles and EPs.
     expect(tierHighlights('solo')).toContain('Send singles to stores for ₦2,000 each');
     expect(tierHighlights('manager')).toContain('Send singles to stores for ₦2,000 each');
-    expect(tierHighlights('free')).toContain('Send to stores from your own distributor account');
     expect(distributionAllowanceCopy('solo_plus')).toBe('Distribution for 1 of your artists, 7 releases a month');
   });
 });

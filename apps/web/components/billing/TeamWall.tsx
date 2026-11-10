@@ -99,11 +99,7 @@ const PRICING_V2 = isPricingV2Enabled();
  *  Talk to us links, never as a card with a checkout. */
 const LABEL_FROM = formatTierFromPrice('label');
 
-// Free is never bought (pricing v4, 2026-11-08): a team that has not paid is
-// already on it, so the wall offers the paid plans only.
-const WALL_TIERS: readonly PricingTierId[] = PRICING_TIER_ORDER.filter(
-  (tier) => !getTier(tier).contactSales && tier !== 'free'
-);
+const WALL_TIERS: readonly PricingTierId[] = PRICING_TIER_ORDER.filter((tier) => !getTier(tier).contactSales);
 
 /** Which tier a returning owner lands on. Manager since 2026-10-17, because it
  *  is the tier that carries `recommended` again (founder-approved reprice; it

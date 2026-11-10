@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Credits unlock AI only</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f0e6; --side: #f0ebe1; --surface: #faf5ec; --brand: #14643a;
+    --ink: #1a1611; --ink2: #4b4740; --ink3: #6a665f; --line: #d9d2c4; --line2: #e6dfd2;
+    --brand-soft: #e3eee4; --warn: #8a5a12; --warn-soft: #f6ead4; --cut: #9b2c2c; --cut-soft: #f7e3e0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15130f; --side: #1c1a15; --surface: #211e18; --brand: #5fbf86;
+      --ink: #f2ede4; --ink2: #cfc8bb; --ink3: #a39d92; --line: #3a362e; --line2: #2d2a23;
+      --brand-soft: #1f3327; --warn: #e3b169; --warn-soft: #3a2d17; --cut: #f08f86; --cut-soft: #3a1f1c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 'Space Grotesk', system-ui, sans-serif; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 32px 16px 72px; }
+  h1 { font: 600 34px/1.15 'Fraunces', serif; margin: 0 0 8px; }
+  h2 { font: 600 22px/1.2 'Fraunces', serif; margin: 48px 0 4px; }
+  .lead { color: var(--ink2); margin: 0 0 8px; max-width: 640px; }
+  .who { color: var(--ink3); font-size: 14px; margin: 0 0 18px; }
+  .pair { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 760px) { .pair { grid-template-columns: 1fr; } }
+  .col-label { font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; margin: 0 0 8px; }
+  .col-label.today { color: var(--ink3); }
+  .col-label.after { color: var(--brand); }
+  .screen { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 20px; min-height: 100%; }
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--ink3); margin: 0 0 6px; text-align: center; }
+  .big { font: 600 26px/1.15 'Fraunces', serif; text-align: center; margin: 0 0 14px; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+  .tile { border: 1px solid var(--line); border-radius: 12px; padding: 8px; text-align: center; font-size: 12px; color: var(--ink3); }
+  .tile b { display: block; font: 600 20px 'Fraunces', serif; color: var(--ink); }
+  .plans { display: grid; gap: 8px; }
+  .plan { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; justify-content: space-between; font-size: 14px; }
+  .plan.pick { border: 2px solid var(--brand); }
+  .plan span { color: var(--ink3); }
+  .btn { display: block; text-align: center; background: var(--ink); color: var(--bg); border-radius: 10px; padding: 11px; font-weight: 600; margin: 14px 0 0; }
+  .ai-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-top: 1px solid var(--line2); margin-top: 18px; padding-top: 14px; font-size: 14px; color: var(--ink2); flex-wrap: wrap; }
+  .ai-row a { color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
+  .app-top { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink3); border-bottom: 1px solid var(--line2); padding-bottom: 10px; margin-bottom: 12px; }
+  .row { border: 1px solid var(--line2); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; font-size: 14px; display: flex; justify-content: space-between; }
+  .row span { color: var(--ink3); }
+  .settings-block { border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .settings-block b { display: block; margin-bottom: 4px; }
+  .settings-block p { margin: 0 0 4px; color: var(--ink2); font-size: 14px; }
+  .note { margin-top: 10px; font-size: 13px; border-radius: 10px; padding: 8px 10px; }
+  .note.cut { background: var(--cut-soft); color: var(--cut); }
+  .note.new { background: var(--brand-soft); color: var(--brand); }
+  .note.same { background: var(--side); color: var(--ink3); }
+  .packs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pack { border: 1px solid var(--line); border-radius: 10px; padding: 10px; font-size: 14px; }
+  .pack span { display: block; color: var(--ink3); font-size: 13px; }
+  .small { font-size: 12px; color: var(--ink3); margin: 10px 0 0; }
+  .newline { font-size: 13px; color: var(--ink); background: var(--brand-soft); border-radius: 8px; padding: 8px 10px; margin: 10px 0 0; }
+  ul.facts { margin: 8px 0 0; padding-left: 20px; color: var(--ink2); }
+  ul.facts li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Credits without a plan unlock the AI only</h1>
+  <p class="lead">Today, any credits with no plan open the whole app with Solo features, and credits never run out unless the AI is used. After this change, credits pay for the AI and nothing else. To plan rollouts and run tasks, a team picks a plan.</p>
+  <p class="who">Issue #1164. Example team: no plan, bought the ₦1,500 pack once (50 credits), has 50 left.</p>
+
+  <h2>1. What they see when they open Urganize</h2>
+  <p class="who">Team with no plan and 50 credits.</p>
+  <div class="pair">
+    <div>
+      <p class="col-label today">Today</p>
+      <div class="screen">
+        <div class="app-top"><span>Home</span><span>Using credits · 50 left</span></div>
+        <div class="row">Ayo · "Lagos Nights" <span>12 tasks this week</span></div>
+        <div class="row">Plan a new rollout <span>open</span></div>
+        <div class="row">Tasks, team, press kit <span>open</span></div>
+        <div class="note cut">The whole app is open, on Solo, for as long as 1 credit is left.</div>
+      </div>
+    </div>
+    <div>
+      <p class="col-label after">After</p>
+      <div class="screen">
+        <p class="eyebrow">Your trial has ended</p>
+        <p class="big">Pick up where you left off.</p>
+        <div class="tiles">
+          <div class="tile"><b>1</b>rollout</div>
+          <div class="tile"><b>34</b>tasks</div>
+          <div class="tile"><b>1</b>artist</div>
+        </div>
+        <div class="plans">
+          <div class="plan">Solo <span>₦5,000 / month</span></div>
+          <div class="plan">Solo Plus <span>₦12,000 / month</span></div>
+          <div class="plan pick">Pro <span>₦15,000 / month</span></div>
+          <div class="plan">Pro Plus <span>₦40,000 / month</span></div>
+        </div>
+        <span class="btn">Continue with Pro</span>
+        <div class="ai-row">Or use AI on credits. You have 50 left. <a>Open AI</a></div>
+        <div class="note same">This is the wall a team with no plan already sees. The "Or use AI on credits" line is already there. Nothing on this screen is new.</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>2. A team whose paid plan lapsed, holding credits</h2>
+  <div class="pair">
+    <div>
+      <p class="col-label today">Today</p>
+      <div class="screen">
+        <div class="app-top"><span>Home</span><span>Using credits · 120 left</span></div>
+        <div class="row">Edit tasks, add rollouts <span>yes, on Solo</span></div>
+        <div class="row">Use the AI <span>yes</span></div>
+      </div>
+    </div>
+    <div>
+      <p class="col-label after">After</p>
+      <div class="screen">
+        <div class="app-top"><span>Home</span><span>Read only</span></div>
+        <div class="row">See everything they built <span>yes</span></div>
+        <div class="row">Edit tasks, add rollouts <span>no, pay to change</span></div>
+        <div class="row">Use the AI <span>yes, on credits</span></div>
+        <div class="note same">Same read-only a lapsed team with no credits gets today, with the AI still open.</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>3. Settings, Billing</h2>
+  <div class="pair">
+    <div>
+      <p class="col-label today">Today</p>
+      <div class="screen">
+        <div class="settings-block">
+          <b>Using credits</b>
+          <p>Your team uses Urganize with Solo features while it has credits.</p>
+          <p>Pick a plan for monthly credits and more room.</p>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="col-label after">After</p>
+      <div class="screen">
+        <div class="settings-block">
+          <b>No plan yet</b>
+          <p>Everything your team created is safe and waiting.</p>
+          <p>Activate a plan to pick up where you left off.</p>
+        </div>
+        <div class="note same">The "Using credits" box goes. They see the same box any team with no plan sees today.</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>4. Buying credits with no plan</h2>
+  <div class="pair">
+    <div>
+      <p class="col-label today">Today</p>
+      <div class="screen">
+        <div class="packs">
+          <div class="pack">50 credits<span>₦1,500</span></div>
+          <div class="pack">100 credits<span>₦3,000</span></div>
+          <div class="pack">250 credits<span>₦7,500</span></div>
+          <div class="pack">500 credits<span>₦15,000</span></div>
+        </div>
+        <p class="small">Subscribers get twice the credits for the same price.</p>
+      </div>
+    </div>
+    <div>
+      <p class="col-label after">After</p>
+      <div class="screen">
+        <div class="packs">
+          <div class="pack">50 credits<span>₦1,500</span></div>
+          <div class="pack">100 credits<span>₦3,000</span></div>
+          <div class="pack">250 credits<span>₦7,500</span></div>
+          <div class="pack">500 credits<span>₦15,000</span></div>
+        </div>
+        <p class="newline">Credits are for the AI. To plan rollouts and run tasks, pick a plan.</p>
+        <p class="small">Subscribers get twice the credits for the same price.</p>
+        <div class="note new">One new line, shown only to a team with no plan, so nobody buys credits expecting the whole app.</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>What else changes</h2>
+  <ul class="facts">
+    <li>Teams on credits with no plan right now lose the rest of the app the moment this goes live. They keep their credits and the AI. (How many there are is not measured: this session has no database access. The admin Teams page lists them under "Credits only".)</li>
+    <li>Admin Teams page: the "Credits only" filter goes; those teams show as Walled or Read only.</li>
+    <li>Prices, packs and the credit rates do not change.</li>
+    <li>The strategy doc says credits-only accounts get Solo features. It needs the same change at your Monday review.</li>
+  </ul>
+</div>
+</body>
+</html>

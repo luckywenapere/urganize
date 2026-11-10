@@ -112,7 +112,7 @@ export function MarketingHeader() {
                   as "Try Urganize" within a few px at 375. On the homepage the
                   `.home-v2 .header-cta` rule (globals.css) turns it into an
                   outline so the hero form stays the one filled action.
-                  PRIMARY_CTA since 2026-11-10: "Start free" while sign-up is
+                  PRIMARY_CTA since 2026-11-10: "Create your account" while sign-up is
                   open, "Join waitlist" when it is not. */}
               {PRIMARY_CTA.label}
             </a>
