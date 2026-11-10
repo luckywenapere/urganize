@@ -21,7 +21,7 @@ export const metadata: Metadata = buildPageMetadata({
 // Keep this date REAL. It only moves when the policy text actually changes —
 // never wire it to new Date() (the old version did, which made the policy
 // claim it was updated every day).
-const LAST_UPDATED = "October 19, 2026";
+const LAST_UPDATED = "November 10, 2026";
 
 const CONTACT_HREF =
   "mailto:contact@urganize.app?subject=Privacy%20question%20-%20Urganize";
@@ -61,24 +61,24 @@ export default function PrivacyPolicy() {
             </p>
             <ul className="mt-5 space-y-3 text-[0.95rem] leading-7 text-[var(--marketing-text-muted)]">
               <li>
-                — We collect what we need to run Urganize: your account, your
+                · We collect what we need to run Urganize: your account, your
                 release data, and product usage.
               </li>
               <li>
-                — Payments are processed by Paystack. We never see or store
+                · Payments are processed by Paystack. We never see or store
                 your card details.
               </li>
               <li>
-                — We use analytics (Google Analytics, Vercel Analytics,
+                · We use analytics (Google Analytics, Vercel Analytics,
                 PostHog) to understand product usage.
               </li>
               <li>
-                — AI sends the release context it needs to our AI provider,
+                · AI sends the release context it needs to our AI provider,
                 only to do what you asked. We do not use your content to train
                 AI models.
               </li>
               <li>
-                — You can delete your account yourself, in the app, instantly.
+                · You can delete your account yourself, in the app, instantly.
               </li>
             </ul>
           </div>
@@ -136,8 +136,8 @@ export default function PrivacyPolicy() {
                 </strong>{" "}
                 Everything you put into Urganize: artists, releases,
                 dates, tasks, comments, event milestones, teammates you invite
-                (their email addresses), and the files you upload: masters,
-                artwork, contracts, split sheets.
+                (their email addresses), the cover art you upload, and the
+                credits and splits you add. We do not store your audio.
               </p>
               <p>
                 <strong className="text-[var(--marketing-text)]">
@@ -175,22 +175,23 @@ export default function PrivacyPolicy() {
             </Section>
 
             <Section number="04" title="How we use it">
-              <p>— To provide and operate Urganize.</p>
+              <p>· To provide and operate Urganize.</p>
               <p>
-                — To build your release plan and, when you use AI, to do
+                · To build your release plan and, when you use AI, to do
                 what you ask it to (see section 05).
               </p>
               <p>
-                — To improve performance, reliability, and the product itself.
+                · To improve performance, reliability, and the product itself.
               </p>
               <p>
-                — To communicate with you about your account and the product.
+                · To communicate with you about your account and the product.
               </p>
-              <p>— To prevent fraud, abuse, and security issues.</p>
+              <p>· To prevent fraud, abuse, and security issues.</p>
               <p>
-                We share data outside Urganize only when you act: audio,
-                artwork and release metadata go to our distribution partner
-                when you send a release; what you put in a pitch goes to the
+                We share data outside Urganize only when you act: when you send
+                a release, its audio goes from your device straight to our
+                distribution partner and we send its artwork and release
+                metadata; what you put in a pitch goes to the
                 curator or opportunity you send it to; and anyone with a
                 press-kit link can see that press kit.
               </p>

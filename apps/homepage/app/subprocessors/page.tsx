@@ -33,7 +33,7 @@ const subprocessors = [
   {
     name: "Supabase",
     purpose: "App database, authentication, and file storage",
-    data: "Account data, release data, and the files you upload",
+    data: "Account data, release data, and the cover art you upload",
   },
   {
     name: "Neon",

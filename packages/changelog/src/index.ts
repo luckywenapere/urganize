@@ -4936,7 +4936,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "September 25, 2026",
     highlights: [
-      "Renaming a rollout used to quietly clear its release date, which could hide your whole plan and ask you to pick a date again. That's fixed now — renaming only changes the name.",
+      "Renaming a rollout used to quietly clear its release date, which could hide your whole plan and ask you to pick a date again. That's fixed now: renaming only changes the name.",
     ],
   },
   {
@@ -5156,7 +5156,7 @@ export const changelog: Release[] = [
     date: "September 8, 2026",
     highlights: [
       "UrgAns tailors your rollout plan more reliably now. It used to give up and hand you the plain playbook more often than it should have.",
-      "UrgAns has a voice now — strict, a little bossy, and focused on getting your release out. Its replies also read clean, with no stray symbols.",
+      "UrgAns has a voice now: strict, a little bossy, and focused on getting your release out. Its replies also read clean, with no stray symbols.",
     ],
   },
   {
@@ -5191,7 +5191,7 @@ export const changelog: Release[] = [
     date: "September 7, 2026",
     highlights: [
       "Ask UrgAns for your release recap and the card shows up right there in the chat. Pick Story or Square and save it without leaving the conversation.",
-      "The Release recap button is gone. Ask for it in your own words, and mention anything worth remembering about the release — UrgAns will put it on the card.",
+      "The Release recap button is gone. Ask for it in your own words, and mention anything worth remembering about the release: UrgAns will put it on the card.",
     ],
   },
   {
@@ -5309,7 +5309,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "September 3, 2026",
     highlights: [
-      "UrgAns can now help with creative direction, content ideas, marketing strategy, and career advice — just ask, no special phrasing needed.",
+      "UrgAns can now help with creative direction, content ideas, marketing strategy, and career advice: just ask, no special phrasing needed.",
       "Ask UrgAns to compare your last few releases or show you who on your team is carrying the most work right now.",
       "UrgAns will tell you plainly when it doesn't have streaming or audience numbers, instead of guessing.",
     ],
@@ -5574,7 +5574,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "August 29, 2026",
     highlights: [
-      "Picking who does an activity is now a simple dropdown. Tap it and the list of your team opens — no keyboard pops up over it any more.",
+      "Picking who does an activity is now a simple dropdown. Tap it and the list of your team opens: no keyboard pops up over it any more.",
     ],
   },
   {
@@ -5594,7 +5594,7 @@ export const changelog: Release[] = [
     tag: "Team",
     date: "August 29, 2026",
     highlights: [
-      "Your teammates can now open a release's pages — Collect metadata, the calendar, the press kit and the rest. Before, those pages said \"Release not found.\" unless you were the person who created the release.",
+      "Your teammates can now open a release's pages: Collect metadata, the calendar, the press kit and the rest. Before, those pages said \"Release not found.\" unless you were the person who created the release.",
       "If the Collect metadata page can't refresh, you keep what already loaded and get a Retry button instead of the page going blank.",
     ],
   },
@@ -5679,7 +5679,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "August 25, 2026",
     highlights: [
-      "Connect the AI app you already use to Urganize and ask it about your releases. It can see your releases, activities and notes, and add or change them — it cannot delete anything.",
+      "Connect the AI app you already use to Urganize and ask it about your releases. It can see your releases, activities and notes, and add or change them: it cannot delete anything.",
       "You decide which apps get in, and you can cut any of them off at any time from Settings.",
     ],
   },
@@ -5689,7 +5689,7 @@ export const changelog: Release[] = [
     tag: "Account",
     date: "August 25, 2026",
     highlights: [
-      "You stay logged in. A slow or patchy connection used to sign you out for real — you would come back to the app, or reopen it on your phone, and be asked to log in again even though nothing was wrong with your account. Now a request that does not get through is treated as exactly that, and your session is left alone.",
+      "You stay logged in. A slow or patchy connection used to sign you out for real: you would come back to the app, or reopen it on your phone, and be asked to log in again even though nothing was wrong with your account. Now a request that does not get through is treated as exactly that, and your session is left alone.",
       "A hiccup loading your profile no longer looks like being logged out, and no longer shows you a red error while you are working.",
       "If your session genuinely does end, the login page now tells you so instead of appearing out of nowhere, and your email is still filled in.",
     ],
@@ -5710,7 +5710,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "August 25, 2026",
     highlights: [
-      "The Collect metadata page is easier to read. You now see three small steps — tap one to open it.",
+      "The Collect metadata page is easier to read. You now see three small steps: tap one to open it.",
       "Each step shows a quick note, like how many details you've filled in or whether your link is live, so you know what's left without opening anything.",
     ],
   },
@@ -5770,9 +5770,9 @@ export const changelog: Release[] = [
     date: "August 22, 2026",
     highlights: [
       "Every team now starts with a 14-day free trial of the whole product, no card required. The trial belongs to the team rather than to each person, so bringing teammates in does not start a fresh clock for them.",
-      "In the last ten days of a trial, a quiet line at the top of the app tells you how many are left. Nothing is held back or hidden while it runs — the trial is the full product.",
+      "In the last ten days of a trial, a quiet line at the top of the app tells you how many are left. Nothing is held back or hidden while it runs: the trial is the full product.",
       "When a trial ends, everything you built stays exactly where it is: releases, activities, files, notes, all of it. Nothing is deleted, and it is all waiting the moment a plan is active.",
-      "One plan covers everyone on your team. If you would rather talk to a person, or you need an invoice, that is on the same screen — a roster deal gets scoped and quoted by hand.",
+      "One plan covers everyone on your team. If you would rather talk to a person, or you need an invoice, that is on the same screen: a roster deal gets scoped and quoted by hand.",
       "Billing in Settings now speaks for the team: how long the trial has left, which plan is active, and who can change it. If billing is not yours to handle, one tap tells the person whose it is.",
     ],
   },
@@ -5782,7 +5782,7 @@ export const changelog: Release[] = [
     tag: "App",
     date: "August 21, 2026",
     highlights: [
-      "On your phone, everything you can open for a release — Plan, Collect metadata, Pitch, Files, Calendar, Press kit — now sits together at the bottom of the screen, stacked so you can see all of it at once. It stays put while you scroll your activities, and nothing runs off the side of the screen the way the old sideways-scrolling row did.",
+      "On your phone, everything you can open for a release, Plan, Collect metadata, Pitch, Files, Calendar, Press kit, now sits together at the bottom of the screen, stacked so you can see all of it at once. It stays put while you scroll your activities, and nothing runs off the side of the screen the way the old sideways-scrolling row did.",
       "Notes came off that row, since it already has its own tab in the bar at the bottom of your phone screen.",
       "The content calendar is no longer marked Beta.",
     ],
@@ -5794,7 +5794,7 @@ export const changelog: Release[] = [
     tag: "Account",
     date: "August 21, 2026",
     highlights: [
-      "The sign-in page got a clean new look: your logo up top and two simple buttons — Continue with Google or Continue with Email.",
+      "The sign-in page got a clean new look: your logo up top and two simple buttons: Continue with Google or Continue with Email.",
       "Signing in with email is now one step at a time. Type just your email and continue: if you have an account, the password field appears right there; if you're new, you go straight into sign-up with your email already filled in.",
       "Stuck at the door? A \"Having trouble signing in? Contact us\" link at the base of the page opens a chat with us.",
     ],
@@ -5805,7 +5805,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "August 21, 2026",
     highlights: [
-      "Tapping the UrgAns icon while already on the assistant page now takes you back to your workspace — before, it did nothing.",
+      "Tapping the UrgAns icon while already on the assistant page now takes you back to your workspace: before, it did nothing.",
       "On phones, switching between UrgAns and Home no longer loses the release you had pinned in the assistant.",
     ],
   },
@@ -5816,7 +5816,7 @@ export const changelog: Release[] = [
     tag: "Account",
     date: "August 21, 2026",
     highlights: [
-      "New members now get a welcome note from Lucky in their inbox when they finish setting up — with a direct line to him on WhatsApp if anything feels confusing.",
+      "New members now get a welcome note from Lucky in their inbox when they finish setting up: with a direct line to him on WhatsApp if anything feels confusing.",
     ],
   },
   {
@@ -5825,7 +5825,7 @@ export const changelog: Release[] = [
     tag: "Team",
     date: "August 21, 2026",
     highlights: [
-      "Teammate invites now arrive by email. Invite someone with their address from Settings or UrgAns and the join link lands in their inbox — the copyable link is still there as a backup for sharing in a chat.",
+      "Teammate invites now arrive by email. Invite someone with their address from Settings or UrgAns and the join link lands in their inbox: the copyable link is still there as a backup for sharing in a chat.",
     ],
   },
   {
@@ -5834,8 +5834,8 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "August 18, 2026",
     highlights: [
-      "Creating a release with a rollout plan no longer asks twice whether it's a single, EP or album. You answer once in the create window, and the planner walkthrough carries that answer forward — it now starts at the artist question, six questions instead of seven.",
-      "Choosing a rollout plan now takes you straight into the planning questions no matter where you created the release from — the workspace, UrgAns, or the new-release button in the bar — instead of only from the workspace.",
+      "Creating a release with a rollout plan no longer asks twice whether it's a single, EP or album. You answer once in the create window, and the planner walkthrough carries that answer forward: it now starts at the artist question, six questions instead of seven.",
+      "Choosing a rollout plan now takes you straight into the planning questions no matter where you created the release from, the workspace, UrgAns, or the new-release button in the bar, instead of only from the workspace.",
     ],
   },
   {
@@ -5844,7 +5844,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "August 18, 2026",
     highlights: [
-      "Asking UrgAns to create a release now works end to end. It used to walk you through the seven rollout questions and then stop with “there is already a release plan” — it had no way to create the release, so it aimed the plan at one you already had. Now, when you finish the questions, it creates the new release and drafts its rollout plan in one go.",
+      "Asking UrgAns to create a release now works end to end. It used to walk you through the seven rollout questions and then stop with “there is already a release plan”: it had no way to create the release, so it aimed the plan at one you already had. Now, when you finish the questions, it creates the new release and drafts its rollout plan in one go.",
       "If a plan is ever pointed at a release that already has its activities, UrgAns now says so and offers to plan a new release instead of giving up.",
     ],
   },
@@ -5866,7 +5866,7 @@ export const changelog: Release[] = [
     tag: "Team",
     date: "August 16, 2026",
     highlights: [
-      "Creating a release now hands you a login to send to your team. You don't have to go looking for it — the moment the release is set up, the link is there to copy straight into a message or an email.",
+      "Creating a release now hands you a login to send to your team. You don't have to go looking for it: the moment the release is set up, the link is there to copy straight into a message or an email.",
       "A new Team logins section in Settings lets you create as many logins as you need, one per person, and label each one so you know who you sent it to.",
       "Nobody has to be sent a password. Whoever opens your link chooses their own on the way in, so there's never a password sitting in a chat you'd have to go back and delete.",
       "You can revoke any login you've handed out. It stops working immediately, and anyone who already joined keeps their access.",
@@ -5878,7 +5878,7 @@ export const changelog: Release[] = [
     date: "August 15, 2026",
     highlights: [
       "Your activities are grouped by what state they're in, not only by when they're due. In Progress, Blocked, In Review, Backlog and Locked each get their own group now, so the work you've actually started is visible at a glance instead of sitting unmarked among everything else.",
-      "Every group's bar shows how much of the release sits in that state, so you can read the shape of a release — how much is underway, how much is waiting, how much is done — without opening anything.",
+      "Every group's bar shows how much of the release sits in that state, so you can read the shape of a release, how much is underway, how much is waiting, how much is done, without opening anything.",
       "Groups with nothing in them stay hidden, so the list only shows the states your release is actually in.",
     ],
   },
@@ -5888,7 +5888,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "August 15, 2026",
     highlights: [
-      "Your activities list now shows all five time groups — Overdue, Due today, Due this week, Upcoming and No due date — from the moment a release has work in it, so you can read at a glance how the release is spread across the weeks ahead instead of only seeing the groups that happen to be occupied.",
+      "Your activities list now shows all five time groups, Overdue, Due today, Due this week, Upcoming and No due date, from the moment a release has work in it, so you can read at a glance how the release is spread across the weeks ahead instead of only seeing the groups that happen to be occupied.",
     ],
   },
   {
@@ -5928,7 +5928,7 @@ export const changelog: Release[] = [
     tag: "Pitching",
     date: "August 14, 2026",
     highlights: [
-      "Press kits are back. Open a release and you can generate a shareable link again — one page with the artwork, the details and your promo shots, ready to send to a blog, a playlist or a radio show.",
+      "Press kits are back. Open a release and you can generate a shareable link again: one page with the artwork, the details and your promo shots, ready to send to a blog, a playlist or a radio show.",
       "The Press kit button now sits beside Calendar at the bottom of your activities, so both of the things you send out live in the same place.",
     ],
   },
@@ -5938,7 +5938,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "August 14, 2026",
     highlights: [
-      "Delete buttons look like delete buttons again. The red fill behind them was never actually being drawn, so anything asking you to confirm deleting a release or a note — or the card UrgAns shows before it does something it can't undo — came out as a thin outline with red writing inside it, far fainter than a warning should look.",
+      "Delete buttons look like delete buttons again. The red fill behind them was never actually being drawn, so anything asking you to confirm deleting a release or a note, or the card UrgAns shows before it does something it can't undo, came out as a thin outline with red writing inside it, far fainter than a warning should look.",
       "Red warning text is easier to read across the app, in both the light and dark themes. The red sat too pale on the light background and too dull on the dark one, so error messages and delete warnings were among the hardest things on the page to read at exactly the moment they mattered most.",
     ],
   },
@@ -5948,11 +5948,11 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "August 14, 2026",
     highlights: [
-      "UrgAns can now run more of your workspace for you: rename a release, set or move its date, delete a release or an activity, comment on an activity, and find, edit, pin or delete your notes — just by asking.",
+      "UrgAns can now run more of your workspace for you: rename a release, set or move its date, delete a release or an activity, comment on an activity, and find, edit, pin or delete your notes: just by asking.",
       "Ask UrgAns to assign work to someone by name and it looks up the right teammate instead of guessing.",
-      "Plan a rollout by talking it through: UrgAns asks what you're releasing, when, what's ready and what you're going for, then drafts the plan from the playbook — no form to fill in.",
+      "Plan a rollout by talking it through: UrgAns asks what you're releasing, when, what's ready and what you're going for, then drafts the plan from the playbook: no form to fill in.",
       "UrgAns can also fill in your distribution details (ISRC, UPC, genre, label, the (P) and (C) lines), plan content posts on your calendars, invite or remove teammates, pitch a song to a playlist, and handle your press kit link and release recap.",
-      "Anything that can't be undone now asks first. UrgAns shows a card spelling out exactly what will happen — including how many activities go with a release, or how many a plan is about to create — and nothing runs until you approve it.",
+      "Anything that can't be undone now asks first. UrgAns shows a card spelling out exactly what will happen, including how many activities go with a release, or how many a plan is about to create, and nothing runs until you approve it.",
     ],
   },
   {
@@ -5972,7 +5972,7 @@ export const changelog: Release[] = [
     date: "August 14, 2026",
     highlights: [
       "Collecting metadata is three plain steps now: fill in the song's details, send one link to everyone who worked on it, then watch their answers land. The page used to open on three blocks of industry jargon at once with nothing saying what to do first, or that any of it could wait.",
-      "Every field explains itself in ordinary words. ISRC, UPC, the ℗ and © lines — each one now says what it is and where to get it, and the page tells you outright that everything is optional and shows how many you have filled in.",
+      "Every field explains itself in ordinary words. ISRC, UPC, the ℗ and © lines: each one now says what it is and where to get it, and the page tells you outright that everything is optional and shows how many you have filled in.",
       "The form your collaborators fill in was rewritten for the people who actually fill it in. It opens by saying it takes about two minutes and only three things are required, each section says when you can skip it entirely, and terms like PRO, IPI and splits are explained in plain language right under the box.",
     ],
   },
@@ -6002,10 +6002,10 @@ export const changelog: Release[] = [
     tag: "App",
     date: "August 13, 2026",
     highlights: [
-      "Settings is four tabs now — Account, Workspace, Team and Notifications — instead of one long scroll. Twelve sections used to sit stacked in a single column with nothing grouping them, so changing your password meant scrolling past your team, your logo and your releases to get there. Each tab holds only what belongs together, and the page finally has its name at the top.",
+      "Settings is four tabs now, Account, Workspace, Team and Notifications, instead of one long scroll. Twelve sections used to sit stacked in a single column with nothing grouping them, so changing your password meant scrolling past your team, your logo and your releases to get there. Each tab holds only what belongs together, and the page finally has its name at the top.",
       "Your three notification settings sit together in one place. Push, the after-a-task check-in and the weekly nudge were three separate blocks spread down the page, and now they read as the one set of choices they always were.",
       "Every tab has its own link, so you can go straight to the part you want and Settings remembers where you were when you refresh.",
-      "The two places you can set an artist name no longer look identical. One is your own profile, one is the workspace's artist — they're in different tabs now and each says which it is.",
+      "The two places you can set an artist name no longer look identical. One is your own profile, one is the workspace's artist: they're in different tabs now and each says which it is.",
     ],
   },
   {
@@ -6014,7 +6014,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "August 13, 2026",
     highlights: [
-      "When something in the app breaks, it now says so and offers you a way on. A page that hit a problem used to just stop where it was, half drawn, with nothing to click and no hint that anything had gone wrong. You get a short explanation, a Try again, and a way back to your releases — and the menus and the UrgAns button stay put, so a broken page costs you the page and not your way out of it.",
+      "When something in the app breaks, it now says so and offers you a way on. A page that hit a problem used to just stop where it was, half drawn, with nothing to click and no hint that anything had gone wrong. You get a short explanation, a Try again, and a way back to your releases: and the menus and the UrgAns button stay put, so a broken page costs you the page and not your way out of it.",
       "The panels either side of your work can no longer take the app down with them. If UrgAns or your workspace card runs into trouble it quietly steps aside and the rest keeps working, where before the whole screen went with it.",
     ],
   },
@@ -6025,7 +6025,7 @@ export const changelog: Release[] = [
     highlights: [
       "UrgAns replies now stream in word by word instead of appearing all at once, so you can start reading the moment the first words land.",
       "Every reply carries a quiet row of actions underneath: copy it in one tap (handy for pasting into a chat), regenerate the last answer, or rate it with a thumbs up or down so we know what's working.",
-      "Suggested follow-up questions now sit in their own titled list under the answer, each one a full-width row you can tap to ask — clearer than the small floating buttons they used to be.",
+      "Suggested follow-up questions now sit in their own titled list under the answer, each one a full-width row you can tap to ask: clearer than the small floating buttons they used to be.",
     ],
   },
   {
@@ -6035,7 +6035,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "August 13, 2026",
     highlights: [
-      "You can take a note without leaving UrgAns. Start a message with \"note\" — \"note Call the promoter about Friday\" — and it saves straight to your notes, first line as the title. There's a Take a note button under the prompt too, for when you'd rather have the full page and room to write.",
+      "You can take a note without leaving UrgAns. Start a message with \"note\", \"note Call the promoter about Friday\", and it saves straight to your notes, first line as the title. There's a Take a note button under the prompt too, for when you'd rather have the full page and room to write.",
       "If you're already looking at a release when you do it, the note is filed under that release. Otherwise it's just a note, and you can link it to something later.",
     ],
   },
@@ -6046,7 +6046,7 @@ export const changelog: Release[] = [
     date: "August 13, 2026",
     highlights: [
       "Signing up and signing in now survive a bad connection. Both pages used to arrive as a loading screen and only became themselves once the rest of the app had finished downloading, so on a weak mobile signal a single missing piece left you watching the word \"Loading\" for as long as you were willing to wait, with nothing to tap and nothing explaining why. The form is part of the page now, there from the moment it lands.",
-      "If a browser has JavaScript turned off — a content blocker, or private-browsing restrictions — both pages say so plainly instead of leaving you pressing a button that quietly does nothing.",
+      "If a browser has JavaScript turned off, a content blocker, or private-browsing restrictions, both pages say so plainly instead of leaving you pressing a button that quietly does nothing.",
     ],
   },
   {
@@ -6065,7 +6065,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "August 12, 2026",
     highlights: [
-      "Metadata, Files, Press kit and Pitch now name the release you have open, right under the heading — \"for Best · Babyboy Dorian\". Collecting credits or sending a pitch without a visible reminder of which release you were in meant taking it on trust, which is a bad thing to guess at when the details go out to a distributor.",
+      "Metadata, Files, Press kit and Pitch now name the release you have open, right under the heading: \"for Best · Babyboy Dorian\". Collecting credits or sending a pitch without a visible reminder of which release you were in meant taking it on trust, which is a bad thing to guess at when the details go out to a distributor.",
     ],
   },
   {
@@ -6136,7 +6136,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "August 12, 2026",
     highlights: [
-      "First release, no detours: if you haven't created a release yet, the New release screen now opens on its own and stays open until you make one — there's nothing else to do on an empty dashboard anyway. Signing out is still always available.",
+      "First release, no detours: if you haven't created a release yet, the New release screen now opens on its own and stays open until you make one: there's nothing else to do on an empty dashboard anyway. Signing out is still always available.",
     ],
   },
   {
@@ -6145,7 +6145,7 @@ export const changelog: Release[] = [
     tag: "Pitching",
     date: "August 12, 2026",
     highlights: [
-      "The content calendar got a proper tune-up on phones. An empty month now gives you a Plan a post button instead of telling you to tap a day that isn't there, there's an Add a post button under the list for any other day, and the small controls — marking a post as posted, opening a post, closing things — are all easier to hit.",
+      "The content calendar got a proper tune-up on phones. An empty month now gives you a Plan a post button instead of telling you to tap a day that isn't there, there's an Add a post button under the list for any other day, and the small controls, marking a post as posted, opening a post, closing things, are all easier to hit.",
       "It behaves better on desktop too: with the UrgAns panel open the calendar now switches to its list view instead of cramming seven skinny columns into the space that's left, and switching between calendars or months shows a loading state instead of briefly showing the wrong posts.",
       "A handful of small wrongs put right: deleting a calendar no longer flashes a confusing warning over its own confirmation, the back button no longer replays your calendar setup steps, error messages lost their database jargon, and the post form no longer shows a disabled \"coming soon\" row.",
     ],
@@ -6165,7 +6165,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "August 10, 2026",
     highlights: [
-      "Fixed the row of buttons above your release's activities (Metadata, Calendar, Notes, and the rest) on phones — it used to crop the first one off the edge of the screen and could wrap a button's own label across it. It now scrolls as one line, so every button is there and reads correctly.",
+      "Fixed the row of buttons above your release's activities (Metadata, Calendar, Notes, and the rest) on phones: it used to crop the first one off the edge of the screen and could wrap a button's own label across it. It now scrolls as one line, so every button is there and reads correctly.",
     ],
   },
   {
@@ -6185,7 +6185,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "August 10, 2026",
     highlights: [
-      "Mark a task done and UrgAns now asks how it went. Three taps to answer — Went well, Went okay, or Didn't go to plan — plus a line about what happened if you feel like it. The task completes the instant you tick it, so answering is never something you wait on, and skipping costs one tap with no follow-up.",
+      "Mark a task done and UrgAns now asks how it went. Three taps to answer, Went well, Went okay, or Didn't go to plan, plus a line about what happened if you feel like it. The task completes the instant you tick it, so answering is never something you wait on, and skipping costs one tap with no follow-up.",
       "What you say is kept with the task, so the story of a release builds itself as you work instead of being reconstructed later from memory.",
       "If you'd rather not be asked, turn off \"Ask me after tasks\" in Settings and the question stops for good.",
     ],
@@ -6196,7 +6196,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "August 9, 2026",
     highlights: [
-      "A release with no date set no longer shows a date line at all. It used to read \"Date not set\" on every card, which said nothing you couldn't already see — the prompt to add one still sits in the release's activity list, where you can actually set it.",
+      "A release with no date set no longer shows a date line at all. It used to read \"Date not set\" on every card, which said nothing you couldn't already see: the prompt to add one still sits in the release's activity list, where you can actually set it.",
     ],
   },
   {
@@ -6206,7 +6206,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "August 9, 2026",
     highlights: [
-      "Added Notes — a private place to jot things down the moment they come up, mid-call or mid-DM, with no setup and nothing to fill in first. Link a note to a release whenever it's relevant, or leave it as-is; either way it saves as you type.",
+      "Added Notes: a private place to jot things down the moment they come up, mid-call or mid-DM, with no setup and nothing to fill in first. Link a note to a release whenever it's relevant, or leave it as-is; either way it saves as you type.",
     ],
   },
   {
@@ -6227,7 +6227,7 @@ export const changelog: Release[] = [
     tag: "App",
     date: "August 7, 2026",
     highlights: [
-      "Your catalog on a phone now uses the full width of the screen. Releases are wide rows — cover art beside the title, date and progress — so you see four or five at a glance instead of two floating cards with empty space either side. Release titles are bigger everywhere too.",
+      "Your catalog on a phone now uses the full width of the screen. Releases are wide rows, cover art beside the title, date and progress, so you see four or five at a glance instead of two floating cards with empty space either side. Release titles are bigger everywhere too.",
     ],
   },
   {
@@ -6245,8 +6245,8 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "August 6, 2026",
     highlights: [
-      "A release with no date now makes it clear you can add activities right away — the date card offers it directly, and an empty activity list has its own \"Add your first activity\" button. Setting a date was never required to add your own work; it just looked that way.",
-      "Fixed activities being filed against the wrong release when two releases shared a name — likelier now that \"Untitled release\" is the default. Typing a name that matches more than one release no longer guesses; pick the one you meant from the list.",
+      "A release with no date now makes it clear you can add activities right away: the date card offers it directly, and an empty activity list has its own \"Add your first activity\" button. Setting a date was never required to add your own work; it just looked that way.",
+      "Fixed activities being filed against the wrong release when two releases shared a name: likelier now that \"Untitled release\" is the default. Typing a name that matches more than one release no longer guesses; pick the one you meant from the list.",
     ],
   },
   {
@@ -6256,7 +6256,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "August 6, 2026",
     highlights: [
-      "Creating a release no longer asks for anything up front. Skip the name and we'll call it \"Untitled release\"; skip the date and add it whenever it's confirmed — both are marked optional.",
+      "Creating a release no longer asks for anything up front. Skip the name and we'll call it \"Untitled release\"; skip the date and add it whenever it's confirmed: both are marked optional.",
       "If you created a release without a date, its activities view now carries a card to set one. For a release started from the rollout plan, that card is what builds your plan: pick the date and all 64 activities appear, scheduled around it.",
     ],
   },
@@ -6275,7 +6275,7 @@ export const changelog: Release[] = [
     tag: "App",
     date: "August 6, 2026",
     highlights: [
-      "The page now sits evenly on the screen — the workspace card used to hang 32px further left than everything above it, so the left and right edges never quite matched.",
+      "The page now sits evenly on the screen: the workspace card used to hang 32px further left than everything above it, so the left and right edges never quite matched.",
     ],
   },
   {
@@ -6284,7 +6284,7 @@ export const changelog: Release[] = [
     tag: "App",
     date: "August 6, 2026",
     highlights: [
-      "The workspace loading screen now matches what actually loads in — release cards, the activity list, and the focused release layout no longer shift or resize once your data arrives.",
+      "The workspace loading screen now matches what actually loads in: release cards, the activity list, and the focused release layout no longer shift or resize once your data arrives.",
     ],
   },
   {
@@ -6311,7 +6311,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "August 6, 2026",
     highlights: [
-      "Your release cards now line up exactly with the workspace card and UrgAns panel — the last fix nudged them slightly too high.",
+      "Your release cards now line up exactly with the workspace card and UrgAns panel: the last fix nudged them slightly too high.",
     ],
   },
   {
@@ -6320,7 +6320,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "August 5, 2026",
     highlights: [
-      "Your releases now really do fit 4 across when UrgAns is closed and your screen has the room — the cards were a touch too wide to ever manage it, so they're slightly slimmer at their widest.",
+      "Your releases now really do fit 4 across when UrgAns is closed and your screen has the room: the cards were a touch too wide to ever manage it, so they're slightly slimmer at their widest.",
     ],
   },
   {
@@ -6342,7 +6342,7 @@ export const changelog: Release[] = [
     tag: "App",
     date: "August 5, 2026",
     highlights: [
-      "Workspace identity and Workspace logo now share one row in Settings instead of stacking full-width — a tidier fit since they're really one pairing (both feed your workspace card).",
+      "Workspace identity and Workspace logo now share one row in Settings instead of stacking full-width: a tidier fit since they're really one pairing (both feed your workspace card).",
     ],
   },
   {
@@ -6360,7 +6360,7 @@ export const changelog: Release[] = [
     tag: "Team",
     date: "August 5, 2026",
     highlights: [
-      "Teammates now leads Settings — it's the first thing you see instead of being buried below your workspace details.",
+      "Teammates now leads Settings: it's the first thing you see instead of being buried below your workspace details.",
     ],
   },
   {
@@ -6369,7 +6369,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "August 5, 2026",
     highlights: [
-      "Fixed the release grid showing only one narrow column when both the workspace card and UrgAns were open on screen — it now uses the available space and shows two.",
+      "Fixed the release grid showing only one narrow column when both the workspace card and UrgAns were open on screen: it now uses the available space and shows two.",
     ],
   },
   {
@@ -6379,7 +6379,7 @@ export const changelog: Release[] = [
     tag: "Team",
     date: "August 5, 2026",
     highlights: [
-      "A workspace card now sits alongside the dashboard, UrgAns, Settings, and your releases — your label or team logo, name, artist, teammate count, and active-release count, all in one place. Update your workspace name and logo from Settings; everywhere else, the card just reflects it.",
+      "A workspace card now sits alongside the dashboard, UrgAns, Settings, and your releases: your label or team logo, name, artist, teammate count, and active-release count, all in one place. Update your workspace name and logo from Settings; everywhere else, the card just reflects it.",
     ],
   },
   {
@@ -6407,7 +6407,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "August 4, 2026",
     highlights: [
-      "The Motion progress bar on your releases was hard to see against the background — it now stands out clearly in both light and dark mode.",
+      "The Motion progress bar on your releases was hard to see against the background: it now stands out clearly in both light and dark mode.",
     ],
   },
   {
@@ -6416,7 +6416,7 @@ export const changelog: Release[] = [
     tag: "App",
     date: "August 4, 2026",
     highlights: [
-      "Loading states got a lot less bare across the app — admin pages, the press kit and metadata pages, the content calendar, and public press-kit/credit links now show a proper preview of what's coming instead of a plain spinner or blank screen.",
+      "Loading states got a lot less bare across the app: admin pages, the press kit and metadata pages, the content calendar, and public press-kit/credit links now show a proper preview of what's coming instead of a plain spinner or blank screen.",
     ],
   },
   {
@@ -6472,7 +6472,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "July 31, 2026",
     highlights: [
-      "Fixed the Chappi cursor's outline from earlier today — it was showing up as an ugly solid box instead of a clean edge. It now fills in just the mark itself, the way it was supposed to look the first time.",
+      "Fixed the Chappi cursor's outline from earlier today: it was showing up as an ugly solid box instead of a clean edge. It now fills in just the mark itself, the way it was supposed to look the first time.",
     ],
   },
   {
@@ -6481,7 +6481,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 31, 2026",
     highlights: [
-      "Release metadata is here: every release gets a Metadata page (next to Press kit) where you fill in distribution details — ISRC, UPC, genre, label, copyright lines — and generate a shareable link for collaborators. Send it to producers, co-writers, and engineers so they can submit their own publishing credits (splits, PRO, IPI, socials) without needing an Urganize account, and watch their submissions land on the page as they come in.",
+      "Release metadata is here: every release gets a Metadata page (next to Press kit) where you fill in distribution details, ISRC, UPC, genre, label, copyright lines, and generate a shareable link for collaborators. Send it to producers, co-writers, and engineers so they can submit their own publishing credits (splits, PRO, IPI, socials) without needing an Urganize account, and watch their submissions land on the page as they come in.",
     ],
   },
   {
@@ -6500,7 +6500,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "July 31, 2026",
     highlights: [
-      "Chappi now slides in beside your releases instead of taking over the screen — open it from the catalog, keep working with your releases in view, and expand to full screen whenever you want more room.",
+      "Chappi now slides in beside your releases instead of taking over the screen: open it from the catalog, keep working with your releases in view, and expand to full screen whenever you want more room.",
     ],
   },
   {
@@ -6509,7 +6509,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "July 31, 2026",
     highlights: [
-      "The Chappi cursor now stays put — it used to flip back to the regular pointer over buttons and links, and now it doesn't. Fixed a glitch where opening a pop-up (creating a release, deleting one, and a few others) would turn the whole dimmed screen into a hand cursor.",
+      "The Chappi cursor now stays put: it used to flip back to the regular pointer over buttons and links, and now it doesn't. Fixed a glitch where opening a pop-up (creating a release, deleting one, and a few others) would turn the whole dimmed screen into a hand cursor.",
     ],
   },
   {
@@ -6518,7 +6518,7 @@ export const changelog: Release[] = [
     tag: "Account",
     date: "July 31, 2026",
     highlights: [
-      "Signing in now lands you on Chappi first — ask it anything or jump straight into a quick action, with your releases and tasks always one tap away in the top bar.",
+      "Signing in now lands you on Chappi first: ask it anything or jump straight into a quick action, with your releases and tasks always one tap away in the top bar.",
     ],
   },
   {
@@ -6527,7 +6527,7 @@ export const changelog: Release[] = [
     tag: "Team",
     date: "July 31, 2026",
     highlights: [
-      "Invite prompts now say what they mean: \"Invite artists, freelancers and team members\" replaces the narrower \"Invite teammates\" everywhere it appears — Settings, the release page, Chappi's invite banner, and after your first release.",
+      "Invite prompts now say what they mean: \"Invite artists, freelancers and team members\" replaces the narrower \"Invite teammates\" everywhere it appears: Settings, the release page, Chappi's invite banner, and after your first release.",
     ],
   },
   {
@@ -6536,7 +6536,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 31, 2026",
     highlights: [
-      "Activities: the Status and Assignee fields dropped their Beta tags — they're no longer experimental.",
+      "Activities: the Status and Assignee fields dropped their Beta tags: they're no longer experimental.",
       "Attachments are temporarily hidden from activities while we rework file uploads. Nothing you'd already attached was touched or deleted, it's just hidden from the app for now.",
     ],
   },
@@ -6564,7 +6564,7 @@ export const changelog: Release[] = [
     tag: "Pitching",
     date: "July 31, 2026",
     highlights: [
-      "Press kits are here: generate a shareable, branded link for any release straight from its page — cover art, release details, and photos pull in automatically, and the kit updates itself whenever the release changes. Send it to press, curators, or bookers with one link.",
+      "Press kits are here: generate a shareable, branded link for any release straight from its page: cover art, release details, and photos pull in automatically, and the kit updates itself whenever the release changes. Send it to press, curators, or bookers with one link.",
     ],
   },
   {
@@ -6583,7 +6583,7 @@ export const changelog: Release[] = [
     tag: "App",
     date: "July 30, 2026",
     highlights: [
-      "Simplified how you move around a release: the left side menu is gone. Every release page now has a plain Back link at the top, and the release page itself carries direct buttons to its content calendar and press kit — one click, nothing to collapse or expand.",
+      "Simplified how you move around a release: the left side menu is gone. Every release page now has a plain Back link at the top, and the release page itself carries direct buttons to its content calendar and press kit: one click, nothing to collapse or expand.",
     ],
   },
   {
@@ -6592,7 +6592,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 30, 2026",
     highlights: [
-      "The release menu now has a Dashboard link at the top, so you can always get back home from any release page — no more hunting for the way out.",
+      "The release menu now has a Dashboard link at the top, so you can always get back home from any release page: no more hunting for the way out.",
       "Selecting a release on the dashboard now shows an Overview button that opens the release page directly.",
       "Cleaned up the release menu: the collapse control is a small icon instead of looking like another menu item, and the duplicate Content calendar button is gone from the release header.",
     ],
@@ -6603,7 +6603,7 @@ export const changelog: Release[] = [
     tag: "Pitching",
     date: "July 30, 2026",
     highlights: [
-      "The press kit is now one click from your dashboard — select a release and the Press kit button appears right next to Calendar and Files, no need to open the release first.",
+      "The press kit is now one click from your dashboard: select a release and the Press kit button appears right next to Calendar and Files, no need to open the release first.",
     ],
   },
   {
@@ -6621,7 +6621,7 @@ export const changelog: Release[] = [
     tag: "Team",
     date: "July 29, 2026",
     highlights: [
-      "Fixed invited teammates getting stuck on a first-time setup screen after accepting their invite — joining a workspace now takes you straight to the dashboard. Anyone already stuck is freed the next time they open the app.",
+      "Fixed invited teammates getting stuck on a first-time setup screen after accepting their invite: joining a workspace now takes you straight to the dashboard. Anyone already stuck is freed the next time they open the app.",
     ],
   },
   {
@@ -6630,7 +6630,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "July 26, 2026",
     highlights: [
-      "Fixed Chappi's message box floating mid-screen on mobile — it now sits properly at the bottom of the page.",
+      "Fixed Chappi's message box floating mid-screen on mobile: it now sits properly at the bottom of the page.",
     ],
   },
   {
@@ -6639,7 +6639,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "July 26, 2026",
     highlights: [
-      "The AI status update generator is now live — read your release's current state and get a one-paragraph update ready to share.",
+      "The AI status update generator is now live: read your release's current state and get a one-paragraph update ready to share.",
       "AI rollout planning and status updates now retry more reliably behind the scenes, so a slow response is far less likely to show as an error.",
     ],
   },
@@ -6649,7 +6649,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "July 26, 2026",
     highlights: [
-      "The AI rollout planner is now live — when you create a release with a rollout plan, it's tailored by AI to your release's context, ready to review and edit before you commit it.",
+      "The AI rollout planner is now live: when you create a release with a rollout plan, it's tailored by AI to your release's context, ready to review and edit before you commit it.",
     ],
   },
   {
@@ -6658,7 +6658,7 @@ export const changelog: Release[] = [
     tag: "App",
     date: "July 23, 2026",
     highlights: [
-      "The notifications panel dropped its Beta tag — the label stays in Settings only.",
+      "The notifications panel dropped its Beta tag: the label stays in Settings only.",
     ],
   },
   {
@@ -6668,9 +6668,9 @@ export const changelog: Release[] = [
     tag: "App",
     date: "July 23, 2026",
     highlights: [
-      "Urganize now cheers you on — a welcome when you arrive, a momentum nudge while you work, and a gentle reminder if you've been away a while, all as notifications on devices that have them on.",
-      "\"What's new\" announcements now only cover real feature releases — no more cards about tiny fixes.",
-      "Signing in is smoother for Google accounts — the password option always stays available alongside the Google suggestion.",
+      "Urganize now cheers you on: a welcome when you arrive, a momentum nudge while you work, and a gentle reminder if you've been away a while, all as notifications on devices that have them on.",
+      "\"What's new\" announcements now only cover real feature releases: no more cards about tiny fixes.",
+      "Signing in is smoother for Google accounts: the password option always stays available alongside the Google suggestion.",
     ],
   },
   {
@@ -6679,7 +6679,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "July 23, 2026",
     highlights: [
-      "The Chappi dock's welcome now sits at the bottom of the panel, right above the footer — no more floating mid-air with empty space beneath it.",
+      "The Chappi dock's welcome now sits at the bottom of the panel, right above the footer: no more floating mid-air with empty space beneath it.",
     ],
   },
   {
@@ -6689,8 +6689,8 @@ export const changelog: Release[] = [
     tag: "App",
     date: "July 23, 2026",
     highlights: [
-      "A \"What's new\" note now greets you on your first visit after an update — everything that shipped since you last looked, in one place. Dismiss it and it stays gone until the next release.",
-      "Announcements: the team can now send a push notification to every user's device — release notes, tips, and news will start arriving where you are.",
+      "A \"What's new\" note now greets you on your first visit after an update: everything that shipped since you last looked, in one place. Dismiss it and it stays gone until the next release.",
+      "Announcements: the team can now send a push notification to every user's device: release notes, tips, and news will start arriving where you are.",
     ],
   },
   {
@@ -6699,8 +6699,8 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
-      "Creating a release now starts with a choice: begin from the proven rollout plan (recommended) or from a blank release you build up yourself — two clear cards, pick one, then name and date it.",
-      "Settings gains a Back button that returns you to exactly where you came from — the release you were on, your scoped workspace, or UrgAns.",
+      "Creating a release now starts with a choice: begin from the proven rollout plan (recommended) or from a blank release you build up yourself: two clear cards, pick one, then name and date it.",
+      "Settings gains a Back button that returns you to exactly where you came from: the release you were on, your scoped workspace, or UrgAns.",
     ],
   },
   {
@@ -6709,7 +6709,7 @@ export const changelog: Release[] = [
     tag: "App",
     date: "July 23, 2026",
     highlights: [
-      "Loading screens across Settings now mirror your real data — the Teammates and Releases lists show exactly as many placeholder rows as you have members and releases, so content lands where the placeholders stood.",
+      "Loading screens across Settings now mirror your real data: the Teammates and Releases lists show exactly as many placeholder rows as you have members and releases, so content lands where the placeholders stood.",
       "The single-release loading screen matches its final shape too: back button, motion bar, and side rails sized to your roster.",
       "Notifications are now marked Beta in Settings and in the notifications panel.",
     ],
@@ -6720,7 +6720,7 @@ export const changelog: Release[] = [
     tag: "Team",
     date: "July 23, 2026",
     highlights: [
-      "Invite links are now short and clean — app.urganize.app/join/… with a small code, instead of the long token they used to carry. Old links keep working until they expire.",
+      "Invite links are now short and clean: app.urganize.app/join/… with a small code, instead of the long token they used to carry. Old links keep working until they expire.",
     ],
   },
   {
@@ -6729,7 +6729,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
-      "Sharing an app.urganize.app link now shows the current branded card — the share image was stale and its URL could resolve to an address social crawlers couldn't reach.",
+      "Sharing an app.urganize.app link now shows the current branded card: the share image was stale and its URL could resolve to an address social crawlers couldn't reach.",
     ],
   },
   {
@@ -6738,7 +6738,7 @@ export const changelog: Release[] = [
     tag: "Team",
     date: "July 23, 2026",
     highlights: [
-      "Invites now come in two kinds: a Teammate sees your whole catalog, while an Artist only ever sees their own releases — pick Artist when inviting (by email or link) and choose which artist they are.",
+      "Invites now come in two kinds: a Teammate sees your whole catalog, while an Artist only ever sees their own releases: pick Artist when inviting (by email or link) and choose which artist they are.",
       "Artist-scoped access is enforced everywhere: the catalog, release pages, and activities all show an invited artist only their own work.",
     ],
   },
@@ -6748,8 +6748,8 @@ export const changelog: Release[] = [
     tag: "Team",
     date: "July 23, 2026",
     highlights: [
-      "Invite by link: don't have someone's email? Copy invite link from Settings → Teammates and share it anywhere — anyone who opens it joins your team as a Team Member. Links stay valid for 7 days.",
-      "Only you can delete your releases — teammates never see a Delete button on releases they don't own.",
+      "Invite by link: don't have someone's email? Copy invite link from Settings → Teammates and share it anywhere: anyone who opens it joins your team as a Team Member. Links stay valid for 7 days.",
+      "Only you can delete your releases: teammates never see a Delete button on releases they don't own.",
       "Team invites are now marked Beta while we refine collaboration.",
     ],
   },
@@ -6759,7 +6759,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
-      "The Releases list in Settings no longer labels every release \"draft\" — the status shows only once a release has actually moved past its starting point, same as the catalog cards.",
+      "The Releases list in Settings no longer labels every release \"draft\": the status shows only once a release has actually moved past its starting point, same as the catalog cards.",
     ],
   },
   {
@@ -6768,8 +6768,8 @@ export const changelog: Release[] = [
     tag: "Team",
     date: "July 23, 2026",
     highlights: [
-      "Team collaboration now actually works end to end: when a teammate accepts your invite, they see your whole catalog — every release and its activities — and can open and work them.",
-      "Your Teammates list now shows who's still pending — an Invited badge sits next to anyone who hasn't accepted yet, and disappears the moment they join.",
+      "Team collaboration now actually works end to end: when a teammate accepts your invite, they see your whole catalog, every release and its activities, and can open and work them.",
+      "Your Teammates list now shows who's still pending: an Invited badge sits next to anyone who hasn't accepted yet, and disappears the moment they join.",
       "Teammates can see the team too: everyone gets a read-only Teammates list in Settings, so an invitee can confirm they've been added.",
       "The role you pick when inviting now counts: Manager can manage the team, Artist and Team Member can work activities, and Viewer is read-only everywhere.",
       "An invitee's team now defaults to the workspace that invited them, not an empty personal one.",
@@ -6781,7 +6781,7 @@ export const changelog: Release[] = [
     tag: "Team",
     date: "July 23, 2026",
     highlights: [
-      "Teammate invite links now always point at app.urganize.app — invitees land straight on the accept page instead of hitting a hosting login wall. Re-send any invite that didn't work.",
+      "Teammate invite links now always point at app.urganize.app: invitees land straight on the accept page instead of hitting a hosting login wall. Re-send any invite that didn't work.",
     ],
   },
   {
@@ -6790,8 +6790,8 @@ export const changelog: Release[] = [
     tag: "App",
     date: "July 23, 2026",
     highlights: [
-      "No more phantom scrollbar — when your catalog fits the screen, the page doesn't scroll at all, and when it doesn't fit, you scroll without a visible scrollbar, like a native app.",
-      "Notifications can now be cleared — a Clear button in the notifications panel empties it in one tap.",
+      "No more phantom scrollbar: when your catalog fits the screen, the page doesn't scroll at all, and when it doesn't fit, you scroll without a visible scrollbar, like a native app.",
+      "Notifications can now be cleared: a Clear button in the notifications panel empties it in one tap.",
     ],
   },
   {
@@ -6801,7 +6801,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "July 23, 2026",
     highlights: [
-      "Chappi chats can now be pinned to a specific release — a picker under the message box lists your releases by name (with their cover art), so instructions like \"add an activity\" land on the release you chose without naming it every time.",
+      "Chappi chats can now be pinned to a specific release: a picker under the message box lists your releases by name (with their cover art), so instructions like \"add an activity\" land on the release you chose without naming it every time.",
     ],
   },
   {
@@ -6810,9 +6810,9 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
-      "The activity view now names the release it belongs to, right between the status and the due date — no more guessing which release an activity is part of.",
+      "The activity view now names the release it belongs to, right between the status and the due date: no more guessing which release an activity is part of.",
       "Long activity titles now wrap onto the next line on mobile instead of getting cut off at the edge of the screen.",
-      "On Android, the keyboard no longer covers the Chappi message box while you type — the page now makes room for it.",
+      "On Android, the keyboard no longer covers the Chappi message box while you type: the page now makes room for it.",
     ],
   },
   {
@@ -6821,10 +6821,10 @@ export const changelog: Release[] = [
     tag: "App",
     date: "July 23, 2026",
     highlights: [
-      "The app now remembers what it showed you — your catalog, activities, and settings paint instantly on every visit, like a proper mobile app, refreshing quietly in the background.",
+      "The app now remembers what it showed you: your catalog, activities, and settings paint instantly on every visit, like a proper mobile app, refreshing quietly in the background.",
       "The mobile catalog is redesigned: release cards are centered at a comfortable size instead of edge to edge, and a single release fits your screen with no scrolling.",
       "The motion tracker now shows on mobile too when you open a release.",
-      "UrgAns on mobile behaves like a real chat app — the page stays put, the conversation scrolls on its own, the message box stays pinned, and tapping it no longer zooms the screen.",
+      "UrgAns on mobile behaves like a real chat app: the page stays put, the conversation scrolls on its own, the message box stays pinned, and tapping it no longer zooms the screen.",
       "The account button in the top bar is now a clean profile icon instead of your initials, drawn in the house style.",
     ],
   },
@@ -6834,9 +6834,9 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
-      "Fixed the single-release view scrolling the whole page when your roster is large — the screen now stays locked and the release rails scroll on their own, which also makes switching between releases reliable.",
-      "The motion tracker is back on the single-release view — a progress bar with the done count (like 2 of 64) sits right at the top, next to a smaller back button.",
-      "Chappi's welcome screen is simpler — straight to the greeting and the message box.",
+      "Fixed the single-release view scrolling the whole page when your roster is large: the screen now stays locked and the release rails scroll on their own, which also makes switching between releases reliable.",
+      "The motion tracker is back on the single-release view: a progress bar with the done count (like 2 of 64) sits right at the top, next to a smaller back button.",
+      "Chappi's welcome screen is simpler: straight to the greeting and the message box.",
     ],
   },
   {
@@ -6845,9 +6845,9 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
-      "Opening a release now keeps everything on one screen — the page stays put and the activities list scrolls on its own, so the back button and your other releases never leave view.",
+      "Opening a release now keeps everything on one screen: the page stays put and the activities list scrolls on its own, so the back button and your other releases never leave view.",
       "The release row at the top of the app is cleaner: just the cover art, release name, and date.",
-      "Chappi conversations now start from the bottom, right above the message box — like every chat you already use.",
+      "Chappi conversations now start from the bottom, right above the message box: like every chat you already use.",
     ],
   },
   {
@@ -6857,7 +6857,7 @@ export const changelog: Release[] = [
     tag: "App",
     date: "July 23, 2026",
     highlights: [
-      "Appearance gains a System option — pick it and the app follows your device's light/dark setting automatically, switching live the moment your device does.",
+      "Appearance gains a System option: pick it and the app follows your device's light/dark setting automatically, switching live the moment your device does.",
       "Release statuses now carry a Beta tag everywhere they appear (release cards, the release page, and the activity view) while we refine how statuses work.",
     ],
   },
@@ -6867,7 +6867,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
-      "The new-release form is down to its essentials — the rollout-timing explainer now appears after you create the release, inside the dismissible guide, where it's actually useful.",
+      "The new-release form is down to its essentials: the rollout-timing explainer now appears after you create the release, inside the dismissible guide, where it's actually useful.",
     ],
   },
   {
@@ -6876,7 +6876,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
-      "The release row in the top bar now reads like the card it replaced — artist name over the title, with the release date alongside.",
+      "The release row in the top bar now reads like the card it replaced: artist name over the title, with the release date alongside.",
       "The help menu's icons joined the house set: a tour laminate for Docs, a studio microphone for Contact, a speaker cab for Community.",
       "Trimmed the notifications setting to a single quiet status line once it's on.",
     ],
@@ -6887,8 +6887,8 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
-      "Opening a release now puts the whole release — cover art and all — into the top bar, and the activities take over the page. The duplicate \"showing activities for\" pill is gone.",
-      "New in-house icons for Settings (mixing-desk faders) and Sign out (an eject button) — no more stock gear and door.",
+      "Opening a release now puts the whole release, cover art and all, into the top bar, and the activities take over the page. The duplicate \"showing activities for\" pill is gone.",
+      "New in-house icons for Settings (mixing-desk faders) and Sign out (an eject button): no more stock gear and door.",
       "The create-activity window lost its redundant \"Quick Create\" label.",
     ],
   },
@@ -6899,10 +6899,10 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
-      "Tasks are now called activities everywhere — and the release you're working on now lives in the top bar (artist and title), so the page below is all activities and actions.",
+      "Tasks are now called activities everywhere: and the release you're working on now lives in the top bar (artist and title), so the page below is all activities and actions.",
       "The activity view got simpler: comments are gone, and attachments and assigning are marked Beta while we refine them.",
-      "Chatting with Chappi now feels like a proper messenger: a clean centered conversation, your messages in bubbles, replies as plain text, and the writing box always at the bottom — no more full-width sprawl or name labels.",
-      "Loading screens now mirror your own catalog — if you have two releases, you see two loading cards, centered, exactly where they'll land. Settings now lives in one place: your profile menu.",
+      "Chatting with Chappi now feels like a proper messenger: a clean centered conversation, your messages in bubbles, replies as plain text, and the writing box always at the bottom: no more full-width sprawl or name labels.",
+      "Loading screens now mirror your own catalog: if you have two releases, you see two loading cards, centered, exactly where they'll land. Settings now lives in one place: your profile menu.",
     ],
   },
   {
@@ -6913,7 +6913,7 @@ export const changelog: Release[] = [
     date: "July 23, 2026",
     highlights: [
       "A full visual pass in the house style: soft rounded corners are back everywhere, the top bar went quiet and calm, and the help \"?\" moved up beside the rest of the navigation.",
-      "Hand-drawn icons throughout the chrome — a record crate for your releases, a waveform bubble for Chappi, a live-signal mark for notifications — instead of the stock icons every app uses.",
+      "Hand-drawn icons throughout the chrome, a record crate for your releases, a waveform bubble for Chappi, a live-signal mark for notifications, instead of the stock icons every app uses.",
       "The release picker in quick-create now shows cover art (or the Urganize mark) instead of letter initials, the releases view dropped its redundant heading, and the release page's list is now titled Activities.",
     ],
   },
@@ -6924,7 +6924,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
-      "The new-release form is shorter — the description field is gone. Once you're in your new release, a quick dismissible guide points you to what matters: the tasks below.",
+      "The new-release form is shorter: the description field is gone. Once you're in your new release, a quick dismissible guide points you to what matters: the tasks below.",
       "The quick \"create task\" shortcut (press C) no longer shows a leftover Tag picker from an earlier version of the app.",
       "The releases view now centers your releases as a group instead of bunching them to one side when you have fewer than a full row.",
     ],
@@ -6935,7 +6935,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
-      "The release completion label now reads \"Motion\" — how much of the release is moving, at a glance.",
+      "The release completion label now reads \"Motion\": how much of the release is moving, at a glance.",
     ],
   },
   {
@@ -6944,8 +6944,8 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
-      "Releases without cover art now wear the Urganize \"U\" mark as their default artwork — on every release, past and future, in both light and dark mode — until you upload the real thing.",
-      "Fixed Settings sections randomly flashing back to their loading state while you were mid-page — background session refreshes no longer disturb what's already on screen.",
+      "Releases without cover art now wear the Urganize \"U\" mark as their default artwork, on every release, past and future, in both light and dark mode, until you upload the real thing.",
+      "Fixed Settings sections randomly flashing back to their loading state while you were mid-page: background session refreshes no longer disturb what's already on screen.",
       "Appearance and Notifications now sit side by side on one row, and the redundant \"Account / Settings\" heading is gone from the top bar.",
     ],
   },
@@ -6955,7 +6955,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
-      "Task edits now show up in your list instantly — reassign or unassign someone, rename a task, or move a date, and the row updates the moment you do it. New and deleted tasks appear and disappear right away too.",
+      "Task edits now show up in your list instantly: reassign or unassign someone, rename a task, or move a date, and the row updates the moment you do it. New and deleted tasks appear and disappear right away too.",
       "Loading screens across the app now match what actually loads, so pages land in place instead of jumping around.",
     ],
   },
@@ -6965,7 +6965,7 @@ export const changelog: Release[] = [
     tag: "App",
     date: "July 23, 2026",
     highlights: [
-      "Real notifications are here. Turn them on in Settings and your device tells you when a task is assigned to you, when something's due, and when a task changes status — even when the app is closed.",
+      "Real notifications are here. Turn them on in Settings and your device tells you when a task is assigned to you, when something's due, and when a task changes status: even when the app is closed.",
       "Urganize is now installable on your phone: add it to your home screen and it opens like an app, notifications included.",
     ],
   },
@@ -6975,8 +6975,8 @@ export const changelog: Release[] = [
     tag: "App",
     date: "July 23, 2026",
     highlights: [
-      "Settings polish: your artist now leads the page — it's the first thing you see. Password and session controls moved to the bottom where account plumbing belongs.",
-      "The light/dark mode switch is now a proper two-sided control with a sliding highlight — tap the side you want.",
+      "Settings polish: your artist now leads the page: it's the first thing you see. Password and session controls moved to the bottom where account plumbing belongs.",
+      "The light/dark mode switch is now a proper two-sided control with a sliding highlight: tap the side you want.",
       "Removed the workspace logo and notification-preferences sections; neither was earning its place.",
     ],
   },
@@ -6987,7 +6987,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
-      "Tasks now open in a smooth pop-up right over your list instead of taking over the whole page — close it and you're exactly where you left off.",
+      "Tasks now open in a smooth pop-up right over your list instead of taking over the whole page: close it and you're exactly where you left off.",
       "Simplified the task view: priorities, tags, and the activity feed are gone. A task is its title, status, owner, due date, notes, files, and comments.",
       "Settings got a full redesign: one clean page with clear sections instead of scattered boxed cards.",
     ],
@@ -6998,7 +6998,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
-      "Cleaned up the task panel: the priority and status filter dropdowns are gone — the task sections themselves are the filter now.",
+      "Cleaned up the task panel: the priority and status filter dropdowns are gone: the task sections themselves are the filter now.",
       "The help menu's community link is now simply called Community, and the keyboard shortcuts panel was removed.",
     ],
   },
@@ -7008,7 +7008,7 @@ export const changelog: Release[] = [
     tag: "Rollouts",
     date: "July 23, 2026",
     highlights: [
-      "Task sections now only show up when there's something in them. No more empty \"Overdue (0)\" or \"Upcoming (0)\" rows — a section appears when a task moves into it and disappears when it empties out.",
+      "Task sections now only show up when there's something in them. No more empty \"Overdue (0)\" or \"Upcoming (0)\" rows: a section appears when a task moves into it and disappears when it empties out.",
     ],
   },
   {
@@ -7018,7 +7018,7 @@ export const changelog: Release[] = [
     tag: "Account",
     date: "July 23, 2026",
     highlights: [
-      "Urganize is now free to use — no trial countdown, no payment lock. We're setting up every team personally, so just sign in and run your releases.",
+      "Urganize is now free to use: no trial countdown, no payment lock. We're setting up every team personally, so just sign in and run your releases.",
       "Signing in now lands you straight on your releases. Chappi is still one tap away in the top bar.",
       "The content calendar is now marked Beta while we keep improving it.",
     ],
@@ -7104,7 +7104,7 @@ export const changelog: Release[] = [
     tag: "Account",
     date: "July 15, 2026",
     highlights: [
-      "Coming back to Urganize now takes you straight in — if you're already signed in, you no longer catch a flash of the login screen on the way.",
+      "Coming back to Urganize now takes you straight in: if you're already signed in, you no longer catch a flash of the login screen on the way.",
     ],
   },
   {
@@ -7114,7 +7114,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "July 15, 2026",
     highlights: [
-      "Chappi now floats with you: an Ask Chappi button at the bottom-right of every page opens a chat panel that follows you around the app — same conversation as the full Chappi page, expandable any time, with a direct line to the founder in its footer. (Rolling out with Chappi.)",
+      "Chappi now floats with you: an Ask Chappi button at the bottom-right of every page opens a chat panel that follows you around the app: same conversation as the full Chappi page, expandable any time, with a direct line to the founder in its footer. (Rolling out with Chappi.)",
       "Chappi's home got a polish: the greeting now sits centered in the page, and managers get a one-tap banner for inviting their teammates.",
     ],
   },
@@ -7124,7 +7124,7 @@ export const changelog: Release[] = [
     tag: "Account",
     date: "July 15, 2026",
     highlights: [
-      "Signing in now lands you on Chappi first — a centered ask-anything box with your quick actions right under it — and a new workspace icon in the top bar keeps your releases and tasks one click away. (Rolling out with Chappi.)",
+      "Signing in now lands you on Chappi first, a centered ask-anything box with your quick actions right under it, and a new workspace icon in the top bar keeps your releases and tasks one click away. (Rolling out with Chappi.)",
     ],
   },
   {
@@ -7134,7 +7134,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "July 14, 2026",
     highlights: [
-      "Chappi now has its own page, reached from a new icon in the top bar, with a real scrolling conversation — a long chat no longer crowds your releases and tasks.",
+      "Chappi now has its own page, reached from a new icon in the top bar, with a real scrolling conversation: a long chat no longer crowds your releases and tasks.",
     ],
   },
   {
@@ -7144,7 +7144,7 @@ export const changelog: Release[] = [
     tag: "Account",
     date: "July 13, 2026",
     highlights: [
-      "Promo codes: partner workshops and programs can now give their participants a free window of full Urganize access — redeem a code, no card required.",
+      "Promo codes: partner workshops and programs can now give their participants a free window of full Urganize access: redeem a code, no card required.",
     ],
   },
   {
@@ -7155,7 +7155,7 @@ export const changelog: Release[] = [
     highlights: [
       "UrgAns, a conversational AI assistant, is built into the dashboard as the front door: ask about your releases and take actions in plain language. (Rolling out behind a flag; falls back to a command bar until fully switched on.)",
       "Added light mode across the app, with automatic system-preference detection and a manual toggle.",
-      "Faster load times — cut the app's initial load size by over 20%.",
+      "Faster load times: cut the app's initial load size by over 20%.",
       "Task completion is now instant and reliable, with no more silent failures when checking off a task.",
       "Fixed notification bugs, including notifications not clearing when their task was deleted.",
     ],
@@ -7167,9 +7167,9 @@ export const changelog: Release[] = [
     date: "May–June 2026",
     highlights: [
       "The release workspace: create a release and instantly get a hand-crafted 64-task rollout plan spanning 11 weeks of pre- and post-release work.",
-      "Tasks with assignees, due dates, priority, and dependencies — blocked tasks are clearly marked and unlock automatically as their blockers complete.",
-      "File and asset attachments — upload artwork, masters, contracts, and split sheets straight to a release.",
-      "Event milestones — listening parties, video shoots, and release day appear as dated points on the release timeline.",
+      "Tasks with assignees, due dates, priority, and dependencies: blocked tasks are clearly marked and unlock automatically as their blockers complete.",
+      "File and asset attachments: upload artwork, masters, contracts, and split sheets straight to a release.",
+      "Event milestones: listening parties, video shoots, and release day appear as dated points on the release timeline.",
       "Consolidated everything onto one workspace screen: releases and their tasks together, instead of separate pages.",
       "Real-time notifications with a notification bell.",
       "Recurring monthly and annual subscriptions plus a Label plan, with billing in local and international currency.",
