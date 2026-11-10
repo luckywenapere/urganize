@@ -15,6 +15,7 @@ import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
 import { PageDawn } from "../components/marketing/PageDawn";
 import type { ProductShot } from "@/content/product-shots";
+import { PRIMARY_CTA } from "@/lib/app-urls";
 
 export const metadata: Metadata = {
   ...buildPageMetadata({
@@ -159,7 +160,7 @@ export default function ForAiArtistsPage() {
             <div className="mt-8 flex w-full flex-col items-center gap-4">
               <TrialButton location="for_ai_artists_hero" size="lg" className="w-full sm:w-auto" />
               <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                We are letting artists in from the waitlist.
+                {PRIMARY_CTA.note}
               </p>
             </div>
           </PageDawn>
@@ -257,8 +258,7 @@ export default function ForAiArtistsPage() {
                 Release fast without releasing messy.
               </h2>
               <p className="mx-auto mt-6 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
-                Join the waitlist, and we set up every artist
-                personally. See{" "}
+                Start free, and move to a paid plan when you need more. See{" "}
                 <Link
                   href="/pricing"
                   className="text-[var(--marketing-text)] underline underline-offset-4 hover:text-[var(--marketing-accent)]"
@@ -270,7 +270,7 @@ export default function ForAiArtistsPage() {
               <div className="mt-10 flex w-full flex-col items-center gap-4">
                 <TrialButton location="for_ai_artists_cta" size="lg" className="w-full sm:w-auto" />
                 <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                  We are letting artists in from the waitlist.
+                  {PRIMARY_CTA.note}
                 </p>
               </div>
             </div>

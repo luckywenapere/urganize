@@ -15,6 +15,7 @@ import { buildPageMetadata } from "@/lib/seo";
 import { TESTIMONIALS } from "@/content/testimonials";
 import { PageDawn } from "../components/marketing/PageDawn";
 import type { ProductShot } from "@/content/product-shots";
+import { PRIMARY_CTA } from "@/lib/app-urls";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Release planning software for artist managers",
@@ -135,7 +136,7 @@ export default function ForManagersPage() {
             <div className="mt-8 flex w-full flex-col items-center gap-4">
               <TrialButton location="for_managers_hero" size="lg" className="w-full sm:w-auto" />
               <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                We are letting people in from the waitlist.
+                {PRIMARY_CTA.note}
               </p>
             </div>
           </PageDawn>
@@ -236,8 +237,7 @@ export default function ForManagersPage() {
             <div className="text-center">
               <h2 className={PERSONA_HEADLINE_CLASS}>Stop chasing your whole roster.</h2>
               <p className="mx-auto mt-6 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
-                Join the waitlist, and we set up every team
-                personally. See{" "}
+                Start free, and move to a paid plan when you need more. See{" "}
                 <Link
                   href="/pricing"
                   className="text-[var(--marketing-text)] underline underline-offset-4 hover:text-[var(--marketing-accent)]"
@@ -249,7 +249,7 @@ export default function ForManagersPage() {
               <div className="mt-10 flex w-full flex-col items-center gap-4">
                 <TrialButton location="for_managers_cta" size="lg" className="w-full sm:w-auto" />
                 <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                  We are letting people in from the waitlist.
+                  {PRIMARY_CTA.note}
                 </p>
               </div>
             </div>

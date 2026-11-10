@@ -177,7 +177,7 @@ export default async function GuidePage({
             </p>
             <p className={`mt-2 ${bodyText}`}>
               Tell Urganize your goals and get a plan that fits, with an owner and a due date
-              on every task. Join the waitlist to get in.
+              on every task. Start free.
             </p>
             <div className="mt-5">
               <TrialButton location="guide_cta" />

@@ -1,4 +1,4 @@
-import { WAITLIST_URL } from "@/lib/app-urls";
+import { PRIMARY_CTA } from "@/lib/app-urls";
 
 export type TrialButtonLocation =
   | "hero"
@@ -12,7 +12,10 @@ export type TrialButtonLocation =
   | "for_executives_cta"
   | "for_ai_artists_hero"
   | "for_ai_artists_cta"
-  | "guide_cta";
+  | "guide_cta"
+  | "why_urganize_hero"
+  | "why_urganize_cta"
+  | "signup";
 
 // The site's one primary ask (2026-09-02). Three mounts on the homepage
 // (hero, pricing, final — RosterSection carried a fourth, "roster", until it
@@ -36,11 +39,11 @@ export function TrialButton({
   location,
   size = "md",
   className = "",
-  label = "Join waitlist",
+  label = PRIMARY_CTA.label,
 }: {
   location: TrialButtonLocation;
   size?: "md" | "lg";
-  /** Founder call 2026-10-19 (URG-407): every mount reads "Join waitlist" (was "Try Urganize"). */
+  /** Every mount reads PRIMARY_CTA.label: "Start free" while sign-up is open (2026-11-10), "Join waitlist" when it is not (URG-407). */
   label?: string;
   className?: string;
 }) {
@@ -50,7 +53,7 @@ export function TrialButton({
       : "px-7 py-3.5 text-sm sm:text-base";
   return (
     <a
-      href={WAITLIST_URL}
+      href={PRIMARY_CTA.href}
       data-track="start_trial_click"
       data-location={location}
       className={`inline-flex cursor-pointer touch-manipulation items-center justify-center rounded-full bg-[var(--marketing-primary)] font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] transition-colors hover:bg-[var(--marketing-primary-hover)] ${sizing} ${className}`.trim()}

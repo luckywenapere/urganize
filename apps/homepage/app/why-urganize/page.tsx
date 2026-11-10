@@ -3,7 +3,8 @@ import { ProofLine } from "../components/landing/ProofLine";
 import { ResponsiveProductShot } from "../components/landing/ResponsiveProductShot";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
-import { WaitlistForm } from "../components/landing/WaitlistForm";
+import { TrialButton } from "../components/landing/TrialButton";
+import { PRIMARY_CTA } from "@/lib/app-urls";
 import { WorkspaceShotSection } from "../components/landing/sections/WorkspaceShotSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
@@ -131,7 +132,8 @@ export default function WhyUrganizePage() {
                 on purpose, per the ProofLine mount table's "keep the first
                 touch light" rule; tamuno stays on the final CTA below. */}
             <div className="mt-8 flex w-full flex-col items-center gap-3">
-              <WaitlistForm source="why_urganize_hero" />
+              <TrialButton location="why_urganize_hero" size="lg" className="w-full sm:w-auto" />
+              <p className="mt-4 text-sm leading-6 text-[var(--marketing-text-muted)]">{PRIMARY_CTA.note}</p>
             </div>
           </PageDawn>
         </SectionShell>
@@ -265,7 +267,8 @@ export default function WhyUrganizePage() {
             <div className="text-center">
               <h2 className={headlineClass}>Keep the chat for talking. Put the release on a plan.</h2>
               <div className="mt-10 flex w-full flex-col items-center gap-3">
-                <WaitlistForm source="why_urganize_cta" />
+                <TrialButton location="why_urganize_cta" size="lg" className="w-full sm:w-auto" />
+                <p className="mt-4 text-sm leading-6 text-[var(--marketing-text-muted)]">{PRIMARY_CTA.note}</p>
                 <ProofLine id="tamuno" className="mt-2" />
               </div>
             </div>
