@@ -21,6 +21,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "Plan new music across your roster. Each artist's plan fits their goals, every task has an owner and you see what worked for each one.",
   path: "/for-executives",
+  shareCard: "for-executives",
 });
 
 // This is the persona page for the team running a roster. It was written for
