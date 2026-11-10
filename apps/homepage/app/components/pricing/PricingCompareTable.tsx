@@ -40,8 +40,9 @@ const GROUPS: Group[] = [
     title: "AI",
     rows: [
       { label: "AI credits a month", value: (tier) => getTier(tier).urgansMonthlyCredits.toLocaleString("en-US") },
-      // Only a paying team can go past its credits (overage, apps/web).
-      { label: "Keep going past your credits", value: (tier) => (tier === "free" ? "No" : "Yes, with a limit") },
+      // Every plan on the page is paid, so every one can go past its credits
+      // (overage, apps/web). Free said "No" here until it was removed 2026-11-09.
+      { label: "Keep going past your credits", value: () => "Yes, with a limit" },
     ],
   },
   {

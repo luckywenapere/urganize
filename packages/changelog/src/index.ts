@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.261.6",
+    title: "No more Free plan, and credits are for AI",
+    tag: "Account",
+    date: "November 10, 2026",
+    highlights: [
+      "The Free plan has ended. To keep working in Urganize, pick a plan.",
+      "The 30 AI credits that came with Free are gone too.",
+      "Without a plan, credits now pay for AI only. To plan rollouts and run tasks, pick a plan.",
+    ],
+  },
+  {
     version: "1.261.5",
     title: "Fewer screens that contradict themselves",
     tag: "App",

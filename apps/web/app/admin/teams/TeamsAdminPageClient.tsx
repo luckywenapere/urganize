@@ -63,10 +63,8 @@ type TeamsPayload = {
 const FILTERS = [
   { value: 'all', label: 'All' },
   { value: 'trial', label: 'On trial' },
-  { value: 'free', label: 'Free plan' },
   { value: 'walled', label: 'Walled' },
   { value: 'read_only', label: 'Read only' },
-  { value: 'credits_only', label: 'Credits only' },
   { value: 'paid', label: 'Paying' },
   { value: 'comped', label: 'Comped' },
   { value: 'deal', label: 'Founding / custom' },
@@ -80,7 +78,6 @@ const STATE_LABEL: Record<string, string> = {
   trial: 'On trial',
   grace: 'Just lapsed',
   read_only: 'Read only',
-  credits_only: 'Credits only',
   walled: 'Walled',
 };
 
@@ -90,7 +87,6 @@ const STATE_CLASS: Record<string, string> = {
   trial: 'border-stroke-default bg-bg-elevated text-content-secondary',
   grace: 'border-status-warning/40 bg-status-warning/10 text-status-warning',
   read_only: 'border-status-warning/40 bg-status-warning/10 text-status-warning',
-  credits_only: 'border-status-info/40 bg-status-info/10 text-status-info',
   walled: 'border-status-error/40 bg-status-error/10 text-status-error',
 };
 
@@ -431,18 +427,6 @@ export default function TeamsAdminPageClient() {
                 <td className="px-3 py-3 text-content-secondary">
                   {team.comped ? (
                     <span className="text-content-tertiary">Never</span>
-                  ) : team.state === 'credits_only' ? (
-                    // Credits-only has no date: it lasts while the balance does.
-                    <>
-                      <span className="text-content-tertiary">While credits last</span>
-                      <p className="text-xs text-content-tertiary">No plan, Solo features</p>
-                    </>
-                  ) : team.state === 'free' ? (
-                    // The Free plan (pricing v4, 2026-11-08): never paid, no wall.
-                    <>
-                      <span className="text-content-tertiary">No wall</span>
-                      <p className="text-xs text-content-tertiary">Free plan, never paid</p>
-                    </>
                   ) : team.state === 'read_only' ? (
                     // Read-only is permanent: there is no later wall to count
                     // down to, so a date here would be a fiction.

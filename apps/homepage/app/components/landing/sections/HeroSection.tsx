@@ -60,9 +60,9 @@ export function HeroSection() {
         {/* z-[60] keeps the form above the hero-fade-in transform stack and
             below the demo overlay's z-[100]. */}
         <div className="hero-fade-in hero-delay-3 relative z-[60] mt-9 flex w-full flex-col items-center gap-5">
-          {/* Open sign-up (2026-11-10, #1176): a button straight into the app
-              on the Free plan. The waitlist form comes back if SIGNUP_OPEN is
-              turned off. */}
+          {/* Open sign-up (2026-11-10, #1177): a button straight into the app
+              (public beta; the team picks a plan there). The waitlist form
+              comes back if SIGNUP_OPEN is turned off. */}
           {SIGNUP_OPEN ? (
             <div className="flex flex-col items-center gap-3">
               <TrialButton location="hero" size="lg" className="w-full sm:w-auto" />

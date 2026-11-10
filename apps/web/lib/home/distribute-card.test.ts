@@ -11,19 +11,18 @@ describe('decideDistributeCard', () => {
     expect(decideDistributeCard({ state: 'comped', tier: 'label' })).toBe('distribute');
   });
 
-  it('offers Pro to Solo, Manager, trial and credits-only teams', () => {
+  it('offers Pro to Solo, Manager and trial teams', () => {
     expect(decideDistributeCard({ state: 'paid', tier: 'solo', isOwnerOrAdmin: true })).toBe('upgrade');
     expect(decideDistributeCard({ state: 'paid', tier: 'manager', isOwnerOrAdmin: true })).toBe('upgrade');
     // A trial resolves to the flagship tier on the server; it has not bought it.
     expect(decideDistributeCard({ state: 'trial', tier: 'label', isOwnerOrAdmin: true })).toBe('upgrade');
     expect(decideDistributeCard({ state: 'grace', tier: 'label', isOwnerOrAdmin: true })).toBe('upgrade');
-    expect(decideDistributeCard({ state: 'credits_only', tier: 'solo', isOwnerOrAdmin: true })).toBe('upgrade');
   });
 
   it('never sends a teammate who is not an owner or admin to checkout', () => {
     expect(decideDistributeCard({ state: 'paid', tier: 'solo', isOwnerOrAdmin: false })).toBe('ask_admin');
     expect(decideDistributeCard({ state: 'trial', tier: 'label', isOwnerOrAdmin: false })).toBe('ask_admin');
-    expect(decideDistributeCard({ state: 'credits_only', tier: 'solo' })).toBe('ask_admin');
+    expect(decideDistributeCard({ state: 'grace', tier: 'label' })).toBe('ask_admin');
   });
 
   it('still gives every teammate Distribute on a plan that has it', () => {

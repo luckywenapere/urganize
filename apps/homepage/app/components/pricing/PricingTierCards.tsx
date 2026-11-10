@@ -27,24 +27,24 @@ import {
   type TierGroupId,
 } from "@urganize/pricing";
 import { useVisitorCurrency } from "@/lib/visitor-currency";
-import { APP_ORIGIN, APP_SIGNUP_URL } from "@/lib/app-urls";
+import { APP_ORIGIN } from "@/lib/app-urls";
 import { salesMailto } from "@/lib/sales-mailto";
 import { PricingCompareTable } from "./PricingCompareTable";
 
 // The price table, PRICING V4 (founder-approved mock, 2026-11-08, #1112,
 // docs/mocks/pricing-v4/mock.html).
 //
-// Six plans in two groups behind a "Just you | Your team" switch: Free, Solo
-// and Solo Plus for an artist working alone; Pro, Pro Plus and Label for a
-// team. Pro is the code id `manager` and Pro Plus is `pro`: only the names on
+// Five plans in two groups behind a "Just you | Your team" switch: Solo and
+// Solo Plus for an artist working alone; Pro, Pro Plus and Label for a team.
+// (Free led the first side from 2026-11-08 until the founder removed it on
+// 2026-11-09.) Pro is the code id `manager` and Pro Plus is `pro`: only the names on
 // screen moved, so payments and stored plans did not.
 //
 // EVERY NUMBER COMES FROM @urganize/pricing (prices, limits, credits, the
 // distribution allowance), so this page cannot advertise a ceiling the app does
 // not apply. Lines the mock marked "Soon" are not built and are not shown.
 //
-// Free is never bought: its button opens the app. Solo, Solo Plus, Pro and Pro
-// Plus go to checkout for that plan and period. Label is a custom deal and its
+// Solo, Solo Plus, Pro and Pro Plus go to checkout for that plan and period. Label is a custom deal and its
 // button emails us.
 
 const INTERVAL_LABEL: Record<BillingInterval, string> = {
@@ -61,9 +61,6 @@ function cardPrice(
   interval: BillingInterval,
   currency: PricingCurrencyCode
 ): { figure: string; unit: string | null; sub: string | null } {
-  if (tierId === "free") {
-    return { figure: money(0, currency), unit: null, sub: "Free for as long as you like" };
-  }
   if (getTier(tierId).contactSales) {
     // "Custom", with the Naira starting price for a visitor paying in Naira.
     const from = PRICING_TIERS[tierId].monthlyPrice;
@@ -172,8 +169,9 @@ export function PricingTierCards() {
           </div>
         </div>
 
-        {/* Three cards a side: one column on a phone, three from lg. */}
-        <div className="grid gap-6 lg:grid-cols-3">
+        {/* Two or three cards a side: one column on a phone, then one column
+            per card from lg, so the two-card side has no empty slot. */}
+        <div className={`grid gap-6 ${tiers.length === 2 ? "lg:mx-auto lg:w-full lg:max-w-[52rem] lg:grid-cols-2" : "lg:grid-cols-3"}`}>
           {tiers.map((tierId) => {
             const tier = getTier(tierId);
             const { figure, unit, sub } = cardPrice(tierId, interval, currency);
@@ -203,16 +201,7 @@ export function PricingTierCards() {
                 </p>
                 <p className="mt-2 text-[0.8rem] leading-5 text-[var(--marketing-text-muted)] md:min-h-10">{sub}</p>
 
-                {tierId === "free" ? (
-                  <a
-                    href={APP_SIGNUP_URL}
-                    data-track="pricing_plan_clicked"
-                    data-plan={tierId}
-                    className="mt-6 inline-flex items-center justify-center rounded-full border border-[var(--marketing-border)] px-5 py-3 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text)] transition-colors hover:bg-[var(--marketing-surface)]"
-                  >
-                    Choose Free
-                  </a>
-                ) : isSelfServePurchase(tierId, interval) ? (
+                {isSelfServePurchase(tierId, interval) ? (
                   <a
                     href={`${APP_ORIGIN}/checkout?plan=${tierId}&period=${interval}`}
                     data-track="pricing_plan_clicked"

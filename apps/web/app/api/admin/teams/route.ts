@@ -3,9 +3,6 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { verifyAdmin } from '../_shared';
 import { isHardPaywallEnabled, computeExtendedTrialEnd } from '@/lib/team-billing';
 import { resolveAdminTeamAccess } from '@/lib/admin-team-access';
-import { couldBeCreditsOnly, isFundedForAccess } from '@/lib/team-billing';
-import { isCreditsEnabled } from '@/lib/credits/config';
-import { readBalances } from '@/lib/credits/credits-server';
 import { invalidateTeamAccess } from '@/lib/team-billing-server';
 import { invalidateSubscriptionSnapshot } from '@/lib/subscription-access';
 import { ACTION_EVENT_TYPE, parseTeamAdminAction } from '@/lib/admin-teams';
@@ -139,22 +136,6 @@ export async function GET(request: NextRequest) {
     workspaces.map((row) => row.id)
   );
 
-  // Credits-only teams (2026-10-02): read a balance only for a team that would
-  // otherwise show as walled or read-only, so the console names the state the
-  // app actually gives them.
-  const fundedWorkspaces = new Set<string>();
-  if (isCreditsEnabled()) {
-    await Promise.all(
-      workspaces.map(async (row) => {
-        const profile = row.owner_id ? profiles.get(row.owner_id) : undefined;
-        const subscription = row.owner_id ? subscriptions.get(row.owner_id) : undefined;
-        const { resolution } = resolveAdminTeamAccess({ workspace: row, profile, subscription, now });
-        if (!couldBeCreditsOnly(resolution.state)) return;
-        if (isFundedForAccess(await readBalances(client, row.id))) fundedWorkspaces.add(row.id);
-      })
-    );
-  }
-
   const teams = workspaces.map((row) => {
     const profile = row.owner_id ? profiles.get(row.owner_id) : undefined;
     const subscription = row.owner_id ? subscriptions.get(row.owner_id) : undefined;
@@ -169,7 +150,6 @@ export async function GET(request: NextRequest) {
       profile,
       subscription,
       now,
-      creditsFunded: fundedWorkspaces.has(row.id),
     });
 
     return {

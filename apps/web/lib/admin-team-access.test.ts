@@ -32,16 +32,14 @@ describe('resolveAdminTeamAccess', () => {
     expect(result.resolution).toMatchObject({ state: 'trial', reason: 'trial_active' });
   });
 
-  // Free plan (pricing v4, 2026-11-08): a never-paid team whose trial ran out
-  // is on Free now, not walled.
-  it('puts a team whose trial ran out and never paid on the Free plan', () => {
+  it('walls a team whose trial ran out and never paid', () => {
     const result = resolveAdminTeamAccess({
       workspace: { ...team, trial_ends_at: '2026-09-20T00:00:00Z' },
       profile: { email: 'owner@example.com', is_subscribed: false, paid_at: null },
       subscription: null,
       now,
     });
-    expect(result.resolution.state).toBe('free');
+    expect(result.resolution.state).toBe('walled');
   });
 
   it('does not count a subscription whose period has ended', () => {

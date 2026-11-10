@@ -100,19 +100,13 @@ export type TeamAccessState =
    *  keep every read; writes are refused. Permanent — there is no second
    *  deadline and no wall after it. See resolveTeamAccess. */
   | 'read_only'
-  /** No plan, but the team holds bought or monthly credits, so it uses
-   *  Urganize with Solo features (strategy doc, section 8: "Credits only ...
-   *  Solo features"). Founder call, 2026-10-02: only while the balance is above
-   *  zero. At zero the team falls back to 'read_only' or 'walled', whichever it
-   *  would otherwise be. See resolveTeamAccess. */
-  | 'credits_only'
-  /** The Free plan (pricing v4, 2026-11-08). Never paid, trial over: the team
-   *  keeps using Urganize inside Free's limits instead of meeting the wall.
-   *  Resolves to the `free` tier (resolveTeamTier). See resolveTeamAccess. */
-  | 'free'
-  /** The wall. Since Free (2026-11-08) resolveTeamAccess never returns it; the
-   *  state stays because the multi-team combination, the admin filters and older
-   *  cached answers still name it. */
+  /* 'credits_only' (no plan, credits in the balance, so the whole app with
+   * Solo features) existed from 2026-10-02 to 2026-11-10, when the founder
+   * ruled that credits without a plan unlock the AI only (#1164). A team with
+   * no plan is walled or read-only whatever its balance, and uses UrgAns on
+   * credits through lib/credits/urgans-admission.ts. */
+  /** The wall. (The Free plan replaced it for one day, 2026-11-08 to
+   *  2026-11-09, and was then removed outright by the founder.) */
   | 'walled';
 
 export type TeamAccessReason =
@@ -127,10 +121,6 @@ export type TeamAccessReason =
   /** The owner cancelled the trial, and the trial is over. Also read-only
    *  (founder call, 2026-10-14), so what they built stays readable. */
   | 'trial_cancelled'
-  /** No plan, credits in the balance. The credits-only state. */
-  | 'credits_funded'
-  /** Never paid and the trial is over (or was cancelled): the Free plan. */
-  | 'free_plan'
   /** trial_ends_at was never stamped. Fails OPEN — see resolveTeamAccess. */
   | 'no_trial_stamp'
   /** The owner's paid period ended, and the team is inside the bonus days it
@@ -263,12 +253,6 @@ export function resolveTeamAccess(input: {
   now?: Date;
   /** Server passes TEAM_TRIAL_EXPIRY_GRACE_MS; clients pass 0 (or omit). */
   graceMs?: number;
-  /** The team holds credits that count for access (see isFundedForAccess), and
-   *  credits are switched on. Absent means "no", so every caller that does not
-   *  pass it behaves exactly as before. Only consulted where the answer would
-   *  otherwise be read-only or the wall: a trial, a paid plan or a comp is never
-   *  narrowed to Solo by having credits. */
-  creditsFunded?: boolean;
   /** The owner's paid-through date (their snapshot's expiresAt). Only read
    *  when the team holds bonus days; see paidBonusEndsAt. */
   ownerPaidThrough?: string | null;
@@ -375,20 +359,9 @@ export function resolveTeamAccess(input: {
     };
   }
 
-  // Credits-only, with Solo features. Checked before read-only so a team whose
-  // plan lapsed but who still holds credits keeps writing, which is the doc's
-  // "drops to Solo features as a credits-only account".
-  if (input.creditsFunded) {
-    return {
-      state: 'credits_only',
-      hasAccess: true,
-      canWrite: true,
-      reason: 'credits_funded',
-      trialEndsAt,
-      trialDaysLeft: 0,
-      inGrace: false,
-    };
-  }
+  // Credits do not open the app (founder, 2026-11-10, #1164). Until then a
+  // team here with bought or monthly credits got the whole app with Solo
+  // features; now credits without a plan pay for UrgAns only.
 
   if (input.ownerLapsedFromPayment) {
     return {
@@ -402,56 +375,34 @@ export function resolveTeamAccess(input: {
     };
   }
 
-  // THE FREE PLAN (pricing v4, founder, 2026-11-08). This used to be the wall
-  // (and, for a cancelled trial, read-only since 2026-10-14). A team reaches
-  // this line only when it has NEVER PAID: no owner access, no comp, no bonus
-  // days, no unexpired trial, no grace, no credits that count for access, and
-  // not lapsed from a payment (that is read-only above and stays so). So the one
-  // state that changes is exactly "never paid, trial over", which now keeps
-  // working inside Free's limits instead of being walled.
+  // A cancelled trial is read-only rather than walled (founder call,
+  // 2026-10-14). Below the paid lapse so a team that both paid and cancelled
+  // keeps the payment reason, and below credits for the same reason as above.
   //
-  // A cancelled trial is Free too: it never paid either, and Free is strictly
-  // more than the read-only it had, so nothing is taken from anyone. The reason
-  // stays 'trial_cancelled' so the cancel flow's numbers still read.
+  // The Free plan (2026-11-08) sat here for one day, putting every never-paid
+  // team on Free instead of at the wall. The founder removed it outright on
+  // 2026-11-09, so this is the pre-Free behaviour again.
+  if (input.team.trialCancelledAt) {
+    return {
+      state: 'read_only',
+      hasAccess: true,
+      canWrite: false,
+      reason: 'trial_cancelled',
+      trialEndsAt,
+      trialDaysLeft: 0,
+      inGrace: false,
+    };
+  }
+
   return {
-    state: 'free',
-    hasAccess: true,
-    canWrite: true,
-    reason: input.team.trialCancelledAt ? 'trial_cancelled' : 'free_plan',
+    state: 'walled',
+    hasAccess: false,
+    canWrite: false,
+    reason: 'trial_expired',
     trialEndsAt,
     trialDaysLeft: 0,
     inGrace: false,
   };
-}
-
-/**
- * Whether a team's credits count toward credits-only access: what it BOUGHT or
- * was granted monthly, never trial credits. Trial credits are taken back when a
- * trial ends with nothing bought (lib/credits/credits-server.ts getCreditSnapshot,
- * which runs lazily), so counting them here would open the app to every expired
- * trial until that removal ran. Someone who bought and then spent all of it but
- * still holds trial leftovers is not funded for access; they keep UrgAns on
- * those leftovers through the UrgAns gate, which is the safe side to be wrong on.
- *
- * Null (an unreadable balance) is NOT funded. This is the one counter here that
- * fails closed, because being wrong the open way gives the whole app away free
- * to every walled team for as long as the read fails; closed is exactly the
- * behaviour before credits-only access existed.
- */
-export function isFundedForAccess(
-  balances: { allowance: number; topup: number } | null | undefined
-): boolean {
-  if (!balances) return false;
-  return balances.allowance + balances.topup > 0;
-}
-
-/** Whether a resolution could become credits-only, so the server knows to read
- *  the balance. Only the two no-plan answers can; everything else already has
- *  access of its own and must not be narrowed to Solo. */
-export function couldBeCreditsOnly(state: TeamAccessState): boolean {
-  // Free too: a team with bought credits works on Solo features (credits-only),
-  // which is more than Free gives, so the balance is worth reading.
-  return state === 'walled' || state === 'read_only' || state === 'free';
 }
 
 /** Does this state grant reads? Everything except the wall. */

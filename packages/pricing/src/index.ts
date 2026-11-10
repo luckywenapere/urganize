@@ -239,11 +239,13 @@ export function formatPlanCyclePrice(
 // id stays `enterprise` because it is what subscriptions.plan stores and what
 // subscriptions_plan_check (20260823100000) already permits, so bringing Group
 // back on 2026-10-02 needed no migration. Renaming the id would mean one.
-// 'free' and 'solo_plus' joined 2026-11-08 (pricing v4, founder, #1112). The
-// DISPLAY names moved too, and the ids did NOT: 'manager' shows as "Pro" and
-// 'pro' shows as "Pro Plus", because both ids are stored in subscriptions.plan
-// and named by Paystack env vars. Never rename an id to match its label.
-export type PricingTierId = 'free' | 'solo' | 'solo_plus' | 'manager' | 'pro' | 'label' | 'enterprise';
+// 'solo_plus' joined 2026-11-08 (pricing v4, founder, #1112). The DISPLAY
+// names moved too, and the ids did NOT: 'manager' shows as "Pro" and 'pro'
+// shows as "Pro Plus", because both ids are stored in subscriptions.plan and
+// named by Paystack env vars. Never rename an id to match its label.
+// 'free' was a tier from 2026-11-08 to 2026-11-09, when the founder removed the
+// Free plan outright. It was never written to subscriptions.plan.
+export type PricingTierId = 'solo' | 'solo_plus' | 'manager' | 'pro' | 'label' | 'enterprise';
 
 /** The two sides of the pricing page (pricing v4): plans for an artist working
  *  alone, and plans for a team running other people's music. */
@@ -252,7 +254,7 @@ export type TierGroupId = 'you' | 'team';
 export const TIER_GROUP_ORDER: readonly TierGroupId[] = ['you', 'team'] as const;
 
 export const TIER_GROUPS: Record<TierGroupId, readonly PricingTierId[]> = {
-  you: ['free', 'solo', 'solo_plus'],
+  you: ['solo', 'solo_plus'],
   team: ['manager', 'pro', 'label'],
 };
 
@@ -271,12 +273,6 @@ export function tierGroupOf(id: PricingTierId): TierGroupId {
   return TIER_GROUPS.you.includes(id) ? 'you' : 'team';
 }
 
-/** The free plan: no price, no checkout. A team that has not paid uses it once
- *  its trial is over (resolveTeamAccess in apps/web). */
-export const FREE_TIER_ID = 'free' as const;
-export function isFreeTier(id: unknown): id is 'free' {
-  return id === FREE_TIER_ID;
-}
 /** How often a plan is paid. `semiannual` (6 months, paid up front) since
  *  2026-10-22 (self-serve checkout, founder approved): 6 months are billed at
  *  SIX_MONTHS_BILLED months of the monthly price, so one is free. */
@@ -483,23 +479,6 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
   // and no team can resolve onto it. Its CTA is the free team trial, which
   // needs no plan code. Making it buyable is a migration plus two minted Plans
   // plus their env vars — see the note in apps/web/lib/billing-plans.ts.
-  // FREE (pricing v4, 2026-11-08, founder). Nothing to pay, for as long as you
-  // like. A team that has not paid lands here instead of at the wall once its
-  // trial is over (resolveTeamAccess, apps/web/lib/team-billing.ts). Never sold
-  // by card and never written to subscriptions.plan. monthlyPrice is ₦0, so the
-  // price helpers answer "₦0" rather than treating it as a sales-led tier.
-  free: {
-    id: 'free',
-    label: 'Free',
-    audience: 'Try Urganize on your next rollout.',
-    outcomeHeading: 'Your next rollout, planned for you',
-    outcomes: ['Your rollout plan, written for you'],
-    monthlyPrice: tierPrice(0),
-    includesDistribution: false,
-    urgansMonthlyCredits: 30,
-    limits: { artists: 1, seats: 1, activeReleases: 1, urgansMonthlyActions: 10 },
-    perks: [],
-  },
   solo: {
     id: 'solo',
     // Repriced and renamed 2026-11-07 (founder, issue #1112): "Solo" again,
@@ -679,7 +658,6 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
  *  Group is the lone "Let's talk" card. It was three from 2026-09-09, when Group
  *  was removed; the strategy doc made it a plan again. */
 export const PRICING_TIER_ORDER: readonly PricingTierId[] = [
-  'free',
   'solo',
   'solo_plus',
   'manager',
@@ -760,7 +738,7 @@ export function tierOutcomes(id: PricingTierId, currency: PricingCurrencyCode = 
  *  adds. Each line must be true of the product today. */
 export function tierFeatures(id: PricingTierId, currency: PricingCurrencyCode = 'NGN'): { heading: string; lines: string[] } {
   // Pricing v4 (founder-approved mock, 2026-11-08, docs/mocks/pricing-v4).
-  // Each side of the page starts with a full list (Free, Pro) and every plan
+  // Each side of the page starts with a full list (Solo, Pro) and every plan
   // after it says what it adds. Every number comes from `limits`, the credits
   // and the distribution allowance, the same fields apps/web enforces. Lines in
   // the mock marked "Soon" are not built and are deliberately absent.
@@ -773,13 +751,19 @@ export function tierFeatures(id: PricingTierId, currency: PricingCurrencyCode = 
   const roster = `${limits.artists ?? 'Unlimited'} artists, ${limits.seats ?? 'unlimited'} people`;
   const stores = tierStoresLine(id, currency);
   switch (id) {
-    case 'free':
-      return { heading: 'What you get:', lines: [rollouts, 'Your rollout plan, written for you', credits, 'A press kit', stores] };
     case 'solo': {
+      // The Free plan led this side until 2026-11-09; Solo now carries the full list.
       const helpers = Math.max(0, (limits.seats ?? 1) - 1);
       return {
-        heading: 'Everything in Free, plus:',
-        lines: [`Add ${helpers} ${helpers === 1 ? 'person' : 'people'} to help you`, credits, stores],
+        heading: 'What you get:',
+        lines: [
+          rollouts,
+          'Your rollout plan, written for you',
+          `Add ${helpers} ${helpers === 1 ? 'person' : 'people'} to help you`,
+          credits,
+          'A press kit',
+          stores,
+        ],
       };
     }
     case 'solo_plus':
@@ -805,7 +789,6 @@ export function tierFeatures(id: PricingTierId, currency: PricingCurrencyCode = 
 export function tierStoresLine(id: PricingTierId, currency: PricingCurrencyCode = 'NGN'): string {
   const single = currency === 'USD' ? formatMoney(EXTRA_RELEASE_PRICE_USD, 'USD') : formatMoney(EXTRA_RELEASE_PRICE_NAIRA, 'NGN');
   const allowance = DISTRIBUTION_ALLOWANCE[id];
-  if (id === 'free') return 'Send to stores from your own distributor account';
   if (id === 'solo_plus') return 'Singles and EPs to stores, included';
   if (id === 'label' || id === 'enterprise') {
     const artists = DISTRIBUTION_ALLOWANCE.label?.artists ?? 5;
@@ -821,7 +804,6 @@ export function tierStoresLine(id: PricingTierId, currency: PricingCurrencyCode 
 export function tierStoresCell(id: PricingTierId, currency: PricingCurrencyCode = 'NGN'): string {
   const single = currency === 'USD' ? formatMoney(EXTRA_RELEASE_PRICE_USD, 'USD') : formatMoney(EXTRA_RELEASE_PRICE_NAIRA, 'NGN');
   const allowance = DISTRIBUTION_ALLOWANCE[id];
-  if (id === 'free') return 'Own distributor account';
   if (id === 'solo_plus') return 'Singles and EPs included';
   if (id === 'label' || id === 'enterprise') {
     return `Singles, EPs, albums, ${DISTRIBUTION_ALLOWANCE.label?.artists ?? 5} artists`;
@@ -832,7 +814,6 @@ export function tierStoresCell(id: PricingTierId, currency: PricingCurrencyCode 
 
 /** Who helps you, by plan (pricing v4 mock). A promise, not a routing switch. */
 export const TIER_SUPPORT: Record<PricingTierId, string> = {
-  free: 'Email',
   solo: 'Email',
   solo_plus: 'Email',
   manager: 'WhatsApp',
@@ -1010,9 +991,6 @@ export const CREDIT_PACK = { credits: 100, priceNaira: 1_500 } as const;
 /** What one AI credit costs past a plan's monthly credits, naira (founder,
  *  2026-11-07, #1112). Cheaper on bigger plans. Our cost is about ₦6.88. */
 export const CREDIT_OVERAGE_NAIRA: Record<PricingTierId, number> = {
-  // Free never goes past its credits: overage is for a paying team only
-  // (overageRateKobo in apps/web). The number is here because the map is total.
-  free: 20,
   solo: 20,
   solo_plus: 18,
   manager: 18,
@@ -1143,11 +1121,9 @@ export function tierHighlights(
       : `₦${EXTRA_RELEASE_PRICE_NAIRA.toLocaleString('en-US')}`;
   const extra = distribution
     ? [`Extra singles ${single} each`]
-    : id === 'free'
-      ? ['Send to stores from your own distributor account']
-      : monthlyPrice
-        ? [`Send singles to stores for ${single} each`]
-        : [];
+    : monthlyPrice
+      ? [`Send singles to stores for ${single} each`]
+      : [];
   return [...lines, ...(distribution ? [distribution] : []), ...extra, ...perks];
 }
 
@@ -1177,7 +1153,6 @@ export function formatTierFromPrice(
 
 /** Whole dollars a month. A tier missing here has no dollar price. */
 export const USD_MONTHLY_PRICE: Partial<Record<PricingTierId, number>> = {
-  free: 0,
   solo: 9,
   // Solo Plus in dollars (decided 2026-11-08): $19, the usual price step
   // between Solo $9 and the first team plan at $29.
@@ -1253,7 +1228,6 @@ export function getTier(id: PricingTierId): PricingTierDefinition {
 
 export function isPricingTierId(value: unknown): value is PricingTierId {
   return (
-    value === 'free' ||
     value === 'solo' ||
     value === 'solo_plus' ||
     value === 'manager' ||

@@ -64,8 +64,7 @@ export type RecurringPlanId = BillingPlanId | 'manager' | 'solo' | 'solo_plus' |
  * ids renews regardless, because `isRecurringPlan` below is a separate list
  * answering a separate question — whether a tier can be BOUGHT today and
  * whether a live subscription still EXTENDS are meant to be able to disagree. */
-// 'solo_plus' joined 2026-11-08 (pricing v4). 'free' is NOT here and never may
-// be: nothing is bought on it, so nothing may resolve a Paystack Plan for it.
+// 'solo_plus' joined 2026-11-08 (pricing v4).
 export type SelfServeTierId = Extract<PricingTierId, 'manager' | 'solo' | 'solo_plus' | 'pro' | 'label'>;
 
 export function isSelfServeTier(value: unknown): value is SelfServeTierId {

@@ -24,8 +24,8 @@ export const metadata: Metadata = buildPageMetadata({
   // The root template adds " | Urganize".
   title: "Pricing for artists, managers and record labels",
   description:
-    // Pricing v4 (2026-11-08): six plans in two groups, Free among them.
-    "Plan new music and keep track of every task, with a Free plan and paid plans for an artist on their own or a team with a roster. See what each plan includes.",
+    // Pricing v4 (2026-11-08): plans in two groups. Free was removed 2026-11-09.
+    "Plan new music and keep track of every task, with plans for an artist on their own or a team with a roster. See what each plan includes.",
   path: "/pricing",
   shareCard: "pricing",
 });

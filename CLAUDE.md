@@ -40,7 +40,7 @@ The copy is word for word. If the founder's document changes, refresh the copy f
 
    Committed is not the same as "build it now". Each still has to earn a sprint under the rule above, and ships behind a flag that starts off, like everything else here.
 4. **Group is a plan again** (custom price, for distributors and multi-label groups), and Group teams count as paying teams. The code removed it on 2026-09-09; see the fixes list.
-5. **Credits-only accounts are a real way to use Urganize**: no monthly fee, Solo features, ₦30 a credit.
+5. **Credits-only accounts are a real way to use Urganize**: no monthly fee, Solo features, ₦30 a credit. **Changed 2026-11-10 (founder call, #1164): credits without a plan unlock the AI only.** A team with no plan is walled (or read-only after a paid lapse) whatever its balance and uses UrgAns on credits from the wall. The `credits_only` access state, `isFundedForAccess` and `couldBeCreditsOnly` are gone. The strategy doc needs the same change at the Monday review.
 6. **The directory**: search is open to every plan, Solo and trials included; seeded, unclaimed profiles are allowed (built only from credits already on a released release's public credit link, removed on request); and the app asks people to publish their profile right after their first release plan.
 7. **Copy**: the doc's one-liner is "Urganize is where music teams do everything after the music is made". Since 2026-10-17 (founder approved, URG-344) the product's own copy says "Urganize is where music teams plan every release and deliver it on time" instead, to follow the homepage v2 hero; the strategy doc copy is left word for word until the founder changes the source. "Interaction app" is internal only and never goes into copy.
 
@@ -53,7 +53,7 @@ Found on 2026-10-02 by reading the code against the doc. Each is a fix to make, 
 | 1 | Solo is one seat | **Fixed 2026-10-02 (v1.59.0).** Solo is 1 seat, which the owner holds, so a Solo account can invite nobody; a team already over it keeps its members and is only refused new ones. The seat and rollout refusal messages now read "1 person" and "1 rollout" | `packages/pricing/src/index.ts`, Solo `limits.seats` |
 | 2 | Directory search on every plan | **Fixed 2026-10-02 (v1.59.0).** The `directory_search` entitlement is removed outright rather than set true everywhere, the plan check is gone from `GET /api/directory`, and `tier-limits-guard.test.ts` holds that route to reading no entitlement. The paywall still applies, so a team with no plan and no trial cannot search, and credits-only teams cannot either (their access covers UrgAns only; widening it is a founder call) | `apps/web/app/api/directory/route.ts` |
 | 3 | Group is a custom-priced plan | **Fixed 2026-10-02.** Group is back as tier id `enterprise` (name "Group"), sales-led, with Label's entitlements and 1,500 monthly credits, and a fourth "Let's talk" card on the pricing page. A team gets it only through "Mark paid" in `/admin/teams`; see "Group is back" at the end of this file | `packages/pricing`, `lib/entitlements.ts`, `lib/admin-teams.ts` |
-| 4 | Anyone can use Urganize on credits alone | **Fixed 2026-10-02.** A team with no plan that holds bought or monthly credits gets the whole app with Solo features (state `credits_only`); at zero it falls back to the wall or read-only and keeps UrgAns to buy more. See "Credits-only teams get Solo features" at the end of this file | `lib/team-billing.ts`, `lib/team-billing-server.ts` |
+| 4 | Anyone can use Urganize on credits alone | **Reversed 2026-11-10 (#1164): credits without a plan unlock the AI only; see item 5 above.** **Fixed 2026-10-02.** A team with no plan that holds bought or monthly credits gets the whole app with Solo features (state `credits_only`); at zero it falls back to the wall or read-only and keeps UrgAns to buy more. See "Credits-only teams get Solo features" at the end of this file | `lib/team-billing.ts`, `lib/team-billing-server.ts` |
 | 5 | Low-balance warning below 50 credits | **Fixed (#660).** The banner shows below 50 credits (`isLowOnCredits` in `lib/credits/copy.ts`, tested at 49 and 50). Since 2026-10-02 the chat box also shows the balance on every turn while credits are on | `components/app/UrgansUsageStrip.tsx`, `components/chappi/ChappiConversation.tsx` |
 | 6 | A credit history page | **Fixed (#660).** `/dashboard/credits` lists spends, purchases, grants, trial removals and admin changes, newest first, one line per turn | `app/dashboard/credits` |
 | 7 | Credits ship behind a flag that starts off; the 40 and 150 action limits stay until credits are tested | **Decided 2026-10-02 (founder): credits stay on.** They have been on in production since v1.55.0 and replace the 40 and 150 monthly action limits. Do not switch `NEXT_PUBLIC_FEATURE_URGANS_CREDITS` off to match the doc; the doc's line is out of date, and the founder's Monday review is where the doc itself gets corrected | `NEXT_PUBLIC_FEATURE_URGANS_CREDITS` |
@@ -467,9 +467,21 @@ sections corrected in this sweep now say.
 
 ---
 
-## Pricing v4: six plans, a Free plan, Solo Plus (2026-11-08, v1.261.0, #1112)
+## Pricing v4: five plans, Solo Plus (2026-11-08, v1.261.0, #1112; Free removed 2026-11-09, v1.261.3)
 
 Founder-approved mock: `docs/mocks/pricing-v4/mock.html`.
+
+**The Free plan was removed outright on 2026-11-09 (founder call, "with
+immediate effect"), one day after it shipped.** The `free` tier id, the `free`
+access state and the `free_plan` reason are gone from the code. A never-paid
+team past its trial meets the wall again (`walled`, reason `trial_expired`) and
+a cancelled trial is read-only again, exactly as before 2026-11-08. Sign-up
+stays open (`SIGNUP_OPEN`), so a new team meets the plan wall straight away.
+The 30 credits Free granted are taken back lazily: `getCreditSnapshot` calls
+`expireFreePlanAllowance` for a walled team, which removes what is left of
+allowance rows of exactly `FREE_PLAN_GRANT_CREDITS` (30, a size no paid plan
+grants) from a team that never bought anything, once, keyed
+`expire:free_plan:<workspace>`. Everything about Free below is history.
 
 - **Six plans in two groups.** "Just you": Free (₦0), Solo (₦5,000/mo), Solo
   Plus (₦12,000/mo). "Your team": Pro (₦15,000/mo), Pro Plus (₦40,000/mo),

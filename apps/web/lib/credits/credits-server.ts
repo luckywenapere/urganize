@@ -135,6 +135,61 @@ export async function readBalances(client: SupabaseClient, workspaceId: string):
   }
 }
 
+/**
+ * What one monthly grant of the Free plan was. Free existed from 2026-11-08 until
+ * the founder removed it on 2026-11-09, and granted a never-paid team 30 credits
+ * a month into the allowance source. No paid plan's allowance is 30 (see
+ * ALLOWANCE_CREDITS), so an allowance row of exactly this size is a Free grant.
+ */
+export const FREE_PLAN_GRANT_CREDITS = 30;
+
+/**
+ * Take back what is left of the Free plan's credits, for a team that never paid
+ * (the 1.261.3 promise: "the 30 AI credits that came with Free are gone too").
+ * Runs lazily from getCreditSnapshot for a walled team, like the trial removal.
+ *
+ * One row, once (its key names the team), in the allowance source, never more
+ * than the Free grants added and never more than is left. Like the trial removal
+ * it only happens when we positively know nothing was bought. Returns how many
+ * credits were taken (0 when nothing was, or it could not be established).
+ */
+export async function expireFreePlanAllowance(
+  client: SupabaseClient,
+  input: { workspaceId: string; ownerUserId: string | null; allowance: number }
+): Promise<number> {
+  if (!(input.allowance > 0)) return 0;
+  try {
+    const grants = await client
+      .from(TABLE)
+      .select('credits')
+      .eq('workspace_id', input.workspaceId)
+      .eq('kind', 'allowance')
+      .eq('credits', FREE_PLAN_GRANT_CREDITS);
+    if (grants.error) return 0;
+    const granted = (grants.data ?? []).reduce((sum, row) => sum + asNumber((row as { credits?: unknown }).credits), 0);
+    const credits = Math.floor(Math.min(granted, input.allowance));
+    if (!(credits > 0)) return 0;
+    if (await hasEverPurchased(client, input)) return 0;
+    const removed = await insertOnce(
+      client,
+      {
+        workspace_id: input.workspaceId,
+        owner_user_id: input.ownerUserId,
+        pool: 'allowance',
+        kind: 'expire',
+        credits: -credits,
+        dedupe_key: `expire:free_plan:${input.workspaceId}`,
+        metadata: { source: 'free_plan_removed' },
+      },
+      'remove the Free plan credits'
+    );
+    return removed ? credits : 0;
+  } catch (error) {
+    console.error('[credits] could not remove the Free plan credits:', error);
+    return 0;
+  }
+}
+
 /** Insert one grant, tolerating the unique key that makes a grant happen once. */
 async function insertOnce(client: SupabaseClient, row: Record<string, unknown>, what: string): Promise<boolean> {
   try {
@@ -295,12 +350,19 @@ export async function getCreditSnapshot(
   let balances = await readBalances(client, input.workspaceId);
   if (!balances) return null;
 
-  // A trial that ended unpaid: walled before 2026-11-08, Free since. Either way
-  // the leftover trial credits go (Free has its own monthly 30).
-  if ((input.team.state === 'walled' || input.team.state === 'free') && balances.trial > 0) {
+  if (input.team.state === 'walled' && balances.trial > 0) {
     const purchased = await hasEverPurchased(client, input);
     if (!purchased && (await expireTrialCredits(client, { ...input, credits: balances.trial }))) {
       balances = { ...balances, trial: 0, total: balances.allowance + balances.topup };
+    }
+  }
+
+  // The removed Free plan's leftover credits (2026-11-09): same lazy moment, same
+  // "only if nothing was ever bought" rule, checked inside the helper.
+  if (input.team.state === 'walled' && balances.allowance > 0) {
+    const removed = await expireFreePlanAllowance(client, { ...input, allowance: balances.allowance });
+    if (removed > 0) {
+      balances = { ...balances, allowance: balances.allowance - removed, total: balances.total - removed };
     }
   }
 

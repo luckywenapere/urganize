@@ -105,7 +105,7 @@ const announceUpgradeLimit = async (response: Response): Promise<void> => {
       limitKey?: unknown;
       error?: unknown;
     };
-    // Pricing v4 (2026-11-08): Free lifts to Solo, Solo to Solo Plus.
+    // Pricing v4 (2026-11-08): Solo lifts to Solo Plus.
     const plan = payload.upgradeTo;
     if (
       (plan !== 'solo' && plan !== 'solo_plus' && plan !== 'manager' && plan !== 'pro') ||

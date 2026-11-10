@@ -201,6 +201,14 @@ export function BuyCredits({ account, onPurchased, returnTo = '/dashboard/credit
         </ul>
       )}
 
+      {/* No plan (#1164, 2026-11-10): credits pay for the AI only, so say so
+          before anyone buys expecting the whole app. */}
+      {account === 'credits_only' ? (
+        <p className="mt-3 text-sm text-content-primary">
+          Credits are for the AI. To plan rollouts and run tasks, pick a plan.
+        </p>
+      ) : null}
+
       {account === 'credits_only' || account === 'trial' ? (
         <p className="mt-3 text-xs text-content-tertiary">
           Subscribers get twice the credits for the same price.

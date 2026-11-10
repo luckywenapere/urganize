@@ -47,7 +47,7 @@ export function FinalCTASection() {
         <div id="join" className="scroll-mt-28 text-center">
           <h2 className={centeredHeadlineClass}>Plan your next release around your goals.</h2>
 
-          {/* The waitlist form, always open (2026-10-07); a Start free button
+          {/* The waitlist form, always open (2026-10-07); a Create your account button
               while sign-up is open (2026-11-10, #1176). */}
           <div className="relative z-[60] mt-10 flex w-full flex-col items-center gap-4">
             <div className="w-full">

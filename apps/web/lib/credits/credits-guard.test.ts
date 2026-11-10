@@ -248,13 +248,20 @@ describe('credits are tagged and never expire', () => {
     expect(spend).not.toMatch(/window_start/);
   });
 
-  it('removes credits in one place, only from the trial source, and only through the guarded helper', () => {
+  it('removes credits in two places only, each behind a purchase check', () => {
     const server = sources.get('lib/credits/credits-server.ts') ?? '';
-    expect([...server.matchAll(/kind:\s*'expire'/g)]).toHaveLength(1);
-    const expire = server.slice(server.indexOf("kind: 'expire'") - 200, server.indexOf("kind: 'expire'") + 100);
-    expect(expire).toMatch(/pool:\s*'trial'/);
-    // The only caller sits behind the purchase check.
+    // The leftover trial (2026-10-01) and the removed Free plan's grants
+    // (2026-11-09). Anything else that takes credits away is a new rule.
+    const at = [...server.matchAll(/kind:\s*'expire'/g)].map((m) => m.index ?? 0);
+    expect(at).toHaveLength(2);
+    const near = at.map((i) => server.slice(i - 200, i + 200));
+    expect(near.filter((text) => /pool:\s*'trial'/.test(text))).toHaveLength(1);
+    expect(near.filter((text) => /pool:\s*'allowance'[\s\S]*free_plan/.test(text))).toHaveLength(1);
+    // The trial removal's only caller sits behind the purchase check.
     expect(server).toMatch(/!purchased\s*&&[^;]*expireTrialCredits\(/);
+    // The Free removal checks for a purchase itself.
+    const free = server.slice(server.indexOf('export async function expireFreePlanAllowance'));
+    expect(free.slice(0, free.indexOf("kind: 'expire'"))).toMatch(/if \(await hasEverPurchased\(client, input\)\) return 0;/);
   });
 });
 

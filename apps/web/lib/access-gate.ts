@@ -52,8 +52,9 @@ export type AccessSource =
  * Open sign-up (2026-11-08, founder call). Closed sign-up held every new
  * account on "You're on the list" until the founder let it in, and about 60
  * sign-up links sent in one week produced no new users. While this is true,
- * anyone who signs up gets straight into the app on the Free plan. Set it to
- * false to close sign-up again; nothing else changes.
+ * anyone who signs up gets straight into the app. Set it to false to close
+ * sign-up again; nothing else changes. (They landed on the Free plan until the
+ * founder removed it on 2026-11-09; now a new team meets the plan wall.)
  */
 export const SIGNUP_OPEN = true;
 

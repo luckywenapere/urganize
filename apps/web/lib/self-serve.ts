@@ -33,7 +33,7 @@ export type CheckoutPlan = Extract<PricingTierId, 'solo' | 'solo_plus' | 'manage
 // yearly.
 // Label and the 6-month period are still valid ids (isCheckoutPlan,
 // isCheckoutPeriod) so teams already on them can renew.
-// Solo Plus joined 2026-11-08 (pricing v4). Free is never bought.
+// Solo Plus joined 2026-11-08 (pricing v4).
 export const CHECKOUT_PLANS: readonly CheckoutPlan[] = ['solo', 'solo_plus', 'manager', 'pro'];
 export const CHECKOUT_PERIODS: readonly BillingInterval[] = ['monthly', 'annual'];
 export type PaymentMethodChoice = 'card' | 'transfer';

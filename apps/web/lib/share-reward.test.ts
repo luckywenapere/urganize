@@ -74,11 +74,6 @@ describe('decideShareReward: trialing teams', () => {
     expect(result).toMatchObject({ kind: 'trial_extended', trialEndsAt: iso(30) });
   });
 
-  it('gives a credits-only team 30 days of full access from now', () => {
-    const result = decide({ access: { state: 'credits_only', reason: 'credits_funded' }, teamTrialEndsAt: iso(-5) });
-    expect(result).toMatchObject({ kind: 'trial_extended', trialEndsAt: iso(30) });
-  });
-
   it('stamps an unstamped trial 30 days from now', () => {
     const result = decide({ access: { state: 'trial', reason: 'no_trial_stamp' }, teamTrialEndsAt: null });
     expect(result).toMatchObject({ kind: 'trial_extended', trialEndsAt: iso(30) });

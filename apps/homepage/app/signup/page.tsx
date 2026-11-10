@@ -13,14 +13,14 @@ import type { ProductShot } from "@/content/product-shots";
 // brand (founder call, 2026-08-09; see the note in app/sitemap.ts). The URL
 // stays /signup so old links keep working, but the page
 // is the waitlist: its one button goes to WAITLIST_URL, and its copy says
-// waitlist, never sign up (house copy rule, 2026-10-16). Since 2026-11-10 (#1176) it is the
-// Start free page while SIGNUP_OPEN is on. It was a direct sign-up door to
+// waitlist, never sign up (house copy rule, 2026-10-16). Since 2026-11-10 (#1177) it is the
+// create-your-account page while SIGNUP_OPEN is on (public beta, no Free plan). It was a direct sign-up door to
 // /onboarding from 2026-08-09 until the waitlist came back.
 
 export const metadata: Metadata = buildPageMetadata({
-  title: SIGNUP_OPEN ? "Start free" : "Waitlist",
+  title: SIGNUP_OPEN ? "Create your account" : "Waitlist",
   description: SIGNUP_OPEN
-    ? `${CORE_LINE} Start free on the Free plan, for as long as you like.`
+    ? `${CORE_LINE} Public beta. Create your account and pick a plan.`
     : `${CORE_LINE} Join the waitlist and we will let you in as spots open.`,
   path: "/signup",
 });
@@ -60,10 +60,10 @@ export default function SignupPage() {
           <PageDawn className="grid items-center gap-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
             <div>
               <p className="mono-label text-[var(--marketing-text-subtle)]">
-                {SIGNUP_OPEN ? "Free plan" : "Waitlist"}
+                {SIGNUP_OPEN ? "Public beta" : "Waitlist"}
               </p>
               <h1 className="mt-6 text-[2.25rem] leading-[1.08] sm:text-[3rem]">
-                {SIGNUP_OPEN ? "Start free" : "Join the waitlist"}
+                {SIGNUP_OPEN ? "Create your account" : "Join the waitlist"}
               </h1>
               <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
                 Tell Urganize your goals and get a plan that fits. Or make

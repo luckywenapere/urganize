@@ -27,8 +27,9 @@ export const WAITLIST_URL = "/#waitlist";
 
 /**
  * Is sign-up open? Mirrors apps/web's SIGNUP_OPEN (lib/access-gate.ts), open
- * since 2026-11-08 (#1140): anyone who signs up gets in on the Free plan. The
- * site followed on 2026-11-10 (#1176). Every primary button, the hero and
+ * since 2026-11-08 (#1140). The site followed on 2026-11-10 (#1177). Urganize
+ * is a public beta (founder, 2026-11-10) with no Free plan (#1158): anyone can
+ * create an account, and plans rollouts once the team picks a plan. Every primary button, the hero and
  * final forms, and the "how do I get in" lines read PRIMARY_CTA, so closing
  * sign-up again is this one line (and the app's).
  */
@@ -37,11 +38,11 @@ export const SIGNUP_OPEN = true;
 export const PRIMARY_CTA = SIGNUP_OPEN
   ? {
       href: APP_SIGNUP_URL,
-      label: "Start free",
-      /** The line under a button. The app's own words for the Free plan. */
-      note: "Free for as long as you like.",
+      label: "Create your account",
+      /** The line under a button. */
+      note: "Public beta. Pick a plan to start your first rollout.",
       /** The small caps line under the hero button. */
-      hint: "FREE FOR AS LONG AS YOU LIKE",
+      hint: "PUBLIC BETA",
     }
   : {
       href: WAITLIST_URL,

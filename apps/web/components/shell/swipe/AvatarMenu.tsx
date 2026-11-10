@@ -471,10 +471,6 @@ export function usePlanCard(canBill: boolean): { eyebrow: string; title: string;
     const days = Math.max(0, team.trialDaysLeft);
     return { eyebrow: 'Your trial', title: `${days} ${days === 1 ? 'day' : 'days'} left`, action: 'Choose a plan' };
   }
-  // The Free plan (pricing v4, 2026-11-08): name it, and offer the paid plans.
-  if (team.state === 'free') {
-    return { eyebrow: 'Your plan', title: getTier('free').label, action: 'Choose a plan' };
-  }
   if ((team.state === 'paid' || team.state === 'comped') && team.tier) {
     return { eyebrow: 'Your plan', title: getTier(team.tier).label, action: 'Manage plan' };
   }
