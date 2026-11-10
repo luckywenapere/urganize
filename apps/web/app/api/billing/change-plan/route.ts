@@ -120,7 +120,12 @@ export async function POST(request: NextRequest) {
 
   if (!subscription) {
     return NextResponse.json(
-      { error: 'There is no active plan to change yet. Activate a plan first.' },
+      {
+        error: 'There is no active plan to change yet. Activate a plan first.',
+        // Same reason the quote gives for a lapsed period, so the plans page
+        // can send the person to checkout instead of stopping here (#1161).
+        reason: 'no_active_period',
+      },
       { status: 400 }
     );
   }

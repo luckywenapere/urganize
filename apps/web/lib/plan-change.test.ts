@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PRICING_TIERS, getTierPrice, isPricingTierId } from '@urganize/pricing';
 import {
   MIN_CHARGEABLE_MINOR_UNIT,
+  isPlanChangeForTeam,
   planChangeRefusalMessage,
   quotePlanChange,
   unusedFraction,
@@ -499,5 +500,30 @@ describe('the quote can never contradict the tier table', () => {
       kind: 'refused',
       reason: 'legacy_current_plan',
     });
+  });
+});
+
+describe('isPlanChangeForTeam', () => {
+  // Since the Free plan (2026-11-08) a team with no paid plan still has access
+  // and can write. Sending its plan tap to change-plan ended in "There is no
+  // active plan to change yet" instead of checkout (#1161).
+  it('is a change only for a team whose owner pays', () => {
+    expect(isPlanChangeForTeam({ hasAccess: true, canWrite: true, state: 'paid', reason: 'owner_paid' })).toBe(true);
+  });
+
+  it.each([
+    ['free', 'trial_expired'],
+    ['trial', 'trial_active'],
+    ['grace', 'trial_grace'],
+    ['credits_only', 'trial_expired'],
+    ['comped', 'comped'],
+    ['paid', 'owner_allowlisted'],
+  ] as const)('is a new purchase for a %s team (%s)', (state, reason) => {
+    expect(isPlanChangeForTeam({ hasAccess: true, canWrite: true, state, reason })).toBe(false);
+  });
+
+  it('is a new purchase for a read-only team and for no answer at all', () => {
+    expect(isPlanChangeForTeam({ hasAccess: true, canWrite: false, state: 'read_only', reason: 'payment_failed' })).toBe(false);
+    expect(isPlanChangeForTeam(null)).toBe(false);
   });
 });

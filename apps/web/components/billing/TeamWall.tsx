@@ -34,6 +34,7 @@ import {
   type TeamAccessClientSnapshot,
 } from '@/lib/team-billing-client';
 import { isPricingV2Enabled } from '@/lib/entitlements';
+import { isPlanChangeForTeam } from '@/lib/plan-change';
 import { HelpTip } from '@/components/shared/HelpTip';
 import { TierPlanPicker, planChargeNote } from '@/components/billing/TierPlanPicker';
 import { PlanCards } from '@/components/billing/PlanCards';
@@ -343,7 +344,14 @@ export function TeamWall() {
       // on the only button that page offers them. They are REACTIVATING, which
       // is an ordinary checkout. Reading canWrite here means this branch and the
       // quote agree by construction rather than by coincidence.
-      if (PRICING_V2 && team?.hasAccess && team.canWrite) {
+      //
+      // ONLY A TEAM THAT REALLY PAYS (#1161). Since the Free plan (2026-11-08) a
+      // team on Free, a trial or credits has access and can write with no paid
+      // plan at all, so this branch refused every one of them with "There is no
+      // active plan to change yet" and they could not pay. isPlanChangeForTeam
+      // is the one rule; and if the server still finds no paid period, the tap
+      // carries on to checkout below instead of stopping on that message.
+      if (PRICING_V2 && isPlanChangeForTeam(team)) {
         const changeResponse = await fetch('/api/billing/change-plan', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -354,10 +362,13 @@ export function TeamWall() {
           authorizationUrl?: string;
           effectiveAt?: string;
           error?: string;
+          reason?: string;
         };
-        if (!changeResponse.ok) {
+        const nothingToChange = !changeResponse.ok && changePayload.reason === 'no_active_period';
+        if (!changeResponse.ok && !nothingToChange) {
           throw new Error(changePayload.error || 'Could not change your plan.');
         }
+        if (!nothingToChange) {
         // An upgrade with something to pay goes to Paystack; a downgrade and a
         // free upgrade are already done, so say so rather than redirecting
         // somewhere that would look like a failed payment.
@@ -378,6 +389,7 @@ export function TeamWall() {
         setIsStartingCheckout(false);
         if (userId) void getTeamAccessClient(userId, { force: true }).then(setTeam);
         return;
+        }
       }
 
       // Self-serve checkout (2026-10-22): the owner's own new purchase goes to
@@ -431,10 +443,7 @@ export function TeamWall() {
   }, [
     selectedPlan,
     effectiveTier,
-    team?.hasAccess,
-    team?.canWrite,
-    team?.primaryWorkspaceId,
-    team?.ownerUserId,
+    team,
     selectedInterval,
     router,
     userId,
