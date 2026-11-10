@@ -85,11 +85,11 @@ export default function TermsPage() {
 
             <Section number="04" title="Trial, subscriptions, and billing">
               <p>
-                Urganize is in a waitlist beta. When your spot opens, your team
-                gets a 3-day free trial of the full product with no card
-                required. The trial covers the whole team, not each
-                person, so joining an existing team does not start a new one.
-                After the trial, continued use requires a paid subscription,
+                Anyone can create an account and use Urganize on the Free plan
+                for as long as they like. A team may also get a free trial of a
+                paid plan, with no card required. A trial covers the whole
+                team, not each person, so joining an existing team does not
+                start a new one. Paid plans are a subscription,
                 priced per team and paid monthly or once a year through
                 Paystack, whichever you pick. We never see or store your card
                 details.

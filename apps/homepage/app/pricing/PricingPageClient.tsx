@@ -7,6 +7,7 @@ import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { PricingTierCards } from "../components/pricing/PricingTierCards";
 import { PageDawn } from "../components/marketing/PageDawn";
+import { SIGNUP_OPEN } from "@/lib/app-urls";
 
 // THE PRICE TABLE IS UNCONDITIONAL. Do not put it back behind a flag.
 //
@@ -130,6 +131,9 @@ export function PricingPageClient() {
         {/* WAITLIST — the secondary path for anyone not ready to talk yet.
             Same capture pipeline as the rest of the marketing site
             (URG-125/URG-136). */}
+        {/* Hidden while sign-up is open (2026-11-10, #1176): there is no spot
+            to wait for. Comes back with SIGNUP_OPEN off. */}
+        {!SIGNUP_OPEN && (
         <section id="waitlist" className="relative scroll-mt-28 px-6 pb-28">
           <div className="mx-auto max-w-3xl text-center">
             <ScrollReveal>
@@ -147,6 +151,7 @@ export function PricingPageClient() {
             </div>
           </div>
         </section>
+        )}
       </main>
 
       <MarketingFooter />

@@ -11,7 +11,7 @@ import {
 } from "../../content/changelog";
 import { CORE_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
-import { WAITLIST_URL } from "@/lib/app-urls";
+import { PRIMARY_CTA } from "@/lib/app-urls";
 import { ChangelogFilter } from "./ChangelogFilter";
 import { ResponsiveProductShot } from "../components/landing/ResponsiveProductShot";
 
@@ -233,11 +233,13 @@ function MonthBody({ month }: { month: Month }) {
 
 export default function ChangelogPage() {
   const months = groupByMonth(publicChangelog);
-  let shown = 0;
-  const openMonths = months.findIndex((month) => {
-    shown += month.featured.length;
-    return shown >= OPEN_FEATURES;
-  });
+  // Running total of featured items per month, without reassigning a local
+  // during render (react-hooks/immutability). Same result as the old loop.
+  const runningTotals = months.reduce<number[]>(
+    (totals, month) => [...totals, (totals[totals.length - 1] ?? 0) + month.featured.length],
+    [],
+  );
+  const openMonths = runningTotals.findIndex((total) => total >= OPEN_FEATURES);
   const openCount = openMonths === -1 ? months.length : openMonths + 1;
   const recent = recentFeatures(publicChangelog);
 
@@ -304,12 +306,12 @@ export default function ChangelogPage() {
               Plan your next release on Urganize.
             </p>
             <a
-              href={WAITLIST_URL}
+              href={PRIMARY_CTA.href}
               data-track="start_trial_click"
               data-location="changelog_footer"
               className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-[var(--marketing-primary)] px-5 py-2.5 text-sm font-medium text-[var(--marketing-primary-text)] hover:bg-[var(--marketing-primary-hover)]"
             >
-              Join waitlist
+              {PRIMARY_CTA.label}
             </a>
           </div>
         </div>

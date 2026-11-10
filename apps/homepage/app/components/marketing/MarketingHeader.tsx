@@ -4,7 +4,7 @@ import { CommunityMenu } from "./CommunityMenu";
 import { MobileMenu } from "./MobileMenu";
 import { ProductMenu } from "./ProductMenu";
 import { ThemeToggle } from "./ThemeToggle";
-import { WAITLIST_URL } from "@/lib/app-urls";
+import { PRIMARY_CTA } from "@/lib/app-urls";
 
 // One header for every marketing page. Product pages (Features, Pricing, Why
 // Urganize, Privacy) live in the ProductMenu dropdown — their ONLY home;
@@ -101,7 +101,7 @@ export function MarketingHeader() {
                 the product app. APP_SIGNUP_URL is /onboarding, NOT /auth, which
                 is login-only — see lib/app-urls.ts. */}
             <a
-              href={WAITLIST_URL}
+              href={PRIMARY_CTA.href}
               data-track="start_trial_click"
               data-location="header"
               className="header-cta inline-flex min-h-11 shrink-0 items-center justify-center rounded-full bg-[var(--marketing-primary)] px-4 py-2 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] hover:bg-[var(--marketing-primary-hover)] sm:px-5 sm:py-2.5"
@@ -111,8 +111,10 @@ export function MarketingHeader() {
                   and WAITLIST_URL lands on the homepage hero form. Same width
                   as "Try Urganize" within a few px at 375. On the homepage the
                   `.home-v2 .header-cta` rule (globals.css) turns it into an
-                  outline so the hero form stays the one filled action. */}
-              Join waitlist
+                  outline so the hero form stays the one filled action.
+                  PRIMARY_CTA since 2026-11-10: "Start free" while sign-up is
+                  open, "Join waitlist" when it is not. */}
+              {PRIMARY_CTA.label}
             </a>
             <ThemeToggle />
           </div>

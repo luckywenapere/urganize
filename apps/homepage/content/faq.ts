@@ -30,7 +30,7 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   {
     question: "When can I start?",
     answer:
-      "We are letting people in from the waitlist. Join and we will message you when your spot opens.",
+      "Today. Start free and you are in straight away, on the Free plan for as long as you like.",
   },
   {
     question: "My team lives on WhatsApp. Will they actually use it?",

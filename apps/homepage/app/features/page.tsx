@@ -9,6 +9,7 @@ import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
 import { PageDawn } from "../components/marketing/PageDawn";
 import type { ProductShot } from "@/content/product-shots";
+import { PRIMARY_CTA } from "@/lib/app-urls";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Plan new music, track every task, pitch with a press kit",
@@ -188,7 +189,7 @@ export default function FeaturesPage() {
             <div className="mt-8 flex w-full flex-col items-center gap-4">
               <TrialButton location="features_hero" size="lg" className="w-full sm:w-auto" />
               <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                We are letting people in from the waitlist.
+                {PRIMARY_CTA.note}
               </p>
             </div>
           </PageDawn>
@@ -291,7 +292,7 @@ export default function FeaturesPage() {
               <div className="mt-10 flex w-full flex-col items-center gap-4">
                 <TrialButton location="features_cta" size="lg" className="w-full sm:w-auto" />
                 <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                  We are letting people in from the waitlist.
+                  {PRIMARY_CTA.note}
                 </p>
                 <ProofLine id="antoine" className="mt-2" />
               </div>

@@ -3,6 +3,8 @@ import { ProofLine } from "../ProofLine";
 import { ResponsiveProductShot } from "../ResponsiveProductShot";
 import { SectionShell } from "../SectionShell";
 import { WaitlistForm } from "../WaitlistForm";
+import { TrialButton } from "../TrialButton";
+import { PRIMARY_CTA, SIGNUP_OPEN } from "@/lib/app-urls";
 import { WatchDemo } from "../WatchDemo";
 import { wideContainerClass } from "./shared";
 import { HeroCards, HeroSky } from "./HeroDawn";
@@ -58,12 +60,22 @@ export function HeroSection() {
         {/* z-[60] keeps the form above the hero-fade-in transform stack and
             below the demo overlay's z-[100]. */}
         <div className="hero-fade-in hero-delay-3 relative z-[60] mt-9 flex w-full flex-col items-center gap-5">
-          <WaitlistForm
-            source="homepage_hero"
-            buttonLabel="Join waitlist"
-            hint="PRIVATE BETA · INVITES GO OUT WEEKLY"
-            accent
-          />
+          {/* Open sign-up (2026-11-10, #1176): a button straight into the app
+              on the Free plan. The waitlist form comes back if SIGNUP_OPEN is
+              turned off. */}
+          {SIGNUP_OPEN ? (
+            <div className="flex flex-col items-center gap-3">
+              <TrialButton location="hero" size="lg" className="w-full sm:w-auto" />
+              <p className="mono-label text-[var(--marketing-text-subtle)]">{PRIMARY_CTA.hint}</p>
+            </div>
+          ) : (
+            <WaitlistForm
+              source="homepage_hero"
+              buttonLabel={PRIMARY_CTA.label}
+              hint={PRIMARY_CTA.hint}
+              accent
+            />
+          )}
           <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
             <WatchDemo variant="link" />
           </p>
