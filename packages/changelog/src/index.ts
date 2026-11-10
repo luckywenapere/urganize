@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.261.4",
+    tag: "App",
+    date: "November 10, 2026",
+    highlights: [
+      "Picking a plan while you are on Free or a trial now takes you to pay. Before, it showed an error and stopped.",
+    ],
+  },
+  {
     version: "1.261.3",
     tag: "AI",
     date: "November 10, 2026",

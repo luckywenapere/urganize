@@ -313,3 +313,22 @@ export function planChangeRefusalMessage(reason: PlanChangeRefusalReason): strin
       return 'There is no active plan to change yet. Activate a plan first.';
   }
 }
+
+/**
+ * Is a plan tap a CHANGE to a plan the team already pays for, or a new purchase?
+ *
+ * Only a team whose owner pays has a paid period to change. Free, a trial,
+ * credits only, a comp and a founder-allowed account all have access and can
+ * write, but hold no subscription, so /api/billing/change-plan refuses them
+ * ("There is no active plan to change yet") and they could not pay at all
+ * (#1161). They belong in checkout.
+ */
+export function isPlanChangeForTeam(
+  team:
+    | { hasAccess: boolean; canWrite: boolean; state: string; reason: string }
+    | null
+    | undefined
+): boolean {
+  if (!team) return false;
+  return team.hasAccess && team.canWrite && team.state === 'paid' && team.reason === 'owner_paid';
+}
