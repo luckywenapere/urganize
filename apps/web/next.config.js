@@ -45,6 +45,10 @@ const BUILD_ID = (
 // The Oct 16, 2026 feature cuts (URG-319). See the `env` block below.
 const CUT_FEATURE_FLAGS = require('./lib/cut-features.json');
 
+// Short links that say where a visitor came from (#1185): go.urganize.app/x,
+// /ig ... Each slug is rewritten to /api/go/<slug>. See lib/source-links.ts.
+const SOURCE_LINK_SLUGS = Object.keys(require('./lib/source-links.json'));
+
 // Sentry (URG-372). The app version becomes the Sentry release, and the
 // Vercel environment (production / preview) its environment. VERCEL_ENV is
 // server-only, so it is stamped for the browser here. package.json mirrors
@@ -185,6 +189,7 @@ const nextConfig = {
         source: '/.well-known/oauth-authorization-server/:path*',
         destination: '/api/well-known/oauth-authorization-server',
       },
+      ...SOURCE_LINK_SLUGS.map((slug) => ({ source: `/${slug}`, destination: `/api/go/${slug}` })),
     ];
   },
   images: {

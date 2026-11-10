@@ -64,6 +64,7 @@ import {
   reportReferralCode,
 } from '@/lib/referral-intent';
 import { captureSignupSourceFromSearch, reportSignupSource } from '@/lib/signup-source-intent';
+import { reportSourceLinkSignup } from '@/lib/source-links';
 import { isReferralsEnabled } from '@/lib/referrals';
 import { markOnboardingPlannerHandoff, onboardingLandingPath, startFirstSession } from '@/lib/first-session';
 import { recordHref } from '@/lib/artist-page';
@@ -619,7 +620,7 @@ export default function OnboardingPage() {
 
   const afterTeamExists = async (token: string) => {
     // The partner code and where they came from, now the team exists.
-    await Promise.all([reportReferralCode(token), reportSignupSource(token)]).catch(() => undefined);
+    await Promise.all([reportReferralCode(token), reportSignupSource(token), reportSourceLinkSignup(token)]).catch(() => undefined);
   };
 
   const createTeam = async (input: { name: string; whoFor: TeamWhoFor; nameEdited: boolean }) => {
