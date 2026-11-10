@@ -1877,11 +1877,13 @@ export function ChappiConversation({
       </div>
 
       {/* The composer sits on a frosted ground the transcript scrolls UNDER
-          (founder call, 2026-10-20): the wrapper pulls up over the last 40px
-          of the scroller (-mt-10; the bottom sentinel is 48px tall so a
+          (founder call, 2026-10-20): the wrapper pulls up over the last 16px
+          of the scroller (-mt-4; the bottom sentinel is 48px tall so a
           message scrolled to the end still clears it), and its top padding
-          puts the pill back exactly where it was (52px = the 40px overlap plus
-          the old 12px gap). The ground fades from clear to the page colour
+          puts the pill back exactly where it was (28px = the 16px overlap plus
+          the old 12px gap). It was a 40px overlap until 2026-11-10, when the
+          founder found the frost too tall on a phone: it should be about the
+          height of the box, not twice it. The ground fades from clear to the page colour
           over that padding and blurs what passes beneath, the way the phone's
           bottom bar already does, so the box reads as part of the
           conversation rather than a form stuck to it. The panel variant
@@ -1889,13 +1891,14 @@ export function ChappiConversation({
           makes this wrapper the containing block for fixed descendants; the
           scope and attach menus are absolute, which it does not affect. */}
       <div
-        className={`relative z-10 -mt-10 shrink-0 bg-gradient-to-t pt-[3.25rem] backdrop-blur-xl ${
+        className={`relative z-10 -mt-4 shrink-0 bg-gradient-to-t pt-7 backdrop-blur-xl ${
           isPanel ? 'from-bg-surface via-bg-surface/90 to-transparent' : 'from-bg-base via-bg-base/90 to-transparent'
         }`}
       >
         {awayFromLatest ? (
-          // The way back down: one round button in the frost's top edge, the
-          // same material as the pill. Only while the newest message is out of
+          // The way back down: one round button just above the frost, the
+          // same material as the pill (the frost is too short to hold it
+          // without covering the box since 2026-11-10). Only while the newest message is out of
           // reach, so a short chat never shows it.
           // Centred with auto margins, never a transform: the fade-up keyframe
           // ends on transform: translateY(0) and would cancel a translateX.
@@ -1903,7 +1906,7 @@ export function ChappiConversation({
             type="button"
             onClick={scrollToLatest}
             aria-label="Scroll to the latest message"
-            className="motion-focus motion-press absolute inset-x-0 top-1 z-20 mx-auto grid h-9 w-9 place-items-center rounded-full border border-stroke-default bg-bg-surface/80 text-content-primary shadow-md backdrop-blur-xl transition-colors hover:bg-bg-elevated animate-in"
+            className="motion-focus motion-press absolute inset-x-0 bottom-full z-20 mx-auto mb-2 grid h-9 w-9 place-items-center rounded-full border border-stroke-default bg-bg-surface/80 text-content-primary shadow-md backdrop-blur-xl transition-colors hover:bg-bg-elevated animate-in"
           >
             <ArrowDown className="h-4 w-4" aria-hidden="true" />
           </button>

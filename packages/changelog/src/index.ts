@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.261.3",
+    tag: "AI",
+    date: "November 10, 2026",
+    highlights: [
+      "The soft blur above the UrgAns reply box is shorter now, so you see more of the chat on your phone.",
+      "Tap a song's smart link to copy it. The Copy and Share buttons are gone.",
+    ],
+  },
+  {
     version: "1.261.2",
     title: "A clearer way to say what Urganize does",
     tag: "App",

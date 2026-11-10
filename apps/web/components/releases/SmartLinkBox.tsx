@@ -1,17 +1,21 @@
 'use client';
 
-// A released song's smart link with Copy and Share inside the box (Nov 2026,
-// #1090 and #1092, mocks docs/mocks/release-day-auto-link and
-// docs/mocks/out-now-placement). The same box on the Out now card on Home, on
-// the artist page under Out now, and at the top of the rollout.
+// A released song's smart link (Nov 2026, #1090 and #1092, mocks
+// docs/mocks/release-day-auto-link and docs/mocks/out-now-placement). The same
+// box on the Out now card on Home, on the artist page under Out now, and at
+// the top of the rollout.
+//
+// Tapping the box copies the link (founder call, 2026-11-10, #1160). The Copy
+// and Share buttons inside it were removed; the link swaps to "Link copied"
+// for a moment so the tap is still seen.
 //
 // useReleaseSmartLink reads the link for a released rollout. It shows nothing
 // while there is none: the link is made in the background.
 
 import { useEffect, useState } from 'react';
-import { Check, Share } from '@/components/icons';
+import { Check } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
-import { copyText, shareTextToApps } from '@/lib/share-file';
+import { copyText } from '@/lib/share-file';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { isAltlinkEnabled } from '@/lib/altlink/rules';
 
@@ -38,31 +42,28 @@ export function SmartLinkBox({
     }
   };
 
-  const share = async () => {
-    captureAnalyticsEvent({ name: 'out_now_link_shared', properties: { release_id: releaseId } });
-    const outcome = await shareTextToApps({ text: `${title} is out now. Listen: ${url}`, title });
-    if (outcome === 'unsupported') await copy();
-  };
-
+  const label = url.replace(/^https?:\/\//, '');
   return (
-    <div className={`flex items-center gap-1 rounded-xl border border-stroke-default bg-bg-base py-1 pl-3 pr-1 ${className}`}>
-      <span className="min-w-0 flex-1 truncate text-[13.5px] text-content-secondary">{url.replace(/^https?:\/\//, '')}</span>
+    <div className={className}>
       <button
         type="button"
         onClick={() => void copy()}
-        className="hit-44 relative motion-focus inline-flex h-8 shrink-0 items-center gap-1 rounded-lg px-2.5 text-[13px] font-semibold text-brand hover:bg-bg-hover"
+        aria-label={`Copy the link to ${title}: ${label}`}
+        className="motion-focus motion-press flex h-11 w-full items-center gap-2 rounded-xl border border-stroke-default bg-bg-base px-3 text-left hover:bg-bg-hover"
       >
-        {copied ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
-        {copied ? 'Copied' : 'Copy'}
+        {copied ? (
+          <span className="inline-flex min-w-0 flex-1 items-center gap-1.5 text-[13.5px] font-semibold text-brand">
+            <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            Link copied
+          </span>
+        ) : (
+          <span className="min-w-0 flex-1 truncate text-[13.5px] text-content-secondary">{label}</span>
+        )}
       </button>
-      <button
-        type="button"
-        onClick={() => void share()}
-        aria-label={`Share ${title}`}
-        className="hit-44 relative motion-focus grid h-8 w-8 shrink-0 place-items-center rounded-lg text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-      >
-        <Share className="h-4 w-4" aria-hidden="true" />
-      </button>
+      {/* Outside the button: its aria-label would hide a status inside it. */}
+      <span role="status" className="sr-only">
+        {copied ? 'Link copied' : ''}
+      </span>
     </div>
   );
 }

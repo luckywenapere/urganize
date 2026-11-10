@@ -1,7 +1,7 @@
 {
   "name": "@urganize/homepage",
   "description": "Urganize is an app that helps artists, managers and record labels plan new music and keep track of every task.",
-  "version": "1.261.1",
+  "version": "1.261.3",
   "private": true,
   "scripts": {
     "dev": "next dev",
