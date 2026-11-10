@@ -5,7 +5,7 @@ import { onlyPreProductionWork } from '@/lib/pre-production';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { usePageBarCrumbSlot, usePageBarEndSlot } from '@/components/shell/PageBar';
-import { ChevronRight, Plus, Sparkles } from '@/components/icons';
+import { ChevronRight, Plus } from '@/components/icons';
 import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/lib/tasks';
@@ -37,7 +37,8 @@ type WorkspaceDesktopFocusedProps = {
    * what is showing: a scene has taken the panel otherwise, and "add an
    * activity" pointed at nothing on screen is noise. Absent, no button. */
   onNewActivity?: () => void;
-  /** Opens the idea box on a planned rollout. Absent, no button. */
+  /** Opens the idea box on a planned rollout. It is a row behind the tab row's
+   * three dots since Nov 10, 2026 (#1179); absent, no row. */
   onAddIdea?: () => void;
   /** Share and Archive: dialogs WorkspaceView owns. They sit behind the tab
    * row's overflow button. Change artist left the menu on Oct 18, 2026; it is
@@ -100,6 +101,13 @@ const STATUS_TONE: Record<ReturnType<typeof statusGroup>, string> = {
  * Desktop-only focused rollout (design overhaul, 2026-10-04): a page bar line
  * (crumb, artist, status, progress, one primary action; trimmed 2026-10-15), the
  * rollout's places as a row of tabs, then the panel those tabs open into.
+ *
+ * Two lines since Nov 10, 2026 (#1179, founder approved mock, part of #1175).
+ * Line one says where you are and what it is, then the count, the Brief and
+ * one filled New activity. Line two is the tabs on the left and the plan's
+ * tools on the right, with the three dots last. The plan's tools and Add idea
+ * shared line one before, about ten things on one line, so the rollout's name
+ * was cut short and Select ran into the count.
  *
  * It used to be a viewport-locked column beside a vertical menu and the UrgAns
  * chat. The menu is the tab row now and UrgAns is the floating drawer, so this
@@ -192,10 +200,17 @@ export function WorkspaceDesktopFocused({
           <span className="shrink-0">Home</span>
         )}
         <ChevronRight className="h-3.5 w-3.5 shrink-0 text-content-tertiary" aria-hidden="true" />
-        <span className="min-w-0 truncate font-semibold text-content-primary">{card.release.title}</span>
+        <span title={card.release.title} className="min-w-0 truncate font-semibold text-content-primary">
+          {card.release.title}
+        </span>
       </nav>
       <span className="h-[21px] w-px shrink-0 bg-stroke-subtle" aria-hidden="true" />
-      <span className="min-w-0 max-w-[14rem] truncate text-sm text-content-secondary">
+      {/* The artist gives way first (#1179): the rollout's name reads in full
+          at normal widths, and a long artist name is what gets cut short. */}
+      <span
+        title={scopedRelease.artistName || undefined}
+        className="min-w-[3rem] max-w-[14rem] shrink-[8] truncate text-sm text-content-secondary"
+      >
         {scopedRelease.artistName || 'Unassigned artist'}
       </span>
       <span
@@ -209,18 +224,14 @@ export function WorkspaceDesktopFocused({
 
   const actions = focus ? null : (
     <div className="flex shrink-0 items-center gap-[13px]">
-      {/* A hairline between the plan's tools and the page's own, shown only
-          when the tools are on the line: 13 + 1 + 13 sits on the line's
-          golden-ratio scale (8 / 13 / 21 / 34). */}
-      <span
-        className="hidden h-[21px] w-px bg-stroke-subtle group-has-[#subnav-slot-tools:not(:empty)]/pagebar:block"
-        aria-hidden="true"
-      />
+      {/* Only three things here (#1179): the count, the Brief, New activity.
+          The plan's tools are on the tab row below and Add idea is behind its
+          three dots. */}
       {/* One plain count (2026-10-14 declutter), worded like the
           distribution checklist's. */}
       {hasPlan ? (
-        <div className="hidden items-center gap-2 xl:flex">
-          <span className="text-sm tabular-nums text-content-secondary">
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="whitespace-nowrap text-sm tabular-nums text-content-secondary">
             {tasksDone} of {tasksTotal} done
           </span>
           <ReleaseDeliveredMark total={tasksTotal} done={tasksDone} />
@@ -235,21 +246,13 @@ export function WorkspaceDesktopFocused({
           coverUrl={card.coverThumbUrl ?? card.coverArtUrl}
         />
       ) : null}
-      {onAddIdea && hasPlan ? (
-        <button
-          type="button"
-          onClick={onAddIdea}
-          className="motion-focus motion-press inline-flex h-[34px] shrink-0 items-center justify-center gap-2 rounded-full border border-stroke-control px-[13px] text-[13px] font-medium text-content-primary transition-colors hover:bg-bg-hover"
-        >
-          <Sparkles className="h-4 w-4" aria-hidden="true" />
-          Add idea
-        </button>
-      ) : null}
+      {/* The line's one primary action, filled like the app's other primary
+          buttons (#1179). It was one of two outlined buttons before. */}
       {onNewActivity && hasPlan ? (
         <button
           type="button"
           onClick={onNewActivity}
-          className="motion-focus motion-press inline-flex h-[34px] shrink-0 items-center justify-center gap-2 rounded-full border border-stroke-control px-[13px] text-[13px] font-medium text-content-primary transition-colors hover:bg-bg-hover"
+          className="motion-focus motion-press inline-flex h-[34px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-brand px-[13px] text-[13px] font-semibold text-content-inverse transition-colors hover:bg-brand-hover"
         >
           <Plus className="h-4 w-4" aria-hidden="true" />
           New activity
@@ -275,7 +278,9 @@ export function WorkspaceDesktopFocused({
             the left, the count and New activity on the right, all on the
             breadcrumb's line. The cover, the big title and the date that sat
             in a header under it are gone: the crumb already names the
-            rollout, and the cover and date live in their own scenes. */}
+            rollout, and the cover and date live in their own scenes.
+            The plan's tools left this line for the tab row on Nov 10, 2026
+            (#1179), which reverses that part of the one-line call. */}
         {crumbSlot ? createPortal(crumb, crumbSlot) : null}
         {endSlot && actions ? createPortal(actions, endSlot) : null}
         {!crumbSlot || !endSlot ? (
@@ -308,6 +313,7 @@ export function WorkspaceDesktopFocused({
         <RolloutTabs
           releaseId={scopedRelease.id}
           share={share}
+          addIdea={onAddIdea && hasPlan ? { label: 'Add idea', onClick: onAddIdea } : null}
           releaseDate={releaseDate}
           archive={archive}
           deleteRollout={deleteRollout}

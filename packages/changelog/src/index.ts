@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.265.2",
+    tag: "Rollouts",
+    date: "November 11, 2026",
+    highlights: [
+      "The top of a rollout's plan is tidier on a computer. The rollout's name now shows in full.",
+      "The plan's tools sit beside the tabs, and New activity is one clear green button.",
+      "Add idea moved into the three-dots menu.",
+      "On the timeline, activity names have more room. A late activity shows a red dot and its date in red.",
+    ],
+  },
+  {
     version: "1.265.1",
     tag: "Rollouts",
     date: "November 11, 2026",

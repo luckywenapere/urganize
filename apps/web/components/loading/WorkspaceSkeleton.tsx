@@ -1,6 +1,8 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
+import { createPortal } from 'react-dom';
+import { usePageBarCrumbSlot, usePageBarEndSlot } from '@/components/shell/PageBar';
 import { SkeletonBlock } from './SkeletonBlock';
 import { useKnownReleaseCount } from './known-counts';
 import {
@@ -265,25 +267,66 @@ function MobileFocusedSkeleton({ panelBody }: { panelBody: PanelBody }) {
  * 2026-09-30 and is one centre column now, like the real one: the rails went
  * with the row of scene pills, and the menu that replaced the pills is a card in
  * the right-hand column that RolloutMenuSkeletonPortal fills.
+ *
+ * Its top is the real page's two lines since Nov 10, 2026 (#1179): the page
+ * bar line, then the tab row with the plan's tools at its right end.
  */
 function DesktopFocusedSkeleton({ panelBody }: { panelBody: PanelBody }) {
   // The New activity button is only there while the main view is showing, the
   // real component's own rule. A named scene has taken the panel otherwise.
   const showNewActivity = panelBody === 'timeline' || panelBody === 'activities';
+  // The two lines of the real top (#1179, Nov 10, 2026). Line one lives in the
+  // shell's page bar, so its placeholders portal into the same two slots the
+  // real crumb and actions do; until this they were drawn in the page as a
+  // back button and a progress strip the real page stopped having in October.
+  const crumbSlot = usePageBarCrumbSlot(true);
+  const endSlot = usePageBarEndSlot(true);
   return (
     <div className="flex h-[calc(100dvh-9.25rem-1px)] min-h-[24rem] flex-col gap-4">
-      {/* Compact back button + motion tracker strip (h-1.5, matching the
-          2026-08-04 contrast fix) + the New activity button at the far end.
-          w-28 for the button: px-3 + a 14px icon + gap-1.5 + "New activity" at
-          11px semibold comes to roughly 114px, and a placeholder rounds DOWN,
-          because one wider than the real pill shifts the tracker left when the
-          label arrives where a narrower one shifts it right. */}
-      <div className="flex shrink-0 items-center gap-4">
-        <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
-        <SkeletonBlock className="h-2.5 w-14" />
-        <SkeletonBlock className="h-1.5 flex-1 rounded-full" />
-        <SkeletonBlock className="h-2.5 w-8" />
-        {showNewActivity ? <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" /> : null}
+      {/* Line one: Home > the rollout's name, the artist and the status on the
+          left; the count, the Brief and New activity on the right. Widths round
+          DOWN from the real ones, because a placeholder wider than what
+          replaces it shifts its neighbours when the label arrives. */}
+      {crumbSlot
+        ? createPortal(
+            <div className="flex min-w-0 items-center gap-[13px]" aria-hidden="true">
+              <SkeletonBlock className="h-3.5 w-10 shrink-0" />
+              <SkeletonBlock className="h-4 w-40 shrink-0" />
+              <SkeletonBlock className="h-3.5 w-24 shrink-0" />
+              <SkeletonBlock className="h-[21px] w-20 shrink-0 rounded-full" />
+            </div>,
+            crumbSlot
+          )
+        : null}
+      {endSlot
+        ? createPortal(
+            <div className="flex shrink-0 items-center gap-[13px]" aria-hidden="true">
+              <SkeletonBlock className="h-3.5 w-20 shrink-0" />
+              <SkeletonBlock className="h-10 w-36 shrink-0 rounded-xl" />
+              {showNewActivity ? <SkeletonBlock className="h-[34px] w-28 shrink-0 rounded-full" /> : null}
+            </div>,
+            endSlot
+          )
+        : null}
+
+      {/* Line two: the tabs on the left, the plan's tools on the right while
+          the plan is what is coming, and the three dots last. Same bleed,
+          rule and padding as the real sticky row in WorkspaceDesktopFocused. */}
+      <div className="-mx-8 flex shrink-0 items-center gap-[13px] border-b border-stroke-subtle px-8 pb-2">
+        <div className="flex min-w-0 flex-1 items-center gap-1">
+          <SkeletonBlock className="h-10 w-32 shrink-0 rounded-lg" />
+          <SkeletonBlock className="h-10 w-36 shrink-0 rounded-lg" />
+          <SkeletonBlock className="h-10 w-28 shrink-0 rounded-lg" />
+        </div>
+        {showNewActivity ? (
+          <div className="flex shrink-0 items-center gap-2">
+            <SkeletonBlock className="h-[30px] w-[62px] shrink-0 rounded-lg" />
+            <SkeletonBlock className="h-[34px] w-[34px] shrink-0 rounded-lg" />
+            <SkeletonBlock className="h-[34px] w-24 shrink-0 rounded-full" />
+            <SkeletonBlock className="h-[34px] w-14 shrink-0 rounded-full" />
+          </div>
+        ) : null}
+        <SkeletonBlock className="h-10 w-10 shrink-0 rounded-lg" />
       </div>
 
       {/* Centre column — a plain flex-column frame, same as the real

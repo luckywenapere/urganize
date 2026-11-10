@@ -21,6 +21,7 @@ import {
   narrowTimeline,
   hideDoneItems,
   countDoneItems,
+  formatTimelineDate,
   type ReleaseTimeline,
   type TimelineItem,
   type TimelinePhaseGroup,
@@ -111,9 +112,15 @@ const TONE_LABEL: Record<TimelineTone, string> = {
  * Overdue and in-progress differ only by red versus green on the grid, and red
  * versus green is the pair colour-blind readers confuse most; catch-up and
  * blocked also share one amber. Saying the state in text is what keeps the grid
- * readable without hue. Done, cancelled and scheduled are the quiet defaults. */
+ * readable without hue. Done, cancelled and scheduled are the quiet defaults.
+ *
+ * Overdue left this list on Nov 10, 2026 (#1179, founder approved mock): the
+ * word on every late row was the loudest thing in the column and cut the names
+ * short. A late row in the grid says it once, with a red dot before the name
+ * and its date in red after it. The date is the text that still reads without
+ * hue (a day before Today), and a screen reader hears "Overdue". The week
+ * list keeps its own tag. */
 const TONE_TAG_CLASS: Partial<Record<TimelineTone, string>> = {
-  overdue: 'text-status-error',
   catch_up: 'text-status-warning',
   blocked: 'text-status-warning',
 };
@@ -250,8 +257,9 @@ export function TimelineScene({
   const phoneSearchOpen = useRolloutPhoneChrome((state) => state.searchOpen);
   const menuFolded = usePlanMenuFold((state) => state.folded);
   const setPhoneSearchOpen = useRolloutPhoneChrome((state) => state.setSearchOpen);
-  // The plan tools sit in the page bar (or the full-screen bar) on a computer,
-  // so their in-page row is empty there and must not keep its gap.
+  // The plan tools sit at the right end of the rollout's tab row on a computer
+  // (#1179; the page bar before), so their in-page row is empty there and must
+  // not keep its gap.
   const toolsInBar = tasks.length > 0;
   // Phases default OPEN (`?? false` at the two call sites below). They shipped
   // collapsed in 2026-08, which was defensible while this was a scene you chose
@@ -579,8 +587,10 @@ export function TimelineScene({
       <div className="tl-grid-view">
         <div className="flex items-stretch">
           {/* Activity labels. A fixed column rather than a grid cell so the
-              axis beside it can be measured on its own for the drag maths. */}
-          <div className="w-44 shrink-0 pr-3">
+              axis beside it can be measured on its own for the drag maths.
+              280px wide once there is room (#1179), so names read in full;
+              176px in a narrow container (.tl-label-col in globals.css). */}
+          <div className="tl-label-col shrink-0 pr-3">
             <div className="h-7" aria-hidden="true" />
             {phases.map((phase) => (
               <PhaseLabels
@@ -589,6 +599,7 @@ export function TimelineScene({
                 dates={phaseDates[phase.phase] ?? ''}
                 isCollapsed={collapsed[phase.phase] ?? false}
                 startHereId={startHereId}
+                releaseDate={release.releaseDate!}
                 onToggle={() =>
                   setCollapsed((current) => ({
                     ...current,
@@ -768,6 +779,7 @@ function PhaseLabels({
   dates,
   isCollapsed,
   startHereId = null,
+  releaseDate,
   onToggle,
   onOpenTask,
 }: {
@@ -777,6 +789,8 @@ function PhaseLabels({
   isCollapsed: boolean;
   /** A smaller plan's first open task (URG-318). */
   startHereId?: string | null;
+  /** For a late row's date (#1179). */
+  releaseDate: string;
   onToggle: () => void;
   onOpenTask: (taskId: string) => void;
 }) {
@@ -820,6 +834,8 @@ function PhaseLabels({
         : phase.items.map((item) => {
             const pickable = selection?.selectable.has(item.taskId) ?? false;
             const picked = selection?.selected.has(item.taskId) ?? false;
+            // Late, said once (#1179): a red dot, then the date in red.
+            const late = item.tone === 'overdue' && item.taskId !== startHereId;
             return (
             <button
               key={item.taskId}
@@ -838,6 +854,9 @@ function PhaseLabels({
               {item.isMilestone ? (
                 <Flag className="h-3 w-3 shrink-0 text-brand" aria-hidden="true" />
               ) : null}
+              {late ? (
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-status-error" aria-hidden="true" />
+              ) : null}
               <span
                 className={`min-w-0 flex-1 truncate text-[11px] text-content-secondary ${
                   item.tone === 'cancelled' ? 'line-through opacity-55' : ''
@@ -851,6 +870,11 @@ function PhaseLabels({
                 </span>
               ) : item.taskId === startHereId ? (
                 <span className="shrink-0 font-mono text-[10px] text-brand">Start here</span>
+              ) : late ? (
+                <span className="shrink-0 text-[11px] font-medium tabular-nums text-status-error" data-late-date>
+                  <span className="sr-only">{TONE_LABEL.overdue}, </span>
+                  {formatTimelineDate(releaseDate, item.startDay)}
+                </span>
               ) : TONE_TAG_CLASS[item.tone] ? (
                 <span className={`shrink-0 text-[11px] font-semibold ${TONE_TAG_CLASS[item.tone]}`}>
                   {TONE_LABEL[item.tone]}

@@ -640,6 +640,23 @@ html[data-theme='light'] .cc-island {
 .tl-list-view {
   display: block;
 }
+/* The grid's activity name column (#1179): 280px so names read in full, once
+   the container can spare it and still leave the weeks room. */
+.tl-label-col {
+  width: 11rem;
+}
+@container (min-width: 52rem) {
+  .tl-label-col {
+    width: 280px;
+  }
+}
+@supports not (container-type: inline-size) {
+  @media (min-width: 1024px) {
+    .tl-label-col {
+      width: 280px;
+    }
+  }
+}
 @container (min-width: 34rem) {
   .tl-grid-view {
     display: block;

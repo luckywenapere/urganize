@@ -84,6 +84,11 @@ export const RELEASE_MENU_ORDER = [
   // the plan first again and made the brief a button on the plan's title line
   // that opens it on the whole screen (#902). This row stays for the menu.
   'brief',
+  // Add idea (#1179, Nov 10, 2026, founder approved mock): it was a button on
+  // the computer's top line, which held too much. It is plan work, so it sits
+  // with the brief; on a computer both are behind the tab row's three dots.
+  // The phone keeps its own Add idea row at the thumb end of the Rollout menu.
+  'add-idea',
   // The rollout's own chat thread (Release & Task Chat, Phase 1). Ranked
   // second, ahead of the other promoted tabs, because it is the raw
   // coordination surface the PRD built this feature to replace WhatsApp
@@ -248,6 +253,7 @@ const GROUP_BY_KEY: Record<ReleaseMenuKey, RolloutMenuGroupKey> = {
   timeline: 'plan',
   activities: 'plan',
   brief: 'plan',
+  'add-idea': 'plan',
   chat: 'plan',
   calendar: 'plan',
   note: 'plan',

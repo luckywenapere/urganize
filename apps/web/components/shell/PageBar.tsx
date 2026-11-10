@@ -43,17 +43,6 @@ export function usePageBarEndSlot(enabled: boolean): HTMLElement | null {
   return slot;
 }
 
-/** The page bar's tools slot (a page's controls, between the crumb and the
- *  end), once it is in the document; null on a phone. */
-export function usePageBarToolsSlot(enabled: boolean): HTMLElement | null {
-  const [slot, setSlot] = useState<HTMLElement | null>(null);
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSlot(enabled ? document.getElementById(SUBNAV_SLOT_TOOLS) : null);
-  }, [enabled]);
-  return slot;
-}
-
 export function PageBar() {
   const pathname = usePathname() ?? '/dashboard';
   const areas = useShellAreas();
