@@ -201,3 +201,17 @@ Connection requests from 5 Nov: 3 of 18 accepted so far, 2 of them replied (Afol
 **Calls this week:** Nkosinathi Jele today at 11:30am (booked through the link as "Nkosinathi Mdluli"; he also took Tue 11:30, which looks like a double booking; not messaged today), Bayo Fatoba today at 3pm, Abraham Tue 12pm, Nicholas Tue 4pm, Meghan Kek Wed 2pm.
 
 **No-show:** Nkosinathi did not join the 11:30am call. Emailed him at 11:38am saying Oyin was waiting and offering to keep Tue 10 Nov 11:30 instead; waiting on his reply.
+
+**9 Nov, afternoon and evening.** Measured the week from LinkedIn's own thread data: 44% of first DMs got a reply (36 of 82), 18% of connection requests were accepted (16 of 87), and acceptance fell to 13% then 0% on the 7 and 8 Nov batches, which went out without likes. Went back and liked an own post for every pending invitee from 7, 8 and 9 Nov (33 likes). Rule from now on: like a post before every DM and invite. Replies sent: Pabalelo Mashego (manages Chronicaldeep, Latique, Tyron SA, Torque MuziQ) asked to test Urganize as a label, Lewatle; told them we'd switch them to the label side. Abiodun Odunuga (Morravey's next project with Sony West Africa) got the link, then a follow-up offering a personal setup call, since Morravey (DMW, Sony Music Africa) is a big artist. Snumari Datnayi: thanks.
+
+## 10 Nov 2026
+
+**Sign-ups:** Pabalelo Mashego signed up at 1:33pm through the open sign-up. The Lewatle team was comped onto Label from /admin/teams (no end date), and Pabalelo was told on LinkedIn. First label testing Urganize.
+
+**Inbox replies sent (11):** Tobias Metzger (four acts in Toronto, Yerevan and London) and Josephine A. Bonsu (marketing freelancer) asked what Urganize does: answered, start-free link. Yasin Ben (no releases planned): link for the next one. Emmanuel Ogunmola (no music dates yet): link. Tayo Adeniran (team uses Notion): closed warmly. Elvis Ofurum (freelancing) and Richard M. Ajayi ("just creatives"): asked what kind. Abiodun Odunuga (Morravey's project almost out): will check in after the drop. Pabalelo: sent the email, switched, confirmed. Wilson Mary Oluwayemisi booked a call through the link for 4:30pm today; confirmed.
+
+**Cold DMs (3):** Ugonna Steve (Enugu flyers post liked), Olajide Stephen (post already liked), Georges Kande (liked 9 Nov). Skipped Melissa Kariuki (Whip Music, music tech founder; invited by another session) and Danny Garcia (Songtools).
+
+**Connection requests with a note (15), all with a liked post where they had one:** Eniola Obileye (7th Sea), Micheal Oyebisi (Mikky Mic Entertainment), Vivien Albert, Justice Idogho (Soundboy FA, Kull GP), Jerry Dauda, Frances Okoro (Synnex Entertainment), Ajibola Disu, IfeOluwa A., Tolani A. (Audora), Joy Etido Usen, Adedamola Adenibuyan (manages Meeza), Raymond Goodman (Jambox Entertainment), Nofiu Abiodun Ibrahim, Igbagboyemi Taiwo, Adeniyi Akinbowale (Kneelyo Media). All confirmed pending. All in Nigeria, to test whether Nigerian managers accept more. Skipped: Balat Boman (needs his email to connect), Chinedu Ikpewujo (already pending), Osamuyi Ekofuogie (Chocolate City).
+
+**Calls today:** Abraham 12pm, Nicholas 4pm, Mary Wilson 4:30pm.
