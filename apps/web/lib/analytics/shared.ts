@@ -1,4 +1,5 @@
 import type { Profile } from '@/lib/supabase/client';
+import type { SourceLinkProperties } from '@/lib/source-links';
 import type {
   ClaimCompletedProperties,
   ClaimPageViewedProperties,
@@ -623,6 +624,13 @@ export interface AnalyticsEventPropertiesMap {
   public_profile_cta_clicked: PublicProfileCtaClickedProperties;
   profile_link_shared: ProfileLinkSharedProperties;
   signup_from_profile: SignupFromProfileProperties;
+  /**
+   * Short links on go.urganize.app (2026-11-10, #1185, lib/source-links.ts).
+   * Server-side. A tap is anonymous; the sign-up is sent against the new
+   * account. Only values from the list in lib/source-links.json.
+   */
+  source_link_clicked: SourceLinkProperties;
+  signup_from_source_link: SourceLinkProperties;
   /**
    * Directory referral invites (2026-10-11, GitHub #834, lib/directory-invites).
    * Server-side, all three sent against the INVITER's id, so "invites sent"

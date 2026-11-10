@@ -1,0 +1,11 @@
+{
+  "x": { "source": "x", "medium": "social" },
+  "ig": { "source": "instagram", "medium": "social" },
+  "fb": { "source": "facebook", "medium": "social" },
+  "yt": { "source": "youtube", "medium": "social" },
+  "ow": { "source": "ow", "medium": "social" },
+  "cn": { "source": "cn", "medium": "social" },
+  "sws": { "source": "soundwavespotlight", "medium": "partner" },
+  "trm": { "source": "therealmusicdistro", "medium": "partner" },
+  "stmz": { "source": "stmz", "medium": "partner" }
+}
