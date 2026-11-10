@@ -20,7 +20,7 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 // Real date discipline: moves only when the terms text changes.
-const LAST_UPDATED = "October 19, 2026";
+const LAST_UPDATED = "November 10, 2026";
 
 const CONTACT_HREF =
   "mailto:contact@urganize.app?subject=Terms%20question%20-%20Urganize";
@@ -63,9 +63,10 @@ export default function TermsPage() {
 
             <Section number="02" title="The service">
               <p>
-                Urganize gives you one place to plan and run music releases:
-                a release plan built from our templates, tasks with owners and
-                dates, file storage per release, press kits, event milestones,
+                Urganize helps artists, managers and record labels plan new
+                music and keep track of every task: a plan built from your
+                goals or one you make yourself, tasks with owners and dates,
+                cover art and release details, press kits, event milestones,
                 pitching to curators and opportunities, distribution through
                 our partner, and our AI assistant. We improve the product
                 continuously: features may change, and we may add, modify, or
@@ -75,7 +76,7 @@ export default function TermsPage() {
 
             <Section number="03" title="Accounts">
               <p>
-                You can sign up with an email and password or with Google. You
+                You can create an account with an email and password or with Google. You
                 are responsible for your account and for keeping your sign-in
                 secure. You must be 13 or older. Provide accurate information.
                 Billing and access depend on it.
@@ -118,7 +119,7 @@ export default function TermsPage() {
             <Section number="05" title="Your content">
               <p>
                 You own everything you put into Urganize: releases, tasks,
-                files, artwork, masters, contracts. You grant us only the
+                cover art, credits and release details. You grant us only the
                 license we need to operate the service: hosting, processing,
                 and displaying your content to you and the teammates you
                 invite.
@@ -129,8 +130,8 @@ export default function TermsPage() {
               </p>
               <p>
                 You are responsible for having the rights to what you upload.
-                Don&apos;t upload music, artwork, or documents you don&apos;t
-                own or have permission to use.
+                Don&apos;t send music or artwork you don&apos;t own or have
+                permission to use.
               </p>
             </Section>
 
@@ -164,9 +165,10 @@ export default function TermsPage() {
 
             <Section number="08" title="Distribution, pitching and press kits">
               <p>
-                When you send a release to distribution, we pass its audio,
-                artwork and metadata to our distribution partner, The Real
-                Music Distro, and the partner&apos;s own terms also apply. You
+                When you send a release to distribution, its audio goes from
+                your device straight to our distribution partner, The Real
+                Music Distro, and we pass its artwork and metadata to them. The
+                partner&apos;s own terms also apply. You
                 confirm that you hold the rights to the release and that its
                 details (credits, splits, ISRC, UPC) are correct. Stores decide
                 on their own when a release goes live and whether to approve
@@ -200,9 +202,9 @@ export default function TermsPage() {
                 before the claim.
               </p>
               <p>
-                Keep your own copies of master recordings and irreplaceable
-                files. Urganize stores your working copies; it is not your
-                archive of record.
+                Keep your own copies of your recordings and artwork. Urganize
+                does not store your audio, and it is not your archive of
+                record.
               </p>
             </Section>
 
