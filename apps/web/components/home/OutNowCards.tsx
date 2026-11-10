@@ -5,13 +5,13 @@
 // that came out gets a card on top of Home with its smart link one tap away.
 //
 // Most songs already have a link by the morning (the pre-save turns into a
-// smart link at midnight), so the button is usually "Copy smart link". A song
+// smart link at midnight), so the card usually shows the link to copy. A song
 // with no UPC or ISRC gets the code finder instead: we look it up on streaming
 // and ask "Is this your song?" before making anything.
 //
 // Release day on its own (#1090, docs/mocks/release-day-auto-link): nothing is
 // shown while a link is looked for or made. The card appears once there is a
-// link, or something the team must answer. Copy and Share sit inside the link.
+// link, or something the team must answer. Tapping the link copies it (#1160).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
