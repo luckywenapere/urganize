@@ -65,6 +65,16 @@ type ChappiStore = {
    * by anything that replaces the transcript. */
   nextChatId: string | null;
   setNextChatId: (id: string | null) => void;
+  /** Where a first message goes when nothing else named a chat: the person's
+   *  one Assistant chat (#1207). Set by the history store when it starts, so a
+   *  blank transcript never becomes a free-standing session again. Survives
+   *  `reset`; cleared on sign-out. */
+  defaultChatId: string | null;
+  setDefaultChatId: (id: string | null) => void;
+  /** Replaces the transcript with the server's copy plus this tab's unsaved
+   *  tail, WITHOUT bumping `epoch`: it is the same conversation catching up
+   *  (the one chat's rebase, #1207), so a reply on its way must still land. */
+  rebaseConversation: (messages: ChappiMessage[], restoredCount: number) => void;
   /** Release the conversation is pinned to via the scope picker under the
    * prompt box; null = all releases. Survives `reset` deliberately — picking
    * a release is a working-context choice, not part of one conversation. */
@@ -159,6 +169,15 @@ export const useChappiStore = create<ChappiStore>((set) => ({
   restoredCount: 0,
   nextChatId: null,
   setNextChatId: (id) => set({ nextChatId: id }),
+  defaultChatId: null,
+  setDefaultChatId: (id) => set({ defaultChatId: id }),
+  rebaseConversation: (messages, restoredCount) =>
+    set((current) => ({
+      messages,
+      restoredCount: Math.min(Math.max(0, restoredCount), messages.length),
+      // A stale "last reply" chip row belongs to whatever was last on screen.
+      reply: current.messages.length === messages.length ? current.reply : null,
+    })),
   scopedReleaseId: null,
   scopedRecordId: null,
   setScopedRecordId: (recordId) => set({ scopedRecordId: recordId }),
@@ -177,11 +196,13 @@ export const useChappiStore = create<ChappiStore>((set) => ({
   setPendingConfirmation: (pending) => set({ pendingConfirmation: pending }),
   appendMessage: (message) =>
     set((current) => ({
-      messages: [...current.messages, message],
+      // Every message carries when it was written, for the chat's day dividers.
+      messages: [...current.messages, message.at ? message : { ...message, at: new Date().toISOString() }],
       // The id is minted in the SAME update as the first message, so the
       // history store never sees a chat with messages and no id.
       conversationId:
-        current.conversationId ?? (HISTORY_ENABLED ? current.nextChatId ?? newChatId() : null),
+        current.conversationId ??
+        (HISTORY_ENABLED ? current.nextChatId ?? current.defaultChatId ?? newChatId() : null),
       nextChatId: null,
     })),
   truncateFromMessage: (messageId) =>
@@ -258,6 +279,7 @@ export const useChappiStore = create<ChappiStore>((set) => ({
       conversationId: null,
       restoredCount: 0,
       nextChatId: null,
+      defaultChatId: null,
       pendingConfirmation: null,
       scopedReleaseId: null,
       scopedRecordId: null,

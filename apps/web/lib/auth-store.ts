@@ -474,6 +474,8 @@ interface AuthState {
   updateProfileName: (name: string) => Promise<void>;
   updateAskAfterTasks: (enabled: boolean) => Promise<void>;
   updateMotivationalNudges: (enabled: boolean) => Promise<void>;
+  /** The morning brief's off switch (#1207). */
+  updateMorningBrief: (enabled: boolean) => Promise<void>;
   /** URG-260: the Settings view override; null goes back to automatic. */
   updateRoleView: (view: Profile['role_view']) => Promise<void>;
   updateRole: (role: Profile['role']) => Promise<void>;
@@ -1077,6 +1079,25 @@ export const useAuthStore = create<AuthState>()(
         const { data: updatedProfile, error } = await supabase
           .from('profiles')
           .update({ motivational_nudges: enabled, updated_at: new Date().toISOString() })
+          .eq('id', currentUser.id)
+          .select('*')
+          .single();
+
+        if (error) {
+          throw new Error(handleSupabaseError(error));
+        }
+
+        set({ user: updatedProfile, error: null });
+      },
+
+      // The morning brief's off switch (#1207). Same shape as above.
+      updateMorningBrief: async (enabled: boolean) => {
+        const currentUser = get().user;
+        if (!currentUser) throw new Error('User not found');
+
+        const { data: updatedProfile, error } = await supabase
+          .from('profiles')
+          .update({ morning_brief: enabled, updated_at: new Date().toISOString() })
           .eq('id', currentUser.id)
           .select('*')
           .single();

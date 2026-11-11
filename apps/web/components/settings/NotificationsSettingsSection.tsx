@@ -1,6 +1,7 @@
 'use client';
 
 import { panelClass } from './panelClass';
+import { MorningBriefSection } from './MorningBriefSection';
 import { PushNotificationsSection } from './PushNotificationsSection';
 
 /**
@@ -13,6 +14,10 @@ import { PushNotificationsSection } from './PushNotificationsSection';
  * columns (ask_after_tasks, motivational_nudges) are kept and ignored; the
  * old row components stay in this folder, unrendered.
  *
+ * The morning brief (#1207, 11 Nov 2026) has a row of its own: it is a daily
+ * message in the Assistant chat, and the approved mock promised a way to turn
+ * it off.
+ *
  * The push row always renders something (a one-line note when the device
  * can't do push), so the Notifications tab is never an empty page.
  */
@@ -23,6 +28,7 @@ export function NotificationsSettingsSection() {
     <section className={panelClass}>
       <div className="divide-y divide-stroke-subtle">
         <PushNotificationsSection />
+        <MorningBriefSection />
       </div>
     </section>
   );

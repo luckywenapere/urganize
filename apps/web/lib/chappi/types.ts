@@ -1,4 +1,5 @@
 import type { ProjectOffer } from '@/lib/project-offer';
+import type { MorningBrief } from './morning-brief';
 // Client-safe Chappi types. No server-only imports here — this module is
 // consumed by the ChappiHero client component AND (from Phase 2 onward) by the
 // server-side agent route, mirroring the lib/release-planning.ts split.
@@ -38,6 +39,17 @@ export type ChappiMessage = {
    *  transcript still shows what each answer was working from — a single
    *  "latest" value would relabel every earlier answer. */
   briefSections?: string[];
+  /** When the message was written (ISO). Older saved messages have none; the
+   *  chat's day dividers skip them. Set by appendMessage when missing. */
+  at?: string;
+  /** A message that is not an ordinary turn (#1207):
+   *   brief   — the morning brief, written by the server at 8am Lagos.
+   *   divider — a label in the one chat, e.g. where an old session was folded in.
+   *  Neither is ever sent to the model as a turn of its own. */
+  kind?: 'brief' | 'divider';
+  /** The brief's structured payload, for kind 'brief'. Read back through
+   *  sanitizeMorningBrief (lib/chappi/morning-brief.ts). */
+  brief?: MorningBrief;
 };
 
 /**

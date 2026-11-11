@@ -324,6 +324,8 @@ describe('two places writing one chat', () => {
   it("never overwrites another tab's messages it could not load: the diverged transcript becomes its own chat", async () => {
     startChappiHistory(USER);
     await settle();
+    // A rollout's chat (not the one Assistant chat, which rebases instead).
+    useChappiStore.getState().setDefaultChatId(null);
     // Our save lands, but the answer is lost on the way back.
     server.setOverride((call) => (call.method === 'PUT' ? 'land-then-throw' : null));
     say(message('u1', 'user'));
@@ -412,6 +414,8 @@ describe('an answer after its chat left the screen', () => {
   it('is dropped once its chat was deleted here', async () => {
     startChappiHistory(USER);
     await settle();
+    // Only a rollout's chat can be deleted; the one Assistant chat stays.
+    useChappiStore.getState().setDefaultChatId(null);
     say(message('u1', 'user'));
     const id = currentId();
     await settle(SAVE_DELAY);

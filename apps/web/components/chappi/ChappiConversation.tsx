@@ -61,10 +61,15 @@ import {
 } from '@/stores/useChappiHistoryStore';
 import {
   CHAPPI_HISTORY_LIMIT,
+  forModelHistory,
   isChappiHistoryEnabled,
   newChatId,
 } from '@/lib/chappi/conversation-history';
 import { useTaskStore } from '@/stores/useTaskStore';
+import { ChappiBriefCard } from '@/components/chappi/ChappiBriefCard';
+import { ChappiEarlierMessages } from '@/components/chappi/ChappiEarlierMessages';
+import { dayLinesFor } from '@/lib/chappi/day-divider';
+import { ChatDayLine } from '@/components/chappi/ChatDayLine';
 import { useNotesStore } from '@/stores/useNotesStore';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { useShareStore } from '@/stores/useShareStore';
@@ -1236,7 +1241,7 @@ export function ChappiConversation({
           // Photos and files ride only with the latest message that has them, and
           // only while it is recent (lib/urgans-attachments.ts): a request never
           // carries a picture from an hour ago.
-          messages: selectAttachmentsToSend(historyForApi.slice(-CHAPPI_HISTORY_LIMIT)),
+          messages: selectAttachmentsToSend(forModelHistory(historyForApi).slice(-CHAPPI_HISTORY_LIMIT)),
           releaseScope: scopedRelease
             ? { id: scopedRelease.id, title: scopedRelease.title }
             : undefined,
@@ -1390,7 +1395,7 @@ export function ChappiConversation({
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           // Approving a card writes one closing line. It never needs the picture.
-          messages: stripAttachmentPayloads(historyForApi.slice(-CHAPPI_HISTORY_LIMIT)),
+          messages: stripAttachmentPayloads(forModelHistory(historyForApi).slice(-CHAPPI_HISTORY_LIMIT)),
           releaseScope: scopedRelease
             ? { id: scopedRelease.id, title: scopedRelease.title }
             : undefined,
@@ -2005,12 +2010,22 @@ function Transcript({
   projectOffer,
   onProjectOfferChoice,
 }: TranscriptProps) {
+  // Day lines in the one chat (#1207): above the first message of each day.
+  const dayLines = dayLinesFor(messages);
   return (
     <div className="space-y-5 pb-2">
+      <ChappiEarlierMessages />
       {trailing && trailingAt !== undefined && trailingAt <= 0 ? trailing : null}
       {messages.map((message, index) => (
         <Fragment key={message.id}>
-        {message.role === 'user' ? (
+        {dayLines[index] ? <ChatDayLine label={dayLines[index] as string} /> : null}
+        {message.kind === 'divider' ? (
+          <p data-message-id={markMessages ? message.id : undefined} className="text-center text-xs text-content-tertiary">
+            {message.content}
+          </p>
+        ) : message.kind === 'brief' && message.brief ? (
+          <ChappiBriefCard brief={message.brief} messageId={markMessages ? message.id : undefined} />
+        ) : message.role === 'user' ? (
           <div data-message-id={markMessages ? message.id : undefined} className="flex justify-end">
             <div className="flex max-w-[85%] flex-col items-end">
               {message.attachments?.length ? (

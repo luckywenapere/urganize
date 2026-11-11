@@ -1,99 +1,61 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Clock, Plus } from '@/components/icons';
+import { useEffect, useState } from 'react';
+import { ArrowLeft, Clock } from '@/components/icons';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { ChappiConversation } from '@/components/chappi/ChappiConversation';
-import { ChappiHistoryList } from '@/components/chappi/ChappiHistoryList';
 import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
 import { UrgansActivityView } from '@/components/urgans-activity/UrgansActivityView';
-import { withoutHomeChat } from '@/lib/chappi/home-chat';
+import { showMain } from '@/components/shell/swipe/main-thread';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
-import { useChappiHistoryStore } from '@/stores/useChappiHistoryStore';
-import { useChappiStore } from '@/stores/useChappiStore';
+import { refreshMainChat } from '@/stores/useChappiHistoryStore';
 
 /**
- * The UrgAns view on a computer (2026-10-26, founder call, from the Hark
- * reference): the sessions down the left, the open session in the middle. Since
- * 2026-10-27 this is the only place a computer shows the chat: Home there has
- * none, and the UrgAns pill in the top bar, "Ask UrgAns" on Home and the
- * drawer's expand all lead here.
+ * The Assistant on a computer: ONE chat that never resets (#1207, Oyin, 11 Nov
+ * 2026; mock docs/mocks/assistant-one-chat). It replaced the sessions layout
+ * (sessions down the left and "New session", 2026-10-26). Rollout chats stay
+ * in the Rollouts list; old sessions were folded into this chat as earlier
+ * pages ("Show earlier" at the top).
  *
- * Landing here with no session open puts the most recent one on screen. Home's
- * own chat (the phone's Home box) is never a session, so if it is on screen it
- * is swapped for the latest session, or a blank one when there are none. Done
- * once per visit: starting a new session afterwards is the person's own move.
- * Sized by .home-split-height, which leaves room for the top bar.
+ * Every morning at 8am Lagos the brief is written into this chat, so opening
+ * the page, or coming back to the tab, checks for anything new.
+ *
+ * The file keeps its name so every import stays put. Sized by
+ * .home-split-height, which leaves room for the top bar.
  */
 export function UrgansSessionsLayout({ onNewRelease }: { onNewRelease: () => void }) {
-  const summaries = useChappiHistoryStore((state) => state.summaries);
-  const homeChatId = useChappiHistoryStore((state) => state.homeChatId);
-  const listStatus = useChappiHistoryStore((state) => state.listStatus);
-  const loadList = useChappiHistoryStore((state) => state.loadList);
-  const open = useChappiHistoryStore((state) => state.open);
-  const settled = useRef(false);
-  // "What UrgAns did" shows in the middle in place of the session (#849).
+  // "What AI did" shows in place of the chat (#849).
   const [showActivity, setShowActivity] = useState(false);
 
   useEffect(() => {
-    void loadList();
-  }, [loadList]);
-
-  useEffect(() => {
-    if (settled.current || listStatus !== 'ready') return;
-    settled.current = true;
-    const chappi = useChappiStore.getState();
-    const onHomeChat =
-      !!homeChatId &&
-      (chappi.conversationId === homeChatId ||
-        (chappi.conversationId === null && chappi.nextChatId === homeChatId));
-    const idle = chappi.conversationId === null && chappi.messages.length === 0;
-    if (!onHomeChat && !idle) return;
-    const latest = withoutHomeChat(summaries, homeChatId)[0];
-    if (latest) void open(latest.id);
-    else if (onHomeChat) {
-      // Keep a question carried here from "Ask UrgAns" (lib/ask-urgans.ts).
-      const carried = chappi.input;
-      chappi.reset();
-      if (carried) useChappiStore.getState().setInput(carried);
-    }
-  }, [listStatus, summaries, homeChatId, open]);
-
-  const startNew = () => {
-    useChappiStore.getState().reset();
-    setShowActivity(false);
-  };
+    void showMain().then(() => refreshMainChat());
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void refreshMainChat();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
 
   return (
-    <div className="home-split-height flex gap-6 xl:gap-8">
-      <aside aria-label="Sessions" className="flex w-72 shrink-0 flex-col xl:w-80">
+    <div className="home-split-height mx-auto flex w-full max-w-3xl flex-col">
+      <div className="flex shrink-0 items-center justify-between gap-3 pb-2">
+        <h1 className="font-display text-2xl text-content-primary">Assistant</h1>
         <button
           type="button"
-          onClick={startNew}
-          className="motion-focus motion-press mb-3 inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full px-3.5 text-sm font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          New session
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowActivity(true)}
+          onClick={() => setShowActivity((current) => !current)}
           aria-pressed={showActivity}
-          className={`motion-focus motion-press mb-3 inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full px-3.5 text-sm font-medium transition-colors ${
-            showActivity
-              ? 'bg-bg-hover text-content-primary'
-              : 'text-content-secondary hover:bg-bg-hover hover:text-content-primary'
-          }`}
+          className="motion-focus motion-press inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full px-3.5 text-sm font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
         >
-          <Clock className="h-4 w-4" aria-hidden="true" />
-          What AI did
+          {showActivity ? (
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <Clock className="h-4 w-4" aria-hidden="true" />
+          )}
+          {showActivity ? 'Back to the chat' : 'What AI did'}
         </button>
-        <div className="min-h-0 flex-1">
-          <ChappiHistoryList variant="panel" onDone={() => setShowActivity(false)} />
-        </div>
-      </aside>
+      </div>
 
-      <section aria-label="AI" data-tour="nav-urgans" className="flex min-w-0 flex-1 flex-col">
+      <section aria-label="AI" data-tour="nav-urgans" className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="shrink-0">
           <InviteTeamBanner />
         </div>
@@ -102,7 +64,7 @@ export function UrgansSessionsLayout({ onNewRelease }: { onNewRelease: () => voi
             <UrgansActivityView />
           </div>
         ) : null}
-        {/* Hidden, never unmounted, while the history shows: a reply on its
+        {/* Hidden, never unmounted, while "What AI did" shows: a reply on its
             way lives in it. */}
         <div className={`min-h-0 flex-1 ${showActivity ? 'hidden' : ''}`}>
           <ErrorBoundary name="urgans-conversation" onError={reportBoundaryError} fallback={null}>

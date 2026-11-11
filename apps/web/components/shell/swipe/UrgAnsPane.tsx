@@ -15,7 +15,7 @@ import { formatRelativeTime } from '@/lib/relative-time';
 import { getNotificationMessage, type TaskNotification } from '@/lib/tasks';
 import { readUrgansLink } from '@/lib/swipe-nav';
 import { useChappiStore } from '@/stores/useChappiStore';
-import { useChappiHistoryStore } from '@/stores/useChappiHistoryStore';
+import { refreshMainChat, useChappiHistoryStore } from '@/stores/useChappiHistoryStore';
 import { showMain } from './main-thread';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useNeedsYouStore } from '@/stores/useNeedsYouStore';
@@ -92,6 +92,18 @@ export function UrgAnsPane({ active }: { active: boolean }) {
     }
     if (first) void showMain();
   }, [active, loadNeedsYou]);
+
+  // The morning brief lands in Main at 8am (#1207): check for it when the tab
+  // is shown and when the app comes back to the front.
+  useEffect(() => {
+    if (!active || !HISTORY_ENABLED) return;
+    void refreshMainChat();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void refreshMainChat();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [active]);
 
   // A freshly carried card: the composer gets a soft ring (no keyboard).
   useEffect(() => {

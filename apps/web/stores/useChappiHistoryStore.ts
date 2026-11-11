@@ -64,6 +64,7 @@ import {
   type StoredChatMessage,
 } from '@/lib/chappi/conversation-history';
 import { homeChatIdFor, isHomeChatId } from '@/lib/chappi/home-chat';
+import { rebaseOnServer } from '@/lib/chappi/main-thread';
 import { projectSessionIdFor, rolloutSessionIdFor } from '@/lib/rollout-session';
 import { clearChatCache, readChatCache, writeChatCache } from '@/lib/chappi/conversation-cache';
 import { takeWarmedHistory } from '@/lib/chappi/history-warm';
@@ -142,6 +143,11 @@ let cacheTimer: ReturnType<typeof setTimeout> | null = null;
 /** Set around a fork's rekey so the subscription does not treat the old id as
  *  a chat being left (its transcript IS the new chat now). */
 let suppressDetachFor: string | null = null;
+/** Set while the one chat catches up with the server, so the catch-up is not
+ *  read as the person doing something (#1207). */
+let rebasing = false;
+/** The fold of old sessions runs once per signed-in page load. */
+let foldedFor: string | null = null;
 
 const detached = new Map<string, ChappiMessage[]>();
 const tombstones = new Set<string>();
@@ -180,6 +186,11 @@ function resolveChatId(id: string): string {
 
 function isCurrent(id: string): boolean {
   return useChappiStore.getState().conversationId === id;
+}
+
+/** The person's one Assistant chat (#1207). */
+function isMainChat(id: string): boolean {
+  return Boolean(sessionUserId) && id === homeChatIdFor(sessionUserId);
 }
 
 function transcriptFor(id: string): ChappiMessage[] | null {
@@ -407,6 +418,13 @@ async function handleSyncFailure(
       // while the refused save was in flight.
       const localIds = (transcriptFor(id) ?? []).map((message) => message.id);
       const outcome = resolveConflict(localIds, serverIds);
+      // The one chat is never forked into a new chat: the server adds to it
+      // (the 8am brief) and moves its oldest messages to an earlier page, so a
+      // tab that was open catches up instead (#1207).
+      if (isMainChat(id) && (outcome === 'reload' || outcome === 'fork')) {
+        await rebaseChat(id);
+        return;
+      }
       if (outcome === 'adopt') {
         retryAttempts.delete(id);
         setSyncEntry(id, { revision, serverIds, status: 'saved' });
@@ -565,6 +583,10 @@ async function fetchChat(id: string): Promise<ChatDetail | null> {
  *  show theirs. If something was typed here while theirs was on its way, the
  *  two sides now differ, and this tab's transcript becomes its own chat. */
 async function reloadChat(id: string) {
+  if (isMainChat(id)) {
+    await rebaseChat(id);
+    return;
+  }
   const detail = await fetchChat(id);
   if (!sessionUserId || tombstones.has(id)) return;
   if (!detail) {
@@ -588,6 +610,45 @@ async function reloadChat(id: string) {
   } else if (detached.has(id)) {
     detached.set(id, detail.messages);
   }
+  scheduleCacheWrite();
+}
+
+/**
+ * The one chat catching up with the server (#1207): the server's copy, with
+ * anything this tab added since its last save put after it. Messages the tab
+ * had seen saved but the server no longer holds were moved to an earlier page
+ * and are not put back. Never forks.
+ */
+async function rebaseChat(id: string) {
+  const owner = sessionUserId;
+  const detail = await fetchChat(id);
+  if (!sessionUserId || owner !== sessionUserId || tombstones.has(id)) return;
+  if (!detail) {
+    setSyncEntry(id, { status: 'saved' });
+    return;
+  }
+  const entry = useChappiHistoryStore.getState().sync[id] ?? DEFAULT_ENTRY;
+  const local = transcriptFor(id) ?? [];
+  const serverIds = detail.messages.map((message) => message.id);
+  const { messages, added } = rebaseOnServer<ChappiMessage>(local, entry.serverIds, detail.messages);
+  retryAttempts.delete(id);
+  setSyncEntry(id, { revision: detail.revision, serverIds, status: added > 0 ? 'saving' : 'saved' });
+  upsertSummary(summaryFromDetail(detail));
+  const unchanged =
+    messages.length === local.length && messages.every((message, index) => message.id === local[index]?.id);
+  if (!unchanged) {
+    if (isCurrent(id)) {
+      rebasing = true;
+      try {
+        useChappiStore.getState().rebaseConversation(messages, detail.messages.length);
+      } finally {
+        rebasing = false;
+      }
+    } else if (detached.has(id)) {
+      detached.set(id, messages);
+    }
+  }
+  if (added > 0) scheduleSync(id, 0);
   scheduleCacheWrite();
 }
 
@@ -679,6 +740,11 @@ function onTranscriptChange(state: ChappiSnapshot, prev: ChappiSnapshot) {
     return;
   }
 
+  if (state.messages !== prev.messages && rebasing) {
+    scheduleCacheWrite();
+    return;
+  }
+
   if (state.messages !== prev.messages) {
     // Added to (or regenerated) here — this session's own activity — as
     // opposed to a saved chat being loaded, which bumps the epoch.
@@ -741,6 +807,8 @@ export function startChappiHistory(userId: string): void {
 
   sessionUserId = userId;
   useChappiHistoryStore.setState({ homeChatId: homeChatIdFor(userId) });
+  // A blank transcript's first message goes to the one chat (#1207).
+  useChappiStore.getState().setDefaultChatId(homeChatIdFor(userId));
   interacted = false;
   unsubscribe = useChappiStore.subscribe(onTranscriptChange);
 
@@ -788,6 +856,30 @@ export function startChappiHistory(userId: string): void {
     .getState()
     .loadList({ force: true })
     .then(() => maybeOpenNewerChat());
+  void foldOldSessions(userId);
+}
+
+/** Folds old free-standing sessions into the one chat, once per page load
+ *  (#1207). Quiet: nothing on screen changes, and a failure tries next load. */
+async function foldOldSessions(userId: string): Promise<void> {
+  if (foldedFor === userId) return;
+  foldedFor = userId;
+  try {
+    const token = await getAccessToken();
+    if (!token || sessionUserId !== userId) return;
+    const response = await fetch('/api/urgans/conversations/fold', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, ...BACKGROUND_HEADERS },
+      cache: 'no-store',
+    });
+    if (!response.ok || sessionUserId !== userId) return;
+    const data = (await response.json().catch(() => null)) as { folded?: number } | null;
+    if (data?.folded && data.folded > 0) {
+      void useChappiHistoryStore.getState().loadList({ force: true });
+    }
+  } catch {
+    foldedFor = null;
+  }
 }
 
 /** Stops saving and forgets the session's bookkeeping. Leaves the browser
@@ -807,6 +899,7 @@ export function stopChappiHistory(): void {
   activityAt.clear();
   inFlight.clear();
   sessionUserId = null;
+  foldedFor = null;
   interacted = false;
   listLoadedAt = 0;
   listInFlight = null;
@@ -1090,6 +1183,58 @@ async function showChatById(id: string): Promise<void> {
   if (now.conversationId === id) return;
   now.reset();
   useChappiStore.getState().setNextChatId(id);
+}
+
+/**
+ * Brings the one chat up to date when it is on screen (#1207): a brief the
+ * server wrote at 8am, or anything another device added. Cheap when nothing
+ * changed. Called when the Assistant page opens and when the tab comes back.
+ */
+export async function refreshMainChat(): Promise<void> {
+  if (!HISTORY_ENABLED || !sessionUserId) return;
+  const id = homeChatIdFor(sessionUserId);
+  if (!id || !isCurrent(id)) return;
+  if (inFlight.has(id) || timers.has(id)) return;
+  const entry = useChappiHistoryStore.getState().sync[id];
+  if (!entry || entry.revision === 0) return;
+  await rebaseChat(id);
+}
+
+export type EarlierPageResult = {
+  messages: ChappiMessage[];
+  nextCursor: string | null;
+};
+
+/**
+ * One earlier page of the one chat, newest first (#1207). `cursor` is null
+ * for the newest page. Null on any failure; the button stays to try again.
+ */
+export async function loadEarlierPage(cursor: string | null): Promise<EarlierPageResult | null> {
+  if (!HISTORY_ENABLED || !sessionUserId) return null;
+  const owner = sessionUserId;
+  const token = await getAccessToken();
+  if (!token || owner !== sessionUserId) return null;
+  try {
+    const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+    const response = await fetch(`/api/urgans/conversations/earlier${query}`, {
+      headers: { Authorization: `Bearer ${token}`, ...BACKGROUND_HEADERS },
+      cache: 'no-store',
+    });
+    if (!response.ok || owner !== sessionUserId) return null;
+    const data = (await response.json().catch(() => null)) as {
+      page?: { messages?: unknown[] } | null;
+      nextCursor?: string | null;
+    } | null;
+    if (!data) return null;
+    const messages: ChappiMessage[] = [];
+    for (const item of data.page?.messages ?? []) {
+      const message = normalizeChatMessage(item);
+      if (message) messages.push(message);
+    }
+    return { messages, nextCursor: data.page ? data.nextCursor ?? null : null };
+  } catch {
+    return null;
+  }
 }
 
 /**
