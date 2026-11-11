@@ -22,3 +22,7 @@ Slice 1 of "one flow from song to review". Mocks: `docs/mocks/song-to-review/moc
 
 - `pnpm test`: all pass except two failures that exist on `main` without this change (`icons-registry.test.ts`: `components/releases/PlanOptionPreview.tsx`; `tours.test.ts`: reduced motion). Type check and lint clean.
 - The card was rendered in a throwaway page with faked task data at 390px, dark and light, full checklist and a project made before (deleted after). **Not checked live:** no signed-in local session, so the routes against a real database were not exercised.
+
+## v1.265.1: the approved desktop details are back
+
+The #1190 desktop card (approved before this work) had "Tasks · 4 open, 1 done", an Add link in the heading and bold open titles. v1.265.0 dropped those on a computer. v1.265.1 puts them back around the checklist: `taskCountsLine` beside "Making the song", the Add link (`lg:` only; the phone keeps Add a task under the list), `lg:font-semibold` titles, and the #1190 card padding. Phones unchanged. Checked in a throwaway page at 1280px with fake tasks.

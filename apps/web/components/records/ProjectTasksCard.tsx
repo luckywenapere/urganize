@@ -6,7 +6,7 @@ import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { formatSessionDay, isCalendarDate, lagosToday } from '@/lib/next-records';
 import { addProjectTask, addSongChecklist, fetchProjectTasks, setProjectTaskDone } from '@/lib/project-tasks-client';
-import { isTaskLate } from '@/lib/record-page-data';
+import { isTaskLate, taskCountsLine } from '@/lib/record-page-data';
 import { groupProjectTasks, hasSongChecklist } from '@/lib/song-checklist';
 import type { Task } from '@/types/tasks';
 
@@ -133,7 +133,7 @@ export function ProjectTasksCard({ recordId }: { recordId: string }) {
         <button type="button" onClick={() => openTask(task.id)} className="motion-focus min-h-11 min-w-0 flex-1 py-1.5 text-left">
           <span
             className={`block truncate text-[15px] ${
-              isDone ? 'text-content-secondary line-through decoration-content-tertiary' : 'text-content-primary'
+              isDone ? 'text-content-secondary line-through decoration-content-tertiary' : 'text-content-primary lg:font-semibold'
             }`}
           >
             {task.title}
@@ -191,15 +191,34 @@ export function ProjectTasksCard({ recordId }: { recordId: string }) {
   const percent = grouped.total ? Math.round((grouped.done / grouped.total) * 100) : 0;
 
   return (
-    <section className="rounded-xl border border-stroke-default bg-bg-surface shadow-sm" aria-busy={tasks === null}>
-      <div className="px-4 pt-3.5">
+    <section className="rounded-xl border border-stroke-default bg-bg-surface shadow-sm lg:rounded-2xl" aria-busy={tasks === null}>
+      <div className="px-4 pt-3.5 lg:px-5 lg:pt-[18px]">
         <div className="flex items-baseline justify-between gap-3">
-          <h2 className="font-sans text-[15px] font-semibold text-content-primary">Making the song</h2>
+          <h2 className="font-sans text-[15px] font-semibold text-content-primary lg:text-lg lg:leading-6">
+            Making the song
+            {tasks !== null ? (
+              <span className="hidden text-[13px] font-medium text-content-secondary lg:inline">
+                {' '}
+                · {taskCountsLine(grouped.total - grouped.done, grouped.done)}
+              </span>
+            ) : null}
+          </h2>
           {tasks !== null && grouped.total ? (
-            <span className="text-[13px] tabular-nums text-content-secondary">
+            <span className="text-[13px] tabular-nums text-content-secondary lg:hidden">
               {grouped.done} of {grouped.total}
             </span>
           ) : null}
+          {/* On a computer, Add sits beside the title (#1190); the phone's is under the list. */}
+          {adding ? null : (
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="motion-focus hidden shrink-0 items-center gap-1 rounded text-[13px] font-semibold text-brand underline underline-offset-[3px] hover:no-underline lg:inline-flex"
+            >
+              <Plus aria-hidden className="size-3.5" />
+              Add<span className="sr-only"> a task</span>
+            </button>
+          )}
         </div>
         {tasks !== null && grouped.total ? (
           <div
@@ -215,7 +234,7 @@ export function ProjectTasksCard({ recordId }: { recordId: string }) {
         ) : null}
       </div>
 
-      <div className="px-4 pb-2 pt-1">
+      <div className="px-4 pb-2 pt-1 lg:px-5">
         {tasks === null && !error ? (
           <div className="space-y-2 py-2" aria-hidden>
             <div className="h-4 w-2/3 rounded bg-bg-hover" />
@@ -293,7 +312,7 @@ export function ProjectTasksCard({ recordId }: { recordId: string }) {
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className={`motion-focus inline-flex min-h-11 w-full items-center gap-1.5 text-[13px] font-medium text-content-secondary hover:text-content-primary ${
+            className={`motion-focus inline-flex min-h-11 w-full items-center gap-1.5 text-[13px] font-medium text-content-secondary hover:text-content-primary lg:hidden ${
               grouped.total ? 'border-t border-stroke-default' : ''
             }`}
           >

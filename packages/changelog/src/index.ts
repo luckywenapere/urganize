@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.265.1",
+    tag: "Rollouts",
+    date: "November 11, 2026",
+    highlights: [
+      "On a computer, the song checklist has Add beside its title again, with how many tasks are open and done.",
+    ],
+  },
+  {
     version: "1.265.0",
     title: "Every new song comes with its checklist",
     tag: "Rollouts",
