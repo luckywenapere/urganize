@@ -17,10 +17,10 @@
  *      square), where it cannot hide anything. So a bad pair can make an image
  *      plain, never unreadable. Settings says so when it happens.
  *
- * SHARE IMAGES ONLY. The founder's no-themes rule (one fixed look for press
- * kits, the recap card and every public page) still stands everywhere else;
- * this is a deliberate, narrow exception for the one surface a user publishes
- * as their own.
+ * Share images and, since 2026-11-11 (#1209, founder call), the artist's own
+ * page in the app (lib/artist-brand-theme.ts reuses these helpers). The
+ * founder's no-themes rule (one fixed look for press kits, the recap card and
+ * every public page) still stands everywhere else.
  *
  * Pure and dependency free, like social-share.ts: the Settings preview, the
  * share-card route and the tests all run the SAME rules, so the preview can

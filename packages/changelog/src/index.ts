@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.267.0",
+    tag: "App",
+    date: "November 12, 2026",
+    highlights: [
+      "Each artist's page now wears their brand colors. Set two colors in Settings and the page takes them on, while keeping the Urganize look.",
+      "Text on the page always stays easy to read, whatever colors you pick.",
+    ],
+  },
+  {
     version: "1.266.4",
     tag: "App",
     date: "November 11, 2026",

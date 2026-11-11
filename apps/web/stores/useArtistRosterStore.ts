@@ -1,5 +1,6 @@
 'use client';
 
+import type { BrandColors } from '@/lib/social-share-colors';
 import { registerSignOutReset } from '@/lib/sign-out-resets';
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
@@ -32,6 +33,8 @@ export type RosterArtist = {
   slug: string;
   /** Signed, short-lived. Absent on payloads that predate artist photos. */
   photoUrl?: string | null;
+  /** The artist's brand colors, when the API sends them (#1209). */
+  brandColors?: BrandColors;
 };
 
 type ArtistRosterStore = {

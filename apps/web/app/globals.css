@@ -2272,6 +2272,49 @@ html select.field-native {
   pointer-events: none;
 }
 
+/* The artist page's brand band (#1209, lib/artist-brand-theme.ts). The band is
+   the artist's own color; what keeps it Urganize is the same woven grain the
+   ground carries, drawn in the band's own text color, and a row of tooth
+   triangles along the bottom edge in the accent. Both sit BEHIND the content
+   (isolation + z-index -1) so they can never cover a word or a button. The
+   band only exists when the artist has brand colors, so a house page is
+   untouched. */
+.artist-brand-band {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.artist-brand-band::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(0deg, rgb(var(--color-text-primary) / 0.07) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgb(var(--color-text-primary) / 0.05) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(45deg, rgb(var(--color-text-primary) / 0.035) 0 1px, transparent 1px 6px);
+}
+
+.artist-brand-band::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 7px;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--artist-band-accent);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 7'%3E%3Cpath d='M0 7L7 0l7 7z' fill='%23000'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 7'%3E%3Cpath d='M0 7L7 0l7 7z' fill='%23000'/%3E%3C/svg%3E");
+  -webkit-mask-size: 14px 7px;
+  mask-size: 14px 7px;
+  -webkit-mask-repeat: repeat-x;
+  mask-repeat: repeat-x;
+}
+
 /* The app's only dashed surface becomes a woven one. A dashed border is the
    universal "nothing here yet" placeholder; teeth on all four sides read as a
    deliberately finished edge, which is the right note for an empty state that
