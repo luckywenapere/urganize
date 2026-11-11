@@ -5,7 +5,7 @@ describe('recordStageSteps', () => {
   const states = (status: Parameters<typeof recordStageSteps>[0]) => recordStageSteps(status).map((step) => step.state);
 
   it('names the three stops in order: Idea and Making are one Song stop (#1143)', () => {
-    expect(recordStageSteps('idea').map((step) => step.label)).toEqual(['Song', 'Release', 'Out']);
+    expect(recordStageSteps('idea').map((step) => step.label)).toEqual(['Song', 'Rollout', 'Out']);
   });
 
   it('an idea and a project in the making both sit at Song', () => {
@@ -13,7 +13,7 @@ describe('recordStageSteps', () => {
     expect(states('making')).toEqual(['now', 'next', 'later']);
   });
 
-  it('once planned, Release is now and Song is done', () => {
+  it('once planned, Rollout is now and Song is done', () => {
     expect(states('planned')).toEqual(['done', 'now', 'next']);
   });
 

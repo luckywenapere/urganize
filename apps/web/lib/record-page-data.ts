@@ -1,11 +1,11 @@
 import { isCalendarDate, type RecordStatus } from '@/lib/next-records';
 
 // The record page's small rules (#1190, mock docs/mocks/record-page-desktop):
-// where a record stands on Song, Release, Out, and the counts the desktop
+// where a record stands on Song, Rollout, Out, and the counts the desktop
 // cards show beside their titles. Pure, so the page only draws.
 
 export type RecordStageStep = {
-  key: 'song' | 'release' | 'out';
+  key: 'song' | 'rollout' | 'out';
   label: string;
   /** done: behind us. now: where it is. next: the stop after now. later: beyond that. */
   state: 'done' | 'now' | 'next' | 'later';
@@ -13,14 +13,15 @@ export type RecordStageStep = {
 
 const STOPS = [
   { key: 'song', label: 'Song' },
-  { key: 'release', label: 'Release' },
+  { key: 'rollout', label: 'Rollout' },
   { key: 'out', label: 'Out' },
 ] as const;
 
 /**
- * Song, Release, Out (2026-11-11, #1143). Idea and Making are both Song on
+ * Song, Rollout, Out (2026-11-11, #1143; Rollout, not Release, per the
+ * rollout vocabulary rule, Oyin 11 Nov). Idea and Making are both Song on
  * screen; the song checklist's groups are what used to be those stages. A
- * project becomes its rollout at Release; Out is lit on the rollout itself.
+ * project becomes its rollout at Rollout; Out is lit on the rollout itself.
  * A dropped record is at no stop.
  */
 export function recordStageSteps(status: RecordStatus): RecordStageStep[] {

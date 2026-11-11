@@ -160,7 +160,7 @@ type SheetName = 'menu' | 'rename' | 'cover' | 'kind' | 'drop' | 'plan' | 'idea'
 
 /**
  * Where the project stands on a phone (2026-11-11, #1143, mock screen 1.2):
- * one track with Song, Release and Out (recordStageSteps). Idea and Making are
+ * one track with Song, Rollout and Out (recordStageSteps). Idea and Making are
  * both "Song"; the checklist groups below are what used to be those stages.
  * A computer draws StageSteps below instead.
  */
