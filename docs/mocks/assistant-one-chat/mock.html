@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Assistant: one chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --side:#f0ebe1; --side-on:#e6e1d6; --card:#faf5ec; --hover:#ebe6dc;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18); --ctl:#8a857c;
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --err:#961a1a; --warn:#8a5a00;
+    --board:#d9d5cc; --board-text:#1a1611; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--board-text); padding:32px 16px 64px; }
+  p { margin:0; }
+  .intro, .sec-h, .note { max-width:1160px; margin:0 auto; }
+  .intro { margin-bottom:28px; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; margin:0 0 6px; }
+  .intro p, .sec-h p { color:var(--board-sec); }
+  .sec-h { margin-top:44px; margin-bottom:12px; }
+  .sec-h h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:0 0 4px; }
+  .mono { font-family:'JetBrains Mono', monospace; }
+
+  /* Computer frame */
+  .desk { max-width:1160px; margin:0 auto; background:var(--bg); color:var(--text); border-radius:18px; overflow:hidden; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .top { display:flex; align-items:center; gap:14px; padding:14px 20px; border-bottom:1px solid var(--line); }
+  .logo { font-family:'Young Serif', serif; font-size:18px; }
+  .beta { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--brand); background:rgba(20,100,58,.15); padding:1px 6px; border-radius:99px; }
+  .nav { display:flex; gap:4px; margin-left:18px; }
+  .nav span { padding:8px 14px; border-radius:99px; font-size:13.5px; font-weight:500; color:var(--sec); opacity:.6; }
+  .nav span.on { background:var(--card); color:var(--text); opacity:1; box-shadow:0 1px 2px rgba(26,22,17,.08); outline:1px solid var(--line); }
+  .search { margin-left:auto; border:1px solid var(--line); background:rgba(250,245,236,.7); border-radius:99px; padding:8px 14px; font-size:13px; color:var(--sec); width:240px; }
+
+  .chatwrap { display:flex; justify-content:center; padding:0 24px; }
+  .chat { width:100%; max-width:720px; display:flex; flex-direction:column; }
+  .chathead { display:flex; align-items:center; justify-content:space-between; padding:16px 0 8px; }
+  .chathead h3 { font-family:'Young Serif', serif; font-weight:400; font-size:22px; margin:0; }
+  .ghostbtn { display:inline-flex; align-items:center; gap:6px; min-height:36px; padding:0 12px; border-radius:99px; font-size:12.5px; font-weight:500; color:var(--sec); }
+  .ghostbtn:hover { background:var(--hover); }
+  .scroll { flex:1; overflow:hidden; position:relative; display:flex; flex-direction:column; gap:14px; padding:8px 0 16px; }
+  .older { align-self:center; font-size:12.5px; color:var(--sec); border:1px solid var(--line2); border-radius:99px; padding:5px 12px; }
+  .day { display:flex; align-items:center; gap:10px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ter); }
+  .day::before, .day::after { content:''; flex:1; height:1px; background:var(--line); }
+  .old { font-size:11.5px; color:var(--ter); text-align:center; }
+  .me { align-self:flex-end; max-width:78%; background:var(--hover); border-radius:16px 16px 4px 16px; padding:9px 13px; font-size:14px; }
+  .ai { max-width:88%; font-size:14px; color:var(--text); }
+  .ai .who { font-size:12px; color:var(--ter); margin-bottom:3px; }
+
+  /* The brief card */
+  .brief { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px 18px; box-shadow:0 1px 2px rgba(26,22,17,.05); }
+  .brief .bh { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+  .brief .bh b { font-family:'Young Serif', serif; font-weight:400; font-size:19px; }
+  .brief .bh span { font-size:12px; color:var(--ter); }
+  .brief .lede { color:var(--sec); font-size:13.5px; margin-top:4px; }
+  .bs { margin-top:14px; }
+  .bs h5 { margin:0 0 6px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ter); font-weight:700; }
+  .bs ul { list-style:none; margin:0; padding:0; }
+  .bs li { display:flex; gap:10px; align-items:flex-start; padding:5px 0; font-size:13.5px; border-top:1px solid var(--line); }
+  .bs li:first-child { border-top:0; }
+  .bs li .t { flex:1; min-width:0; }
+  .bs li .m { font-size:12px; color:var(--sec); white-space:nowrap; }
+  .late { color:var(--err); font-weight:600; }
+  .dot { width:8px; height:8px; border-radius:50%; margin-top:7px; flex:none; background:var(--ctl); }
+  .dot.r { background:var(--err); } .dot.g { background:var(--brand); }
+  .next { margin-top:14px; padding:12px 14px; border-radius:14px; background:var(--brand-soft); display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .next p { font-size:13.5px; } .next p b { font-weight:600; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:0 14px; border-radius:99px; font-weight:600; font-size:13px; background:var(--brand); color:#f5f0e6; white-space:nowrap; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+  .chip { border:1px solid var(--line2); border-radius:99px; padding:4px 11px; font-size:12.5px; color:var(--sec); background:transparent; }
+
+  .composer { border:1px solid var(--ctl); background:#fffdf8; border-radius:22px; padding:12px 14px; display:flex; align-items:center; gap:10px; margin-bottom:18px; }
+  .composer span { flex:1; color:var(--ter); }
+  .send { width:32px; height:32px; border-radius:50%; background:var(--brand); display:grid; place-items:center; color:#f5f0e6; font-size:14px; }
+
+  /* Phone */
+  .phones { display:flex; flex-wrap:wrap; gap:28px; justify-content:center; max-width:1160px; margin:0 auto; }
+  .col { width:360px; max-width:100%; }
+  .tag { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin-bottom:6px; }
+  .why { font-size:13px; color:var(--board-sec); margin-bottom:12px; min-height:40px; }
+  .phone { background:var(--bg); color:var(--text); border-radius:30px; padding:16px 14px 0; height:740px; display:flex; flex-direction:column; box-shadow:0 12px 32px rgba(26,22,17,.10); overflow:hidden; }
+  .phone .scroll { justify-content:flex-end; }
+  .phone .chathead { padding-top:4px; }
+  .phone .chathead h3 { font-size:20px; }
+  .phone .brief { padding:14px; }
+  .phone .bs li .m { display:block; }
+  .phone .bs li { flex-wrap:wrap; }
+  .tabs { display:flex; border-top:1px solid var(--line); margin:0 -14px; padding:8px 4px 14px; background:var(--side); }
+  .tabs span { flex:1; text-align:center; font-size:11px; color:var(--sec); }
+  .tabs span i { display:block; width:20px; height:20px; border-radius:6px; border:1.6px solid currentColor; margin:0 auto 3px; opacity:.6; }
+  .tabs span.on { color:var(--brand); font-weight:600; } .tabs span.on i { opacity:1; }
+
+  /* Lock screen push */
+  .lock { background:linear-gradient(160deg,#3a4a3f,#1e2620); border-radius:30px; height:740px; padding:22px 14px; color:#f5f0e6; }
+  .lock .time { text-align:center; font-size:64px; font-weight:300; letter-spacing:-.02em; margin-top:28px; }
+  .lock .date { text-align:center; font-size:15px; opacity:.85; }
+  .push { margin-top:42px; background:rgba(250,245,236,.88); color:var(--text); border-radius:20px; padding:12px 14px; display:flex; gap:10px; }
+  .push .ic { width:36px; height:36px; border-radius:9px; background:var(--brand); color:#f5f0e6; display:grid; place-items:center; font-family:'Young Serif', serif; flex:none; }
+  .push .pt { font-size:13.5px; font-weight:600; display:flex; justify-content:space-between; }
+  .push .pt span { font-weight:400; color:var(--ter); font-size:12px; }
+  .push p { font-size:13px; color:var(--sec); }
+
+  /* Rollout page with its own chat */
+  .roll { display:grid; grid-template-columns:1fr 380px; min-height:600px; }
+  .rmain { padding:22px 26px; }
+  .rmain .eyebrow { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ter); }
+  .rmain h3 { font-family:'Young Serif', serif; font-weight:400; font-size:26px; margin:2px 0 14px; }
+  .motion { height:6px; background:var(--hover); border-radius:99px; overflow:hidden; margin-bottom:18px; }
+  .motion i { display:block; height:100%; width:38%; background:var(--brand); }
+  .task { display:flex; gap:10px; padding:10px 0; border-top:1px solid var(--line); font-size:13.5px; }
+  .ck { width:16px; height:16px; border-radius:5px; border:1.5px solid var(--ctl); margin-top:2px; flex:none; }
+  .rchat { border-left:1px solid var(--line); background:var(--card); display:flex; flex-direction:column; padding:16px; }
+  .rchat .h { font-size:13px; font-weight:600; }
+  .rchat .s { font-size:12px; color:var(--ter); margin-bottom:12px; }
+  .rchat .body { flex:1; display:flex; flex-direction:column; gap:12px; }
+  .rchat .composer { margin-bottom:0; }
+
+  .outline { outline:2px dashed rgba(20,100,58,.55); outline-offset:6px; border-radius:18px; }
+  .note { margin-top:40px; font-size:13.5px; color:var(--board-sec); }
+  .note h3 { color:var(--board-text); font-size:15px; margin:0 0 8px; }
+  .note ol, .note ul { margin:0 0 14px; padding-left:20px; }
+  .note li { margin:4px 0; }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Assistant: one chat, with a morning brief</h1>
+  <p>Issue #1207. The Assistant tab becomes one chat that never resets. Every morning at 8am a brief waits at the bottom of it, and a notification says it is ready. The main menu does not change.</p>
+</div>
+
+<!-- 1. Computer -->
+<div class="sec-h">
+  <h2>1 · Assistant on a computer</h2>
+  <p>No sessions list and no "New session". One chat down the middle. Today's brief is the newest thing in it, so it is what you see when you open the tab. Scroll up for yesterday and every chat before it.</p>
+</div>
+<div class="desk">
+  <div class="top">
+    <span class="logo">Urganize</span><span class="beta">Beta</span>
+    <div class="nav"><span>Home</span><span>Artists</span><span class="on">Assistant</span><span>Rollouts</span></div>
+    <div class="search">Search or ask AI</div>
+  </div>
+  <div class="chatwrap">
+    <div class="chat">
+      <div class="chathead">
+        <h3>Assistant</h3>
+        <span class="ghostbtn">◷ What AI did</span>
+      </div>
+      <div class="scroll">
+        <span class="older">Show October</span>
+        <div class="day">Tue 10 Nov</div>
+        <div class="me">Remind me what's left on Midnight before Friday?</div>
+        <div class="ai"><div class="who">AI</div>Three things: the cover art final, the pitch to Afro Wave, and the radio edit. The cover art is the one holding the others up.</div>
+
+        <div class="day">Today, Wed 11 Nov</div>
+        <div class="brief outline">
+          <div class="bh"><b>Good morning, Wena</b><span>8:00am · Morning brief</span></div>
+          <p class="lede">Midnight comes out in 9 days. Two things are late and one show is this week.</p>
+
+          <div class="bs">
+            <h5>Needs you today</h5>
+            <ul>
+              <li><span class="dot r"></span><span class="t">Cover art final approved · Midnight</span><span class="m late">2 days late</span></li>
+              <li><span class="dot r"></span><span class="t">Send split sheet to Tobi · Midnight</span><span class="m late">1 day late</span></li>
+              <li><span class="dot"></span><span class="t">Pitch to Afro Wave · Midnight</span><span class="m">Due today</span></li>
+            </ul>
+          </div>
+
+          <div class="bs">
+            <h5>Since yesterday</h5>
+            <ul>
+              <li><span class="dot g"></span><span class="t">Ada finished the radio edit</span><span class="m">Midnight</span></li>
+              <li><span class="dot g"></span><span class="t">Lagos Heat added "Midnight" to their playlist</span><span class="m">Pitch</span></li>
+              <li><span class="dot"></span><span class="t">Seyi sent his credits</span><span class="m">Midnight</span></li>
+            </ul>
+          </div>
+
+          <div class="bs">
+            <h5>Coming up</h5>
+            <ul>
+              <li><span class="dot"></span><span class="t">Show at Hard Rock Lagos · Dorian</span><span class="m">Sat 14 Nov · 3 days</span></li>
+              <li><span class="dot"></span><span class="t">Midnight comes out</span><span class="m">Fri 20 Nov · 9 days</span></li>
+            </ul>
+          </div>
+
+          <div class="next">
+            <p><b>One thing first:</b> approve the cover art. Two other activities are waiting on it.</p>
+            <span class="btn">Open cover art</span>
+          </div>
+          <div class="chips"><span class="chip">Chase Tobi for me</span><span class="chip">What's left on Midnight?</span></div>
+        </div>
+      </div>
+      <div class="composer"><span>Ask AI…</span><span class="send">↑</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Phone + push -->
+<div class="sec-h">
+  <h2>2 · On a phone, and the 8am notification</h2>
+  <p>Same one chat on the Assistant tab. The notification opens straight onto today's brief.</p>
+</div>
+<div class="phones">
+  <div class="col">
+    <div class="tag">8:00am notification</div>
+    <p class="why">Only to people who turned notifications on. Tapping it opens the Assistant tab.</p>
+    <div class="lock">
+      <div class="time">8:00</div>
+      <div class="date">Wednesday 11 November</div>
+      <div class="push">
+        <div class="ic">U</div>
+        <div style="flex:1">
+          <div class="pt">Urganize <span>now</span></div>
+          <p><b style="color:var(--text)">Your morning brief is ready</b><br/>2 things are late on Midnight. Show on Saturday.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="tag">Assistant tab</div>
+    <p class="why">The brief at the bottom, yesterday above it. The sections stack so nothing gets cut off.</p>
+    <div class="phone">
+      <div class="chathead"><h3>Assistant</h3><span class="ghostbtn">◷ What AI did</span></div>
+      <div class="scroll" style="gap:12px">
+        <div class="day">Today</div>
+        <div class="brief">
+          <div class="bh"><b>Good morning, Wena</b></div>
+          <p class="lede">Midnight comes out in 9 days. Two things are late.</p>
+          <div class="bs">
+            <h5>Needs you today</h5>
+            <ul>
+              <li><span class="dot r"></span><span class="t">Cover art final approved<span class="m late">2 days late</span></span></li>
+              <li><span class="dot r"></span><span class="t">Send split sheet to Tobi<span class="m late">1 day late</span></span></li>
+            </ul>
+          </div>
+          <div class="bs">
+            <h5>Since yesterday</h5>
+            <ul><li><span class="dot g"></span><span class="t">Ada finished the radio edit</span></li></ul>
+          </div>
+          <div class="bs">
+            <h5>Coming up</h5>
+            <ul><li><span class="dot"></span><span class="t">Hard Rock Lagos<span class="m">Sat · 3 days</span></span></li></ul>
+          </div>
+          <div class="next" style="flex-direction:column;align-items:stretch">
+            <p><b>One thing first:</b> approve the cover art.</p>
+            <span class="btn">Open cover art</span>
+          </div>
+        </div>
+      </div>
+      <div class="composer" style="margin-bottom:10px"><span>Ask AI…</span><span class="send">↑</span></div>
+      <div class="tabs"><span><i></i>Home</span><span><i></i>Artists</span><span class="on"><i></i>Assistant</span><span><i></i>Rollouts</span><span><i></i>More</span></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="tag">A quiet morning</div>
+    <p class="why">A brief still comes every day, so the habit holds. On a quiet day it is short.</p>
+    <div class="phone">
+      <div class="chathead"><h3>Assistant</h3><span class="ghostbtn">◷ What AI did</span></div>
+      <div class="scroll" style="gap:12px">
+        <div class="day">Yesterday</div>
+        <div class="me">Thanks, all done for today</div>
+        <div class="ai"><div class="who">AI</div>Nice work. See you tomorrow.</div>
+        <div class="day">Today</div>
+        <div class="brief">
+          <div class="bh"><b>Good morning, Wena</b></div>
+          <p class="lede">Nothing is late and nothing changed overnight.</p>
+          <div class="bs">
+            <h5>Coming up</h5>
+            <ul><li><span class="dot"></span><span class="t">Midnight comes out<span class="m">Fri 20 Nov · 9 days</span></span></li></ul>
+          </div>
+          <div class="next" style="flex-direction:column;align-items:stretch">
+            <p><b>One thing first:</b> start the pitch list for Midnight while it's quiet.</p>
+            <span class="btn">Start the pitch list</span>
+          </div>
+        </div>
+      </div>
+      <div class="composer" style="margin-bottom:10px"><span>Ask AI…</span><span class="send">↑</span></div>
+      <div class="tabs"><span><i></i>Home</span><span><i></i>Artists</span><span class="on"><i></i>Assistant</span><span><i></i>Rollouts</span><span><i></i>More</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Rollout chat -->
+<div class="sec-h">
+  <h2>3 · On a rollout, its own chat</h2>
+  <p>Asking from a rollout page goes to that rollout's chat, not the main one. Rollouts themselves stay as they are.</p>
+</div>
+<div class="desk">
+  <div class="top">
+    <span class="logo">Urganize</span><span class="beta">Beta</span>
+    <div class="nav"><span>Home</span><span>Artists</span><span>Assistant</span><span class="on">Rollouts</span></div>
+    <div class="search">Search or ask AI</div>
+  </div>
+  <div class="roll">
+    <div class="rmain">
+      <div class="eyebrow">Dorian · Single</div>
+      <h3>Midnight</h3>
+      <div class="motion"><i></i></div>
+      <div class="task"><span class="ck"></span><span style="flex:1">Cover art final approved</span><span class="late" style="font-size:12px">2 days late</span></div>
+      <div class="task"><span class="ck"></span><span style="flex:1">Send split sheet to Tobi</span><span class="late" style="font-size:12px">1 day late</span></div>
+      <div class="task"><span class="ck"></span><span style="flex:1">Pitch to Afro Wave</span><span style="font-size:12px;color:var(--sec)">Today</span></div>
+      <div class="task"><span class="ck"></span><span style="flex:1">Book the listening party venue</span><span style="font-size:12px;color:var(--sec)">Fri</span></div>
+    </div>
+    <div class="rchat outline">
+      <div class="h">AI on Midnight</div>
+      <div class="s">This chat is only about this rollout</div>
+      <div class="body">
+        <div class="me">Who still owes me credits?</div>
+        <div class="ai"><div class="who">AI</div>Tobi and Kemi. Seyi sent his yesterday. Want me to chase the other two?</div>
+      </div>
+      <div class="composer"><span>Ask about Midnight…</span><span class="send">↑</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <h3>What happens to the chats people already have</h3>
+  <ul>
+    <li>Every saved session is folded into the one chat, oldest first, each under its date and its old title, like "From 'Pitch ideas' · 3 Oct".</li>
+    <li>Nothing is deleted. A copy of every old session is kept before they are folded in.</li>
+    <li>Rollout chats start fresh from today, because old sessions do not say which rollout they were about.</li>
+  </ul>
+  <h3>How the brief works</h3>
+  <ul>
+    <li>8am Lagos time, every day, for people who used Urganize in the last 14 days.</li>
+    <li>The facts come straight from your rollouts and tasks. AI only writes the opening line and picks the one next step. If AI is down, a plain version still arrives.</li>
+    <li>It does not use any of your AI credits.</li>
+    <li>You can turn it off in Settings, under Notifications.</li>
+  </ul>
+</div>
+
+</body>
+</html>

@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.268.0",
+    tag: "App",
+    date: "November 12, 2026",
+    highlights: [
+      "The Assistant is now one chat that keeps going. Your old chats are in it too, under \"Show earlier\" at the top.",
+      "Every morning at 8am, a short brief waits in that chat: what needs you today, what your team finished, dates coming up and one thing to do first. You also get a notification.",
+      "Chats about a rollout stay with that rollout. You can turn the morning brief off in Settings, under Notifications.",
+    ],
+  },
+  {
     version: "1.267.0",
     tag: "App",
     date: "November 12, 2026",

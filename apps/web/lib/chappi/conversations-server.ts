@@ -14,6 +14,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { randomUUID } from 'node:crypto';
 import { encodeNoteCursor, takeNotePage, type NoteCursor } from '@/lib/note-paging';
 import {
   CHAT_PAGE_SIZE,
@@ -25,7 +26,10 @@ import {
   type ChatSyncResult,
   type StoredChatMessage,
   type StoredChatRow,
+  CHAT_TITLE_FALLBACK,
+  deriveConversationTitle,
 } from './conversation-history';
+import { EARLIER_PAGE_TITLE, MAIN_ARCHIVE_THREAD, planMainArchive } from './main-thread';
 
 export const URGANS_CONVERSATIONS_TABLE = 'urgans_conversations';
 
@@ -127,7 +131,9 @@ export async function listChats(
   let query = admin
     .from(URGANS_CONVERSATIONS_TABLE)
     .select(SUMMARY_COLUMNS)
-    .eq('owner_user_id', userId);
+    .eq('owner_user_id', userId)
+    // Earlier pages of the one chat (#1207) are never a chat of their own.
+    .is('thread_key', null);
 
   if (cursor) {
     // Strictly after the cursor in (last_message_at desc, id desc). Both halves
@@ -202,6 +208,13 @@ export async function syncChat(
     case 'not_found':
       return fail(404, NOT_FOUND);
     case 'too_large':
+      // The one chat never says "too long" (#1207): its oldest messages move to
+      // an earlier page, and the browser is told the chat changed, so it
+      // catches up and saves again on top of the shorter chat.
+      if (chatId === userId && read.row) {
+        const moved = await archiveMainChat(admin, userId, { force: true, now });
+        if (moved.ok && moved.value.moved > 0) return answerLostRace(admin, userId, chatId);
+      }
       return fail(413, TOO_LARGE);
     case 'invalid':
       return fail(400, decision.error);
@@ -288,4 +301,172 @@ export async function deleteChat(
     .eq('owner_user_id', userId);
   if (error) return fail(500, error.message || 'Could not delete this chat.');
   return { ok: true, value: null };
+}
+
+// ── The one Assistant chat (#1207) ───────────────────────────────────────────
+
+/**
+ * Moves the oldest messages of the one chat (id = the person's user id) to an
+ * earlier page when the chat is long (lib/chappi/main-thread.ts says what
+ * moves). The earlier page is written first, then the chat is shortened by a
+ * write conditional on its revision; if another tab saved in between, the page
+ * is taken back out and nothing changes. A tab that was open catches up through
+ * the one chat's rebase rule, never by forking.
+ */
+export async function archiveMainChat(
+  admin: SupabaseClient,
+  userId: string,
+  options: { force?: boolean; now?: Date } = {}
+): Promise<ServerResult<{ moved: number }>> {
+  const read = await readOwnedRow(admin, userId, userId);
+  if (read.error) return fail(500, read.error);
+  if (!read.row) return { ok: true, value: { moved: 0 } };
+  const stored = toStoredRow(read.row);
+  const plan = planMainArchive(stored.messages, options.force);
+  if (!plan) return { ok: true, value: { moved: 0 } };
+
+  const lastAt = [...plan.archive].reverse().find((message) => message.at)?.at;
+  const pageAt = lastAt ?? (options.now ?? new Date()).toISOString();
+  const pageId = randomUUID();
+  const inserted = await admin
+    .from(URGANS_CONVERSATIONS_TABLE)
+    .insert({
+      id: pageId,
+      owner_user_id: userId,
+      thread_key: MAIN_ARCHIVE_THREAD,
+      title: EARLIER_PAGE_TITLE,
+      messages: plan.archive,
+      message_count: plan.archive.length,
+      revision: 1,
+      last_message_at: pageAt,
+    })
+    .select('id');
+  if (inserted.error) return fail(500, inserted.error.message || 'Could not move earlier messages.');
+
+  const updated = await admin
+    .from(URGANS_CONVERSATIONS_TABLE)
+    .update({
+      messages: plan.keep,
+      message_count: plan.keep.length,
+      revision: stored.revision + 1,
+    })
+    .eq('id', userId)
+    .eq('owner_user_id', userId)
+    .eq('revision', stored.revision)
+    .select('id');
+  const rows = (updated.data as Row[] | null) ?? [];
+  if (updated.error || rows.length === 0) {
+    await admin.from(URGANS_CONVERSATIONS_TABLE).delete().eq('id', pageId).eq('owner_user_id', userId);
+    if (updated.error) return fail(500, updated.error.message || 'Could not move earlier messages.');
+    return answerLostRace(admin, userId, userId);
+  }
+  return { ok: true, value: { moved: plan.archive.length } };
+}
+
+/**
+ * Adds one message to the one chat from the server (the morning brief). Safe
+ * to call twice with the same message: a message already there is not added
+ * again. Retries a lost race a few times, since a tab may be saving at 8am.
+ */
+export async function appendToMainChat(
+  admin: SupabaseClient,
+  userId: string,
+  message: StoredChatMessage,
+  now: Date = new Date()
+): Promise<ServerResult<{ added: boolean }>> {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const read = await readOwnedRow(admin, userId, userId);
+    if (read.error) return fail(500, read.error);
+    const nowIso = now.toISOString();
+    if (!read.row) {
+      const { error } = await admin.from(URGANS_CONVERSATIONS_TABLE).insert({
+        id: userId,
+        owner_user_id: userId,
+        title: CHAT_TITLE_FALLBACK,
+        messages: [message],
+        message_count: 1,
+        revision: 1,
+        last_message_at: nowIso,
+      });
+      if (!error) return { ok: true, value: { added: true } };
+      if ((error as { code?: string }).code === '23505') continue;
+      return fail(500, error.message || 'Could not add to the chat.');
+    }
+    const stored = toStoredRow(read.row);
+    if (stored.messages.some((existing) => existing.id === message.id)) {
+      return { ok: true, value: { added: false } };
+    }
+    const next = [...stored.messages, message];
+    if (planMainArchive(next)) {
+      const moved = await archiveMainChat(admin, userId, { now });
+      if (!moved.ok && moved.status !== 409) return moved;
+      continue;
+    }
+    const title =
+      !stored.title || stored.title === CHAT_TITLE_FALLBACK ? deriveConversationTitle(next) : stored.title;
+    const { data, error } = await admin
+      .from(URGANS_CONVERSATIONS_TABLE)
+      .update({
+        title,
+        messages: next,
+        message_count: next.length,
+        revision: stored.revision + 1,
+        last_message_at: nowIso,
+      })
+      .eq('id', userId)
+      .eq('owner_user_id', userId)
+      .eq('revision', stored.revision)
+      .select('id');
+    if (error) return fail(500, error.message || 'Could not add to the chat.');
+    if (((data as Row[] | null) ?? []).length > 0) return { ok: true, value: { added: true } };
+  }
+  return fail(409, CHANGED);
+}
+
+export type EarlierPage = {
+  id: string;
+  title: string;
+  lastMessageAt: string;
+  messages: StoredChatMessage[];
+};
+
+/** One earlier page of the one chat, newest first. Read only. */
+export async function getEarlierPage(
+  admin: SupabaseClient,
+  userId: string,
+  cursor: NoteCursor | null
+): Promise<ServerResult<{ page: EarlierPage | null; nextCursor: string | null }>> {
+  let query = admin
+    .from(URGANS_CONVERSATIONS_TABLE)
+    .select(DETAIL_COLUMNS)
+    .eq('owner_user_id', userId)
+    .eq('thread_key', MAIN_ARCHIVE_THREAD);
+  if (cursor) {
+    query = query.or(
+      `last_message_at.lt.${cursor.updatedAt},and(last_message_at.eq.${cursor.updatedAt},id.lt.${cursor.id})`
+    );
+  }
+  const { data, error } = await query
+    .order('last_message_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(2);
+  if (error) return fail(500, error.message || 'Could not load earlier messages.');
+  const rows = (data || []) as Row[];
+  const first = rows[0];
+  if (!first) return { ok: true, value: { page: null, nextCursor: null } };
+  return {
+    ok: true,
+    value: {
+      page: {
+        id: String(first.id),
+        title: String(first.title ?? EARLIER_PAGE_TITLE),
+        lastMessageAt: String(first.last_message_at ?? ''),
+        messages: toStoredRow(first).messages,
+      },
+      nextCursor:
+        rows.length > 1
+          ? encodeNoteCursor({ updatedAt: String(first.last_message_at), id: String(first.id) })
+          : null,
+    },
+  };
 }

@@ -100,8 +100,8 @@ const FILES = [
   join(WEB, 'lib', 'chappi', 'conversation-history.ts'),
   join(WEB, 'lib', 'chappi', 'conversations-server.ts'),
   join(WEB, 'stores', 'useChappiHistoryStore.ts'),
-  join(WEB, 'components', 'chappi', 'ChappiHistoryList.tsx'),
-  join(WEB, 'components', 'chappi', 'ChappiDeleteChatDialog.tsx'),
+  join(WEB, 'components', 'chappi', 'ChappiBriefCard.tsx'),
+  join(WEB, 'components', 'chappi', 'ChappiEarlierMessages.tsx'),
   // Brand colors for those images (2026-09-24): the Settings editor and its
   // route are the same new surface, so they are born under the same rules. The
   // lib half is already reached by the social-share prefix above.

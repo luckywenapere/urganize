@@ -1,15 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { History, Maximize2, MessageCircle, RotateCcw, X } from '@/components/icons';
+import { Maximize2, MessageCircle, X } from '@/components/icons';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { URGANS_HREF } from '@/lib/shell-nav';
 import { isChappiHistoryEnabled } from '@/lib/chappi/history-flag';
 import { ChappiConversation } from './ChappiConversation';
-import { ChappiHistoryList } from './ChappiHistoryList';
+import { showMain } from '@/components/shell/swipe/main-thread';
 
-// Saved sessions: a header button swaps the card's body to the sessions list.
+// The one Assistant chat (#1207): opened when the card opens on nothing.
 const HISTORY_ENABLED = isChappiHistoryEnabled();
 
 type ChappiSidePanelProps = {
@@ -60,11 +60,16 @@ type ChappiSidePanelProps = {
 export function ChappiSidePanel({ open, onNewRelease }: ChappiSidePanelProps) {
   const router = useRouter();
   const setRailOpen = useChappiStore((state) => state.setRailOpen);
-  const messages = useChappiStore((state) => state.messages);
-  const reset = useChappiStore((state) => state.reset);
-
-  // The chats list is showing in place of the conversation.
-  const [showChats, setShowChats] = useState(false);
+  // The Assistant is one chat (#1207). Opening the card with nothing on screen
+  // shows it, rather than a blank page that would start a chat of its own. A
+  // rollout's chat, if one is on screen, stays.
+  useEffect(() => {
+    if (!open || !HISTORY_ENABLED) return;
+    const chappi = useChappiStore.getState();
+    if (chappi.conversationId === null && chappi.messages.length === 0 && chappi.nextChatId === null) {
+      void showMain();
+    }
+  }, [open]);
 
   return (
     <section
@@ -87,34 +92,6 @@ export function ChappiSidePanel({ open, onNewRelease }: ChappiSidePanelProps) {
           AI
         </p>
         <div className="flex items-center gap-1">
-          {HISTORY_ENABLED ? (
-            <button
-              type="button"
-              onClick={() => setShowChats((current) => !current)}
-              aria-label={showChats ? 'Back to the session' : 'Your sessions'}
-              title={showChats ? 'Back to the session' : 'Sessions'}
-              className={`motion-focus motion-press grid h-7 w-7 place-items-center transition-colors hover:bg-bg-hover hover:text-content-primary ${
-                showChats ? 'text-brand' : 'text-content-tertiary'
-              }`}
-            >
-              <History className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
-          ) : null}
-          {messages.length > 0 ? (
-            <button
-              type="button"
-              onClick={() => {
-                reset();
-                // A new session is a conversation to type into, not the list.
-                setShowChats(false);
-              }}
-              aria-label="New session"
-              title="New session"
-              className="motion-focus motion-press grid h-7 w-7 place-items-center text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
-            >
-              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
-          ) : null}
           <button
             type="button"
             onClick={() => {
@@ -144,14 +121,7 @@ export function ChappiSidePanel({ open, onNewRelease }: ChappiSidePanelProps) {
         </div>
       </div>
 
-      {showChats ? (
-        <div className="min-h-0 flex-1 px-2 pb-3 pt-2">
-          <ChappiHistoryList variant="panel" onDone={() => setShowChats(false)} />
-        </div>
-      ) : null}
-      {/* Hidden, never unmounted, while the list shows: its cards and any
-          reply still on its way live in it. */}
-      <div className={`min-h-0 flex-1 px-3 pb-3 pt-2 ${showChats ? 'hidden' : ''}`}>
+      <div className="min-h-0 flex-1 px-3 pb-3 pt-2">
         <ChappiConversation variant="panel" onNewRelease={onNewRelease} />
       </div>
     </section>

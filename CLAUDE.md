@@ -565,3 +565,18 @@ moved it; prefer one union over several flags; a request that can be
 superseded carries a token captured at its start; anything holding one
 account's data registers a sign-out reset. That file also ranks the machines
 still open, `subscriptions.status` and the `tasks.status` PATCH first.
+
+---
+
+## One Assistant chat, and the morning brief (2026-11-11, #1207)
+
+Founder ask: the Assistant tab is one chat that never resets, and a brief waits in it every morning so people come back to check it. The main menu (Home, Assistant, Rollouts) and rollout chats are unchanged. Mock: `docs/mocks/assistant-one-chat/mock.html`. No flag.
+
+- **The one chat is the existing Main chat** (id = the user id, `lib/chappi/home-chat.ts`). `UrgansSessionsLayout`, the phone page and the side panel open it; the sessions list, "New session" and the delete dialog are gone. Rollout chats stay in the Rollouts list.
+- **Old sessions are folded in, lazily, per person** (`POST /api/urgans/conversations/fold`, called once by `startChappiHistory`). A free-standing session becomes an earlier page (`thread_key = 'main_archive'`) headed by a divider naming its old title and date. Rollout and project chats are kept (their ids are hashes, so this cannot be done in SQL). Each original is copied to `urgans_conversations_folded` first.
+- **A chat that never resets cannot fit the row caps**, so the oldest messages move to earlier pages (`planMainArchive`, `archiveMainChat`): at 360 messages or 650 KB the newest 120 stay. "Show earlier" at the top loads them, read only (`GET .../earlier`). `listChats` hides earlier pages.
+- **The main chat never forks.** On a 409 the client takes the server copy plus its own unsaved tail (`rebaseOnServer`, `rebaseChat`), because the server writes into it too (the brief, archiving).
+- **The morning brief** (`lib/chappi/morning-brief.ts`, pure; `morning-brief-server.ts`): facts from `loadHomeData` (what needs you, what teammates finished since yesterday, release days in 14 days, one next step); AI may only reword the lede and pick which need leads (surface `morning_brief`, template fallback, never charged). One per person per Lagos day, locked by `morning_briefs` unique (user_id, brief_date); written as message `brief-<date>` (kind `brief`), then a push. Only team-side people active in the last 14 days with `profiles.morning_brief` on.
+- **Schedule:** pg_cron `urganize-morning-briefs` hits `/api/cron/morning-briefs` every 10 minutes 07:00 to 08:50 UTC (8am Lagos), using the Vault secrets `urganize_app_url` and `urganize_cron_secret`. The Vercel cron slots are full. Kill switch: `MORNING_BRIEFS=off`.
+- **Off switch for a person:** Settings, Notifications, "Morning brief".
+- Migration `20261111120000_one_assistant_chat_and_morning_brief.sql` applied 2026-11-11; the chats were backed up first to `backup_urgans_conversations_20261111` (31 rows).

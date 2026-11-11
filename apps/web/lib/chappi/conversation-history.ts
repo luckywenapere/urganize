@@ -29,6 +29,7 @@
 
 import { deriveNoteTitle } from '@/lib/notes';
 import type { ChappiMessage } from './types';
+import { sanitizeMorningBrief, type MorningBrief } from './morning-brief';
 
 /** How recently a chat must have been touched to come back on reopen
  *  (founder decision, 2026-09-24: "resume if recent"). */
@@ -79,6 +80,9 @@ export type StoredChatMessage = {
   role: ChatRole;
   content: string;
   briefSections?: string[];
+  at?: string;
+  kind?: 'brief' | 'divider';
+  brief?: MorningBrief;
 };
 
 /** One row of the history list. */
@@ -172,6 +176,26 @@ function cleanBriefSections(raw: unknown): string[] | undefined {
   return sections.length > 0 ? sections : undefined;
 }
 
+/**
+ * The turns the model reads (#1207). A divider is a label in the one chat, not
+ * something anyone said, so it is left out; a brief goes as its plain text
+ * without the card payload, which the model has no use for.
+ */
+export function forModelHistory<T extends ChappiMessage>(messages: readonly T[]): T[] {
+  const out: T[] = [];
+  for (const message of messages) {
+    if (message.kind === 'divider') continue;
+    if (message.kind === 'brief' || message.brief !== undefined) {
+      const rest = { ...message };
+      delete rest.brief;
+      out.push(rest);
+    } else {
+      out.push(message);
+    }
+  }
+  return out;
+}
+
 /** The saved form of a transcript message. */
 export function toStoredMessage(message: ChappiMessage): StoredChatMessage {
   const stored: StoredChatMessage = {
@@ -181,7 +205,30 @@ export function toStoredMessage(message: ChappiMessage): StoredChatMessage {
   };
   const sections = cleanBriefSections(message.briefSections);
   if (sections) stored.briefSections = sections;
+  applyExtras(stored, message);
   return stored;
+}
+
+/** An ISO timestamp, or nothing. */
+function cleanAt(raw: unknown): string | undefined {
+  if (typeof raw !== 'string' || raw.length > 40) return undefined;
+  return Number.isFinite(Date.parse(raw)) ? raw : undefined;
+}
+
+/** Copies the optional fields a stored message may carry (#1207). A brief whose
+ *  payload does not parse stays an ordinary assistant message. */
+function applyExtras(target: StoredChatMessage, source: { at?: unknown; kind?: unknown; brief?: unknown }) {
+  const at = cleanAt(source.at);
+  if (at) target.at = at;
+  if (source.kind === 'divider') {
+    target.kind = 'divider';
+  } else if (source.kind === 'brief' && target.role === 'assistant') {
+    const brief = sanitizeMorningBrief(source.brief);
+    if (brief) {
+      target.kind = 'brief';
+      target.brief = brief;
+    }
+  }
 }
 
 /**
@@ -192,7 +239,7 @@ export function toStoredMessage(message: ChappiMessage): StoredChatMessage {
  */
 export function normalizeChatMessage(raw: unknown): StoredChatMessage | null {
   if (!raw || typeof raw !== 'object') return null;
-  const { id, role, content, briefSections } = raw as Record<string, unknown>;
+  const { id, role, content, briefSections, at, kind, brief } = raw as Record<string, unknown>;
   if (typeof id !== 'string' || id.length === 0 || id.length > MAX_CHAT_MESSAGE_ID_LENGTH) {
     return null;
   }
@@ -201,6 +248,7 @@ export function normalizeChatMessage(raw: unknown): StoredChatMessage | null {
   const message: StoredChatMessage = { id, role, content: clampContent(content) };
   const sections = cleanBriefSections(briefSections);
   if (sections) message.briefSections = sections;
+  applyExtras(message, { at, kind, brief });
   return message;
 }
 

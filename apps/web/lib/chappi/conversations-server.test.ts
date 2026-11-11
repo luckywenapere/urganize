@@ -42,6 +42,10 @@ function fakeAdmin(respond: (op: Op, index: number) => Answer) {
             op.filters.push([column, value]);
             return builder;
           },
+          is(column: string, value: unknown) {
+            op.filters.push([`${column}:is`, value]);
+            return builder;
+          },
           or(expression: string) {
             op.orFilter = expression;
             return builder;
@@ -306,7 +310,11 @@ describe('listChats', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.chats.map((chat) => chat.title)).toEqual(['C', 'B']);
-    expect(ops[0].filters).toEqual([['owner_user_id', USER]]);
+    // Earlier pages of the one Assistant chat never show in the list (#1207).
+    expect(ops[0].filters).toEqual([
+      ['owner_user_id', USER],
+      ['thread_key:is', null],
+    ]);
     expect(ops[0].limit).toBe(3);
     expect(ops[0].orders).toEqual([
       ['last_message_at', false],

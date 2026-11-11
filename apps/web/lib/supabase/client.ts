@@ -184,6 +184,8 @@ export type Profile = {
    * (lib/motivation-server.ts). Default true; undefined (pre-migration
    * rows) counts as on. */
   motivational_nudges?: boolean;
+  /** The morning brief's off switch (#1207). Undefined counts as on. */
+  morning_brief?: boolean;
   /** The Settings view override (URG-260, lib/role-views.ts). Null or missing
    * (rows before the column existed) = automatic, from the persona and role. */
   role_view?: 'artist_manager' | 'label' | 'solo_artist' | 'artist_team' | 'other' | null;

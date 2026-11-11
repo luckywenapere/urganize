@@ -47,19 +47,25 @@ describe('Home on a computer has no chat', () => {
     expect(page).toContain('<HomeAskBar />');
   });
 
-  it('shows a computer the sessions layout on the AI page, never bouncing to Home', () => {
+  it('shows a computer the one chat on the AI page, never bouncing to Home (#1207)', () => {
     const page = read('app', 'dashboard', 'urgans', 'ChappiPageClient.tsx');
     expect(page).toContain('<UrgansSessionsLayout');
     expect(page).not.toContain('router.replace(HOME_PATH)');
     expect(page).not.toMatch(/router\.replace\(['"]\/dashboard\/home['"]\)/);
     const layout = read('components', 'chappi', 'UrgansSessionsLayout.tsx');
-    expect(layout).toContain('<ChappiHistoryList');
+    // One chat that never resets: no sessions list and no "New session".
+    expect(layout).not.toContain('ChappiHistoryList');
+    expect(layout).not.toContain('New session');
+    expect(layout).toContain('showMain(');
     expect(layout).toMatch(CONVERSATION_TAG);
     expect(layout).toContain('data-tour="nav-urgans"');
   });
 
   it('expands the drawer onto the AI page, not onto Home', () => {
     const panel = read('components', 'chappi', 'ChappiSidePanel.tsx');
+    // The drawer has no sessions list or "New session" either (#1207).
+    expect(panel).not.toContain('ChappiHistoryList');
+    expect(panel).not.toContain('New session');
     expect(panel).toContain('router.push(URGANS_HREF)');
     expect(panel).not.toContain('router.push(HOME_PATH)');
   });

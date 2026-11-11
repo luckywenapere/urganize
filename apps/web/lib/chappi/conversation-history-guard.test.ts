@@ -63,6 +63,9 @@ function stripComments(source: string): string {
 const ROUTES = [
   join(WEB, 'app', 'api', 'urgans', 'conversations', 'route.ts'),
   join(WEB, 'app', 'api', 'urgans', 'conversations', '[conversationId]', 'route.ts'),
+  // The one Assistant chat (#1207): earlier pages, and folding old sessions in.
+  join(WEB, 'app', 'api', 'urgans', 'conversations', 'earlier', 'route.ts'),
+  join(WEB, 'app', 'api', 'urgans', 'conversations', 'fold', 'route.ts'),
 ];
 
 /** Each exported handler's body, keyed by method. */
