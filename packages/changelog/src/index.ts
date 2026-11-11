@@ -67,6 +67,19 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.262.0",
+    title: "The artist page uses the whole screen on a computer",
+    tag: "App",
+    date: "November 11, 2026",
+    highlights: [
+      "On a computer, an artist's page now has two columns: their music on the left, their tasks on the right.",
+      "The tasks card shows what is late first, and who has each task. Tick your own right there.",
+      "Songs that are out have a Copy link button.",
+      "Each record shows once. Before, the same song could appear in two places.",
+      "The button at the top now says New record.",
+    ],
+  },
+  {
     version: "1.261.6",
     title: "No more Free plan, and credits are for AI",
     tag: "Account",

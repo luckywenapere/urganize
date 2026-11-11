@@ -189,6 +189,11 @@ describe('summaries', () => {
     );
     expect(summary.status).toBe('idea');
   });
+  it('carries the rollout it points at, so the artist page shows it once (#1183)', () => {
+    const base = { id: ID, artistId: ID2, title: 'Night Bus', kind: null, coverColor: null, coverUrl: null, status: 'making' as const, songs: [], sessions: [] };
+    expect(summarizeRecord({ ...base, releaseId: ID2 }, '2026-11-10').releaseId).toBe(ID2);
+    expect(summarizeRecord(base, '2026-11-10').releaseId).toBeNull();
+  });
   it('a record is done only with songs, all done', () => {
     expect(isRecordDone({ songs: [] })).toBe(false);
     expect(isRecordDone({ songs: [song({ stage: 'done' }), song({ stage: 'mixing' })] })).toBe(false);
