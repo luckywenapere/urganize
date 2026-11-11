@@ -55,3 +55,15 @@ export function addProjectTask(
 export function setProjectTaskDone(taskId: string, done: boolean): Promise<ProjectTaskCall> {
   return taskCall(`/api/tasks/${encodeURIComponent(taskId)}`, 'PATCH', { status: done ? 'done' : 'todo' });
 }
+
+/** Adds the song checklist to a project made before it (2026-11-11, #1143). */
+export async function addSongChecklist(recordId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const response = await call(`/api/records/${encodeURIComponent(recordId)}/checklist`, 'POST', {});
+    if (response.ok) return { ok: true };
+    const payload = (await response.json().catch(() => ({}))) as { error?: string };
+    return { ok: false, error: payload.error || 'Could not add the checklist. Try again.' };
+  } catch {
+    return { ok: false, error: 'Could not reach Urganize. Check your connection.' };
+  }
+}

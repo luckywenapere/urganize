@@ -1,28 +1,33 @@
 import { isCalendarDate, type RecordStatus } from '@/lib/next-records';
 
 // The record page's small rules (#1190, mock docs/mocks/record-page-desktop):
-// where a record stands on Idea, Making, Rollout, and the counts the desktop
+// where a record stands on Song, Release, Out, and the counts the desktop
 // cards show beside their titles. Pure, so the page only draws.
 
 export type RecordStageStep = {
-  key: 'idea' | 'making' | 'planned';
+  key: 'song' | 'release' | 'out';
   label: string;
   /** done: behind us. now: where it is. next: the stop after now. later: beyond that. */
   state: 'done' | 'now' | 'next' | 'later';
 };
 
 const STOPS = [
-  { key: 'idea', label: 'Idea' },
-  { key: 'making', label: 'Making' },
-  { key: 'planned', label: 'Rollout' },
+  { key: 'song', label: 'Song' },
+  { key: 'release', label: 'Release' },
+  { key: 'out', label: 'Out' },
 ] as const;
 
-/** Idea, Making, then its rollout (2026-11-04, #1074). A dropped record is at no stop. */
+/**
+ * Song, Release, Out (2026-11-11, #1143). Idea and Making are both Song on
+ * screen; the song checklist's groups are what used to be those stages. A
+ * project becomes its rollout at Release; Out is lit on the rollout itself.
+ * A dropped record is at no stop.
+ */
 export function recordStageSteps(status: RecordStatus): RecordStageStep[] {
-  const at = STOPS.findIndex((stop) => stop.key === status);
+  const at = status === 'idea' || status === 'making' ? 0 : status === 'planned' ? 1 : -1;
   return STOPS.map((stop, index) => ({
     ...stop,
-    state: index === at ? 'now' : at > index ? 'done' : index === at + 1 ? 'next' : 'later',
+    state: index === at ? 'now' : at > index ? 'done' : at >= 0 && index === at + 1 ? 'next' : 'later',
   }));
 }
 

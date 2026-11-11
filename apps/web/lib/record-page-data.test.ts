@@ -4,20 +4,17 @@ import { isTaskLate, recordStageSteps, taskCountsLine } from './record-page-data
 describe('recordStageSteps', () => {
   const states = (status: Parameters<typeof recordStageSteps>[0]) => recordStageSteps(status).map((step) => step.state);
 
-  it('names the three stops in order', () => {
-    expect(recordStageSteps('idea').map((step) => step.label)).toEqual(['Idea', 'Making', 'Rollout']);
+  it('names the three stops in order: Idea and Making are one Song stop (#1143)', () => {
+    expect(recordStageSteps('idea').map((step) => step.label)).toEqual(['Song', 'Release', 'Out']);
   });
 
-  it('an idea is now, making is next, the rollout is later', () => {
+  it('an idea and a project in the making both sit at Song', () => {
     expect(states('idea')).toEqual(['now', 'next', 'later']);
+    expect(states('making')).toEqual(['now', 'next', 'later']);
   });
 
-  it('in the making, the idea reads done', () => {
-    expect(states('making')).toEqual(['done', 'now', 'next']);
-  });
-
-  it('once planned, the rollout is now and the rest is done', () => {
-    expect(states('planned')).toEqual(['done', 'done', 'now']);
+  it('once planned, Release is now and Song is done', () => {
+    expect(states('planned')).toEqual(['done', 'now', 'next']);
   });
 
   it('a dropped record is at no stop', () => {

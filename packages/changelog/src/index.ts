@@ -67,6 +67,18 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.265.0",
+    title: "Every new song comes with its checklist",
+    tag: "Rollouts",
+    date: "November 11, 2026",
+    highlights: [
+      "Start a song and the whole job is there: 15 tasks for the idea, recording, finishing and paperwork. No dates until you pick a release day.",
+      "Only the next group is open. Finished groups fold away with a tick.",
+      "Idea and Making are now one step, Song. The steps read Song, Release, Out.",
+      "Songs you started before get an Add the checklist button.",
+    ],
+  },
+  {
     version: "1.264.0",
     title: "Home shows your tasks and your team",
     tag: "App",

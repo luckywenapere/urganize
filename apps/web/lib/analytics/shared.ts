@@ -535,7 +535,7 @@ export interface AnalyticsEventPropertiesMap {
   };
   /** A task added to a project (2026-11-04, #1074): from a suggestion, typed, or by the AI. */
   project_task_added: {
-    source: 'suggestion' | 'manual' | 'ai';
+    source: 'suggestion' | 'manual' | 'ai' | 'checklist';
   };
   /** Plan the rollout on a record (step 4, 2026-10-27): the sheet opened, then Continue. */
   record_rollout: {
