@@ -1,51 +1,38 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Plus } from '@/components/icons';
+import { Check, CheckCircle2, ChevronDown, ListChecks, Plus } from '@/components/icons';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
-import { formatSessionDay, isCalendarDate, lagosToday, type RecordStatus, type SongStage } from '@/lib/next-records';
-import { suggestProjectTasks } from '@/lib/project-suggestions';
-import { addProjectTask, fetchProjectTasks, setProjectTaskDone } from '@/lib/project-tasks-client';
-import { isTaskLate, taskCountsLine } from '@/lib/record-page-data';
-import { isTaskClosed, type Task } from '@/types/tasks';
+import { formatSessionDay, isCalendarDate, lagosToday } from '@/lib/next-records';
+import { addProjectTask, addSongChecklist, fetchProjectTasks, setProjectTaskDone } from '@/lib/project-tasks-client';
+import { isTaskLate } from '@/lib/record-page-data';
+import { groupProjectTasks, hasSongChecklist } from '@/lib/song-checklist';
+import type { Task } from '@/types/tasks';
 
-// A project's tasks (4 Nov 2026, mock screens 2 and 3). Real task rows, so a
-// tap opens the ordinary task pop-up and chasing, assignment emails and the
-// AI all work. Under the tracklist, because the songs are why the tasks exist.
-// Suggestions come from lib/project-suggestions.ts: picked from a list, never
-// invented, and a job already added is not offered again.
-//
-// On a computer (#1190, mock docs/mocks/record-page-desktop) the card is the
-// page's right column: the counts sit beside the title, Add moves up to the
-// heading, and the day sits at the end of the row, red when it has passed.
-// Every such rule is an `lg:` class; a phone draws what it drew before.
+// The song checklist on a project (2026-11-11, #1143, mocks
+// docs/mocks/song-to-review screens 1.2 and 2.5). The whole job of making a
+// song is on screen from the start, in four groups with no dates. Only the
+// next unfinished group is open; the others fold to one line (a finished one
+// with a tick), so the card shows what to do now. The
+// rows are real tasks: a tap opens the ordinary task pop-up, where the team
+// gives it to someone. Tasks the team adds themselves sit under "Other".
+// A task given a day shows it at the end of its row, red once it has passed
+// (#1190). On a computer the card is the page's right column.
 
-function dueLabel(task: Task): string {
-  const day = (task.dueDate || '').slice(0, 10);
-  return isCalendarDate(day) ? formatSessionDay(day) : 'no day';
+function closed(task: Task): boolean {
+  return task.status === 'done' || task.status === 'cancelled';
 }
 
-function ownerLabel(task: Task): string {
-  return task.assignee?.name?.trim() || 'Nobody yet';
-}
-
-export function ProjectTasksCard({
-  recordId,
-  status,
-  songs,
-}: {
-  recordId: string;
-  status: RecordStatus;
-  songs: ReadonlyArray<{ title: string; stage: SongStage }>;
-}) {
+export function ProjectTasksCard({ recordId }: { recordId: string }) {
   const { openTask, isTaskOpen } = useTaskUI();
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [error, setError] = useState('');
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [showDone, setShowDone] = useState(false);
+  // Groups the person opened or closed by hand; the rest follow "done folds".
+  const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const today = useMemo(() => lagosToday(), []);
 
   const apply = useCallback((next: Task[] | null) => {
@@ -65,37 +52,43 @@ export function ProjectTasksCard({
     };
   }, [recordId, apply]);
 
-  // The pop-up edits the task in place (owner, day, notes); read the list
-  // again when it closes so the row shows what was changed there.
+  // The pop-up edits the task in place (owner, notes); read the list again
+  // when it closes so the row shows what was changed there.
   const wasOpen = useRef(false);
   useEffect(() => {
     if (wasOpen.current && !isTaskOpen) void load();
     wasOpen.current = isTaskOpen;
   }, [isTaskOpen, load]);
 
-  const open = useMemo(() => (tasks ?? []).filter((task) => !isTaskClosed(task.status)), [tasks]);
-  const done = useMemo(() => (tasks ?? []).filter((task) => isTaskClosed(task.status)), [tasks]);
-  const suggestions = useMemo(
-    () =>
-      tasks === null
-        ? []
-        : suggestProjectTasks({ status, songs, existingTitles: tasks.map((task) => task.title), limit: 3 }),
-    [tasks, status, songs]
-  );
+  const grouped = useMemo(() => groupProjectTasks(tasks ?? []), [tasks]);
+  const missingChecklist = tasks !== null && !hasSongChecklist(tasks);
 
-  const add = async (title: string, description: string | undefined, source: 'suggestion' | 'manual', key: string) => {
-    setBusyKey(key);
+  const add = async (title: string) => {
+    setBusyKey('manual');
     setError('');
-    const result = await addProjectTask(recordId, { title, description, source });
+    const result = await addProjectTask(recordId, { title, source: 'manual' });
     setBusyKey(null);
     if (!result.ok) {
       setError(result.error);
       return false;
     }
-    captureAnalyticsEvent({ name: 'project_task_added', properties: { source } });
+    captureAnalyticsEvent({ name: 'project_task_added', properties: { source: 'manual' } });
     if (result.task) setTasks((current) => [...(current ?? []), result.task as Task]);
     else void load();
     return true;
+  };
+
+  const addChecklist = async () => {
+    setBusyKey('checklist');
+    setError('');
+    const result = await addSongChecklist(recordId);
+    setBusyKey(null);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    captureAnalyticsEvent({ name: 'project_task_added', properties: { source: 'checklist' } });
+    void load();
   };
 
   const toggle = async (task: Task) => {
@@ -114,186 +107,205 @@ export function ProjectTasksCard({
   };
 
   const row = (task: Task) => {
-    const isDone = task.status === 'done';
+    const isDone = closed(task);
+    const owner = task.assignee?.name?.trim();
+    const day = (task.dueDate || '').slice(0, 10);
+    const hasDay = !isDone && isCalendarDate(day);
+    const late = hasDay && isTaskLate(task.dueDate, today, false);
     return (
-      <li key={task.id} className="flex items-center gap-2 border-t border-stroke-default py-1 first:border-t-0 lg:gap-1 lg:first:border-t">
+      <li key={task.id} className="flex items-center gap-1 border-t border-stroke-default first:border-t-0">
         <button
           type="button"
           onClick={() => void toggle(task)}
           disabled={busyKey === task.id}
           aria-label={isDone ? `Mark "${task.title}" not done` : `Mark "${task.title}" done`}
           aria-pressed={isDone}
-          className="motion-focus grid size-11 shrink-0 place-items-center rounded-full lg:-ml-3"
+          className="motion-focus -ml-3 grid size-11 shrink-0 place-items-center rounded-full"
         >
           <span
-            className={`grid size-5 place-items-center rounded-full border ${
+            className={`grid size-[18px] place-items-center rounded-[5px] border ${
               isDone ? 'border-brand bg-brand text-content-inverse' : 'border-stroke-control'
             }`}
           >
             {isDone ? <Check aria-hidden className="size-3.5" /> : null}
           </span>
         </button>
-        <button
-          type="button"
-          onClick={() => openTask(task.id)}
-          className="motion-focus flex min-h-11 min-w-0 flex-1 items-center gap-3 text-left"
-        >
-          <span className="min-w-0 flex-1">
-            <span
-              className={`block text-sm lg:truncate ${isDone ? 'text-content-secondary line-through' : 'text-content-primary lg:font-semibold'}`}
-            >
-              {task.title}
-            </span>
-            <span className="block text-xs text-content-secondary lg:truncate">
-              {ownerLabel(task)}
-              <span className="lg:hidden"> · {dueLabel(task)}</span>
-            </span>
-          </span>
+        <button type="button" onClick={() => openTask(task.id)} className="motion-focus min-h-11 min-w-0 flex-1 py-1.5 text-left">
           <span
-            className={`hidden shrink-0 whitespace-nowrap text-[13px] lg:block ${
-              isTaskLate(task.dueDate, today, isTaskClosed(task.status)) ? 'font-semibold text-status-error' : 'text-content-secondary'
+            className={`block truncate text-[15px] ${
+              isDone ? 'text-content-secondary line-through decoration-content-tertiary' : 'text-content-primary'
             }`}
           >
-            {dueLabel(task)}
-            {isTaskLate(task.dueDate, today, isTaskClosed(task.status)) ? <span className="sr-only">, late</span> : null}
+            {task.title}
           </span>
+          {!isDone && (owner || task.description) ? (
+            <span className="block truncate text-xs text-content-secondary">{owner || task.description}</span>
+          ) : null}
         </button>
+        {hasDay ? (
+          <span className={`shrink-0 whitespace-nowrap text-[13px] ${late ? 'font-semibold text-status-error' : 'text-content-secondary'}`}>
+            {formatSessionDay(day)}
+            {late ? <span className="sr-only">, late</span> : null}
+          </span>
+        ) : null}
       </li>
     );
   };
 
-  const summary =
-    tasks === null ? null : `${open.length} open${done.length ? ` · ${done.length} done` : ''}`;
+  // Only the next unfinished checklist group opens by itself (mock 1.2): the
+  // rest fold to one line, so the card shows what to do now. The team's own
+  // tasks open whenever any is still open.
+  const nextGroup = grouped.groups.find((group) => group.done < group.total)?.key ?? null;
+
+  const groupBlock = (key: string, label: string, rows: Task[], done: number, total: number) => {
+    const complete = total > 0 && done === total;
+    const open = toggled[key] ?? (key === 'other' ? !complete : key === nextGroup);
+    const panelId = `project-${recordId}-group-${key}`;
+    return (
+      <div key={key} className="border-t border-stroke-default first:border-t-0">
+        <button
+          type="button"
+          onClick={() => setToggled((current) => ({ ...current, [key]: !open }))}
+          aria-expanded={open}
+          aria-controls={panelId}
+          className="motion-focus flex min-h-11 w-full items-center justify-between gap-2 text-left"
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold text-content-primary">
+            {complete ? <CheckCircle2 aria-hidden className="size-4 text-brand" /> : null}
+            {label}
+          </span>
+          <span className="flex items-center gap-2 text-[13px] tabular-nums text-content-secondary">
+            {done}/{total}
+            <ChevronDown aria-hidden className={`size-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+          </span>
+        </button>
+        {open ? (
+          <ul id={panelId} className="pb-1.5">
+            {rows.map(row)}
+          </ul>
+        ) : null}
+      </div>
+    );
+  };
+
+  const percent = grouped.total ? Math.round((grouped.done / grouped.total) * 100) : 0;
 
   return (
-    <section
-      className="rounded-[14px] border border-stroke-default bg-bg-surface px-3.5 py-3 lg:rounded-2xl lg:px-5 lg:pb-2 lg:pt-[18px]"
-      aria-busy={tasks === null}
-    >
-      <div className="mb-1.5 flex items-baseline justify-between gap-3 lg:mb-2">
-        <h2 className="font-display text-base text-content-primary lg:text-lg lg:leading-6">
-          Tasks
-          {tasks !== null ? (
-            <span className="hidden font-sans text-[13px] font-medium text-content-secondary lg:inline">
-              {' '}
-              · {taskCountsLine(open.length, done.length)}
+    <section className="rounded-xl border border-stroke-default bg-bg-surface shadow-sm" aria-busy={tasks === null}>
+      <div className="px-4 pt-3.5">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="font-sans text-[15px] font-semibold text-content-primary">Making the song</h2>
+          {tasks !== null && grouped.total ? (
+            <span className="text-[13px] tabular-nums text-content-secondary">
+              {grouped.done} of {grouped.total}
             </span>
           ) : null}
-        </h2>
-        {summary ? <span className="text-[13px] text-content-secondary lg:hidden">{summary}</span> : null}
-        {/* lg: the one way to add a task, up beside the title (the phone's is under the list). */}
-        {adding ? null : (
+        </div>
+        {tasks !== null && grouped.total ? (
+          <div
+            role="progressbar"
+            aria-label="Tasks done"
+            aria-valuemin={0}
+            aria-valuemax={grouped.total}
+            aria-valuenow={grouped.done}
+            className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-brand/15"
+          >
+            <div className="h-full rounded-full bg-brand transition-[width]" style={{ width: `${percent}%` }} />
+          </div>
+        ) : null}
+      </div>
+
+      <div className="px-4 pb-2 pt-1">
+        {tasks === null && !error ? (
+          <div className="space-y-2 py-2" aria-hidden>
+            <div className="h-4 w-2/3 rounded bg-bg-hover" />
+            <div className="h-4 w-1/2 rounded bg-bg-hover" />
+            <div className="h-4 w-3/5 rounded bg-bg-hover" />
+          </div>
+        ) : null}
+
+        {missingChecklist ? (
+          <div className="my-2 flex items-start gap-3 rounded-lg border border-brand/30 bg-brand/[.07] px-3.5 py-3">
+            <ListChecks aria-hidden className="mt-0.5 size-4 shrink-0 text-brand" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-content-primary">Add the song checklist</p>
+              <p className="text-[13px] text-content-secondary">
+                Every step of making a song, in order: idea, recording, finishing, paperwork.
+              </p>
+              <button
+                type="button"
+                onClick={() => void addChecklist()}
+                disabled={busyKey !== null}
+                className="motion-focus mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-md bg-brand px-4 text-sm font-medium text-content-inverse disabled:opacity-50"
+              >
+                <Plus aria-hidden className="size-4" />
+                {busyKey === 'checklist' ? 'Adding...' : 'Add the checklist'}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {grouped.groups.map((group) => groupBlock(group.key, group.label, group.tasks, group.done, group.total))}
+        {grouped.other.length
+          ? groupBlock(
+              'other',
+              'Other tasks',
+              grouped.other,
+              grouped.other.filter(closed).length,
+              grouped.other.length
+            )
+          : null}
+
+        {adding ? (
+          <form
+            className="flex gap-2 border-t border-stroke-default py-2"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              const title = newTitle.trim();
+              if (!title) return;
+              if (await add(title)) {
+                setNewTitle('');
+                setAdding(false);
+              }
+            }}
+          >
+            <label className="sr-only" htmlFor={`project-task-${recordId}`}>
+              New task
+            </label>
+            <input
+              id={`project-task-${recordId}`}
+              value={newTitle}
+              onChange={(event) => setNewTitle(event.target.value)}
+              maxLength={200}
+              autoFocus
+              placeholder="What needs doing?"
+              className="min-h-11 flex-1 rounded-md border border-stroke-control bg-bg-base px-3 text-base text-content-primary placeholder:text-content-tertiary hover:border-content-secondary md:text-sm"
+            />
+            <button
+              type="submit"
+              disabled={busyKey !== null || !newTitle.trim()}
+              className="motion-focus min-h-11 rounded-md border border-stroke-control px-3 text-sm font-medium text-content-primary disabled:opacity-50"
+            >
+              Add
+            </button>
+          </form>
+        ) : (
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="motion-focus hidden shrink-0 items-center gap-1 rounded text-[13px] font-semibold text-brand underline underline-offset-[3px] hover:no-underline lg:inline-flex"
+            className={`motion-focus inline-flex min-h-11 w-full items-center gap-1.5 text-[13px] font-medium text-content-secondary hover:text-content-primary ${
+              grouped.total ? 'border-t border-stroke-default' : ''
+            }`}
           >
             <Plus aria-hidden className="size-3.5" />
-            Add<span className="sr-only"> a task</span>
+            Add a task
           </button>
         )}
-      </div>
 
-      {tasks === null && !error ? (
-        <div className="space-y-2 py-1" aria-hidden>
-          <div className="h-4 w-2/3 rounded bg-bg-hover" />
-          <div className="h-4 w-1/2 rounded bg-bg-hover" />
-        </div>
-      ) : null}
-
-      {open.length ? <ul>{open.map(row)}</ul> : null}
-      {tasks !== null && !open.length && !suggestions.length ? (
-        <p className="py-1 text-sm text-content-secondary lg:border-t lg:border-stroke-default lg:py-3">
-          Nothing open. Add the next job<span className="lg:hidden"> below</span>.
+        <p role="status" aria-live="polite" className="text-sm text-status-error">
+          {error}
         </p>
-      ) : null}
-
-      {suggestions.length ? (
-        <div className={open.length ? 'mt-1 border-t border-stroke-default pt-1' : ''}>
-          <p className="py-1 text-xs font-semibold text-content-secondary">Suggested next</p>
-          <ul>
-            {suggestions.map((suggestion) => (
-              <li key={suggestion.key} className="flex items-center justify-between gap-2 py-1">
-                <span className="min-w-0">
-                  <span className="block text-sm text-content-primary">{suggestion.title}</span>
-                  <span className="block text-xs text-content-secondary">{suggestion.description}</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => void add(suggestion.title, suggestion.description, 'suggestion', suggestion.key)}
-                  disabled={busyKey !== null}
-                  className="motion-focus inline-flex min-h-11 shrink-0 items-center gap-1 px-2 text-[13px] font-semibold text-content-primary hover:underline"
-                >
-                  <Plus aria-hidden className="size-3.5" />
-                  Add
-                  <span className="sr-only"> {suggestion.title}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {adding ? (
-        <form
-          className="mt-1 flex gap-2 lg:mb-2"
-          onSubmit={async (event) => {
-            event.preventDefault();
-            const title = newTitle.trim();
-            if (!title) return;
-            if (await add(title, undefined, 'manual', 'manual')) {
-              setNewTitle('');
-              setAdding(false);
-            }
-          }}
-        >
-          <label className="sr-only" htmlFor={`project-task-${recordId}`}>
-            New task
-          </label>
-          <input
-            id={`project-task-${recordId}`}
-            value={newTitle}
-            onChange={(event) => setNewTitle(event.target.value)}
-            maxLength={200}
-            placeholder="What needs doing?"
-            className="min-h-11 flex-1 rounded-lg border border-stroke-control bg-bg-base px-3 text-sm text-content-primary placeholder:text-content-tertiary hover:border-content-secondary"
-          />
-          <button
-            type="submit"
-            disabled={busyKey !== null || !newTitle.trim()}
-            className="motion-focus min-h-11 rounded-lg border border-stroke-control px-3 text-sm font-semibold text-content-primary disabled:opacity-50"
-          >
-            Add
-          </button>
-        </form>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="motion-focus mt-1 inline-flex min-h-11 items-center gap-1 text-[13px] font-semibold text-content-primary hover:underline lg:hidden"
-        >
-          <Plus aria-hidden className="size-3.5" />
-          Add a task
-        </button>
-      )}
-
-      {done.length ? (
-        <div className="border-t border-stroke-default pt-1">
-          <button
-            type="button"
-            onClick={() => setShowDone((value) => !value)}
-            aria-expanded={showDone}
-            className="motion-focus inline-flex min-h-11 items-center text-[13px] text-content-secondary hover:text-content-primary"
-          >
-            {showDone ? 'Hide done' : `Show ${done.length} done`}
-          </button>
-          {showDone ? <ul>{done.map(row)}</ul> : null}
-        </div>
-      ) : null}
-
-      <p role="status" aria-live="polite" className="text-sm text-status-error">
-        {error}
-      </p>
+      </div>
     </section>
   );
 }

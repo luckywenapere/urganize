@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { suggestProjectTasks, IDEA_STAGE_SUGGESTIONS } from './project-suggestions';
+import { suggestProjectTasks } from './project-suggestions';
+import { SONG_CHECKLIST } from './song-checklist';
+
+const checklistTitles = SONG_CHECKLIST.flatMap((group) => group.items.map((item) => item.title));
 
 describe('suggestProjectTasks', () => {
-  it('an idea gets the idea-stage list', () => {
+  it('an idea gets the song checklist, in order', () => {
     const out = suggestProjectTasks({ status: 'idea', songs: [], existingTitles: [] });
-    expect(out.map((s) => s.title)).toEqual(IDEA_STAGE_SUGGESTIONS.slice(0, 4).map((s) => s.title));
+    expect(out.map((s) => s.title)).toEqual(checklistTitles.slice(0, 4));
   });
 
-  it('making leads with one finish job per song still being made', () => {
+  it('making leads with one finish job per song still being made, then the checklist', () => {
     const out = suggestProjectTasks({
       status: 'making',
       songs: [
@@ -17,34 +20,23 @@ describe('suggestProjectTasks', () => {
         { title: 'Later', stage: 'idea' },
       ],
       existingTitles: [],
+      limit: 3,
     });
-    expect(out.slice(0, 2).map((s) => s.title)).toEqual(['Finish the Wahala mix', 'Finish recording Pressure']);
-    expect(out.map((s) => s.title)).not.toContain('Finish writing Later');
+    expect(out.map((s) => s.title)).toEqual(['Finish the Wahala mix', 'Finish recording Pressure', checklistTitles[0]]);
   });
 
-  it('making with no songs falls back to the pre-production jobs', () => {
-    const out = suggestProjectTasks({ status: 'making', songs: [], existingTitles: [] });
-    expect(out[0].title).toBe('Book sessions');
-  });
-
-  it('drops "Finish the song" once songs carry their own finish jobs', () => {
+  it('only offers checklist tasks the project does not have, whatever their case or spacing', () => {
     const out = suggestProjectTasks({
       status: 'making',
-      songs: [{ title: 'Wahala', stage: 'mixing' }],
-      existingTitles: [],
-      limit: 20,
+      songs: [],
+      existingTitles: ['  write the HOOK ', checklistTitles[1]],
+      limit: 50,
     });
-    expect(out.map((s) => s.title)).not.toContain('Finish the song');
+    expect(out.map((s) => s.title)).toEqual(checklistTitles.slice(2));
   });
 
-  it('hides a job already added, whatever its case or spacing', () => {
-    const out = suggestProjectTasks({
-      status: 'idea',
-      songs: [],
-      existingTitles: ['  write the HOOK '],
-      limit: 20,
-    });
-    expect(out.map((s) => s.title)).not.toContain('Write the hook');
+  it('offers nothing once the whole checklist is on the project and no song is mid-way', () => {
+    expect(suggestProjectTasks({ status: 'making', songs: [], existingTitles: checklistTitles })).toEqual([]);
   });
 
   it('a planned or dropped project suggests nothing', () => {

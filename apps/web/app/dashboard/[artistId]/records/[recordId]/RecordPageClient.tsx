@@ -158,38 +158,41 @@ function UseRow({ label, value }: { label: string; value: string }) {
 type SheetName = 'menu' | 'rename' | 'cover' | 'kind' | 'drop' | 'plan' | 'idea' | null;
 
 /**
- * Where the project stands (2026-11-04, #1074, mock screens 2 and 3): Idea,
- * Making, then its rollout. The lit stop is now; the ones before it read done.
+ * Where the project stands on a phone (2026-11-11, #1143, mock screen 1.2):
+ * one track with Song, Release and Out (recordStageSteps). Idea and Making are
+ * both "Song"; the checklist groups below are what used to be those stages.
+ * A computer draws StageSteps below instead.
  */
 function StageLine({ status }: { status: NextRecord['status'] }) {
   const stops = recordStageSteps(status);
+  const filled = stops.findIndex((stop) => stop.state === 'now');
   return (
-    <ol aria-label="Where this project is" className="flex items-center gap-1.5 lg:hidden">
-      {stops.map((stop, index) => {
+    <ol aria-label="Where this project is" className="relative flex justify-between px-3 pt-1 lg:hidden">
+      <span aria-hidden className="absolute left-[34px] right-[34px] top-[16px] h-0.5 rounded bg-stroke-default">
+        <span className="block h-full rounded bg-brand" style={{ width: `${Math.max(0, filled) * 50}%` }} />
+      </span>
+      {stops.map((stop) => {
         const now = stop.state === 'now';
         const past = stop.state === 'done';
         return (
-          <li key={stop.key} className="flex min-w-0 flex-1 items-center gap-1.5">
-            <span
-              aria-current={now ? 'step' : undefined}
-              className={`flex min-w-0 flex-1 flex-col items-center rounded-[10px] border px-1 pb-1 pt-1.5 ${
-                now ? 'border-brand bg-brand/10' : 'border-stroke-default bg-bg-surface'
-              }`}
-            >
-              <span
-                className={`text-[13px] font-semibold ${now ? 'text-brand' : past ? 'text-content-primary' : 'text-content-tertiary'}`}
-              >
-                {stop.label}
+          <li key={stop.key} aria-current={now ? 'step' : undefined} className="relative z-10 flex flex-col items-center gap-1.5">
+            {past ? (
+              <span className="grid size-6 place-items-center rounded-full bg-brand text-content-inverse">
+                <Check aria-hidden className="size-3.5" />
               </span>
-              <span className={`font-mono text-[10px] uppercase tracking-[0.06em] ${now ? 'text-brand' : 'text-content-tertiary'}`}>
-                {now ? 'Now' : past ? 'Done' : stop.state === 'next' ? 'Next' : 'Later'}
+            ) : now ? (
+              <span className="grid size-6 place-items-center rounded-full border-2 border-brand bg-bg-base">
+                <span className="size-2 rounded-full bg-brand" />
               </span>
+            ) : (
+              <span className="size-6 rounded-full border-2 border-stroke-control bg-bg-base" />
+            )}
+            <span className={`text-[13px] font-semibold ${now || past ? 'text-content-primary' : 'text-content-secondary'}`}>
+              {stop.label}
             </span>
-            {index < stops.length - 1 ? (
-              <span aria-hidden className="text-xs text-content-tertiary">
-                ›
-              </span>
-            ) : null}
+            <span className={`-mt-1.5 text-[11px] ${now ? 'text-brand' : 'text-content-secondary'}`}>
+              {now ? 'Now' : past ? 'Done' : stop.state === 'next' ? 'Next' : 'Later'}
+            </span>
           </li>
         );
       })}
@@ -611,10 +614,6 @@ export default function RecordPageClient() {
     setSheetError('');
   };
 
-  /** Idea to Making (2026-11-04): a PATCH, and never back. */
-  const startMaking = () =>
-    void run(() => patchRecord(record.id, { status: 'making' }), { record_id: record.id, action: 'started_making' });
-
   const addSong = async () => {
     const name = newSong.trim();
     if (!name) return;
@@ -903,10 +902,6 @@ export default function RecordPageClient() {
               <Link href={`/dashboard?release=${record.releaseId}`} className={desktopFilled}>
                 Open the rollout
               </Link>
-            ) : isIdea ? (
-              <button type="button" onClick={startMaking} disabled={busy} className={desktopFilled}>
-                Start making
-              </button>
             ) : record.status === 'dropped' ? null : (
               <button type="button" onClick={openPlanSheet} disabled={busy} className={desktopFilled}>
                 Plan the rollout
@@ -915,20 +910,6 @@ export default function RecordPageClient() {
           </div>
           {planned ? (
             <p className="mt-1.5 text-xs text-content-secondary">This project is now its rollout</p>
-          ) : isIdea ? (
-            <>
-              <p className="mt-1.5 text-xs text-content-secondary">
-                It also moves to Making by itself when a song starts recording or a session is saved.
-              </p>
-              <button
-                type="button"
-                onClick={openPlanSheet}
-                disabled={busy}
-                className="motion-focus mt-1 inline-flex min-h-8 items-center rounded text-[13px] font-semibold text-content-secondary hover:text-content-primary hover:underline"
-              >
-                Or plan the rollout now
-              </button>
-            </>
           ) : record.status === 'dropped' ? null : (
             <p className="mt-1.5 text-xs text-content-secondary">{planHint(record.songs)}</p>
           )}
@@ -1007,25 +988,6 @@ export default function RecordPageClient() {
             Open the rollout
           </Link>
           <p className="mt-1.5 text-center text-xs text-content-secondary">This project is now its rollout</p>
-        </div>
-      ) : isIdea ? (
-        // Idea stage (mock screen 2): Start making is the decision this stage is
-        // for, so it is the big button; the rollout stays one tap away, quieter.
-        <div className="lg:hidden">
-          <button type="button" onClick={startMaking} disabled={busy} className={greenButton}>
-            Start making
-          </button>
-          <p className="mt-1.5 text-center text-xs text-content-secondary">
-            It also moves to Making by itself when a song starts recording or a session is saved.
-          </p>
-          <button
-            type="button"
-            onClick={openPlanSheet}
-            disabled={busy}
-            className="motion-focus mx-auto mt-1 flex min-h-11 items-center px-2 text-[13px] font-semibold text-content-secondary hover:text-content-primary hover:underline"
-          >
-            Or plan the rollout now
-          </button>
         </div>
       ) : (
         <div className="lg:hidden">
@@ -1137,7 +1099,7 @@ export default function RecordPageClient() {
           under the songs because the songs are why the tasks exist. */}
       {hasTasks ? (
         <div className="min-w-0 lg:col-start-2 lg:row-span-5 lg:row-start-1">
-          <ProjectTasksCard recordId={record.id} status={record.status} songs={record.songs} />
+          <ProjectTasksCard recordId={record.id} />
         </div>
       ) : null}
 

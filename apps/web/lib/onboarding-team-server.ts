@@ -488,6 +488,7 @@ export async function createOnboardingRecord(
     // "Just an idea" starts the project at Idea; Recording and Mixing start it
     // in the making (2026-11-04, #1074). The first song keeps its own stage.
     status: input.songStage === 'idea' ? 'idea' : 'making',
+    songStage: input.songStage,
   });
   if (!record.ok) return fail(record.status, record.error);
   // Best effort: the record exists either way, and the song can be added on its page.

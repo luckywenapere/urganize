@@ -757,7 +757,7 @@ export function ChappiConversation({
     appendMessage({ id: nextMessageId('u'), role: 'user', content: choice.label });
     setProjectOffer(null);
     if (choice.jobs.length === 0) {
-      reportFromCard("Okay. They stay under Suggested next on the project whenever you want them.");
+      reportFromCard("Okay. Ask me again whenever you want them.");
       return;
     }
     let added = 0;

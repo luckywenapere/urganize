@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { seedRelationship } from '@/lib/relationships-server';
 import { removePhotoObject, signPhotoPath } from '@/lib/profile-photo-server';
 import {
+  isOpenRecord,
   lagosToday,
   OPEN_RECORD_STATUSES,
   orderSessions,
@@ -19,6 +20,7 @@ import {
   type SessionStatus,
   type SongStage,
 } from '@/lib/next-records';
+import { checklistSeedRows, furthestSongStage } from '@/lib/song-checklist';
 import {
   pickRecordAsk,
   pickSessionToCheck,
@@ -39,6 +41,7 @@ export const RECORD_SESSIONS_TABLE = 'record_sessions';
 export const RECORD_SESSION_PEOPLE_TABLE = 'record_session_people';
 export const RECORD_SESSION_SONGS_TABLE = 'record_session_songs';
 const TEAM_RELATIONSHIPS_TABLE = 'team_relationships';
+const TASKS_TABLE = 'tasks';
 const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
 
 type Row = Record<string, unknown>;
@@ -79,6 +82,58 @@ export async function startMakingIfIdea(admin: SupabaseClient, workspaceId: stri
   if (error) console.error('[next-record] work started but the project stayed an idea:', error.message);
 }
 
+/**
+ * The song checklist on a project (2026-11-11, #1143): adds whichever of the
+ * fifteen tasks the project does not have yet, ticked up to the song's stage
+ * (the stage given, else the furthest song). A title already on the project is
+ * never added twice, so calling it again adds nothing. Only an open project
+ * (Idea or Making) takes tasks, the same rule as the add-a-task route.
+ */
+export async function seedSongChecklist(
+  admin: SupabaseClient,
+  input: { workspaceId: string; recordId: string; userId: string; stage?: SongStage }
+): Promise<RecordsResult<{ added: number }>> {
+  const [record, songs, tasks] = await Promise.all([
+    admin.from(RECORDS_TABLE).select('status').eq('workspace_id', input.workspaceId).eq('id', input.recordId).maybeSingle(),
+    admin.from(RECORD_SONGS_TABLE).select('stage').eq('workspace_id', input.workspaceId).eq('record_id', input.recordId),
+    admin.from(TASKS_TABLE).select('title').eq('workspace_id', input.workspaceId).eq('record_id', input.recordId),
+  ]);
+  if (record.error || songs.error || tasks.error) return fail(500, 'Could not add the checklist.');
+  if (!record.data) return fail(404, 'Record not found.');
+  if (!isOpenRecord(text((record.data as Row).status) as RecordStatus)) {
+    return fail(409, 'This project already has its rollout.');
+  }
+  const stage =
+    input.stage ?? furthestSongStage(((songs.data ?? []) as Row[]).map((row) => ({ stage: text(row.stage) as SongStage })));
+  const rows = checklistSeedRows({
+    stage,
+    existingTitles: ((tasks.data ?? []) as Row[]).map((row) => text(row.title)),
+  });
+  if (rows.length === 0) return { ok: true, value: { added: 0 } };
+  const now = new Date().toISOString();
+  const { error } = await admin.from(TASKS_TABLE).insert(
+    rows.map((row) => ({
+      workspace_id: input.workspaceId,
+      record_id: input.recordId,
+      release_id: null,
+      created_by: input.userId,
+      // Nobody yet: the team decides who does what, as with suggestions.
+      assigned_to_user_id: null,
+      title: row.title,
+      description: row.description,
+      status: row.status,
+      priority: 'none',
+      state: 'idea',
+      dependencies: [],
+      auto_generated: true,
+      metadata: { checklist: { list: 'song', key: row.key, group: row.group, position: row.position } },
+      updated_at: now,
+    }))
+  );
+  if (error) return fail(500, 'Could not add the checklist.');
+  return { ok: true, value: { added: rows.length } };
+}
+
 /** Projects still open (Idea or Making) for one artist, as the artist page's rows. */
 export async function listArtistRecords(
   admin: SupabaseClient,
@@ -112,6 +167,8 @@ export async function createRecord(
     idea: string;
     /** Idea or Making; Making when left out, as before the Idea stage. */
     status?: OpenRecordStatus;
+    /** Where the first song is, so the checklist starts ticked up to it. */
+    songStage?: SongStage;
   }
 ): Promise<RecordsResult<NextRecord>> {
   const { data, error } = await admin
@@ -128,7 +185,17 @@ export async function createRecord(
     .select('id')
     .single();
   if (error || !data) return fail(500, 'Could not start the record.');
-  return readRecord(admin, input.workspaceId, text((data as Row).id));
+  const recordId = text((data as Row).id);
+  // Best effort: the project exists either way, and its page offers the
+  // checklist again when none of it is there.
+  const seeded = await seedSongChecklist(admin, {
+    workspaceId: input.workspaceId,
+    recordId,
+    userId: input.userId,
+    stage: input.songStage ?? 'idea',
+  });
+  if (!seeded.ok) console.error('[next-record] project started without its checklist:', seeded.error);
+  return readRecord(admin, input.workspaceId, recordId);
 }
 
 /** One record with its songs and sessions, or 404 when it is not this team's. */
