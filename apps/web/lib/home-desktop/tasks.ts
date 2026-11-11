@@ -5,6 +5,7 @@
 // nothing here widens what anyone sees. Pure: today is passed in.
 
 import { lagosToday } from '@/lib/next-records';
+import { selectKeyTaskIds, type PlanFocusTask } from '@/lib/plan-focus';
 import { isTaskClosed } from '@/types/tasks';
 
 export const HOME_TASK_LIMIT = 5;
@@ -58,6 +59,38 @@ function toRows<T extends HomeTaskInput>(open: T[], today: string): HomeTaskRow<
   return [...open].sort(byUrgency).map((task) => {
     const day = dayOf(task.dueDate);
     return { id: task.id, task, late: Boolean(day && day < today), doneToday: false };
+  });
+}
+
+export type HomeFocusTask = HomeTaskInput & PlanFocusTask;
+
+/**
+ * The viewer's tasks worth showing on Home (#1206). A plan assigns every task
+ * it makes to the rollout's owner (lib/release-templates/instantiate.ts), so
+ * "assigned to me" alone is the whole plan: an owner with ten rollouts saw
+ * "423 open". Two rules cut that to real work, both from what a task already
+ * carries, with nothing rewritten:
+ *
+ *  1. Only a rollout's short main list (selectKeyTaskIds, the same few tasks
+ *     the rollout plan opens on, plus anything a person wrote by hand).
+ *  2. Not what was due before a song that is already out. The song came out
+ *     without it; it is history, not a late task.
+ *
+ * `releaseDayById` is each rollout's release day (YYYY-MM-DD, or null).
+ */
+export function focusMyTasks<T extends HomeFocusTask>(
+  tasks: readonly T[],
+  viewerId: string,
+  releaseDayById: ReadonlyMap<string, string | null>,
+  today: string
+): T[] {
+  if (!viewerId) return [];
+  const key = selectKeyTaskIds(tasks as T[]);
+  return tasks.filter((task) => {
+    if (task.assignedToUserId !== viewerId || !isOpen(task) || !key.has(task.id)) return false;
+    const releaseDay = task.releaseId ? dayOf(releaseDayById.get(task.releaseId) ?? null) : null;
+    const due = dayOf(task.dueDate);
+    return !(releaseDay && releaseDay < today && due && due < releaseDay);
   });
 }
 
