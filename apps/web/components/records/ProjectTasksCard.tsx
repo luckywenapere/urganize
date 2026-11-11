@@ -4,9 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Plus } from '@/components/icons';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
-import { formatSessionDay, isCalendarDate, type RecordStatus, type SongStage } from '@/lib/next-records';
+import { formatSessionDay, isCalendarDate, lagosToday, type RecordStatus, type SongStage } from '@/lib/next-records';
 import { suggestProjectTasks } from '@/lib/project-suggestions';
 import { addProjectTask, fetchProjectTasks, setProjectTaskDone } from '@/lib/project-tasks-client';
+import { isTaskLate, taskCountsLine } from '@/lib/record-page-data';
 import { isTaskClosed, type Task } from '@/types/tasks';
 
 // A project's tasks (4 Nov 2026, mock screens 2 and 3). Real task rows, so a
@@ -14,6 +15,11 @@ import { isTaskClosed, type Task } from '@/types/tasks';
 // AI all work. Under the tracklist, because the songs are why the tasks exist.
 // Suggestions come from lib/project-suggestions.ts: picked from a list, never
 // invented, and a job already added is not offered again.
+//
+// On a computer (#1190, mock docs/mocks/record-page-desktop) the card is the
+// page's right column: the counts sit beside the title, Add moves up to the
+// heading, and the day sits at the end of the row, red when it has passed.
+// Every such rule is an `lg:` class; a phone draws what it drew before.
 
 function dueLabel(task: Task): string {
   const day = (task.dueDate || '').slice(0, 10);
@@ -40,6 +46,7 @@ export function ProjectTasksCard({
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [showDone, setShowDone] = useState(false);
+  const today = useMemo(() => lagosToday(), []);
 
   const apply = useCallback((next: Task[] | null) => {
     if (next) setTasks(next);
@@ -109,14 +116,14 @@ export function ProjectTasksCard({
   const row = (task: Task) => {
     const isDone = task.status === 'done';
     return (
-      <li key={task.id} className="flex items-center gap-2 border-t border-stroke-default py-1 first:border-t-0">
+      <li key={task.id} className="flex items-center gap-2 border-t border-stroke-default py-1 first:border-t-0 lg:gap-1 lg:first:border-t">
         <button
           type="button"
           onClick={() => void toggle(task)}
           disabled={busyKey === task.id}
           aria-label={isDone ? `Mark "${task.title}" not done` : `Mark "${task.title}" done`}
           aria-pressed={isDone}
-          className="motion-focus grid size-11 shrink-0 place-items-center rounded-full"
+          className="motion-focus grid size-11 shrink-0 place-items-center rounded-full lg:-ml-3"
         >
           <span
             className={`grid size-5 place-items-center rounded-full border ${
@@ -129,13 +136,26 @@ export function ProjectTasksCard({
         <button
           type="button"
           onClick={() => openTask(task.id)}
-          className="motion-focus min-h-11 flex-1 text-left"
+          className="motion-focus flex min-h-11 min-w-0 flex-1 items-center gap-3 text-left"
         >
-          <span className={`block text-sm ${isDone ? 'text-content-secondary line-through' : 'text-content-primary'}`}>
-            {task.title}
+          <span className="min-w-0 flex-1">
+            <span
+              className={`block text-sm lg:truncate ${isDone ? 'text-content-secondary line-through' : 'text-content-primary lg:font-semibold'}`}
+            >
+              {task.title}
+            </span>
+            <span className="block text-xs text-content-secondary lg:truncate">
+              {ownerLabel(task)}
+              <span className="lg:hidden"> · {dueLabel(task)}</span>
+            </span>
           </span>
-          <span className="block text-xs text-content-secondary">
-            {ownerLabel(task)} · {dueLabel(task)}
+          <span
+            className={`hidden shrink-0 whitespace-nowrap text-[13px] lg:block ${
+              isTaskLate(task.dueDate, today, isTaskClosed(task.status)) ? 'font-semibold text-status-error' : 'text-content-secondary'
+            }`}
+          >
+            {dueLabel(task)}
+            {isTaskLate(task.dueDate, today, isTaskClosed(task.status)) ? <span className="sr-only">, late</span> : null}
           </span>
         </button>
       </li>
@@ -146,10 +166,32 @@ export function ProjectTasksCard({
     tasks === null ? null : `${open.length} open${done.length ? ` · ${done.length} done` : ''}`;
 
   return (
-    <section className="rounded-[14px] border border-stroke-default bg-bg-surface px-3.5 py-3" aria-busy={tasks === null}>
-      <div className="mb-1.5 flex items-baseline justify-between gap-3">
-        <h2 className="font-display text-base text-content-primary">Tasks</h2>
-        {summary ? <span className="text-[13px] text-content-secondary">{summary}</span> : null}
+    <section
+      className="rounded-[14px] border border-stroke-default bg-bg-surface px-3.5 py-3 lg:rounded-2xl lg:px-5 lg:pb-2 lg:pt-[18px]"
+      aria-busy={tasks === null}
+    >
+      <div className="mb-1.5 flex items-baseline justify-between gap-3 lg:mb-2">
+        <h2 className="font-display text-base text-content-primary lg:text-lg lg:leading-6">
+          Tasks
+          {tasks !== null ? (
+            <span className="hidden font-sans text-[13px] font-medium text-content-secondary lg:inline">
+              {' '}
+              · {taskCountsLine(open.length, done.length)}
+            </span>
+          ) : null}
+        </h2>
+        {summary ? <span className="text-[13px] text-content-secondary lg:hidden">{summary}</span> : null}
+        {/* lg: the one way to add a task, up beside the title (the phone's is under the list). */}
+        {adding ? null : (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="motion-focus hidden shrink-0 items-center gap-1 rounded text-[13px] font-semibold text-brand underline underline-offset-[3px] hover:no-underline lg:inline-flex"
+          >
+            <Plus aria-hidden className="size-3.5" />
+            Add<span className="sr-only"> a task</span>
+          </button>
+        )}
       </div>
 
       {tasks === null && !error ? (
@@ -161,7 +203,9 @@ export function ProjectTasksCard({
 
       {open.length ? <ul>{open.map(row)}</ul> : null}
       {tasks !== null && !open.length && !suggestions.length ? (
-        <p className="py-1 text-sm text-content-secondary">Nothing open. Add the next job below.</p>
+        <p className="py-1 text-sm text-content-secondary lg:border-t lg:border-stroke-default lg:py-3">
+          Nothing open. Add the next job<span className="lg:hidden"> below</span>.
+        </p>
       ) : null}
 
       {suggestions.length ? (
@@ -192,7 +236,7 @@ export function ProjectTasksCard({
 
       {adding ? (
         <form
-          className="mt-1 flex gap-2"
+          className="mt-1 flex gap-2 lg:mb-2"
           onSubmit={async (event) => {
             event.preventDefault();
             const title = newTitle.trim();
@@ -226,7 +270,7 @@ export function ProjectTasksCard({
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className="motion-focus mt-1 inline-flex min-h-11 items-center gap-1 text-[13px] font-semibold text-content-primary hover:underline"
+          className="motion-focus mt-1 inline-flex min-h-11 items-center gap-1 text-[13px] font-semibold text-content-primary hover:underline lg:hidden"
         >
           <Plus aria-hidden className="size-3.5" />
           Add a task
