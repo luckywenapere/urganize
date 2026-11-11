@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { usePageBarCrumbSlot, usePageBarEndSlot } from '@/components/shell/PageBar';
 import { SkeletonBlock } from './SkeletonBlock';
+import { ACTIVITY_GRID_CLASS } from '@/lib/activity-columns';
 import { useKnownReleaseCount } from './known-counts';
 import {
   resolvePanelBody,
@@ -359,9 +360,28 @@ function BucketBodySkeleton() {
             <div className="flex items-center justify-between gap-3 px-4 py-3">
               <SkeletonBlock className="h-3.5 w-24 shrink-0" />
               {/* Started-share bar placeholder — mirrors the real header's
-                  flex-1 Motion-pattern bar (TasksPanel, 2026-08-14). */}
-              <SkeletonBlock className="h-1.5 min-w-0 flex-1 rounded-full" />
+                  flex-1 Motion-pattern bar (TasksPanel, 2026-08-14). On a
+                  computer it is the short bar at the right (#1203). */}
+              <SkeletonBlock className="h-1.5 min-w-0 flex-1 rounded-full lg:ml-auto lg:w-[120px] lg:flex-none" />
+              <SkeletonBlock className="hidden h-3.5 w-16 shrink-0 lg:block" />
               <SkeletonBlock className="h-4 w-4 shrink-0 rounded-sm" />
+            </div>
+            {/* The rows in their columns, computer only (#1203): the heading
+                row, then two rows on the same grid as TaskRow's. Phones keep
+                the closed header alone, as before. */}
+            <div className="hidden lg:block">
+              {Array.from({ length: 3 }).map((_, row) => (
+                <div
+                  key={`bucket-${index}-row-${row}`}
+                  className={`items-center border-l-4 border-t border-stroke-subtle border-l-transparent px-4 ${row === 0 ? 'py-2' : 'py-3'} ${ACTIVITY_GRID_CLASS}`}
+                >
+                  <SkeletonBlock className={row === 0 ? 'h-3 w-0' : 'h-5 w-5 rounded-full'} />
+                  <SkeletonBlock className={row === 0 ? 'h-3 w-14' : 'h-4 w-56'} />
+                  <SkeletonBlock className={`hidden xl:block ${row === 0 ? 'h-3 w-8' : 'h-4 w-28'}`} />
+                  <SkeletonBlock className={row === 0 ? 'h-3 w-8' : 'h-4 w-24'} />
+                  <SkeletonBlock className={`ml-auto ${row === 0 ? 'h-3 w-8' : 'h-4 w-12'}`} />
+                </div>
+              ))}
             </div>
           </div>
         ))}

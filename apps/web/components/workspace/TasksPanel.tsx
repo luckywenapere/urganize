@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { DialogPanel } from '@/components/shared/DialogPanel';
 import {
@@ -22,7 +22,7 @@ import { MORPH_EXIT_MS, prefersReducedMotion } from '@/lib/morph';
 import { usePresence } from '@/components/motion/usePresence';
 import type { Release } from '@/types/releases';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
-import { TaskRow, type TaskRowSelection } from '@/components/tasks/TaskRow';
+import { TaskColumnsHeading, TaskRow, type TaskRowSelection } from '@/components/tasks/TaskRow';
 import { BulkSelectBar, SelectToggleButton, isSelectableTask } from '@/components/tasks/BulkSelect';
 import { TASKS_CHANGED_EVENT } from '@/components/tasks/TaskUIProvider';
 import { orderForThumb } from '@/lib/release-menu';
@@ -32,7 +32,7 @@ import { resolvePanelBody } from '@/lib/scene-cache';
 import { useSceneOverlay } from './useSceneOverlay';
 import { PlanViewToggle } from './PlanViewToggle';
 import { PlanListControls, PlanShowAllToggle, usePlanList } from './PlanListControls';
-import { RolloutPhaseHeader } from './RolloutPhases';
+import { EmptyPhaseLine, RolloutPhaseHeader } from './RolloutPhases';
 import { PhaseSuggestions, PlanSuggestionToast, usePlanSuggestions } from './PlanSuggestions';
 import { pickStartHereTaskId } from '@/lib/plan-core';
 import {
@@ -851,9 +851,14 @@ export function TasksPanel({
               // A search or filter shows only the phases it matched.
               if (plan.filtering && rows.length === 0) return null;
               const isOpen = !phaseCollapsed[summary.phase] || plan.filtering;
+              // Nothing planned and nothing to suggest: on a computer the phase
+              // is one dashed line (#1203); the box below is the phone's.
+              const isBare =
+                summary.total === 0 && !plan.filtering && !suggestions.some((item) => item.phase === summary.phase);
               return (
+                <Fragment key={summary.phase}>
+                <div className={isBare ? 'lg:hidden' : undefined}>
                 <RolloutPhaseHeader
-                  key={summary.phase}
                   summary={summary}
                   isOpen={isOpen}
                   onToggle={() => togglePhase(summary.phase)}
@@ -868,21 +873,36 @@ export function TasksPanel({
                       </p>
                     )
                   ) : (
-                    rows.map((task) => (
-                      <TaskRow
-                        key={task.id}
-                        task={task}
-                        density="compact"
-                        startHere={task.id === startHereId}
-                        onClick={(t) => openTask(t.id)}
-                        selection={rowSelection(task)}
-                      />
-                    ))
+                    <>
+                      <TaskColumnsHeading />
+                      {rows.map((task) => (
+                        <TaskRow
+                          key={task.id}
+                          task={task}
+                          density="compact"
+                          columns
+                          startHere={task.id === startHereId}
+                          onClick={(t) => openTask(t.id)}
+                          selection={rowSelection(task)}
+                        />
+                      ))}
+                    </>
                   )}
                   {scopedRelease && !plan.filtering ? (
                     <PhaseSuggestions releaseId={scopedRelease.id} phase={summary.phase} items={suggestions} />
                   ) : null}
                 </RolloutPhaseHeader>
+                </div>
+                {isBare && scopedRelease ? (
+                  <EmptyPhaseLine
+                    summary={summary}
+                    className="hidden lg:flex"
+                    onAdd={() =>
+                      openQuickCreate({ releaseId: scopedRelease.id, source: 'inline', phase: summary.phase })
+                    }
+                  />
+                ) : null}
+                </Fragment>
               );
             })
           : null}
@@ -966,6 +986,7 @@ export function TasksPanel({
               </button>
               {isOpen ? (
                 <div id={bodyId}>
+                  {scopedRelease ? <TaskColumnsHeading /> : null}
                   {sectionTasks.map((task) => {
                     const isLeaving = Boolean(pendingCompletionIds[task.id]);
                     return (
@@ -976,6 +997,7 @@ export function TasksPanel({
                         <TaskRow
                           task={task}
                           density="compact"
+                          columns={Boolean(scopedRelease)}
                           onClick={(t) => openTask(t.id)}
                           selection={rowSelection(task)}
                         />
