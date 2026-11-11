@@ -3,14 +3,14 @@
   "ig": { "source": "instagram", "medium": "social" },
   "fb": { "source": "facebook", "medium": "social" },
   "yt": { "source": "youtube", "medium": "social" },
-  "ow": { "source": "ow", "medium": "social" },
-  "cn": { "source": "cn", "medium": "social" },
+  "ow": { "source": "oyin_wenapere", "medium": "social" },
+  "cn": { "source": "chidera_nnamani", "medium": "social" },
   "sws": { "source": "soundwavespotlight", "medium": "partner" },
   "trm": { "source": "therealmusicdistro", "medium": "partner" },
   "stmz": { "source": "stmz", "medium": "partner" },
   "tt": { "source": "tiktok", "medium": "social" },
-  "tr": { "source": "tr", "medium": "social" },
-  "sc": { "source": "sc", "medium": "social" },
+  "tr": { "source": "threads", "medium": "social" },
+  "sc": { "source": "snapchat", "medium": "social" },
   "wa": { "source": "whatsapp", "medium": "social" },
-  "u": { "source": "u", "medium": "social" }
+  "u": { "source": "urganization", "medium": "social" }
 }

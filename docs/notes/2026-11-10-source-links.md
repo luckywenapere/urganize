@@ -19,18 +19,18 @@ The cookie is httpOnly and holds only the slug. The slug is always looked up in 
 | /ig | instagram | social |
 | /fb | facebook | social |
 | /yt | youtube | social |
-| /ow | ow | social |
-| /cn | cn | social |
+| /ow | oyin_wenapere | social |
+| /cn | chidera_nnamani | social |
 | /sws | soundwavespotlight | partner |
 | /trm | therealmusicdistro | partner |
 | /stmz | stmz | partner |
 | /tt | tiktok | social |
-| /tr | tr | social |
-| /sc | sc | social |
+| /tr | threads | social |
+| /sc | snapchat | social |
 | /wa | whatsapp | social |
-| /u | u | social |
+| /u | urganization | social |
 
-The names for ig, fb, yt, sws and trm are assumed from the short forms. ow, cn and stmz were not spelled out, so they report as typed. Five more were added on 11 Nov 2026 (#1194): tt and wa are assumed to be TikTok and WhatsApp; tr, sc and u report as typed. Changing a name is one word in the JSON; the slug in the link stays the same.
+The founder gave the names for ow, cn, tr, sc and u on 11 Nov 2026 (#1196); before that they reported as typed, so older PostHog events carry the short form in `source` (the `slug` never changed, so break down by `slug`). ig, fb, yt, tt, wa, sws and trm are assumed from the short forms. stmz is not named yet and reports as typed. Changing a name is one word in the JSON; the slug in the link stays the same.
 
 To add a link, add one line to `lib/source-links.json`. `lib/source-links.test.ts` fails if a slug is the name of a real page or redirect.
 
