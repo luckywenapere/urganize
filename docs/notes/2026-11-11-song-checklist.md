@@ -29,7 +29,7 @@ The #1190 desktop card (approved before this work) had "Tasks · 4 open, 1 done"
 
 ## v1.266.0: Pick a release day (slice 2, first part)
 
-- The project's main button (phone and computer) says **"Pick a release day"**, not "Plan the rollout". The approved mock said "Release this song", but the rollout vocabulary rule (founder, 2026-09-09; `lib/rollout-vocabulary.test.ts`) keeps "release" for the date only, so the button names the step. The stage line still reads Song, Release, Out: flagged to Oyin, not changed.
+- The project's main button (phone and computer) says **"Pick a release day"**, not "Plan the rollout". The approved mock said "Release this song", but the rollout vocabulary rule (founder, 2026-09-09; `lib/rollout-vocabulary.test.ts`) keeps "release" for the date only, so the button names the step. The stage line then read Song, Release, Out; Oyin said yes the same day to Song, Rollout, Out (next patch).
 - The sheet (mock 1.3): three Fridays to pick from, the first at least 9 weeks out (`releaseDayOptions` in `lib/release-this-song.ts`, tested), the middle one picked by default, or "Another day: pick it in the next step". A picked day goes to the planner as `prefill.releaseDate`, so the planner skips its date question. The carry-over line sits in a green box; "What the plan will use" folds under a details toggle. The button says "Make the plan".
 - The AI's line when the last song is done, the Start next sheet and the onboarding hint say "Pick a release day" too.
 - Not done: the mock's budget field (the planner already asks it) and "one page that changes stage" (the rollout is still its own page).
