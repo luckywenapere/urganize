@@ -31,9 +31,9 @@ type BrandColorsSectionProps = {
 };
 
 /**
- * Brand colors for the share images (founder call, 2026-09-24): a background
- * and an accent per artist, used on the Instagram, WhatsApp, X and Snapchat
- * images and nowhere else.
+ * Brand colors (founder call, 2026-09-24): a background and an accent per
+ * artist, used on the Instagram, WhatsApp, X and Snapchat images and, since
+ * 2026-11-11 (#1209), on the artist's own page in the app.
  *
  * The preview is drawn from the SAME palette the image route uses
  * (resolveSharePalette), so what this shows is what gets posted, including the
@@ -82,6 +82,9 @@ export function BrandColorsSection({
         </button>
       </h2>
       <div id={bodyId} hidden={!open} className="mt-4">
+      <p className="mb-3 text-sm text-content-secondary">
+        Each artist&rsquo;s page and share images use their colors. Text color is picked for you, so words stay easy to read.
+      </p>
       {isLoading && artists === undefined ? (
         <div className="space-y-2">
           <SkeletonBlock className="h-32 w-full rounded-xl" />

@@ -29,6 +29,8 @@ import type { ExecutionRelease } from '@/lib/execution-types';
 import { displayReleaseTitle } from '@/types/releases';
 import { SmartLinkBox, useReleaseSmartLink } from '@/components/releases/SmartLinkBox';
 import { copyText } from '@/lib/share-file';
+import { ARTIST_BRAND_ATTR, artistBrandCss, resolveArtistBrandTheme } from '@/lib/artist-brand-theme';
+import { BRAND_COLORS_SETTINGS_HREF, isBrandColorsEnabled } from '@/lib/social-share-colors';
 
 // The artist page, redesigned 2026-10-29 (#866, founder approved
 // docs/mocks/artist-page/mock.html). Where the artist stands first (two chips
@@ -46,6 +48,7 @@ import { copyText } from '@/lib/share-file';
 // on the same markup, so a phone draws what it drew before.
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
+const BRAND_COLORS_ENABLED = isBrandColorsEnabled();
 
 const DAY_MS = 86_400_000;
 
@@ -302,21 +305,21 @@ function UpNextCard({
     // with a button that says where the card goes.
     <Card
       className={cn(
-        'relative flex flex-row items-center gap-4 px-4 py-3.5 transition-colors hover:bg-accent lg:gap-5 lg:rounded-2xl lg:border-0 lg:bg-[#1d2a21] lg:p-5 lg:text-[#f5f0e6] lg:hover:bg-[#1d2a21]',
+        'artist-up-next relative flex flex-row items-center gap-4 px-4 py-3.5 transition-colors hover:bg-accent lg:gap-5 lg:rounded-2xl lg:border-0 lg:bg-[#1d2a21] lg:p-5 lg:text-[#f5f0e6] lg:hover:bg-[#1d2a21]',
         starting && 'opacity-60'
       )}
     >
       {countdown !== null ? (
         <div className="shrink-0 pr-1 text-center" aria-hidden>
-          <span className="block font-display text-3xl leading-none text-primary lg:text-[40px] lg:text-[#f5f0e6]">{countdown}</span>
-          <span className="text-xs text-muted-foreground lg:text-[#f5f0e6]/70">{days}</span>
+          <span className="block font-display text-3xl leading-none text-primary lg:text-[40px] lg:text-[#f5f0e6] up-next-ink">{countdown}</span>
+          <span className="text-xs text-muted-foreground lg:text-[#f5f0e6]/70 up-next-muted">{days}</span>
         </div>
       ) : null}
       <CardHeader className="min-w-0 flex-1 gap-0.5 space-y-0 p-0" aria-hidden>
-        <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-primary lg:text-[#f5f0e6]/70">Up next</p>
+        <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-primary lg:text-[#f5f0e6]/70 up-next-muted">Up next</p>
         {/* leading-snug: a long record title wraps on a phone. */}
-        <CardTitle className="leading-snug lg:text-[#f5f0e6]">{title}</CardTitle>
-        <CardDescription className="lg:text-[#f5f0e6]/70">{line}</CardDescription>
+        <CardTitle className="leading-snug lg:text-[#f5f0e6] up-next-ink">{title}</CardTitle>
+        <CardDescription className="lg:text-[#f5f0e6]/70 up-next-muted">{line}</CardDescription>
       </CardHeader>
       <span id={descriptionId} className="sr-only">
         {line}
@@ -325,7 +328,7 @@ function UpNextCard({
       {/* Drawn only: the stretched control below is what is clicked and read. */}
       <span
         aria-hidden
-        className="hidden h-9 shrink-0 items-center whitespace-nowrap rounded-full bg-[#f5f0e6] px-4 text-[13px] font-semibold text-[#1d2a21] lg:inline-flex"
+        className="hidden h-9 shrink-0 items-center whitespace-nowrap rounded-full bg-[#f5f0e6] px-4 text-[13px] font-semibold text-[#1d2a21] lg:inline-flex up-next-cta"
       >
         {cta}
       </span>
@@ -412,6 +415,14 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
     }
     return counts;
   }, [tasks]);
+
+  // The artist's brand colors theme this page (#1209); null keeps the house look.
+  const brandColors = artist?.brandColors ?? null;
+  const brandTheme = useMemo(
+    () => (BRAND_COLORS_ENABLED ? resolveArtistBrandTheme(brandColors) : null),
+    [brandColors]
+  );
+  const brandCss = useMemo(() => (brandTheme ? artistBrandCss(brandTheme) : null), [brandTheme]);
 
   const releaseCount = buckets.planned.length + buckets.live.length + buckets.past.length;
   const viewed = artist !== null;
@@ -592,10 +603,18 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
   const canImport = streamingProfile === null && catalogueCount === 0;
 
   return (
-    <div className="mx-auto w-full max-w-3xl lg:max-w-[1120px]">
+    <div className="mx-auto w-full max-w-3xl lg:max-w-[1120px]" {...(brandTheme ? { [ARTIST_BRAND_ATTR]: '' } : {})}>
+      {/* The artist's colors (#1209): a few CSS variables, scoped to this page,
+          that arrive and leave with it. Built only from normalized hex values. */}
+      {brandCss ? <style>{brandCss}</style> : null}
       {backLink}
 
-      <header className="mt-5 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <header
+        className={cn(
+          'mt-5 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between',
+          brandTheme && 'artist-brand-band rounded-2xl px-5 pb-7 pt-5 lg:px-6 lg:pb-8 lg:pt-6'
+        )}
+      >
         <div className="flex min-w-0 items-center gap-4 sm:gap-5">
           <ProfilePhotoPicker
             name={artist.name}
@@ -627,6 +646,20 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
                   </Chip>
                 ))}
               </div>
+            ) : null}
+            {brandTheme ? (
+              <Link
+                href={BRAND_COLORS_SETTINGS_HREF}
+                className="motion-focus mt-2 inline-flex min-h-6 items-center gap-1.5 rounded-full border border-[rgb(var(--color-stroke)/0.28)] px-2.5 font-mono text-[11px] text-content-secondary transition-colors hover:bg-bg-hover"
+              >
+                <span
+                  aria-hidden
+                  className="h-2.5 w-2.5 rounded-[3px] border border-[rgb(var(--color-stroke)/0.4)]"
+                  style={{ backgroundColor: brandTheme.band }}
+                />
+                <span aria-hidden className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: brandTheme.bandAccent }} />
+                Brand colors
+              </Link>
             ) : null}
           </div>
         </div>

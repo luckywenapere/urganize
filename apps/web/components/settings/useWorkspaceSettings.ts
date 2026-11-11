@@ -17,6 +17,7 @@ import {
   type UploadStep,
 } from '@/lib/upload-failure-report';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
+import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { NO_BRAND_COLORS, sameBrandColors, type BrandColors } from '@/lib/social-share-colors';
 import { getAccessToken } from './getAccessToken';
 import type { WorkspaceLogo } from './WorkspaceLogoSection';
@@ -582,11 +583,17 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
         throw new Error(payload.error || 'Could not save the colors. Try again.');
       }
       commitRoster(withColors(payload.artist.brandColors));
+      // The artist page reads the shared roster, so it repaints in the new colors (#1209).
+      useArtistRosterStore.setState((state) => ({
+        artists: state.artists.map((entry) =>
+          entry.id === artistId ? { ...entry, brandColors: payload.artist?.brandColors } : entry
+        ),
+      }));
       const reset = payload.artist.brandColors.background === null && payload.artist.brandColors.accent === null;
       setBrandColorsMessage(
         reset
           ? `${current.name} is back to Urganize colors.`
-          : `Saved. ${current.name}’s share images use these colors now.`
+          : `Saved. ${current.name}’s page and share images use these colors now.`
       );
     } catch (err) {
       commitRoster(withColors(previous));
