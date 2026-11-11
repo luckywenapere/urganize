@@ -301,3 +301,4 @@ Adding a note: create `docs/notes/YYYY-MM-DD-short-slug.md` (start it with a `# 
 - [Writing hooks: the skill and what we know (2026-11-09, #1149)](2026-11-09-writing-hooks.md)
 - [Short links that say where people come from (2026-11-10, #1185, no flag)](2026-11-10-source-links.md): go.urganize.app/x, /ig, /fb, /yt, /ow, /cn, /sws, /trm, /stmz rewrite to /api/go/<slug>, which counts the tap in PostHog, sets a 30-day `urg_src` cookie on .urganize.app and 307s to urganize.app with utm tags; a new team's sign-up reports `signup_from_source_link`; the list is `lib/source-links.json`
 - [Record page on a computer (2026-11-11, v1.263.0, no flag, #1190)](2026-11-11-record-page-desktop.md): two columns at lg, square cover, one filled button top right, stages as steps, bars under their names, tasks card restyled; every rule is an `lg:` class
+- [Home on a computer: tasks, your team and Customise Home (2026-11-10)](2026-11-10-home-desktop-tasks-team-customise.md)

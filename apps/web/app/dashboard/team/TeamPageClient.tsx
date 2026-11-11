@@ -2,6 +2,7 @@
 
 import { recallLast, rememberLast } from '@/lib/last-seen';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Copy, Loader2, Plus, Users } from '@/components/icons';
 import { authHeaders, readError } from '@/components/press-kits/press-kit-client';
 import { TeamSheet } from '@/components/team/TeamSheet';
@@ -67,6 +68,19 @@ export default function TeamPageClient() {
   }, [load]);
 
   const people = useMemo(() => data?.people ?? [], [data]);
+
+  // Home on a computer links here (#1182): ?person=<member id> opens that
+  // person's tasks, ?invite=1 opens the invite form for someone who may
+  // invite. Read once, when the team first lands, so closing stays closed.
+  const params = useSearchParams();
+  const linkedPerson = params.get('person');
+  const linkedInvite = params.get('invite') === '1';
+  const [linkHandled, setLinkHandled] = useState(false);
+  if (data && !linkHandled) {
+    setLinkHandled(true);
+    if (linkedPerson && data.people.some((person) => person.memberId === linkedPerson)) setOpenId(linkedPerson);
+    else if (linkedInvite && data.viewer.canManage && data.picker) setInviting(true);
+  }
   const active = people.filter((person) => person.status === 'active');
   const waiting = people.filter((person) => person.status === 'invited');
   const open = people.find((person) => person.memberId === openId) ?? null;
