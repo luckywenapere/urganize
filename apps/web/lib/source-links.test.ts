@@ -13,8 +13,11 @@ const require_ = createRequire(import.meta.url);
 const config = require_(join(process.cwd(), 'next.config.js'));
 
 describe('source links', () => {
-  it('has the nine links the founder asked for', () => {
-    expect(SOURCE_LINKS.map((link) => link.slug)).toEqual(['x', 'ig', 'fb', 'yt', 'ow', 'cn', 'sws', 'trm', 'stmz']);
+  it('has the links the founder asked for', () => {
+    expect(SOURCE_LINKS.map((link) => link.slug)).toEqual([
+      'x', 'ig', 'fb', 'yt', 'ow', 'cn', 'sws', 'trm', 'stmz',
+      'tt', 'tr', 'sc', 'wa', 'u',
+    ]);
   });
 
   it('keeps slugs and values to plain lowercase words', () => {

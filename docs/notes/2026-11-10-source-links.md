@@ -24,8 +24,13 @@ The cookie is httpOnly and holds only the slug. The slug is always looked up in 
 | /sws | soundwavespotlight | partner |
 | /trm | therealmusicdistro | partner |
 | /stmz | stmz | partner |
+| /tt | tiktok | social |
+| /tr | tr | social |
+| /sc | sc | social |
+| /wa | whatsapp | social |
+| /u | u | social |
 
-The names for ig, fb, yt, sws and trm are assumed from the short forms. ow, cn and stmz were not spelled out, so they report as typed. Changing a name is one word in the JSON; the slug in the link stays the same.
+The names for ig, fb, yt, sws and trm are assumed from the short forms. ow, cn and stmz were not spelled out, so they report as typed. Five more were added on 11 Nov 2026 (#1194): tt and wa are assumed to be TikTok and WhatsApp; tr, sc and u report as typed. Changing a name is one word in the JSON; the slug in the link stays the same.
 
 To add a link, add one line to `lib/source-links.json`. `lib/source-links.test.ts` fails if a slug is the name of a real page or redirect.
 
