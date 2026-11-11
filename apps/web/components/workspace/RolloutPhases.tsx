@@ -1,7 +1,8 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { ChevronDown } from '@/components/icons';
+import { ChevronDown, Plus } from '@/components/icons';
+import { emptyPhaseText } from '@/lib/activity-columns';
 import {
   formatPhaseDates,
   phaseForLine,
@@ -40,11 +41,11 @@ function StateBadge({ summary }: { summary: RolloutPhaseSummary }) {
   );
 }
 
-function ProgressBar({ percent }: { percent: number }) {
+function ProgressBar({ percent, className = '' }: { percent: number; className?: string }) {
   // The Motion bar pattern: bg-stroke-strong track, aria-hidden, the count
   // beside it is the accessible metric.
   return (
-    <div className="h-1.5 min-w-0 flex-1 rounded-full bg-stroke-strong" aria-hidden="true">
+    <div className={`h-1.5 min-w-0 flex-1 rounded-full bg-stroke-strong ${className}`} aria-hidden="true">
       <div
         className="h-full rounded-full bg-brand transition-[width] duration-300"
         style={{ width: `${percent}%` }}
@@ -177,16 +178,25 @@ export function RolloutPhaseHeader({
           isOpen ? 'border-b border-stroke-subtle' : ''
         }`}
       >
-        <span className="flex min-w-0 shrink-0 flex-col">
-          <span className="flex items-center gap-1.5">
-            <span className="text-sm font-semibold text-content-primary">{summary.label}</span>
+        {/* On a computer (#1203) the name, the tag and the dates read on one
+            line, and the bar is a short one at the right beside the count. */}
+        <span className="flex min-w-0 shrink-0 flex-col lg:flex-row lg:items-center lg:gap-3">
+          <span className="flex items-center gap-1.5 lg:gap-2">
+            <span className="text-sm font-semibold text-content-primary lg:text-[15px]">{summary.label}</span>
             <StateBadge summary={summary} />
           </span>
-          {dates ? <span className="text-xs text-content-tertiary">{dates}</span> : null}
+          {dates ? (
+            <span className="text-xs text-content-tertiary lg:text-[13px] lg:text-content-secondary">{dates}</span>
+          ) : null}
         </span>
-        <ProgressBar percent={summary.percent} />
-        <span className="shrink-0 text-xs tabular-nums text-content-secondary">
-          {summary.done}/{summary.total} done
+        <ProgressBar percent={summary.percent} className="lg:ml-auto lg:w-[120px] lg:flex-none" />
+        <span className="shrink-0 text-xs tabular-nums text-content-secondary lg:text-[13px]">
+          <span className="lg:hidden">
+            {summary.done}/{summary.total} done
+          </span>
+          <span className="hidden lg:inline">
+            {summary.done} of {summary.total} done
+          </span>
         </span>
         <ChevronDown
           className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${isOpen ? '' : '-rotate-90'}`}
@@ -194,6 +204,41 @@ export function RolloutPhaseHeader({
         />
       </button>
       {isOpen ? <div id={controlsId}>{children}</div> : null}
+    </div>
+  );
+}
+
+/**
+ * A phase with nothing planned, on a computer (#1203, founder approved mock,
+ * 11 Nov 2026): one dashed line with the phase's name, its tag, its dates and
+ * "+ Add activity", instead of a tall empty box, so the phase with real work is
+ * what you see. Phones keep the box.
+ */
+export function EmptyPhaseLine({
+  summary,
+  onAdd,
+  className = '',
+}: {
+  summary: RolloutPhaseSummary;
+  onAdd: () => void;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`items-center gap-3 rounded-xl border border-dashed border-stroke-strong px-5 py-2 text-sm text-content-secondary ${className}`}
+      data-empty-phase={summary.phase}
+    >
+      <span className="shrink-0 font-semibold text-content-primary">{summary.label}</span>
+      <StateBadge summary={summary} />
+      <span className="min-w-0">{emptyPhaseText(formatPhaseDates(summary))}</span>
+      <button
+        type="button"
+        onClick={onAdd}
+        className="motion-focus ml-auto inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-2 text-[13px] font-semibold text-brand transition-colors hover:bg-bg-hover"
+      >
+        <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+        Add activity
+      </button>
     </div>
   );
 }

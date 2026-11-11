@@ -1403,6 +1403,9 @@ export function WorkspaceView() {
       <RolloutIdeasCard
         key={scopedReleaseSlim.id}
         condensed={simplePlanView}
+        // One line over the list on a computer (#1203); the timeline, the
+        // Brief tab and phones keep the card.
+        oneLine={isDesktopViewport && panelBody === 'activities'}
         tasks={scopedTasks}
         hasReleaseDate={Boolean(scopedReleaseSlim.releaseDate)}
         onPlanChanged={() => void loadCommandCenter({ force: true })}

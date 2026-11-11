@@ -13,6 +13,7 @@ import {
 } from '@/lib/tasks';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
+import { ACTIVITY_GRID_CLASS, plainDueLabel } from '@/lib/activity-columns';
 
 function AssigneeAvatar({ member, size = 'sm' }: { member: WorkspaceMember; size?: 'sm' | 'md' }) {
   const dim = size === 'sm' ? 'h-[18px] w-[18px] text-[9px]' : 'h-6 w-6 text-[11px]';
@@ -101,7 +102,28 @@ type TaskRowProps = {
   startHere?: boolean;
   /** Present only in select mode. See TaskRowSelection. */
   selection?: TaskRowSelection;
+  /** The rollout's Activities list on a computer (#1203): from lg the compact
+   * row sits in fixed columns (tick, Activity, Kind, Who, Due) under a heading
+   * row, with the kind in full, a name beside the face and the due date in
+   * plain words. Below lg the row is the same one line as before. */
+  columns?: boolean;
 };
+
+/** The heading row over a group of `columns` rows. Computer only. */
+export function TaskColumnsHeading() {
+  return (
+    <div
+      className={`hidden items-center border-b border-l-4 border-stroke-subtle border-l-transparent px-4 py-2 text-xs font-semibold text-content-secondary ${ACTIVITY_GRID_CLASS}`}
+      data-activity-columns-heading
+    >
+      <span aria-hidden="true" />
+      <span>Activity</span>
+      <span className="hidden xl:block">Kind</span>
+      <span>Who</span>
+      <span className="text-right">Due</span>
+    </div>
+  );
+}
 
 function getAssigneeLabel(task: Task): string {
   if (task.assignee?.name) {
@@ -111,7 +133,7 @@ function getAssigneeLabel(task: Task): string {
   return task.assignee?.email || 'Unassigned';
 }
 
-export function TaskRow({ task, onClick, onBlocker, density = 'comfortable', startHere = false, selection }: TaskRowProps) {
+export function TaskRow({ task, onClick, onBlocker, density = 'comfortable', startHere = false, selection, columns = false }: TaskRowProps) {
   const due = getRelativeDueLabel(task);
   const isLocked = task.status === 'locked';
   const isMilestone = isEventMilestone(task);
@@ -182,22 +204,83 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable', sta
     // stays neutral (the existing isOverdue=false on compressed-runway tasks
     // suppresses the red), milestone date stays info-blue, completion stays
     // strikethrough. Only the POSITION moves vs. the previous two-line stack.
+    const plainDue = columns ? plainDueLabel(task) : null;
     return (
       <div
         className={`group flex items-center gap-3 border-l-4 border-t border-stroke-subtle ${baseBgClass} px-4 py-2.5 transition first:border-t-0 motion-focus ${borderClass} ${hoverClass} ${
           isLocked && !selection?.selected ? 'bg-bg-surface/60' : ''
-        }`}
+        } ${columns ? `lg:py-3 ${ACTIVITY_GRID_CLASS}` : ''}`}
         {...interactionHandlers}
         data-ph-capture-attribute-section="tasks"
       >
         {leadingControl}
-        <p
-          className={`min-w-0 flex-1 ${titleClass}`}
-          title={task.title}
-        >
-          {task.title}
-        </p>
-        <div className="flex shrink-0 items-center gap-2 text-xs text-content-secondary">
+        {columns ? (
+          // The title cell. On a computer Start here and the lock sit beside
+          // the title, so the three columns to its right hold one thing each.
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <p className={`min-w-0 ${titleClass} ${task.status === 'done' ? 'lg:font-medium lg:text-content-secondary' : ''}`} title={task.title}>
+              {task.title}
+            </p>
+            {startHere ? (
+              <span className="hidden shrink-0 whitespace-nowrap text-xs font-semibold text-brand lg:inline">Start here</span>
+            ) : null}
+            {isLocked ? (
+              <Lock
+                className="hidden h-3.5 w-3.5 shrink-0 text-content-tertiary lg:block"
+                aria-label="Locked. Waiting on an earlier activity."
+              />
+            ) : null}
+          </div>
+        ) : (
+          <p
+            className={`min-w-0 flex-1 ${titleClass}`}
+            title={task.title}
+          >
+            {task.title}
+          </p>
+        )}
+        {columns && plainDue ? (
+          <>
+            {/* Kind: the activity's group, in full. Drops below xl. */}
+            <span className="hidden min-w-0 items-center gap-2 text-sm text-content-secondary xl:flex">
+              {task.groupName ? (
+                <>
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: task.groupColor || '#64748B' }}
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0 break-words">{task.groupName}</span>
+                </>
+              ) : null}
+            </span>
+            <span className="hidden min-w-0 items-center gap-2 text-sm text-content-secondary lg:flex">
+              {task.assignee ? (
+                <>
+                  <AssigneeAvatar member={task.assignee} size="md" />
+                  <span className="min-w-0 break-words">{getAssigneeLabel(task)}</span>
+                </>
+              ) : (
+                <span className="text-content-tertiary">Unassigned</span>
+              )}
+            </span>
+            <span
+              className={`hidden items-center justify-end gap-1 text-right text-sm lg:flex ${
+                plainDue.tone === 'late'
+                  ? 'font-semibold text-status-error'
+                  : plainDue.tone === 'quiet'
+                    ? 'text-content-secondary'
+                    : 'text-content-primary'
+              }`}
+            >
+              {isMilestone && task.status !== 'done' ? (
+                <CalendarDays className="h-3.5 w-3.5 shrink-0 text-content-tertiary" aria-label="Event milestone" />
+              ) : null}
+              {plainDue.label}
+            </span>
+          </>
+        ) : null}
+        <div className={`flex shrink-0 items-center gap-2 text-xs text-content-secondary ${columns ? 'lg:hidden' : ''}`}>
           {startHere ? (
             <span className="whitespace-nowrap font-mono text-[11px] text-brand">Start here</span>
           ) : null}

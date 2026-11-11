@@ -86,10 +86,18 @@ export function RolloutIdeasCard({
   onDraftWithAi,
   onWriteMyself,
   condensed = false,
+  oneLine = false,
   tasks = [],
   hasReleaseDate = false,
   onPlanChanged,
 }: {
+  /**
+   * The Activities list on a computer (#1203, founder approved mock, 11 Nov
+   * 2026): on a rollout that has its plan the idea is one line with "Open",
+   * since it has been read by the time the list is being worked. Open shows
+   * the same card as before, in place; Close folds it back.
+   */
+  oneLine?: boolean;
   /** Called after the owner applies suggested changes, so the page reloads the plan. */
   onPlanChanged?: () => void;
   /** The simple plan view: the team brief with Edit idea, not the full card. */
@@ -118,6 +126,8 @@ export function RolloutIdeasCard({
   // The "Edit idea" button that opened the full card is gone (Nov 2, 2026), so
   // this stays false; the full card still draws when there is no brief yet.
   const [expanded] = useState(false);
+  // The one-line idea, opened in place (see `oneLine`).
+  const [lineOpen, setLineOpen] = useState(false);
   const fromVoiceRef = useRef(false);
   // The kept recording of the idea being written (2026-10-27).
   const clipRef = useRef<{ audioPath: string; seconds: number | null } | null>(null);
@@ -595,6 +605,34 @@ export function RolloutIdeasCard({
     );
   }
 
+  // One line on a planned rollout's list (see `oneLine`). Anything that needs
+  // the card (typing, asking who, suggested changes, an error) opens it.
+  const foldable = oneLine && hasPlan && hasNotes && !round;
+  if (foldable && !lineOpen && !typing && !askingWho && !suggest && !error) {
+    return (
+      <section
+        ref={sectionRef}
+        aria-labelledby={`ideas-title-${release.id}`}
+        className="flex items-center gap-3 rounded-xl border border-stroke-default bg-bg-surface px-4 py-2"
+        data-idea-line
+      >
+        <h2 id={`ideas-title-${release.id}`} className="shrink-0 text-sm font-semibold text-content-primary">
+          The idea
+        </h2>
+        <p className="min-w-0 flex-1 truncate text-sm text-content-secondary">
+          {data.notes.map((note) => note.content).join(' ')}
+        </p>
+        <button
+          type="button"
+          onClick={() => setLineOpen(true)}
+          className="motion-focus h-8 shrink-0 rounded-full px-2 text-[13px] font-semibold text-brand underline underline-offset-4 hover:bg-bg-hover"
+        >
+          Open
+        </button>
+      </section>
+    );
+  }
+
   return (
     <section
       ref={sectionRef}
@@ -605,6 +643,15 @@ export function RolloutIdeasCard({
           : 'rounded-[20px] border border-stroke-default bg-bg-surface px-5 py-4'
       }
     >
+      {foldable && lineOpen ? (
+        <button
+          type="button"
+          onClick={() => setLineOpen(false)}
+          className="motion-focus float-right h-8 rounded-full px-2 text-[13px] font-semibold text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+        >
+          Close
+        </button>
+      ) : null}
       <h2
         id={`ideas-title-${release.id}`}
         className={

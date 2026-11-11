@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Activities, desktop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --side-on:#e6e1d6; --card:#faf5ec; --hover:#ebe6dc; --tile:#e3ddd0;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --err:#961a1a; --err-soft:rgba(150,26,26,.08);
+    --ink:#1d2a21; --on-ink:#f5f0e6; --on-ink2:rgba(245,240,230,.72);
+    --board:#d9d5cc; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/20px 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--text); padding:40px 16px 72px; font-variant-numeric:tabular-nums; }
+  p,h1,h2,h3 { margin:0; }
+  .serif { font-family:'Young Serif', serif; font-weight:400; letter-spacing:0; }
+  .sec { color:var(--sec); } .ter { color:var(--ter); } .err { color:var(--err); }
+  .wrap { max-width:1240px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; line-height:36px; }
+  .intro p { color:var(--board-sec); max-width:760px; margin-top:8px; }
+  .label { font-size:12px; line-height:16px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin:40px 0 8px; }
+
+  .desk { background:var(--bg); border-radius:16px; overflow:hidden; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .bar { height:64px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:0 32px; }
+  .logo { font-family:'Young Serif', serif; font-size:18px; display:flex; align-items:center; gap:8px; }
+  .beta { font:700 10px/16px 'Instrument Sans'; letter-spacing:.06em; padding:0 6px; border-radius:4px; background:var(--brand-soft); color:var(--brand); }
+  .tabs { display:flex; gap:4px; }
+  .tabs span { padding:8px 14px; border-radius:99px; color:var(--sec); }
+  .tabs span.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .icons { display:flex; gap:12px; justify-content:flex-end; align-items:center; }
+  .icons i { width:36px; height:36px; border-radius:50%; border:1px solid var(--line2); }
+  .icons b { width:36px; height:36px; border-radius:50%; background:var(--brand); color:var(--on-ink); display:grid; place-items:center; font-size:12px; }
+
+  /* One content width for Home: 1120. */
+  .page { max-width:1120px; margin:0 auto; padding:8px 0 48px; display:flex; flex-direction:column; gap:16px; }
+
+  .face { width:40px; height:40px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--tile); font-weight:600; font-size:13px; }
+  .cv { width:40px; height:40px; flex:none; border-radius:6px; }
+  .cv.none { background:transparent; border:1.5px dashed var(--line2); display:grid; place-items:center; color:var(--ter); font-size:18px; }
+  .chev { width:8px; height:8px; border-top:1.5px solid var(--ter); border-right:1.5px solid var(--ter); transform:rotate(45deg); flex:none; }
+  .btn { display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 16px; border-radius:99px; font-weight:600; font-size:13px; white-space:nowrap; }
+  .btn.light { background:var(--on-ink); color:var(--ink); }
+  .btn.ghost { border:1px solid var(--line2); color:var(--text); font-weight:500; }
+
+  /* 1. Out now: one quiet line, not a tall card with a full-width button. */
+  .out { display:flex; align-items:center; gap:12px; padding:10px 16px; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+  .out .cv { width:32px; height:32px; background:var(--tile); }
+  .pill { font-size:12px; line-height:20px; font-weight:600; padding:0 8px; border-radius:99px; background:var(--brand-soft); color:var(--brand); }
+  .out .grow { flex:1; min-width:0; }
+  .link { color:var(--brand); font-weight:600; text-decoration:underline; text-underline-offset:3px; }
+  .x { color:var(--ter); font-size:18px; padding:0 4px; }
+
+  /* 2. Next drop: unchanged in shape. */
+  .hero { background:var(--ink); color:var(--on-ink); border-radius:16px; padding:24px; display:flex; align-items:center; gap:24px; }
+  .hero .art { width:120px; height:120px; border-radius:8px; background:#5b2a86; flex:none; }
+  .hero .eyebrow { font-size:11px; font-weight:700; letter-spacing:.1em; color:var(--on-ink2); }
+  .hero h3 { font-family:'Young Serif', serif; font-weight:400; font-size:32px; line-height:40px; margin-top:4px; }
+  .hero .by { color:var(--on-ink2); margin-top:2px; }
+  .hero .prog { width:280px; height:4px; border-radius:99px; background:rgba(245,240,230,.18); margin-top:14px; overflow:hidden; }
+  .hero .prog i { display:block; width:35%; height:100%; background:#7fd99a; }
+  .hero .meta { margin-top:8px; color:var(--on-ink2); }
+  .hero .late { color:#ffb4a8; font-weight:600; }
+  .hero .right { margin-left:auto; text-align:right; }
+  .hero .num { font-family:'Young Serif', serif; font-size:56px; line-height:56px; }
+
+  /* 3. The list: head with the count and the one action; rows read left to right without a gap. */
+  .lhead { display:flex; align-items:flex-end; justify-content:space-between; margin-top:16px; }
+  .lhead h3 { font-family:'Young Serif', serif; font-weight:400; font-size:22px; line-height:28px; }
+  .list { background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+  .row { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1.3fr) 148px 220px 16px; align-items:center; gap:24px; padding:14px 20px; border-top:1px solid var(--line); }
+  .row:first-child { border-top:0; }
+  .row.th { padding:10px 20px; font-size:12px; font-weight:600; color:var(--sec); }
+  .who, .what { display:flex; align-items:center; gap:12px; min-width:0; }
+  .who .name { font-family:'Young Serif', serif; font-size:17px; line-height:22px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .state { font-size:12px; line-height:16px; font-weight:600; color:var(--brand); }
+  .state.quiet { color:var(--ter); font-weight:500; }
+  .what .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .what .k { font-size:12px; line-height:16px; color:var(--sec); }
+  .when .d { font-weight:600; }
+  .when .n { font-size:12px; line-height:16px; color:var(--sec); }
+  .work .bar2 { height:4px; border-radius:99px; background:var(--line2); overflow:hidden; }
+  .work .bar2 i { display:block; height:100%; background:var(--brand); }
+  .work .n { font-size:12px; line-height:16px; color:var(--sec); margin-top:6px; display:flex; gap:10px; }
+  .work .n b { font-weight:600; color:var(--err); }
+  .add { display:flex; align-items:center; gap:12px; padding:14px 20px; border-top:1px solid var(--line); color:var(--sec); font-weight:500; }
+  .add i { width:40px; height:40px; border-radius:50%; border:1.5px dashed var(--line2); display:grid; place-items:center; font-style:normal; font-size:18px; color:var(--ter); }
+
+  /* 7. Tasks on Home: mine on the left, the ones I handed out on the right. */
+  .tasks { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .tcard { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:6px 20px 8px; min-width:0; }
+  .thead { display:flex; align-items:baseline; justify-content:space-between; padding:12px 0 8px; }
+  .thead h3 { font-family:'Young Serif', serif; font-weight:400; font-size:18px; line-height:24px; }
+  .thead h3 span { font:500 13px/20px 'Instrument Sans'; color:var(--sec); }
+  .thead .link { font-size:13px; }
+  .trow { display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--line); min-width:0; }
+  .ck { width:20px; height:20px; border-radius:50%; border:1.5px solid var(--line2); flex:none; }
+  .face.sm { width:28px; height:28px; font-size:11px; font-style:normal; }
+  .tt { flex:1; min-width:0; }
+  .tt .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tt .k { font-size:12px; line-height:16px; color:var(--sec); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .due { font-size:13px; color:var(--sec); white-space:nowrap; }
+  .due.late { color:var(--err); font-weight:600; }
+  .due.ok { color:var(--brand); font-weight:600; }
+  .trow.done .t { color:var(--sec); text-decoration:line-through; }
+
+  /* 8. The team on Home (desktop only): one row of people, each with their load. */
+  .team { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+  .person { display:flex; align-items:center; gap:12px; padding:14px 16px; background:var(--card); border:1px solid var(--line); border-radius:14px; min-width:0; }
+  .person.invite { background:transparent; border-style:dashed; border-color:var(--line2); }
+  .face.dash { background:transparent; border:1.5px dashed var(--line2); color:var(--ter); font-size:18px; font-weight:400; }
+  .pt { min-width:0; }
+  .pt .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pt .k { font-size:12px; line-height:16px; color:var(--sec); }
+  .pt .c { font-size:12px; line-height:16px; color:var(--sec); margin-top:2px; }
+  .pt .c b { color:var(--err); font-weight:600; }
+  .you { font-size:11px; font-weight:600; color:var(--brand); background:var(--brand-soft); border-radius:99px; padding:1px 6px; margin-left:4px; }
+
+  /* 9. Customise Home: reorder, remove, add back. */
+  .editbar { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 16px; border-radius:12px; background:var(--brand-soft); }
+  .edit-grid, .tray { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .w { grid-column:span 2; position:relative; padding:16px 110px 16px 48px; border:1.5px dashed var(--line2); border-radius:14px; background:var(--card); }
+  .w.half, .w.add2 { grid-column:span 1; }
+  .w.add2 { padding-left:16px; background:transparent; }
+  .w .wt { font-weight:600; }
+  .w .k { font-size:12px; line-height:16px; color:var(--sec); margin-top:2px; }
+  .grip { position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--ter); letter-spacing:-2px; cursor:grab; }
+  .rm, .w .link { position:absolute; right:16px; top:50%; transform:translateY(-50%); font-size:13px; font-weight:600; color:var(--err); }
+  .rm.off { color:var(--ter); font-weight:500; }
+  .w .link { color:var(--brand); }
+
+  .notes { margin-top:24px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .note { background:#e9e5db; border-radius:12px; padding:16px; color:var(--board-sec); }
+  .note b { display:block; color:var(--text); margin-bottom:4px; }
+
+  /* Activities (the plan as a list), desktop */
+  .page { max-width:none; padding:0 32px 48px; }
+  .btn.pri { background:var(--brand); color:var(--on-ink); }
+  .l1 { display:flex; align-items:center; gap:12px; height:56px; }
+  .l1 .crumb { color:var(--sec); } .l1 .crumb b { color:var(--text); }
+  .l1 .sep { width:1px; height:20px; background:var(--line2); }
+  .pillst { font-size:12px; line-height:20px; font-weight:600; padding:0 8px; border-radius:99px; background:var(--brand-soft); color:var(--brand); }
+  .l1 .right { margin-left:auto; display:flex; align-items:center; gap:12px; }
+  .l2 { display:flex; align-items:center; gap:4px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+  .l2 .tab { padding:8px 12px; border-radius:10px; color:var(--sec); font-weight:500; }
+  .l2 .tab.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .l2 .tools { margin-left:auto; display:flex; align-items:center; gap:8px; }
+  .chip { height:32px; padding:0 12px; border-radius:99px; border:1px solid var(--line2); display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; }
+  .chip.on { background:var(--side-on); border-color:transparent; font-weight:600; }
+  .idea { display:flex; align-items:center; gap:12px; padding:12px 16px; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+  .idea p { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .phase { background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+  .phase.now { border-color:var(--brand); }
+  .ph { display:flex; align-items:center; gap:12px; padding:14px 20px; }
+  .ph h4 { margin:0; font-size:15px; line-height:20px; font-weight:600; }
+  .ph .dates { color:var(--sec); font-size:13px; }
+  .ph .bar3 { width:120px; height:4px; border-radius:99px; background:var(--line2); overflow:hidden; margin-left:auto; }
+  .ph .bar3 i { display:block; height:100%; background:var(--brand); }
+  .ph .cnt { font-size:13px; color:var(--sec); width:64px; text-align:right; }
+  .tag { font-size:11px; line-height:18px; font-weight:700; letter-spacing:.04em; padding:0 6px; border-radius:4px; }
+  .tag.nowt { background:var(--brand-soft); color:var(--brand); }
+  .tag.open { background:rgba(138,90,10,.12); color:#7a4e08; }
+  .arow { display:grid; grid-template-columns:24px minmax(0,1fr) 200px 160px 110px; align-items:center; gap:16px; padding:12px 20px; border-top:1px solid var(--line); }
+  .arow.h { padding:8px 20px; font-size:12px; font-weight:600; color:var(--sec); }
+  .arow .t { font-weight:600; display:flex; align-items:center; gap:10px; min-width:0; }
+  .arow .t em { font-style:normal; font-size:12px; font-weight:600; color:var(--brand); white-space:nowrap; }
+  .arow .who { display:flex; align-items:center; gap:8px; color:var(--sec); min-width:0; }
+  .arow .kind { color:var(--sec); }
+  .arow .due { text-align:right; }
+  .ck.done { background:var(--brand); border-color:var(--brand); }
+  .arow.isdone .t { color:var(--sec); text-decoration:line-through; font-weight:500; }
+  .thin { display:flex; align-items:center; gap:12px; padding:12px 20px; border:1px dashed var(--line2); border-radius:12px; color:var(--sec); }
+  .thin b { color:var(--text); font-weight:600; }
+  .thin .link { margin-left:auto; font-size:13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <h1>Activities, desktop</h1>
+    <p>The rollout plan as a list. It sits under the two-line top bar you already approved. It uses the sample rollout from your screens PDF (Owambe Season, three activities). Five changes, listed under the frame.</p>
+  </div>
+
+  <div class="label">After, desktop 1240</div>
+  <div class="desk">
+    <div class="bar">
+      <div class="logo">Urganize <span class="beta">BETA</span></div>
+      <div class="tabs"><span class="on">Home</span><span>Assistant</span><span>Rollouts</span></div>
+      <div class="icons"><i></i><b>AK</b></div>
+    </div>
+    <div class="page">
+      <div class="l1">
+        <span class="crumb">Home &rsaquo; <b>Owambe Season</b></span><span class="sep"></span><span class="sec">Kemi Ade</span><span class="pillst">In progress</span>
+        <div class="right"><span class="sec">1 of 3 done</span><span class="chip">Brief</span><span class="btn pri">+ New activity</span></div>
+      </div>
+      <div class="l2">
+        <span class="tab on">Work the plan</span><span class="tab">Distribute now</span><span class="tab">Pitch this!</span>
+        <div class="tools"><span class="chip">Timeline</span><span class="chip on">List</span><span class="chip">Group: Phase</span><span class="chip">Select</span><span class="chip">···</span></div>
+      </div>
+
+      <div class="idea"><b>The idea</b><p class="sec">Lead with a live-room performance of Owambe Season, then reveal Kemi Ade's cover art ahead of release.</p><span class="link" style="font-size:13px">Open</span></div>
+
+      <div class="thin"><b>Pre-release</b><span class="tag open">STILL OPEN</span><span>Until 5 Nov · nothing planned</span><span class="link">+ Add activity</span></div>
+
+      <div class="phase now">
+        <div class="ph"><h4>Release</h4><span class="tag nowt">NOW</span><span class="dates">6 Nov to 9 Nov</span><div class="bar3"><i style="width:33%"></i></div><span class="cnt">1 of 3 done</span></div>
+        <div class="arow h"><span></span><span>Activity</span><span>Kind</span><span>Who</span><span style="text-align:right">Due</span></div>
+        <div class="arow"><i class="ck"></i><span class="t">Send press release <em>Start here</em></span><span class="kind">Press and playlists</span><span class="who"><i class="face sm">AK</i>Ayo Kalu</span><span class="due">Today</span></div>
+        <div class="arow"><i class="ck"></i><span class="t">Approve cover artwork</span><span class="kind">Artwork</span><span class="who"><i class="face sm">AK</i>Ayo Kalu</span><span class="due">Tomorrow</span></div>
+        <div class="arow isdone"><i class="ck done"></i><span class="t">Publish release teaser</span><span class="kind">Social campaign</span><span class="who"><i class="face sm">AK</i>Ayo Kalu</span><span class="due sec">Done</span></div>
+      </div>
+
+      <div class="thin"><b>Post-release</b><span>From 21 Nov · nothing planned</span><span class="link">+ Add activity</span></div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="note"><b>1. Rows line up in columns</b>Today the kind, the person and the due date float at the right end of each row at different widths. They get fixed columns with headings: Activity, Kind, Who, Due.</div>
+    <div class="note"><b>2. Nothing is cut off</b>"Press &amp; pla…" and "Social cam…" show in full as "Press and playlists" and "Social campaign". The person shows a name beside the face.</div>
+    <div class="note"><b>3. Empty phases take one line</b>Today a phase with nothing in it is a tall empty box. It becomes one dashed line with "+ Add activity", so the phase with real work is what you see.</div>
+    <div class="note"><b>4. Due dates read like words</b>"Today", "Tomorrow", or the date, in the normal font, red only when late. Today they are in a typewriter font that looks like code.</div>
+    <div class="note"><b>5. The idea is one line</b>The "What's the idea?" card shrinks to one line with "Open", since you have read it by the time you are working the list.</div>
+  </div>
+</div>
+</body>
+</html>

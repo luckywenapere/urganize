@@ -67,6 +67,18 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.269.0",
+    title: "Your plan as a list is easier to read on a computer",
+    tag: "Rollouts",
+    date: "November 12, 2026",
+    highlights: [
+      "On a computer, your plan as a list now lines up in columns: the activity, its kind, who has it and when it is due.",
+      "Nothing is cut off. You see the full kind and the person's name.",
+      "Due dates read like words: Today, Tomorrow or the date. Red only means late.",
+      "A phase with nothing planned is one short line with Add activity.",
+    ],
+  },
+  {
     version: "1.268.0",
     tag: "App",
     date: "November 12, 2026",

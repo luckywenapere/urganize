@@ -14,6 +14,7 @@ import {
 import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import type { TaskCreateSource } from '@/lib/tasks';
+import type { RolloutPhase } from '@/lib/rollout-phases';
 import { isTaskUiEngineRequested, subscribeTaskUiEngineRequest } from '@/lib/task-ui-demand';
 
 // TaskUIProvider is mounted by AppShell for every page, /auth included. Since
@@ -41,6 +42,12 @@ export type QuickCreateDefaults = {
   releaseId?: string | null;
   groupId?: string | null;
   source?: TaskCreateSource;
+  /**
+   * The rollout phase the new activity belongs to (#1203): set by "+ Add
+   * activity" on an empty phase's line, so the activity lands in the phase it
+   * was added from whatever its date. Stored at `metadata.phase`.
+   */
+  phase?: RolloutPhase | null;
   /**
    * Seeds the title field. The input is focused AND selected on open, so a
    * prefill is accepted by pressing Enter and replaced by simply typing —
