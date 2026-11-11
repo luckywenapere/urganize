@@ -22,7 +22,7 @@ import { artistHref } from '@/lib/artist-page';
 import { describeDaysToGo, sortBySoonestDrop } from '@/lib/artists-list';
 import { isChappiEnabled } from '@/lib/chappi/config';
 import { layoutRows, type HomeBlockId, type HomeLayout } from '@/lib/home-desktop/layout';
-import { selectDelegated, selectMyTasks } from '@/lib/home-desktop/tasks';
+import { focusMyTasks, selectDelegated, selectMyTasks } from '@/lib/home-desktop/tasks';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { TEAM_HREF } from '@/lib/team-page';
 import { useChappiStore } from '@/stores/useChappiStore';
@@ -92,7 +92,19 @@ export function HomeDesktop({
     () => new Set(releases.filter((release) => release.ownerUserId === viewerId).map((release) => release.id)),
     [releases, viewerId]
   );
-  const mine = useMemo(() => selectMyTasks(tasks, viewerId, today), [tasks, viewerId, today]);
+  // A plan gives its owner every task it makes, so My tasks is held to each
+  // rollout's short main list and skips leftovers of songs already out (#1206).
+  const releaseDays = useMemo(() => new Map(releases.map((release) => [release.id, release.releaseDate ?? null])), [releases]);
+  const myFocus = useMemo(() => focusMyTasks(tasks, viewerId, releaseDays, today), [tasks, viewerId, releaseDays, today]);
+  const mine = useMemo(() => selectMyTasks(myFocus, viewerId, today), [myFocus, viewerId, today]);
+  // The same numbers on your own tile, so Home never shows two counts for you.
+  const myLoad = useMemo(
+    () => ({
+      open: myFocus.length,
+      late: myFocus.filter((task) => Boolean(task.dueDate && task.dueDate.slice(0, 10) < today)).length,
+    }),
+    [myFocus, today]
+  );
   const delegated = useMemo(
     () => selectDelegated(tasks, viewerId, ownedReleaseIds, today),
     [tasks, viewerId, ownedReleaseIds, today]
@@ -156,7 +168,7 @@ export function HomeDesktop({
         );
       case 'team':
         // A team that cannot be read draws nothing rather than a guess.
-        return team ? <HomeTeamRow team={team} /> : teamFailed ? null : <HomeTeamRowSkeleton />;
+        return team ? <HomeTeamRow team={team} mine={myLoad} /> : teamFailed ? null : <HomeTeamRowSkeleton />;
       case 'artists':
         return <ArtistsBlock rows={rows} setArtistPhoto={setArtistPhoto} />;
       case 'ask':

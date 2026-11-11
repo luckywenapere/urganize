@@ -9,7 +9,7 @@
 import Link from 'next/link';
 import { Plus } from '@/components/icons';
 import { ProfileFace } from '@/components/shared/ProfileFace';
-import { TEAM_COPY, TEAM_HREF, TEAM_ROLE_LABEL, type TeamPageResponse, type TeamPerson } from '@/lib/team-page';
+import { TEAM_COPY, TEAM_HREF, TEAM_ROLE_LABEL, type TeamPageResponse } from '@/lib/team-page';
 
 /** Tiles in the row, the invite tile included. */
 const SLOTS = 5;
@@ -38,8 +38,7 @@ export function HomeTeamHead({ count }: { count: number | null }) {
   );
 }
 
-function Load({ person }: { person: TeamPerson }) {
-  const { open, late } = person.summary;
+function Load({ open, late }: { open: number; late: number }) {
   if (open === 0) return <span className="block text-xs leading-4 text-content-secondary">Nothing open</span>;
   return (
     <span className="block text-xs leading-4 text-content-secondary">
@@ -54,7 +53,14 @@ function Load({ person }: { person: TeamPerson }) {
   );
 }
 
-export function HomeTeamRow({ team }: { team: TeamPageResponse }) {
+export function HomeTeamRow({
+  team,
+  mine,
+}: {
+  team: TeamPageResponse;
+  /** The viewer's own load as My tasks counts it, shown on their tile. */
+  mine?: { open: number; late: number };
+}) {
   const active = team.people.filter((person) => person.status === 'active');
   // You first, then the Team page's own order (online, then most recent).
   const people = [...active.filter((person) => person.isCurrentUser), ...active.filter((person) => !person.isCurrentUser)];
@@ -86,7 +92,7 @@ export function HomeTeamRow({ team }: { team: TeamPageResponse }) {
                   ) : null}
                 </span>
                 <span className="block truncate text-xs leading-4 text-content-secondary">{TEAM_ROLE_LABEL[person.role]}</span>
-                <Load person={person} />
+                <Load {...(person.isCurrentUser && mine ? mine : person.summary)} />
               </span>
             </Link>
           </li>

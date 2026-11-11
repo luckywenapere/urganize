@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.266.4",
+    tag: "App",
+    date: "November 11, 2026",
+    highlights: [
+      "My tasks on Home now shows the few tasks that matter on each rollout, not every task in every plan.",
+      "Old tasks from before a song came out no longer show as late.",
+    ],
+  },
+  {
     version: "1.266.3",
     tag: "App",
     date: "November 11, 2026",

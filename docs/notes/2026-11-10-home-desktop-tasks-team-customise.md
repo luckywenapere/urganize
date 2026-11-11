@@ -39,6 +39,15 @@ One content width, 1120 (`HOME_DESKTOP_WIDTH`, an inner wrapper as `WorkspaceFra
 - Team counts come from the primary team only (the Team page's rule), while My tasks reads every rollout the viewer can see, so the two "open" numbers can differ for someone on two teams.
 - `/api/ui-drafts` sits behind the paid-access check like most routes. A locked account never reaches Home, so this does not matter there.
 
+## My tasks is the short list, not every plan task (2026-11-11, #1206)
+
+A plan assigns every task it makes to the rollout's owner (`lib/release-templates/instantiate.ts`), so "assigned to me" was the whole plan: the owner of ten rollouts saw "423 open", all made by plans, 153 of them on songs already out. `focusMyTasks` in `lib/home-desktop/tasks.ts` (tested) now holds My tasks to:
+
+1. each rollout's short main list (`selectKeyTaskIds` in `lib/plan-focus.ts`, the same few tasks the rollout plan opens on, plus anything a person wrote by hand), picked from the whole rollout and then kept only where the viewer holds it;
+2. nothing that was due before a song that is already out.
+
+The viewer's own tile in Your team shows the same open and late numbers, so Home never shows two counts for one person. The Team page still counts every task a person holds, and "See all" still opens that full list. Delegated is unchanged: a task someone else holds was handed out on purpose.
+
 ## Not verified
 
 See the pull request for what was and was not checked in a browser.
