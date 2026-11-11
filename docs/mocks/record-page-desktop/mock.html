@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Record page, desktop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --side-on:#e6e1d6; --card:#faf5ec; --hover:#ebe6dc; --tile:#e3ddd0;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --err:#961a1a; --err-soft:rgba(150,26,26,.08);
+    --ink:#1d2a21; --on-ink:#f5f0e6; --on-ink2:rgba(245,240,230,.72);
+    --board:#d9d5cc; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/20px 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--text); padding:40px 16px 72px; font-variant-numeric:tabular-nums; }
+  p,h1,h2,h3 { margin:0; }
+  .serif { font-family:'Young Serif', serif; font-weight:400; letter-spacing:0; }
+  .sec { color:var(--sec); } .ter { color:var(--ter); } .err { color:var(--err); }
+  .wrap { max-width:1240px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; line-height:36px; }
+  .intro p { color:var(--board-sec); max-width:760px; margin-top:8px; }
+  .label { font-size:12px; line-height:16px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin:40px 0 8px; }
+
+  .desk { background:var(--bg); border-radius:16px; overflow:hidden; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .bar { height:64px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:0 32px; }
+  .logo { font-family:'Young Serif', serif; font-size:18px; display:flex; align-items:center; gap:8px; }
+  .beta { font:700 10px/16px 'Instrument Sans'; letter-spacing:.06em; padding:0 6px; border-radius:4px; background:var(--brand-soft); color:var(--brand); }
+  .tabs { display:flex; gap:4px; }
+  .tabs span { padding:8px 14px; border-radius:99px; color:var(--sec); }
+  .tabs span.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .icons { display:flex; gap:12px; justify-content:flex-end; align-items:center; }
+  .icons i { width:36px; height:36px; border-radius:50%; border:1px solid var(--line2); }
+  .icons b { width:36px; height:36px; border-radius:50%; background:var(--brand); color:var(--on-ink); display:grid; place-items:center; font-size:12px; }
+
+  /* One content width for Home: 1120. */
+  .page { max-width:1120px; margin:0 auto; padding:8px 0 48px; display:flex; flex-direction:column; gap:16px; }
+
+  .face { width:40px; height:40px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--tile); font-weight:600; font-size:13px; }
+  .cv { width:40px; height:40px; flex:none; border-radius:6px; }
+  .cv.none { background:transparent; border:1.5px dashed var(--line2); display:grid; place-items:center; color:var(--ter); font-size:18px; }
+  .chev { width:8px; height:8px; border-top:1.5px solid var(--ter); border-right:1.5px solid var(--ter); transform:rotate(45deg); flex:none; }
+  .btn { display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 16px; border-radius:99px; font-weight:600; font-size:13px; white-space:nowrap; }
+  .btn.light { background:var(--on-ink); color:var(--ink); }
+  .btn.ghost { border:1px solid var(--line2); color:var(--text); font-weight:500; }
+
+  /* 1. Out now: one quiet line, not a tall card with a full-width button. */
+  .out { display:flex; align-items:center; gap:12px; padding:10px 16px; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+  .out .cv { width:32px; height:32px; background:var(--tile); }
+  .pill { font-size:12px; line-height:20px; font-weight:600; padding:0 8px; border-radius:99px; background:var(--brand-soft); color:var(--brand); }
+  .out .grow { flex:1; min-width:0; }
+  .link { color:var(--brand); font-weight:600; text-decoration:underline; text-underline-offset:3px; }
+  .x { color:var(--ter); font-size:18px; padding:0 4px; }
+
+  /* 2. Next drop: unchanged in shape. */
+  .hero { background:var(--ink); color:var(--on-ink); border-radius:16px; padding:24px; display:flex; align-items:center; gap:24px; }
+  .hero .art { width:120px; height:120px; border-radius:8px; background:#5b2a86; flex:none; }
+  .hero .eyebrow { font-size:11px; font-weight:700; letter-spacing:.1em; color:var(--on-ink2); }
+  .hero h3 { font-family:'Young Serif', serif; font-weight:400; font-size:32px; line-height:40px; margin-top:4px; }
+  .hero .by { color:var(--on-ink2); margin-top:2px; }
+  .hero .prog { width:280px; height:4px; border-radius:99px; background:rgba(245,240,230,.18); margin-top:14px; overflow:hidden; }
+  .hero .prog i { display:block; width:35%; height:100%; background:#7fd99a; }
+  .hero .meta { margin-top:8px; color:var(--on-ink2); }
+  .hero .late { color:#ffb4a8; font-weight:600; }
+  .hero .right { margin-left:auto; text-align:right; }
+  .hero .num { font-family:'Young Serif', serif; font-size:56px; line-height:56px; }
+
+  /* 3. The list: head with the count and the one action; rows read left to right without a gap. */
+  .lhead { display:flex; align-items:flex-end; justify-content:space-between; margin-top:16px; }
+  .lhead h3 { font-family:'Young Serif', serif; font-weight:400; font-size:22px; line-height:28px; }
+  .list { background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+  .row { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1.3fr) 148px 220px 16px; align-items:center; gap:24px; padding:14px 20px; border-top:1px solid var(--line); }
+  .row:first-child { border-top:0; }
+  .row.th { padding:10px 20px; font-size:12px; font-weight:600; color:var(--sec); }
+  .who, .what { display:flex; align-items:center; gap:12px; min-width:0; }
+  .who .name { font-family:'Young Serif', serif; font-size:17px; line-height:22px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .state { font-size:12px; line-height:16px; font-weight:600; color:var(--brand); }
+  .state.quiet { color:var(--ter); font-weight:500; }
+  .what .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .what .k { font-size:12px; line-height:16px; color:var(--sec); }
+  .when .d { font-weight:600; }
+  .when .n { font-size:12px; line-height:16px; color:var(--sec); }
+  .work .bar2 { height:4px; border-radius:99px; background:var(--line2); overflow:hidden; }
+  .work .bar2 i { display:block; height:100%; background:var(--brand); }
+  .work .n { font-size:12px; line-height:16px; color:var(--sec); margin-top:6px; display:flex; gap:10px; }
+  .work .n b { font-weight:600; color:var(--err); }
+  .add { display:flex; align-items:center; gap:12px; padding:14px 20px; border-top:1px solid var(--line); color:var(--sec); font-weight:500; }
+  .add i { width:40px; height:40px; border-radius:50%; border:1.5px dashed var(--line2); display:grid; place-items:center; font-style:normal; font-size:18px; color:var(--ter); }
+
+  /* 7. Tasks on Home: mine on the left, the ones I handed out on the right. */
+  .tasks { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .tcard { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:6px 20px 8px; min-width:0; }
+  .thead { display:flex; align-items:baseline; justify-content:space-between; padding:12px 0 8px; }
+  .thead h3 { font-family:'Young Serif', serif; font-weight:400; font-size:18px; line-height:24px; }
+  .thead h3 span { font:500 13px/20px 'Instrument Sans'; color:var(--sec); }
+  .thead .link { font-size:13px; }
+  .trow { display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--line); min-width:0; }
+  .ck { width:20px; height:20px; border-radius:50%; border:1.5px solid var(--line2); flex:none; }
+  .face.sm { width:28px; height:28px; font-size:11px; font-style:normal; }
+  .tt { flex:1; min-width:0; }
+  .tt .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tt .k { font-size:12px; line-height:16px; color:var(--sec); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .due { font-size:13px; color:var(--sec); white-space:nowrap; }
+  .due.late { color:var(--err); font-weight:600; }
+  .due.ok { color:var(--brand); font-weight:600; }
+  .trow.done .t { color:var(--sec); text-decoration:line-through; }
+
+  /* 8. The team on Home (desktop only): one row of people, each with their load. */
+  .team { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+  .person { display:flex; align-items:center; gap:12px; padding:14px 16px; background:var(--card); border:1px solid var(--line); border-radius:14px; min-width:0; }
+  .person.invite { background:transparent; border-style:dashed; border-color:var(--line2); }
+  .face.dash { background:transparent; border:1.5px dashed var(--line2); color:var(--ter); font-size:18px; font-weight:400; }
+  .pt { min-width:0; }
+  .pt .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pt .k { font-size:12px; line-height:16px; color:var(--sec); }
+  .pt .c { font-size:12px; line-height:16px; color:var(--sec); margin-top:2px; }
+  .pt .c b { color:var(--err); font-weight:600; }
+  .you { font-size:11px; font-weight:600; color:var(--brand); background:var(--brand-soft); border-radius:99px; padding:1px 6px; margin-left:4px; }
+
+  /* 9. Customise Home: reorder, remove, add back. */
+  .editbar { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 16px; border-radius:12px; background:var(--brand-soft); }
+  .edit-grid, .tray { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .w { grid-column:span 2; position:relative; padding:16px 110px 16px 48px; border:1.5px dashed var(--line2); border-radius:14px; background:var(--card); }
+  .w.half, .w.add2 { grid-column:span 1; }
+  .w.add2 { padding-left:16px; background:transparent; }
+  .w .wt { font-weight:600; }
+  .w .k { font-size:12px; line-height:16px; color:var(--sec); margin-top:2px; }
+  .grip { position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--ter); letter-spacing:-2px; cursor:grab; }
+  .rm, .w .link { position:absolute; right:16px; top:50%; transform:translateY(-50%); font-size:13px; font-weight:600; color:var(--err); }
+  .rm.off { color:var(--ter); font-weight:500; }
+  .w .link { color:var(--brand); }
+
+  .notes { margin-top:24px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .note { background:#e9e5db; border-radius:12px; padding:16px; color:var(--board-sec); }
+  .note b { display:block; color:var(--text); margin-bottom:4px; }
+
+  /* Record page, desktop */
+  .back { display:inline-flex; align-items:center; gap:8px; color:var(--sec); font-weight:500; }
+  .btn.pri { background:var(--brand); color:var(--on-ink); }
+  .rhead { display:flex; align-items:center; gap:24px; }
+  .rhead .art { width:136px; height:136px; border-radius:12px; background:var(--tile); flex:none; display:grid; place-items:center; color:var(--sec); font-size:12px; font-weight:600; position:relative; }
+  .rhead .art u { position:absolute; left:8px; bottom:8px; text-decoration:none; font-size:11px; padding:2px 8px; border-radius:99px; background:var(--card); border:1px solid var(--line2); color:var(--text); }
+  .rhead .eyebrow { color:var(--sec); font-weight:500; }
+  .rhead h2 { font-family:'Young Serif', serif; font-weight:400; font-size:36px; line-height:44px; margin:2px 0 12px; }
+  .rhead .acts { margin-left:auto; text-align:right; }
+  .rhead .hint { font-size:12px; color:var(--sec); margin-top:6px; }
+  .steps { display:flex; align-items:center; gap:10px; font-size:13px; }
+  .steps .s { display:flex; align-items:center; gap:6px; color:var(--sec); }
+  .steps .s i { width:18px; height:18px; border-radius:50%; border:1.5px solid var(--line2); display:grid; place-items:center; font-style:normal; font-size:11px; }
+  .steps .s.done i { background:var(--brand); border-color:var(--brand); color:var(--on-ink); }
+  .steps .s.now { color:var(--text); font-weight:600; }
+  .steps .s.now i { border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft); }
+  .steps .ln { width:32px; height:1.5px; background:var(--line2); }
+  .cols { display:grid; grid-template-columns:minmax(0,1fr) 400px; gap:24px; align-items:start; }
+  .col { display:flex; flex-direction:column; gap:16px; min-width:0; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:6px 20px 12px; }
+  .card p.body { padding:0 0 8px; font-size:15px; line-height:24px; }
+  .song { display:grid; grid-template-columns:24px minmax(0,1fr) repeat(4,56px) 16px; align-items:center; gap:8px; padding:12px 0; border-top:1px solid var(--line); }
+  .song.h { border-top:0; padding:0 0 8px; font-size:12px; color:var(--sec); font-weight:600; }
+  .song.h span { text-align:center; }
+  .song .no { color:var(--sec); }
+  .song .t { font-weight:600; }
+  .seg { height:6px; border-radius:99px; background:var(--line2); }
+  .seg.on { background:var(--brand); }
+  .addrow { display:flex; align-items:center; gap:8px; padding:12px 0 4px; border-top:1px solid var(--line); color:var(--sec); font-weight:500; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <h1>Record page, desktop</h1>
+    <p>The page for one record before its rollout. It uses the sample record from your screens PDF (Owambe Season by Kemi Ade). Five changes, listed under the frame.</p>
+  </div>
+
+  <div class="label">After, desktop 1240</div>
+  <div class="desk">
+    <div class="bar">
+      <div class="logo">Urganize <span class="beta">BETA</span></div>
+      <div class="tabs"><span class="on">Home</span><span>Assistant</span><span>Rollouts</span></div>
+      <div class="icons"><i></i><b>AK</b></div>
+    </div>
+    <div class="page">
+      <span class="back">&larr; Kemi Ade</span>
+
+      <div class="rhead">
+        <div class="art">No cover yet<u>Add cover</u></div>
+        <div>
+          <p class="eyebrow">Kemi Ade · Single</p>
+          <h2>Owambe Season</h2>
+          <div class="steps">
+            <span class="s done"><i>✓</i>Idea</span><span class="ln"></span>
+            <span class="s now"><i></i>Making</span><span class="ln"></span>
+            <span class="s"><i></i>Rollout</span>
+          </div>
+        </div>
+        <div class="acts">
+          <span class="btn pri">Plan the rollout</span>
+          <p class="hint">Every song is done</p>
+        </div>
+      </div>
+
+      <div class="cols">
+        <div class="col">
+          <div class="card">
+            <div class="thead"><h3>The idea</h3><span class="link">Edit</span></div>
+            <p class="body">A warm Afropop single built for late-night Lagos radio, playlist discovery and a live-room visual.</p>
+          </div>
+
+          <div class="card">
+            <div class="thead"><h3>Tracklist <span>· 1 of 1 song done</span></h3></div>
+            <div class="song h"><i></i><i></i><span>Idea</span><span>Recorded</span><span>Mixed</span><span>Done</span><i></i></div>
+            <div class="song">
+              <span class="no">1</span><span class="t">Owambe Season</span>
+              <i class="seg on"></i><i class="seg on"></i><i class="seg on"></i><i class="seg on"></i>
+              <span class="chev"></span>
+            </div>
+            <div class="addrow">+ Add a song</div>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="tcard">
+            <div class="thead"><h3>Tasks <span>· 4 open, 1 done</span></h3><span class="link">+ Add</span></div>
+            <div class="trow"><i class="ck"></i><div class="tt"><p class="t">Send press release</p><p class="k">Ayo Kalu</p></div><span class="due late">Sun 8 Nov</span></div>
+            <div class="trow"><i class="ck"></i><div class="tt"><p class="t">Approve cover artwork</p><p class="k">Ayo Kalu</p></div><span class="due late">Mon 9 Nov</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="note"><b>1. The page uses the desktop width</b>Today it is one narrow column in the middle of the screen. The idea and the tracklist sit on the left, tasks on the right, so tasks are visible without scrolling.</div>
+    <div class="note"><b>2. The cover is a square, not a banner</b>A cover is square everywhere else in music. With no cover it is a plain tile that says so, with "Add cover". No colour-wash placeholder.</div>
+    <div class="note"><b>3. One main button, at the top</b>"Plan the rollout" moves from the middle of the page to the top right, where the main action sits on the other pages. The line under it says why it is ready.</div>
+    <div class="note"><b>4. The stages read as a path</b>Idea, Making, Rollout become three steps on one line with a tick for done, in place of three boxes that look like buttons.</div>
+    <div class="note"><b>5. The tracklist explains its bars</b>Each song's four bars sit under their names: Idea, Recorded, Mixed, Done. Today the names are in a corner and the bars are unlabelled.</div>
+  </div>
+</div>
+</body>
+</html>

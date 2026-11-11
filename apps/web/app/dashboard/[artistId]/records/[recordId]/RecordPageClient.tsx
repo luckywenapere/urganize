@@ -9,6 +9,7 @@ import { ProjectTasksCard } from '@/components/records/ProjectTasksCard';
 import { ProjectChatSheet } from '@/components/records/ProjectChatSheet';
 import { fetchProjectTasks } from '@/lib/project-tasks-client';
 import { isTaskClosed } from '@/types/tasks';
+import { recordStageSteps } from '@/lib/record-page-data';
 import { PhotoCropDialog } from '@/components/shared/PhotoCropDialog';
 import { useAuthStore } from '@/lib/auth-store';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
@@ -24,6 +25,8 @@ import {
   RECORD_KINDS,
   SESSION_STATUSES,
   SESSION_STATUS_LABELS,
+  SONG_STAGES,
+  SONG_STAGE_LABELS,
   artistCoverColor,
   isOpenRecord,
   lagosToday,
@@ -88,12 +91,35 @@ const iconButton =
   'motion-focus motion-press grid h-11 w-11 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary';
 const coverChip = 'motion-focus motion-press rounded-full bg-black/35 text-white transition-colors hover:bg-black/50';
 
-function Card({ title, aside, children }: { title: string; aside?: React.ReactNode; children: React.ReactNode }) {
+// Every desktop rule on this page is an `lg:` class (#1190, mock
+// docs/mocks/record-page-desktop/mock.html), so a phone draws what it drew before.
+const desktopFilled =
+  'motion-focus motion-press inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-full bg-brand px-4 text-[13px] font-semibold text-content-inverse transition-opacity duration-fast ease-standard hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
+
+function Card({
+  title,
+  count,
+  aside,
+  asideClassName = '',
+  className = '',
+  children,
+}: {
+  title: string;
+  /** Shown beside the title on a computer only ("1 of 3 songs done"). */
+  count?: string;
+  aside?: React.ReactNode;
+  asideClassName?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="rounded-[14px] border border-stroke-default bg-bg-surface px-3.5 py-3">
-      <div className="mb-1.5 flex items-baseline justify-between gap-3">
-        <h2 className="font-display text-base text-content-primary">{title}</h2>
-        {aside ? <span className="text-[13px] text-content-secondary">{aside}</span> : null}
+    <section className={`rounded-[14px] border border-stroke-default bg-bg-surface px-3.5 py-3 lg:rounded-2xl lg:px-5 lg:pb-3 lg:pt-[18px] ${className}`}>
+      <div className="mb-1.5 flex items-baseline justify-between gap-3 lg:mb-2">
+        <h2 className="font-display text-base text-content-primary lg:text-lg lg:leading-6">
+          {title}
+          {count ? <span className="hidden font-sans text-[13px] font-medium text-content-secondary lg:inline"> · {count}</span> : null}
+        </h2>
+        {aside ? <span className={`text-[13px] text-content-secondary ${asideClassName}`}>{aside}</span> : null}
       </div>
       {children}
     </section>
@@ -101,12 +127,12 @@ function Card({ title, aside, children }: { title: string; aside?: React.ReactNo
 }
 
 /** The dashed "add the first one" card (mock screen 2). */
-function AddCard({ title, hint, onClick }: { title: string; hint: string; onClick: () => void }) {
+function AddCard({ title, hint, className = '', onClick }: { title: string; hint: string; className?: string; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="motion-focus block w-full rounded-[14px] border border-dashed border-stroke-control px-3.5 py-3 text-left transition-colors hover:bg-bg-hover"
+      className={`motion-focus block w-full rounded-[14px] border border-dashed border-stroke-control px-3.5 py-3 text-left transition-colors hover:bg-bg-hover lg:rounded-2xl lg:px-5 lg:py-4 ${className}`}
     >
       <span className="block text-sm font-semibold text-content-primary">{title}</span>
       <span className="mt-0.5 block text-[13px] text-content-secondary">{hint}</span>
@@ -136,17 +162,12 @@ type SheetName = 'menu' | 'rename' | 'cover' | 'kind' | 'drop' | 'plan' | 'idea'
  * Making, then its rollout. The lit stop is now; the ones before it read done.
  */
 function StageLine({ status }: { status: NextRecord['status'] }) {
-  const stops = [
-    { key: 'idea', label: 'Idea' },
-    { key: 'making', label: 'Making' },
-    { key: 'planned', label: 'Rollout' },
-  ] as const;
-  const at = status === 'dropped' ? -1 : stops.findIndex((stop) => stop.key === status);
+  const stops = recordStageSteps(status);
   return (
-    <ol aria-label="Where this project is" className="flex items-center gap-1.5">
+    <ol aria-label="Where this project is" className="flex items-center gap-1.5 lg:hidden">
       {stops.map((stop, index) => {
-        const now = index === at;
-        const past = at > index;
+        const now = stop.state === 'now';
+        const past = stop.state === 'done';
         return (
           <li key={stop.key} className="flex min-w-0 flex-1 items-center gap-1.5">
             <span
@@ -161,7 +182,7 @@ function StageLine({ status }: { status: NextRecord['status'] }) {
                 {stop.label}
               </span>
               <span className={`font-mono text-[10px] uppercase tracking-[0.06em] ${now ? 'text-brand' : 'text-content-tertiary'}`}>
-                {now ? 'Now' : past ? 'Done' : index === at + 1 ? 'Next' : 'Later'}
+                {now ? 'Now' : past ? 'Done' : stop.state === 'next' ? 'Next' : 'Later'}
               </span>
             </span>
             {index < stops.length - 1 ? (
@@ -169,6 +190,48 @@ function StageLine({ status }: { status: NextRecord['status'] }) {
                 ›
               </span>
             ) : null}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/**
+ * The same three stops on a computer (#1190, mock note 4): one line that reads
+ * as a path, a tick for done and a ringed dot for now, in place of three boxes
+ * that looked like buttons. Not clickable, as before; the state is also said
+ * in words for a screen reader.
+ */
+function StageSteps({ status }: { status: NextRecord['status'] }) {
+  const stops = recordStageSteps(status);
+  return (
+    <ol aria-label="Where this project is" className="hidden items-center gap-2.5 text-[13px] lg:flex">
+      {stops.map((stop, index) => {
+        const now = stop.state === 'now';
+        const done = stop.state === 'done';
+        return (
+          <li key={stop.key} className="flex items-center gap-2.5">
+            <span
+              aria-current={now ? 'step' : undefined}
+              className={`flex items-center gap-1.5 ${now ? 'font-semibold text-content-primary' : 'text-content-secondary'}`}
+            >
+              <span
+                aria-hidden
+                className={`grid size-[18px] shrink-0 place-items-center rounded-full border-[1.5px] ${
+                  done
+                    ? 'border-brand bg-brand text-content-inverse'
+                    : now
+                      ? 'border-brand ring-[3px] ring-brand/15'
+                      : 'border-stroke-strong'
+                }`}
+              >
+                {done ? <Check className="size-3" /> : now ? <span className="block size-2 rounded-full bg-brand" /> : null}
+              </span>
+              {stop.label}
+              <span className="sr-only">, {done ? 'done' : now ? 'now' : stop.state}</span>
+            </span>
+            {index < stops.length - 1 ? <span aria-hidden className="h-[1.5px] w-8 bg-stroke-strong" /> : null}
           </li>
         );
       })}
@@ -502,12 +565,33 @@ export default function RecordPageClient() {
 
   if (!record) {
     return (
-      <div className="mx-auto w-full max-w-xl">
+      <div className="mx-auto w-full max-w-xl lg:max-w-[1120px]">
         {back}
         {missing ? (
           <p className="text-sm text-content-secondary">We could not find that project on your team.</p>
         ) : (
-          <div className="h-[190px] animate-pulse rounded-2xl bg-bg-surface" aria-busy="true" />
+          <>
+            <div className="h-[190px] animate-pulse rounded-2xl bg-bg-surface lg:hidden" aria-busy="true" />
+            {/* lg: the page's own shape, a square cover beside the name, then two columns. */}
+            <div className="hidden lg:block" aria-busy="true">
+              <div className="flex items-center gap-6">
+                <div className="h-[136px] w-[136px] shrink-0 animate-pulse rounded-xl bg-bg-surface" />
+                <div className="min-w-0 flex-1 space-y-3">
+                  <div className="h-4 w-32 animate-pulse rounded bg-bg-surface" />
+                  <div className="h-10 w-72 animate-pulse rounded-lg bg-bg-surface" />
+                  <div className="h-4 w-56 animate-pulse rounded bg-bg-surface" />
+                </div>
+                <div className="h-9 w-36 animate-pulse rounded-full bg-bg-surface" />
+              </div>
+              <div className="mt-4 grid grid-cols-[minmax(0,1fr)_400px] items-start gap-6">
+                <div className="space-y-4">
+                  <div className="h-24 animate-pulse rounded-2xl border border-stroke-default bg-bg-surface" />
+                  <div className="h-40 animate-pulse rounded-2xl border border-stroke-default bg-bg-surface" />
+                </div>
+                <div className="h-52 animate-pulse rounded-2xl border border-stroke-default bg-bg-surface" />
+              </div>
+            </div>
+          </>
         )}
       </div>
     );
@@ -708,14 +792,152 @@ export default function RecordPageClient() {
 
   const useNote = recordUseNote(record.songs);
   const tasksNote = carryOverLine(openTaskCount);
+  const openIdea = () => {
+    setIdeaDraft(record.idea);
+    setSheetError('');
+    setSheet('idea');
+  };
+  const hasTasks = isOpenRecord(record.status);
+  const eyebrow = [artistName, record.kind ? recordKindLabel(record.kind) : null].filter(Boolean).join(' · ');
+
+  // The ⋯ menu, drawn once for the phone's cover and once for the desktop
+  // header; whichever the screen hides is display:none, backdrop included.
+  const moreMenu = (buttonClass: string, bubbleClass: string) => (
+    <>
+      {sheet === 'menu' ? (
+        <button type="button" aria-hidden tabIndex={-1} className="fixed inset-0 z-[200] cursor-default bg-black/45" onClick={() => setSheet(null)} />
+      ) : null}
+      <div className={`relative ${sheet === 'menu' ? 'z-[210]' : ''}`}>
+        <button
+          type="button"
+          aria-label="More for this project"
+          aria-haspopup="menu"
+          aria-expanded={sheet === 'menu'}
+          onClick={() => setSheet(sheet === 'menu' ? null : 'menu')}
+          className={buttonClass}
+        >
+          <span className={`${bubbleClass} ${sheet === 'menu' ? 'bg-content-primary text-content-inverse' : ''}`}>
+            <MoreHorizontal className="h-4 w-4" aria-hidden />
+          </span>
+        </button>
+          {sheet === 'menu' ? (
+            <div
+              role="menu"
+              aria-label="More for this project"
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setSheet(null);
+              }}
+              className="absolute right-0 top-full mt-1 w-[220px] overflow-hidden rounded-[14px] border border-stroke-strong bg-bg-elevated py-1 shadow-[0_12px_32px_rgba(0,0,0,0.5)]"
+            >
+              {[
+                {
+                  label: 'Rename',
+                  open: () => {
+                    setRenameTo(record.title);
+                    setSheet('rename');
+                  },
+                },
+                { label: 'Change cover or colour', open: () => setSheet('cover') },
+                { label: 'Single, EP or album', open: () => setSheet('kind') },
+              ].map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  role="menuitem"
+                  onClick={item.open}
+                  className="motion-focus block min-h-11 w-full px-3.5 text-left text-sm text-content-primary hover:bg-bg-hover"
+                >
+                  {item.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => setSheet('drop')}
+                className="motion-focus block min-h-11 w-full border-t border-stroke-strong px-3.5 text-left text-sm text-status-error hover:bg-bg-hover"
+              >
+                Drop this project
+              </button>
+            </div>
+          ) : null}
+      </div>
+    </>
+  );
 
   return (
-    <div className="mx-auto w-full max-w-xl space-y-3 pb-10">
+    <div className="mx-auto w-full max-w-xl space-y-3 pb-10 lg:max-w-[1120px] lg:space-y-4">
       {back}
 
-      {/* The cover (mock screens 2 and 3) */}
+      {/* lg (#1190, mock notes 2 to 4): a square cover, the name and the steps,
+          and the one filled button at the top right with its reason under it.
+          With no picture the square is a plain tile that says so. */}
+      <header className="hidden items-center gap-6 lg:flex">
+        <div
+          className="relative grid h-[136px] w-[136px] shrink-0 place-items-center overflow-hidden rounded-xl bg-bg-active bg-cover bg-center"
+          style={record.coverUrl ? { backgroundImage: `url("${record.coverUrl}")` } : undefined}
+        >
+          {record.coverUrl ? null : <span className="text-xs font-semibold text-content-secondary">No cover yet</span>}
+          <button
+            type="button"
+            onClick={() => setSheet('cover')}
+            className="motion-focus motion-press absolute bottom-2 left-2 inline-flex min-h-7 items-center rounded-full border border-stroke-strong bg-bg-surface px-2.5 text-xs font-medium text-content-primary transition-colors hover:bg-bg-hover"
+          >
+            {record.coverUrl ? 'Change cover' : 'Add cover'}
+          </button>
+        </div>
+        <div className="min-w-0 flex-1">
+          {eyebrow ? <p className="truncate text-sm font-medium text-content-secondary">{eyebrow}</p> : null}
+          <h1 className="mb-3 mt-0.5 line-clamp-2 font-display text-4xl font-normal leading-[44px] text-content-primary">{record.title}</h1>
+          {record.status !== 'dropped' ? <StageSteps status={record.status} /> : null}
+          {/* The song count sits on the tracklist here, so only the next session is said. */}
+          {status.next ? <p className="mt-2 text-[13px] text-status-warning first-letter:uppercase">{status.next}</p> : null}
+        </div>
+        {/* The ⋯ menu sits right beside the button; the reason line runs under both. */}
+        <div className="flex max-w-[300px] shrink-0 flex-col items-end text-right">
+          <div className="flex items-center gap-2">
+            {moreMenu(
+              'motion-focus motion-press grid h-9 w-9 place-items-center rounded-full border border-stroke-strong text-content-primary transition-colors hover:bg-bg-hover',
+              'grid h-full w-full place-items-center rounded-full'
+            )}
+            {planned ? (
+              <Link href={`/dashboard?release=${record.releaseId}`} className={desktopFilled}>
+                Open the rollout
+              </Link>
+            ) : isIdea ? (
+              <button type="button" onClick={startMaking} disabled={busy} className={desktopFilled}>
+                Start making
+              </button>
+            ) : record.status === 'dropped' ? null : (
+              <button type="button" onClick={openPlanSheet} disabled={busy} className={desktopFilled}>
+                Plan the rollout
+              </button>
+            )}
+          </div>
+          {planned ? (
+            <p className="mt-1.5 text-xs text-content-secondary">This project is now its rollout</p>
+          ) : isIdea ? (
+            <>
+              <p className="mt-1.5 text-xs text-content-secondary">
+                It also moves to Making by itself when a song starts recording or a session is saved.
+              </p>
+              <button
+                type="button"
+                onClick={openPlanSheet}
+                disabled={busy}
+                className="motion-focus mt-1 inline-flex min-h-8 items-center rounded text-[13px] font-semibold text-content-secondary hover:text-content-primary hover:underline"
+              >
+                Or plan the rollout now
+              </button>
+            </>
+          ) : record.status === 'dropped' ? null : (
+            <p className="mt-1.5 text-xs text-content-secondary">{planHint(record.songs)}</p>
+          )}
+        </div>
+      </header>
+
+      {/* The cover (mock screens 2 and 3), on a phone */}
       <section
-        className="relative flex h-[190px] flex-col justify-between rounded-2xl bg-cover bg-center px-3.5 py-3"
+        className="relative flex h-[190px] flex-col justify-between rounded-2xl bg-cover bg-center px-3.5 py-3 lg:hidden"
         style={{ backgroundColor: coverColor, backgroundImage: record.coverUrl ? `url("${record.coverUrl}")` : undefined }}
         aria-label={`${record.title} cover`}
       >
@@ -725,75 +947,17 @@ export default function RecordPageClient() {
           <button type="button" onClick={() => setSheet('cover')} className={`${coverChip} min-h-8 px-3 text-xs`}>
             {record.coverUrl ? 'Change cover' : 'Add cover'}
           </button>
-          {sheet === 'menu' ? (
-            <button type="button" aria-hidden tabIndex={-1} className="fixed inset-0 z-[200] cursor-default bg-black/45" onClick={() => setSheet(null)} />
-          ) : null}
-          <div className={`relative ${sheet === 'menu' ? 'z-[210]' : ''}`}>
-            <button
-              type="button"
-              aria-label="More for this project"
-              aria-haspopup="menu"
-              aria-expanded={sheet === 'menu'}
-              onClick={() => setSheet(sheet === 'menu' ? null : 'menu')}
-              className={`${coverChip} -mr-1.5 -mt-1.5 grid h-11 w-11 place-items-center`}
-            >
-              <span
-                className={`grid h-8 w-8 place-items-center rounded-full ${sheet === 'menu' ? 'bg-content-primary text-content-inverse' : ''}`}
-              >
-                <MoreHorizontal className="h-4 w-4" aria-hidden />
-              </span>
-            </button>
-              {sheet === 'menu' ? (
-                <div
-                  role="menu"
-                  aria-label="More for this project"
-                  onKeyDown={(event) => {
-                    if (event.key === 'Escape') setSheet(null);
-                  }}
-                  className="absolute right-0 top-full mt-1 w-[220px] overflow-hidden rounded-[14px] border border-stroke-strong bg-bg-elevated py-1 shadow-[0_12px_32px_rgba(0,0,0,0.5)]"
-                >
-                  {[
-                    {
-                      label: 'Rename',
-                      open: () => {
-                        setRenameTo(record.title);
-                        setSheet('rename');
-                      },
-                    },
-                    { label: 'Change cover or colour', open: () => setSheet('cover') },
-                    { label: 'Single, EP or album', open: () => setSheet('kind') },
-                  ].map((item) => (
-                    <button
-                      key={item.label}
-                      type="button"
-                      role="menuitem"
-                      onClick={item.open}
-                      className="motion-focus block min-h-11 w-full px-3.5 text-left text-sm text-content-primary hover:bg-bg-hover"
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => setSheet('drop')}
-                    className="motion-focus block min-h-11 w-full border-t border-stroke-strong px-3.5 text-left text-sm text-status-error hover:bg-bg-hover"
-                  >
-                    Drop this project
-                  </button>
-                </div>
-              ) : null}
-          </div>
+          {moreMenu(`${coverChip} -mr-1.5 -mt-1.5 grid h-11 w-11 place-items-center`, 'grid h-8 w-8 place-items-center rounded-full')}
         </div>
         <div className="relative min-w-0">
           <p className="truncate text-[13px] text-white/80">
-            {[artistName, record.kind ? recordKindLabel(record.kind) : null].filter(Boolean).join(' · ')}
+            {eyebrow}
           </p>
           <h1 className="line-clamp-2 font-display text-[28px] font-normal leading-[1.1] text-white">{record.title}</h1>
         </div>
       </section>
 
-      <p className="pt-1 text-sm text-content-primary">
+      <p className="pt-1 text-sm text-content-primary lg:hidden">
         {status.main}
         {status.next ? (
           <>
@@ -805,33 +969,40 @@ export default function RecordPageClient() {
 
       {record.status !== 'dropped' ? <StageLine status={record.status} /> : null}
 
+      {/* lg (#1190, mock note 1): two columns. The cards stay in the phone's
+          order in the page; on a computer the idea, the songs and the sessions
+          take the left column and tasks the right, which spans every row. The
+          last row is the stretchy one, so a long tasks card never spreads the
+          left cards apart. */}
+      <div
+        className={`space-y-3 lg:grid lg:items-start lg:gap-x-6 lg:gap-y-4 lg:space-y-0 ${
+          hasTasks ? 'lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_auto_auto_auto_1fr]' : 'lg:max-w-[696px] lg:grid-cols-1'
+        }`}
+      >
       {/* The idea (2026-11-04): back on the page, because an Idea stage with
           nowhere to write the idea is empty. In the making it shows only once written. */}
       {isIdea || record.idea ? (
         <Card
           title="The idea"
+          className="lg:col-start-1"
           aside={
             <button
               type="button"
-              onClick={() => {
-                setIdeaDraft(record.idea);
-                setSheetError('');
-                setSheet('idea');
-              }}
-              className="motion-focus -my-2 inline-flex min-h-11 items-center px-1 text-[13px] font-semibold text-content-primary hover:underline"
+              onClick={openIdea}
+              className="motion-focus -my-2 inline-flex min-h-11 items-center px-1 text-[13px] font-semibold text-content-primary hover:underline lg:text-brand lg:underline lg:underline-offset-[3px] lg:hover:no-underline"
             >
               {record.idea ? 'Edit' : 'Write it'}
             </button>
           }
         >
-          <p className={`whitespace-pre-line text-sm ${record.idea ? 'text-content-primary' : 'text-content-secondary'}`}>
+          <p className={`whitespace-pre-line text-sm lg:text-[15px] lg:leading-6 ${record.idea ? 'text-content-primary' : 'text-content-secondary'}`}>
             {record.idea || 'What is this one about? A line is enough.'}
           </p>
         </Card>
       ) : null}
 
       {planned ? (
-        <div>
+        <div className="lg:hidden">
           <Link href={`/dashboard?release=${record.releaseId}`} className={greenButton}>
             Open the rollout
           </Link>
@@ -840,7 +1011,7 @@ export default function RecordPageClient() {
       ) : isIdea ? (
         // Idea stage (mock screen 2): Start making is the decision this stage is
         // for, so it is the big button; the rollout stays one tap away, quieter.
-        <div>
+        <div className="lg:hidden">
           <button type="button" onClick={startMaking} disabled={busy} className={greenButton}>
             Start making
           </button>
@@ -857,7 +1028,7 @@ export default function RecordPageClient() {
           </button>
         </div>
       ) : (
-        <div>
+        <div className="lg:hidden">
           <button type="button" onClick={openPlanSheet} disabled={busy} className={greenButton}>
             Plan the rollout
           </button>
@@ -866,17 +1037,26 @@ export default function RecordPageClient() {
       )}
 
       {error ? (
-        <p role="alert" className="text-sm text-status-error">
+        <p role="alert" className="text-sm text-status-error lg:col-start-1">
           {error}
         </p>
       ) : null}
 
       {/* Songs: a numbered tracklist with four stage bars (mock screen 3) */}
       {record.songs.length ? (
-        <Card title="Tracklist" aside="Idea · Rec · Mix · Done">
+        <Card title="Tracklist" count={status.main} aside="Idea · Rec · Mix · Done" asideClassName="lg:hidden" className="lg:col-start-1">
+          {/* lg (mock note 5): each bar sits under its name. The names are the
+              app's own stage names; the bars say them to a screen reader. */}
+          <div aria-hidden className="hidden justify-end pb-1 text-xs font-semibold text-content-secondary lg:flex">
+            {SONG_STAGES.map((stage) => (
+              <span key={stage} className="w-[68px] text-center">
+                {SONG_STAGE_LABELS[stage]}
+              </span>
+            ))}
+          </div>
           <ol>
             {record.songs.map((song, index) => (
-              <li key={song.id} className="flex items-center justify-between gap-2 border-t border-stroke-default py-1 first:border-t-0">
+              <li key={song.id} className="flex items-center justify-between gap-2 border-t border-stroke-default py-1 first:border-t-0 lg:first:border-t">
                 <button
                   type="button"
                   onClick={() => {
@@ -886,8 +1066,8 @@ export default function RecordPageClient() {
                   }}
                   className="motion-focus flex min-h-11 min-w-0 flex-1 items-center text-left text-sm text-content-primary"
                 >
-                  <span className="w-[18px] shrink-0 tabular-nums text-content-tertiary">{index + 1}</span>
-                  <span className="truncate">{song.title}</span>
+                  <span className="w-[18px] shrink-0 tabular-nums text-content-tertiary lg:w-6 lg:text-content-secondary">{index + 1}</span>
+                  <span className="truncate lg:font-semibold">{song.title}</span>
                 </button>
                 <StageBars title={song.title} stage={song.stage} disabled={busy} onPick={(stage) => moveStage(song, stage)} />
               </li>
@@ -928,7 +1108,7 @@ export default function RecordPageClient() {
         </Card>
       ) : addingSong ? (
         <form
-          className="flex gap-2 rounded-[14px] border border-dashed border-stroke-control p-3"
+          className="flex gap-2 rounded-[14px] border border-dashed border-stroke-control p-3 lg:col-start-1"
           onSubmit={(event) => {
             event.preventDefault();
             void addSong();
@@ -950,19 +1130,22 @@ export default function RecordPageClient() {
           </button>
         </form>
       ) : (
-        <AddCard title="Add a song" hint="A working title is fine. Rename it later." onClick={() => setAddingSong(true)} />
+        <AddCard title="Add a song" hint="A working title is fine. Rename it later." className="lg:col-start-1" onClick={() => setAddingSong(true)} />
       )}
 
       {/* Tasks (2026-11-04, mock screens 2 and 3): real tasks on the project,
           under the songs because the songs are why the tasks exist. */}
-      {isOpenRecord(record.status) ? (
-        <ProjectTasksCard recordId={record.id} status={record.status} songs={record.songs} />
+      {hasTasks ? (
+        <div className="min-w-0 lg:col-start-2 lg:row-span-5 lg:row-start-1">
+          <ProjectTasksCard recordId={record.id} status={record.status} songs={record.songs} />
+        </div>
       ) : null}
 
       {/* Sessions with a little date block (mock screen 3) */}
       {record.sessions.length || (draft && draft.id === null) ? (
         <Card
           title="Sessions"
+          className="lg:col-start-1"
           aside={
             sessionPeople.length ? (
               <span className="flex" aria-label={sessionPeople.map((person) => person.name).join(', ')}>
@@ -1070,8 +1253,9 @@ export default function RecordPageClient() {
           )}
         </Card>
       ) : (
-        <AddCard title="Add a session" hint={'A day, or words like "next week".'} onClick={startSession} />
+        <AddCard title="Add a session" hint={'A day, or words like "next week".'} className="lg:col-start-1" onClick={startSession} />
       )}
+      </div>
 
       {/* ── Sheets ─────────────────────────────────────────────────────────── */}
 

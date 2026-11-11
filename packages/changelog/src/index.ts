@@ -67,6 +67,19 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.263.0",
+    title: "The record page uses the whole screen on a computer",
+    tag: "App",
+    date: "November 11, 2026",
+    highlights: [
+      "On a computer, a record's page now has two columns: the idea, the songs and the sessions on the left, its tasks on the right.",
+      "The cover is a square. With no cover yet, it says so and you can add one.",
+      "The main button sits at the top right.",
+      "Idea, Making and Rollout read as three steps, with a tick on the ones that are done.",
+      "Each song's bars sit under their names: Idea, Recording, Mixing, Done.",
+    ],
+  },
+  {
     version: "1.262.0",
     title: "The artist page uses the whole screen on a computer",
     tag: "App",

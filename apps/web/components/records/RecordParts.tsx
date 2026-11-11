@@ -34,7 +34,8 @@ export function CoverTile({
 /**
  * Four bars: Idea, Recording, Mixing, Done. Each bar is a button that moves
  * the song to that stage; the hit area is a full 44px tall, the bar drawn
- * small inside it, as the mock shows.
+ * small inside it, as the mock shows. On a computer (#1190) each bar is wide
+ * enough to sit under its name in the tracklist's heading row.
  */
 export function StageBars({
   title,
@@ -59,10 +60,10 @@ export function StageBars({
           aria-label={`${title}: ${SONG_STAGE_LABELS[value]}`}
           title={SONG_STAGE_LABELS[value]}
           onClick={() => onPick(value)}
-          className="motion-focus grid h-11 w-[22px] place-items-center rounded-md disabled:cursor-not-allowed"
+          className="motion-focus grid h-11 w-[22px] place-items-center rounded-md disabled:cursor-not-allowed lg:w-[68px]"
         >
           <span
-            className={`block h-1.5 w-4 rounded-full transition-colors duration-fast ${
+            className={`block h-1.5 w-4 rounded-full transition-colors duration-fast lg:w-14 ${
               index <= reached ? 'bg-brand' : 'bg-[rgb(var(--color-stroke)/0.14)]'
             }`}
           />
