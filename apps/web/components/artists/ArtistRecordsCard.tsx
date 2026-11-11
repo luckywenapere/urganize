@@ -79,7 +79,7 @@ export function RecordRows({ artistId, records }: { artistId: string; records: R
               )}
               <div className="min-w-0 flex-1">
                 <p className={`truncate text-sm font-semibold ${untitled ? 'text-content-secondary' : 'text-content-primary'}`}>
-                  {untitled ? 'Untitled project' : record.title}
+                  {untitled ? 'Untitled record' : record.title}
                   {record.kind ? <span className="font-normal text-content-secondary"> · {recordKindLabel(record.kind)}</span> : null}
                 </p>
                 <p className="truncate text-[13px] text-content-secondary">{parts.join(' · ')}</p>

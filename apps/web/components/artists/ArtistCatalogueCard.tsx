@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { recallLast, rememberLast } from '@/lib/last-seen';
 import { createPortal } from 'react-dom';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
@@ -15,6 +15,7 @@ import {
   type CatalogueRow,
 } from '@/lib/artist-import/client';
 import { isNewRelease } from '@/lib/artist-import/summary';
+import { olderSongsNotRolledOut } from '@/lib/artist-page-data';
 import { lagosToday } from '@/lib/next-records';
 import { kindLabel } from './ImportParts';
 import { PoweredByAltlink } from '@/components/releases/PoweredByAltlink';
@@ -183,10 +184,14 @@ function AddCode({ artistId, row, onSaved }: { artistId: string; row: CatalogueR
  */
 export function ArtistCatalogueCard({
   artistId,
+  outRollouts,
   onCount,
   onProfile,
 }: {
   artistId: string;
+  /** This artist's rollouts that are already out. A song here that one of them
+   *  put out is left off, so it shows once under Out now (#1183). */
+  outRollouts?: readonly { title: string; releaseDate: string | null }[];
   onCount?: (count: number) => void;
   /** The linked streaming profile once the first read answers (#882). */
   onProfile?: (profile: CatalogueProfile | null) => void;
@@ -264,7 +269,10 @@ export function ArtistCatalogueCard({
     }
   };
 
-  const rows = data.releases;
+  const rows = useMemo(
+    () => (outRollouts ? olderSongsNotRolledOut(data.releases, outRollouts) : data.releases),
+    [data.releases, outRollouts]
+  );
   useEffect(() => {
     if (data.loaded) onCount?.(rows.length);
   }, [onCount, rows.length, data.loaded]);
@@ -333,12 +341,12 @@ export function ArtistCatalogueCard({
                           href={row.link.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="max-w-44 truncate text-xs font-medium text-status-success underline-offset-2 hover:underline"
+                          className="max-w-44 truncate text-xs font-medium text-status-success underline-offset-2 hover:underline lg:hidden"
                         >
                           {row.link.url.replace(/^https?:\/\//, '')}
                         </a>
                         <button type="button" onClick={() => void copy(row.link?.url ?? '', row.id)} className={smallButton}>
-                          {justCopied === row.id ? 'Copied' : 'Copy'}
+                          {justCopied === row.id ? 'Copied' : <>Copy<span className="hidden lg:inline">&nbsp;link</span></>}
                         </button>
                       </div>
                     ) : hasCode ? (

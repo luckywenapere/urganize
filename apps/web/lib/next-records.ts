@@ -93,6 +93,9 @@ export type RecordSummary = {
   coverUrl: string | null;
   /** Idea or Making: the artist page marks an idea. */
   status: RecordStatus;
+  /** The rollout it points at once one is being planned from it, so the artist
+   *  page shows the record once (lib/artist-page-data.ts). Absent on old copies. */
+  releaseId?: string | null;
   songCount: number;
   doneCount: number;
   nextSession: { date: string | null; dateHint: string } | null;
@@ -261,7 +264,7 @@ export function parseSessionInput(body: unknown): Parsed<SessionInput> {
 
 /** "1 of 4 done" and the next planned session, for the artist page row. */
 export function summarizeRecord(
-  record: Pick<NextRecord, 'id' | 'artistId' | 'title' | 'kind' | 'coverColor' | 'coverUrl' | 'status' | 'songs' | 'sessions'>,
+  record: Pick<NextRecord, 'id' | 'artistId' | 'title' | 'kind' | 'coverColor' | 'coverUrl' | 'status' | 'songs' | 'sessions'> & { releaseId?: string | null },
   today: string
 ): RecordSummary {
   const doneCount = record.songs.filter((song) => song.stage === 'done').length;
@@ -272,6 +275,7 @@ export function summarizeRecord(
     coverColor: recordCoverColor(record),
     coverUrl: record.coverUrl,
     status: record.status,
+    releaseId: record.releaseId ?? null,
     songCount: record.songs.length,
     doneCount,
     nextSession: (() => {
