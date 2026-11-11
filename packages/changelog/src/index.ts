@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.266.2",
+    tag: "Team",
+    date: "November 11, 2026",
+    highlights: [
+      "On the Team page, a long label like \"Babyboy Dorian only\" no longer covers the person's face.",
+    ],
+  },
+  {
     version: "1.266.1",
     tag: "Rollouts",
     date: "November 11, 2026",

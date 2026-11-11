@@ -287,17 +287,23 @@ function PersonCard({ person, now, onOpen }: { person: TeamPerson; now: Date; on
       onClick={onOpen}
       className="motion-focus motion-press relative flex h-full min-h-[262px] w-full flex-col items-center rounded-2xl border border-stroke-default bg-bg-surface p-4 text-center hover:border-stroke-control"
     >
-      {pill ? (
-        <span
-          className={`absolute right-3 top-3 rounded-full px-2 py-0.5 text-[11.5px] ${
-            person.access.kind !== 'all' && !person.isCurrentUser && person.role !== 'owner'
-              ? 'bg-brand-subtle font-semibold text-brand'
-              : 'bg-bg-hover text-content-secondary'
-          }`}
-        >
-          {pill}
-        </span>
-      ) : null}
+      {/* The pill has its own row above the face. In the corner, a long one
+          ("Babyboy Dorian only") ran across the centred face. It is cut short
+          with its full text on hover when it still does not fit. */}
+      <span className="-mt-1 flex h-6 w-full justify-end">
+        {pill ? (
+          <span
+            title={pill}
+            className={`max-w-full truncate rounded-full px-2 py-0.5 text-[11.5px] ${
+              person.access.kind !== 'all' && !person.isCurrentUser && person.role !== 'owner'
+                ? 'bg-brand-subtle font-semibold text-brand'
+                : 'bg-bg-hover text-content-secondary'
+            }`}
+          >
+            {pill}
+          </span>
+        ) : null}
+      </span>
       <TeamAvatar initials={person.initials} avatarUrl={person.avatarUrl} online={online} size="lg" />
       <span className="mt-3 w-full truncate text-[15px] font-semibold text-content-primary">{person.name}</span>
       <span className="text-[12.5px] text-content-secondary">{TEAM_ROLE_LABEL[person.role]}</span>
@@ -337,6 +343,8 @@ function WaitingCard({ person, canManage, onOpen }: { person: TeamPerson; canMan
       className="motion-focus motion-press relative flex h-full min-h-[262px] w-full flex-col items-center rounded-2xl border-[1.5px] border-dashed border-stroke-control p-4 text-center"
     >
       <span className="absolute right-3 top-3 rounded-full bg-bg-hover px-2 py-0.5 text-[11.5px] text-content-secondary">Invited</span>
+      {/* The same row a person's card keeps for its pill, so faces line up. */}
+      <span className="-mt-1 block h-6 w-full" aria-hidden="true" />
       <TeamAvatar initials={person.initials} avatarUrl={null} online={false} size="lg" pending />
       <span className="mt-3 w-full truncate text-[15px] text-content-primary">{person.email}</span>
       <span className="text-[12.5px] text-content-secondary">{TEAM_ROLE_LABEL[person.role]}</span>
@@ -387,6 +395,7 @@ function TeamSkeleton() {
       <div className="mt-4 hidden grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3.5 md:grid">
         {[0, 1, 2, 3].map((key) => (
           <div key={key} className="flex min-h-[262px] flex-col items-center rounded-2xl border border-stroke-default bg-bg-surface p-4">
+            <span className="-mt-1 block h-6 w-full" />
             <span className="h-[52px] w-[52px] animate-pulse rounded-full bg-bg-hover" />
             <span className="mt-3 h-4 w-24 animate-pulse rounded bg-bg-hover" />
             <span className="mt-2 h-3 w-16 animate-pulse rounded bg-bg-hover" />
