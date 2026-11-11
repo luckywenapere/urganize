@@ -146,7 +146,7 @@ async function prepare(ctx: ChappiToolContext, args: Record<string, unknown>): P
 export function doneLine(before: NextRecord | null, after: NextRecord): string {
   if ((before && isRecordDone(before)) || !isRecordDone(after)) return '';
   const count = after.songs.length;
-  return ` That's ${count} of ${count} songs done. The Plan the rollout button is ready at the top of the record.`;
+  return ` That's ${count} of ${count} songs done. The Pick a release day button is ready at the top of the record.`;
 }
 
 /**

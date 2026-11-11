@@ -85,7 +85,7 @@ export function StartNextSheet({
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
-        <p className="mt-1 text-sm text-content-tertiary">Start with the idea. Plan the rollout when the music is ready.</p>
+        <p className="mt-1 text-sm text-content-tertiary">Start with the idea. Pick a release day when the music is ready.</p>
 
         {artists.length > 0 ? (
           <fieldset className="mt-4">

@@ -10,6 +10,7 @@ import { ProjectChatSheet } from '@/components/records/ProjectChatSheet';
 import { fetchProjectTasks } from '@/lib/project-tasks-client';
 import { isTaskClosed } from '@/types/tasks';
 import { recordStageSteps } from '@/lib/record-page-data';
+import { RELEASE_DAY_BUTTON, releaseDayOptions } from '@/lib/release-this-song';
 import { PhotoCropDialog } from '@/components/shared/PhotoCropDialog';
 import { useAuthStore } from '@/lib/auth-store';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
@@ -508,6 +509,8 @@ export default function RecordPageClient() {
   const [ideaDraft, setIdeaDraft] = useState('');
   /** Open tasks that move into Pre-production, counted when the plan sheet opens. */
   const [openTaskCount, setOpenTaskCount] = useState(0);
+  /** The release day picked in the sheet; null means "pick it in the planner". */
+  const [releaseDay, setReleaseDay] = useState<string | null>(null);
   const [editingSong, setEditingSong] = useState<RecordSong | null>(null);
   const [songName, setSongName] = useState('');
   const [cropping, setCropping] = useState<File | null>(null);
@@ -531,6 +534,7 @@ export default function RecordPageClient() {
 
   const artist = artists.find((entry) => entry.id === artistId) ?? null;
   const today = useMemo(() => lagosToday(), []);
+  const dayOptions = useMemo(() => releaseDayOptions(today), [today]);
 
   const run = async (
     work: () => Promise<RecordCall>,
@@ -736,6 +740,7 @@ export default function RecordPageClient() {
   // ── Plan the rollout (step 4): make the rollout, link it, open planner v2
   const openPlanSheet = () => {
     setSheetError('');
+    setReleaseDay(dayOptions[1]?.date ?? null);
     setSheet('plan');
     setOpenTaskCount(0);
     void fetchProjectTasks(record.id).then((tasks) => {
@@ -781,6 +786,7 @@ export default function RecordPageClient() {
       prefill: {
         releaseType,
         ...(artistName ? { artistName } : {}),
+        ...(releaseDay ? { releaseDate: releaseDay } : {}),
         musicStage: recordMusicStage(record),
         fromRecord: fromRecordLine(record),
         ...(record.coverUrl ? { readyToday: ['artwork' as const] } : {}),
@@ -904,7 +910,7 @@ export default function RecordPageClient() {
               </Link>
             ) : record.status === 'dropped' ? null : (
               <button type="button" onClick={openPlanSheet} disabled={busy} className={desktopFilled}>
-                Plan the rollout
+                {RELEASE_DAY_BUTTON}
               </button>
             )}
           </div>
@@ -992,7 +998,7 @@ export default function RecordPageClient() {
       ) : (
         <div className="lg:hidden">
           <button type="button" onClick={openPlanSheet} disabled={busy} className={greenButton}>
-            Plan the rollout
+            {RELEASE_DAY_BUTTON}
           </button>
           <p className="mt-1.5 text-center text-xs text-content-secondary">{planHint(record.songs)}</p>
         </div>
@@ -1225,10 +1231,48 @@ export default function RecordPageClient() {
       <ProjectChatSheet recordId={record.id} title={record.title} />
 
       {sheet === 'plan' ? (
-        <Sheet label="Here's what I'll use" onClose={closeSheet}>
-          <p className="text-[13px] text-content-secondary">AI</p>
-          <h2 className="mt-0.5 font-display text-[22px] text-content-primary">Here&apos;s what I&apos;ll use</h2>
-          <div className="mt-2.5">
+        <Sheet label={`A release day for ${record.title}`} onClose={closeSheet}>
+          {/* #1143 slice 2 (mock 1.3): pick the day here; the planner then skips its date question. */}
+          <h2 className="font-sans text-lg font-semibold text-content-primary">A release day for {record.title}</h2>
+          <p className="mt-0.5 text-[13px] text-content-secondary">We build the plan back from this day.</p>
+          <p className="mt-4 text-sm font-medium text-content-primary">Release day</p>
+          <div role="radiogroup" aria-label="Release day" className="mt-2 grid grid-cols-3 gap-2">
+            {dayOptions.map((option) => {
+              const on = releaseDay === option.date;
+              return (
+                <button
+                  key={option.date}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => setReleaseDay(option.date)}
+                  className={`motion-focus min-h-11 rounded-lg border p-2 text-center ${
+                    on ? 'border-brand bg-brand/[.07] ring-1 ring-brand' : 'border-stroke-control'
+                  }`}
+                >
+                  <span className="block text-[11px] text-content-secondary">{option.weekday}</span>
+                  <span className="block text-[15px] font-semibold text-content-primary">{option.day}</span>
+                  <span className={`block text-[11px] ${on ? 'text-brand' : 'text-content-secondary'}`}>{option.weeks} wks</span>
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={releaseDay === null}
+            onClick={() => setReleaseDay(null)}
+            className={`motion-focus mt-1 inline-flex min-h-11 items-center text-[13px] font-medium ${
+              releaseDay === null ? 'text-content-primary underline underline-offset-[3px]' : 'text-brand'
+            }`}
+          >
+            Another day: pick it in the next step
+          </button>
+          {tasksNote ? (
+            <p className="mt-2 rounded-lg border border-brand/30 bg-brand/[.07] px-3.5 py-2.5 text-[13px] text-content-primary">{tasksNote}</p>
+          ) : null}
+          <details className="mt-3">
+            <summary className="motion-focus min-h-11 cursor-pointer py-2 text-[13px] font-medium text-content-secondary">What the plan will use</summary>
             <UseRow label="Kind" value={recordKindLabel(recordReleaseType(record))} />
             <UseRow label="Songs" value={record.songs.map((song) => song.title).join(', ') || 'None yet'} />
             <UseRow
@@ -1240,9 +1284,8 @@ export default function RecordPageClient() {
             />
             {record.idea ? <UseRow label="The idea" value={record.idea} /> : null}
             <UseRow label="Cover" value={record.coverUrl ? 'Your cover' : 'Your mood colour, until there\'s art'} />
-          </div>
+          </details>
           {useNote ? <p className="mt-2 text-[13px] text-content-secondary">{useNote}</p> : null}
-          {tasksNote ? <p className="mt-2 text-[13px] text-content-secondary">{tasksNote}</p> : null}
           {sheetError ? (
             <p role="alert" className="mt-2 text-sm text-status-error">
               {sheetError}
@@ -1250,7 +1293,7 @@ export default function RecordPageClient() {
           ) : null}
           <div className="mt-3 space-y-2">
             <button type="button" onClick={() => void continueToPlanner()} disabled={busy} className={greenButton}>
-              {busy ? 'One moment…' : 'Continue'}
+              {busy ? 'One moment…' : 'Make the plan'}
             </button>
             <button type="button" onClick={closeSheet} disabled={busy} className={outlineButton}>
               Not yet

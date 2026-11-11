@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.266.0",
+    title: "Pick a release day right from your song",
+    tag: "Rollouts",
+    date: "November 11, 2026",
+    highlights: [
+      "Tap Pick a release day on a song and choose one of three Fridays. The plan is built back from that day.",
+      "Tasks you have not finished on the song move into the plan, so nothing gets lost.",
+    ],
+  },
+  {
     version: "1.265.2",
     tag: "Rollouts",
     date: "November 11, 2026",
