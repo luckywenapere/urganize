@@ -12,7 +12,7 @@ import { isOnline } from '@/lib/presence';
 import { timeAgo } from '@/lib/usage-metrics-format';
 
 export const HOME_TEAM_COPY = {
-  label: 'Your team',
+  label: 'Team',
   online: 'Online now',
   never: 'Not seen yet',
   manage: 'Manage team',

@@ -37,7 +37,7 @@ describe('readLayout (restore)', () => {
     expect(layout.removed.filter((id) => id === 'team')).toHaveLength(1);
   });
 
-  it('always keeps Your artists on Home, even if a save removed it', () => {
+  it('always keeps Artists on Home, even if a save removed it', () => {
     const layout = readLayout({ v: 1, order: ['my_tasks'], removed: ['artists', 'out_now', 'next_drop', 'delegated', 'team', 'ask'] });
     expect(layout.order).toEqual(['my_tasks', 'artists']);
     expect(layout.removed).not.toContain('artists');
@@ -71,7 +71,7 @@ describe('editing', () => {
     expect(added.removed).toEqual(['ask']);
   });
 
-  it('never removes Your artists', () => {
+  it('never removes Artists', () => {
     expect(removeBlock(DEFAULT_HOME_LAYOUT, 'artists')).toEqual(DEFAULT_HOME_LAYOUT);
   });
 

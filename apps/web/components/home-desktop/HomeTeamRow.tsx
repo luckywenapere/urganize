@@ -1,6 +1,6 @@
 'use client';
 
-// Your team on Home, on a computer only (#1182, mock docs/mocks/home-tighter,
+// Team on Home, on a computer only (#1182, mock docs/mocks/home-tighter,
 // note 8): one row of people, each with their role and how much is on them.
 // The data is the Team page's own (GET /api/team), so the counts are the same
 // numbers the Team page shows and follow the viewer's own access limits.
@@ -23,7 +23,7 @@ export function HomeTeamHead({ count }: { count: number | null }) {
   return (
     <div className="flex items-end justify-between gap-4">
       <h2 className="font-display text-[22px] font-normal leading-7 text-content-primary">
-        Your team
+        Team
         {count !== null ? (
           <span className="font-sans text-sm font-medium text-content-secondary">
             {' '}
@@ -66,7 +66,7 @@ export function HomeTeamRow({ team }: { team: TeamPageResponse }) {
   const more = people.length - shown.length;
 
   return (
-    <section data-home-block="team" aria-label="Your team">
+    <section data-home-block="team" aria-label="Team">
       <HomeTeamHead count={people.length} />
       <ul className="mt-3 grid grid-cols-5 gap-3">
         {shown.map((person) => (

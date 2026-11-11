@@ -32,8 +32,8 @@ export const HOME_BLOCK_COPY: Record<HomeBlockId, { title: string; about: string
   next_drop: { title: 'Next drop', about: 'The rollout that drops soonest, with the countdown.' },
   my_tasks: { title: 'My tasks', about: 'Tasks assigned to you.' },
   delegated: { title: 'Delegated', about: 'Tasks you gave to someone else.' },
-  team: { title: 'Your team', about: 'Each person and how much is on them.' },
-  artists: { title: 'Your artists', about: 'Every artist and their next rollout.' },
+  team: { title: 'Team', about: 'Each person and how much is on them.' },
+  artists: { title: 'Artists', about: 'Every artist and their next rollout.' },
   ask: { title: 'Ask the Assistant', about: 'The ask box.' },
 };
 
