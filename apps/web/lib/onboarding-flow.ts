@@ -286,7 +286,7 @@ export function describeMusicBlocker(form: MusicForm, todayYmd: string): string 
 /** The one line under Add it. */
 export function musicPromise(form: MusicForm): string {
   if (!form.stage) return '';
-  if (isEarlyStage(form.stage)) return "We'll keep track of it while you make it. Plan the rollout when you're ready.";
+  if (isEarlyStage(form.stage)) return "We'll keep track of it while you make it. Pick a release day when you're ready.";
   if (form.stage === 'ready') {
     return form.noDate || !isYmd(form.date)
       ? "We'll ask a few questions, then build your plan."

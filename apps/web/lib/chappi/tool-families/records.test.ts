@@ -253,7 +253,7 @@ describe('the last song to Done points to the rollout button', () => {
 
   it('says it once, on the change that finishes the record', () => {
     expect(doneLine(RECORD, allDone(RECORD))).toBe(
-      " That's 3 of 3 songs done. The Plan the rollout button is ready at the top of the record."
+      " That's 3 of 3 songs done. The Pick a release day button is ready at the top of the record."
     );
     expect(doneLine(allDone(RECORD), allDone(RECORD))).toBe('');
     expect(doneLine(RECORD, RECORD)).toBe('');
@@ -277,7 +277,7 @@ describe('the last song to Done points to the rollout button', () => {
       songs: [{ title: 'pressure', stage: 'done' }],
     });
     expect(result.ok).toBe(true);
-    expect(result.summary).toMatch(/That's 2 of 2 songs done\. The Plan the rollout button is ready at the top of the record\.$/);
+    expect(result.summary).toMatch(/That's 2 of 2 songs done\. The Pick a release day button is ready at the top of the record\.$/);
   });
 });
 

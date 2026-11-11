@@ -189,7 +189,7 @@ describe('what the button promises', () => {
   it('follows the stage', () => {
     expect(musicPromise(form())).toBe('');
     expect(musicPromise(form({ stage: 'recording' }))).toBe(
-      "We'll keep track of it while you make it. Plan the rollout when you're ready."
+      "We'll keep track of it while you make it. Pick a release day when you're ready."
     );
     expect(musicPromise(form({ stage: 'ready', noDate: true }))).toBe("We'll ask a few questions, then build your plan.");
     expect(musicPromise(form({ stage: 'ready', noDate: false, date: '2026-12-01' }))).toBe(
