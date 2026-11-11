@@ -215,3 +215,21 @@ Connection requests from 5 Nov: 3 of 18 accepted so far, 2 of them replied (Afol
 **Connection requests with a note (15), all with a liked post where they had one:** Eniola Obileye (7th Sea), Micheal Oyebisi (Mikky Mic Entertainment), Vivien Albert, Justice Idogho (Soundboy FA, Kull GP), Jerry Dauda, Frances Okoro (Synnex Entertainment), Ajibola Disu, IfeOluwa A., Tolani A. (Audora), Joy Etido Usen, Adedamola Adenibuyan (manages Meeza), Raymond Goodman (Jambox Entertainment), Nofiu Abiodun Ibrahim, Igbagboyemi Taiwo, Adeniyi Akinbowale (Kneelyo Media). All confirmed pending. All in Nigeria, to test whether Nigerian managers accept more. Skipped: Balat Boman (needs his email to connect), Chinedu Ikpewujo (already pending), Osamuyi Ekofuogie (Chocolate City).
 
 **Calls today:** Abraham 12pm, Nicholas 4pm, Mary Wilson 4:30pm.
+
+## 11 Nov 2026
+
+**How we're doing (admin and live database, this morning):** 113 users in total. 0 active paying teams on the scoreboard, MRR ₦2,600. Sign-ups from LinkedIn so far: Clinton Mabulana (8 Nov, nothing set up), LEWATLE SNF (10 Nov, 5 artists and 1 release, on Label), and "Ayo Deji" (10 Nov, open sign-up, nothing set up yet; most likely Ayodeji Oyedeji, who got the link on 9 Nov). The gap is still after sign-up: 2 of 3 have not added anything.
+
+**Inbox replies sent (5):** Meghan Kek is taking over Lucas Rizzo's call (2pm today), confirmed. Lordson Benson ("I see the work Urganize is doing"): asked who he works with, start-free link. Nofiu Abiodun Ibrahim: asked who he works with. Olajide Stephen (release planning for independent artists): what Urganize is, start-free link. Tolani Abiodun: clarified the question, asked about Audora.
+
+**Cold DMs (5), all with a liked post where they had one:** Maria João Fortes (Sony Music Portugal), Franco Angelo Lavorato (Nerea López), Daniel Byelich, Paul Sonkamble, Soo Ahn.
+
+**Connection requests with a note (14), each with a liked post where they had one:** Ekome Daniel, King Balance (Balance Music Record), Gift Banigo (Whalshyfyre Muzik), Neoentle Mokori (Culture Hub ZA), Jarrad Treger (Jetblack), Nomthandazo Zulu, Midalo Rambani, Joshua Molotsi (Velocity Music Group), Darwin Petersen, Jabulani Matarise, Zamani Ndlovu, Duke M., Kwaku Adusei Poku (Accra), Georgios Kretsos. Mostly South Africa, to compare with yesterday's Nigeria batch. Bongile Pateni's request would not go through (tried twice). Skipped Oluwafemi Ogunseye (already pending).
+
+**Calls today:** Meghan Kek 2pm (for Lucas's team). Lucas's own 4pm slot was cancelled on Oyin's yes.
+
+**The Free plan was removed on 10 Nov at 5:03pm (v1.261.6), but replies kept saying "you can start free".** New sign-ups now meet the plan wall. Sent a short correction to the six people told "start free" (Josephine, Lordson, Olajide, Tobias, Yasin, Emmanuel Ogunmola). From now on replies mention paid plans (one artist up to a full label) with no prices. Emmanuel David (independent producer and A&R) replied; asked about his next release.
+
+**Round 2 (afternoon):** first DM to Joy Etido Usen (accepted today, post liked yesterday). Connection requests (9) to Kelvin Amponsah (Crux Global, Accra), Benjamin Lebrave, Yannick Zagba (Abidjan), Godwin Addisco, Matt Voss, Talha Eren, Oli James, Isaiah La Touche and Isaac Green (UK), 6 with a liked post (Matt, Talha, Oli have none). Julia Miller's request would not go through. Week total: 51 requests.
+
+**Measured to 11 Nov (LinkedIn thread data and live database):** first DMs 39 of 86 replied (45%); requests 27 of 102 accepted (26%), by day 29%, 38%, 19% and 8% (7 and 8 Nov, no likes), 23% (9 Nov, 2 days), 27% (10 Nov Nigeria batch, 1 day); 17 of 27 who accepted replied (63%). 24 people got the sign-up link, 3 signed up, 1 uses it (Lewatle), 0 paying. The gap is after sign-up.
