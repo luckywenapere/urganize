@@ -2,7 +2,7 @@
 
 // Home on a computer (#1182, founder approved mock docs/mocks/home-tighter).
 // One content width (1120), and blocks the person can reorder and remove:
-// Out now (one line), Next drop, My tasks, Delegated, Your team, Your artists
+// Out now (one line), Next drop, My tasks, Delegated, Team, Artists
 // and, from "Add to Home", the ask box. Phones keep their own Home: this is
 // mounted only at lg and up by app/dashboard/artists/ArtistsPageClient.tsx.
 //
@@ -197,10 +197,10 @@ function ArtistsBlock({
 }) {
   const openAddArtist = useShellStore((state) => state.openAddArtist);
   return (
-    <section data-home-block="artists" aria-label="Your artists" className="mt-2">
+    <section data-home-block="artists" aria-label="Artists" className="mt-2">
       <div className="flex items-end justify-between gap-4">
         <h2 className="font-display text-[22px] font-normal leading-7 text-content-primary">
-          Your artists
+          Artists
           <span className="font-sans text-sm font-medium text-content-secondary"> · {rows.length}</span>
         </h2>
         <button type="button" onClick={() => openAddArtist()} className={GHOST}>
