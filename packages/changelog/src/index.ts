@@ -67,6 +67,18 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.264.0",
+    title: "Home shows your tasks and your team",
+    tag: "App",
+    date: "November 11, 2026",
+    highlights: [
+      "On a computer, Home now lists your tasks and the tasks you gave to others. Late ones come first, and you can tick yours off right there.",
+      "Your team sits on Home too, with how much each person has open and late.",
+      "The artists list shows the day each rollout drops, soonest first. You can add an artist from the list.",
+      "Press Customise Home to move blocks around or remove the ones you don't use. Only you see your layout.",
+    ],
+  },
+  {
     version: "1.263.0",
     title: "The record page uses the whole screen on a computer",
     tag: "App",

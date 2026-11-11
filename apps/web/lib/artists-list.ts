@@ -102,3 +102,26 @@ export function describeDaysToGo(days: number): string {
   if (days > 1) return `In ${days} days`;
   return days === -1 ? 'Out yesterday' : `Out ${-days} days ago`;
 }
+
+/**
+ * Home on a computer (#1182): the list follows the Next drop card. Dated
+ * rollouts first, soonest first; then rollouts with no date yet; then artists
+ * whose newest song is out; artists with nothing planned sit last. Roster
+ * order breaks ties, so the list never shuffles on its own.
+ */
+export function sortBySoonestDrop<A, R>(rows: readonly ArtistListRow<A, R>[]): ArtistListRow<A, R>[] {
+  const rank = (row: ArtistListRow<A, R>): number =>
+    row.status === 'rolling_out' ? (row.daysToGo === null ? 1 : 0) : row.status === 'out_now' ? 2 : 3;
+  return rows
+    .map((row, index) => ({ row, index }))
+    .sort((a, b) => {
+      const gap = rank(a.row) - rank(b.row);
+      if (gap !== 0) return gap;
+      if (rank(a.row) === 0) {
+        const days = (a.row.daysToGo ?? 0) - (b.row.daysToGo ?? 0);
+        if (days !== 0) return days;
+      }
+      return a.index - b.index;
+    })
+    .map(({ row }) => row);
+}

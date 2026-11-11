@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { artistsList, describeDaysToGo } from './artists-list';
+import { artistsList, describeDaysToGo, sortBySoonestDrop } from './artists-list';
 
 // Local noon, so a date-only string and "now" never straddle a day boundary
 // differently on a machine in another timezone.
@@ -94,5 +94,35 @@ describe('describeDaysToGo', () => {
     expect(describeDaysToGo(0)).toBe('Today');
     expect(describeDaysToGo(-1)).toBe('Out yesterday');
     expect(describeDaysToGo(-4)).toBe('Out 4 days ago');
+  });
+});
+
+describe('sortBySoonestDrop', () => {
+  const row = (id: string, status: 'rolling_out' | 'out_now' | 'quiet', daysToGo: number | null) => ({
+    artist: { id },
+    next: null,
+    status,
+    daysToGo,
+    done: 0,
+    total: 0,
+    dueThisWeek: 0,
+    late: 0,
+  });
+
+  it('puts the soonest dated drop first, then no date, then out, then quiet', () => {
+    const sorted = sortBySoonestDrop([
+      row('quiet', 'quiet', null),
+      row('out', 'out_now', -3),
+      row('nodate', 'rolling_out', null),
+      row('far', 'rolling_out', 57),
+      row('soon', 'rolling_out', 8),
+    ]);
+    expect(sorted.map((entry) => entry.artist.id)).toEqual(['soon', 'far', 'nodate', 'out', 'quiet']);
+  });
+
+  it('keeps roster order on a tie and leaves the input alone', () => {
+    const rows = [row('b', 'quiet', null), row('a', 'quiet', null), row('c', 'rolling_out', 4), row('d', 'rolling_out', 4)];
+    expect(sortBySoonestDrop(rows).map((entry) => entry.artist.id)).toEqual(['c', 'd', 'b', 'a']);
+    expect(rows[0].artist.id).toBe('b');
   });
 });

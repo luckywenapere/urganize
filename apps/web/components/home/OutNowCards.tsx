@@ -16,6 +16,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Disc3, X } from '@/components/icons';
+import { copyText } from '@/lib/share-file';
+import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { supabase } from '@/lib/supabase/client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useHiddenNudgeSet } from '@/lib/hidden-nudges';
@@ -50,7 +52,17 @@ async function authedFetch(input: string, init?: RequestInit): Promise<Response>
 }
 
 /** Every song out this week, newest first. Renders nothing when there are none. */
-export function OutNowCards({ artistId, className = '' }: { artistId?: string; className?: string }) {
+export function OutNowCards({
+  artistId,
+  className = '',
+  variant = 'card',
+}: {
+  artistId?: string;
+  className?: string;
+  /** 'line' is Home on a computer (#1182): the same states as one quiet line
+   *  with a link for the action, since this is a small status, not a task. */
+  variant?: 'card' | 'line';
+}) {
   const releases = useReleaseStore((state) => state.releases);
   // The day changes the list, so it is read once per render of the list, not stored.
   const [now] = useState(() => Date.now());
@@ -65,16 +77,29 @@ export function OutNowCards({ artistId, className = '' }: { artistId?: string; c
   const shown = out.filter((release) => !hidden.has(release.id));
   if (!ALTLINK_ENABLED || shown.length === 0) return null;
   return (
-    <div className={`space-y-3 ${className}`}>
+    <div className={`${variant === 'line' ? 'space-y-2' : 'space-y-3'} ${className}`}>
       {shown.map((release) => (
-        <OutNowCard key={release.id} release={release} now={now} onHide={() => hide(release.id)} />
+        <OutNowCard key={release.id} release={release} now={now} onHide={() => hide(release.id)} variant={variant} />
       ))}
     </div>
   );
 }
 
-function OutNowCard({ release, now, onHide }: { release: ExecutionRelease; now: number; onHide: () => void }) {
+const LINE_LINK = 'motion-focus shrink-0 text-sm font-semibold text-brand underline underline-offset-[3px] disabled:opacity-60';
+
+function OutNowCard({
+  release,
+  now,
+  onHide,
+  variant,
+}: {
+  release: ExecutionRelease;
+  now: number;
+  onHide: () => void;
+  variant: 'card' | 'line';
+}) {
   const [view, setView] = useState<LinkView | null>(null);
+  const [copied, setCopied] = useState(false);
   const [canWrite, setCanWrite] = useState(false);
   const polls = useRef(0);
   const title = displayReleaseTitle(release.title);
@@ -127,6 +152,90 @@ function OutNowCard({ release, now, onHide }: { release: ExecutionRelease; now: 
     needsCode && canWrite && (finder.view?.status === 'found' || finder.view?.status === 'looking');
   const offerSetup = !url && !making && !needsCode && Boolean(view && canWrite && !view.link);
   if (!url && !finderAsks && !offerSetup) return null;
+
+  if (variant === 'line') {
+    const releaseLink = `/dashboard?release=${encodeURIComponent(release.id)}`;
+    const found = finderAsks && finder.view?.status === 'found' ? finder.view.candidate : null;
+    const copy = async () => {
+      if (!url) return;
+      captureAnalyticsEvent({ name: 'out_now_link_copied', properties: { release_id: release.id } });
+      if (await copyText(url)) {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1800);
+      }
+    };
+    return (
+      <section
+        className="flex min-h-[52px] items-center gap-3 rounded-xl border border-stroke-default bg-bg-surface py-2 pl-4 pr-2"
+        data-home-block="out-now"
+        aria-label={`${title} is out now`}
+      >
+        {cover ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={cover} alt="" className="h-8 w-8 shrink-0 rounded-md object-cover" />
+        ) : (
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-bg-hover text-content-tertiary" aria-hidden="true">
+            <Disc3 className="h-4 w-4" />
+          </span>
+        )}
+        <span className="shrink-0 rounded-full bg-brand/10 px-2 text-xs font-semibold leading-5 text-brand">Out now</span>
+        <p className="min-w-0 flex-1 truncate text-sm text-content-secondary">
+          <Link href={releaseLink} className="motion-focus font-semibold text-content-primary hover:underline">
+            {title}
+          </Link>{' '}
+          by {release.artistName}.{' '}
+          {url
+            ? 'The smart link is ready.'
+            : found
+              ? `Found "${found.title}" by ${found.artist} on streaming. Is this your song?`
+              : finderAsks
+                ? 'Looking for it on streaming. This can take a few hours.'
+                : 'It has no smart link yet.'}
+          {finder.error ? <span className="text-status-error"> {finder.error}</span> : null}
+        </p>
+        {url ? (
+          <button type="button" onClick={() => void copy()} className={LINE_LINK} aria-live="polite">
+            {copied ? 'Link copied' : 'Copy the link'}
+          </button>
+        ) : found ? (
+          <>
+            {found.url ? (
+              <a href={found.url} target="_blank" rel="noreferrer" className={LINE_LINK}>
+                Listen
+              </a>
+            ) : null}
+            <button type="button" className={LINE_LINK} disabled={finder.answering !== null} onClick={() => void finder.answer(true)}>
+              Yes, make the link
+            </button>
+            <button
+              type="button"
+              className="motion-focus shrink-0 text-sm font-medium text-content-secondary underline underline-offset-[3px] disabled:opacity-60"
+              disabled={finder.answering !== null}
+              onClick={() => void finder.answer(false)}
+            >
+              {finder.answering === 'no' ? 'Looking for another…' : 'No'}
+            </button>
+          </>
+        ) : finderAsks ? (
+          <Link href={typeCodeHref} className={LINE_LINK}>
+            Type the code yourself
+          </Link>
+        ) : (
+          <Link href={`/dashboard/distribute/${encodeURIComponent(release.id)}?tab=link`} className={LINE_LINK}>
+            Set up the smart link
+          </Link>
+        )}
+        <button
+          type="button"
+          onClick={onHide}
+          aria-label={`Hide ${title} from Home`}
+          className="motion-focus grid h-9 w-9 shrink-0 place-items-center rounded-full text-content-tertiary hover:bg-bg-hover hover:text-content-primary"
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </section>
+    );
+  }
 
   return (
     <section
