@@ -7,5 +7,10 @@
   "cn": { "source": "cn", "medium": "social" },
   "sws": { "source": "soundwavespotlight", "medium": "partner" },
   "trm": { "source": "therealmusicdistro", "medium": "partner" },
-  "stmz": { "source": "stmz", "medium": "partner" }
+  "stmz": { "source": "stmz", "medium": "partner" },
+  "tt": { "source": "tiktok", "medium": "social" },
+  "tr": { "source": "tr", "medium": "social" },
+  "sc": { "source": "sc", "medium": "social" },
+  "wa": { "source": "whatsapp", "medium": "social" },
+  "u": { "source": "u", "medium": "social" }
 }
