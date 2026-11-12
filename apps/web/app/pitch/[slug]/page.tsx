@@ -4,6 +4,7 @@ import { CuratorPageCta } from '@/components/curator/CuratorPageCta';
 import { curatorPageDescription } from '@/lib/curator-public';
 import { loadPublicCuratorPage } from '@/lib/curator-public-server';
 import { PITCH_PLATFORM_LABELS } from '@/lib/pitching';
+import { curatorStatsLine, initialsOf, pitchingSteps, playlistWants } from '@/lib/public-pages-desktop';
 
 /**
  * A playlist curator's public page.
@@ -71,14 +72,10 @@ function SafeLink({ href, children }: { href: string; children: React.ReactNode 
   );
 }
 
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || '')
-    .join('');
-}
+const initials = initialsOf;
+
+/** A flat tile, never an empty one or a gradient (#1232). */
+const TILE = 'rgba(245, 240, 230, 0.06)';
 
 export default async function PublicCuratorPage({ params }: PageProps) {
   const { slug } = await params;
@@ -95,7 +92,8 @@ export default async function PublicCuratorPage({ params }: PageProps) {
 
   return (
     <div className="kit-island min-h-screen" style={{ backgroundColor: GROUND }}>
-      <main className="mx-auto max-w-2xl px-5 pb-24 pt-14 sm:px-8 sm:pt-20">
+      <CuratorDesktop page={page} totalFollowers={totalFollowers} />
+      <main className="mx-auto max-w-2xl px-5 pb-24 pt-14 sm:px-8 sm:pt-20 lg:hidden">
         <header className="flex flex-col items-center text-center">
           {page.photoUrl ? (
             // A signed Storage URL with a one hour life. next/image would
@@ -179,6 +177,142 @@ export default async function PublicCuratorPage({ params }: PageProps) {
             className="font-mono text-[11px] tracking-[0.12em] hover:underline"
             style={{ color: FAINT }}
           >
+            Made with Urganize
+          </a>
+        </footer>
+      </main>
+    </div>
+  );
+}
+
+/**
+ * The curator page on a computer (#1232; approved mock
+ * docs/mocks/public-pages-desktop, screen 4): name, numbers and the Pitch
+ * button on one row, the playlists three across with flat initials tiles, and
+ * how pitching works. A phone keeps the stacked page above.
+ */
+function CuratorDesktop({
+  page,
+  totalFollowers,
+}: {
+  page: NonNullable<Awaited<ReturnType<typeof loadPublicCuratorPage>>>;
+  totalFollowers: number;
+}) {
+  const stats = curatorStatsLine(page.playlists.length, totalFollowers);
+  return (
+    <div className="hidden lg:block">
+      <div className="flex h-16 items-center justify-between border-b px-10" style={{ borderColor: STROKE }}>
+        <a href="https://urganize.app" className="font-display text-[20px]" style={{ color: ACCENT }}>
+          Urganize
+        </a>
+        <span className="text-[13px]" style={{ color: MUTED }}>
+          Playlist curator
+        </span>
+      </div>
+
+      <main className="mx-auto max-w-[1080px] px-10 pb-12 pt-10">
+        <header className="grid grid-cols-[120px_minmax(0,1fr)_auto] items-center gap-7">
+          {page.photoUrl ? (
+            // A signed Storage URL with a one hour life. next/image would
+            // proxy and cache it past its own expiry.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={page.photoUrl}
+              alt={page.displayName}
+              className="h-[120px] w-[120px] rounded-full object-cover"
+              style={{ backgroundColor: SURFACE }}
+            />
+          ) : (
+            <span
+              aria-hidden="true"
+              className="flex h-[120px] w-[120px] items-center justify-center rounded-full font-display text-[40px]"
+              style={{ backgroundColor: TILE, color: MUTED }}
+            >
+              {initials(page.displayName)}
+            </span>
+          )}
+          <div className="min-w-0">
+            <h1 className="font-display text-[40px] leading-[1.15]" style={{ color: CREAM }}>
+              {page.displayName}
+            </h1>
+            {stats ? (
+              <p className="mt-0.5 text-[13px]" style={{ color: MUTED }}>
+                {stats}
+              </p>
+            ) : null}
+            {page.bio ? (
+              <p className="mt-2.5 max-w-[640px] whitespace-pre-line text-[15px] leading-6" style={{ color: MUTED }}>
+                {page.bio}
+              </p>
+            ) : null}
+          </div>
+          <CuratorPageCta
+            slug={page.slug}
+            displayName={page.displayName}
+            hasPlaylists={page.playlists.length > 0}
+            layout="row"
+          />
+        </header>
+
+        {page.playlists.length > 0 ? (
+          <ul className="mt-8 grid grid-cols-3 gap-4">
+            {page.playlists.map((playlist) => {
+              const wants = playlistWants(playlist.genres);
+              return (
+                <li
+                  key={playlist.id}
+                  className="overflow-hidden rounded-2xl border"
+                  style={{ backgroundColor: SURFACE, borderColor: STROKE }}
+                >
+                  <div
+                    aria-hidden="true"
+                    className="grid aspect-[16/10] place-items-center font-display text-[44px]"
+                    style={{ backgroundColor: TILE, color: MUTED }}
+                  >
+                    {initials(playlist.name)}
+                  </div>
+                  <div className="p-4">
+                    <p className="text-[12px] font-semibold" style={{ color: MUTED }}>
+                      {PITCH_PLATFORM_LABELS[playlist.platform] || PITCH_PLATFORM_LABELS.other}
+                    </p>
+                    <p className="mt-0.5 line-clamp-2 font-display text-[20px] leading-snug" style={{ color: CREAM }}>
+                      {playlist.url ? <SafeLink href={playlist.url}>{playlist.name}</SafeLink> : playlist.name}
+                    </p>
+                    {playlist.followerCount !== null ? (
+                      <p className="mt-1 text-[13px]" style={{ color: FAINT }}>
+                        {playlist.followerCount.toLocaleString('en')} followers
+                      </p>
+                    ) : null}
+                    {wants ? (
+                      <p className="mt-2 text-[13px]" style={{ color: MUTED }}>
+                        {wants}
+                      </p>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+
+        <section aria-label="How pitching works" className="mt-6 grid grid-cols-3 gap-4">
+          {pitchingSteps(page.displayName).map((step, index) => (
+            <div key={step.title} className="rounded-2xl border p-5" style={{ backgroundColor: SURFACE, borderColor: STROKE }}>
+              <p className="text-[12px] font-bold tracking-[0.06em]" style={{ color: FAINT }}>
+                {index + 1}
+              </p>
+              <p className="mt-1 font-semibold" style={{ color: CREAM }}>
+                {step.title}
+              </p>
+              <p className="text-[13px]" style={{ color: MUTED }}>
+                {step.body}
+              </p>
+            </div>
+          ))}
+        </section>
+
+        <footer className="mt-12 text-center">
+          <a href="https://urganize.app" className="text-[12px] hover:underline" style={{ color: FAINT }}>
             Made with Urganize
           </a>
         </footer>

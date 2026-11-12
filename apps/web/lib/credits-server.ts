@@ -10,6 +10,7 @@
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { loadCoverArtUrls } from '@/lib/cover-art';
 
 const RELEASE_CREDIT_LINKS_TABLE = 'release_credit_links';
 
@@ -21,6 +22,8 @@ export type PublicCreditForm = {
   releaseTitle: string;
   artistName: string;
   releaseDate: string | null;
+  /** Signed cover art, so the person can see which song this is (#1232). */
+  coverUrl: string | null;
 };
 
 /**
@@ -93,7 +96,7 @@ export async function loadPublicCreditForm(token: string): Promise<PublicCreditF
 
     const { data: release, error: releaseError } = await client
       .from('releases')
-      .select('id,title,artist_name,release_date')
+      .select('id,title,artist_name,release_date,artwork_asset_id')
       .eq('id', String(link!.release_id))
       .is('deleted_at', null)
       .maybeSingle();
@@ -105,7 +108,17 @@ export async function loadPublicCreditForm(token: string): Promise<PublicCreditF
       releaseTitle: String(release.title || ''),
       artistName: String(release.artist_name || ''),
       releaseDate: release.release_date ? String(release.release_date) : null,
+      coverUrl: null,
     };
+    // The cover is a nicety: a failed signing leaves the form working.
+    if (release.artwork_asset_id) {
+      const covers = await loadCoverArtUrls(
+        client,
+        [{ id: form.releaseId, artwork_asset_id: String(release.artwork_asset_id) }],
+        { thumbs: false }
+      ).catch(() => null);
+      form.coverUrl = covers?.get(form.releaseId)?.url ?? null;
+    }
 
     return state === 'closed' ? { kind: 'closed', form } : { kind: 'ok', form };
   } catch {

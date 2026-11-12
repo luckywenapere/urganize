@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import { loadPublicBrief } from '@/lib/release-brief-server';
 import { formatBriefDay, lagosDay, referenceColor, referenceDisplayTitle } from '@/lib/release-brief';
+import { BriefBoardDesktop } from './BriefBoardDesktop';
 
 // A view link can be switched off at any moment, so there is no static version
 // of this page to keep (the /pack/[token] reasoning).
@@ -42,7 +43,12 @@ export default async function BriefViewPage({ params }: PageProps) {
   const releaseDay = formatBriefDay(lagosDay(brief.releaseDate));
 
   return (
-    <BriefShell footer>
+    <>
+    {/* A computer gets the board (#1232); a phone keeps this column. */}
+    <div className="hidden lg:block">
+      <BriefBoardDesktop brief={brief} />
+    </div>
+    <BriefShell footer phoneOnly>
       <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#929291]">
         {brief.artistName ? `${brief.artistName} · ` : ''}Brief
       </p>
@@ -118,6 +124,7 @@ export default async function BriefViewPage({ params }: PageProps) {
         </section>
       ) : null}
     </BriefShell>
+    </>
   );
 }
 
@@ -128,9 +135,17 @@ function Label({ children }: { children: React.ReactNode }) {
   return <h2 className="mb-2.5 mt-[26px] text-[12px] font-semibold text-[#929291]">{children}</h2>;
 }
 
-function BriefShell({ children, footer = false }: { children: React.ReactNode; footer?: boolean }) {
+function BriefShell({
+  children,
+  footer = false,
+  phoneOnly = false,
+}: {
+  children: React.ReactNode;
+  footer?: boolean;
+  phoneOnly?: boolean;
+}) {
   return (
-    <main className="min-h-dvh bg-[#0c0c0d] text-[#f2f2f0]">
+    <main className={`min-h-dvh bg-[#0c0c0d] text-[#f2f2f0] ${phoneOnly ? 'lg:hidden' : ''}`}>
       <div className="mx-auto w-full max-w-xl px-4 pb-24 pt-10">{children}</div>
       {footer ? (
         <footer className="fixed inset-x-0 bottom-0 border-t border-[rgba(242,242,240,0.06)] bg-[#0c0c0d] py-3.5 text-center text-[12px] text-[rgba(242,242,240,0.45)]">

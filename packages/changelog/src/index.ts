@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.277.0",
+    title: "Shared pages that fit a computer screen",
+    tag: "App",
+    date: "November 12, 2026",
+    highlights: [
+      "Briefs, press kits, credit forms and curator pages you share now use the whole screen on a computer.",
+      "A press kit keeps the artist, the email button and the download on the left while people read the rest.",
+      "The credits form shows the song next to the form, with every role and a label above each box.",
+    ],
+  },
+  {
     version: "1.276.0",
     title: "The brief and the store details on a computer",
     tag: "Rollouts",

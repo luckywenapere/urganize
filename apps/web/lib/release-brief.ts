@@ -225,6 +225,15 @@ export type PublicBriefPayload = {
   idea: string;
   references: BriefReference[];
   dates: BriefDateRow[];
+  /** The board's one-line idea and mood (#1232): the same cards the team sees, read only. */
+  headline: string;
+  feelsLike: string[];
+  notThis: string[];
+  palette: string[];
+  /** Signed cover art, or null when the rollout has none. */
+  coverUrl: string | null;
+  /** The rollout owner's first name, or '' when unknown. */
+  sharedBy: string;
 };
 
 /** Nothing a person wrote yet: the empty state shows instead of the blocks. */

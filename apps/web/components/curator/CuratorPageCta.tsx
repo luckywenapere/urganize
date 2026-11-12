@@ -23,9 +23,11 @@ type Props = {
   slug: string;
   displayName: string;
   hasPlaylists: boolean;
+  /** 'row': the button on the header row of the page on a computer (#1232). */
+  layout?: 'stacked' | 'row';
 };
 
-export function CuratorPageCta({ slug, displayName, hasPlaylists }: Props) {
+export function CuratorPageCta({ slug, displayName, hasPlaylists, layout = 'stacked' }: Props) {
   const [mounted, setMounted] = useState(false);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAuthLoading = useAuthStore((state) => state.isLoading);
@@ -40,6 +42,27 @@ export function CuratorPageCta({ slug, displayName, hasPlaylists }: Props) {
 
   const button =
     'inline-flex h-12 items-center justify-center rounded-full px-7 text-[15px] font-medium transition-opacity hover:opacity-90';
+  const firstName = displayName.trim().split(/\s+/)[0] || displayName;
+
+  if (layout === 'row') {
+    if (isCuratorOnly) {
+      return (
+        <p className="max-w-[240px] text-right text-[14px]" style={{ color: 'var(--kit-text-muted)' }}>
+          You are signed in as a playlist owner, so there is nothing to send from here.
+        </p>
+      );
+    }
+    return (
+      <Link
+        href={isTeamReader ? scopedPitchingPath(slug) : '/onboarding'}
+        onClick={isTeamReader ? undefined : () => markPitchIntent(slug)}
+        className={`${button} whitespace-nowrap`}
+        style={{ backgroundColor: 'var(--kit-accent)', color: 'var(--kit-ground)' }}
+      >
+        Pitch a song to {firstName}
+      </Link>
+    );
+  }
 
   if (isCuratorOnly) {
     return (
