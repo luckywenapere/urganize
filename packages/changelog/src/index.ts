@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.270.0",
+    title: "Distribute is one page on a computer",
+    tag: "Rollouts",
+    date: "November 12, 2026",
+    highlights: [
+      "On a computer, Distribute now shows everything that goes to the stores in one list: the master, cover art, details, credits and rights.",
+      "A red mark shows what still needs work, and you can fix the cover art and details right there.",
+      "After you send, you can see each step and what went.",
+    ],
+  },
+  {
     version: "1.269.0",
     title: "Your plan as a list is easier to read on a computer",
     tag: "Rollouts",

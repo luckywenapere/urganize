@@ -11,15 +11,19 @@ import type { TrmOwner } from '@/lib/trm/server';
 // hero, a Space Mono meta line, tick rows in one bordered list, quiet partner
 // lines. Kept in one place so every state reads the same.
 
-export const MONO = 'font-mono text-[11px] uppercase tracking-[0.08em] text-content-secondary';
+// From lg up (#1210) the step reads like the rest of the app: normal sentence
+// case in the body font and rounded cards and buttons. The phone keeps the
+// mono labels and square boxes it was approved with.
+export const MONO =
+  'font-mono text-[11px] uppercase tracking-[0.08em] text-content-secondary lg:font-sans lg:text-[13px] lg:normal-case lg:tracking-normal';
 export const PRIMARY =
-  'motion-focus motion-press inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap border border-brand/25 bg-brand px-5 text-[15px] font-semibold text-content-inverse transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto';
+  'motion-focus motion-press inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap border border-brand/25 bg-brand px-5 text-[15px] font-semibold text-content-inverse transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto lg:rounded-full';
 export const OUTLINE =
-  'motion-focus motion-press inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap border border-stroke-strong px-5 text-[15px] font-semibold text-content-primary transition-colors hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto';
+  'motion-focus motion-press inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap border border-stroke-strong px-5 text-[15px] font-semibold text-content-primary transition-colors hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto lg:rounded-full';
 export const ROW_BUTTON =
-  'motion-focus motion-press inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap border border-stroke-strong px-3.5 text-[13.5px] font-semibold text-content-primary transition-colors hover:bg-bg-hover';
+  'motion-focus motion-press inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap border border-stroke-strong px-3.5 text-[13.5px] font-semibold text-content-primary transition-colors hover:bg-bg-hover lg:rounded-full';
 export const ROW_PRIMARY =
-  'motion-focus motion-press inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap border border-brand/25 bg-brand px-3.5 text-[13.5px] font-semibold text-content-inverse transition-colors hover:bg-brand-hover';
+  'motion-focus motion-press inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap border border-brand/25 bg-brand px-3.5 text-[13.5px] font-semibold text-content-inverse transition-colors hover:bg-brand-hover lg:rounded-full';
 export const QUIET_LINK =
   'motion-focus inline-flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-content-secondary underline decoration-stroke-strong underline-offset-[3px] hover:text-content-primary';
 
@@ -50,7 +54,7 @@ export function Chip({ label, tone }: { label: string; tone: 'live' | 'error' | 
   return (
     <span
       role="status"
-      className={`inline-flex h-[26px] shrink-0 items-center gap-[7px] border px-2.5 font-mono text-[10.5px] uppercase tracking-[0.08em] ${toneClass}`}
+      className={`inline-flex h-[26px] shrink-0 items-center gap-[7px] border px-2.5 font-mono text-[10.5px] uppercase tracking-[0.08em] lg:h-7 lg:rounded-full lg:px-3 lg:font-sans lg:text-xs lg:font-semibold lg:normal-case lg:tracking-normal ${toneClass}`}
     >
       <i
         aria-hidden="true"
@@ -99,7 +103,7 @@ export function Face({ owner }: { owner: TrmOwner }) {
 
 export function List({ children, label }: { children: ReactNode; label?: string }) {
   return (
-    <ul aria-label={label} className="border border-stroke-default bg-bg-surface">
+    <ul aria-label={label} className="border border-stroke-default bg-bg-surface lg:overflow-hidden lg:rounded-2xl">
       {children}
     </ul>
   );
@@ -129,7 +133,7 @@ export function Row({
       <div className="min-w-0 flex-1">
         <p className={`text-[15px] font-semibold ${dim ? 'text-content-secondary' : 'text-content-primary'}`}>{title}</p>
         {detail ? (
-          <p className="mt-[3px] break-words font-mono text-[11.5px] tracking-[0.02em] text-content-secondary">{detail}</p>
+          <p className="mt-[3px] break-words font-mono text-[11.5px] tracking-[0.02em] text-content-secondary lg:font-sans lg:text-xs lg:tracking-normal">{detail}</p>
         ) : null}
         {children}
       </div>
@@ -167,7 +171,7 @@ export function FanLine() {
 export function Partners({ trm = true, sending = false, fan = true }: { trm?: boolean; sending?: boolean; fan?: boolean }) {
   if (!trm && !fan) return null;
   return (
-    <div className="divide-y divide-stroke-default border border-stroke-default">
+    <div className="divide-y divide-stroke-default border border-stroke-default lg:rounded-2xl lg:bg-bg-surface">
       {trm ? <PartnerLine sending={sending} /> : null}
       {fan ? <FanLine /> : null}
     </div>

@@ -45,8 +45,8 @@ export function DistributionUsage({ limit }: { limit: DistributionLimitView }) {
       <p className="text-sm text-content-secondary">
         {limit.used} of {limit.releasesLimit} releases used this month. Resets {resetDay(limit.resetsAt)}.
       </p>
-      <div className="mt-3 h-1.5 bg-stroke-default" aria-hidden="true">
-        <div className="h-1.5 bg-brand" style={{ width: `${share}%` }} />
+      <div className="mt-3 h-1.5 bg-stroke-default lg:h-1 lg:overflow-hidden lg:rounded-full" aria-hidden="true">
+        <div className="h-1.5 bg-brand lg:h-1 lg:min-w-1.5 lg:rounded-full" style={{ width: `${share}%` }} />
       </div>
       <p className={`mt-2.5 ${MONO}`}>{artistsLine(limit)}</p>
     </div>
@@ -87,7 +87,7 @@ export function DistributionLimitBlock({
   if (limit.verdict === 'single') {
     return (
       <div className="space-y-3">
-        <div className="border border-brand bg-bg-surface p-4 sm:p-5">
+        <div className="border border-brand bg-bg-surface lg:rounded-2xl p-4 sm:p-5">
           <p className="text-[15px] font-semibold text-content-primary">Send this single for {price}</p>
           <p className="mt-1 text-sm text-content-secondary">
             We send it to Spotify, Apple Music, Audiomack, Boomplay and the rest through TRM.
@@ -100,7 +100,7 @@ export function DistributionLimitBlock({
           <p className={`mt-3 ${MONO}`}>Paid once. Fixing and resending it later is free.</p>
           {errorLine}
         </div>
-        <div className="border border-stroke-default bg-bg-surface p-4 sm:p-5">
+        <div className="border border-stroke-default bg-bg-surface lg:rounded-2xl lg:px-5 p-4 sm:p-5">
           <p className="text-[15px] font-semibold text-content-primary">Send a lot of music?</p>
           <p className="mt-1 text-sm text-content-secondary">
             Add distribution for {artist}: ₦7,100 a month covers 7 releases a month, singles and EPs.
@@ -118,7 +118,7 @@ export function DistributionLimitBlock({
 
   if (limit.verdict === 'needs_addon') {
     return (
-      <div className="border border-stroke-default bg-bg-surface p-4 sm:p-5">
+      <div className="border border-stroke-default bg-bg-surface lg:rounded-2xl lg:px-5 p-4 sm:p-5">
         <p className="text-[15px] font-semibold text-content-primary">This needs distribution for {artist}</p>
         <p className="mt-1 text-sm text-content-secondary">
           {limit.mode === 'addon'
@@ -138,7 +138,7 @@ export function DistributionLimitBlock({
 
   if (!limit.canPay) {
     return (
-      <div className="border border-stroke-default bg-bg-surface p-4 sm:p-5">
+      <div className="border border-stroke-default bg-bg-surface lg:rounded-2xl lg:px-5 p-4 sm:p-5">
         <p className="text-[15px] font-semibold text-content-primary">You’ve used your {limit.releasesLimit} releases this month</p>
         <p className="mt-1 text-sm text-content-secondary">They come back on {resetDay(limit.resetsAt)}.</p>
         {ownPlanLink ? <div className="mt-3">{ownPlanLink}</div> : null}
@@ -156,7 +156,7 @@ export function DistributionLimitBlock({
       : `That’s ${limit.planArtists.join(', ')}. To send for another artist, pay for this release or talk to us.`
     : `This one is ${price}. Your ${limit.releasesLimit} come back on ${resetDay(limit.resetsAt)}.`;
   return (
-    <div className="border border-stroke-default bg-bg-surface p-4 sm:p-5">
+    <div className="border border-stroke-default bg-bg-surface lg:rounded-2xl lg:px-5 p-4 sm:p-5">
       <p className="text-[15px] font-semibold text-content-primary">{title}</p>
       <p className="mt-1 text-sm text-content-secondary">{detail}</p>
       <div className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:items-center">
