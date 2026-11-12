@@ -17,6 +17,7 @@ import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
+import { FitOneLine } from '@/components/shared/FitOneLine';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { CoverThumbEditor } from '@/components/artists/CoverThumbEditor';
 import { ArtistCatalogueCard } from '@/components/artists/ArtistCatalogueCard';
@@ -625,13 +626,12 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
             save={(path) => saveArtistPhoto(artist.id, path)}
             onChange={(url) => setArtistPhoto(artist.id, url)}
             surface="artist_photo"
-            overlayRemove
             quietBadge
           />
           <div className="min-w-0">
-            <h1 className="line-clamp-2 break-words font-display text-[32px] leading-[1.05] text-content-primary sm:text-[40px]">
+            <FitOneLine className="font-display text-[32px] leading-[1.15] text-content-primary sm:text-[40px]">
               {artist.name}
-            </h1>
+            </FitOneLine>
             {/* lg: one status line under the name; the chips are the phone's. */}
             {chips.length > 0 ? (
               <p className={`mt-1.5 hidden text-xs font-semibold lg:block ${chips[0].on ? 'text-brand' : 'font-medium text-content-tertiary'}`}>

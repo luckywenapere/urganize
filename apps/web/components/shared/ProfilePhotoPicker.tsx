@@ -1,6 +1,6 @@
 'use client';
 
-import { Camera, Loader2, Trash2 } from '@/components/icons';
+import { Camera, Loader2 } from '@/components/icons';
 import { captureAnalyticsEvent } from '@/lib/analytics';
 import type { UploadSurface } from '@/lib/upload-failure-report';
 import { PROFILE_PHOTO_MIME_TYPES } from '@/lib/profile-photo';
@@ -38,10 +38,6 @@ type Props = {
   surface: UploadSurface;
   /** Show "Change photo · Remove" under the face. Off for compact list rows. */
   showActions?: boolean;
-  /** No text row: tapping the face changes it, and a small trash button on
-   *  the photo's bottom-right corner, shown on hover, removes it (artist
-   *  page, 2026-10-15). */
-  overlayRemove?: boolean;
   /** A small neutral camera chip instead of the green badge, for a page where
    *  the badge would be the loudest thing on it (artist page, #866). */
   quietBadge?: boolean;
@@ -58,7 +54,6 @@ export function ProfilePhotoPicker({
   onChange,
   surface,
   showActions = false,
-  overlayRemove = false,
   quietBadge = false,
   className = '',
 }: Props) {
@@ -121,23 +116,6 @@ export function ProfilePhotoPicker({
           </span>
         ) : null}
       </button>
-      {overlayRemove && photoUrl && !busy ? (
-        <button
-          type="button"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            void photo.remove();
-          }}
-          aria-label={`Remove ${name}'s photo`}
-          title="Remove photo"
-          // Shown on hover or keyboard focus only (founder, 2026-10-15); a
-          // touch screen has no hover, so it stays visible there.
-          className="motion-focus motion-press absolute bottom-1.5 right-1.5 grid h-8 w-8 place-items-center rounded-full bg-black/55 text-white/85 opacity-0 backdrop-blur-sm transition-[opacity,background-color,color] hover:bg-black/80 hover:text-status-error focus-visible:bg-black/80 focus-visible:text-status-error focus-visible:opacity-100 group-hover/photo:opacity-100 touch:opacity-100"
-        >
-          <Trash2 className="h-4 w-4" aria-hidden />
-        </button>
-      ) : null}
       </div>
 
       <input

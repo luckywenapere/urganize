@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.277.1",
+    tag: "App",
+    date: "November 12, 2026",
+    highlights: [
+      "An artist's name now stays on one line and gets smaller if it is long.",
+      "The trash button is gone from the artist photo.",
+    ],
+  },
+  {
     version: "1.277.0",
     title: "Shared pages that fit a computer screen",
     tag: "App",
