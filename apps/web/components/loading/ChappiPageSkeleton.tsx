@@ -14,9 +14,10 @@ const HISTORY_ENABLED = isChappiHistoryEnabled();
  * The Assistant page's loading state, rendered inline by `ChappiPageClient`
  * while auth and the command-center fetch are in flight.
  *
- * Mirrors the one-chat layout (#1207): on a phone a "What I did" pill over the
- * chat, on a computer a centred column with the page title, the pill and the
- * chat. Switched by CSS so the server markup is right at every width.
+ * On a phone it mirrors the one-chat layout (#1207): a "What I did" pill over
+ * the chat. On a computer (#1218) it mirrors UrgansSessionsLayout: the chats
+ * column (Ask about everything, then rollout chats) and the open chat with its
+ * thin header. Switched by CSS so the server markup is right at every width.
  *
  * Deliberately NOT reserved: the invite-teammates banner, which is
  * manager-gated and dismissal-persisted, so the skeleton cannot know whether
@@ -37,15 +38,39 @@ export function ChappiPageSkeleton() {
           <ChappiConversationSkeleton resumableMessages={messages} />
         </div>
       </div>
-      <div className="home-split-height mx-auto hidden w-full max-w-3xl flex-col lg:flex" aria-hidden="true">
-        <div className="flex shrink-0 items-center justify-between gap-3 pb-2">
-          <SkeletonBlock className="h-8 w-32" />
-          <SkeletonBlock className="h-10 w-32 rounded-full" />
+      <div
+        className="home-split-height mx-auto hidden w-full max-w-[1280px] grid-cols-[288px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-stroke-subtle lg:grid"
+        aria-hidden="true"
+      >
+        <div className="flex min-h-0 flex-col gap-1 border-r border-stroke-subtle bg-bg-surface p-4">
+          <SkeletonRow />
+          <SkeletonBlock className="mx-2 mb-1.5 mt-3.5 h-3 w-24" />
+          {Array.from({ length: 5 }, (_, index) => (
+            <SkeletonRow key={index} />
+          ))}
         </div>
-        <div className="min-h-0 min-w-0 flex-1">
-          <ChappiConversationSkeleton resumableMessages={messages} />
+        <div className="flex min-h-0 min-w-0 flex-col">
+          <div className="flex min-h-[52px] shrink-0 items-center justify-between gap-3 border-b border-stroke-subtle px-6 py-3">
+            <SkeletonBlock className="h-4 w-72" />
+            <SkeletonBlock className="h-4 w-28" />
+          </div>
+          <div className="min-h-0 min-w-0 flex-1 px-6 pb-4 pt-3">
+            <ChappiConversationSkeleton resumableMessages={messages} />
+          </div>
         </div>
       </div>
     </>
+  );
+}
+
+function SkeletonRow() {
+  return (
+    <div className="flex items-center gap-2.5 p-2">
+      <SkeletonBlock className="h-8 w-8 shrink-0 rounded-lg" />
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <SkeletonBlock className="h-3.5 w-32" />
+        <SkeletonBlock className="h-3 w-44" />
+      </div>
+    </div>
   );
 }

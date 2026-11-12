@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.272.0",
+    title: "All your AI chats in one place",
+    tag: "AI",
+    date: "November 12, 2026",
+    highlights: [
+      "On a computer, the Assistant now lists each rollout's chat on the left, under Ask about everything.",
+      "The chats you used last are at the top. Click one and it opens right there.",
+      "Rollouts left the top bar, since its chats now live in the Assistant.",
+    ],
+  },
+  {
     version: "1.271.1",
     tag: "AI",
     date: "November 12, 2026",

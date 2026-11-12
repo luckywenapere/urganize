@@ -258,6 +258,14 @@ export function activeShellArea(areas: ShellArea[], pathname: string): ShellArea
   return areas.find((area) => area.isActive(pathname)) ?? null;
 }
 
+/** The computer's top bar (Nov 12, 2026, #1218, founder approved
+ *  docs/mocks/assistant-chats-desktop): Rollouts left it, because each
+ *  rollout's chat now sits in the Assistant's left column. This reverses the
+ *  Nov 2, 2026 call that made Rollouts a top tab. The phone keeps its tab. */
+export function topBarAreas(areas: ShellArea[]): ShellArea[] {
+  return areas.filter((area) => area.key !== 'rollouts');
+}
+
 /** The sub-tab row is only worth a line of screen when there is a choice. */
 export function visibleSubTabs(area: ShellArea | null): ShellSubTab[] {
   if (!area || area.subTabs.length < 2) return [];

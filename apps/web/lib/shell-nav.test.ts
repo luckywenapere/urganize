@@ -6,6 +6,7 @@ import {
   buildMoreItems,
   buildShellAreas,
   shellPageTitle,
+  topBarAreas,
   visibleSubTabs,
   type ShellFlags,
 } from './shell-nav';
@@ -56,6 +57,14 @@ describe('shell nav', () => {
     expect(activeMobileTab(areas, '/dashboard/sessions')).toBe('rollouts');
     // Team is a page of Settings now, not in the menu.
     expect(areas.some((a) => a.key === 'team')).toBe(false);
+  });
+
+  it('leaves Rollouts out of the computer top bar (Nov 12, 2026, #1218): its chats live in the Assistant', () => {
+    const areas = buildShellAreas(ALL_OFF);
+    expect(topBarAreas(areas).map((a) => a.key)).toEqual(['catalogue', 'urgans']);
+    expect(topBarAreas(buildShellAreas(ALL_ON)).map((a) => a.key)).toEqual(['catalogue', 'urgans', 'relationships', 'opportunities']);
+    // The phone's bottom bar keeps it.
+    expect(buildMobileTabs(areas).map((t) => t.key)).toContain('rollouts');
   });
 
   it('marks areas with nothing built as not live, so their page says coming soon', () => {
