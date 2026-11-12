@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ProofLine } from "../components/landing/ProofLine";
 import { ResponsiveProductShot } from "../components/landing/ResponsiveProductShot";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
@@ -124,7 +125,8 @@ export default function WhyUrganizePage() {
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
               A group chat is good for talking. It is bad at holding a plan,
               even for one artist. Add a second release, a third artist and a
-              team passing work around, and things start to drop.
+              team passing work around, and things start to drop. Urganize
+              plans your release and keeps track of every task.
             </p>
             {/* CTA moved into the hero (2026-08-05): the page previously had
                 no ask until the very bottom, five screens down, so anyone
@@ -132,7 +134,16 @@ export default function WhyUrganizePage() {
                 on purpose, per the ProofLine mount table's "keep the first
                 touch light" rule; tamuno stays on the final CTA below. */}
             <div className="mt-8 flex w-full flex-col items-center gap-3">
-              <TrialButton location="why_urganize_hero" size="lg" className="w-full sm:w-auto" />
+              <div className="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
+                <TrialButton location="why_urganize_hero" size="lg" className="w-full sm:w-auto" />
+                {/* A second option for a visitor not ready to sign up (#1220). */}
+                <Link
+                  href="/pricing"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-[color:var(--marketing-border-strong)] px-7 py-4 text-base font-medium tracking-[-0.02em] text-[var(--marketing-text)] transition-colors hover:bg-[var(--marketing-surface-muted)] sm:w-auto"
+                >
+                  See pricing
+                </Link>
+              </div>
               <p className="mt-4 text-sm leading-6 text-[var(--marketing-text-muted)]">{PRIMARY_CTA.note}</p>
             </div>
           </PageDawn>

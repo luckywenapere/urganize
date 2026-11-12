@@ -8,6 +8,7 @@ import { ResponsiveProductShot } from "../components/landing/ResponsiveProductSh
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { TrialButton } from "../components/landing/TrialButton";
+import { salesMailto } from "@/lib/sales-mailto";
 import { WorkspaceShotSection } from "../components/landing/sections/WorkspaceShotSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
@@ -138,7 +139,19 @@ export default function ForExecutivesPage() {
                 trial, the same TrialButton the homepage mounts; the waitlist
                 survives as a disclosure under the final CTA. */}
             <div className="mt-8 flex w-full flex-col items-center gap-4">
-              <TrialButton location="for_executives_hero" size="lg" className="w-full sm:w-auto" />
+              <div className="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
+                <TrialButton location="for_executives_hero" size="lg" className="w-full sm:w-auto" />
+                {/* The Label plan is a custom deal; this is its way in (#1220). */}
+                <a
+                  href={salesMailto("Label")}
+                  data-track="pricing_contact_clicked"
+                  data-plan="label"
+                  data-location="for_executives_hero"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-[color:var(--marketing-border-strong)] px-7 py-4 text-base font-medium tracking-[-0.02em] text-[var(--marketing-text)] transition-colors hover:bg-[var(--marketing-surface-muted)] sm:w-auto"
+                >
+                  Talk to us about Label
+                </a>
+              </div>
               <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
                 {PRIMARY_CTA.note}
               </p>
@@ -248,7 +261,19 @@ export default function ForExecutivesPage() {
                 .
               </p>
               <div className="mt-10 flex w-full flex-col items-center gap-4">
-                <TrialButton location="for_executives_cta" size="lg" className="w-full sm:w-auto" />
+                <div className="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
+                  <TrialButton location="for_executives_cta" size="lg" className="w-full sm:w-auto" />
+                  {/* The Label plan is a custom deal; this is its way in (#1220). */}
+                  <a
+                    href={salesMailto("Label")}
+                    data-track="pricing_contact_clicked"
+                    data-plan="label"
+                    data-location="for_executives_cta"
+                    className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-[color:var(--marketing-border-strong)] px-7 py-4 text-base font-medium tracking-[-0.02em] text-[var(--marketing-text)] transition-colors hover:bg-[var(--marketing-surface-muted)] sm:w-auto"
+                  >
+                    Talk to us about Label
+                  </a>
+                </div>
                 <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
                   {PRIMARY_CTA.note}
                 </p>

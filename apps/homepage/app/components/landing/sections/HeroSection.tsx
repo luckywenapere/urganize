@@ -1,4 +1,7 @@
-import { PROMISE_LINE } from "@/lib/positioning";
+import { AUDIENCE_LINE, PROMISE_LINE } from "@/lib/positioning";
+import { VisitorPrice } from "@/app/components/pricing/VisitorPrice";
+import { getTier, PRICING_TIER_ORDER } from "@urganize/pricing";
+
 import { ProofLine } from "../ProofLine";
 import { ResponsiveProductShot } from "../ResponsiveProductShot";
 import { SectionShell } from "../SectionShell";
@@ -10,6 +13,13 @@ import { wideContainerClass } from "./shared";
 import { HeroCards, HeroSky } from "./HeroDawn";
 import { HeroLoop } from "../hero-loop/HeroLoop";
 import { HERO_LOOP_POSTER } from "../hero-loop/poster";
+
+// The cheapest paid plan, read from @urganize/pricing like the pricing strip
+// does, so the hero never quotes a typed price.
+const FIRST_PAID_TIER = PRICING_TIER_ORDER.find((id) => {
+  const tier = getTier(id);
+  return !tier.contactSales && (tier.monthlyPrice?.amount ?? 0) > 0;
+});
 
 const HERO_SHOT_SIZES = "(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw";
 
@@ -47,8 +57,13 @@ export function HeroSection() {
         className="relative mx-auto flex max-w-[60rem] scroll-mt-28 flex-col items-center text-center"
       >
         <HeroCards />
+        {/* What it plans and for whom, before the headline (#1220, from the
+            Coframe review: the headline alone never said what gets planned).
+            The headline and the line under it are the founder's approved
+            positioning (lib/positioning.ts) and stay as they are; this label
+            carries the plain "what". */}
         <p className="hero-fade-in hero-delay-1 mono-label text-balance text-[var(--marketing-accent)]">
-          For artists, managers and record labels
+          Plan new music · For {AUDIENCE_LINE}
         </p>
         <h1 className="hero-fade-in hero-delay-1 mt-6 text-balance text-[2.6rem] leading-[1.05] text-[var(--marketing-text)] sm:text-[3.8rem] lg:text-[4.6rem]">
           Tell it your goals. <span className="block text-[var(--marketing-accent)]">Get a plan that fits.</span>
@@ -64,9 +79,22 @@ export function HeroSection() {
               (public beta; the team picks a plan there). The waitlist form
               comes back if SIGNUP_OPEN is turned off. */}
           {SIGNUP_OPEN ? (
-            <div className="flex flex-col items-center gap-3">
-              <TrialButton location="hero" size="lg" className="w-full sm:w-auto" />
+            <div className="flex w-full flex-col items-center gap-3">
+              {/* The main button names what the visitor gets, echoing "Get a
+                  plan that fits" (#1220). It still opens sign-up, which then
+                  asks about the goals and builds the plan. The header button
+                  keeps "Create your account". The demo sits beside it as a
+                  real second button, not a small link. */}
+              <div className="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
+                <TrialButton location="hero" size="lg" label="Get my plan" className="w-full sm:w-auto" />
+                <WatchDemo variant="ghost" className="w-full sm:w-auto" />
+              </div>
               <p className="mono-label text-[var(--marketing-text-subtle)]">{PRIMARY_CTA.hint}</p>
+              {FIRST_PAID_TIER ? (
+                <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
+                  Plans from <VisitorPrice tierId={FIRST_PAID_TIER} />.
+                </p>
+              ) : null}
             </div>
           ) : (
             <WaitlistForm
@@ -76,9 +104,11 @@ export function HeroSection() {
               accent
             />
           )}
-          <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-            <WatchDemo variant="link" />
-          </p>
+          {SIGNUP_OPEN ? null : (
+            <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
+              <WatchDemo variant="link" />
+            </p>
+          )}
           <ProofLine
             id="zaddyfunds"
             className="mt-2 w-full max-w-[30rem] border-t border-[color:var(--marketing-border)] pt-5"

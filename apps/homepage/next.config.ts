@@ -51,7 +51,9 @@ const nextConfig: NextConfig = {
       // browser forever, and a copy decision is the kind that can be reversed.
       {
         source: "/for-labels",
-        destination: "/pricing",
+        // The record labels page exists again (/for-executives), so a label
+        // following an old link lands on the page written for them (#1220).
+        destination: "/for-executives",
         permanent: false,
       },
       // Short links printed on the end card of the walkthrough videos (#908),

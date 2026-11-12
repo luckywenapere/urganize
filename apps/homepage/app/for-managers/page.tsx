@@ -120,9 +120,9 @@ export default function ForManagersPage() {
               </span>
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
-              One artist or five, the plan and the tasks live in one place,
-              not in five chats. Urganize keeps track of every task, so
-              chasing everyone stops being your job.
+              One artist or five, the plan and the tasks live in one place.
+              Urganize keeps track of every task, so chasing everyone stops
+              being your job.
             </p>
             {/* CTA moved into the hero (2026-08-05, URG-218): the page
                 previously had no ask until the very bottom, ~6 screens
@@ -134,7 +134,16 @@ export default function ForManagersPage() {
                 trial, the same TrialButton the homepage mounts; the waitlist
                 survives as a disclosure under the final CTA. */}
             <div className="mt-8 flex w-full flex-col items-center gap-4">
-              <TrialButton location="for_managers_hero" size="lg" className="w-full sm:w-auto" />
+              <div className="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
+                <TrialButton location="for_managers_hero" size="lg" className="w-full sm:w-auto" />
+                {/* A second option for a visitor not ready to sign up (#1220). */}
+                <Link
+                  href="/pricing"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-[color:var(--marketing-border-strong)] px-7 py-4 text-base font-medium tracking-[-0.02em] text-[var(--marketing-text)] transition-colors hover:bg-[var(--marketing-surface-muted)] sm:w-auto"
+                >
+                  See pricing
+                </Link>
+              </div>
               <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
                 {PRIMARY_CTA.note}
               </p>
@@ -267,7 +276,7 @@ export default function ForManagersPage() {
               href="/for-executives"
               className="text-[var(--marketing-text)] underline underline-offset-4 hover:text-[var(--marketing-accent)]"
             >
-              See Urganize for executives
+              See Urganize for record labels
             </Link>
             .
           </p>

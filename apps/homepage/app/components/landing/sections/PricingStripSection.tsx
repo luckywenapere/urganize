@@ -1,5 +1,6 @@
 import { VisitorPrice } from "@/app/components/pricing/VisitorPrice";
 import { salesMailto } from "@/lib/sales-mailto";
+import { PlanPicker } from "../PlanPicker";
 import {
   formatTierFromPrice,
   formatTierPrice,
@@ -75,13 +76,18 @@ export function PricingStripSection() {
           ) : null}
         </div>
 
+        {/* Two taps to the plan that fits (#1220, from the Coframe review). */}
+        <PlanPicker />
+
         {/* Solo, Manager, Pro and Label (from a starting price) since
             2026-11-07. One column on a phone, two from md, four from xl. */}
         <ul className="mx-auto mt-12 grid max-w-[76rem] gap-4 md:grid-cols-2 xl:grid-cols-3">
           {tiers.map(({ id, tier, price, highlights, outcomeHeading, outcomes }) => (
             <li
               key={id}
-              className="flex h-full flex-col rounded-[1.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5 sm:p-6"
+              // Label spans two columns (#1220): five cards in a three-column
+              // grid left an empty slot beside it, which read as a missing plan.
+              className={`flex h-full flex-col rounded-[1.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5 sm:p-6 ${tier.contactSales ? "md:col-span-2" : ""}`}
             >
               {/* No badge and no elevation — every card here is identical, and
                   `tier.recommended` is not read on this surface. Both went on

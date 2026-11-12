@@ -245,8 +245,8 @@ export function PricingTierCards() {
 
         <p className="mx-auto mt-8 max-w-2xl text-center text-sm leading-6 text-[var(--marketing-text-muted)]">
           {currency === "USD"
-            ? `Need more? Add AI credits (${money(CREDIT_PACK_USD.priceUsd, "USD")} for ${CREDIT_PACK_USD.credits}) on any paid plan.`
-            : `Need more? Add AI credits (from ${money(Math.min(...Object.values(CREDIT_OVERAGE_NAIRA)), "NGN")} each, up to a limit you set) on any paid plan${
+            ? `Need more? Add AI credits (${money(CREDIT_PACK_USD.priceUsd, "USD")} for ${CREDIT_PACK_USD.credits}) on any plan.`
+            : `Need more? Add AI credits (from ${money(Math.min(...Object.values(CREDIT_OVERAGE_NAIRA)), "NGN")} each, up to a limit you set) on any plan${
                 canBuyAddon("manager", "person")
                   ? `, or a person (${money(ADDON_PRICES_NAIRA.person, "NGN")}/month) or an artist (${money(ADDON_PRICES_NAIRA.artist, "NGN")}/month) on Pro and Pro Plus`
                   : ""

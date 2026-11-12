@@ -57,7 +57,7 @@ export default function GuidesPage() {
             <p className="text-[var(--marketing-text-muted)]">
               Want this plan built for your next release?
             </p>
-            <TrialButton location="guide_cta" />
+            <TrialButton location="guide_index_cta" />
           </div>
         </div>
       </main>

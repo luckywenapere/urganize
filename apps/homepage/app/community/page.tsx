@@ -43,7 +43,7 @@ export default function CommunityPage() {
               Artists, managers and record labels comparing notes on real releases.
             </h1>
             <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
-              A group chat for managers and artists running releases. Ask how
+              A group chat for artists, managers and record labels running releases. Ask how
               others handled the late artwork, the silent distributor or the
               curator who never replied.
             </p>

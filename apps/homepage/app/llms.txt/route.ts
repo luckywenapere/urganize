@@ -16,6 +16,9 @@ const PAGES: ReadonlyArray<readonly [string, string, string]> = [
   ["For managers", "/for-managers", "How a manager runs several artists and a team in Urganize."],
   ["For record labels", "/for-executives", "How a label runs its roster in Urganize."],
   ["Why Urganize", "/why-urganize", "Why teams move off group chats and spreadsheets."],
+  ["For playlist curators", "/for-curators", "A free inbox for the songs artists pitch to curators."],
+  ["Guides", "/guides", "Plain guides to planning and putting out new music."],
+  ["About Urganize", "/brand", "What Urganize is, how to spell it and the logos to use."],
   ["Updates", "/changelog", "Every change to the product, newest first."],
 ];
 

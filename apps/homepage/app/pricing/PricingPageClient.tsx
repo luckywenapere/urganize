@@ -8,6 +8,8 @@ import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { PricingTierCards } from "../components/pricing/PricingTierCards";
 import { PageDawn } from "../components/marketing/PageDawn";
 import { SIGNUP_OPEN } from "@/lib/app-urls";
+import { SALES_CONTACT_EMAIL } from "@urganize/pricing";
+import { TrialButton } from "../components/landing/TrialButton";
 
 // THE PRICE TABLE IS UNCONDITIONAL. Do not put it back behind a flag.
 //
@@ -95,7 +97,7 @@ export function PricingPageClient() {
                 positioning (asks about your goals, or make your own), so check
                 it against lib/positioning by eye when that changes. */}
             <p className="hero-fade-in hero-delay-2 mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl">
-              Every plan asks about your goals and makes a plan that fits.
+              Whichever you pick, Urganize asks about your goals and builds a release plan that fits.
               You can also make your own.
             </p>
 
@@ -151,6 +153,34 @@ export function PricingPageClient() {
             </div>
           </div>
         </section>
+        )}
+
+        {/* The page used to end at the compare table, with no proof and no
+            closing action while sign-up is open (#1220). This is that ending:
+            the ask, a way to talk to us, and one real quote. */}
+        {SIGNUP_OPEN && (
+          <section className="relative px-6 pb-28 pt-8">
+            <div className="mx-auto max-w-3xl text-center">
+              <ScrollReveal>
+                <h2 className="text-3xl md:text-4xl">Not sure which plan?</h2>
+                <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-[var(--marketing-text-muted)]">
+                  Start on the one that fits today. You can cancel or change your plan any time, and we will help you pick.
+                </p>
+              </ScrollReveal>
+              <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                <TrialButton location="pricing_page_end" size="lg" className="w-full sm:w-auto" />
+                <a
+                  href={`mailto:${SALES_CONTACT_EMAIL}?subject=${encodeURIComponent("Which Urganize plan fits?")}`}
+                  data-track="pricing_contact_clicked"
+                  data-location="pricing_end"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-[color:var(--marketing-border-strong)] px-7 py-4 text-base font-medium tracking-[-0.02em] text-[var(--marketing-text)] transition-colors hover:bg-[var(--marketing-surface-muted)] sm:w-auto"
+                >
+                  Talk to us
+                </a>
+              </div>
+              <ProofLine id="zaddyfunds" className="mx-auto mt-8 max-w-[30rem] border-t border-[color:var(--marketing-border)] pt-5" />
+            </div>
+          </section>
         )}
       </main>
 

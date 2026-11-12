@@ -19,7 +19,7 @@ import { PageDawn } from "../components/marketing/PageDawn";
 export const metadata: Metadata = buildPageMetadata({
   title: "About Urganize: name, brand and press assets",
   description:
-    `What Urganize is, how to spell it, and the logos and words to use when you write about us. ${CORE_LINE}`,
+    `What Urganize is, how to spell it and the logos to use when you write about us. ${CORE_LINE}`,
   path: "/brand",
 });
 
@@ -125,7 +125,7 @@ export default function BrandPage() {
             {/* Hero */}
             <p className={sectionEyebrow}>Brand</p>
             <h1 className="mt-6 text-[2.25rem] leading-[1.08] sm:text-[3rem]">
-              Brand
+              About Urganize
             </h1>
             <p className={`mt-4 max-w-[38rem] ${bodyText}`}>
               How Urganize looks, how it speaks and what it stands for, plus the logos and
