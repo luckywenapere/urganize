@@ -233,3 +233,15 @@ Connection requests from 5 Nov: 3 of 18 accepted so far, 2 of them replied (Afol
 **Round 2 (afternoon):** first DM to Joy Etido Usen (accepted today, post liked yesterday). Connection requests (9) to Kelvin Amponsah (Crux Global, Accra), Benjamin Lebrave, Yannick Zagba (Abidjan), Godwin Addisco, Matt Voss, Talha Eren, Oli James, Isaiah La Touche and Isaac Green (UK), 6 with a liked post (Matt, Talha, Oli have none). Julia Miller's request would not go through. Week total: 51 requests.
 
 **Measured to 11 Nov (LinkedIn thread data and live database):** first DMs 39 of 86 replied (45%); requests 27 of 102 accepted (26%), by day 29%, 38%, 19% and 8% (7 and 8 Nov, no likes), 23% (9 Nov, 2 days), 27% (10 Nov Nigeria batch, 1 day); 17 of 27 who accepted replied (63%). 24 people got the sign-up link, 3 signed up, 1 uses it (Lewatle), 0 paying. The gap is after sign-up.
+
+## 12 Nov 2026
+
+**New from today: investors and possible advisors.** Oyin is now also building relationships with investors and people who could become advisors. No ask yet: each note opens with something they posted, says he's building music software in Nigeria, and asks for nothing.
+
+**Inbox replies sent (5):** Samuel Babayemi (manages Damilola HKN and Wyave, both early): what Urganize does, plans for one artist up to a full label, sign-up link. Elvis Ofurum (freelance A&R and management): asked how he keeps track across his artists. Joy Etido Usen (building Usen House): asked what it is. Igbagboyemi Taiwo (entertainment lawyer and manager) and Gregg Miller (Been Nice Records): asked who they work with. Caroline Morabe (Africa Brandcom) replied to Oyin's own message; left for him.
+
+**First DMs (5), each with a liked post where they had one:** Ty Conway (merch for Mellina Tey's "Bad"), Giulia Ferraro (Decision), Kutlwano Tshidi (Anything Goes), Bright Ukpabi (Dutch Dreams Records, no posts), Adrian Silva (no posts).
+
+**Investor and advisor connection requests (4 pending), each with a liked post:** Kehinde Hassan (Christian Rich, angel investor and advisor), Marie Lora-Mungai (creative industries advisor and investor), Oscar "Oskido" Mdlongwa (Kalawa Jazmee, investor), Michael Ugwu (formerly Sony Music West Africa, Freeme, Merlin board). Rus Newton (music tech and Africa investor) needs his email to connect; post liked. Love Akinkunle's (Tafiya Capital) request failed silently three times; post liked. Dropped Sheppard Solomon (job hunting) and Samson Osei (moved into food).
+
+**Round 2 (afternoon):** Ty Conway replied (does concept designs for Mellina Tey, making merch for Sofia Gillani); asked who he co-manages. Connection requests (6), all confirmed in Sent invitations, each with a liked post where they had one: Kay Agyemang (London, label owner and manager), Jeff Gordon (All Star Entertainment, manages Summer Rios and Danielle Cohn), Chilunji Mwambazi (label ops, Addis Ababa), Michael Dodman (Brighton, no posts), Victor Biyere (The Orchard West Africa, reposts only) and Diamond Sheva (DIMA Empire, 11 years in African music; possible advisor). Skipped Alex Cupido and Polsia Ryder (no posts in years) and Frank Uneke (football talent).
