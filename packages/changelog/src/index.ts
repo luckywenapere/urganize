@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.274.0",
+    title: "Settings on a computer, all in one place",
+    tag: "Account",
+    date: "November 12, 2026",
+    highlights: [
+      "On a computer, your team, plan, AI credits, Trash and your own settings now sit in one menu on the left, with the page beside it.",
+      "Team is a table: what each person can see, how much they have open or late, and their next task. Invites have their own list.",
+      "Paying past your AI credits is a switch that starts off. Trash shows what is about to go first.",
+    ],
+  },
+  {
     version: "1.273.0",
     title: "Find people to hire on a computer",
     tag: "Team",

@@ -134,7 +134,9 @@ function EditSheet({
   );
 }
 
-export function ProfileRows() {
+/** `part` (#1226): the computer's settings menu shows Profile and Appearance
+ *  as two pages; the phone shows both together, as before. */
+export function ProfileRows({ part = 'all' }: { part?: 'all' | 'profile' | 'appearance' } = {}) {
   const user = useAuthStore((state) => state.user);
   const updateProfileName = useAuthStore((state) => state.updateProfileName);
   const updateArtistName = useAuthStore((state) => state.updateArtistName);
@@ -144,6 +146,8 @@ export function ProfileRows() {
 
   return (
     <div>
+      {part === 'appearance' ? null : (
+      <>
       <div id="name" className="scroll-mt-4">
         <AccountPhotoSettings userId={user.id} name={user.name || user.email} />
       </div>
@@ -154,6 +158,9 @@ export function ProfileRows() {
           <Row label="Artist name" value={artistName || <AddPill />} onClick={() => setEditing('artist')} />
         ) : null}
       </RowGroup>
+      </>
+      )}
+      {part === 'profile' ? null : (
       <div id="theme" className="scroll-mt-4">
         <RowGroup>
           <div className="flex min-h-[54px] items-center justify-between gap-3 py-2 text-[16px]">
@@ -162,6 +169,7 @@ export function ProfileRows() {
           </div>
         </RowGroup>
       </div>
+      )}
 
       <EditSheet
         open={editing === 'name'}

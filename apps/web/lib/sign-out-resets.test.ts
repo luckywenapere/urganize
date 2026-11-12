@@ -37,6 +37,7 @@ const REGISTRANTS: Record<SignOutResetId, string> = {
   'needs-you': 'stores/useNeedsYouStore.ts',
   notes: 'stores/useNotesStore.ts',
   'home-layout': 'stores/useHomeLayoutStore.ts',
+  'settings-desk-counts': 'components/settings/desk/useDeskCounts.ts',
 };
 
 describe('sign-out reset registry', () => {

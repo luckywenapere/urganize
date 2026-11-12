@@ -281,3 +281,15 @@ export function readAccessRequest(
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// ── The desktop Team table (#1226) ──────────────────────────────────────────
+
+/** The "Sees" column: "Everything", "Kemi Ade only", "2 rollouts". */
+export const teamSeesLabel = (access: TeamAccess): string => accessPill(access) ?? 'Everything';
+
+/** The seats line and how full the meter is (null: no limit, no meter). */
+export function seatMeter(used: number, limit: number | null): { line: string; share: number | null } {
+  if (limit === null) return { line: `${used} on the team`, share: null };
+  const share = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 100;
+  return { line: `${used} of ${limit} seats`, share };
+}

@@ -10,6 +10,9 @@ import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { displayReleaseTitle } from '@/types/releases';
 import { formatDaysLeft, trashDaysLeft, trashUrgency } from '@/lib/rollout-trash';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
+import { TrashDesk } from '@/components/settings/desk/TrashDesk';
+import { setDeskCount } from '@/components/settings/desk/useDeskCounts';
 
 type TrashItem = {
   id: string;
@@ -34,6 +37,7 @@ const dateFormat = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'sh
  * Items remove themselves 30 days after deletion (the daily cron).
  */
 export default function TrashPageClient() {
+  const desktop = useIsDesktopViewport();
   const authLoading = useAuthStore((state) => state.isLoading);
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
 
@@ -58,6 +62,7 @@ export default function TrashPageClient() {
       }
       const body = (await response.json()) as { items: TrashItem[] };
       setItems(body.items ?? []);
+      setDeskCount('trash', (body.items ?? []).length);
       setError('');
     } catch {
       setError('Could not reach Urganize. Check your connection and try again.');
@@ -83,6 +88,7 @@ export default function TrashPageClient() {
         return;
       }
       setItems((current) => current.filter((entry) => entry.id !== item.id));
+      setDeskCount('trash', Math.max(0, items.length - 1));
       setRestoredTitle(displayReleaseTitle(item.title));
       void loadCommandCenter({ force: true });
     } catch (caught) {
@@ -99,12 +105,40 @@ export default function TrashPageClient() {
       const response = await fetch(`/api/releases/${id}/purge`, { method: 'DELETE', headers });
       if (!response.ok) return await readError(response, 'Could not delete the rollout.');
       setItems((current) => current.filter((entry) => entry.id !== id));
+      setDeskCount('trash', Math.max(0, items.length - 1));
       setToPurge(null);
       return null;
     } catch {
       return 'Could not reach Urganize. Check your connection and try again.';
     }
   };
+
+  const dialog = (
+    <DeleteForeverDialog
+      open={toPurge !== null}
+      item={toPurge ? { ...toPurge, title: displayReleaseTitle(toPurge.title) } : null}
+      onConfirm={purge}
+      onClose={() => setToPurge(null)}
+    />
+  );
+
+  // On a computer: a table inside the settings menu (#1226). Phones keep this list.
+  if (desktop) {
+    return (
+      <>
+        <TrashDesk
+          items={items}
+          loading={authLoading || isLoading}
+          error={error}
+          restoringId={restoringId}
+          restoredTitle={restoredTitle}
+          onRestore={(item) => void restore(item)}
+          onDeleteForever={setToPurge}
+        />
+        {dialog}
+      </>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 pb-16">
@@ -206,12 +240,7 @@ export default function TrashPageClient() {
         </>
       )}
 
-      <DeleteForeverDialog
-        open={toPurge !== null}
-        item={toPurge ? { ...toPurge, title: displayReleaseTitle(toPurge.title) } : null}
-        onConfirm={purge}
-        onClose={() => setToPurge(null)}
-      />
+      {dialog}
     </div>
   );
 }

@@ -67,3 +67,20 @@ export function matchesDeleteConfirmation(input: unknown, title: string): boolea
 export function isRolloutDeleted(row: { deleted_at?: string | null } | null | undefined): boolean {
   return Boolean(row && row.deleted_at);
 }
+
+// ── The desktop Trash table (#1226) ─────────────────────────────────────────
+
+/** Soonest gone first: the oldest deletion is removed first. */
+export function sortTrashSoonestFirst<T extends { deletedAt: string }>(items: readonly T[]): T[] {
+  return [...items].sort((a, b) => toTime(a.deletedAt) - toTime(b.deletedAt));
+}
+
+/** The "Gone in" cell: "8 days", "1 day", "Today". */
+export function trashGoneIn(deletedAt: string | Date, now: Date = new Date()): string {
+  const days = trashDaysLeft(deletedAt, now);
+  if (days <= 0) return 'Today';
+  return days === 1 ? '1 day' : `${days} days`;
+}
+
+/** Red only when it is close: under 7 days. */
+export const trashGoneInIsClose = (daysLeft: number): boolean => daysLeft < 7;

@@ -12,6 +12,8 @@ import { useCreditBalance } from '@/components/urgans-actions/useCreditBalance';
 import { useAuthStore } from '@/lib/auth-store';
 import { isCreditsEnabled } from '@/lib/credits/config';
 import { formatSignedCredits, type HistoryEntry } from '@/lib/credits/history';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
+import { CreditsDesk } from '@/components/settings/desk/CreditsDesk';
 
 /**
  * Every spend, top-up, monthly grant and trial grant, newest first, with the
@@ -38,6 +40,7 @@ function formatWhen(iso: string): string {
 
 export default function CreditsPageClient() {
   const router = useRouter();
+  const desktop = useIsDesktopViewport();
   const authLoading = useAuthStore((state) => state.isLoading);
   const { balance, account, refresh: refreshBalance } = useCreditBalance();
 
@@ -87,6 +90,26 @@ export default function CreditsPageClient() {
   }, [refreshBalance, load]);
 
   if (!CREDITS_ON) return null;
+
+  // On a computer: the settings menu beside it (#1226). Phones keep this page.
+  if (desktop) {
+    return (
+      <CreditsDesk
+        entries={entries}
+        loading={authLoading || isLoading}
+        error={error}
+        nextBefore={nextBefore}
+        loadingMore={isLoadingMore}
+        onMore={() => {
+          setIsLoadingMore(true);
+          void load(nextBefore);
+        }}
+        balance={balance}
+        account={account}
+        onPurchased={handlePurchased}
+      />
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 pb-16">

@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Team, Account, AI credits and Trash, desktop</title>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --side-on:#e6e1d6; --card:#faf5ec; --hover:#ebe6dc; --tile:#e3ddd0;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --err:#961a1a; --err-soft:rgba(150,26,26,.08);
+    --ink:#1d2a21; --on-ink:#f5f0e6; --on-ink2:rgba(245,240,230,.72);
+    --board:#d9d5cc; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/20px 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--text); padding:40px 16px 72px; font-variant-numeric:tabular-nums; }
+  p,h1,h2,h3 { margin:0; }
+  .serif { font-family:'Young Serif', serif; font-weight:400; letter-spacing:0; }
+  .sec { color:var(--sec); } .ter { color:var(--ter); } .err { color:var(--err); }
+  .wrap { max-width:1240px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; line-height:36px; }
+  .intro p { color:var(--board-sec); max-width:760px; margin-top:8px; }
+  .label { font-size:12px; line-height:16px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin:40px 0 8px; }
+
+  .desk { background:var(--bg); border-radius:16px; overflow:hidden; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .bar { height:64px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:0 32px; }
+  .logo { font-family:'Young Serif', serif; font-size:18px; display:flex; align-items:center; gap:8px; }
+  .beta { font:700 10px/16px 'Instrument Sans'; letter-spacing:.06em; padding:0 6px; border-radius:4px; background:var(--brand-soft); color:var(--brand); }
+  .tabs { display:flex; gap:4px; }
+  .tabs span { padding:8px 14px; border-radius:99px; color:var(--sec); }
+  .tabs span.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .icons { display:flex; gap:12px; justify-content:flex-end; align-items:center; }
+  .icons i { width:36px; height:36px; border-radius:50%; border:1px solid var(--line2); }
+  .icons b { width:36px; height:36px; border-radius:50%; background:var(--brand); color:var(--on-ink); display:grid; place-items:center; font-size:12px; }
+
+  /* One content width for Home: 1120. */
+  .page { max-width:1120px; margin:0 auto; padding:8px 0 48px; display:flex; flex-direction:column; gap:16px; }
+
+  .face { width:40px; height:40px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--tile); font-weight:600; font-size:13px; }
+  .cv { width:40px; height:40px; flex:none; border-radius:6px; }
+  .cv.none { background:transparent; border:1.5px dashed var(--line2); display:grid; place-items:center; color:var(--ter); font-size:18px; }
+  .chev { width:8px; height:8px; border-top:1.5px solid var(--ter); border-right:1.5px solid var(--ter); transform:rotate(45deg); flex:none; }
+  .btn { display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 16px; border-radius:99px; font-weight:600; font-size:13px; white-space:nowrap; }
+  .btn.light { background:var(--on-ink); color:var(--ink); }
+  .btn.ghost { border:1px solid var(--line2); color:var(--text); font-weight:500; }
+
+  /* 1. Out now: one quiet line, not a tall card with a full-width button. */
+  .out { display:flex; align-items:center; gap:12px; padding:10px 16px; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+  .out .cv { width:32px; height:32px; background:var(--tile); }
+  .pill { font-size:12px; line-height:20px; font-weight:600; padding:0 8px; border-radius:99px; background:var(--brand-soft); color:var(--brand); }
+  .out .grow { flex:1; min-width:0; }
+  .link { color:var(--brand); font-weight:600; text-decoration:underline; text-underline-offset:3px; }
+  </style></head><body>
+<style>
+  .shell { display:grid; grid-template-columns:240px minmax(0,1fr); gap:32px; max-width:1120px; margin:0 auto; padding:8px 0 48px; align-items:start; }
+  .side { position:sticky; top:16px; }
+  .me { display:flex; gap:12px; align-items:center; padding:4px 8px 16px; }
+  .me .t { font-weight:600; } .me .s { color:var(--sec); font-size:13px; }
+  .grp { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ter); padding:16px 12px 6px; }
+  .nav a { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-radius:10px; color:var(--sec); }
+  .nav a.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .nav a em { font-style:normal; font-size:12px; color:var(--ter); }
+  .main h2 { font-family:'Young Serif', serif; font-weight:400; font-size:30px; line-height:38px; }
+  .main .lead { color:var(--sec); margin-top:4px; }
+  .top { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; margin-bottom:20px; }
+  .btn.dark { background:var(--ink); color:var(--on-ink); }
+  .btn.red { color:var(--err); font-weight:600; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; }
+  .card + .card { margin-top:16px; }
+  .pad { padding:20px; }
+  .ch { font-weight:600; margin-bottom:12px; display:flex; justify-content:space-between; }
+  .ch span { font-weight:400; color:var(--sec); font-size:13px; }
+
+  /* table */
+  .th, .tr { display:grid; align-items:center; gap:16px; padding:12px 20px; }
+  .th { font-size:12px; color:var(--ter); font-weight:600; border-bottom:1px solid var(--line); }
+  .tr { border-top:1px solid var(--line); }
+  .th + .tr { border-top:0; }
+  .team .th, .team .tr { grid-template-columns:minmax(0,1.5fr) 110px minmax(0,1fr) 70px 70px minmax(0,1.6fr) 28px; }
+  .nm { display:flex; gap:12px; align-items:center; min-width:0; }
+  .nm .t { font-weight:600; } .nm .s { color:var(--sec); font-size:12px; }
+  .dim { color:var(--sec); font-size:13px; }
+  .late { color:var(--err); font-weight:600; }
+  .num { font-weight:600; }
+  .dots { color:var(--ter); font-size:18px; letter-spacing:1px; }
+  .scope { font-size:12px; font-weight:600; padding:2px 8px; border-radius:99px; background:var(--hover); color:var(--sec); }
+  .inv .tr { grid-template-columns:minmax(0,1.5fr) 110px minmax(0,1fr) auto; }
+  .seats { display:flex; align-items:center; gap:10px; color:var(--sec); font-size:13px; }
+  .seats i { width:120px; height:6px; border-radius:99px; background:var(--tile); position:relative; overflow:hidden; }
+  .seats i:after { content:''; position:absolute; inset:0 auto 0 0; width:80%; background:var(--brand); }
+
+  /* account */
+  .plan { display:flex; align-items:center; gap:20px; }
+  .plan .grow { flex:1; }
+  .plan .big { font-family:'Young Serif', serif; font-size:24px; }
+  .frow { display:grid; grid-template-columns:200px minmax(0,1fr) auto; gap:16px; align-items:center; padding:14px 20px; border-top:1px solid var(--line); }
+  .frow:first-child { border-top:0; }
+  .frow .k { color:var(--sec); }
+  .frow .v { font-weight:500; }
+
+  /* credits */
+  .two { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:24px; align-items:start; }
+  .meter { height:8px; border-radius:99px; background:var(--tile); overflow:hidden; margin:12px 0 8px; }
+  .meter b { display:block; height:100%; width:80%; background:var(--brand); }
+  .bignum { font-family:'Young Serif', serif; font-size:40px; line-height:44px; }
+  .day { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ter); padding:16px 20px 4px; }
+  .hrow { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:16px; padding:12px 20px; border-top:1px solid var(--line); }
+  .day + .hrow { border-top:0; }
+  .hrow .t { font-weight:500; } .hrow .s { color:var(--sec); font-size:13px; }
+  .hrow .amt { font-weight:600; }
+  .field { height:40px; border:1px solid var(--line2); border-radius:10px; background:var(--bg); padding:0 12px; display:flex; align-items:center; justify-content:space-between; }
+  .small { font-size:13px; color:var(--sec); margin-top:8px; }
+  .toggle { display:flex; justify-content:space-between; align-items:center; }
+  .toggle i { width:32px; height:20px; border-radius:99px; background:var(--tile); position:relative; }
+  .toggle i:after { content:''; position:absolute; left:3px; top:3px; width:14px; height:14px; border-radius:50%; background:#fff; }
+
+  /* trash */
+  .trash .th, .trash .tr { grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) 110px 130px auto 28px; }
+  .soon { color:var(--err); font-weight:600; }
+  .tlink { color:var(--brand); font-weight:600; }
+
+  .notes { margin-top:16px; display:grid; gap:10px; }
+  .note { display:grid; grid-template-columns:28px 1fr; gap:10px; color:var(--board-sec); }
+  .note b { width:24px; height:24px; border-radius:50%; background:var(--ink); color:var(--on-ink); display:grid; place-items:center; font-size:12px; }
+  .note strong { color:var(--text); }
+</style>
+
+<div class="wrap">
+  <div class="intro">
+    <h1>Team, Account, AI credits and Trash, desktop</h1>
+    <p>Screens 19 to 22. On a computer, these four become one place: a left menu with everything about you and your team, and the page on the right. Today Account is a phone menu stretched across the screen, and the other three are separate pages with a Back link.</p>
+  </div>
+
+  <!-- 1 TEAM -->
+  <div class="label">1. Team</div>
+  <div class="desk">
+    <div class="bar"><div class="logo">Urganize <span class="beta">BETA</span></div><div class="tabs"><span>Home</span><span>Assistant</span></div><div class="icons"><i></i><b>AK</b></div></div>
+    <div class="shell">
+      <div class="side">
+        <div class="me"><div class="face">AK</div><div><div class="t">Ayo Kalu</div><div class="s">Ayo Kalu Music</div></div></div>
+        <div class="nav">
+          <div class="grp">Your team</div>
+          <a class="on">Team <em>8</em></a><a>Artists and brand</a><a>Plan and billing</a><a>AI credits</a><a>Trash <em>8</em></a>
+          <div class="grp">You</div>
+          <a>Profile</a><a>Notifications</a><a>Appearance</a><a>Security</a>
+        </div>
+      </div>
+      <div class="main">
+        <div class="top">
+          <div><h2>Team</h2><p class="lead">Who is on Ayo Kalu Music, what they can see, and what they owe next.</p></div>
+          <div style="display:flex;gap:16px;align-items:center"><span class="seats"><i></i>8 of 10 seats</span><span class="btn dark">Invite someone</span></div>
+        </div>
+        <div class="card team">
+          <div class="th"><span>Person</span><span>Sees</span><span>Active</span><span>Open</span><span>Late</span><span>Next</span><span></span></div>
+          <div class="tr"><div class="nm"><div class="face">AK</div><div><div class="t">Ayo Kalu (you)</div><div class="s">Owner</div></div></div><span class="dim">Everything</span><span class="dim">10 h ago</span><span class="num">2</span><span class="late">1</span><span><span class="late">Approve the final master</span> <span class="dim">· yesterday</span></span><span class="dots">⋯</span></div>
+          <div class="tr"><div class="nm"><div class="face">KA</div><div><div class="t">Kemi Ade</div><div class="s">Artist</div></div></div><span class="scope">Kemi Ade only</span><span class="dim">10 h ago</span><span class="num">3</span><span class="dim">0</span><span>Send the updated artist bio <span class="dim">· Tue</span></span><span class="dots">⋯</span></div>
+          <div class="tr"><div class="nm"><div class="face">TW</div><div><div class="t">Tobi Wav</div><div class="s">Artist</div></div></div><span class="scope">Tobi Wav only</span><span class="dim">12 h ago</span><span class="num">1</span><span class="dim">0</span><span>Confirm the single artwork <span class="dim">· Sat</span></span><span class="dots">⋯</span></div>
+          <div class="tr"><div class="nm"><div class="face">MP</div><div><div class="t">Maya Patel</div><div class="s">Manager</div></div></div><span class="dim">Everything</span><span class="dim">Yesterday</span><span class="num">2</span><span class="late">1</span><span><span class="late">Confirm playlist targets</span> <span class="dim">· Fri</span></span><span class="dots">⋯</span></div>
+          <div class="tr"><div class="nm"><div class="face">NO</div><div><div class="t">Nneka Okafor</div><div class="s">Team member</div></div></div><span class="scope">1 rollout</span><span class="dim">3 days ago</span><span class="dim">0</span><span class="dim">0</span><span class="dim">Nothing assigned</span><span class="dots">⋯</span></div>
+          <div class="tr"><div class="nm"><div class="face">DO</div><div><div class="t">Dami Ojo</div><div class="s">Viewer</div></div></div><span class="dim">Everything</span><span class="dim">7 days ago</span><span class="num">1</span><span class="dim">0</span><span>Listen through the latest mix <span class="dim">· 18 Nov</span></span><span class="dots">⋯</span></div>
+        </div>
+        <div class="card inv" style="margin-top:16px">
+          <div class="pad" style="padding-bottom:8px"><div class="ch" style="margin:0">Invited, not joined yet</div></div>
+          <div class="tr"><div class="nm"><div class="face">ST</div><div class="t">studio@urganize.app</div></div><span class="dim">Team member</span><span class="dim">Invited 6 Nov</span><span style="display:flex;gap:16px"><span class="tlink">Copy link</span><span class="tlink">Send again</span><span class="btn red" style="height:auto;padding:0">Cancel</span></span></div>
+          <div class="tr"><div class="nm"><div class="face">PR</div><div class="t">press@urganize.app</div></div><span class="dim">Viewer</span><span class="dim">Invited 4 Nov</span><span style="display:flex;gap:16px"><span class="tlink">Copy link</span><span class="tlink">Send again</span><span class="btn red" style="height:auto;padding:0">Cancel</span></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><p><strong>A table, not ten big cards.</strong> Six people fit on one screen, and you can read down a column to see who is late. Today each person is a tall card and the screen holds five.</p></div>
+    <div class="note"><b>2</b><p><strong>"Sees" is its own column.</strong> "Kemi Ade only" was a small green tag in a corner. What someone can see is the thing you most need to check.</p></div>
+    <div class="note"><b>3</b><p><strong>"Done 7d" is gone.</strong> It was hard to read and nobody acts on it. Open and Late stay, and the next task with its date is written out. Click a row to see their tasks.</p></div>
+    <div class="note"><b>4</b><p><strong>Invites are their own list,</strong> with Copy link, Send again and Cancel. "Invite someone" is a button at the top with the seats beside it, not a dashed card at the end.</p></div>
+    <div class="note"><b>5</b><p><strong>The ⋯ menu</strong> holds Change role, Change what they see and Remove.</p></div>
+  </div>
+
+  <!-- 2 ACCOUNT -->
+  <div class="label">2. Account (Plan and billing open)</div>
+  <div class="desk">
+    <div class="bar"><div class="logo">Urganize <span class="beta">BETA</span></div><div class="tabs"><span>Home</span><span>Assistant</span></div><div class="icons"><i></i><b>AK</b></div></div>
+    <div class="shell">
+      <div class="side">
+        <div class="me"><div class="face">AK</div><div><div class="t">Ayo Kalu</div><div class="s">ayo.kalu@example.com</div></div></div>
+        <div class="nav">
+          <div class="grp">Your team</div>
+          <a>Team <em>8</em></a><a>Artists and brand</a><a class="on">Plan and billing</a><a>AI credits</a><a>Trash <em>8</em></a>
+          <div class="grp">You</div>
+          <a>Profile</a><a>Notifications</a><a>Appearance</a><a>Security</a>
+        </div>
+      </div>
+      <div class="main">
+        <div class="top"><div><h2>Plan and billing</h2><p class="lead">What you pay for and when.</p></div></div>
+        <div class="card pad">
+          <div class="plan"><div class="grow"><p class="dim">Your plan</p><p class="big">Pro</p><p class="dim" style="margin-top:4px">Renews 1 Dec on Visa ending 4081</p></div><span class="btn ghost">Change plan</span></div>
+        </div>
+        <div class="card">
+          <div class="frow"><span class="k">Seats</span><span class="v">8 of 10 used</span><span class="tlink">Team</span></div>
+          <div class="frow"><span class="k">AI credits</span><span class="v">120 of 150 left this month</span><span class="tlink">AI credits</span></div>
+          <div class="frow"><span class="k">Card</span><span class="v">Visa ending 4081</span><span class="tlink">Change</span></div>
+          <div class="frow"><span class="k">Receipts</span><span class="v">Emailed to ayo.kalu@example.com</span><span class="tlink">See all</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>6</b><p><strong>One menu on the left, the page on the right.</strong> Today Account is the phone menu stretched to fill a computer screen, and every choice opens another full page. Here you can see where you are and jump straight to anything.</p></div>
+    <div class="note"><b>7</b><p><strong>Split into Your team and You.</strong> Team, Artists and brand, Plan and billing, AI credits and Trash affect everyone. Profile, Notifications, Appearance and Security are only yours.</p></div>
+    <div class="note"><b>8</b><p><strong>"Showing: All artists" leaves this menu.</strong> It picks which artist you are looking at, so it belongs at the top of the app, not in Account. On a computer it is already the artist switcher on Home.</p></div>
+    <div class="note"><b>9</b><p><strong>The plan says when it renews and on which card.</strong> Today it says "Pro" and "Manage plan" and nothing else.</p></div>
+  </div>
+
+  <!-- 3 CREDITS -->
+  <div class="label">3. AI credits</div>
+  <div class="desk">
+    <div class="bar"><div class="logo">Urganize <span class="beta">BETA</span></div><div class="tabs"><span>Home</span><span>Assistant</span></div><div class="icons"><i></i><b>AK</b></div></div>
+    <div class="shell">
+      <div class="side">
+        <div class="me"><div class="face">AK</div><div><div class="t">Ayo Kalu</div><div class="s">Ayo Kalu Music</div></div></div>
+        <div class="nav">
+          <div class="grp">Your team</div>
+          <a>Team <em>8</em></a><a>Artists and brand</a><a>Plan and billing</a><a class="on">AI credits</a><a>Trash <em>8</em></a>
+          <div class="grp">You</div>
+          <a>Profile</a><a>Notifications</a><a>Appearance</a><a>Security</a>
+        </div>
+      </div>
+      <div class="main">
+        <div class="top"><div><h2>AI credits</h2><p class="lead">What UrgAns has done for you, and what it cost.</p></div></div>
+        <div class="two">
+          <div class="card">
+            <div class="day">Today</div>
+            <div class="hrow"><div><div class="t">Built a rollout plan</div><div class="s">Owambe Season · 2 tasks given to Ayo Kalu · 08:21</div></div><span class="amt">10</span></div>
+            <div class="day">5 Nov</div>
+            <div class="hrow"><div><div class="t">Wrote part of a press kit</div><div class="s">Kemi Ade · press bio saved to the public kit · 10:00</div></div><span class="amt">14</span></div>
+            <div class="day">4 Nov</div>
+            <div class="hrow"><div><div class="t">Filled a pitch kit</div><div class="s">Owambe Season · ready for curators · 15:30</div></div><span class="amt">6</span></div>
+            <div class="day">1 Nov</div>
+            <div class="hrow"><div><div class="t">Built a rollout plan</div><div class="s">Owambe Season · artwork reveal in release week · 12:15</div></div><span class="amt">12</span></div>
+          </div>
+          <div>
+            <div class="card pad">
+              <p class="dim">Left this month</p>
+              <p class="bignum">120 <span class="dim" style="font-family:'Instrument Sans';font-size:15px">of 150</span></p>
+              <div class="meter"><b></b></div>
+              <p class="small" style="margin:0">150 more arrive on 1 Dec. Unused credits never expire.</p>
+            </div>
+            <div class="card pad">
+              <div class="toggle"><span style="font-weight:600">Keep going when they run out</span><i></i></div>
+              <p class="small">Off. UrgAns stops until 1 Dec. Turn on to pay ₦15 a credit, up to a limit you set.</p>
+              <div style="margin-top:12px" class="dim">Limit a month</div>
+              <div class="field" style="margin-top:6px;color:var(--ter)">₦7,500 <span style="font-size:12px">a month</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>10</b><p><strong>The balance is the big number, on the right.</strong> Today "120 left" is small grey code-style text under a bar, and the bar looks almost empty when 80% is left.</p></div>
+    <div class="note"><b>11</b><p><strong>Paying past your credits is a switch that is off by default.</strong> Today a ₦7,500 limit is already filled in with a green Save button, which reads as if you are already paying. The limit only shows once it is on.</p></div>
+    <div class="note"><b>12</b><p><strong>History grouped by day, no minus signs.</strong> Every line is something spent, so "-10" says nothing "10" does not.</p></div>
+  </div>
+
+  <!-- 4 TRASH -->
+  <div class="label">4. Trash</div>
+  <div class="desk">
+    <div class="bar"><div class="logo">Urganize <span class="beta">BETA</span></div><div class="tabs"><span>Home</span><span>Assistant</span></div><div class="icons"><i></i><b>AK</b></div></div>
+    <div class="shell">
+      <div class="side">
+        <div class="me"><div class="face">AK</div><div><div class="t">Ayo Kalu</div><div class="s">Ayo Kalu Music</div></div></div>
+        <div class="nav">
+          <div class="grp">Your team</div>
+          <a>Team <em>8</em></a><a>Artists and brand</a><a>Plan and billing</a><a>AI credits</a><a class="on">Trash <em>8</em></a>
+          <div class="grp">You</div>
+          <a>Profile</a><a>Notifications</a><a>Appearance</a><a>Security</a>
+        </div>
+      </div>
+      <div class="main">
+        <div class="top"><div><h2>Trash</h2><p class="lead">Deleted rollouts stay here for 30 days, then they are gone for good.</p></div><span class="btn ghost">Empty trash</span></div>
+        <div class="card trash">
+          <div class="th"><span>Rollout</span><span>Artist</span><span>Activities</span><span>Gone in</span><span></span><span></span></div>
+          <div class="tr"><span style="font-weight:600">Owambe Season, test rollout</span><span class="dim">Kemi Ade</span><span class="dim">5</span><span class="soon">5 days</span><span class="tlink">Restore</span><span class="dots">⋯</span></div>
+          <div class="tr"><span style="font-weight:600">After Midnight</span><span class="dim">Nia Sol</span><span class="dim">8</span><span class="dim">12 days</span><span class="tlink">Restore</span><span class="dots">⋯</span></div>
+          <div class="tr"><span style="font-weight:600">Open Windows</span><span class="dim">Tobi Wav</span><span class="dim">3</span><span class="dim">16 days</span><span class="tlink">Restore</span><span class="dots">⋯</span></div>
+          <div class="tr"><span style="font-weight:600">Friday at Home</span><span class="dim">Dorian</span><span class="dim">1</span><span class="dim">21 days</span><span class="tlink">Restore</span><span class="dots">⋯</span></div>
+          <div class="tr"><span style="font-weight:600">Lagos After Rain, demo</span><span class="dim">Kemi Ade</span><span class="dim">11</span><span class="dim">23 days</span><span class="tlink">Restore</span><span class="dots">⋯</span></div>
+          <div class="tr"><span style="font-weight:600">Night Bus, early mix</span><span class="dim">Kemi Ade</span><span class="dim">4</span><span class="dim">29 days</span><span class="tlink">Restore</span><span class="dots">⋯</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>13</b><p><strong>Soonest gone first.</strong> Today the list is newest first, so the one about to disappear is at the bottom.</p></div>
+    <div class="note"><b>14</b><p><strong>Restore is the only button on the row.</strong> Delete forever moves into the ⋯ menu and still asks you to confirm. Today every row has a red Delete forever box the same size as Restore, eight times over.</p></div>
+    <div class="note"><b>15</b><p><strong>Red only when it is close,</strong> under 7 days. The rest read as plain grey.</p></div>
+  </div>
+</div>
+
+</body></html>

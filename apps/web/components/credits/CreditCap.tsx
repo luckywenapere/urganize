@@ -5,6 +5,7 @@ import { Loader2 } from '@/components/icons';
 import { authHeaders } from '@/components/press-kits/press-kit-client';
 import { isCardCheckReference } from '@/lib/addons';
 import { isIOSApp } from '@/lib/platform';
+import { creditMeter, overageIsOn } from '@/lib/credits/history';
 
 /**
  * AI credits past the plan's monthly credits (#1112, mocks docs/mocks/pricing-addons
@@ -41,7 +42,23 @@ const BUTTON =
 const OUTLINE =
   'motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 border border-stroke-strong px-4 text-sm font-semibold text-content-primary hover:bg-bg-hover disabled:opacity-50';
 
-export function CreditCap({ fallback, onChange }: { fallback?: ReactNode; onChange?: () => void }) {
+/**
+ * `variant="desk"` (#1226, docs/mocks/account-team-desktop): the computer's AI
+ * credits page. The balance is a big number with a meter, and paying past your
+ * credits is a switch that reads off at a ₦0 cap, which is exactly the
+ * existing "off". Turning it on only shows the limit field; nothing is saved or
+ * charged until Save, and turning it off saves ₦0. Same calls, same rules.
+ */
+export function CreditCap({
+  fallback,
+  onChange,
+  variant = 'stack',
+}: {
+  fallback?: ReactNode;
+  onChange?: () => void;
+  variant?: 'stack' | 'desk';
+}) {
+  const [switchOpen, setSwitchOpen] = useState(false);
   const [state, setState] = useState<CapState | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [draft, setDraft] = useState('');
@@ -109,14 +126,15 @@ export function CreditCap({ fallback, onChange }: { fallback?: ReactNode; onChan
   const capShare = state.capNaira > 0 ? Math.min(100, Math.round((spent / state.capNaira) * 100)) : 0;
   const atCap = state.capNaira > 0 && spent >= state.capNaira;
 
-  const saveCap = async () => {
+  const saveCap = async (value: string = draft) => {
     setError('');
     setMessage('');
     setBusy(true);
-    const result = await post('PUT', { capNaira: draft });
+    const result = await post('PUT', { capNaira: value });
     setBusy(false);
     if (result.ok) {
       setMessage('Saved.');
+      setSwitchOpen(false);
       await load();
       onChange?.();
     } else if (result.data.needsCard) setError('Add a card first. We check it with ₦100 and send it back.');
@@ -146,6 +164,154 @@ export function CreditCap({ fallback, onChange }: { fallback?: ReactNode; onChan
       await load();
     } else setError(errorOf(result.data) || 'Your card was not charged.');
   };
+
+  if (variant === 'desk') {
+    const meter = creditMeter({ balance: state.balance, allowance: state.allowance });
+    const saved = overageIsOn(state.capNaira);
+    const on = saved || switchOpen;
+    const toggle = () => {
+      setError('');
+      setMessage('');
+      if (!on) {
+        setSwitchOpen(true);
+        setDraft('');
+        return;
+      }
+      if (saved) {
+        // Off is the existing ₦0 cap.
+        void saveCap('0');
+        return;
+      }
+      setSwitchOpen(false);
+      setDraft(String(state.capNaira));
+    };
+    return (
+      <section className="space-y-4">
+        <div className="rounded-2xl border border-stroke-default bg-bg-surface p-5">
+          <p className="text-sm text-content-secondary">Left this month</p>
+          <p className="mt-1 font-display text-[40px] leading-[44px] text-content-primary">
+            {meter.left.toLocaleString('en')}
+            {meter.of > 0 && meter.left <= meter.of ? (
+              <span className="ml-2 font-sans text-[15px] text-content-secondary">of {meter.of.toLocaleString('en')}</span>
+            ) : null}
+          </p>
+          {meter.of > 0 ? (
+            <div
+              className="mb-2 mt-3 h-2 overflow-hidden rounded-full bg-bg-hover"
+              role="meter"
+              aria-label="Credits left this month"
+              aria-valuemin={0}
+              aria-valuemax={meter.of}
+              aria-valuenow={Math.min(meter.left, meter.of)}
+            >
+              <div className="h-full rounded-full bg-brand" style={{ width: `${meter.share}%` }} />
+            </div>
+          ) : null}
+          <p className="text-[13px] text-content-secondary">More arrive on {day(state.nextGrantAt)}.</p>
+        </div>
+
+        <div className="rounded-2xl border border-stroke-default bg-bg-surface p-5">
+          <div className="flex items-center justify-between gap-3">
+            <span id="credit-overage-label" className="text-sm font-semibold text-content-primary">
+              Keep going when they run out
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={on}
+              aria-labelledby="credit-overage-label"
+              disabled={busy || !state.canEdit}
+              onClick={toggle}
+              className={`motion-focus relative h-5 w-8 shrink-0 rounded-full transition-colors disabled:opacity-50 ${on ? 'bg-brand' : 'bg-content-primary/15'}`}
+            >
+              <span
+                className={`absolute top-[3px] h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-[left] ${on ? 'left-[15px]' : 'left-[3px]'}`}
+              />
+            </button>
+          </div>
+          {saved ? (
+            <>
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-bg-hover" aria-hidden="true">
+                <div className={`h-full ${atCap ? 'bg-status-error' : 'bg-brand'}`} style={{ width: `${capShare}%` }} />
+              </div>
+              <p className="mt-2 text-[13px] text-content-secondary">
+                On. {(state.used?.credits ?? 0).toLocaleString('en')} credits, {naira(spent)} of your {naira(state.capNaira)} limit
+                this month, at {naira(state.rateNaira ?? 0)} a credit.
+              </p>
+            </>
+          ) : (
+            <p className="mt-2 text-[13px] text-content-secondary">
+              {on ? 'Pay ' : `Off. AI stops until ${day(state.nextGrantAt)}. Turn on to pay `}
+              {naira(state.rateNaira ?? 0)} a credit, up to a limit you set.
+            </p>
+          )}
+
+          {on && state.canEdit ? (
+            <div className="mt-3">
+              <label htmlFor="credit-cap" className="text-[13px] text-content-secondary">
+                Limit a month
+              </label>
+              <div className="mt-1.5 flex gap-2">
+                <div className="flex h-10 min-w-0 flex-1 items-center rounded-[10px] border border-stroke-control bg-bg-base px-3">
+                  <span className="text-content-tertiary">₦</span>
+                  <input
+                    id="credit-cap"
+                    inputMode="numeric"
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value.replace(/[^0-9]/g, ''))}
+                    className="ml-1 w-full min-w-0 bg-transparent text-[15px] text-content-primary focus:outline-none"
+                  />
+                  <span className="ml-2 shrink-0 text-xs text-content-tertiary">a month</span>
+                </div>
+                <button
+                  type="button"
+                  disabled={busy || !draft}
+                  onClick={() => void saveCap()}
+                  className="motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 rounded-full bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-50"
+                >
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+                  Save
+                </button>
+              </div>
+              <p className="mt-2 text-[13px] text-content-secondary">
+                {state.card ? `Charged to your ${state.card} on ${day(state.nextGrantAt)}.` : 'Needs a card on file.'}
+              </p>
+              {!state.card && !isIOSApp() ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void addCard()}
+                  className="motion-focus motion-press mt-3 inline-flex h-9 items-center rounded-full border border-stroke-control px-4 text-sm font-semibold text-content-primary hover:bg-bg-hover disabled:opacity-50"
+                >
+                  Add a card
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          {!state.canEdit ? (
+            <p className="mt-3 text-[13px] text-content-secondary">The person who runs your team sets this.</p>
+          ) : null}
+        </div>
+
+        {state.unpaidNaira > 0 ? (
+          <div className="rounded-2xl border border-status-error/30 bg-status-error/5 p-5">
+            <p className="text-sm text-content-primary">
+              <span className="font-semibold text-status-error">We could not charge {naira(state.unpaidNaira)}</span> for
+              credits used past your monthly credits. Extra credits are paused until it is paid.
+            </p>
+            {state.canEdit ? (
+              <button type="button" disabled={busy} onClick={() => void payNow()} className={`${BUTTON} mt-3 rounded-full`}>
+                Pay {naira(state.unpaidNaira)} now
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {message ? <p role="status" className="text-sm text-content-secondary">{message}</p> : null}
+        {error ? <p role="alert" className="text-sm text-status-error">{error}</p> : null}
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-3">
