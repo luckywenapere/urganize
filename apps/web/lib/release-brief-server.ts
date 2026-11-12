@@ -24,7 +24,8 @@ import { briefSeen, type BriefSeen } from '@/lib/brief-present';
 import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-constants';
 import { loadCoverArtUrls } from '@/lib/cover-art';
 import { isMissingTableError } from '@/lib/promo-channels';
-import { loadWorkspaceAccessContext, loadWorkspaceMembers } from '@/lib/tasks-server';
+import { loadProfilesByIds, loadWorkspaceAccessContext, loadWorkspaceMembers } from '@/lib/tasks-server';
+import { sharedByName } from '@/lib/public-pages-desktop';
 import { listBriefGuests, loadBriefGuestPage, type BriefGuestPage } from '@/lib/release-brief-guests-server';
 import {
   BRIEF_BLOCKS,
@@ -1006,7 +1007,7 @@ export async function loadPublicBrief(token: string): Promise<PublicBriefPayload
     if (!admin) return null;
     const { data, error } = await admin
       .from(BRIEFS_TABLE)
-      .select('release_id,idea,share_enabled')
+      .select('release_id,idea,share_enabled,headline,feels_like,not_this,palette')
       .eq('share_token', token)
       .maybeSingle();
     if (error || !data) return null;
@@ -1017,7 +1018,7 @@ export async function loadPublicBrief(token: string): Promise<PublicBriefPayload
     const [releaseResult, referencesRead, tasks] = await Promise.all([
       admin
         .from('releases')
-        .select('id,title,artist_name,release_date,archived_at')
+        .select('id,title,artist_name,release_date,archived_at,owner_user_id,artwork_asset_id')
         .eq('id', releaseId)
         .is('deleted_at', null)
         .maybeSingle(),
@@ -1027,6 +1028,14 @@ export async function loadPublicBrief(token: string): Promise<PublicBriefPayload
     const release = releaseResult.data ? asRow(releaseResult.data) : null;
     if (!release || release.archived_at) return null;
     const releaseDate = textOrNull(release.release_date);
+    const ownerId = text(release.owner_user_id);
+    const artworkAssetId = textOrNull(release.artwork_asset_id);
+    const [owners, covers] = await Promise.all([
+      ownerId ? loadProfilesByIds(admin, [ownerId]).catch(() => null) : Promise.resolve(null),
+      artworkAssetId
+        ? loadCoverArtUrls(admin, [{ id: releaseId, artwork_asset_id: artworkAssetId }], { thumbs: false }).catch(() => null)
+        : Promise.resolve(null),
+    ]);
 
     return {
       artistName: text(release.artist_name),
@@ -1035,6 +1044,12 @@ export async function loadPublicBrief(token: string): Promise<PublicBriefPayload
       idea: text(brief.idea),
       references: referencesRead.ok ? referencesRead.value : [],
       dates: deriveBriefDates({ tasks, releaseDate, today: briefToday() }),
+      headline: text(brief.headline),
+      feelsLike: textList(brief.feels_like),
+      notThis: textList(brief.not_this),
+      palette: textList(brief.palette),
+      coverUrl: covers?.get(releaseId)?.url ?? null,
+      sharedBy: sharedByName(owners?.get(ownerId)?.name),
     };
   } catch {
     return null;

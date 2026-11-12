@@ -68,7 +68,7 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
     <button
       type="button"
       onClick={onClick}
-      className="kit-print-hide motion-focus inline-flex min-h-[32px] items-center rounded-md px-2 font-mono text-[11px] uppercase tracking-[0.12em] underline-offset-4 hover:underline"
+      className="kit-print-hide motion-focus inline-flex min-h-[32px] items-center rounded-md px-2 font-mono text-[11px] uppercase tracking-[0.12em] underline-offset-4 hover:underline lg:px-0 lg:font-sans lg:text-[13px] lg:font-semibold lg:normal-case lg:tracking-normal"
       style={{ color: state === 'failed' ? CREAM : ACCENT }}
     >
       {state === 'copied' ? 'Copied' : state === 'failed' ? 'Press and hold to copy' : label}
@@ -108,10 +108,13 @@ export function DownloadKitButton({
   artistSlug,
   textFile,
   photos,
+  variant = 'button',
 }: {
   artistSlug: string;
   textFile: string;
   photos: KitPhoto[];
+  /** 'link': the small "Download all" beside the Photos heading on a computer (#1232). */
+  variant?: 'button' | 'link';
 }) {
   const [phase, setPhase] = useState<
     { kind: 'idle' } | { kind: 'working'; done: number; total: number } | { kind: 'error' } | { kind: 'done' }
@@ -163,6 +166,27 @@ export function DownloadKitButton({
 
   const working = phase.kind === 'working';
 
+  if (variant === 'link') {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={working}
+        aria-busy={working}
+        className="kit-print-hide motion-focus text-[13px] font-semibold underline-offset-4 hover:underline disabled:opacity-70"
+        style={{ color: ACCENT }}
+      >
+        {working
+          ? `Preparing ${phase.done} of ${phase.total}`
+          : phase.kind === 'error'
+            ? 'Saved the text only'
+            : phase.kind === 'done'
+              ? 'Saved'
+              : 'Download all'}
+      </button>
+    );
+  }
+
   return (
     <div className="kit-print-hide">
       <button
@@ -197,7 +221,56 @@ export function EmailButton({ email, artistName }: { email: string; artistName: 
       className="kit-print-hide motion-focus inline-flex min-h-[44px] items-center rounded-full px-5 text-sm"
       style={{ backgroundColor: FILL, color: CREAM }}
     >
-      Email the team
+      <span className="lg:hidden">Email the team</span>
+      <span className="hidden lg:inline">Email for interviews</span>
     </a>
+  );
+}
+
+/**
+ * One bio with Short, Medium and Long to switch between, and one Copy (#1232).
+ * A computer only: a phone keeps every bio stacked, each with its own Copy.
+ */
+export function BioSwitch({ bios, title }: { bios: { key: string; label: string; text: string }[]; title: string }) {
+  const initial = bios.some((bio) => bio.key === 'medium') ? 'medium' : bios[0]?.key;
+  const [current, setCurrent] = useState(initial);
+  const bio = bios.find((entry) => entry.key === current) ?? bios[0];
+  if (!bio) return null;
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-[13px] font-semibold" style={{ color: 'var(--kit-text-muted)' }}>
+          {title}
+        </h2>
+        {bios.length > 1 ? (
+          <div role="tablist" aria-label="Bio length" className="inline-flex rounded-full p-[3px]" style={{ background: 'rgba(245,240,230,0.08)' }}>
+            {bios.map((entry) => {
+              const on = entry.key === bio.key;
+              return (
+                <button
+                  key={entry.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => setCurrent(entry.key)}
+                  className="motion-focus rounded-full px-3.5 py-1 text-[13px]"
+                  style={on ? { background: 'var(--kit-ground)', color: CREAM, fontWeight: 600 } : { color: 'var(--kit-text-muted)' }}
+                >
+                  {entry.label}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+      <div role="tabpanel" className="mt-3 space-y-3 text-[15px] leading-relaxed" style={{ color: CREAM }}>
+        {bio.text.split(/\n{2,}/).map((paragraph, index) => (
+          <p key={index}>{paragraph}</p>
+        ))}
+      </div>
+      <div className="mt-3">
+        <CopyButton text={bio.text} label="Copy this bio" />
+      </div>
+    </div>
   );
 }

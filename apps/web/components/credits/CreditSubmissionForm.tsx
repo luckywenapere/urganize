@@ -17,6 +17,7 @@ import {
   type CreditSubmissionInput,
   type ReleaseCreditRole,
 } from '@/types/credits';
+import { creditRoleChipShows } from '@/lib/public-pages-desktop';
 
 // The public credit-submission form (URG-108). Client component rendered by
 // the server page at app/credits/[token]/page.tsx, inside the same
@@ -100,10 +101,10 @@ function inputStyle(): CSSProperties {
   return { backgroundColor: SURFACE, borderColor: FIELD_STROKE, color: CREAM };
 }
 
-/** Quiet grey line above a group of fields. */
+/** Quiet grey line above a group of fields; a plain label on a computer. */
 function GroupLabel({ children }: { children: ReactNode }) {
   return (
-    <p className="text-sm" style={{ color: FAINT }}>
+    <p className="text-sm text-[color:var(--credits-text-faint)] lg:text-[13px] lg:font-semibold lg:text-[color:var(--credits-text)]">
       {children}
     </p>
   );
@@ -116,9 +117,14 @@ function TextField({
   type = 'text',
   required,
   autoComplete,
+  desktopLabel,
+  className = '',
 }: {
   /** Shown as the placeholder and read out as the field's name. */
   label: string;
+  /** The visible label above the field on a computer (#1232), when it differs. */
+  desktopLabel?: ReactNode;
+  className?: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
@@ -126,23 +132,27 @@ function TextField({
   /** What the browser may fill in. Left off for fields it has no name for. */
   autoComplete?: string;
 }) {
+  // A phone names the field in its placeholder; a computer puts the name
+  // above the field, where it stays while you type (#1232).
   return (
-    <input
-      type={type}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      placeholder={label}
-      aria-label={label}
-      required={required}
-      autoComplete={autoComplete}
-      className="h-12 w-full min-w-0 rounded-xl border px-3.5 text-lg outline-none"
-      style={inputStyle()}
-    />
+    <label className={`block min-w-0 ${className}`}>
+      <span className="mb-1.5 hidden text-[13px] font-semibold lg:block" style={{ color: CREAM }}>
+        {desktopLabel ?? label}
+      </span>
+      <input
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={label}
+        aria-label={label}
+        required={required}
+        autoComplete={autoComplete}
+        className="h-12 w-full min-w-0 rounded-xl border px-3.5 text-lg outline-none lg:placeholder:text-transparent"
+        style={inputStyle()}
+      />
+    </label>
   );
 }
-
-/** Roles shown before "More". The rest are rarer on a credit form. */
-const FIRST_ROLES: ReleaseCreditRole[] = ['songwriter', 'producer', 'vocalist', 'featured_artist', 'engineer'];
 
 type CreditSubmissionFormProps = {
   token: string;
@@ -203,11 +213,6 @@ export function CreditSubmissionForm({
   const isWriter = input.roles.some(
     (role) => role === 'songwriter' || role === 'composer' || role === 'lyricist'
   );
-  const shownRoles = showAllRoles
-    ? RELEASE_CREDIT_ROLE_OPTIONS
-    : RELEASE_CREDIT_ROLE_OPTIONS.filter(
-        (role) => FIRST_ROLES.includes(role) || input.roles.includes(role)
-      );
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -313,7 +318,7 @@ export function CreditSubmissionForm({
         </p>
       ) : null}
 
-      <div className="grid gap-2.5">
+      <div className="grid gap-2.5 lg:grid-cols-2 lg:gap-x-3.5 lg:gap-y-4">
         <TextField
           label="Legal name"
           autoComplete="name"
@@ -323,11 +328,17 @@ export function CreditSubmissionForm({
         />
         <TextField
           label="Stage name (optional)"
+          desktopLabel={
+            <>
+              Stage name <span className="font-normal" style={{ color: FAINT }}>Optional</span>
+            </>
+          }
           value={input.stageName || ''}
           onChange={(v) => setInput((c) => ({ ...c, stageName: v }))}
         />
         <TextField
           label="Email"
+          className="lg:col-span-2"
           autoComplete="email"
           type="email"
           required
@@ -341,15 +352,17 @@ export function CreditSubmissionForm({
           <GroupLabel>What did you do?</GroupLabel>
         </legend>
         <div className="mt-2.5 flex flex-wrap gap-1.5">
-          {shownRoles.map((role) => {
+          {/* Every role on a computer; the first few and "More" on a phone. */}
+          {RELEASE_CREDIT_ROLE_OPTIONS.map((role) => {
             const on = input.roles.includes(role);
+            const shows = creditRoleChipShows(role, { showAll: showAllRoles, picked: on });
             return (
               <button
                 key={role}
                 type="button"
                 aria-pressed={on}
                 onClick={() => toggleRole(role)}
-                className="min-h-9 rounded-full border px-3.5 text-sm"
+                className={`min-h-9 rounded-full border px-3.5 text-sm ${shows === 'computer' ? 'hidden lg:inline-block' : ''}`}
                 style={
                   on
                     ? { backgroundColor: BRAND, borderColor: BRAND, color: INK_TEXT }
@@ -364,7 +377,7 @@ export function CreditSubmissionForm({
             <button
               type="button"
               onClick={() => setShowAllRoles(true)}
-              className="min-h-9 rounded-full border px-3.5 text-sm"
+              className="min-h-9 rounded-full border px-3.5 text-sm lg:hidden"
               style={{ borderColor: STROKE, color: FAINT }}
             >
               More

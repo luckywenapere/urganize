@@ -15,7 +15,8 @@ import { PRESS_KIT_SECTION_LABELS } from '@/lib/press-kits';
 import type { PressKitSectionContent, PressKitSectionKey } from '@/types/press-kits';
 import { formatKitDate, firstContactEmail, kitTextFile } from '@/lib/press-kit-text';
 import { KitViewBeacon } from './KitViewBeacon';
-import { CopyButton, DownloadKitButton, EmailButton } from './KitActions';
+import { BioSwitch, CopyButton, DownloadKitButton, EmailButton } from './KitActions';
+import { availableBios } from '@/lib/public-pages-desktop';
 import { ThumbImage } from '@/components/shared/ThumbImage';
 
 /**
@@ -87,16 +88,51 @@ const str = (value: unknown): string => (typeof value === 'string' ? value.trim(
 const rows = (value: unknown): Record<string, unknown>[] =>
   Array.isArray(value) ? (value.filter((item) => item && typeof item === 'object') as Record<string, unknown>[]) : [];
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+/**
+ * The right column's order on a computer (#1232): the mock's bio, latest
+ * release, photos, numbers, then the rest, with Contact last because the email
+ * is already on the left. A phone keeps PUBLIC_SECTION_ORDER.
+ */
+const DESKTOP_ORDER: Partial<Record<PressKitSectionKey, string>> = {
+  bios: 'lg:order-1',
+  latest_release: 'lg:order-2',
+  assets: 'lg:order-3',
+  numbers: 'lg:order-4',
+  contact: 'lg:order-6',
+};
+const desktopOrder = (key: PressKitSectionKey): string => DESKTOP_ORDER[key] ?? 'lg:order-5';
+
+/** On a computer each section is a card with a plain-word heading (#1232). */
+const DESKTOP_CARD =
+  'lg:mt-4 lg:rounded-2xl lg:border lg:border-[color:var(--kit-border)] lg:bg-[color:var(--kit-surface)] lg:p-6';
+
+function Section({
+  title,
+  action,
+  desktopTitle = true,
+  className = '',
+  children,
+}: {
+  title: string;
+  /** Beside the heading on a computer only. */
+  action?: React.ReactNode;
+  /** False when the body draws its own heading on a computer (the bio switch). */
+  desktopTitle?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="kit-section mt-12">
-      <h2
-        className="font-mono text-[11px] uppercase tracking-[0.18em]"
-        style={{ color: FAINT }}
-      >
-        {title}
-      </h2>
-      <div className="mt-3">{children}</div>
+    <section className={`kit-section mt-12 ${DESKTOP_CARD} ${className}`}>
+      <div className={`flex items-center justify-between gap-3 ${desktopTitle ? '' : 'lg:hidden'}`}>
+        <h2
+          className="font-mono text-[11px] uppercase tracking-[0.18em] lg:font-sans lg:text-[13px] lg:font-semibold lg:normal-case lg:tracking-normal lg:text-[color:var(--kit-text-muted)]"
+          style={{ color: FAINT }}
+        >
+          {title}
+        </h2>
+        {action ? <div className="hidden lg:block">{action}</div> : null}
+      </div>
+      <div className={desktopTitle ? 'mt-3' : 'mt-3 lg:mt-0'}>{children}</div>
     </section>
   );
 }
@@ -135,7 +171,12 @@ function Bios({ content }: { content: PressKitSectionContent }) {
   if (available.length === 0) return null;
 
   return (
-    <div className="space-y-6">
+    <>
+      {/* A computer: one bio with a Short, Medium, Long switch (#1232). */}
+      <div className="hidden lg:block">
+        <BioSwitch bios={availableBios(content)} title={PRESS_KIT_SECTION_LABELS.bios} />
+      </div>
+    <div className="space-y-6 lg:hidden">
       {available.map((entry) => (
         <div key={entry.key}>
           <div className="flex items-center justify-between gap-3">
@@ -154,6 +195,7 @@ function Bios({ content }: { content: PressKitSectionContent }) {
         </div>
       ))}
     </div>
+    </>
   );
 }
 
@@ -179,7 +221,7 @@ function SectionBody({
           </p>
         ) : null}
         {date ? (
-          <p className="font-mono text-xs" style={{ color: FAINT }}>
+          <p className="font-mono text-xs lg:font-sans lg:text-[13px]" style={{ color: FAINT }}>
             {date}
           </p>
         ) : null}
@@ -255,9 +297,9 @@ function SectionBody({
     const stats = rows(content.stats);
     if (stats.length === 0) return null;
     return (
-      <ul className="grid gap-4 sm:grid-cols-2">
+      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-2.5">
         {stats.map((stat, index) => (
-          <li key={index}>
+          <li key={index} className="lg:rounded-xl lg:bg-[color:var(--kit-ground)] lg:p-3.5">
             <p className="font-display text-2xl" style={{ color: CREAM }}>
               {str(stat.value)}
             </p>
@@ -268,7 +310,7 @@ function SectionBody({
                 no date attached is the kind of claim this product refuses to
                 make on somebody's behalf. */}
             {str(stat.asOf) ? (
-              <p className="font-mono text-[10px]" style={{ color: FAINT }}>
+              <p className="font-mono text-[10px] lg:mt-0.5 lg:font-sans lg:text-[12px]" style={{ color: FAINT }}>
                 as of {formatKitDate(stat.asOf)}
               </p>
             ) : null}
@@ -375,7 +417,11 @@ function SectionBody({
 function ReleaseBlock({ release, artistName }: { release: PublicReleaseStory; artistName: string }) {
   const date = formatKitDate(release.releaseDate || '');
   return (
-    <section aria-label={release.title || 'New release'} className="mb-14 border-b pb-12" style={{ borderColor: STROKE }}>
+    <section
+      aria-label={release.title || 'New release'}
+      className="mb-14 border-b pb-12 lg:col-start-2 lg:row-start-1 lg:mb-4 lg:rounded-2xl lg:border lg:bg-[color:var(--kit-surface)] lg:p-6"
+      style={{ borderColor: STROKE }}
+    >
       <div className="flex items-center gap-5">
         {release.coverUrl ? (
           // Signed with a short life; next/image would cache it past that.
@@ -388,7 +434,7 @@ function ReleaseBlock({ release, artistName }: { release: PublicReleaseStory; ar
           />
         ) : null}
         <div className="min-w-0">
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: FAINT }}>
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] lg:font-sans lg:text-[13px] lg:font-semibold lg:normal-case lg:tracking-normal" style={{ color: FAINT }}>
             {date ? `Out ${date}` : 'New release'}
           </p>
           <p
@@ -409,7 +455,7 @@ function ReleaseBlock({ release, artistName }: { release: PublicReleaseStory; ar
       ) : null}
       {release.credits.length > 0 ? (
         <div className="mt-8">
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: FAINT }}>
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] lg:font-sans lg:text-[13px] lg:font-semibold lg:normal-case lg:tracking-normal" style={{ color: FAINT }}>
             Who made it
           </p>
           <ul className="mt-3 space-y-1.5">
@@ -448,8 +494,19 @@ export default async function PublicPressKitPage({ params, searchParams }: PageP
   });
 
   const photosBlock = kit.photos.length > 0 ? (
-            <Section title={PRESS_KIT_SECTION_LABELS.assets}>
-              <div className="kit-photos grid gap-4 sm:grid-cols-2">
+            <Section
+              title={PRESS_KIT_SECTION_LABELS.assets}
+              className={desktopOrder('assets')}
+              action={
+                <DownloadKitButton
+                  variant="link"
+                  artistSlug={kit.slug}
+                  textFile={textFile}
+                  photos={kit.photos.map((photo) => ({ url: photo.url, fileName: photo.fileName }))}
+                />
+              }
+            >
+              <div className="kit-photos grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {kit.photos.map((photo) => (
                   <figure key={photo.id}>
                     {/* A signed Storage URL with a one hour life. next/image
@@ -459,7 +516,7 @@ export default async function PublicPressKitPage({ params, searchParams }: PageP
                       src={photo.url}
                       alt={`${kit.artistName} press photo`}
                       loading="lazy"
-                      className="w-full rounded-xl"
+                      className="w-full rounded-xl lg:aspect-[4/5] lg:object-cover"
                       style={{ backgroundColor: SURFACE }}
                     />
                     <figcaption className="mt-2 space-y-0.5">
@@ -469,7 +526,7 @@ export default async function PublicPressKitPage({ params, searchParams }: PageP
                         </p>
                       ) : null}
                       {photo.usageRights ? (
-                        <p className="font-mono text-[10px] uppercase tracking-[0.12em]" style={{ color: FAINT }}>
+                        <p className="font-mono text-[10px] uppercase tracking-[0.12em] lg:font-sans lg:text-[12px] lg:normal-case lg:tracking-normal" style={{ color: FAINT }}>
                           {usageRightLabel(photo.usageRights)}
                         </p>
                       ) : null}
@@ -493,8 +550,23 @@ export default async function PublicPressKitPage({ params, searchParams }: PageP
     <div className="kit-island min-h-screen" style={{ backgroundColor: GROUND }}>
       <KitViewBeacon slug={kit.slug} />
 
-      <main className="mx-auto max-w-2xl px-5 py-16 sm:px-8">
+      {/* A computer: who, how to reach them and the download stay on the left
+          while the reader scrolls the right (#1232). A phone keeps one column. */}
+      <div
+        className="kit-print-hide hidden h-16 items-center justify-between border-b px-10 lg:flex"
+        style={{ borderColor: STROKE }}
+      >
+        <a href="https://urganize.app" className="font-display text-[20px]" style={{ color: ACCENT }}>
+          Urganize
+        </a>
+        <span className="text-[13px]" style={{ color: MUTED }}>
+          Press kit
+        </span>
+      </div>
+
+      <main className="mx-auto max-w-2xl px-5 py-16 sm:px-8 lg:grid lg:max-w-[1120px] lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start lg:gap-x-12 lg:px-10 lg:py-10">
         {release ? <ReleaseBlock release={release} artistName={kit.artistName} /> : null}
+        <aside className="lg:sticky lg:top-6 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-start">
         <header>
           {kit.artistPhotoUrl ? (
             // The artist's roster face, from its 384px copy. A plain img (in
@@ -502,17 +574,17 @@ export default async function PublicPressKitPage({ params, searchParams }: PageP
             // would cache it past that. Hidden until decoded, then faded in
             // over the surface circle: never half painted.
             <span
-              className="mb-6 block h-24 w-24 overflow-hidden rounded-full"
+              className="mb-6 block h-24 w-24 overflow-hidden rounded-full lg:mb-4 lg:aspect-[4/5] lg:h-auto lg:w-full lg:rounded-2xl"
               style={{ backgroundColor: SURFACE }}
             >
               <ThumbImage src={kit.artistPhotoUrl} width={96} height={96} className="block h-full w-full object-cover" />
             </span>
           ) : null}
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: FAINT }}>
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] lg:hidden" style={{ color: FAINT }}>
             Press kit
           </p>
           <h1
-            className="mt-2 break-words font-display text-4xl sm:text-5xl"
+            className="mt-2 break-words font-display text-4xl sm:text-5xl lg:mt-0 lg:text-[34px] lg:leading-[1.15]"
             style={{ color: CREAM, overflowWrap: 'anywhere', textWrap: 'balance' }}
           >
             {kit.artistName}
@@ -523,21 +595,22 @@ export default async function PublicPressKitPage({ params, searchParams }: PageP
             </p>
           ) : null}
           {genreTags ? (
-            <p className="mt-1 font-mono text-xs" style={{ color: FAINT }}>
+            <p className="mt-1 font-mono text-xs lg:font-sans lg:text-[13px]" style={{ color: FAINT }}>
               {genreTags}
             </p>
           ) : null}
           {kit.availableForInterview ? (
-            <p
-              className="mt-4 inline-block rounded-full px-3 py-1 font-mono text-[11px] uppercase tracking-[0.14em]"
-              style={{ backgroundColor: 'var(--kit-fill)', color: CREAM }}
-            >
+            <p className="mt-4 inline-flex items-center rounded-full bg-[color:var(--kit-fill)] px-3 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--kit-text)] lg:mt-3 lg:bg-transparent lg:px-0 lg:py-0 lg:font-sans lg:text-[13px] lg:font-semibold lg:normal-case lg:tracking-normal lg:text-[color:var(--kit-accent)]">
+              <span
+                aria-hidden="true"
+                className="mr-1.5 hidden h-1.5 w-1.5 rounded-full bg-[color:var(--kit-accent)] lg:inline-block"
+              />
               Available for interview
             </p>
           ) : null}
         </header>
 
-        <div className="kit-print-hide mt-8 flex flex-wrap items-start gap-3">
+        <div className="kit-print-hide mt-8 flex flex-wrap items-start gap-3 lg:mt-6 lg:flex-col lg:flex-nowrap lg:items-stretch lg:gap-2.5 lg:[&_a]:w-full lg:[&_a]:justify-center lg:[&_button]:w-full lg:[&_button]:justify-center">
           {contactEmail ? <EmailButton email={contactEmail} artistName={kit.artistName} /> : null}
           <DownloadKitButton
             artistSlug={kit.slug}
@@ -545,10 +618,13 @@ export default async function PublicPressKitPage({ params, searchParams }: PageP
             photos={kit.photos.map((photo) => ({ url: photo.url, fileName: photo.fileName }))}
           />
         </div>
+        </aside>
 
+        {/* Flex on a computer so the cards follow DESKTOP_ORDER. The -mt cancels the first card's margin. */}
+        <div className="lg:col-start-2 lg:row-start-2 lg:-mt-4 lg:flex lg:flex-col">
         {embargo ? (
           <p
-            className="mt-8 rounded-xl border px-4 py-3 text-sm"
+            className="mt-8 rounded-xl border px-4 py-3 text-sm lg:mt-4"
             style={{ borderColor: STROKE, backgroundColor: SURFACE, color: CREAM }}
           >
             {embargo}
@@ -562,8 +638,11 @@ export default async function PublicPressKitPage({ params, searchParams }: PageP
           }
           const entry = body.find((candidate) => candidate.section === key);
           if (!entry) return null;
+          if (key === 'bios' && availableBios(entry.content).length === 0) return null;
           return (
-            <Section key={key} title={PRESS_KIT_SECTION_LABELS[key]}>
+            <Section key={key} title={PRESS_KIT_SECTION_LABELS[key]} desktopTitle={key !== 'bios'}
+              className={desktopOrder(key)}
+            >
               <SectionBody section={key} content={entry.content} />
             </Section>
           );
@@ -574,8 +653,9 @@ export default async function PublicPressKitPage({ params, searchParams }: PageP
             The team is still putting this kit together. Check back soon.
           </p>
         ) : null}
+        </div>
 
-        <footer className="mt-16 border-t pt-6" style={{ borderColor: STROKE }}>
+        <footer className="mt-16 border-t pt-6 lg:col-span-2 lg:col-start-1 lg:row-start-3" style={{ borderColor: STROKE }}>
           <p className="font-mono text-[11px]" style={{ color: FAINT }}>
             Delivered with Urganize
           </p>
