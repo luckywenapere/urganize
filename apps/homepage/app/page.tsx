@@ -23,6 +23,7 @@ import { HERO_VARIANT_SCRIPT } from "@/lib/hero-variant";
 import { homeFontVariables } from "./components/landing/home-fonts";
 import { MarketingFooter } from "./components/marketing/MarketingFooter";
 import { MarketingHeader } from "./components/marketing/MarketingHeader";
+import { MobileStickyCta } from "./components/landing/MobileStickyCta";
 
 // This title/description render verbatim (the home page sits at the same
 // route segment as the root layout, so layout.tsx's "%s | Urganize"
@@ -104,6 +105,7 @@ export default function Home() {
         </main>
 
         <MarketingFooter />
+        <MobileStickyCta />
         <script
           type="application/ld+json"
           // JSON.stringify output of our own constants; nothing user-supplied.

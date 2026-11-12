@@ -15,7 +15,8 @@ export type TrialButtonLocation =
   | "guide_cta"
   | "why_urganize_hero"
   | "why_urganize_cta"
-  | "signup";
+  | "signup"
+  | "mobile_sticky";
 
 // The site's one primary ask (2026-09-02). Three mounts on the homepage
 // (hero, pricing, final — RosterSection carried a fourth, "roster", until it
