@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PRIMARY_CTA, SIGNUP_OPEN } from "@/lib/app-urls";
+import { SIGNUP_OPEN } from "@/lib/app-urls";
 import { TrialButton } from "./TrialButton";
 
 // The homepage's sign-up button, kept within thumb reach on a phone (#1217,
@@ -54,7 +54,7 @@ export function MobileStickyCta() {
         visible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0"
       }`}
     >
-      <TrialButton location="mobile_sticky" className="w-full" label={PRIMARY_CTA.label} />
+      <TrialButton location="mobile_sticky" className="w-full" label="Get my plan" />
     </div>
   );
 }

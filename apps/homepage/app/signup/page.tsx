@@ -8,6 +8,15 @@ import { APP_LOGIN_URL, PRIMARY_CTA, SIGNUP_OPEN } from "@/lib/app-urls";
 import { PageDawn } from "../components/marketing/PageDawn";
 import { ResponsiveProductShot } from "../components/landing/ResponsiveProductShot";
 import type { ProductShot } from "@/content/product-shots";
+import { ProofLine } from "../components/landing/ProofLine";
+import { VisitorPrice } from "../components/pricing/VisitorPrice";
+import { getTier, PRICING_TIER_ORDER } from "@urganize/pricing";
+
+// The cheapest paid plan, from @urganize/pricing, never typed.
+const FIRST_PAID_TIER = PRICING_TIER_ORDER.find((id) => {
+  const tier = getTier(id);
+  return !tier.contactSales && (tier.monthlyPrice?.amount ?? 0) > 0;
+});
 
 // Lives on the marketing domain so it can be found by people searching the
 // brand (founder call, 2026-08-09; see the note in app/sitemap.ts). The URL
@@ -82,6 +91,17 @@ export default function SignupPage() {
                 <p className="mt-4 text-sm text-[var(--marketing-text-subtle)]">
                   {PRIMARY_CTA.note}
                 </p>
+                {/* Price and proof beside the button (#1220): this is the page
+                    brand searches land on, and it had neither. */}
+                {SIGNUP_OPEN && FIRST_PAID_TIER ? (
+                  <p className="mt-2 text-sm text-[var(--marketing-text-muted)]">
+                    Plans from <VisitorPrice tierId={FIRST_PAID_TIER} />.{" "}
+                    <Link href="/pricing" className="underline underline-offset-4 hover:text-[var(--marketing-text)]">
+                      See pricing
+                    </Link>
+                  </p>
+                ) : null}
+                <ProofLine id="zaddyfunds" align="left" className="mt-6 max-w-[30rem] border-t border-[color:var(--marketing-border)] pt-5" />
               </div>
             </div>
 

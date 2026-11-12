@@ -83,7 +83,17 @@ const START_SECONDS = 0;
 // in the hero itself because the hero already plays its own loop (#952) right
 // under this link; two loops on one screen would compete, and a 440px frame
 // here would push the proof line below the fold.
-export function WatchDemo({ variant = "pill" }: { variant?: "pill" | "link" }) {
+// THE GHOST VARIANT (2026-11-12, #1220, from the Coframe review): the hero's
+// second option, on the same row and at the same height as the main button,
+// outlined with a play icon, so a visitor who wants to see the product before
+// signing up has a real button to press instead of a small underlined link.
+export function WatchDemo({
+  variant = "pill",
+  className = "",
+}: {
+  variant?: "pill" | "link" | "ghost";
+  className?: string;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [video, setVideo] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -135,6 +145,18 @@ export function WatchDemo({ variant = "pill" }: { variant?: "pill" | "link" }) {
               name has to contain the visible label (WCAG 2.5.3, Label in
               Name). The stop went on 2026-10-17 (URG-334): the hero link now
               stands alone under the form, not at the end of a sentence. */}
+          Watch the demo
+        </button>
+      ) : variant === "ghost" ? (
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={openDemo}
+          className={`inline-flex cursor-pointer touch-manipulation items-center justify-center gap-2.5 rounded-full border border-[color:var(--marketing-border-strong,var(--marketing-border))] px-7 py-4 text-base font-medium tracking-[-0.02em] text-[var(--marketing-text)] transition-colors hover:bg-[var(--marketing-surface-muted)] ${className}`.trim()}
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+            <path d="M8 5v14l11-7z" />
+          </svg>
           Watch the demo
         </button>
       ) : (

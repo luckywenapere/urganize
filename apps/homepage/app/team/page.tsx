@@ -141,7 +141,7 @@ export default function TeamPage() {
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">
               We&apos;re a small team, and we live the problem we&apos;re
-              fixing. If you want to join us, partner with us, or invest,
+              fixing. If you want to join us, partner with us or invest,
               write to us.
             </p>
             <p className="mt-4">

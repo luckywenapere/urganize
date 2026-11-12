@@ -7,10 +7,9 @@ import {
 import { ResponsiveProductShot } from "../components/landing/ResponsiveProductShot";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
-import { WaitlistForm } from "../components/landing/WaitlistForm";
+import { APP_CURATOR_APPLY_URL } from "@/lib/app-urls";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
-import { CORE_CLAUSE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { PageDawn } from "../components/marketing/PageDawn";
 import type { ProductShot } from "@/content/product-shots";
@@ -18,7 +17,7 @@ import type { ProductShot } from "@/content/product-shots";
 export const metadata: Metadata = buildPageMetadata({
   title: "A free song pitch inbox for playlist curators",
   description:
-    `One inbox for the songs people pitch you, inside Urganize, ${CORE_CLAUSE}. Answer in one tap. Free for curators, and nothing connects to your playlist.`,
+    "One inbox for the songs artists pitch you, inside the app where they plan new music. Answer each in one tap. Free for playlist curators.",
   path: "/for-curators",
   shareCard: "for-curators",
 });
@@ -143,10 +142,18 @@ export default function ForCuratorsPage() {
               free for curators, and your playlist stays yours.
             </p>
             <div className="mt-8 flex w-full flex-col items-center gap-3">
-              <WaitlistForm source="for_curators_hero" />
+              {/* The curator application form in the app (#1220). It used to be
+                  the waitlist form, from before /curator/apply existed. */}
+              <a
+                href={APP_CURATOR_APPLY_URL}
+                data-track="curator_apply_click"
+                data-location="for_curators_hero"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[var(--marketing-primary)] px-8 py-4 text-base font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] transition-colors hover:bg-[var(--marketing-primary-hover)] sm:w-auto"
+              >
+                Apply as a curator
+              </a>
               <p className="text-sm leading-6 text-[var(--marketing-text-subtle)]">
-                Curator accounts are invite only. Leave your details and we
-                send you a link.
+                We read every application and reply within a week.
               </p>
             </div>
           </PageDawn>
@@ -213,14 +220,21 @@ export default function ForCuratorsPage() {
           <SectionShell containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10">
             <div className="text-center">
               <h2 className={PERSONA_HEADLINE_CLASS}>
-                Get your curator invite.
+                Apply to curate on Urganize.
               </h2>
               <p className="mx-auto mt-6 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
                 Free for curators, and we set every curator up personally. Tell
-                us where your playlists live and we will send your link.
+                us where your playlists live and we will reply within a week.
               </p>
               <div className="mt-10 flex w-full flex-col items-center gap-3">
-                <WaitlistForm source="for_curators_cta" />
+                <a
+                  href={APP_CURATOR_APPLY_URL}
+                  data-track="curator_apply_click"
+                  data-location="for_curators_cta"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[var(--marketing-primary)] px-8 py-4 text-base font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] transition-colors hover:bg-[var(--marketing-primary-hover)] sm:w-auto"
+                >
+                  Apply as a curator
+                </a>
               </div>
             </div>
           </SectionShell>

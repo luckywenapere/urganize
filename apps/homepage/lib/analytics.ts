@@ -21,7 +21,9 @@ export type LandingEvent =
   | "hero_tab_switch"
   // Self-serve checkout (2026-10-22): a Get <Plan> card on /pricing, with
   // { plan, period }.
-  | "pricing_plan_clicked";
+  | "pricing_plan_clicked"
+  // The homepage's which-plan-fits picker (#1220), with { who, match }.
+  | "plan_picker_answer";
 
 //
 // HERO A/B (2026-10-18, URG-376). Each event also carries `hero_variant`
