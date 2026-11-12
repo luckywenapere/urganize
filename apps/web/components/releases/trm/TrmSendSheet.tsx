@@ -53,7 +53,7 @@ export function TrmShell({ label, onClose, locked, children }: { label: string; 
       <button type="button" aria-label="Close" tabIndex={-1} onClick={close} className="absolute inset-0 cursor-default bg-black/60" />
       {smUp ? (
         <div className="absolute left-1/2 top-[12vh] w-[480px] max-w-[calc(100vw-2rem)] -translate-x-1/2">
-          <DialogPanel label={label} onClose={close} className="relative max-h-[80vh] overflow-y-auto border border-stroke-strong bg-bg-elevated p-[30px] shadow-2xl">
+          <DialogPanel label={label} onClose={close} className="relative max-h-[80vh] overflow-y-auto border border-stroke-strong bg-bg-elevated p-[30px] shadow-2xl lg:rounded-2xl">
             {!locked ? (
               <button type="button" onClick={onClose} aria-label="Close" className="motion-focus absolute right-5 top-5 text-content-secondary hover:text-content-primary">
                 <X className="h-[18px] w-[18px]" />

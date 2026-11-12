@@ -183,7 +183,12 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     // Fill in details is not a row (Oct 29, 2026, #848): it is part of
     // Distribute, which opens it from its own checklist rows, so Distribute
     // stays lit while it is open.
-    { ...scene('distribute', 'Distribute now'), isActive: activeScene === 'distribute' || activeScene === 'metadata' },
+    // Cover art is a Distribute row too since #1210, so an old Cover art link
+    // keeps Distribute lit.
+    {
+      ...scene('distribute', 'Distribute now'),
+      isActive: activeScene === 'distribute' || activeScene === 'metadata' || activeScene === 'coverart',
+    },
     flags.files ? scene('files', 'Add files') : null,
     // ONE row since 2026-10-16 (Pitch this! as one place): the pitch kit lives
     // inside it, so "Build your pitch kit" is gone from the menu. Old

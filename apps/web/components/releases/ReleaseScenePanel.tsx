@@ -5,7 +5,8 @@ import type { ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/types/tasks';
-import { FIELD_PARAM, type SceneName } from '@/components/workspace/useSceneOverlay';
+import { FIELD_PARAM, useSceneOverlay, type SceneName } from '@/components/workspace/useSceneOverlay';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { isMetadataFixField } from '@/lib/distribution-fix';
 import { captureFeatureDiscoveryByName } from '@/lib/analytics';
 import { MetadataSection } from '@/components/releases/MetadataSection';
@@ -19,7 +20,7 @@ import { PitchScene } from '@/components/pitching/PitchScene';
 import { TimelineScene } from '@/components/releases/TimelineScene';
 import { ReleaseChatSection } from '@/components/releases/ReleaseChatSection';
 import { PitchKitSection } from '@/components/releases/PitchKitSection';
-import { DistributionSection } from '@/components/releases/DistributionSection';
+import { DISTRIBUTE_HOLDS_EDITORS, DistributionSection } from '@/components/releases/DistributionSection';
 import { SpendSection } from '@/components/releases/SpendSection';
 import { ReleaseBriefScene } from '@/components/releases/ReleaseBriefScene';
 import { BriefIdeaGate } from '@/components/releases/BriefIdeaGate';
@@ -150,7 +151,21 @@ export function ReleaseScenePanel({
   const spendStartAdding = scene === 'spend' && requestedField === SPEND_ADD_FIELD;
   // "Fan emails" until the rollout can have a smart link (#852), as the menu row says.
   const smartLinkReady = useSmartLinkReady(scene === 'capture' ? release.id : null);
-  const sceneLabel = scene === 'capture' ? captureRowLabel(smartLinkReady) : SCENE_LABELS[scene];
+  // On a computer, Cover art and Release details are rows of the Distribute
+  // page (#1210, founder approved the desktop mock Nov 11, 2026). Their old
+  // links (Home's first-days card, the lifecycle emails, CoverThumbEditor,
+  // a Fix on a phone, bookmarks) open Distribute with that row's editor open,
+  // and the URL moves to Distribute when the editor closes. Phones keep the
+  // scenes as they are.
+  const desktop = useIsDesktopViewport();
+  const { openScene } = useSceneOverlay();
+  const editorScene = DISTRIBUTE_HOLDS_EDITORS && desktop && (scene === 'metadata' || scene === 'coverart');
+  const showDistribute = scene === 'distribute' || editorScene;
+  const sceneLabel = editorScene
+    ? SCENE_LABELS.distribute
+    : scene === 'capture'
+      ? captureRowLabel(smartLinkReady)
+      : SCENE_LABELS[scene];
 
   // Feature-discovery analytics used to ride the route change (a
   // featureRouteMatchers entry for the old /metadata path). With no route change
@@ -234,7 +249,7 @@ export function ReleaseScenePanel({
           on — this is why an inline open feels instant where the old route
           navigation did not. Their own top margins are overridden by the
           section's `[&>h2+*]` rule above. */}
-      {scene === 'metadata' ? (
+      {scene === 'metadata' && !editorScene ? (
         <MetadataSection
           key={focusField ?? 'metadata'}
           releaseId={release.id}
@@ -243,7 +258,7 @@ export function ReleaseScenePanel({
           onToast={onToast}
         />
       ) : null}
-      {scene === 'coverart' ? <CoverArtSection releaseId={release.id} onToast={onToast} /> : null}
+      {scene === 'coverart' && !editorScene ? <CoverArtSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'files' ? <AssetSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'pitch' ? (
         <PitchScene release={release} onToast={onToast} />
@@ -251,11 +266,20 @@ export function ReleaseScenePanel({
       {scene === 'capture' ? <SmartLinkSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'chat' ? <ReleaseChatSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'pitchkit' ? <PitchKitSection releaseId={release.id} onToast={onToast} /> : null}
-      {scene === 'distribute' ? (
+      {showDistribute ? (
         <DistributionSection
           release={release}
           onOpenDetails={onOpenDetails}
           onChangeArtist={onChangeArtist}
+          onToast={onToast}
+          initialOpen={
+            !editorScene
+              ? null
+              : scene === 'coverart'
+                ? { row: 'cover_art', field: null }
+                : { row: requestedField === 'credits' || requestedField === 'splits' ? 'credits' : 'details', field: focusField }
+          }
+          onEditorClosed={editorScene ? () => openScene('distribute', release.id) : undefined}
         />
       ) : null}
       {scene === 'spend' ? (

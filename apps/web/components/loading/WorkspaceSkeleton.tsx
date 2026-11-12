@@ -174,6 +174,18 @@ function TasksPanelSkeleton({ panelBody }: { panelBody: PanelBody }) {
           const body = panelBody;
           if (body === 'timeline') return <TimelineBodySkeleton />;
           if (body === 'activities') return <BucketBodySkeleton />;
+          // Distribute on a computer is a two-column page that also holds the
+          // Cover art and Details editors (#1210), so those three reserve it.
+          if (body === 'distribute' || body === 'metadata' || body === 'coverart') {
+            return (
+              <>
+                <div className="lg:hidden">
+                  <SceneBodySkeleton />
+                </div>
+                <DistributeDeskBodySkeleton />
+              </>
+            );
+          }
           return <SceneBodySkeleton />;
         })()}
       </div>
@@ -406,6 +418,24 @@ function SceneBodySkeleton() {
       <SkeletonBlock className="h-6 w-40 rounded-md" />
       <SkeletonBlock className="h-4 w-64 rounded-md" />
       <SkeletonBlock className="h-64 w-full rounded-xl" />
+    </div>
+  );
+}
+
+/** The desktop Distribute page: heading and checklist left, the send card and
+ *  the allowance right. Mirrors DistributeDeskSkeleton in TrmDesk.tsx. */
+function DistributeDeskBodySkeleton() {
+  return (
+    <div className="mx-auto mt-6 hidden w-full max-w-[1120px] grid-cols-[minmax(0,1fr)_340px] items-start gap-6 lg:grid xl:grid-cols-[minmax(0,1fr)_380px]" aria-hidden="true">
+      <div className="space-y-4">
+        <SkeletonBlock className="h-10 w-80 rounded-lg" />
+        <SkeletonBlock className="h-4 w-96 rounded-md" />
+        <SkeletonBlock className="h-[340px] w-full rounded-2xl" />
+      </div>
+      <div className="space-y-4">
+        <SkeletonBlock className="h-[164px] w-full rounded-2xl" />
+        <SkeletonBlock className="h-[104px] w-full rounded-2xl" />
+      </div>
     </div>
   );
 }

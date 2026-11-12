@@ -12,11 +12,16 @@ import { FanPaymentsCard } from './FanPaymentsCard';
 import { HandoffSection } from './HandoffSection';
 import { PartnerLogo } from './PartnerLogo';
 import { distributionAuthHeaders, useDistributionStatus } from './useDistributionStatus';
-import { TrmDistribute } from './trm/TrmDistribute';
+import { TrmDistribute, type DistributeOpenRow } from './trm/TrmDistribute';
 
 /** Send to TRM (URG-392) ships ON. NEXT_PUBLIC_FEATURE_TRM_SEND=false is the
  *  kill switch: the step falls back to the handoff + partner cards below. */
 const TRM_SEND_ON = process.env.NEXT_PUBLIC_FEATURE_TRM_SEND !== 'false';
+
+/** On a computer the Distribute step holds the Cover art and Details editors in
+ *  its own rows (#1210), so their old scenes open it there. Only with Send to
+ *  TRM on: the older handoff step has no such rows. */
+export const DISTRIBUTE_HOLDS_EDITORS = TRM_SEND_ON;
 
 type DistributionSectionProps = {
   release: Pick<Release, 'id' | 'title' | 'artistName' | 'releaseDate'>;
@@ -25,6 +30,11 @@ type DistributionSectionProps = {
   onOpenDetails?: () => void;
   /** Open the Change artist dialog. Passed only for who may. */
   onChangeArtist?: () => void;
+  onToast?: (message: string, tone: 'success' | 'error' | 'warning') => void;
+  /** Desktop: open this row's editor on arrival (old Cover art / Release
+   *  details links), and say when it closes. */
+  initialOpen?: DistributeOpenRow | null;
+  onEditorClosed?: () => void;
 };
 
 const PRIMARY_BUTTON =
@@ -65,14 +75,21 @@ const formatDay = (iso: string): string => {
 export function DistributionSection(props: DistributionSectionProps) {
   if (TRM_SEND_ON) {
     return (
-      <TrmDistribute releaseId={props.release.id} onOpenDetails={props.onOpenDetails} onChangeArtist={props.onChangeArtist} />
+      <TrmDistribute
+        releaseId={props.release.id}
+        onOpenDetails={props.onOpenDetails}
+        onChangeArtist={props.onChangeArtist}
+        onToast={props.onToast}
+        initialOpen={props.initialOpen}
+        onEditorClosed={props.onEditorClosed}
+      />
     );
   }
   return <HandoffDistributionSection {...props} />;
 }
 
 /** The step as it was before Send to TRM: the handoff rows and partner cards. */
-function HandoffDistributionSection({ release, onOpenDetails, onChangeArtist }: DistributionSectionProps) {
+function HandoffDistributionSection({ release, onOpenDetails, onChangeArtist }: Pick<DistributionSectionProps, 'release' | 'onOpenDetails' | 'onChangeArtist'>) {
   const { data, setData, loadError, reload } = useDistributionStatus(release.id);
 
   const order = useCallback(

@@ -49,6 +49,28 @@ import { DistributionLimitBlock } from './DistributionLimit';
 import { isBlocked, isExtraReleaseReference } from '@/lib/distribution-limits';
 import { useDistributionPlan } from './useDistributionPlan';
 import { checkoutPath } from '@/lib/self-serve';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
+import { CoverArtSection } from '@/components/releases/CoverArtSection';
+import { MetadataSection } from '@/components/releases/MetadataSection';
+import { useSceneData } from '@/components/releases/useSceneData';
+import type { MetadataFixField } from '@/lib/distribution-fix';
+import { distributeChecklist, leftHeading, leftReason, readyLine, type DistributeRow } from '@/lib/trm/distribute-checklist';
+import {
+  DESK_ROW_BUTTON,
+  DESK_ROW_LINK,
+  DESK_SEND_BUTTON,
+  DESK_SEND_OUTLINE,
+  DeskCard,
+  DeskColumns,
+  DeskEditor,
+  DeskHeading,
+  DeskIssue,
+  DeskItem,
+  DeskPartner,
+  DeskProgress,
+  DeskSendCard,
+  DistributeDeskSkeleton,
+} from './TrmDesk';
 
 /**
  * The Distribute step with Send to TRM (URG-392), built to the approved mocks
@@ -87,14 +109,30 @@ const formatStamp = (iso: string | null | undefined): string => {
   return `${day} · ${time}`;
 };
 
+/** The rows that open an editor inside the desktop checklist (#1210). */
+export type DistributeEditorRow = 'cover_art' | 'details' | 'credits';
+export type DistributeOpenRow = { row: DistributeEditorRow; field: MetadataFixField | null };
+
 type Props = {
   releaseId: string;
   onOpenDetails?: () => void;
   onChangeArtist?: () => void;
+  onToast?: (message: string, tone: 'success' | 'error' | 'warning') => void;
+  /** Desktop: open this row's editor on arrival (an old Cover art or Release
+   *  details link lands here, #1210). */
+  initialOpen?: DistributeOpenRow | null;
+  /** Desktop: called when that editor closes, so the URL can say Distribute. */
+  onEditorClosed?: () => void;
 };
 
-export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Props) {
+export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist, onToast, initialOpen = null, onEditorClosed }: Props) {
   const { data, loadError, reload, post } = useTrm(releaseId);
+  // One layout mounts, never both: the desktop page opens editors inline, and
+  // those fetch (see useIsDesktopViewport).
+  const desktop = useIsDesktopViewport();
+  const [editor, setEditor] = useState<DistributeOpenRow | null>(initialOpen);
+  const coverScene = useSceneData(releaseId, 'coverart', { enabled: desktop && SCENE_FLAGS.coverArt });
+  const coverUrl = coverScene.data?.coverArt?.downloadUrl ?? null;
   const { plan } = useDistributionPlan();
   const { openScene } = useSceneOverlay();
   const router = useRouter();
@@ -215,6 +253,7 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
       </div>
     );
   }
+  if (!data && desktop) return <DistributeDeskSkeleton />;
   if (!data) {
     return (
       <div className="mx-auto mt-8 max-w-[880px] space-y-6" aria-busy="true">
@@ -404,6 +443,519 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist }: Prop
       {note}
     </p>
   ) : null;
+
+  // ---- Desktop (#1210): one page, checklist left, send card right ------------
+  if (desktop) {
+    const toast = (message: string, tone: 'success' | 'error' | 'warning') => {
+      if (onToast) onToast(message, tone);
+      else setNote(message);
+      // An editor saved or uploaded something: re-read the checklist.
+      void reload();
+    };
+    const closeEditor = () => {
+      setEditor(null);
+      void reload();
+      onEditorClosed?.();
+    };
+    const toggleEditor = (next: DistributeOpenRow) => (editor?.row === next.row ? closeEditor() : setEditor(next));
+    const canOpen: Record<DistributeEditorRow, boolean> = {
+      cover_art: SCENE_FLAGS.coverArt,
+      details: SCENE_FLAGS.metadata,
+      credits: SCENE_FLAGS.metadata,
+    };
+    // A Fix that lands in the Cover art or Metadata scene on a phone opens the
+    // same editor inside its row here.
+    const deskFix = (fieldPath: DistributionFieldPath | string | null): (() => void) | null => {
+      if (!fieldPath) return null;
+      const destination = fixDestinationFor(fieldPath as DistributionFieldPath, availability);
+      if (destination?.kind === 'scene' && destination.scene === 'coverart') return () => setEditor({ row: 'cover_art', field: null });
+      if (destination?.kind === 'scene' && destination.scene === 'metadata') {
+        const field = destination.field;
+        return () => setEditor({ row: field === 'credits' || field === 'splits' ? 'credits' : 'details', field });
+      }
+      return fixRun(fieldPath);
+    };
+    /** The details-form field a Details issue opens on, if any. */
+    const fieldOf = (issue: TrmRowView): MetadataFixField | null => {
+      if (!issue.fix || issue.trackId) return null;
+      const destination = fixDestinationFor(issue.fix as DistributionFieldPath, availability);
+      return destination?.kind === 'scene' && destination.scene === 'metadata' ? destination.field : null;
+    };
+    const detailsField = (issues: TrmRowView[]): MetadataFixField | null =>
+      issues.map(fieldOf).find((field): field is MetadataFixField => Boolean(field)) ?? null;
+    const otherIssues = (issues: TrmRowView[]) => issues.filter((issue) => !fieldOf(issue));
+    const issueButton = (issue: TrmRowView | undefined) => {
+      if (!issue) return null;
+      const run = issue.trackId
+        ? () => setSongSheet(issue.trackId as string)
+        : issue.key === 'songs'
+          ? () => void addSong()
+          : deskFix(issue.fix);
+      return run && issue.action ? (
+        <button type="button" onClick={run} className={DESK_ROW_BUTTON}>
+          {ACTION_LABEL[issue.action]}
+        </button>
+      ) : null;
+    };
+    const editorBody = (key: DistributeEditorRow) => {
+      if (editor?.row !== key) return null;
+      return (
+        <DeskEditor label={key === 'cover_art' ? 'Cover art' : key === 'credits' ? 'Credits' : 'Details'} onDone={closeEditor}>
+          {key === 'cover_art' ? (
+            <CoverArtSection releaseId={releaseId} onToast={toast} />
+          ) : (
+            <MetadataSection
+              key={`${key}:${editor.field ?? ''}`}
+              releaseId={releaseId}
+              releaseTitle={data.title}
+              focusField={editor.field ?? (key === 'credits' ? 'credits' : null)}
+              onToast={toast}
+            />
+          )}
+        </DeskEditor>
+      );
+    };
+    const isEditorRow = (key: string): key is DistributeEditorRow => key === 'cover_art' || key === 'details' || key === 'credits';
+    const openButton = (key: DistributeEditorRow, label: string, primary = false) =>
+      canOpen[key] ? (
+        <button
+          type="button"
+          aria-expanded={editor?.row === key}
+          onClick={() => toggleEditor({ row: key, field: key === 'credits' ? 'credits' : null })}
+          className={primary ? DESK_ROW_BUTTON : DESK_ROW_LINK}
+        >
+          {editor?.row === key ? 'Close' : label}
+        </button>
+      ) : null;
+    const thumbFor = (key: string) =>
+      key === 'cover_art' && coverUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={coverUrl} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+      ) : null;
+
+    const checklist = distributeChecklist({
+      blocking: data.checklist.blocking,
+      ready: data.checklist.ready,
+      masters: data.masters,
+      songsListedApart: showSongs,
+      explicitPerSong: data.tracks.length > 0,
+    });
+
+    /** One checklist row before sending, with its one action. */
+    const checkRow = (row: DistributeRow<TrmRowView>) => {
+      const owner = row.issues.find((issue) => issue.owner)?.owner ?? null;
+      let action: React.ReactNode = null;
+      if (row.key === 'cover_art') {
+        const label = row.state === 'todo' && row.detail === 'Not added' ? 'Upload' : 'Replace';
+        action = openButton('cover_art', label, row.state === 'todo');
+      } else if (row.key === 'details') {
+        // Genre, language and explicit are fixed in the details form, so the
+        // row's one Fix opens it on the first of them. The release day, the
+        // title, the artist and a song have fixes of their own (a sheet, a
+        // dialog), so they keep a line each under the row.
+        const field = detailsField(row.issues);
+        if (row.state === 'todo' && field && canOpen.details) {
+          action = (
+            <button
+              type="button"
+              aria-expanded={editor?.row === 'details'}
+              onClick={() => (editor?.row === 'details' ? closeEditor() : setEditor({ row: 'details', field }))}
+              className={DESK_ROW_BUTTON}
+            >
+              {editor?.row === 'details' ? 'Close' : 'Fix'}
+            </button>
+          );
+        } else if (row.state === 'todo' && otherIssues(row.issues).length === 1 && row.issues.length === 1) {
+          action = issueButton(row.issues[0]);
+        } else {
+          action = openButton('details', 'Open');
+        }
+      } else if (row.key === 'credits') {
+        action = row.state === 'todo' ? issueButton(row.issues[0]) ?? openButton('credits', 'Fix', true) : openButton('credits', 'Open');
+      } else if (row.key === 'rights') {
+        action = (
+          <button type="button" onClick={() => setSheet('settings')} className={DESK_ROW_LINK}>
+            Open
+          </button>
+        );
+      }
+      const others = row.key === 'details' && row.state === 'todo' ? otherIssues(row.issues) : [];
+      const lines =
+        others.length > 0 && !(others.length === 1 && row.issues.length === 1)
+          ? others.map((issue) => <DeskIssue key={issue.key} title={issue.title} detail={issue.detail} action={issueButton(issue)} />)
+          : null;
+      return (
+        <DeskItem
+          key={row.key}
+          row={row}
+          thumb={thumbFor(row.key)}
+          action={
+            owner || action ? (
+              <>
+                {owner ? <Face owner={owner} /> : null}
+                {action}
+              </>
+            ) : null
+          }
+        >
+          {lines}
+          {isEditorRow(row.key) ? editorBody(row.key) : null}
+        </DeskItem>
+      );
+    };
+
+    const checklistCard = (
+      <DeskCard label="What goes to the stores">
+        {checklist.rows.map(checkRow)}
+        {addSongRow ? (
+          <li className="flex items-center gap-3.5 border-t border-stroke-default py-3.5">
+            <span aria-hidden="true" className="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-dashed border-stroke-strong text-sm text-content-tertiary">
+              +
+            </span>
+            <p className="min-w-0 flex-1 text-sm text-content-secondary">One song. Add more to make it an EP.</p>
+            <button type="button" disabled={songBusy} onClick={() => void addSong()} className={DESK_ROW_LINK}>
+              Add a song
+            </button>
+          </li>
+        ) : null}
+      </DeskCard>
+    );
+    const dateNote = data.checklist.blocking.some((r) => r.key === 'release_date') ? (
+      <p className="text-sm text-content-secondary">TRM takes {formatShortDay(data.checklist.earliestDate)} or later.</p>
+    ) : null;
+
+    /** After sending: the five items, each with View. */
+    const whatWent = (
+      <DeskCard title="What went" count={songCount > 1 ? `${songCount} songs` : `${checklist.rows.length} items`}>
+        {checklist.rows.map((row) => {
+          const detail =
+            row.key === 'master'
+              ? data.submission?.masterFileName ?? (songCount > 1 ? `${songCount} songs` : '')
+              : row.key === 'cover_art'
+                ? row.detail.replace(/ · Ready for stores$/, '')
+                : row.detail;
+          return (
+            <DeskItem
+              key={row.key}
+              row={{ title: row.title, state: 'ready', detail }}
+              thumb={thumbFor(row.key)}
+              action={isEditorRow(row.key) ? openButton(row.key, 'View') : null}
+            >
+              {isEditorRow(row.key) ? editorBody(row.key) : null}
+            </DeskItem>
+          );
+        })}
+      </DeskCard>
+    );
+
+    // The states with no checklist (taken down, release day passed) still hold
+    // an editor an old link asked for, such as Home's "Type the code yourself".
+    const openEditorCard = editor ? (
+      <DeskCard title={editor.row === 'cover_art' ? 'Cover art' : editor.row === 'credits' ? 'Credits' : 'Details'}>
+        <li className="pt-1 [&>div]:ml-0">{editorBody(editor.row)}</li>
+      </DeskCard>
+    ) : null;
+    const planCard = <DistributionPlanCard plan={plan} limit={data.limit} ownPlan={ownPlan} />;
+    const page = (left: React.ReactNode, right: React.ReactNode) => (
+      <div className="mt-6">
+        <DeskColumns left={left} right={right} />
+        {sheets}
+      </div>
+    );
+    const progressSteps = (current: NonNullable<typeof status>) =>
+      progressFor(current, data.submission?.history ?? [], data.releaseDate).map((step) => ({
+        label: step.label,
+        done: step.done,
+        at: formatStamp(step.at),
+      }));
+    const inverseNote = note ? (
+      <p role="status" className="mt-3 text-sm text-content-inverse/75">
+        {note}
+      </p>
+    ) : null;
+
+    if (status === 'published') {
+      const codes = [
+        { label: 'UPC', code: data.submission?.upc ?? null },
+        { label: 'ISRC', code: data.submission?.isrc ?? null },
+      ].filter((entry): entry is { label: string; code: string } => Boolean(entry.code));
+      return page(
+        <>
+          <div>
+            <DeskHeading title="Delivered to stores." sub={`Live ${formatShortDay(data.releaseDate)}. All stores, with TRM Distro.`} chip={chipNode} />
+            <DeskProgress steps={progressSteps(status)} />
+          </div>
+          {codes.length > 0 ? (
+            <DeskCard title="From TRM">
+              {codes.map(({ label, code }) => (
+                <DeskItem
+                  key={label}
+                  row={{ title: label, state: 'ready', detail: code }}
+                  action={
+                    <button type="button" className={DESK_ROW_LINK} onClick={() => void copy(code, label)}>
+                      <Copy className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                      Copy
+                    </button>
+                  }
+                />
+              ))}
+            </DeskCard>
+          ) : null}
+          {noteLine}
+          {whatWent}
+        </>,
+        <>
+          <DeskPartner sending={false} />
+          {planCard}
+        </>
+      );
+    }
+
+    if (inFlight && status) {
+      return page(
+        <>
+          <div>
+            <DeskHeading
+              title={heroForInFlight(status, received)}
+              sub={received ? 'We’ll tell you the moment it moves. Nothing to do.' : 'Waiting for TRM to receive it. Nothing to do.'}
+              chip={chipNode}
+            />
+            <DeskProgress steps={progressSteps(status)} />
+          </div>
+          {whatWent}
+        </>,
+        <>
+          <DeskPartner sending />
+          {planCard}
+        </>
+      );
+    }
+
+    if (status === 'rejected') {
+      const fixes = data.fixes;
+      const left = fixes.filter((f) => !f.doneAt).length + checklist.left;
+      const rejectedAt = [...(data.submission?.history ?? [])].reverse().find((h) => h.status === 'rejected')?.at;
+      return page(
+        <>
+          <DeskHeading
+            title={`Sent back. ${fixes.length || 1} ${fixes.length === 1 ? 'fix' : 'fixes'}.`}
+            sub={[formatStamp(rejectedAt), 'The fixes are on the plan.'].filter(Boolean).join(' · ')}
+            chip={chipNode}
+          />
+          {fixes.length > 0 ? (
+            <DeskCard title="What TRM asked for">
+              {fixes.map((fix) => {
+                const run = deskFix(fix.fix);
+                return (
+                  <DeskItem
+                    key={fix.id}
+                    row={{ title: fix.title, state: fix.doneAt ? 'ready' : 'todo', detail: `TRM: “${fix.reason}”` }}
+                    action={
+                      <>
+                        {fix.owner ? <Face owner={fix.owner} /> : null}
+                        {fix.doneAt ? (
+                          <span className="text-[13px] font-semibold text-brand">Fixed</span>
+                        ) : run ? (
+                          <button type="button" onClick={run} className={DESK_ROW_BUTTON}>
+                            Fix
+                          </button>
+                        ) : null}
+                      </>
+                    }
+                  />
+                );
+              })}
+            </DeskCard>
+          ) : null}
+          {songsSection}
+          {checklistCard}
+        </>,
+        <>
+          <DeskSendCard
+            title={left > 0 ? `${left} ${left === 1 ? 'fix' : 'fixes'} left` : 'Ready to resend'}
+            reason={left > 0 ? 'Finish the fixes and you can send it back to TRM.' : 'Everything TRM asked for is done.'}
+          >
+            <button type="button" disabled={left > 0} onClick={() => setSheet('resend')} className={DESK_SEND_BUTTON}>
+              Resend to TRM
+            </button>
+          </DeskSendCard>
+          <DeskPartner sending={false} />
+          {planCard}
+        </>
+      );
+    }
+
+    if (status === 'takedown_requested' || status === 'taken_down') {
+      return page(
+        <>
+          <DeskHeading title={status === 'taken_down' ? 'Taken down.' : 'Takedown requested.'} sub="With TRM Distro." chip={chipNode} />
+          {openEditorCard}
+        </>,
+        <>
+          <DeskPartner sending={false} />
+          {planCard}
+        </>
+      );
+    }
+
+    const ownAccountLine = (
+      <p className="mt-3 text-sm text-content-inverse/75">
+        Or send it from {data.primaryArtist ? `${data.primaryArtist}’s` : 'the artist’s'} own TRM account.
+      </p>
+    );
+    const readyHeading = <DeskHeading title="Get it ready for stores" sub={readyLine(checklist)} />;
+
+    if (data.kind !== 'single' && data.storeAccess !== 'allowed') {
+      // TRM's rules (2026-11-07), as on the phone: an EP needs a monthly TRM
+      // plan, an album a yearly one. Send is swapped for the way on.
+      const album = data.kind === 'album';
+      let card: React.ReactNode;
+      if (data.limit && data.limit.mode !== 'plan') {
+        card = (
+          <DeskSendCard
+            title={`${album ? 'Albums' : 'EPs'} need distribution for ${data.primaryArtist || 'this artist'}`}
+            reason={album ? '₦25,500 a year. No monthly limit, albums too.' : '₦7,100 a month (7 releases) or ₦25,500 a year.'}
+          >
+            <Link href="/dashboard?settings=billing" className={DESK_SEND_BUTTON}>
+              Add distribution
+            </Link>
+            {ownAccountLine}
+          </DeskSendCard>
+        );
+      } else {
+        const payYearly = album && data.teamDistributionPlan === 'monthly';
+        const tier = data.teamTier === 'label' ? 'label' : 'pro';
+        card = (
+          <DeskSendCard
+            title={payYearly ? 'Albums need a yearly plan' : album ? 'Albums need a yearly distribution plan' : 'EPs need a distribution plan'}
+            reason={
+              payYearly
+                ? 'You pay monthly, which covers singles and EPs. Pay yearly and albums are included too.'
+                : album
+                  ? 'Solo Plus, Pro Plus and Label include it when you pay yearly.'
+                  : 'Solo Plus, Pro Plus and Label include it, monthly or yearly.'
+            }
+          >
+            <a href={checkoutPath({ plan: payYearly ? tier : 'pro', period: album ? 'annual' : 'monthly' })} className={DESK_SEND_BUTTON}>
+              {payYearly ? 'Pay yearly' : album ? 'Move to Pro Plus, yearly' : 'Move to Pro Plus'}
+            </a>
+            {ownAccountLine}
+          </DeskSendCard>
+        );
+      }
+      return page(
+        <>
+          {readyHeading}
+          {songsSection}
+          {checklistCard}
+          {dateNote}
+        </>,
+        <>
+          {card}
+          {planCard}
+          <Partners />
+        </>
+      );
+    }
+
+    if (status === 'needs_account') {
+      // TRM checks the artist account while delivering, after the submit went
+      // through (TRM, Oct 19, 2026). Fix the account or the email, then resubmit.
+      return page(
+        <>
+          <DeskHeading title={`${data.primaryArtist || 'The artist'} needs a TRM account.`} sub={TRM_ARTIST_NOT_FOUND_TEXT} chip={chipNode} />
+          <DeskCard label="Before it can go">
+            <DeskItem
+              row={{ title: 'TRM account', state: 'todo', detail: `No TRM artist for ${data.artistEmail ?? 'that email'}` }}
+              action={
+                <button type="button" onClick={() => setSheet('email')} className={DESK_ROW_LINK}>
+                  Change email
+                </button>
+              }
+            />
+            {checklist.rows.map(checkRow)}
+          </DeskCard>
+        </>,
+        <>
+          <DeskSendCard title="Then send it again" reason="Once the artist has a TRM account with this email, resubmit.">
+            <div className="flex flex-col gap-2.5">
+              <button type="button" onClick={() => void copy(TRM_SIGNUP_URL, 'Sign-up link')} className={DESK_SEND_BUTTON}>
+                <Copy className="h-4 w-4" aria-hidden="true" />
+                Copy sign-up link
+              </button>
+              <button type="button" disabled={checklist.left > 0} onClick={() => setSheet('resend')} className={DESK_SEND_OUTLINE}>
+                Resubmit to TRM
+              </button>
+            </div>
+            {inverseNote}
+          </DeskSendCard>
+          <DeskPartner sending={false} />
+          {planCard}
+        </>
+      );
+    }
+
+    if (data.checklist.blocking.length > 0 && releaseDayHasPassed(data.releaseDate)) {
+      // Release day has come, so this is history: the rows never done stay as
+      // a record, without actions.
+      const missed = data.checklist.blocking.filter((r) => r.key !== 'release_date');
+      return page(
+        <>
+          <DeskHeading title={`Out on ${formatShortDay(data.releaseDate)}.`} sub="Release day has passed, so this is the record of it." />
+          {missed.length > 0 ? (
+            <DeskCard title="Never finished">
+              {missed.map((row) => (
+                <DeskItem key={row.key} row={{ title: row.title, state: 'todo', detail: row.detail }} />
+              ))}
+            </DeskCard>
+          ) : null}
+          {openEditorCard}
+        </>,
+        <>
+          <Partners sending />
+          {planCard}
+        </>
+      );
+    }
+
+    // Before sending: what is still to do, or ready.
+    const waitlisted = status === 'waitlisted' && !data.canSend;
+    const limitBlocked = checklist.left === 0 && data.canSend && !!data.limit && !ownPlan && isBlocked(data.limit.verdict);
+    const sendLabel = data.submission?.hasDraft && status === 'draft' ? 'Finish sending to stores' : 'Send to stores';
+    return page(
+      <>
+        {readyHeading}
+        {songsSection}
+        {checklistCard}
+        {dateNote}
+      </>,
+      <>
+        <DeskSendCard
+          title={leftHeading(checklist.left)}
+          reason={waitlisted ? 'Sending to the stores opens soon. We’ll tell you the moment it does.' : leftReason(checklist, data.title)}
+        >
+          {waitlisted || limitBlocked ? null : (
+            <button type="button" disabled={busy || checklist.left > 0} onClick={() => void pressSend()} className={DESK_SEND_BUTTON}>
+              {sendLabel}
+            </button>
+          )}
+          {inverseNote}
+          {data.submission?.error && data.canSend ? <p className="mt-3 text-sm text-content-inverse">{data.submission.error}</p> : null}
+        </DeskSendCard>
+        {limitBlocked && data.limit ? (
+          <DistributionLimitBlock
+            limit={data.limit}
+            paying={paying}
+            error={payError}
+            onPay={() => void payForExtra()}
+            onOwnPlan={data.limit.mode === 'plan' ? undefined : () => setOwnPlan(true)}
+          />
+        ) : null}
+        {planCard}
+        <Partners sending />
+      </>
+    );
+  }
 
   const wrap = (children: React.ReactNode) => (
     <div className="mx-auto mt-8 max-w-[880px] space-y-9">

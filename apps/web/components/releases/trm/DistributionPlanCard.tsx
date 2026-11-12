@@ -65,8 +65,8 @@ export function DistributionPlanCard({
   // single. The pay block above the fold already says what to do.
   if (limit && limit.mode === 'addon') {
     return (
-      <div className="border border-stroke-default bg-bg-surface px-4 py-3.5">
-        <p className="text-[15px] font-semibold text-content-primary">Distribution for {limit.artistName || 'this artist'}</p>
+      <div className="border border-stroke-default bg-bg-surface lg:rounded-2xl lg:px-5 px-4 py-3.5">
+        <p className="text-[15px] font-semibold text-content-primary lg:font-display lg:text-lg lg:font-normal">Distribution for {limit.artistName || 'this artist'}</p>
         <DistributionUsage limit={limit} />
       </div>
     );
@@ -80,8 +80,8 @@ export function DistributionPlanCard({
   if (plan.state === 'included') {
     const until = formatLongDay(plan.until);
     return (
-      <div className="border border-stroke-default bg-bg-surface px-4 py-3.5">
-        <p className="text-[15px] font-semibold text-content-primary">Distribution included</p>
+      <div className="border border-stroke-default bg-bg-surface lg:rounded-2xl lg:px-5 px-4 py-3.5">
+        <p className="text-[15px] font-semibold text-content-primary lg:font-display lg:text-lg lg:font-normal">Distribution included</p>
         {limit ? <DistributionUsage limit={limit} /> : null}
         {until && !limit ? <p className={`mt-1 ${MONO}`}>On your plan until {until}.</p> : null}
       </div>
@@ -97,8 +97,8 @@ export function DistributionPlanCard({
         properties: { plan: plan.tier, period: 'semiannual', method: plan.paymentMethod, source: 'distribute' },
       });
     return (
-      <div className="border border-stroke-default bg-bg-surface p-4 sm:p-5">
-        <p className="text-[15px] font-semibold text-content-primary">Distribution comes with 6-month and yearly plans</p>
+      <div className="border border-stroke-default bg-bg-surface lg:rounded-2xl lg:px-5 p-4 sm:p-5">
+        <p className="text-[15px] font-semibold text-content-primary lg:font-display lg:text-lg lg:font-normal">Distribution comes with 6-month and yearly plans</p>
         {plan.canSwitch && six ? (
           <>
             <div className="mt-4">
@@ -131,8 +131,8 @@ export function DistributionPlanCard({
 
   if (plan.reason === 'lapsed') {
     return (
-      <div className="border border-stroke-default bg-bg-surface p-4 sm:p-5">
-        <p className="text-[15px] font-semibold text-content-primary">Your plan ended, so distribution is off</p>
+      <div className="border border-stroke-default bg-bg-surface lg:rounded-2xl lg:px-5 p-4 sm:p-5">
+        <p className="text-[15px] font-semibold text-content-primary lg:font-display lg:text-lg lg:font-normal">Your plan ended, so distribution is off</p>
         <p className="mt-1 text-sm text-content-secondary">Releases already out stay out.</p>
         {plan.canSwitch ? (
           <div className="mt-4">
@@ -146,8 +146,8 @@ export function DistributionPlanCard({
   }
 
   return (
-    <div className="border border-stroke-default bg-bg-surface p-4 sm:p-5">
-      <p className="text-[15px] font-semibold text-content-primary">Distribution comes with Solo Plus, Pro Plus and Label</p>
+    <div className="border border-stroke-default bg-bg-surface lg:rounded-2xl lg:px-5 p-4 sm:p-5">
+      <p className="text-[15px] font-semibold text-content-primary lg:font-display lg:text-lg lg:font-normal">Distribution comes with Solo Plus, Pro Plus and Label</p>
       <p className="mt-1 text-sm text-content-secondary">Or send it with your own TRM plan.</p>
       <div className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:items-center">
         {plan.canSwitch ? (
