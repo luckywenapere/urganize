@@ -24,7 +24,7 @@ const isPersistedDismissed = (value: unknown): value is boolean => typeof value 
  * read AND the team size is known (lib/invite-banner.ts decides), so a manager
  * whose team is already full is never told to invite them.
  */
-export function InviteTeamBanner() {
+export function InviteTeamBanner({ variant = 'banner' }: { variant?: 'banner' | 'line' } = {}) {
   const openSettings = useOpenSettings();
   const user = useAuthStore((state) => state.user);
   // null until the mount effect has read the persisted choice.
@@ -46,6 +46,23 @@ export function InviteTeamBanner() {
     !shouldShowInviteBanner({ isManager: isManagerAccount, dismissed, teamKnown, memberCount })
   ) {
     return null;
+  }
+
+  // The Assistant on a computer (#1218): one quiet line under the
+  // suggestions instead of the full-width bar. Same gate, same destination.
+  if (variant === 'line') {
+    return (
+      <p className="mt-7 text-center text-[13px] text-content-secondary">
+        Working with others?{' '}
+        <button
+          type="button"
+          onClick={() => openSettings({ segment: 'team', section: 'teammates' })}
+          className="motion-focus rounded font-semibold text-brand underline underline-offset-[3px] hover:text-content-primary"
+        >
+          Invite your team
+        </button>
+      </p>
+    );
   }
 
   return (

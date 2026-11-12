@@ -160,6 +160,13 @@ type ChappiConversationProps = {
    * its box hands the message to the sheet instead of the AI tab.
    */
   takeHandedInput?: boolean;
+  /**
+   * The Assistant on a computer (#1218): a line under the empty page's
+   * question, and something under its suggestions (the invite line). Only the
+   * plain page empty state draws them; every other surface leaves them out.
+   */
+  emptySubtitle?: string;
+  emptyFooter?: ReactNode;
 };
 
 // Icons live here, not in the client-safe intent-router lib (icons are React
@@ -300,6 +307,8 @@ export function ChappiConversation({
   placeholder,
   externalComposer = false,
   takeHandedInput = false,
+  emptySubtitle,
+  emptyFooter = null,
 }: ChappiConversationProps) {
   const isPanel = variant === 'panel';
   const router = useRouter();
@@ -1811,11 +1820,13 @@ export function ChappiConversation({
                 What do you want to get done today?
               </h1>
             )}
+            {emptySubtitle ? <p className="-mt-2 text-sm text-content-secondary">{emptySubtitle}</p> : null}
           </div>
         </div>
         <div className="mt-3 shrink-0 lg:mt-6">
           <div className="morph-urgans-composer mx-auto w-full max-w-2xl">{inputForm}</div>
           {chipsRow}
+          {emptyFooter}
         </div>
       </div>
     );

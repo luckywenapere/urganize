@@ -10,7 +10,7 @@ import { AvatarFace } from '@/components/shell/swipe/AvatarMenu';
 import { SETTINGS_PAGE_HREF } from '@/lib/swipe-nav';
 import { useSettingsPageStore } from '@/stores/useSettingsPageStore';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
-import { activeShellArea } from '@/lib/shell-nav';
+import { activeShellArea, topBarAreas } from '@/lib/shell-nav';
 import { useShellAreas } from './useShellAreas';
 import { useShellStore } from '@/stores/useShellStore';
 import { useArtistFilterSync } from './useArtistFilter';
@@ -90,7 +90,8 @@ import { useNavTip } from './useNavTip';
  */
 export function TopNav() {
   const pathname = usePathname() ?? '/dashboard';
-  const areas = useShellAreas();
+  // Home and Assistant on a computer (#1218): Rollouts' chats live in the Assistant.
+  const areas = topBarAreas(useShellAreas());
   const active = activeShellArea(areas, pathname);
   const openCommand = useShellStore((state) => state.openCommand);
   const tip = useNavTip();

@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Assistant and rollout chats, desktop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --side-on:#e6e1d6; --card:#faf5ec; --hover:#ebe6dc; --tile:#e3ddd0;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --err:#961a1a; --err-soft:rgba(150,26,26,.08);
+    --ink:#1d2a21; --on-ink:#f5f0e6; --on-ink2:rgba(245,240,230,.72);
+    --board:#d9d5cc; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/20px 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--text); padding:40px 16px 72px; font-variant-numeric:tabular-nums; }
+  p,h1,h2,h3 { margin:0; }
+  .serif { font-family:'Young Serif', serif; font-weight:400; letter-spacing:0; }
+  .sec { color:var(--sec); } .ter { color:var(--ter); } .err { color:var(--err); }
+  .wrap { max-width:1240px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; line-height:36px; }
+  .intro p { color:var(--board-sec); max-width:760px; margin-top:8px; }
+  .label { font-size:12px; line-height:16px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin:40px 0 8px; }
+
+  .desk { background:var(--bg); border-radius:16px; overflow:hidden; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .bar { height:64px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:0 32px; }
+  .logo { font-family:'Young Serif', serif; font-size:18px; display:flex; align-items:center; gap:8px; }
+  .beta { font:700 10px/16px 'Instrument Sans'; letter-spacing:.06em; padding:0 6px; border-radius:4px; background:var(--brand-soft); color:var(--brand); }
+  .tabs { display:flex; gap:4px; }
+  .tabs span { padding:8px 14px; border-radius:99px; color:var(--sec); }
+  .tabs span.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .icons { display:flex; gap:12px; justify-content:flex-end; align-items:center; }
+  .icons i { width:36px; height:36px; border-radius:50%; border:1px solid var(--line2); }
+  .icons b { width:36px; height:36px; border-radius:50%; background:var(--brand); color:var(--on-ink); display:grid; place-items:center; font-size:12px; }
+
+  /* One content width for Home: 1120. */
+  .page { max-width:1120px; margin:0 auto; padding:8px 0 48px; display:flex; flex-direction:column; gap:16px; }
+
+  .face { width:40px; height:40px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--tile); font-weight:600; font-size:13px; }
+  .cv { width:40px; height:40px; flex:none; border-radius:6px; }
+  .cv.none { background:transparent; border:1.5px dashed var(--line2); display:grid; place-items:center; color:var(--ter); font-size:18px; }
+  .chev { width:8px; height:8px; border-top:1.5px solid var(--ter); border-right:1.5px solid var(--ter); transform:rotate(45deg); flex:none; }
+  .btn { display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 16px; border-radius:99px; font-weight:600; font-size:13px; white-space:nowrap; }
+  .btn.light { background:var(--on-ink); color:var(--ink); }
+  .btn.ghost { border:1px solid var(--line2); color:var(--text); font-weight:500; }
+
+  /* 1. Out now: one quiet line, not a tall card with a full-width button. */
+  .out { display:flex; align-items:center; gap:12px; padding:10px 16px; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+  .out .cv { width:32px; height:32px; background:var(--tile); }
+  .pill { font-size:12px; line-height:20px; font-weight:600; padding:0 8px; border-radius:99px; background:var(--brand-soft); color:var(--brand); }
+  .out .grow { flex:1; min-width:0; }
+  .link { color:var(--brand); font-weight:600; text-decoration:underline; text-underline-offset:3px; }
+  .x { color:var(--ter); font-size:18px; padding:0 4px; }
+
+  /* 2. Next drop: unchanged in shape. */
+  .hero { background:var(--ink); color:var(--on-ink); border-radius:16px; padding:24px; display:flex; align-items:center; gap:24px; }
+  .hero .art { width:120px; height:120px; border-radius:8px; background:#5b2a86; flex:none; }
+  .hero .eyebrow { font-size:11px; font-weight:700; letter-spacing:.1em; color:var(--on-ink2); }
+  .hero h3 { font-family:'Young Serif', serif; font-weight:400; font-size:32px; line-height:40px; margin-top:4px; }
+  .hero .by { color:var(--on-ink2); margin-top:2px; }
+  .hero .prog { width:280px; height:4px; border-radius:99px; background:rgba(245,240,230,.18); margin-top:14px; overflow:hidden; }
+  .hero .prog i { display:block; width:35%; height:100%; background:#7fd99a; }
+  .hero .meta { margin-top:8px; color:var(--on-ink2); }
+  .hero .late { color:#ffb4a8; font-weight:600; }
+  .hero .right { margin-left:auto; text-align:right; }
+  .hero .num { font-family:'Young Serif', serif; font-size:56px; line-height:56px; }
+
+  /* 3. The list: head with the count and the one action; rows read left to right without a gap. */
+  .lhead { display:flex; align-items:flex-end; justify-content:space-between; margin-top:16px; }
+  .lhead h3 { font-family:'Young Serif', serif; font-weight:400; font-size:22px; line-height:28px; }
+  .list { background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+  .row { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1.3fr) 148px 220px 16px; align-items:center; gap:24px; padding:14px 20px; border-top:1px solid var(--line); }
+  .row:first-child { border-top:0; }
+  .row.th { padding:10px 20px; font-size:12px; font-weight:600; color:var(--sec); }
+  .who, .what { display:flex; align-items:center; gap:12px; min-width:0; }
+  .who .name { font-family:'Young Serif', serif; font-size:17px; line-height:22px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .state { font-size:12px; line-height:16px; font-weight:600; color:var(--brand); }
+  .state.quiet { color:var(--ter); font-weight:500; }
+  .what .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .what .k { font-size:12px; line-height:16px; color:var(--sec); }
+  .when .d { font-weight:600; }
+  .when .n { font-size:12px; line-height:16px; color:var(--sec); }
+  .work .bar2 { height:4px; border-radius:99px; background:var(--line2); overflow:hidden; }
+  .work .bar2 i { display:block; height:100%; background:var(--brand); }
+  .work .n { font-size:12px; line-height:16px; color:var(--sec); margin-top:6px; display:flex; gap:10px; }
+  .work .n b { font-weight:600; color:var(--err); }
+  .add { display:flex; align-items:center; gap:12px; padding:14px 20px; border-top:1px solid var(--line); color:var(--sec); font-weight:500; }
+  .add i { width:40px; height:40px; border-radius:50%; border:1.5px dashed var(--line2); display:grid; place-items:center; font-style:normal; font-size:18px; color:var(--ter); }
+
+  /* 7. Tasks on Home: mine on the left, the ones I handed out on the right. */
+  .tasks { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .tcard { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:6px 20px 8px; min-width:0; }
+  .thead { display:flex; align-items:baseline; justify-content:space-between; padding:12px 0 8px; }
+  .thead h3 { font-family:'Young Serif', serif; font-weight:400; font-size:18px; line-height:24px; }
+  .thead h3 span { font:500 13px/20px 'Instrument Sans'; color:var(--sec); }
+  .thead .link { font-size:13px; }
+  .trow { display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--line); min-width:0; }
+  .ck { width:20px; height:20px; border-radius:50%; border:1.5px solid var(--line2); flex:none; }
+  .face.sm { width:28px; height:28px; font-size:11px; font-style:normal; }
+  .tt { flex:1; min-width:0; }
+  .tt .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tt .k { font-size:12px; line-height:16px; color:var(--sec); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .due { font-size:13px; color:var(--sec); white-space:nowrap; }
+  .due.late { color:var(--err); font-weight:600; }
+  .due.ok { color:var(--brand); font-weight:600; }
+  .trow.done .t { color:var(--sec); text-decoration:line-through; }
+
+  /* 8. The team on Home (desktop only): one row of people, each with their load. */
+  .team { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+  .person { display:flex; align-items:center; gap:12px; padding:14px 16px; background:var(--card); border:1px solid var(--line); border-radius:14px; min-width:0; }
+  .person.invite { background:transparent; border-style:dashed; border-color:var(--line2); }
+  .face.dash { background:transparent; border:1.5px dashed var(--line2); color:var(--ter); font-size:18px; font-weight:400; }
+  .pt { min-width:0; }
+  .pt .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pt .k { font-size:12px; line-height:16px; color:var(--sec); }
+  .pt .c { font-size:12px; line-height:16px; color:var(--sec); margin-top:2px; }
+  .pt .c b { color:var(--err); font-weight:600; }
+  .you { font-size:11px; font-weight:600; color:var(--brand); background:var(--brand-soft); border-radius:99px; padding:1px 6px; margin-left:4px; }
+
+  /* 9. Customise Home: reorder, remove, add back. */
+  .editbar { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 16px; border-radius:12px; background:var(--brand-soft); }
+  .edit-grid, .tray { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .w { grid-column:span 2; position:relative; padding:16px 110px 16px 48px; border:1.5px dashed var(--line2); border-radius:14px; background:var(--card); }
+  .w.half, .w.add2 { grid-column:span 1; }
+  .w.add2 { padding-left:16px; background:transparent; }
+  .w .wt { font-weight:600; }
+  .w .k { font-size:12px; line-height:16px; color:var(--sec); margin-top:2px; }
+  .grip { position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--ter); letter-spacing:-2px; cursor:grab; }
+  .rm, .w .link { position:absolute; right:16px; top:50%; transform:translateY(-50%); font-size:13px; font-weight:600; color:var(--err); }
+  .rm.off { color:var(--ter); font-weight:500; }
+  .w .link { color:var(--brand); }
+
+  .notes { margin-top:24px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .note { background:#e9e5db; border-radius:12px; padding:16px; color:var(--board-sec); }
+  .note b { display:block; color:var(--text); margin-bottom:4px; }
+
+  /* Assistant with rollout chats in one place, desktop */
+  .page { max-width:none; padding:0; }
+  .app { display:grid; grid-template-columns:288px minmax(0,1fr); min-height:640px; border-top:1px solid var(--line); }
+  .side { border-right:1px solid var(--line); padding:16px; display:flex; flex-direction:column; gap:4px; background:var(--card); }
+  .newc { display:flex; align-items:center; justify-content:center; gap:8px; height:40px; border-radius:99px; background:var(--brand); color:var(--on-ink); font-weight:600; margin-bottom:12px; }
+  .grp { font-size:12px; line-height:16px; font-weight:600; color:var(--sec); padding:14px 8px 6px; }
+  .it { display:flex; align-items:center; gap:10px; padding:8px; border-radius:10px; min-width:0; }
+  .it.on { background:var(--side-on); }
+  .it .ic { width:32px; height:32px; border-radius:8px; flex:none; display:grid; place-items:center; font-size:12px; font-weight:600; background:var(--tile); }
+  .it .ic.all { background:var(--brand-soft); color:var(--brand); font-size:15px; }
+  .it .mid { min-width:0; flex:1; }
+  .it .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .it .k { font-size:12px; line-height:16px; color:var(--sec); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .it .dot { width:8px; height:8px; border-radius:50%; background:var(--brand); flex:none; }
+  .more { color:var(--sec); font-size:13px; padding:6px 8px; }
+  .main { display:flex; flex-direction:column; }
+  .mh { display:flex; align-items:center; gap:12px; padding:14px 24px; border-bottom:1px solid var(--line); }
+  .mh .t { font-weight:600; } .mh .k { color:var(--sec); font-size:13px; }
+  .mh .link { margin-left:auto; font-size:13px; }
+  .empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 24px; }
+  .empty h2 { font-family:'Young Serif', serif; font-weight:400; font-size:30px; line-height:38px; text-align:center; }
+  .empty p { color:var(--sec); margin-top:6px; }
+  .box { width:100%; max-width:680px; margin-top:24px; border:1.5px solid var(--line2); border-radius:20px; padding:14px 16px; background:var(--card); }
+  .box .ph { color:var(--ter); }
+  .box .row { display:flex; align-items:center; gap:8px; margin-top:14px; }
+  .scope { font-size:12px; font-weight:600; padding:4px 10px; border-radius:99px; background:var(--side-on); }
+  .send { margin-left:auto; width:32px; height:32px; border-radius:50%; background:var(--brand); color:var(--on-ink); display:grid; place-items:center; }
+  .sugg { display:grid; grid-template-columns:1fr 1fr; gap:8px; width:100%; max-width:680px; margin-top:12px; }
+  .sugg span { border:1px solid var(--line2); border-radius:12px; padding:10px 12px; color:var(--text); }
+  .invite { margin-top:28px; color:var(--sec); font-size:13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <h1>Assistant and rollout chats, desktop</h1>
+    <p>Screens 15 and 16 as one page. Rollout names come from your account. Five changes, listed under the frame.</p>
+  </div>
+
+  <div class="label">After, desktop 1240</div>
+  <div class="desk">
+    <div class="bar">
+      <div class="logo">Urganize <span class="beta">BETA</span></div>
+      <div class="tabs"><span>Home</span><span class="on">Assistant</span></div>
+      <div class="icons"><i></i><b>OY</b></div>
+    </div>
+    <div class="page">
+      <div class="app">
+        <aside class="side">
+          <span class="newc">+ New chat</span>
+          <div class="it on"><span class="ic all">✦</span><div class="mid"><p class="t">Ask about everything</p><p class="k">All your artists and rollouts</p></div></div>
+
+          <p class="grp">Rollout chats</p>
+          <div class="it"><span class="ic" style="background:#5b2a86;color:#f5f0e6">BS</span><div class="mid"><p class="t">Blue Season</p><p class="k">Zainab Oyelaran · No messages yet</p></div></div>
+          <div class="it"><span class="ic" style="background:#1f3a8a;color:#f5f0e6">NB</span><div class="mid"><p class="t">Night Bus</p><p class="k">Ayo Kanmi · No messages yet</p></div></div>
+          <div class="it"><span class="ic">LI</span><div class="mid"><p class="t">Locked in</p><p class="k">Last message 4 days ago</p></div><i class="dot"></i></div>
+          <div class="it"><span class="ic" style="background:#8a4a1f;color:#f5f0e6">SS</span><div class="mid"><p class="t">Salt and Signal</p><p class="k">The Harbour Lights · No messages yet</p></div></div>
+          <p class="more">Show all 17</p>
+
+          <p class="grp">Past chats</p>
+          <p class="more" style="padding-top:0">Chats you start here are saved and show up in this list.</p>
+        </aside>
+
+        <section class="main">
+          <div class="mh"><span class="t">Ask about everything</span><span class="k">· UrgAns can see all your artists and rollouts</span><span class="link">What UrgAns did</span></div>
+          <div class="empty">
+            <h2>What do you want to get done today?</h2>
+            <p>Ask about any artist or rollout, or open a rollout's chat on the left.</p>
+            <div class="box">
+              <p class="ph">Ask UrgAns…</p>
+              <div class="row"><span class="scope">All rollouts ▾</span><span class="send">↑</span></div>
+            </div>
+            <div class="sugg">
+              <span>What should I focus on today?</span>
+              <span>What's left before Blue Season drops?</span>
+              <span>Write an update I can send</span>
+              <span>Plan a rollout</span>
+            </div>
+            <p class="invite">Working with others? <span class="link">Invite your team</span></p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="note"><b>1. One place to talk to UrgAns</b>Today the Assistant tab and the Rollouts tab are two chat pages side by side. They become one: "Ask about everything" on top, each rollout's own chat under it. The top bar goes from three tabs to two.</div>
+    <div class="note"><b>2. Nothing opens to a blank half</b>Today Rollouts opens to "Pick a rollout to open its chat" with an empty right side. Here the page always opens on a real chat you can type into.</div>
+    <div class="note"><b>3. Rollout chats say whose they are</b>Each row shows the cover, the rollout and the artist, with a green dot when there is something new. The list shows the most active first, with "Show all".</div>
+    <div class="note"><b>4. The empty box goes</b>The grey "No saved sessions yet" card becomes one quiet line under "Past chats". Past chats fill in as you use it.</div>
+    <div class="note"><b>5. The invite banner becomes one line</b>The full-width "Get more out of Urganize by inviting your team" bar moves to a small line under the suggestions.</div>
+  </div>
+</div>
+</body>
+</html>

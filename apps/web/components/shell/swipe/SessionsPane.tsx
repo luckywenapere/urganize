@@ -8,6 +8,7 @@ import { RolloutCreateFlow } from '@/components/releases/RolloutCreateFlow';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { isChappiHistoryEnabled } from '@/lib/chappi/history-flag';
 import { rolloutSessionIdFor } from '@/lib/rollout-session';
+import { orderRolloutChats } from '@/lib/assistant-chats';
 import { formatRelativeTime } from '@/lib/relative-time';
 import { useAuthStore } from '@/lib/auth-store';
 import { displayReleaseTitle } from '@/types/releases';
@@ -23,7 +24,7 @@ const HISTORY_ENABLED = isChappiHistoryEnabled();
 const typeLabel = (release: ExecutionRelease) =>
   release.releaseType === 'ep' ? 'EP' : release.releaseType === 'album' ? 'Album' : 'Single';
 
-function Cover({ release, size }: { release: ExecutionRelease; size: number }) {
+export function Cover({ release, size }: { release: ExecutionRelease; size: number }) {
   const url = release.coverThumbUrl || release.coverArtUrl || null;
   const box = { width: size, height: size };
   if (url) {
@@ -111,16 +112,11 @@ export function SessionsPane({ active, split = false }: { active: boolean; split
   const rows = useMemo(() => {
     const withLast = releases.map((entry) => {
       const id = rolloutSessionIdFor(userId, entry.id);
-      return { release: entry, last: id ? lastById.get(id) ?? null : null };
+      return { release: entry, last: id ? lastById.get(id) ?? null : null, releaseDate: entry.releaseDate ?? null };
     });
     // Sessions you have used come first, newest chat on top; then the rest by
-    // release date.
-    return withLast.sort((a, b) => {
-      if (a.last && b.last) return b.last.localeCompare(a.last);
-      if (a.last) return -1;
-      if (b.last) return 1;
-      return String(a.release.releaseDate ?? '9999').localeCompare(String(b.release.releaseDate ?? '9999'));
-    });
+    // release date (lib/assistant-chats.ts, shared with the Assistant).
+    return orderRolloutChats(withLast);
   }, [releases, lastById, userId]);
 
   // Read the top few rollout chats ahead of a tap, so opening one after a

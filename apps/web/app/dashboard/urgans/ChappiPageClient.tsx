@@ -31,9 +31,10 @@ const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true'
 /**
  * The Assistant page: ONE chat that never resets (#1207, Oyin, 11 Nov 2026),
  * with the morning brief waiting in it each day. On a computer it is
- * UrgansSessionsLayout (one centred chat); on a phone, one column. There is no
- * "New session" and no sessions list any more: rollout chats live in the
- * Rollouts list, and old sessions were folded into this chat.
+ * UrgansSessionsLayout: that chat plus each rollout's own chat in a left column
+ * (#1218, Nov 12, 2026; ?rollout=<id> opens one). On a phone, one column, and
+ * rollout chats stay in the Rollouts tab. There is no "New session" and no
+ * sessions list: old sessions were folded into this chat.
  */
 export default function ChappiPageClient() {
   const router = useRouter();
