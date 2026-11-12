@@ -11,7 +11,9 @@
 
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Logo, LogoIcon } from '@urganize/ui/Logo';
+import Image from 'next/image';
 import { MyFace } from '@/components/shared/AccountPhoto';
+import { SetupSteps } from '@/components/onboarding/SetupSteps';
 
 export const primaryButtonClass =
   'motion-press inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-full bg-brand px-5 text-[15px] font-semibold text-content-inverse transition-colors duration-fast ease-standard hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-bg-hover disabled:text-content-tertiary';
@@ -98,6 +100,45 @@ export function OnboardingFrame({
         }`}
       >
         {children}
+      </div>
+    </main>
+  );
+}
+
+/**
+ * Create your account (#1229, mock docs/mocks/signin-onboarding-desktop,
+ * screen 2). On a phone it is the narrow frame above, unchanged. On a computer
+ * it takes the sign-in page's two halves: logo and the three steps on top, the
+ * form in the middle of the left half, and the same studio photo filling the
+ * right, so moving between the two does not feel like a different app. CSS
+ * only, so the page stays static.
+ */
+export function SignupSplitFrame({ children }: { children: ReactNode }) {
+  return (
+    <main className="relative flex min-h-screen flex-col text-content-primary lg:grid lg:grid-cols-2">
+      <div className="flex min-h-screen flex-col lg:px-14 lg:pb-10 lg:pt-8">
+        <div className="lg:hidden">
+          <TopBar />
+        </div>
+        <div className="hidden items-center justify-between gap-6 lg:flex">
+          <Logo size="sm" priority className="opacity-95" />
+          <SetupSteps current={1} />
+        </div>
+        <div className="mx-auto w-full max-w-[480px] px-4 pb-[calc(2.5rem+env(safe-area-inset-bottom,0px))] pt-5 md:max-w-[440px] md:pt-10 lg:my-auto lg:max-w-[400px] lg:px-0 lg:py-12">
+          {children}
+        </div>
+      </div>
+      {/* Photo: Dwayne Joe on Unsplash (unsplash.com/photos/C8VidHnIysM),
+          Unsplash License. The sign-in page shows the same one. */}
+      <div className="hidden lg:block lg:p-4 lg:pl-0">
+        <Image
+          src="/images/auth-studio.webp"
+          alt="Two people at work in a recording studio. Photo by Dwayne Joe on Unsplash."
+          width={960}
+          height={1200}
+          sizes="50vw"
+          className="sticky top-4 h-[calc(100vh-32px)] min-h-[560px] w-full rounded-[20px] object-cover grayscale"
+        />
       </div>
     </main>
   );

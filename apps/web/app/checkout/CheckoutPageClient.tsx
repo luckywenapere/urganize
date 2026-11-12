@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { INTRO_MONTHS, type BillingInterval } from '@urganize/pricing';
+import { INTRO_MONTHS, PRICING_TIERS, type BillingInterval } from '@urganize/pricing';
 import { Logo, LoadingMark } from '@urganize/ui';
 import { useAuthStore } from '@/lib/auth-store';
 import { BOOK_CALL_LABEL, needsOnboardingCall } from '@/lib/call-led';
@@ -41,6 +41,9 @@ import {
   type PaymentMethodChoice,
 } from '@/lib/self-serve';
 import { useVisitorCurrency } from '@/lib/visitor-currency';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
+import { SetupSteps } from '@/components/onboarding/SetupSteps';
+import { planRowLine, planTiles, showsIntervalChoice } from '@/lib/checkout-plan-rows';
 
 /** What Bachs takes (docs.bachs.io, 2026-11-01). Its own page shows the
  *  amount in the payer's money. */
@@ -560,6 +563,9 @@ function CheckoutStep({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [transfer, setTransfer] = useState<{ invoice: TransferInvoice; account: TransferAccount } | null>(null);
+  // A computer gets the plan list beside the payment card (#1229); a phone
+  // keeps the layout below. One branch is mounted, never both.
+  const isDesktop = useIsDesktopViewport();
   const logout = useAuthStore((state) => state.logout);
   const signOut = async () => {
     await logout().catch(() => undefined);
@@ -814,6 +820,290 @@ function CheckoutStep({
       : effectiveMethod === 'card'
       ? SELF_SERVE_COPY.cardFine
       : SELF_SERVE_COPY.transferFine;
+
+  if (isDesktop) {
+    // Choose a plan on a computer (#1229, mock docs/mocks/signin-onboarding-desktop,
+    // screen 3). Every plan checkout sells is a row with its price in the
+    // payer's currency, the picked plan's limits are three tiles, and the card
+    // on the right pays. All figures are the ones `pay()` charges: the same
+    // periodAmount, period and currency as the phone layout below.
+    const listed: CheckoutPlan[] = CHECKOUT_PLANS.includes(intent.plan)
+      ? [...CHECKOUT_PLANS]
+      : [...CHECKOUT_PLANS, intent.plan];
+    const showSteps = !current;
+    const intervalChoice = !changing && showsIntervalChoice(periods);
+    const cardLine = !cardAvailable
+      ? 'Not available yet'
+      : period === 'annual'
+        ? 'Renews by itself every year'
+        : period === 'semiannual'
+          ? 'Renews by itself every 6 months'
+          : 'Renews by itself every month';
+    const radio = (checked: boolean) =>
+      `grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full ${
+        checked ? 'border-[5px] border-brand' : 'border-[1.5px] border-stroke-control'
+      }`;
+    const deskPrimary =
+      'flex h-12 w-full items-center justify-center rounded-full bg-content-primary px-5 text-[14px] font-semibold text-bg-base transition-colors duration-fast hover:bg-content-primary/90 disabled:cursor-not-allowed disabled:bg-bg-hover disabled:text-content-secondary';
+    return (
+      <main className="min-h-screen">
+        <header className="grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-6 px-10 pt-2">
+          <Mark />
+          {showSteps ? <SetupSteps current={2} /> : <span />}
+          <p className="justify-self-end text-[13px] text-content-secondary">
+            Paying as <span className="text-content-primary">{userEmail}</span> ·{' '}
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              className="font-semibold text-brand underline underline-offset-[3px]"
+            >
+              Not you?
+            </button>
+          </p>
+        </header>
+        <div className="mx-auto max-w-[992px] px-8 pb-14 pt-4">
+          {options.openInvoice && options.openInvoice.paidKobo > 0 ? (
+            <div className="mb-6 rounded-xl border border-stroke-default bg-bg-surface px-4 py-3 text-sm text-content-secondary">
+              {partPaidCopy(
+                Math.max(0, options.openInvoice.amountKobo - options.openInvoice.creditKobo - options.openInvoice.paidKobo),
+                options.openInvoice.paidKobo
+              ).title}{' '}
+              Pick bank transfer to see your account number.
+            </div>
+          ) : null}
+          <div className="grid grid-cols-[minmax(0,1fr)_340px] items-start gap-8 xl:grid-cols-[minmax(0,1fr)_380px]">
+            <section>
+              <h1 className="font-display text-[34px] font-normal leading-[42px] text-content-primary">
+                {current ? 'Change your plan' : 'Pick a plan'}
+              </h1>
+              <p className="mt-1.5 text-[15px] text-content-secondary">You can change it any time in Settings.</p>
+
+              {intervalChoice ? (
+                <div role="radiogroup" aria-label="How often" className="mt-5 inline-flex gap-0.5 rounded-full bg-bg-hover p-[3px]">
+                  {periods.map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      role="radio"
+                      aria-checked={option === period}
+                      onClick={() => setIntent((value) => ({ ...value, period: option }))}
+                      className={`h-8 rounded-full px-4 text-[13px] font-semibold transition-colors ${
+                        option === period
+                          ? 'bg-bg-surface text-content-primary shadow-sm'
+                          : 'text-content-secondary hover:text-content-primary'
+                      }`}
+                    >
+                      {periodLabel(option)}
+                      {periodSaving(option) ? (
+                        <span className="ml-1.5 font-normal text-brand">{periodSaving(option)}</span>
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              <div role="radiogroup" aria-label="Plan" className="mt-5 grid gap-2.5">
+                {listed.map((option) => {
+                  const checked = option === intent.plan;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      role="radio"
+                      aria-checked={checked}
+                      onClick={() => setIntent((value) => ({ ...value, plan: option }))}
+                      className={`grid grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3.5 rounded-[14px] bg-bg-surface text-left transition-colors ${
+                        checked
+                          ? 'border-2 border-brand px-[17px] py-[15px]'
+                          : 'border border-stroke-control px-[18px] py-4 hover:bg-bg-hover'
+                      }`}
+                    >
+                      <span aria-hidden="true" className={radio(checked)} />
+                      <span className="min-w-0">
+                        <span className="flex items-center gap-2 font-semibold text-content-primary">
+                          {planName(option)}
+                          {current?.plan === option ? (
+                            <span className="rounded-full bg-brand/10 px-2 text-xs font-semibold leading-5 text-brand">
+                              Your plan
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="block text-[13px] text-content-secondary">{planRowLine(option)}</span>
+                      </span>
+                      <span className="font-semibold text-content-primary">
+                        {periodHeadline(option, period, introMonthsLeft, currency)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {saving ? <p className="mt-2.5 text-[13px] text-content-secondary">{saving}</p> : null}
+
+              <dl className="mt-5 grid grid-cols-3 gap-2.5">
+                {planTiles(intent.plan).map((tile) => (
+                  <div key={tile.label} className="flex flex-col-reverse rounded-xl border border-stroke-default bg-bg-surface p-3.5">
+                    <dt className="text-[13px] text-content-secondary">{tile.label}</dt>
+                    <dd className="font-display text-[24px] leading-8 text-content-primary">{tile.value}</dd>
+                  </div>
+                ))}
+              </dl>
+              {options.distributionOn && PRICING_TIERS[intent.plan].includesDistribution ? (
+                <p className="mt-2.5 text-[13px] text-content-secondary">Distribution through our partner is included.</p>
+              ) : null}
+            </section>
+
+            <aside className="sticky top-4 rounded-[20px] border border-stroke-default bg-bg-surface p-6">
+              {alreadyOnIt || changeNote ? (
+                <div className="space-y-4">
+                  <p className="text-content-primary">
+                    {changeNote ?? `You're already on ${planName(intent.plan)}. It renews by itself.`}
+                  </p>
+                  <Link href="/dashboard" className={deskPrimary}>
+                    Go to Home
+                  </Link>
+                </div>
+              ) : changing && current ? (
+                <div className="space-y-4">
+                  <h2 className="font-semibold text-content-primary">Change plan</h2>
+                  <p className="text-[14px] text-content-secondary">
+                    {upgrading
+                      ? `You're on ${planName(current.plan)}. Paystack shows the price for the days left in this period before you pay.`
+                      : `You're on ${planName(current.plan)}. ${planName(intent.plan)} starts when this period ends.`}
+                  </p>
+                  {error ? (
+                    <p role="alert" className="text-sm text-status-error">
+                      {error}
+                    </p>
+                  ) : null}
+                  <button type="button" onClick={() => void pay()} disabled={busy} className={deskPrimary}>
+                    {payLabel}
+                  </button>
+                  <p className="text-center text-xs text-content-secondary">{fineprint}</p>
+                </div>
+              ) : (
+                <>
+                  {bachs ? (
+                    <>
+                      <h2 className="mb-3 font-semibold text-content-primary">Pay your way</h2>
+                      <ul className="grid grid-cols-2 gap-2 text-[13px] text-content-primary" aria-label="Ways to pay">
+                        {(currency === 'USD' ? BACHS_WAYS_TO_PAY_USD : BACHS_WAYS_TO_PAY).map((way) => (
+                          <li key={way} className="rounded-xl border border-stroke-default px-3 py-2.5">
+                            {way}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : (
+                    <>
+                      <h2 id="checkout-pay-with" className="mb-1 font-semibold text-content-primary">
+                        Pay with
+                      </h2>
+                      <div role="radiogroup" aria-labelledby="checkout-pay-with" className="grid gap-2">
+                        {(
+                          [
+                            { id: 'card', title: 'Card', line: cardLine },
+                            { id: 'transfer', title: 'Bank transfer', line: 'Pay into your own account number' },
+                          ] as const
+                        ).map((option) => {
+                          const checked = effectiveMethod === option.id;
+                          const disabled = option.id === 'card' && !cardAvailable;
+                          return (
+                            <button
+                              key={option.id}
+                              type="button"
+                              role="radio"
+                              aria-checked={checked}
+                              disabled={disabled}
+                              onClick={() => pickMethod(option.id)}
+                              className={`grid grid-cols-[20px_1fr] items-start gap-3 rounded-xl text-left transition-colors disabled:opacity-50 ${
+                                checked
+                                  ? 'border-2 border-brand px-[13px] py-[11px]'
+                                  : 'border border-stroke-control px-3.5 py-3 hover:bg-bg-hover'
+                              }`}
+                            >
+                              <span aria-hidden="true" className={`mt-0.5 ${radio(checked)}`} />
+                              <span>
+                                <span className="block font-semibold text-content-primary">{option.title}</span>
+                                <span className="block text-[13px] text-content-secondary">{option.line}</span>
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+
+                  {bachs ? null : codeOpen ? (
+                    <div className="mt-4">
+                      <label className="block text-[13px] font-semibold text-content-primary" htmlFor="checkout-code-desk">
+                        Code
+                      </label>
+                      <div className="mt-1.5 flex gap-2">
+                        <input
+                          id="checkout-code-desk"
+                          className="h-11 min-w-0 flex-1 rounded-xl border border-content-tertiary bg-bg-base px-3.5 text-[14px] uppercase text-content-primary focus:border-brand focus:outline-none"
+                          value={codeInput}
+                          onChange={(event) => {
+                            setCodeInput(event.target.value);
+                            setCodeApplied(null);
+                          }}
+                          autoComplete="off"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void applyCode(codeInput)}
+                          className="h-11 shrink-0 rounded-xl border border-stroke-control px-4 text-[13px] font-semibold hover:bg-bg-hover"
+                        >
+                          {codeApplied ? 'Applied' : 'Apply'}
+                        </button>
+                      </div>
+                      {codeApplied?.line ? (
+                        <p className="mt-1.5 text-[13px] text-content-secondary">{codeApplied.line}</p>
+                      ) : null}
+                      {codeError ? (
+                        <p role="alert" className="mt-1.5 text-[13px] text-status-error">
+                          {codeError}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setCodeOpen(true)}
+                      className="mt-3 text-[13px] font-semibold text-brand underline-offset-[3px] hover:underline"
+                    >
+                      Have a code?
+                    </button>
+                  )}
+
+                  <div className="mt-4 flex items-baseline justify-between border-t border-stroke-default pt-4">
+                    <span className="text-content-secondary">{period === 'monthly' ? 'Total today' : 'Total'}</span>
+                    <span className="font-display text-[28px] leading-9 text-content-primary">
+                      {formatPrice(amount, currency)}
+                    </span>
+                  </div>
+                  {error ? (
+                    <p role="alert" className="mt-2 text-sm text-status-error">
+                      {error}
+                    </p>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => void pay()}
+                    disabled={busy || amount <= 0}
+                    className={`mt-4 ${deskPrimary}`}
+                  >
+                    {payLabel}
+                  </button>
+                  <p className="mt-2.5 text-center text-xs text-content-secondary">{fineprint}</p>
+                </>
+              )}
+            </aside>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen px-5 pb-40 pt-6 lg:px-10 lg:pb-16 lg:pt-10">

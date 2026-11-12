@@ -89,6 +89,7 @@ import { getTeamAccessClient } from '@/lib/team-billing-client';
 import {
   GoogleMark,
   OnboardingFrame,
+  SignupSplitFrame,
   errorTextClass,
   hintClass,
   inputClass,
@@ -531,6 +532,7 @@ export default function OnboardingPage() {
     hasName: Boolean(name.trim()),
     hasEmail: isEmailValid(email),
     passwordLongEnough: isPasswordLongEnough(password),
+    passwordLength: password.length,
   });
 
   const createAccount = async () => {
@@ -914,13 +916,18 @@ export default function OnboardingPage() {
 
   if (screen === 'account') {
     const takenEmail = encodeURIComponent(email.trim().toLowerCase());
+    // On a computer (#1229): the form sits on the page, fields are outlined
+    // and labelled in place, and the button is an ink pill like sign-in's.
+    const deskInput = 'lg:h-[46px] lg:border-content-tertiary lg:bg-bg-surface lg:text-[14px]';
     return (
-      <OnboardingFrame narrow>
-        <div className="animate-fade-in md:rounded-2xl md:border md:border-stroke-control md:bg-bg-surface md:p-7">
-          <h1 className="text-balance font-display text-[30px] font-normal leading-[1.12] tracking-[-0.012em] md:text-[34px]">
+      <SignupSplitFrame>
+        <div className="animate-fade-in md:rounded-2xl md:border md:border-stroke-control md:bg-bg-surface md:p-7 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0">
+          <h1 className="text-balance font-display text-[30px] font-normal leading-[1.12] tracking-[-0.012em] md:text-[34px] lg:text-[40px] lg:leading-[46px]">
             Create your account
           </h1>
-          <p className="mt-2 text-[15px] text-content-secondary">Plan every release with your team. It takes a minute.</p>
+          <p className="mt-2 text-[15px] text-content-secondary">
+            <span className="lg:hidden">Plan every release with your team. </span>It takes a minute.
+          </p>
 
           {/* Signing up needs JavaScript. Say so instead of a button that does nothing. */}
           <noscript>
@@ -934,7 +941,7 @@ export default function OnboardingPage() {
             type="button"
             onClick={() => void continueWithGoogle()}
             disabled={googleBusy || creating}
-            className={`${secondaryButtonClass} mt-[22px]`}
+            className={`${secondaryButtonClass} mt-[22px] lg:mt-7 lg:bg-bg-surface lg:text-[14px]`}
           >
             {googleBusy ? (
               'Opening Google…'
@@ -961,7 +968,7 @@ export default function OnboardingPage() {
           >
             <label className="mt-4 block">
               <span className={labelClass}>Your name</span>
-              <input type="text" value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" className={inputClass} />
+              <input type="text" value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" className={`${inputClass} ${deskInput}`} />
             </label>
             <label className="mt-4 block">
               <span className={labelClass}>Email</span>
@@ -976,7 +983,7 @@ export default function OnboardingPage() {
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
-                className={inputClass}
+                className={`${inputClass} ${deskInput}`}
               />
               {accountError?.kind === 'taken' ? (
                 <span className={errorTextClass}>
@@ -989,16 +996,19 @@ export default function OnboardingPage() {
               ) : null}
             </label>
             <label className="mt-4 block">
-              <span className={labelClass}>Password</span>
+              <span className={`${labelClass} lg:flex lg:items-baseline lg:justify-between`}>
+                Password
+                <span className="hidden font-normal text-content-tertiary lg:inline">{PASSWORD_LENGTH_HINT.replace(/\.$/, '')}</span>
+              </span>
               <input
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 autoComplete="new-password"
                 minLength={MIN_PASSWORD_LENGTH}
-                className={inputClass}
+                className={`${inputClass} ${deskInput}`}
               />
-              <span className={hintClass}>{PASSWORD_LENGTH_HINT}</span>
+              <span className={`${hintClass} lg:hidden`}>{PASSWORD_LENGTH_HINT}</span>
             </label>
 
             {REFERRAL_FIELD_ENABLED ? (
@@ -1040,7 +1050,7 @@ export default function OnboardingPage() {
                 type="submit"
                 disabled={Boolean(accountBlocker) || creating || googleBusy}
                 aria-describedby="account-blocker"
-                className={primaryButtonClass}
+                className={`${primaryButtonClass} lg:bg-content-primary lg:text-[14px] lg:text-bg-base lg:hover:bg-content-primary/90 lg:disabled:bg-bg-hover lg:disabled:text-content-secondary`}
               >
                 {creating ? 'Creating your account…' : 'Create account'}
               </button>
@@ -1057,12 +1067,13 @@ export default function OnboardingPage() {
 
           <p className="mt-[22px] text-center text-sm text-content-secondary">
             Already have an account?{' '}
-            <a href="/auth" className={textLinkClass}>
-              Log in
+            <a href="/auth" className={`${textLinkClass} lg:font-semibold lg:text-brand lg:decoration-brand`}>
+              <span className="lg:hidden">Log in</span>
+              <span className="hidden lg:inline">Sign in</span>
             </a>
           </p>
         </div>
-      </OnboardingFrame>
+      </SignupSplitFrame>
     );
   }
 
