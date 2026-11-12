@@ -13,6 +13,10 @@
 // RE-APPROVAL LOG: Antoine's quote reworded "task by task" -> "activity by
 // activity" on 2026-08-01, matching the product's tasks->activities rename;
 // founder confirmed Antoine's sign-off on the new wording.
+// REVERTED 2026-11-12 (#1224): back to his original "task by task", now that
+// the site says tasks again (founder call). His role was "Artist Manager",
+// which read wrong beside "I manage myself": he is an artist, and he is
+// bringing his roster onto Urganize, so the label says that (founder call).
 //
 // ADENAIYE'S REVIEW REPLACED 2026-08-05 (URG-220): the founder relayed a
 // new, full review from her directly. Full verbatim text (both paragraphs):
@@ -68,9 +72,9 @@ export const TESTIMONIALS: Record<TestimonialId, Testimonial> = {
   antoine: {
     id: "antoine",
     quote:
-      "I manage myself, so every dropped ball is mine. The first time I created a release, the whole rollout was already laid out, week by week, activity by activity. I stopped planning from memory.",
+      "I manage myself, so every dropped ball is mine. The first time I created a release, the whole rollout was already laid out, week by week, task by task. I stopped planning from memory.",
     name: "Antoine",
-    role: "Artist Manager, Creative Business Academy alum",
+    role: "Artist bringing his roster onto Urganize, Creative Business Academy alum",
   },
   // Superseded 2026-08-05 (URG-220) by her new review — see the log above
   // for the full verbatim text. Her PRIOR quote (retired 2026-07-31 for the

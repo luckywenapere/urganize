@@ -76,13 +76,13 @@ const STEPS: readonly {
     title: "Start from your goals.",
     line: "Urganize asks what you want, then makes a plan that fits. Or build your own.",
     demo: "plan",
-    alt: "A new rollout's plan in Urganize: four weeks of activities down to release day, each with an owner, 18 activities in all.",
+    alt: "A new rollout's plan in Urganize: four weeks of tasks down to release day, each with an owner, 18 tasks in all.",
   },
   {
     title: "Keep track of every task.",
     line: "Every task has one owner and one date. Work solo, or bring your team in and each person sees what\u2019s theirs.",
     demo: "owner",
-    alt: "An activity open in Urganize with Ife Bassey as its owner and Fri 13 Nov as its date.",
+    alt: "A task open in Urganize with Ife Bassey as its owner and Fri 13 Nov as its date.",
   },
   {
     title: "See what\u2019s late, and what worked.",

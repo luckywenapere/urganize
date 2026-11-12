@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ProofStats } from "../components/landing/ProofStats";
 import Link from "next/link";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
@@ -101,6 +102,7 @@ export default function SignupPage() {
                     </Link>
                   </p>
                 ) : null}
+                <ProofStats className="mt-4" />
                 <ProofLine id="zaddyfunds" align="left" className="mt-6 max-w-[30rem] border-t border-[color:var(--marketing-border)] pt-5" />
               </div>
             </div>
@@ -109,7 +111,7 @@ export default function SignupPage() {
               <ResponsiveProductShot
                 desktop={firstRelease}
                 phone={firstReleasePhone}
-                alt="A release called Sunday Light by Ada Sol in Urganize, with this week's three activities already planned and a card saying your plan is ready: 64 activities over 11 weeks."
+                alt="A release called Sunday Light by Ada Sol in Urganize, with this week's three tasks already planned and a card saying your plan is ready: 64 tasks over 11 weeks."
                 sizes="(min-width: 1024px) min(46vw, 608px), (min-width: 688px) 640px, calc(100vw - 48px)"
               />
             </div>

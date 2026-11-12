@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   ...buildPageMetadata({
     title: "Release planning for AI artists",
     description:
-      "Making the song got fast. The rollout did not. Tell Urganize your goals and get a plan that fits, or make your own, with an owner on every activity.",
+      "Making the song got fast. The rollout did not. Tell Urganize your goals and get a plan that fits, or make your own, with an owner on every task.",
     path: "/for-ai-artists",
     shareCard: "for-ai-artists",
   }),
@@ -62,17 +62,17 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "The song took an afternoon. The rollout still takes weeks.",
-    body: "Urganize asks about your goals and makes a plan that fits: 64 activities for a single, 90 for an EP, 113 for an album. Or make your own, and delete whatever does not apply to how you work.",
+    body: "Urganize asks about your goals and makes a plan that fits: 64 tasks for a single, 90 for an EP, 113 for an album. Or make your own, and delete whatever does not apply to how you work.",
     points: [
       "A plan shaped to your goals, or your own",
-      "Every activity dated around that release day",
+      "Every task dated around that release day",
       "Edit or delete anything. It is your plan",
     ],
   },
   {
     kicker: "Your cadence",
     title: "Dropping in three weeks, not eleven?",
-    body: "Set the date you actually have. Every activity is dated from release day, so a shorter runway moves the whole plan with it instead of leaving you a list of dates that already passed. Cut the activities that do not fit and keep the ones that do.",
+    body: "Set the date you actually have. Every task is dated from release day, so a shorter runway moves the whole plan with it instead of leaving you a list of dates that already passed. Cut the tasks that do not fit and keep the ones that do.",
     points: [
       "Move the release date and the plan moves with it",
       "Run several rollouts at once, each on its own plan",
@@ -95,7 +95,7 @@ const compactBlocks = [
   {
     kicker: "Whoever helps",
     title: "A mixer, a designer, an editor.",
-    body: "Give any activity an owner with a due date. They see what is theirs, and activities wait for each other so nothing starts before the step it needs is done.",
+    body: "Give any task an owner with a due date. They see what is theirs, and tasks wait for each other so nothing starts before the step it needs is done.",
   },
   {
     kicker: "Status",
@@ -185,7 +185,7 @@ export default function ForAiArtistsPage() {
             <ResponsiveProductShot
               desktop={rolloutsShot}
               phone={rolloutsShotPhone}
-              alt="A rollout in Urganize for Night Swim by Vela Nine, out Friday 20 November: a week-by-week timeline with today three weeks out, an owner on each activity, and in front the rollouts list showing Night Swim in 19 days, Paper Moons with 2 late and Low Tide with 3 due this week."
+              alt="A rollout in Urganize for Night Swim by Vela Nine, out Friday 20 November: a week-by-week timeline with today three weeks out, an owner on each task, and in front the rollouts list showing Night Swim in 19 days, Paper Moons with 2 late and Low Tide with 3 due this week."
               sizes="(min-width: 1024px) 944px, calc(100vw - 64px)"
               fetchPriority="auto"
             />

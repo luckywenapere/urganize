@@ -97,12 +97,12 @@ const OTHER_ASSETS = [
     note: "The live app",
   },
   {
-    label: "Product screenshot: activities",
+    label: "Product screenshot: tasks",
     href: "/images/product/workspace-tasks.png",
     note: "The live app",
   },
   {
-    label: "Product screenshot: activities (dark)",
+    label: "Product screenshot: tasks (dark)",
     href: "/images/product/workspace-tasks-dark.png",
     note: "The live app",
   },

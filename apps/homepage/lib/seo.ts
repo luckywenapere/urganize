@@ -192,7 +192,9 @@ export function buildPageMetadata({
   return {
     title,
     description,
-    alternates: { canonical: url },
+    // A plain-text version for AI agents (#1224, Coframe): every page points
+    // to /llms.txt, the site's markdown summary, as its text/markdown twin.
+    alternates: { canonical: url, types: { "text/markdown": `${SITE_URL}/llms.txt` } },
     ...(noIndex
       ? { robots: { index: false, follow: true } }
       : {}),

@@ -54,7 +54,7 @@ export function MobileStickyCta() {
         visible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0"
       }`}
     >
-      <TrialButton location="mobile_sticky" className="w-full" label="Get my plan" />
+      <TrialButton location="mobile_sticky" className="w-full" label="Build my release plan" />
     </div>
   );
 }
