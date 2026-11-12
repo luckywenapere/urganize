@@ -19,6 +19,17 @@
 // editorial pitch (Spotify and Apple Music), and its pitch payment receipts.
 // /dashboard/pitching survives only as a bridge into a rollout's Pitch tab,
 // so old emails, notifications and Paystack's cancel link still land.
+//
+// 2026-11-12 (#1215, part of #1175; approved mock docs/mocks/pitch-desktop):
+// from `lg` up, with Pitch on credits, the tab is two columns. Left: "Send it
+// to curators" (platform chips and curator rows in one card), the Spotify and
+// Apple Music editors card, and Sent with this rollout's real pitches (the
+// curator inbox link moves there, dual accounts only). Right: a dark summary
+// card that adds up the credits and holds the send button, then "What
+// curators read" as a short checklist whose Edit opens the kit editor. The
+// floating "Your curator inbox" text at the top is gone on desktop. Phones
+// keep the layout below unchanged. One branch is mounted, never both, because
+// every piece here fetches for itself.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -38,6 +49,8 @@ import { useAuthStore } from '@/lib/auth-store';
 import { isValidCuratorSlug } from '@/lib/curator-public';
 import { isPitchCreditsEnabled } from '@/lib/pitch-credits';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
+import { PitchDeskSkeleton, SentCard } from './PitchDeskParts';
 
 /** ?curator= (from a curator's public page) and ?payment=cancelled (Paystack's
  *  cancel link), read once and imperatively: the workspace owns the URL, and a
@@ -108,6 +121,40 @@ export function PitchScene({ release, onToast }: PitchSceneProps) {
 
   const waitingCount = useMemo(() => countWaitingPitches(pitches), [pitches]);
   const atLimit = waitingCount >= MAX_WAITING_PITCHES_PER_RELEASE;
+  const desk = useIsDesktopViewport();
+
+  if (desk && CREDITS_ON) {
+    if (!paramsRead) return <PitchDeskSkeleton />;
+    return (
+      <CreditPitchPicker
+        desk
+        releaseId={release.id}
+        songTitle={release.title || ''}
+        story={kit.story}
+        kitUrl={kit.url}
+        kitReady={kit.ready}
+        atLimit={atLimit}
+        curatorSlug={curatorSlug}
+        topUpReference={topUpReference}
+        topUpCancelled={paymentCancelled}
+        onSent={() => void refreshPitches(true)}
+        onToast={onToast}
+        belowList={
+          <>
+            {showEditorialPitch(release.releaseDate) ? (
+              <EditorialPitchSection card releaseId={release.id} releaseDate={release.releaseDate ?? null} />
+            ) : null}
+            <SentCard pitches={pitches} loading={isLoadingPitches} showInbox={hasCuratorProfile === true} />
+          </>
+        }
+        aside={
+          PITCH_KIT_ON ? (
+            <PitchKitSection variant="checklist" releaseId={release.id} onToast={onToast} onShareStateChange={setKit} />
+          ) : null
+        }
+      />
+    );
+  }
 
   // 2026-10-16, Pitch this! as one place (founder approved mocks): the kit on
   // top, then curators, their answers and the editors. Three tabs

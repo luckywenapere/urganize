@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.271.0",
+    title: "Pitch on a computer, with the cost in view",
+    tag: "Pitching",
+    date: "November 12, 2026",
+    highlights: [
+      "On a computer, Pitch this! adds up what you pick as you go and shows the credits you have, right next to the send button.",
+      "Spotify and Apple Music editors, what you sent and your kit each have their own place on the page.",
+    ],
+  },
+  {
     version: "1.270.0",
     title: "Distribute is one page on a computer",
     tag: "Rollouts",

@@ -186,6 +186,17 @@ function TasksPanelSkeleton({ panelBody }: { panelBody: PanelBody }) {
               </>
             );
           }
+          // Pitch this! on a computer is two columns (#1215).
+          if (body === 'pitch') {
+            return (
+              <>
+                <div className="lg:hidden">
+                  <SceneBodySkeleton />
+                </div>
+                <PitchDeskBodySkeleton />
+              </>
+            );
+          }
           return <SceneBodySkeleton />;
         })()}
       </div>
@@ -435,6 +446,28 @@ function DistributeDeskBodySkeleton() {
       <div className="space-y-4">
         <SkeletonBlock className="h-[164px] w-full rounded-2xl" />
         <SkeletonBlock className="h-[104px] w-full rounded-2xl" />
+      </div>
+    </div>
+  );
+}
+
+/** The desktop Pitch tab: heading, curators, editors left; the summary card
+ *  and the kit checklist right. Mirrors PitchDeskSkeleton in PitchDeskParts. */
+function PitchDeskBodySkeleton() {
+  return (
+    <div
+      className="mx-auto mt-6 hidden w-full max-w-[1120px] grid-cols-[minmax(0,1fr)_340px] items-start gap-6 lg:grid xl:grid-cols-[minmax(0,1fr)_360px]"
+      aria-hidden="true"
+    >
+      <div className="space-y-4">
+        <SkeletonBlock className="h-10 w-72 rounded-lg" />
+        <SkeletonBlock className="h-4 w-96 rounded-md" />
+        <SkeletonBlock className="h-[280px] w-full rounded-2xl" />
+        <SkeletonBlock className="h-[120px] w-full rounded-2xl" />
+      </div>
+      <div className="space-y-4">
+        <SkeletonBlock className="h-[220px] w-full rounded-2xl" />
+        <SkeletonBlock className="h-[180px] w-full rounded-2xl" />
       </div>
     </div>
   );
