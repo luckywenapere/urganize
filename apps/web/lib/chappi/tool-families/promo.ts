@@ -13,7 +13,9 @@
 // link to hand out, so there was no rename available; giving UrgAns tools for
 // it is its own piece of work.
 
+import { randomUUID } from 'node:crypto';
 import { MAX_PITCH_NOTE_LENGTH, PITCH_PLATFORMS } from '@/lib/pitching';
+import { isPitchCreditsEnabled } from '@/lib/pitch-credits';
 import { isSocialShareEnabled, shareDisplayTitle } from '@/lib/social-share';
 import {
   apiError,
@@ -22,11 +24,42 @@ import {
   fail,
   isFlagGateOff,
   type ChappiTool,
+  type InternalApiResponse,
 } from './shared';
 
 const PITCHING_OFF = "Playlist pitching isn't enabled yet.";
 const RECAP_OFF = "Rollout recaps aren't enabled yet.";
 const SHARE_OFF = "Sharing to socials isn't switched on for your team yet.";
+
+/** A playlist's credit price as the route sends it; missing means Free. */
+function creditsOf(playlist: Record<string, unknown>): number {
+  const credits = Number(playlist.creditPrice);
+  return Number.isFinite(credits) && credits > 0 ? Math.floor(credits) : 0;
+}
+
+const plural = (count: number) => `${count} credit${count === 1 ? '' : 's'}`;
+
+/**
+ * Why a pitch did not go out, in words the user can act on. Every refusal
+ * from the pitch routes carries its own reason, so it is passed on as is;
+ * the tool used to call every 409 "already pitched", which hid the real one
+ * (#1236). Two answers are reworded: the credits shortfall, to name the
+ * numbers, and the credits route's duplicate, which speaks of several curators.
+ */
+export function pitchRefusal(res: InternalApiResponse): string {
+  if (res.status === 402 && res.body.code === 'insufficient') {
+    const needed = Number(res.body.needed);
+    const balance = Number(res.body.balance);
+    if (Number.isFinite(needed) && Number.isFinite(balance)) {
+      return `This pitch costs ${plural(needed)} and you have ${balance}. Buy more credits, then ask me again. Nothing was charged.`;
+    }
+    return 'You need more credits for this pitch. Buy more credits, then ask me again. Nothing was charged.';
+  }
+  if (res.status === 409 && res.body.code === 'duplicate') {
+    return 'This playlist already has a pitch from this rollout waiting for a reply.';
+  }
+  return apiError(res, 'Could not send the pitch.');
+}
 
 /** Bound the browse payload — the route returns up to 200 playlists. */
 const MAX_LISTED_PLAYLISTS = 30;
@@ -37,7 +70,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
     kind: 'read',
     level: 'read',
     description:
-      'Browse curator playlists a song can be pitched to, optionally filtered by platform or genre.',
+      'Browse curator playlists a song can be pitched to, optionally filtered by platform or genre. `credits` is what one pitch costs (0 means free).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -71,6 +104,8 @@ export const PROMO_TOOLS: ChappiTool[] = [
         platform: String(playlist.platform ?? ''),
         genres: Array.isArray(playlist.genres) ? playlist.genres.map(String) : [],
         followers: (playlist.followerCount ?? null) as number | null,
+        // 0 is a free pitch; anything else is charged from the team's credits.
+        credits: creditsOf(playlist),
       }));
       const truncated =
         playlists.length > data.length ? ` Showing the first ${data.length}.` : '';
@@ -136,7 +171,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
     kind: 'mutate',
     level: 'confirm',
     description:
-      "Pitch a song from a rollout to a curator's playlist. Requires the user to approve a confirmation card — calling this only proposes it, and nothing reaches the curator until they approve.",
+      "Pitch a song from a rollout to a curator's playlist. A paid playlist is charged from the team's credits when sent. Requires the user to approve a confirmation card — calling this only proposes it, and nothing reaches the curator until they approve.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -182,10 +217,16 @@ export const PROMO_TOOLS: ChappiTool[] = [
       if (!playlist) return { ok: false, summary: 'That playlist was not found.' };
 
       const curator = String(playlist.curatorName ?? 'the curator');
+      const credits = creditsOf(playlist);
+      const cost = !isPitchCreditsEnabled()
+        ? ''
+        : credits > 0
+          ? ` This uses ${plural(credits)}.`
+          : ' This pitch is free.';
       return {
         ok: true,
         title: `Pitch "${songTitle}" to ${playlist.name}?`,
-        detail: `${curator} gets the song, your link${note ? ' and your note' : ''}, and can answer from their own inbox. A pitch cannot be taken back.`,
+        detail: `${curator} gets the song, your link${note ? ' and your note' : ''}, and can answer from their own inbox. A pitch cannot be taken back.${cost}`,
         confirmLabel: 'Send pitch',
       };
     },
@@ -197,6 +238,30 @@ export const PROMO_TOOLS: ChappiTool[] = [
       if (!releaseId || !playlistId || !songTitle || !songUrl) {
         return fail('releaseId, playlistId, songTitle and songUrl are all required.');
       }
+      const note = argString(args, 'note') || undefined;
+
+      // With pitch credits on, every pitch goes through the credits route,
+      // the same one Pitch this! uses: it charges a paid playlist and sends a
+      // Free one for nothing. The free route refuses paid playlists, so it is
+      // only for when credits are off. One request id per approved card: the
+      // route charges a retry of the same id once, and the one-waiting-pitch
+      // rule stops a second card from pitching the same playlist twice.
+      if (isPitchCreditsEnabled()) {
+        const res = await callInternalApi(ctx, '/api/pitching/send', {
+          method: 'POST',
+          body: { releaseId, playlistIds: [playlistId], songTitle, songUrl, note, requestId: randomUUID() },
+        });
+        if (isFlagGateOff(res)) return fail(PITCHING_OFF);
+        if (!res.ok) return fail(pitchRefusal(res));
+        const charged = Number(res.body.charged);
+        const balance = res.body.balance;
+        const cost =
+          Number.isFinite(charged) && charged > 0
+            ? ` ${plural(charged)} used${typeof balance === 'number' ? `, ${balance} left` : ''}.`
+            : '';
+        return { ok: true, summary: `Pitched "${songTitle}".${cost}` };
+      }
+
       const res = await callInternalApi(ctx, '/api/pitching/pitches', {
         method: 'POST',
         body: {
@@ -205,14 +270,11 @@ export const PROMO_TOOLS: ChappiTool[] = [
           songTitle,
           songUrl,
           songPlatform: argString(args, 'songPlatform') || undefined,
-          note: argString(args, 'note') || undefined,
+          note,
         },
       });
       if (isFlagGateOff(res)) return fail(PITCHING_OFF);
-      if (res.status === 409) {
-        return fail('That song has already been pitched to this playlist.');
-      }
-      if (!res.ok) return fail(apiError(res, 'Could not send the pitch.'));
+      if (!res.ok) return fail(pitchRefusal(res));
       return { ok: true, summary: `Pitched "${songTitle}".` };
     },
   },
