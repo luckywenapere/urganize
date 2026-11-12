@@ -31,11 +31,10 @@ import { displayReleaseTitle } from '@/types/releases';
 import { SmartLinkBox, useReleaseSmartLink } from '@/components/releases/SmartLinkBox';
 import { copyText } from '@/lib/share-file';
 import { ARTIST_BRAND_ATTR, artistBrandCss, resolveArtistBrandTheme } from '@/lib/artist-brand-theme';
-import { BRAND_COLORS_SETTINGS_HREF, isBrandColorsEnabled } from '@/lib/social-share-colors';
+import { isBrandColorsEnabled } from '@/lib/social-share-colors';
 
 // The artist page, redesigned 2026-10-29 (#866, founder approved
-// docs/mocks/artist-page/mock.html). Where the artist stands first (two chips
-// under the name), then the one thing to do next, then all of their music on
+// docs/mocks/artist-page/mock.html). The one thing to do next, then all of their music on
 // one line from In the making to Rolling out to Out now. The posting plan sits
 // beside it on desktop and under it on a phone. "What UrgAns remembers" left
 // the page; UrgAns still keeps and uses those facts.
@@ -135,19 +134,6 @@ function daysFrom(today: string, value: string | null): number | null {
 }
 
 const recordName = (record: RecordSummary) => (isUntitledRecord(record.title) ? 'the untitled record' : record.title);
-
-function Chip({ children, on = false }: { children: React.ReactNode; on?: boolean }) {
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs ${
-        on ? 'bg-brand-subtle font-semibold text-brand' : 'bg-bg-hover text-content-secondary'
-      }`}
-    >
-      {on ? <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-brand" /> : null}
-      {children}
-    </span>
-  );
-}
 
 /** Three faded sleeves: the records that will fill the Out now slot. Each
  *  sleeve is opaque (page colour under a faded tint), so the one in front
@@ -503,25 +489,6 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
     openCreateForArtist(artist.id);
   };
 
-  // Where the artist stands, in two chips: the lit one is what is happening.
-  const chips: { label: string; on: boolean }[] = [];
-  if (upNext.kind === 'rollout') chips.push({ label: `Rolling out ${displayReleaseTitle(upNext.release.title)}`, on: true });
-  else if (upNext.kind === 'out') chips.push({ label: `${displayReleaseTitle(upNext.release.title)} is out`, on: true });
-  else if (upNext.kind === 'record')
-    chips.push({
-      label:
-        upNext.record.status === 'idea'
-          ? isUntitledRecord(upNext.record.title)
-            ? 'An idea'
-            : `${upNext.record.title} is an idea`
-          : isUntitledRecord(upNext.record.title)
-            ? 'Making a record'
-            : `Making ${upNext.record.title}`,
-      on: true,
-    });
-  if (buckets.planned.length === 0 && buckets.live.length === 0) chips.push({ label: 'No rollout yet', on: false });
-  else if (records && records.length > 0) chips.push({ label: `${records.length} in the making`, on: false });
-
   // On release day a song leaves Rolling out for the top of Out now (#1092,
   // docs/mocks/out-now-placement); its rollout and after-release tasks are one tap away.
   const rolling = buckets.planned;
@@ -632,35 +599,6 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
             <FitOneLine className="font-display text-[32px] leading-[1.15] text-content-primary sm:text-[40px]">
               {artist.name}
             </FitOneLine>
-            {/* lg: one status line under the name; the chips are the phone's. */}
-            {chips.length > 0 ? (
-              <p className={`mt-1.5 hidden text-xs font-semibold lg:block ${chips[0].on ? 'text-brand' : 'font-medium text-content-tertiary'}`}>
-                {chips[0].label}
-              </p>
-            ) : null}
-            {chips.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-1.5 lg:hidden">
-                {chips.map((chip) => (
-                  <Chip key={chip.label} on={chip.on}>
-                    {chip.label}
-                  </Chip>
-                ))}
-              </div>
-            ) : null}
-            {brandTheme ? (
-              <Link
-                href={BRAND_COLORS_SETTINGS_HREF}
-                className="motion-focus mt-2 inline-flex min-h-6 items-center gap-1.5 rounded-full border border-[rgb(var(--color-stroke)/0.28)] px-2.5 font-mono text-[11px] text-content-secondary transition-colors hover:bg-bg-hover"
-              >
-                <span
-                  aria-hidden
-                  className="h-2.5 w-2.5 rounded-[3px] border border-[rgb(var(--color-stroke)/0.4)]"
-                  style={{ backgroundColor: brandTheme.band }}
-                />
-                <span aria-hidden className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: brandTheme.bandAccent }} />
-                Brand colors
-              </Link>
-            ) : null}
           </div>
         </div>
         {/* New record first: between releases the next record is the work (founder, 2026-10-29).

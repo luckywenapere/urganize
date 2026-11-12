@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.277.2",
+    tag: "App",
+    date: "November 12, 2026",
+    highlights: [
+      "The artist page header is cleaner: the status pills and the Brand colors button under the name are gone.",
+    ],
+  },
+  {
     version: "1.277.1",
     tag: "App",
     date: "November 12, 2026",
