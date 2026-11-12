@@ -52,11 +52,12 @@ const BRAND_COLORS_ENABLED = isBrandColorsEnabled();
 
 const DAY_MS = 86_400_000;
 
-// lg: the one filled button sits last, the quiet one before it (mock note 2).
+// Header buttons sit under the name, beside the photo (founder, 2026-11-12),
+// so they are compact on every screen.
 const primaryButton =
-  'motion-focus motion-press inline-flex min-h-11 flex-1 items-center justify-center rounded-full bg-brand px-5 text-sm font-semibold text-content-inverse transition-colors hover:bg-brand-hover disabled:opacity-50 sm:flex-none lg:order-2 lg:min-h-9 lg:px-4 lg:text-[13px]';
+  'motion-focus motion-press inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-full bg-brand px-2.5 text-[13px] font-semibold text-content-inverse transition-colors hover:bg-brand-hover disabled:opacity-50 sm:px-4';
 const ghostButton =
-  'motion-focus motion-press inline-flex min-h-11 flex-1 items-center justify-center rounded-full border border-stroke-strong px-5 text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover sm:flex-none lg:order-1 lg:min-h-9 lg:px-4 lg:text-[13px] lg:font-medium';
+  'motion-focus motion-press inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-full border border-stroke-strong px-2.5 text-[13px] font-semibold text-content-primary transition-colors hover:bg-bg-hover sm:px-4';
 // "Copy link" on an Out now row, desktop only.
 const copyLinkButton =
   'motion-focus motion-press hidden h-8 shrink-0 items-center gap-1.5 rounded-full border border-stroke-strong px-3.5 text-[13px] font-medium text-content-primary transition-colors hover:bg-bg-hover lg:inline-flex';
@@ -579,37 +580,36 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
 
       <header
         className={cn(
-          'mt-5 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between',
+          'mt-5 flex min-w-0 items-center gap-3 sm:gap-5',
           brandTheme && 'artist-brand-band rounded-2xl px-5 pb-7 pt-5 lg:px-6 lg:pb-8 lg:pt-6'
         )}
       >
-        <div className="flex min-w-0 items-center gap-4 sm:gap-5">
-          <ProfilePhotoPicker
-            name={artist.name}
-            photoUrl={artist.photoUrl}
-            size={80}
-            square
-            signUrl={artistPhotoUrl(artist.id)}
-            save={(path) => saveArtistPhoto(artist.id, path)}
-            onChange={(url) => setArtistPhoto(artist.id, url)}
-            surface="artist_photo"
-            quietBadge
-          />
-          <div className="min-w-0">
-            <FitOneLine className="font-display text-[32px] leading-[1.15] text-content-primary sm:text-[40px]">
-              {artist.name}
-            </FitOneLine>
+        <ProfilePhotoPicker
+          name={artist.name}
+          photoUrl={artist.photoUrl}
+          size={76}
+          square
+          signUrl={artistPhotoUrl(artist.id)}
+          save={(path) => saveArtistPhoto(artist.id, path)}
+          onChange={(url) => setArtistPhoto(artist.id, url)}
+          surface="artist_photo"
+          quietBadge
+          className="shrink-0"
+        />
+        {/* Name on top, buttons at the bottom, together as tall as the photo. */}
+        <div className="flex min-h-[76px] min-w-0 flex-1 flex-col justify-between gap-2">
+          <FitOneLine className="font-display text-[30px] leading-[1.15] text-content-primary sm:text-[36px]">
+            {artist.name}
+          </FitOneLine>
+          {/* New record first: between releases the next record is the work (founder, 2026-10-29). */}
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            <button type="button" onClick={newRecord} disabled={starting} className={primaryButton}>
+              {starting ? 'Starting…' : 'New record'}
+            </button>
+            <button type="button" onClick={planRollout} className={ghostButton}>
+              Plan a rollout
+            </button>
           </div>
-        </div>
-        {/* New record first: between releases the next record is the work (founder, 2026-10-29).
-            lg: it is the one filled button and sits last, after a quiet Plan a rollout. */}
-        <div className="flex shrink-0 gap-2">
-          <button type="button" onClick={newRecord} disabled={starting} className={primaryButton}>
-            {starting ? 'Starting…' : 'New record'}
-          </button>
-          <button type="button" onClick={planRollout} className={ghostButton}>
-            Plan a rollout
-          </button>
         </div>
       </header>
       {recordError ? (
