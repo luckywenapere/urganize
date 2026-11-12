@@ -15,7 +15,7 @@
 //
 // Copy is always "a listen and a written reply", never a playlist spot.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Loader2, X } from '@/components/icons';
 import type { BrowsablePlaylist, PitchPlatform, SentPitch } from '@/types/pitching';
@@ -81,6 +81,8 @@ import {
   type SendBody,
 } from '@/lib/pitch-credits-client';
 import { CuratorFace } from './CuratorFace';
+import { CuratorRows, PitchDeskGrid, SummaryCard } from './PitchDeskParts';
+import { pitchSummary } from '@/lib/pitch-summary';
 import { currentShareOrigin } from '@/lib/app-hosts';
 
 type Props = {
@@ -97,6 +99,12 @@ type Props = {
   topUpCancelled?: boolean;
   onSent: (pitches: SentPitch[]) => void;
   onToast: (message: string, tone: 'success' | 'error' | 'warning') => void;
+  /** Desktop (#1215): two columns, the summary card on the right. */
+  desk?: boolean;
+  /** Desktop: what sits under the curators on the left (editors, Sent). */
+  belowList?: ReactNode;
+  /** Desktop: what sits under the summary card on the right (the kit). */
+  aside?: ReactNode;
 };
 
 const PLATFORMS = PITCH_PLATFORMS.filter((platform) => platform !== 'other');
@@ -142,6 +150,9 @@ export function CreditPitchPicker({
   topUpCancelled = false,
   onSent,
   onToast,
+  desk = false,
+  belowList = null,
+  aside = null,
 }: Props) {
   const [playlists, setPlaylists] = useState<BrowsablePlaylist[] | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -364,6 +375,125 @@ export function CreditPitchPicker({
 
   const platformLabel = platform ? PITCH_PLATFORM_LABELS[platform] : '';
 
+  const songFields =
+    picked.length > 0 && !sent ? (
+      <div className={`overflow-hidden rounded-2xl bg-bg-surface ${desk ? 'border border-stroke-default' : 'mt-4'}`}>
+        <label className="block px-4 pt-3">
+          <span className="block text-[13px] text-content-primary/55">Song link</span>
+          <input
+            ref={linkRef}
+            type="url"
+            inputMode="url"
+            value={songUrl}
+            onChange={(event) => {
+              setSongUrl(event.target.value);
+              setLinkError('');
+            }}
+            placeholder={SONG_LINK_PLACEHOLDER_SHORT}
+            aria-invalid={Boolean(linkError)}
+            className="h-11 w-full bg-transparent text-base text-content-primary placeholder:text-content-tertiary focus:outline-none sm:text-[15px]"
+          />
+        </label>
+        {linkError ? <p className="px-4 pb-1 text-[13px] text-status-error">{linkError}</p> : null}
+        <label className="ml-4 block border-t border-content-primary/10 pr-4 pt-3">
+          <span className="block text-[13px] text-content-primary/55">Note</span>
+          <textarea
+            rows={3}
+            value={noteValue}
+            maxLength={room}
+            onChange={(event) => {
+              setNoteTouched(true);
+              setNote(event.target.value);
+            }}
+            placeholder="Say hi"
+            className="w-full resize-none bg-transparent py-2 text-base text-content-primary placeholder:text-content-tertiary focus:outline-none sm:text-[15px]"
+          />
+        </label>
+        {attachKit ? (
+          <p className="ml-4 flex items-center gap-2 border-t border-content-primary/10 py-3 pr-4 text-[13px] text-content-primary/55">
+            <span className="text-brand">
+              <CheckMark size={14} width={2.6} />
+            </span>
+            Your kit goes with it
+          </p>
+        ) : null}
+      </div>
+    ) : null;
+
+  const topUpSheet =
+    sheetOpen && credits ? (
+      <TopUpSheet
+        account={credits.account}
+        short={short}
+        count={picked.length}
+        canBuy={credits.canBuy && credits.purchasable}
+        onClose={() => setSheetOpen(false)}
+        onPay={pay}
+      />
+    ) : null;
+
+  if (desk) {
+    // The approved desktop mock (#1215). Same state, same send, same top-up
+    // sheet and Paystack return as the phone; only the arrangement differs.
+    const summary = pitchSummary(picked, balance);
+    return (
+      <>
+        <PitchDeskGrid
+          left={
+            <>
+              <section aria-label="Send to curators" className="space-y-4">
+                <div>
+                  <h2 className="font-display text-[32px] leading-10 text-content-primary">Send it to curators</h2>
+                  <p className="mt-1 text-sm text-content-secondary">{PITCH_CREDITS_SUBTITLE}</p>
+                </div>
+                {banner ? (
+                  <div role="alert" className="rounded-2xl bg-status-error/10 px-4 py-3">
+                    <p className="text-[15px] font-semibold text-content-primary">{banner.title}</p>
+                    <p className="text-[13px] text-content-primary/55">{banner.line}</p>
+                  </div>
+                ) : null}
+                <CuratorRows
+                  platforms={PLATFORMS}
+                  platform={platform}
+                  onPlatform={setPlatform}
+                  playlists={playlists}
+                  visible={visible}
+                  selected={selected}
+                  onToggle={toggle}
+                  loadError={loadError}
+                  onRetry={() => void load()}
+                  loadErrorText={LOAD_ERROR}
+                />
+                {songFields}
+                {error ? (
+                  <p role="alert" className="text-sm text-status-error">
+                    {error}
+                  </p>
+                ) : null}
+              </section>
+              {belowList}
+            </>
+          }
+          right={
+            <>
+              <SummaryCard
+                summary={summary}
+                sending={sending}
+                status={status}
+                atLimit={atLimit}
+                sent={sent}
+                onSend={() => void send()}
+                onMore={() => setSent(null)}
+              />
+              {aside}
+            </>
+          }
+        />
+        {topUpSheet}
+      </>
+    );
+  }
+
   return (
     <section aria-label="Send to curators">
       <h3 className="font-display text-xl text-content-primary">Send to curators</h3>
@@ -483,49 +613,7 @@ export function CreditPitchPicker({
         )}
       </div>
 
-      {picked.length > 0 && !sent ? (
-        <div className="mt-4 overflow-hidden rounded-2xl bg-bg-surface">
-          <label className="block px-4 pt-3">
-            <span className="block text-[13px] text-content-primary/55">Song link</span>
-            <input
-              ref={linkRef}
-              type="url"
-              inputMode="url"
-              value={songUrl}
-              onChange={(event) => {
-                setSongUrl(event.target.value);
-                setLinkError('');
-              }}
-              placeholder={SONG_LINK_PLACEHOLDER_SHORT}
-              aria-invalid={Boolean(linkError)}
-              className="h-11 w-full bg-transparent text-base text-content-primary placeholder:text-content-tertiary focus:outline-none sm:text-[15px]"
-            />
-          </label>
-          {linkError ? <p className="px-4 pb-1 text-[13px] text-status-error">{linkError}</p> : null}
-          <label className="ml-4 block border-t border-content-primary/10 pr-4 pt-3">
-            <span className="block text-[13px] text-content-primary/55">Note</span>
-            <textarea
-              rows={3}
-              value={noteValue}
-              maxLength={room}
-              onChange={(event) => {
-                setNoteTouched(true);
-                setNote(event.target.value);
-              }}
-              placeholder="Say hi"
-              className="w-full resize-none bg-transparent py-2 text-base text-content-primary placeholder:text-content-tertiary focus:outline-none sm:text-[15px]"
-            />
-          </label>
-          {attachKit ? (
-            <p className="ml-4 flex items-center gap-2 border-t border-content-primary/10 py-3 pr-4 text-[13px] text-content-primary/55">
-              <span className="text-brand">
-                <CheckMark size={14} width={2.6} />
-              </span>
-              Your kit goes with it
-            </p>
-          ) : null}
-        </div>
-      ) : null}
+      {songFields}
 
       {error ? (
         <p role="alert" className="mt-3 text-sm text-status-error">
@@ -546,16 +634,7 @@ export function CreditPitchPicker({
         />
       ) : null}
 
-      {sheetOpen && credits ? (
-        <TopUpSheet
-          account={credits.account}
-          short={short}
-          count={picked.length}
-          canBuy={credits.canBuy && credits.purchasable}
-          onClose={() => setSheetOpen(false)}
-          onPay={pay}
-        />
-      ) : null}
+      {topUpSheet}
     </section>
   );
 }

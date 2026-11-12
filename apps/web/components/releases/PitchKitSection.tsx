@@ -4,6 +4,7 @@
 import { isCreditsEnabled } from '@/lib/credits/config';
 import { embeddedEstimateCredits } from '@/lib/credits/embedded';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Check,
   ChevronRight,
@@ -11,7 +12,10 @@ import {
   Loader2,
   Plus,
   Trash2,
+  X,
 } from '@/components/icons';
+import { DialogPanel } from '@/components/shared/DialogPanel';
+import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { absoluteKitUrl, publishReleaseKitLink } from '@/lib/pitch-kit-client';
 import { kitLinkPath } from '@/lib/press-kit-public';
 import { supabase } from '@/lib/supabase/client';
@@ -39,7 +43,44 @@ type PitchKitSectionProps = {
   releaseId: string;
   onToast: (message: string, tone: 'success' | 'error' | 'warning') => void;
   onShareStateChange?: (state: KitShareState) => void;
+  /** Desktop Pitch tab (#1215): a short ticked list in the right column, with
+   *  Edit opening this same editor in a side panel. */
+  variant?: 'full' | 'checklist';
 };
+
+type KitPart = 'story' | 'credits' | 'artist';
+
+/** The editor, beside the page, for the desktop checklist's Edit. */
+function KitEditorPanel({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+  useEffect(() => lockBodyScroll(), []);
+  return createPortal(
+    <div className="fixed inset-0 z-50">
+      <button
+        type="button"
+        aria-label="Close"
+        tabIndex={-1}
+        onClick={onClose}
+        className="absolute inset-0 h-full w-full cursor-default bg-black/55"
+      />
+      <DialogPanel
+        label="What curators read"
+        onClose={onClose}
+        className="absolute inset-y-0 right-0 w-[480px] max-w-full overflow-y-auto bg-bg-surface p-7"
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="motion-focus absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full text-content-tertiary hover:bg-bg-elevated hover:text-content-primary"
+        >
+          <X className="h-5 w-5" />
+        </button>
+        {children}
+      </DialogPanel>
+    </div>,
+    document.body
+  );
+}
 
 const FIELD_CLASS =
   'w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2.5 text-sm text-content-primary placeholder:text-content-tertiary hover:border-content-secondary focus:border-brand focus:outline-none';
@@ -146,7 +187,9 @@ function KitRow({
  *
  * Fetches for itself and is not cached: it is edited in place.
  */
-export function PitchKitSection({ releaseId, onToast, onShareStateChange }: PitchKitSectionProps) {
+export function PitchKitSection({ releaseId, onToast, onShareStateChange, variant = 'full' }: PitchKitSectionProps) {
+  const checklist = variant === 'checklist';
+  const [editing, setEditing] = useState(false);
   const [data, setData] = useState<PitchKitPayload | null>(null);
   const [loadError, setLoadError] = useState('');
   const [story, setStory] = useState('');
@@ -366,6 +409,19 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
     );
   }
 
+  if (!data && checklist) {
+    return (
+      <div className="rounded-2xl border border-stroke-default bg-bg-surface px-5 py-4" aria-busy="true" aria-label="Loading your kit">
+        <div className="h-5 w-40 animate-pulse rounded-md bg-bg-elevated" />
+        <div className="mt-4 space-y-3">
+          <div className="h-3.5 w-3/5 animate-pulse rounded-md bg-bg-elevated" />
+          <div className="h-3.5 w-1/2 animate-pulse rounded-md bg-bg-elevated" />
+          <div className="h-3.5 w-2/5 animate-pulse rounded-md bg-bg-elevated" />
+        </div>
+      </div>
+    );
+  }
+
   if (!data) {
     return (
       <div className="rounded-2xl bg-bg-surface p-4 sm:p-5" aria-busy="true" aria-label="Loading your kit">
@@ -507,15 +563,19 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
     </li>
   ) : null;
 
-  return (
-    <section aria-label="What curators read">
+  const heading = (
+    <>
       <h3 className="font-display text-xl text-content-primary">What curators read</h3>
       <p className="mt-1 text-[13px] text-content-primary/55">
         Goes with every pitch.{ready ? '' : ` ${doneCount} of 3 done.`}
       </p>
+    </>
+  );
 
+  const editorBody = (
+    <>
       <div className="mt-3">
-        {ready && !showRows ? (
+        {ready && !showRows && !checklist ? (
           <ul className="rounded-2xl bg-bg-surface px-4" aria-label="What is in the kit">
             <li className="border-b border-stroke-subtle">
               <button
@@ -783,14 +843,116 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
           {fillError}
         </p>
       ) : null}
+    </>
+  );
 
-
+  const lockedSheet = (
       <UrgansLockedSheet
         open={Boolean(lockedMessage)}
         message={lockedMessage}
         actionType="epk.fill_both"
         onClose={() => setLockedMessage('')}
       />
+  );
+
+  if (checklist) {
+    const firstMissing: KitPart | null = !storyDone ? 'story' : !creditsDone ? 'credits' : !artistDone ? 'artist' : null;
+    const parts: { key: KitPart; label: string; done: boolean; hint: string }[] = [
+      { key: 'story', label: 'The story', done: storyDone, hint: 'Not written yet' },
+      { key: 'credits', label: 'Credits', done: creditsDone, hint: 'Not added yet' },
+      { key: 'artist', label: 'Bio', done: artistDone, hint: kitBio ? 'Add who to write to' : 'Not written yet' },
+    ];
+    const openEditor = (part: KitPart | null) => {
+      setOpenRow(part);
+      setEditing(true);
+    };
+    return (
+      <>
+        <section aria-label="What curators read" className="rounded-2xl border border-stroke-default bg-bg-surface px-5 pb-2 pt-3">
+          <div className="flex items-baseline justify-between gap-3 pb-1 pt-1">
+            <h3 className="font-display text-lg leading-6 text-content-primary">What curators read</h3>
+            <button
+              type="button"
+              onClick={() => openEditor(firstMissing)}
+              className="motion-focus text-[13px] font-semibold text-brand hover:underline"
+            >
+              Edit
+            </button>
+          </div>
+          <ul>
+            {parts.map((part) => (
+              <li key={part.key} className="border-t border-stroke-subtle first:border-t-0">
+                <button
+                  type="button"
+                  onClick={() => openEditor(part.key)}
+                  className="motion-focus flex min-h-11 w-full items-center gap-2.5 py-2 text-left"
+                >
+                  <span
+                    className={`grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full ${
+                      part.done ? 'bg-brand text-content-inverse' : 'border-[1.5px] border-content-tertiary/50'
+                    }`}
+                    aria-hidden="true"
+                  >
+                    {part.done ? <Check className="h-2.5 w-2.5" /> : null}
+                  </span>
+                  <span className="flex-1 text-sm text-content-primary">
+                    {part.label}
+                    <span className="sr-only">{part.done ? ' (done)' : ' (not done yet)'}</span>
+                  </span>
+                  {part.done ? null : <span className="shrink-0 text-xs text-content-tertiary">{part.hint}</span>}
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="border-t border-stroke-subtle py-2">
+            {storyDone ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => void shareKit()}
+                  disabled={sharing}
+                  className="motion-focus inline-flex min-h-10 items-center gap-2 text-[13px] font-semibold text-brand hover:underline disabled:opacity-60"
+                >
+                  {sharing ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  ) : copied ? (
+                    <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                  )}
+                  {copied ? 'Copied' : 'Copy share link'}
+                </button>
+                {manualLink ? (
+                  <input
+                    readOnly
+                    aria-label="Share link"
+                    value={manualLink}
+                    onFocus={(event) => event.currentTarget.select()}
+                    className={`${FIELD_CLASS} mb-2 font-mono text-xs`}
+                  />
+                ) : null}
+              </>
+            ) : (
+              <p className="py-2 text-xs text-content-secondary">Write the story to get a share link.</p>
+            )}
+          </div>
+        </section>
+        {editing ? (
+          <KitEditorPanel onClose={() => setEditing(false)}>
+            {heading}
+            {editorBody}
+          </KitEditorPanel>
+        ) : null}
+        {lockedSheet}
+      </>
+    );
+  }
+
+  return (
+    <section aria-label="What curators read">
+      {heading}
+      {editorBody}
+      {lockedSheet}
     </section>
   );
 }

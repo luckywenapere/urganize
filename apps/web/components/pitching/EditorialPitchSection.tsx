@@ -33,7 +33,13 @@ const OPEN_BUTTON_CLASS =
 export function EditorialPitchSection({
   releaseId,
   releaseDate = null,
-}: { releaseId?: string; releaseDate?: string | null } = {}) {
+  card = false,
+}: {
+  releaseId?: string;
+  releaseDate?: string | null;
+  /** Desktop Pitch tab (#1215): its own card, marked free and separate from curators. */
+  card?: boolean;
+} = {}) {
   const router = useRouter();
   const { openTask } = useTaskUI();
   const [rows, setRows] = useState<EditorialRow[] | null>(null);
@@ -82,6 +88,41 @@ export function EditorialPitchSection({
     const row = rows?.[0] ?? null;
     const spotify = EDITORIAL_PLATFORMS[0];
     const due = editorialDueLine(releaseDate);
+    if (card) {
+      return (
+        <section aria-label={ROLLOUT_EDITORIAL_TITLE} className="rounded-2xl border border-stroke-default bg-bg-surface px-5 pb-4 pt-4">
+          <h3 className="font-display text-lg leading-6 text-content-primary">Spotify and Apple Music editors</h3>
+          <p className="mt-1 text-sm text-content-secondary">
+            Pitch to their own editorial teams. This is separate from curators and costs nothing.
+          </p>
+          {error ? (
+            <div role="alert" className="mt-3 flex items-center gap-3 text-sm">
+              <span className="font-semibold text-content-primary">Couldn’t load this.</span>
+              <button type="button" onClick={() => void load()} className="motion-focus min-h-10 font-semibold text-brand hover:underline">
+                Try again
+              </button>
+            </div>
+          ) : rows === null ? (
+            <div className="mt-3" aria-hidden="true">
+              <SkeletonBlock className="h-9 w-48 rounded-full" />
+            </div>
+          ) : (
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+              <button
+                type="button"
+                onClick={() => (row ? open(row) : void openExternalUrl(spotify.url))}
+                className="motion-focus motion-press inline-flex h-9 items-center rounded-full border border-stroke-control px-4 text-[13px] font-medium text-content-primary transition-colors hover:border-content-secondary"
+              >
+                {row ? EDITORIAL_OPEN_LABEL : 'Pitch to their editors'}
+              </button>
+              <span className="min-w-0 text-[13px] text-content-secondary">
+                {row ? `${editorialStateCopy(row)} · ${platformNames}` : due}
+              </span>
+            </div>
+          )}
+        </section>
+      );
+    }
     return (
       <section aria-label={ROLLOUT_EDITORIAL_TITLE}>
         <h3 className="mb-2 font-display text-xl text-content-primary">{ROLLOUT_EDITORIAL_TITLE}</h3>
