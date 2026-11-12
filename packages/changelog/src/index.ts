@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.276.0",
+    title: "The brief and the store details on a computer",
+    tag: "Rollouts",
+    date: "November 12, 2026",
+    highlights: [
+      "On a computer, the brief fills the screen in four columns, and the song's name on the cover no longer breaks in the middle of a word.",
+      "The details stores need are on one page with every box open. A box stores need that is still empty is marked red and tells you where to get it.",
+      "Credits sit beside the details: the link to send, who has answered, and whether the splits add up to 100%.",
+    ],
+  },
+  {
     version: "1.275.0",
     title: "Signing in and getting started on a computer",
     tag: "Account",

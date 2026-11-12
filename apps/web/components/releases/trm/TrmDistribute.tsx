@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Copy } from '@/components/icons';
+import { ChevronLeft, Copy } from '@/components/icons';
 import { useSceneOverlay } from '@/components/workspace/useSceneOverlay';
 import { releaseDayHasPassed } from '@/lib/release-out';
 import { fixDestinationFor, type FixAvailability } from '@/lib/distribution-fix';
@@ -532,6 +532,37 @@ export function TrmDistribute({ releaseId, onOpenDetails, onChangeArtist, onToas
         // eslint-disable-next-line @next/next/no-img-element
         <img src={coverUrl} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
       ) : null;
+
+    // Details and Credits open as their own page (#1230, mock
+    // docs/mocks/brief-details-desktop): every field open, the count and the
+    // credits beside them. Done and the line at the top come back here.
+    if (editor && editor.row !== 'cover_art' && canOpen[editor.row]) {
+      return (
+        <div className="mt-6">
+          <div className="mx-auto w-full max-w-[1120px]">
+            <button
+              type="button"
+              onClick={closeEditor}
+              className="motion-focus -ml-1 inline-flex items-center gap-0.5 rounded-md px-1 text-[13px] text-content-secondary hover:text-content-primary"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+              Get it ready for stores
+            </button>
+            <h3 className="mt-0.5 font-display text-[30px] leading-[38px] text-content-primary">Details for the stores</h3>
+          </div>
+          <MetadataSection
+            key={`desk:${editor.field ?? ''}`}
+            layout="desk"
+            releaseId={releaseId}
+            releaseTitle={data.title}
+            focusField={editor.field ?? (editor.row === 'credits' ? 'credits' : null)}
+            onToast={toast}
+            onDone={closeEditor}
+          />
+          {sheets}
+        </div>
+      );
+    }
 
     const checklist = distributeChecklist({
       blocking: data.checklist.blocking,

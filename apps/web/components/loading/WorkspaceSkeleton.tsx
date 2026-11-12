@@ -176,7 +176,30 @@ function TasksPanelSkeleton({ panelBody }: { panelBody: PanelBody }) {
           if (body === 'activities') return <BucketBodySkeleton />;
           // Distribute on a computer is a two-column page that also holds the
           // Cover art and Details editors (#1210), so those three reserve it.
-          if (body === 'distribute' || body === 'metadata' || body === 'coverart') {
+          // Release details on a computer is its own page (#1230): three
+          // cards of fields left, the count and the credits right.
+          if (body === 'metadata') {
+            return (
+              <>
+                <div className="lg:hidden">
+                  <SceneBodySkeleton />
+                </div>
+                <DetailsDeskBodySkeleton />
+              </>
+            );
+          }
+          // The brief on a computer is a four-column board (#1230).
+          if (body === 'brief') {
+            return (
+              <>
+                <div className="lg:hidden">
+                  <SceneBodySkeleton />
+                </div>
+                <BriefDeskBodySkeleton />
+              </>
+            );
+          }
+          if (body === 'distribute' || body === 'coverart') {
             return (
               <>
                 <div className="lg:hidden">
@@ -446,6 +469,50 @@ function DistributeDeskBodySkeleton() {
       <div className="space-y-4">
         <SkeletonBlock className="h-[164px] w-full rounded-2xl" />
         <SkeletonBlock className="h-[104px] w-full rounded-2xl" />
+      </div>
+    </div>
+  );
+}
+
+/** Release details on a computer (#1230): the heading, three cards of fields
+ *  left, the dark count card and Credits right. Mirrors MetadataSection's
+ *  desk layout. */
+function DetailsDeskBodySkeleton() {
+  return (
+    <div className="mx-auto mt-6 hidden w-full max-w-[1120px] lg:block" aria-hidden="true">
+      <SkeletonBlock className="h-3 w-36 rounded-md" />
+      <SkeletonBlock className="mt-2 h-[30px] w-72 rounded-lg" />
+      <div className="mt-5 grid grid-cols-[minmax(0,1fr)_340px] items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="space-y-4">
+          <SkeletonBlock className="h-[300px] w-full rounded-2xl" />
+          <SkeletonBlock className="h-[150px] w-full rounded-2xl" />
+          <SkeletonBlock className="h-[150px] w-full rounded-2xl" />
+        </div>
+        <div className="space-y-4">
+          <SkeletonBlock className="h-[76px] w-full rounded-2xl" />
+          <SkeletonBlock className="h-[260px] w-full rounded-2xl" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** The brief on a computer (#1230): the title line, then four columns, the
+ *  cover down two rows. Mirrors the brief scene's own desk skeleton. */
+function BriefDeskBodySkeleton() {
+  return (
+    <div className="hidden lg:block" aria-hidden="true">
+      <SkeletonBlock className="h-[30px] w-40 rounded-lg" />
+      <SkeletonBlock className="mt-2.5 h-3 w-64 rounded-md" />
+      <div className="mt-5 grid grid-cols-4 gap-4">
+        <SkeletonBlock className="row-span-2 h-[360px] w-full rounded-2xl" />
+        <SkeletonBlock className="h-[172px] w-full rounded-2xl" />
+        <SkeletonBlock className="col-span-2 h-[172px] w-full rounded-2xl" />
+        <SkeletonBlock className="h-[172px] w-full rounded-2xl" />
+        <SkeletonBlock className="h-[172px] w-full rounded-2xl" />
+        <SkeletonBlock className="h-[172px] w-full rounded-2xl" />
+        <SkeletonBlock className="col-span-2 h-[220px] w-full rounded-2xl" />
+        <SkeletonBlock className="col-span-2 h-[220px] w-full rounded-2xl" />
       </div>
     </div>
   );

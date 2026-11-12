@@ -59,7 +59,7 @@ const MIN_W: Record<BoardCardKey, number> = {
   settle: 4,
   pieces: 4,
   moments: 6,
-  people: 4,
+  people: 3,
   side: 3,
 };
 

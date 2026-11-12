@@ -212,29 +212,39 @@ export type BoardCardKey =
 /** Grid lines, 1-based: column x for w columns, row y for h rows. */
 export type BoardPlacement = { x: number; y: number; w: number; h: number };
 
-/** Split `width` columns starting at `x` between the cards that are there, by weight. */
+/** A quarter of the board: the grid keeps 12 tracks, so a stored arrangement
+ *  still reads, and the default places cards on four columns of three (#1230). */
+export const BOARD_QUARTER = BOARD_COLUMNS / 4;
+
+/**
+ * Split `quarters` quarters starting at column `x` between the cards that are
+ * there, by weight, so every card starts and ends on a quarter line. Each card
+ * gets at least one quarter; the last takes what is left.
+ */
 function shareRow(
   cards: { key: BoardCardKey; weight: number }[],
   present: Set<BoardCardKey>,
   x: number,
-  width: number
+  quarters: number
 ): { key: BoardCardKey; x: number; w: number }[] {
-  const here = cards.filter((card) => present.has(card.key));
-  if (here.length === 1) return [{ key: here[0].key, x, w: width }];
+  const here = cards.filter((card) => present.has(card.key)).slice(0, quarters);
   const total = here.reduce((sum, card) => sum + card.weight, 0);
-  let cursor = x;
+  let cursor = 0;
   return here.map((card, index) => {
-    const w = index === here.length - 1 ? x + width - cursor : Math.round((card.weight / total) * width);
-    const out = { key: card.key, x: cursor, w };
-    cursor += w;
+    const left = here.length - index - 1;
+    const share = index === here.length - 1 ? quarters - cursor : Math.max(1, Math.min(quarters - cursor - left, Math.round((card.weight / total) * quarters)));
+    const out = { key: card.key, x: x + cursor * BOARD_QUARTER, w: share * BOARD_QUARTER };
+    cursor += share;
     return out;
   });
 }
 
 /**
- * Where each card sits on a wide board (the approved mock): the vision on top
- * (cover beside the idea, the countdown, how it feels and its colours), the
- * look and sound next, then the work (to settle, key moments, who's on what).
+ * Where each card sits on a wide board (the approved mock, #1230): four
+ * columns. The cover takes the first column down two rows; beside it the
+ * countdown and the idea, then how it feels, its colours and the people. Then
+ * the sound beside the look, what was decided beside what is left to settle,
+ * the moments across the board, and what we are making beside the notes.
  * Only the cards that are there get a place, and the rest close up, so a
  * young rollout never shows holes. Rows size to their content; a card's `h`
  * is how many of those rows it spans.
@@ -242,51 +252,55 @@ function shareRow(
 export function boardPlacements(present: Set<BoardCardKey>): Partial<Record<BoardCardKey, BoardPlacement>> {
   const out: Partial<Record<BoardCardKey, BoardPlacement>> = {};
   let y = 1;
+  const cover = present.has('cover');
 
-  // Band 1: the record beside the idea.
-  const rightTop = [
-    shareRow([{ key: 'idea', weight: 5 }, { key: 'countdown', weight: 2 }], present, 6, 7),
-    shareRow([{ key: 'feels', weight: 3 }, { key: 'palette', weight: 4 }], present, 6, 7),
-  ].filter((row) => row.length > 0);
-  if (present.has('cover')) {
-    if (rightTop.length === 0) {
-      out.cover = { x: 1, y, w: BOARD_COLUMNS, h: 1 };
-    } else {
-      out.cover = { x: 1, y, w: 5, h: rightTop.length };
-    }
-  }
-  const coverless = !present.has('cover');
+  // Band 1: the record, then the idea and how it feels.
+  const topRows = [
+    [{ key: 'countdown', weight: 1 }, { key: 'idea', weight: 2 }],
+    [{ key: 'feels', weight: 1 }, { key: 'palette', weight: 1 }, { key: 'people', weight: 1 }],
+  ] as { key: BoardCardKey; weight: number }[][];
+  const rightTop = topRows
+    .map((row) => (cover ? shareRow(row, present, 1 + BOARD_QUARTER, 3) : shareRow(row, present, 1, 4)))
+    .filter((row) => row.length > 0);
+  if (cover) out.cover = rightTop.length ? { x: 1, y, w: BOARD_QUARTER, h: rightTop.length } : { x: 1, y, w: BOARD_COLUMNS, h: 1 };
   rightTop.forEach((row, index) => {
-    const widen = coverless ? shareRow(row.map((cell) => ({ key: cell.key, weight: cell.w })), present, 1, BOARD_COLUMNS) : row;
-    for (const cell of widen) out[cell.key] = { x: cell.x, y: y + index, w: cell.w, h: 1 };
+    for (const cell of row) out[cell.key] = { x: cell.x, y: y + index, w: cell.w, h: 1 };
   });
-  y += Math.max(rightTop.length, present.has('cover') ? 1 : 0);
+  y += Math.max(rightTop.length, cover ? 1 : 0);
 
-  // Band 2: the look beside sound and decisions.
-  const stack = (['sound', 'decisions'] as const).filter((key) => present.has(key));
-  if (present.has('look')) {
-    out.look = { x: 1, y, w: stack.length ? 7 : BOARD_COLUMNS, h: Math.max(stack.length, 1) };
-    stack.forEach((key, index) => {
-      out[key] = { x: 8, y: y + index, w: 5, h: 1 };
-    });
-    y += Math.max(stack.length, 1);
-  } else if (stack.length) {
-    for (const cell of shareRow(stack.map((key) => ({ key, weight: 1 })), present, 1, BOARD_COLUMNS)) {
-      out[cell.key] = { x: cell.x, y, w: cell.w, h: 1 };
-    }
+  // Then pairs across the board, and the moments line on its own.
+  const rest: { key: BoardCardKey; weight: number }[][] = [
+    [{ key: 'sound', weight: 1 }, { key: 'look', weight: 1 }],
+    [{ key: 'decisions', weight: 1 }, { key: 'settle', weight: 1 }],
+    [{ key: 'moments', weight: 1 }],
+    [{ key: 'pieces', weight: 1 }, { key: 'side', weight: 1 }],
+  ];
+  for (const row of rest) {
+    const cells = shareRow(row, present, 1, 4);
+    if (cells.length === 0) continue;
+    for (const cell of cells) out[cell.key] = { x: cell.x, y, w: cell.w, h: 1 };
     y += 1;
   }
-
-  // Band 3: the work.
-  for (const key of ['settle', 'pieces', 'moments'] as const) {
-    if (!present.has(key)) continue;
-    out[key] = { x: 1, y, w: BOARD_COLUMNS, h: 1 };
-    y += 1;
-  }
-  const bottom = shareRow([{ key: 'people', weight: 7 }, { key: 'side', weight: 5 }], present, 1, BOARD_COLUMNS);
-  for (const cell of bottom) out[cell.key] = { x: cell.x, y, w: cell.w, h: 1 };
-
   return out;
+}
+
+/**
+ * The cover's title size on a wide board (#1230): big, but never so big that a
+ * word breaks in the middle ("Owa / mbe / Seas / on"). The longest word has to
+ * fit across the cover, so the size follows the cover's width (container
+ * units) divided by that word's length, between a floor and a ceiling. The
+ * title then wraps only at spaces.
+ */
+export const COVER_TITLE_MIN_PX = 18;
+export const COVER_TITLE_MAX_PX = 40;
+/** Roughly how wide one letter of the display face is, in ems. */
+const DISPLAY_EM_PER_LETTER = 0.6;
+
+export function coverTitleFontSize(title: string): string {
+  const longest = Math.max(1, ...title.trim().split(/\s+/).map((word) => [...word].length));
+  const max = title.trim().length > 28 ? 30 : COVER_TITLE_MAX_PX;
+  const per = (longest * DISPLAY_EM_PER_LETTER).toFixed(2);
+  return `clamp(${COVER_TITLE_MIN_PX}px, calc(100cqw / ${per}), ${max}px)`;
 }
 
 const PHONE_ORDER: BoardCardKey[] = [
