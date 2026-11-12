@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.271.1",
+    tag: "AI",
+    date: "November 12, 2026",
+    highlights: [
+      "UrgAns can now pitch your song to playlists that cost credits. Before, it said the song was already pitched and nothing went out.",
+      "Before you send, UrgAns shows how many credits the pitch uses, and tells you plainly when you need more.",
+    ],
+  },
+  {
     version: "1.271.0",
     title: "Pitch on a computer, with the cost in view",
     tag: "Pitching",
