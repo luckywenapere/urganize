@@ -17,3 +17,31 @@ describe('describeNextBlocker (Create your account)', () => {
     );
   });
 });
+
+describe('describeNextBlocker with the password length (desktop sign-up, #1229)', () => {
+  it('counts the characters still needed', () => {
+    expect(describeNextBlocker({ ...ready, passwordLongEnough: false, passwordLength: 5 })).toBe(
+      `Your password needs ${MIN_PASSWORD_LENGTH - 5} more characters.`
+    );
+  });
+
+  it('says one character, not one characters', () => {
+    expect(
+      describeNextBlocker({ ...ready, passwordLongEnough: false, passwordLength: MIN_PASSWORD_LENGTH - 1 })
+    ).toBe('Your password needs 1 more character.');
+  });
+
+  it('asks for a password when the field is empty', () => {
+    expect(describeNextBlocker({ ...ready, passwordLongEnough: false, passwordLength: 0 })).toBe('Add a password.');
+  });
+
+  it('still names the name and email first', () => {
+    expect(describeNextBlocker({ hasName: false, hasEmail: true, passwordLongEnough: false, passwordLength: 3 })).toBe(
+      'Add your name.'
+    );
+  });
+
+  it('says nothing once the password is long enough', () => {
+    expect(describeNextBlocker({ ...ready, passwordLength: MIN_PASSWORD_LENGTH })).toBe('');
+  });
+});

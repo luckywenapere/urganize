@@ -19,6 +19,7 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { HomeBell } from '@/components/home/v2/HomeBell';
 import { EMPTY_STATE_ACTION_CLASS } from '@/components/shared/EmptyState';
 import { PlanLoopDemo } from '@/components/artists/PlanLoopDemo';
+import { FirstArtistDesk, readFirstArtistLater } from '@/components/artists/FirstArtistDesk';
 import { OutNowCards } from '@/components/home/OutNowCards';
 import { StreamingLinkPrompt } from '@/components/artists/StreamingLinkPrompt';
 import { useShellStore } from '@/stores/useShellStore';
@@ -46,6 +47,7 @@ export default function ArtistsPageClient({
 }: { swipe?: boolean; active?: boolean } = {}) {
   const router = useRouter();
   const authLoading = useAuthStore((state) => state.isLoading);
+  const userId = useAuthStore((state) => state.user?.id ?? null);
 
   const artists = useArtistRosterStore((state) => state.artists);
   const rosterLoaded = useArtistRosterStore((state) => state.loaded);
@@ -88,6 +90,10 @@ export default function ArtistsPageClient({
   const [commandCenterSettled, setCommandCenterSettled] = useState(!commandCenterLoading);
   if (!commandCenterLoading && !commandCenterSettled) setCommandCenterSettled(true);
   const ownArtistId = rosterLoaded ? artistHomeId(viewer, artists) : null;
+  // The first artist step on a computer (#1229) until they add one or pick
+  // "Do this later". Read once per user; the click sets it for this visit.
+  const [laterFor, setLaterFor] = useState<string | null>(null);
+  const firstArtistLater = Boolean(userId) && (laterFor === userId || readFirstArtistLater(userId));
 
   if (!ARTIST_PAGE_ENABLED) return null;
 
@@ -157,7 +163,11 @@ export default function ArtistsPageClient({
           </ul>
         </div>
       ) : list.rows.length === 0 ? (
-        <ArtistsEmpty />
+        isDesktop && !firstArtistLater ? (
+          <FirstArtistDesk userId={userId} onLater={() => setLaterFor(userId)} />
+        ) : (
+          <ArtistsEmpty demo={!isDesktop} />
+        )
       ) : (
         <div className="section-list-enter">
           {/* Songs out this week sit above everything (#1086). */}
@@ -187,19 +197,25 @@ export default function ArtistsPageClient({
 
 /** The first page a new team sees (#969): the one action that fills it, and
  *  beside it a short loop of what comes next, a release planned in UrgAns
- *  (#1007; it replaced the faded list here, which stays on other pages). */
-function ArtistsEmpty() {
+ *  (#1007; it replaced the faded list here, which stays on other pages).
+ *  On a computer the loop is left out (#1229): the first visit is the first
+ *  artist step, and after "Do this later" Home is just the action. */
+function ArtistsEmpty({ demo = true }: { demo?: boolean }) {
   const openAddArtist = useShellStore((state) => state.openAddArtist);
   return (
-    <section className="mx-auto grid max-w-xl items-center gap-8 py-6 sm:py-10 lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-12">
-      <div className="text-center lg:text-left">
+    <section
+      className={`mx-auto grid max-w-xl items-center gap-8 py-6 sm:py-10 ${
+        demo ? 'lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-12' : ''
+      }`}
+    >
+      <div className={`text-center ${demo ? 'lg:text-left' : ''}`}>
         <h2 className="text-balance font-display text-[24px] font-normal leading-[1.25] text-content-primary sm:text-[28px]">
           No artists yet.
         </h2>
         <p className="mt-2 text-pretty text-[14px] leading-normal text-content-secondary">
           Add the first and their rollouts show here.
         </p>
-        <div className="mt-5 flex justify-center lg:justify-start">
+        <div className={`mt-5 flex justify-center ${demo ? 'lg:justify-start' : ''}`}>
           <button
             type="button"
             onClick={() => openAddArtist()}
@@ -210,7 +226,7 @@ function ArtistsEmpty() {
           </button>
         </div>
       </div>
-      <PlanLoopDemo className="mx-auto w-full max-w-[440px]" />
+      {demo ? <PlanLoopDemo className="mx-auto w-full max-w-[440px]" /> : null}
     </section>
   );
 }

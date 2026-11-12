@@ -55,13 +55,14 @@ const SESSION_HINT_ATTRIBUTE = 'data-auth-session';
 const normalizeAuthEmail = (value: string) => value.trim().toLowerCase();
 
 // The card's controls: 44px on a phone, 38px from md, 8px corners, so every
-// row of the card is the same height (#1053).
+// row of the card is the same height (#1053). From lg the form sits on the
+// page with pill buttons and a 46px outlined field (#1229).
 const googleButtonClass =
-  'flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-bg-hover text-[15px] font-medium text-content-primary transition-colors duration-fast ease-standard hover:bg-bg-active disabled:cursor-not-allowed disabled:opacity-50 md:h-[38px] md:text-[13px]';
+  'flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-bg-hover text-[15px] font-medium text-content-primary transition-colors duration-fast ease-standard hover:bg-bg-active disabled:cursor-not-allowed disabled:opacity-50 md:h-[38px] md:text-[13px] lg:h-12 lg:rounded-full lg:border lg:border-stroke-control lg:bg-bg-surface lg:text-[14px] lg:font-semibold lg:hover:bg-bg-hover';
 const primaryButtonClass =
-  'flex h-11 w-full items-center justify-center rounded-lg bg-brand text-[15px] font-semibold text-content-inverse transition-colors duration-fast ease-standard hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50 md:h-[38px] md:text-[13px]';
+  'flex h-11 w-full items-center justify-center rounded-lg bg-brand text-[15px] font-semibold text-content-inverse transition-colors duration-fast ease-standard hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50 md:h-[38px] md:text-[13px] lg:mt-2 lg:h-12 lg:rounded-full lg:bg-content-primary lg:text-[14px] lg:text-bg-base lg:hover:bg-content-primary/90';
 const fieldClass =
-  'h-11 w-full rounded-lg border border-stroke-control/40 bg-bg-base px-3 text-base text-content-primary outline-none placeholder:text-content-tertiary focus:border-brand disabled:opacity-60 md:h-[38px] md:text-[13px]';
+  'h-11 w-full rounded-lg border border-stroke-control/40 bg-bg-base px-3 text-base text-content-primary outline-none placeholder:text-content-tertiary focus:border-brand disabled:opacity-60 md:h-[38px] md:text-[13px] lg:h-[46px] lg:rounded-xl lg:border-content-tertiary lg:bg-bg-surface lg:px-3.5 lg:text-[14px] lg:focus:border-brand';
 
 const lookupEmailAccount = async (normalizedEmail: string): Promise<EmailAccountLookup> => {
   try {
@@ -485,24 +486,28 @@ export default function AuthPage() {
             unless <html> carries `urg-textile`, and is aria-hidden and
             pointer-events-none either way. Kept as a plain div with no client
             state: this page is `○ Static` and must stay that way. */}
-        <div className="urg-ground-sunburst" aria-hidden="true" />
+        <div className="urg-ground-sunburst lg:hidden" aria-hidden="true" />
+        {/* On a computer (#1229, mock docs/mocks/signin-onboarding-desktop,
+            screen 1): two halves filling the window. The form on the left,
+            one photo filling the right; the plans, questions and footer below
+            are phone only. On a phone the photo drops under the form so
+            signing in stays on the first screen. */}
         <div className="urg-above">
-          <header className="px-4 pt-5 lg:px-[60px] lg:pt-7">
-            <Logo size="md" priority />
-          </header>
+          <section className="lg:grid lg:min-h-screen lg:grid-cols-2">
+            <div className="lg:flex lg:min-h-screen lg:flex-col lg:px-14 lg:pb-10 lg:pt-8">
+              <header className="px-4 pt-5 lg:p-0">
+                <Logo size="md" priority />
+              </header>
 
-          {/* Two columns from lg, measured off the reference at 1440 wide:
-              650 / 105 gap / 476, photo top 39px under the header. On a phone
-              the photo drops under the card so signing in stays on the first
-              screen. */}
-          <section className="lg:mt-[39px] lg:grid lg:max-w-[1351px] lg:grid-cols-[minmax(0,650fr)_minmax(0,476fr)] lg:items-start lg:gap-x-[clamp(32px,7.3vw,105px)] lg:px-[60px]">
-            <div className="flex flex-col items-center px-4 pt-12 text-center lg:px-0 lg:pt-[71px]">
+            <div className="flex flex-col items-center px-4 pt-12 text-center lg:mx-auto lg:my-auto lg:w-full lg:max-w-[400px] lg:items-stretch lg:px-0 lg:py-12 lg:text-left">
               {/* Young Serif at its real weight, never a fake bold. */}
-              <h1 className="text-balance font-display text-[34px] font-normal leading-10 tracking-[-0.012em] text-content-primary lg:text-[48px] lg:leading-[53px]">
-                Plan new music. Track every task.
+              <h1 className="text-balance font-display text-[34px] font-normal leading-10 tracking-[-0.012em] text-content-primary lg:text-[40px] lg:leading-[46px]">
+                <span className="lg:hidden">Plan new music. Track every task.</span>
+                <span className="hidden lg:inline">From idea to execution.</span>
               </h1>
-              <p className="mt-3 text-base leading-[23px] text-content-secondary lg:mt-[18px] lg:text-[17px] lg:leading-6">
-                Tell it your goals and get a plan that fits. Use it solo or with your team.
+              <p className="mt-3 text-base leading-[23px] text-content-secondary lg:mt-2 lg:text-[15px] lg:leading-[22px]">
+                <span className="lg:hidden">Tell it your goals and get a plan that fits. Use it solo or with your team.</span>
+                <span className="hidden lg:inline">Plan every release with your team, in one place.</span>
               </p>
 
               {/* Signing in needs JavaScript. Say so instead of leaving the user
@@ -528,7 +533,8 @@ export default function AuthPage() {
                 </p>
               )}
 
-              <div className="mt-7 w-full max-w-[418px] rounded-2xl border border-stroke-default bg-bg-surface p-5 text-left shadow-[0_1px_2px_rgba(26,22,17,0.04),0_8px_24px_rgba(26,22,17,0.06)] lg:mt-[31px] lg:p-[26px]">
+              {/* A card on a phone; on a computer the form sits on the page. */}
+              <div className="mt-7 w-full max-w-[418px] rounded-2xl border border-stroke-default bg-bg-surface p-5 text-left shadow-[0_1px_2px_rgba(26,22,17,0.04),0_8px_24px_rgba(26,22,17,0.06)] lg:max-w-none lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
                 {inviteOnly ? (
                   <InviteOnlyNotice
                     onSignIn={() => {
@@ -571,7 +577,12 @@ export default function AuthPage() {
                       )}
                     </button>
 
-                    <p className="mt-3 text-center text-xs leading-[14px] text-content-tertiary lg:text-[11px]">OR</p>
+                    <p className="mt-3 text-center text-xs leading-[14px] text-content-tertiary lg:hidden">OR</p>
+                    <div aria-hidden="true" className="my-[18px] hidden items-center gap-3 text-xs text-content-tertiary lg:flex">
+                      <span className="h-px flex-1 bg-stroke-control" />
+                      or
+                      <span className="h-px flex-1 bg-stroke-control" />
+                    </div>
 
                     {/* Identifier-first: the email alone, then the password
                         field opens under it once the lookup finds an account.
@@ -579,9 +590,9 @@ export default function AuthPage() {
                         back step. */}
                     <form
                       onSubmit={emailStage === 'collect' ? handleEmailContinue : handleLogin}
-                      className="mt-3 flex flex-col gap-3"
+                      className="mt-3 flex flex-col gap-3 lg:mt-0"
                     >
-                      <label htmlFor="auth-email" className="sr-only">
+                      <label htmlFor="auth-email" className="sr-only lg:not-sr-only lg:-mb-1.5 lg:text-[13px] lg:font-semibold lg:text-content-primary">
                         Email
                       </label>
                       <input
@@ -634,7 +645,7 @@ export default function AuthPage() {
 
                       {emailStage === 'password' && (
                         <>
-                          <label htmlFor="auth-password" className="sr-only">
+                          <label htmlFor="auth-password" className="sr-only lg:not-sr-only lg:-mb-1.5 lg:text-[13px] lg:font-semibold lg:text-content-primary">
                             Password
                           </label>
                           <input
@@ -675,7 +686,7 @@ export default function AuthPage() {
                       <p role="alert" className="mt-3 text-center text-sm text-status-error">{error || callbackError}</p>
                     )}
 
-                    <p className="mt-3.5 text-center text-xs leading-[17px] text-content-tertiary lg:text-[11px] lg:leading-4">
+                    <p className="mt-3.5 text-center text-xs leading-[17px] text-content-tertiary lg:mt-4">
                       By continuing, you agree to our{' '}
                       <a href={TERMS_URL} className="text-brand underline underline-offset-2">
                         Terms
@@ -690,9 +701,22 @@ export default function AuthPage() {
                 )}
               </div>
 
+              {/* New to Urganize: a computer has no plans section below, so
+                  the way to make an account sits under the form. */}
+              {inviteOnly ? null : (
+                <p className="mt-6 hidden text-center text-sm text-content-secondary lg:block">
+                  New to Urganize?{' '}
+                  <Link href={signupHref} className="font-semibold text-brand underline underline-offset-[3px]">
+                    Create an account
+                  </Link>
+                </p>
+              )}
+
+              {/* Phones only: someone signing in on a laptop is not about to
+                  install a phone app. */}
               <a
                 href={ANDROID_URL}
-                className="mt-5 inline-flex h-11 items-center gap-2 rounded-lg bg-bg-hover px-4 text-sm font-medium text-content-primary transition-colors hover:bg-bg-active lg:mt-[26px] lg:h-9 lg:px-3.5 lg:text-[13px]"
+                className="mt-5 inline-flex h-11 items-center gap-2 rounded-lg bg-bg-hover px-4 text-sm font-medium text-content-primary transition-colors hover:bg-bg-active lg:hidden"
               >
                 <Smartphone className="h-4 w-4" aria-hidden="true" />
                 Get the Android app
@@ -700,7 +724,7 @@ export default function AuthPage() {
 
               {/* Through openExternalUrl so the Android app hands WhatsApp off
                   instead of loading it inside its own window. */}
-              <p className="mt-6 text-sm text-content-secondary lg:text-[13px]">
+              <p className="mt-6 text-sm text-content-secondary lg:hidden">
                 Having trouble signing in?{' '}
                 <button
                   type="button"
@@ -714,23 +738,40 @@ export default function AuthPage() {
               </p>
             </div>
 
+            <p className="hidden text-[13px] text-content-secondary lg:block">
+              Trouble signing in?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  void openExternalUrl(SUPPORT_WHATSAPP_URL);
+                }}
+                className="font-semibold text-brand underline underline-offset-[3px]"
+              >
+                Contact us
+              </button>
+            </p>
+            </div>
+
             {/* Photo: Dwayne Joe on Unsplash (unsplash.com/photos/C8VidHnIysM),
-                Unsplash License, free for commercial use. */}
-            <div className="px-4 pt-10 lg:px-0 lg:pt-0">
+                Unsplash License, free for commercial use. On a computer it
+                fills the right half and stays put while the left scrolls. */}
+            <div className="px-4 pt-10 lg:p-4 lg:pl-0">
               <Image
                 src="/images/auth-studio.webp"
                 alt="Two people at work in a recording studio. Photo by Dwayne Joe on Unsplash."
                 width={960}
                 height={1200}
-                sizes="(min-width: 1024px) 476px, 100vw"
-                className="h-[300px] w-full rounded-xl object-cover lg:h-[594px]"
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="h-[300px] w-full rounded-xl object-cover lg:sticky lg:top-4 lg:h-[calc(100vh-32px)] lg:min-h-[560px] lg:rounded-[20px] lg:grayscale"
               />
             </div>
           </section>
 
-          <AuthPlans />
-          <AuthQuestions />
-          <AuthFooter logo={<Logo size="md" />} />
+          <div className="lg:hidden">
+            <AuthPlans />
+            <AuthQuestions />
+            <AuthFooter logo={<Logo size="md" />} />
+          </div>
         </div>
       </main>
     </>

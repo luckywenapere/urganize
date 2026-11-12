@@ -14,11 +14,19 @@ export type AccountBlockerInput = {
   hasName: boolean;
   hasEmail: boolean;
   passwordLongEnough: boolean;
+  /** Characters typed so far. Given, the line counts what is still needed
+   *  ("Your password needs 3 more characters.", #1229). */
+  passwordLength?: number;
 };
 
 export function describeNextBlocker(input: AccountBlockerInput): string {
   if (!input.hasName) return 'Add your name.';
   if (!input.hasEmail) return 'Add your email.';
-  if (!input.passwordLongEnough) return `Use at least ${MIN_PASSWORD_LENGTH} characters.`;
+  if (!input.passwordLongEnough) {
+    if (input.passwordLength === undefined) return `Use at least ${MIN_PASSWORD_LENGTH} characters.`;
+    if (input.passwordLength <= 0) return 'Add a password.';
+    const left = Math.max(1, MIN_PASSWORD_LENGTH - input.passwordLength);
+    return `Your password needs ${left} more ${left === 1 ? 'character' : 'characters'}.`;
+  }
   return '';
 }

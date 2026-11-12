@@ -67,6 +67,18 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.275.0",
+    title: "Signing in and getting started on a computer",
+    tag: "Account",
+    date: "November 12, 2026",
+    highlights: [
+      "On a computer, signing in and making an account now look like one page: the form on the left, a photo on the right.",
+      "You see the three steps to get started: your account, your plan, your first artist.",
+      "Pick your plan from the full list and see what each one gives you before you pay.",
+      "Your first visit asks who you work with. Type their name or paste their Spotify link.",
+    ],
+  },
+  {
     version: "1.274.0",
     title: "Settings on a computer, all in one place",
     tag: "Account",
