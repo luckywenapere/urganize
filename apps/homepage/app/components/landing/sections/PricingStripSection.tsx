@@ -1,4 +1,5 @@
 import { VisitorPrice } from "@/app/components/pricing/VisitorPrice";
+import { salesMailto } from "@/lib/sales-mailto";
 import {
   formatTierFromPrice,
   formatTierPrice,
@@ -133,6 +134,24 @@ export function PricingStripSection() {
                   </li>
                 ))}
               </ul>
+              {/* The Label card is a custom deal, so it had no price to act on
+                  and no button: a label buyer had nowhere to go (#1217, from
+                  the Coframe review). The self-serve cards keep the page's own
+                  "Create your account" ask; only Label gets a contact button,
+                  the same mailto /pricing's Label card opens. */}
+              {tier.contactSales ? (
+                <div className="mt-auto pt-6">
+                  <a
+                    href={salesMailto(tier.label)}
+                    data-track="pricing_contact_clicked"
+                    data-plan={id}
+                    data-location="home_pricing"
+                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--marketing-border)] px-5 py-2.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text)] transition-colors hover:bg-[var(--marketing-surface)]"
+                  >
+                    Talk to us
+                  </a>
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>

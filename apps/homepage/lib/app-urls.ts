@@ -39,10 +39,13 @@ export const PRIMARY_CTA = SIGNUP_OPEN
   ? {
       href: APP_SIGNUP_URL,
       label: "Create your account",
-      /** The line under a button. */
-      note: "Public beta. Pick a plan to start your first rollout.",
+      /** The line under a button. "Cancel or change your plan any time" is
+       *  true of the app: Settings > Billing has a self-serve cancel flow and
+       *  plan changes (#1217). The bare "PUBLIC BETA" left people guessing
+       *  what beta meant for them. */
+      note: "Public beta. Pick a plan to start your first rollout. Cancel or change your plan any time.",
       /** The small caps line under the hero button. */
-      hint: "PUBLIC BETA",
+      hint: "PUBLIC BETA · CANCEL ANY TIME",
     }
   : {
       href: WAITLIST_URL,
