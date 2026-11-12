@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.273.0",
+    title: "Find people to hire on a computer",
+    tag: "Team",
+    date: "November 12, 2026",
+    highlights: [
+      "On a computer, the Directory is one list you can filter by the job you need, like designers or engineers, and by city. Each person shows what they have delivered, and you can ask them from the row.",
+      "Beside the list you see what your rollouts still need, the people you asked and your own listing.",
+      "A person's page now shows their full bio, the work they delivered and who they work with, with a button to ask them.",
+    ],
+  },
+  {
     version: "1.272.0",
     title: "All your AI chats in one place",
     tag: "AI",

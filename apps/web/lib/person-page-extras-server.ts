@@ -3,6 +3,8 @@ import { RELEASE_ASSETS_BUCKET, generateSignedUrl, generateThumbSignedUrls } fro
 import { PROFILE_PHOTO_SIGNED_URL_TTL_SECONDS } from './profile-photo';
 import { readTestRelease } from './test-release';
 import { pickCreditTiles, pickManagedFaces, type CreditTile, type ManagedFace } from './person-page';
+import { workPieces, type WorkPiece, type WorkRecord } from './person-work';
+import type { DirectoryRole } from './directory-roles';
 
 /**
  * What the claimed /p/{slug} page (URG-305) adds on top of loadPublicPerson:
@@ -24,17 +26,27 @@ const asRow = (value: unknown): Row => (value && typeof value === 'object' ? (va
 const text = (value: unknown): string => (typeof value === 'string' ? value : '');
 
 export type PersonPageExtras = {
-  managed: { count: number; faces: ManagedFace[] };
+  /** `names` is every named artist they own, for "Works with" (#1221). */
+  managed: { count: number; faces: ManagedFace[]; names: string[] };
   /** Distinct releases on the record. Zero hides the stat. */
   releases: number;
   credits: CreditTile[];
+  /** The pieces of work from their delivery records, a rollout named only once
+   *  it is out (lib/person-work.ts). */
+  work: WorkPiece[];
 };
 
 export const EMPTY_PERSON_PAGE_EXTRAS: PersonPageExtras = {
-  managed: { count: 0, faces: [] },
+  managed: { count: 0, faces: [], names: [] },
   releases: 0,
   credits: [],
+  work: [],
 };
+
+/** Today in Lagos, YYYY-MM-DD: the day a rollout counts as out. */
+function lagosToday(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date());
+}
 
 async function sign(admin: SupabaseClient, bucket: string, path: string): Promise<string | null> {
   try {
@@ -82,7 +94,8 @@ async function loadManaged(
           : null,
       }))
     );
-    return { count: rows.filter((row) => row.name).length, faces };
+    const names = rows.map((row) => row.name.trim()).filter(Boolean);
+    return { count: names.length, faces, names };
   } catch {
     return EMPTY_PERSON_PAGE_EXTRAS.managed;
   }
@@ -92,10 +105,10 @@ async function loadCredits(
   admin: SupabaseClient,
   input: { userId: string; personId: string },
   thumbs: boolean
-): Promise<Pick<PersonPageExtras, 'releases' | 'credits'>> {
+): Promise<Pick<PersonPageExtras, 'releases' | 'credits' | 'work'>> {
   try {
     const [records, submissions] = await Promise.all([
-      admin.from('delivery_records').select('release_id').eq('user_id', input.userId).limit(500),
+      admin.from('delivery_records').select('release_id, role').eq('user_id', input.userId).limit(500),
       admin
         .from('release_credit_submissions')
         .select('release_id, confirmed_accurate, person_hidden')
@@ -112,14 +125,32 @@ async function loadCredits(
       else if (row.confirmed_accurate === true) ids.add(id);
     }
     for (const id of hidden) ids.delete(id);
-    if (ids.size === 0) return { releases: 0, credits: [] };
+    if (ids.size === 0) return { releases: 0, credits: [], work: [] };
 
     const { data: releaseRows, error } = await admin
       .from('releases')
-      .select('id, artwork_asset_id, release_date, metadata')
+      .select('id, title, artist_name, artwork_asset_id, release_date, metadata')
       .is('deleted_at', null)
       .in('id', [...ids].slice(0, 300));
-    if (error || !releaseRows) return { releases: 0, credits: [] };
+    if (error || !releaseRows) return { releases: 0, credits: [], work: [] };
+
+    // Delivery records only: a credit a team typed is not work the product saw
+    // arrive. A rollout the person hid as "not mine" stays off too.
+    const releaseById = new Map(releaseRows.map(asRow).map((row) => [text(row.id), row]));
+    const workRecords: WorkRecord[] = [];
+    for (const record of (records.data || []).map(asRow)) {
+      const release = releaseById.get(text(record.release_id));
+      if (!release || hidden.has(text(record.release_id))) continue;
+      workRecords.push({
+        releaseId: text(record.release_id),
+        role: text(record.role) as DirectoryRole,
+        releaseTitle: text(release.title),
+        artistName: text(release.artist_name),
+        releaseDate: text(release.release_date) || null,
+        isTest: readTestRelease(release.metadata as never),
+      });
+    }
+    const work = workPieces(workRecords, lagosToday());
     const releases = releaseRows
       .map(asRow)
       .filter((row) => !readTestRelease(row.metadata as never))
@@ -175,9 +206,9 @@ async function loadCredits(
         })
       )
     ).filter((entry): entry is CreditTile => entry !== null);
-    return { releases: releases.length, credits };
+    return { releases: releases.length, credits, work };
   } catch {
-    return { releases: 0, credits: [] };
+    return { releases: 0, credits: [], work: [] };
   }
 }
 

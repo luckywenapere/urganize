@@ -6,6 +6,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { getAccessToken } from '@/components/settings/getAccessToken';
 import { WorkRequestSheet } from '@/components/directory/WorkRequestSheet';
 import type { DirectoryRole } from '@/lib/directory-roles';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 
 // Reach + save, the foot of a claimed /p/{slug} page (URG-305).
 //
@@ -23,6 +24,8 @@ const LINE = '#202023';
 
 export function ProfileActions({ slug }: { slug: string }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  // On a computer the header's ProfileDeskActions reads reach instead (#1221).
+  const isDesktop = useIsDesktopViewport();
   const [mounted, setMounted] = useState(false);
   const [self, setSelf] = useState(false);
   const [recipient, setRecipient] = useState<Recipient | null>(null);
@@ -34,7 +37,7 @@ export function ProfileActions({ slug }: { slug: string }) {
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || isDesktop) return;
     let cancelled = false;
     (async () => {
       try {
@@ -59,7 +62,7 @@ export function ProfileActions({ slug }: { slug: string }) {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, slug]);
+  }, [isAuthenticated, isDesktop, slug]);
 
   const signIn = () => {
     window.location.href = `/auth?next=${encodeURIComponent(`/p/${slug}`)}`;

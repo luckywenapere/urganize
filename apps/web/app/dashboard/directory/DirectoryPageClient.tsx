@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import {
   applyDirectoryFilters,
+  availableCities,
   withoutViewer,
   fallbackCounts,
   type DirectoryEntry,
@@ -35,6 +36,13 @@ import type { ShelfPerson } from '@/lib/featured-shelves-server';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { ProfileFace, profileInitials } from '@/components/shared/ProfileFace';
 import { bucketResultCount, type DirectoryDemandSource } from '@/lib/directory-demand';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
+import { activeHireChip, demandRole, hireChipFilters } from '@/lib/directory-hire';
+import {
+  DirectoryDeskAside,
+  DirectoryDeskFilters,
+  DirectoryDeskList,
+} from '@/components/directory/DirectoryDesk';
 
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 const REQUESTS_ENABLED =
@@ -147,6 +155,17 @@ function DirectoryBody() {
   );
   const [asking, setAsking] = useState<Person | null>(null);
   const [sent, setSent] = useState('');
+  // On a computer (#1221) the page is a hire list: Open to work only is a
+  // switch, on by default, and a "Show" in Your rollouts need carries its
+  // rollout and activity into the ask the same way a role gaps link does.
+  const isDesktop = useIsDesktopViewport();
+  const [openOnly, setOpenOnly] = useState(true);
+  const [askContext, setAskContext] = useState<{ releaseId: string; taskId: string } | null>(null);
+  const activeFilters = useMemo<DirectoryFilters>(
+    () => (isDesktop ? { ...filters, availability: openOnly ? 'open' : null } : filters),
+    [filters, isDesktop, openOnly]
+  );
+  const fromPlan = arrivedFromRoleGaps || askContext !== null;
 
   useEffect(() => {
     if (!DIRECTORY_ENABLED) {
@@ -199,11 +218,11 @@ function DirectoryBody() {
   }, [router]);
 
   const results = useMemo(() => {
-    const filtered = applyDirectoryFilters(people, filters);
+    const filtered = applyDirectoryFilters(people, activeFilters);
     // A typed search ranks by name. With nothing typed, the people a reader most
     // likely came for go first (managers for an artist, creatives for a manager).
-    return filters.query.trim() ? filtered : orderForViewer(filtered, viewerType);
-  }, [people, filters, viewerType]);
+    return activeFilters.query.trim() ? filtered : orderForViewer(filtered, viewerType);
+  }, [people, activeFilters, viewerType]);
 
   // One report per settled filter, not per keystroke. The delay is what keeps
   // "designer" from also reporting d, de, des and desi.
@@ -216,30 +235,39 @@ function DirectoryBody() {
     if (!loaded || error) return;
 
     const timer = window.setTimeout(() => {
-      const signature = JSON.stringify([filters.query.trim(), filters.role, filters.city, filters.availability, filters.profileType]);
+      const signature = JSON.stringify([
+        activeFilters.query.trim(),
+        activeFilters.role,
+        activeFilters.roles ?? null,
+        activeFilters.city,
+        activeFilters.availability,
+        activeFilters.profileType,
+      ]);
       if (reportedRef.current === signature) return;
       reportedRef.current = signature;
 
       captureAnalyticsEvent({
         name: 'directory_searched',
         properties: {
-          has_query: filters.query.trim().length > 0,
-          role: filters.role,
-          availability: filters.availability,
-          filtered_by_city: Boolean(filters.city),
+          has_query: activeFilters.query.trim().length > 0,
+          role: activeFilters.role,
+          availability: activeFilters.availability,
+          filtered_by_city: Boolean(activeFilters.city),
           results: bucketResultCount(results.length),
         },
       });
 
-      if (!filters.role) return;
-      const source: DirectoryDemandSource = arrivedFromRoleGaps ? 'role_gap' : 'search';
-      void reportRoleDemand({ role: filters.role, matched: results.length > 0, source });
+      const role = demandRole(activeFilters);
+      if (!role) return;
+      const source: DirectoryDemandSource = fromPlan ? 'role_gap' : 'search';
+      void reportRoleDemand({ role, matched: results.length > 0, source });
     }, 600);
 
     return () => window.clearTimeout(timer);
-  }, [filters, results.length, loaded, error, arrivedFromRoleGaps]);
+  }, [activeFilters, results.length, loaded, error, fromPlan]);
 
-  const counts = useMemo(() => fallbackCounts(people, filters), [people, filters]);
+  const counts = useMemo(() => fallbackCounts(people, activeFilters), [people, activeFilters]);
+  const cities = useMemo(() => availableCities(people), [people]);
   const isDefaultView =
     !filters.query.trim() && !filters.role && !filters.city && !filters.availability && !filters.profileType;
 
@@ -255,9 +283,122 @@ function DirectoryBody() {
   // Their role is a credit, not a delivery record, so no role, type, city or
   // availability filter ever matches one.
   const unclaimedShown =
-    !filters.role && !filters.profileType && !filters.city && !filters.availability
+    !filters.role && !filters.roles?.length && !filters.profileType && !filters.city && !filters.availability
       ? unclaimedMatching(unclaimed, filters.query)
       : [];
+
+  // Who may be asked from a row. Somebody who is "Not taking work" is listed
+  // and findable but cannot be asked, and the server refuses it too. The row
+  // is the courtesy; the route is the rule. The type rule decides it too.
+  const canAsk = (person: Person): boolean =>
+    REQUESTS_ENABLED &&
+    canReceiveRequests(person.availability) &&
+    canShowMessageButton({
+      targetType: person.profileType ?? null,
+      availability: person.availability,
+      viewerType,
+    });
+
+  const askSheet = asking ? (
+    <WorkRequestSheet
+      person={asking}
+      // Prefilled when the manager arrived from the role gaps panel, which
+      // is the whole point of that link: the plan already knows the job.
+      defaultRole={filters.role ?? (asking.profileType === 'manager' ? 'manager' : null)}
+      releaseId={askContext?.releaseId ?? (arrivedFromRoleGaps ? searchParams.get('release') : null)}
+      taskId={askContext?.taskId ?? (arrivedFromRoleGaps ? searchParams.get('task') : null)}
+      onClose={() => setAsking(null)}
+      onSent={setSent}
+    />
+  ) : null;
+
+  if (isDesktop) {
+    const hireChip = activeHireChip(filters);
+    const openSettingsDirectory = () =>
+      openSettings({ segment: 'directory', section: DIRECTORY_SETTINGS_ANCHOR });
+    // Unclaimed pages are never open to work, so they ride along only with the
+    // switch off and nothing else filtered, as on a phone.
+    const deskUnclaimed = !openOnly && hireChip === 'everyone' && !filters.city ? unclaimedShown : [];
+    const countLabel = `${results.length} ${results.length === 1 ? 'person' : 'people'}${openOnly ? ' open to work' : ''}`;
+    return (
+      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4 pb-12">
+        {!loaded ? (
+          <div className="flex items-center gap-2 pt-4 text-sm text-content-secondary">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            <span className="sr-only">Opening the directory</span>
+          </div>
+        ) : error ? (
+          <p role="alert" className="pt-4 text-sm text-status-error">{error}</p>
+        ) : (
+          <>
+            <DirectoryDeskFilters
+              query={filters.query}
+              onQuery={(query) => patch({ query })}
+              city={filters.city}
+              cities={cities}
+              onCity={(city) => patch({ city })}
+              chip={hireChip}
+              onChip={(key) => {
+                setAskContext(null);
+                patch(hireChipFilters(key));
+              }}
+              strayRoleLabel={hireChip === null && filters.role ? DIRECTORY_ROLE_LABELS[filters.role] : null}
+              onClearStrayRole={() => patch(hireChipFilters('everyone'))}
+              openOnly={openOnly}
+              onOpenOnly={setOpenOnly}
+              onListing={openSettingsDirectory}
+            />
+            <div className="grid grid-cols-[minmax(0,1fr)_288px] items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="min-w-0">
+                <DirectoryDeskList
+                  people={results}
+                  unclaimed={deskUnclaimed}
+                  countLabel={countLabel}
+                  canAsk={canAsk}
+                  onAsk={(person) => setAsking(person as Person)}
+                  empty={
+                    <DirectoryEmptyState
+                      nobodyListed={people.length === 0}
+                      counts={counts}
+                      role={filters.role}
+                      city={filters.city}
+                      hasQuery={filters.query.trim().length > 0}
+                      onClearQuery={() => patch({ query: '' })}
+                      onDropRole={() => patch({ role: null, roles: null })}
+                      onDropCity={() => patch({ city: null })}
+                      onShowOpen={() => {
+                        setFilters(NO_FILTERS);
+                        setOpenOnly(true);
+                      }}
+                      onListMe={openSettingsDirectory}
+                    />
+                  }
+                />
+                {sent ? (
+                  <p className="mt-4 rounded-lg border border-brand/30 bg-brand/10 px-3 py-2 text-sm text-content-primary">
+                    {sent}
+                  </p>
+                ) : null}
+                <div className="mt-6">
+                  <DirectoryInvites />
+                </div>
+              </div>
+              <DirectoryDeskAside
+                onFind={(need) => {
+                  setAskContext({ releaseId: need.releaseId, taskId: need.taskId });
+                  setOpenOnly(true);
+                  setFilters({ ...NO_FILTERS, role: need.role as DirectoryRole });
+                }}
+                onAllAsks={openSettingsDirectory}
+                onEditListing={openSettingsDirectory}
+              />
+            </div>
+          </>
+        )}
+        {askSheet}
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -292,8 +433,8 @@ function DirectoryBody() {
                   onClick={() =>
                     patch(
                       entry.key === 'all'
-                        ? { ...chipFilters('all'), city: null, availability: null }
-                        : chipFilters(entry.key)
+                        ? { ...chipFilters('all'), roles: null, city: null, availability: null }
+                        : { ...chipFilters(entry.key), roles: null }
                     )
                   }
                   className={`hit-44 relative motion-focus rounded-full border px-3.5 py-2 text-[13px] font-bold ${
@@ -353,17 +494,7 @@ function DirectoryBody() {
                     // but cannot be asked, and the server refuses it too. The
                     // row is the courtesy; the route is the rule. The type rule
                     // decides it too (canShowMessageButton).
-                    onAsk={
-                      REQUESTS_ENABLED &&
-                      canReceiveRequests(person.availability) &&
-                      canShowMessageButton({
-                        targetType: person.profileType ?? null,
-                        availability: person.availability,
-                        viewerType,
-                      })
-                        ? () => setAsking(person)
-                        : null
-                    }
+                    onAsk={canAsk(person) ? () => setAsking(person) : null}
                   />
                 </li>
               ))}
@@ -389,18 +520,7 @@ function DirectoryBody() {
         </>
       )}
 
-      {asking ? (
-        <WorkRequestSheet
-          person={asking}
-          // Prefilled when the manager arrived from the role gaps panel, which
-          // is the whole point of that link: the plan already knows the job.
-          defaultRole={filters.role ?? (asking.profileType === 'manager' ? 'manager' : null)}
-          releaseId={arrivedFromRoleGaps ? searchParams.get('release') : null}
-          taskId={arrivedFromRoleGaps ? searchParams.get('task') : null}
-          onClose={() => setAsking(null)}
-          onSent={setSent}
-        />
-      ) : null}
+      {askSheet}
     </div>
   );
 }

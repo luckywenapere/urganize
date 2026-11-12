@@ -142,7 +142,8 @@ describe('featured shelves: the page', () => {
 
   it('never ranks the search results by the shelves', () => {
     const source = stripTsComments(read('app/dashboard/directory/DirectoryPageClient.tsx'));
-    expect(source).toContain('applyDirectoryFilters(people, filters)');
+    // activeFilters is the same filters plus the desktop Open to work switch (#1221).
+    expect(source).toContain('applyDirectoryFilters(people, activeFilters)');
     expect(source).not.toMatch(/shelves\.(featured|onTheRise)[\s\S]{0,40}results/);
   });
 

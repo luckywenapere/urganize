@@ -25,7 +25,7 @@ import { describeRequestStatus, revealsContact, type WorkRequestStatus } from '@
  * this column follows.
  */
 
-type SentRequest = {
+export type SentRequest = {
   id: string;
   role: DirectoryRole;
   note: string;
@@ -42,16 +42,9 @@ type SentRequest = {
   created_at: string;
 };
 
-type Variant = 'settings' | 'release';
-
-export function SentRequestsList({
-  releaseId,
-  variant = 'settings',
-}: {
-  /** Narrows to one release. Absent means every request this account sent. */
-  releaseId?: string;
-  variant?: Variant;
-}) {
+/** Every request this account sent, read once. Shared by this list and the
+ *  Directory's "Your asks" card on a computer (#1221). Quiet on failure. */
+export function useSentRequests(): { requests: SentRequest[]; loaded: boolean } {
   const [requests, setRequests] = useState<SentRequest[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -87,6 +80,21 @@ export function SentRequestsList({
       cancelled = true;
     };
   }, [authHeaders]);
+
+  return { requests, loaded };
+}
+
+type Variant = 'settings' | 'release';
+
+export function SentRequestsList({
+  releaseId,
+  variant = 'settings',
+}: {
+  /** Narrows to one release. Absent means every request this account sent. */
+  releaseId?: string;
+  variant?: Variant;
+}) {
+  const { requests, loaded } = useSentRequests();
 
   // Filtered here rather than by the server: the whole list is one small page
   // and the settings mount needs all of it, so a release param would be a
