@@ -77,7 +77,7 @@ export default function PlanDemo({ theme }: { theme: Theme }) {
               </div>
               <div className="up-count" data-on={s.built || undefined}>
                 <Count value={s.count} duration={500} className="up-count__n" />
-                <span>activities</span>
+                <span>tasks</span>
               </div>
             </div>
 

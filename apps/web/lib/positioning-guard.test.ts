@@ -10,7 +10,9 @@ import {
   CANONICAL_DESCRIPTION,
   CORE_CLAUSE,
   CORE_LINE,
+  HERO_EYEBROW,
   HERO_HEADLINE,
+  HERO_SUBHEAD,
   LEARNING_LINE,
   META_DESCRIPTION,
   ONE_LINER,
@@ -278,7 +280,8 @@ describe('positioning', () => {
       'Urganize is an app that helps artists, managers and record labels plan new music and keep track of every task.',
     );
     expect(SHORT_LINE).toBe('Plan new music. Track every task.');
-    expect(HERO_HEADLINE).toBe('Tell it your goals. Get a plan that fits.');
+    expect(HERO_HEADLINE).toBe('Plan your next release, task by task.');
+    expect(HERO_EYEBROW).toBe('Tell it your goals. Get a plan that fits.');
     expect(PROMISE_LINE).toBe('Or make your own. Use it solo or with your team, and keep track of every task.');
     expect(META_DESCRIPTION).toBe(
       'Urganize helps artists, managers and record labels plan new music and keep track of every task. ' +
@@ -337,6 +340,8 @@ describe('positioning', () => {
       CORE_LINE,
       SHORT_LINE,
       HERO_HEADLINE,
+      HERO_EYEBROW,
+      HERO_SUBHEAD,
       PROMISE_LINE,
       LEARNING_LINE,
       META_DESCRIPTION,

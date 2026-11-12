@@ -72,10 +72,10 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "Every rollout runs the same way, whoever runs it.",
-    body: "Urganize asks about each artist's goals and makes a plan that fits: 64 activities for a single, 90 for an EP, 113 for an album. Or make your own. Your newest manager delivers a rollout the same way your best one does, and anyone can edit or delete an activity that does not apply.",
+    body: "Urganize asks about each artist's goals and makes a plan that fits: 64 tasks for a single, 90 for an EP, 113 for an album. Or make your own. Your newest manager delivers a rollout the same way your best one does, and anyone can edit or delete a task that does not apply.",
     points: [
       "A plan shaped to each artist’s goals",
-      "Every activity dated around that release day",
+      "Every task dated around that release day",
       "The same starting plan for every artist and every team",
     ],
   },
@@ -84,8 +84,8 @@ const valueBlocks = [
 const compactBlocks = [
   {
     kicker: "Accountability",
-    title: "Every activity has a name on it.",
-    body: "An owner, a due date and a priority. Activities wait for each other in the right order, so nothing starts before the step it needs is done and nobody has to remember the sequence.",
+    title: "Every task has a name on it.",
+    body: "An owner, a due date and a priority. Tasks wait for each other in the right order, so nothing starts before the step it needs is done and nobody has to remember the sequence.",
   },
   {
     kicker: "Status",

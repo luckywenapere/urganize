@@ -81,10 +81,22 @@ export const CORE_LINE = `Urganize is ${CORE_CLAUSE}.`;
 export const SHORT_LINE = 'Plan new music. Track every task.';
 
 /**
- * The homepage headline. It leads with the one new idea in the positioning:
- * Urganize asks about your goals before it plans. Founder approved 2026-11-09.
+ * The homepage headline. Coframe's test, accepted by the founder 2026-11-12
+ * (#1224): name the job and who it is for in the headline itself, because
+ * "Tell it your goals. Get a plan that fits." never said what gets planned.
+ * The old headline lives on as HERO_EYEBROW, the line above it.
  */
-export const HERO_HEADLINE = 'Tell it your goals. Get a plan that fits.';
+export const HERO_HEADLINE = 'Plan your next release, task by task.';
+
+/** The line above the headline: the 2026-11-09 headline, kept as Coframe advised. */
+export const HERO_EYEBROW = 'Tell it your goals. Get a plan that fits.';
+
+/**
+ * The line under the headline (Coframe, #1224). Coframe wrote "until it
+ * ships"; the house word is never "ship", so it says "until it's out".
+ */
+export const HERO_SUBHEAD =
+  "Urganize builds a release plan for artists, managers and record labels, then tracks every task until it's out.";
 
 /**
  * The line under the headline: the rest of the positioning in one breath.

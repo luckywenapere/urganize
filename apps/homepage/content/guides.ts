@@ -85,7 +85,7 @@ export const GUIDES: readonly Guide[] = [
     ],
     still: {
       ...guideStill("plan", [1360, 800], [716, 680]),
-      alt: "An Urganize timeline for the single Harmattan Gold: activities set out week by week from 8 weeks out to release day, today marked, and the Spotify editorial pitch open with one owner, Ada Nwosu, and one week, 5 weeks out.",
+      alt: "An Urganize timeline for the single Harmattan Gold: tasks set out week by week from 8 weeks out to release day, today marked, and the Spotify editorial pitch open with one owner, Ada Nwosu, and one week, 5 weeks out.",
     },
     sections: [
       {
@@ -251,7 +251,7 @@ export const GUIDES: readonly Guide[] = [
           },
           {
             type: "p",
-            text: "Urganize builds this plan for you when you create a rollout: 64 activities for a single, 90 for an EP and 113 for an album. It asks about your goals first, and you can also make your own. Every activity has an owner and a due date, and you can edit or delete any of them.",
+            text: "Urganize builds this plan for you when you create a rollout: 64 tasks for a single, 90 for an EP and 113 for an album. It asks about your goals first, and you can also make your own. Every task has an owner and a due date, and you can edit or delete any of them.",
           },
         ],
       },
@@ -272,7 +272,7 @@ export const GUIDES: readonly Guide[] = [
     ],
     still: {
       ...guideStill("checklist", [1360, 908], [716, 940]),
-      alt: "An Urganize activity list for Harmattan Gold: each activity has an owner and a week, and the owner menu is open on the first cover art draft, listing the artist, the manager, the marketing lead and the designer.",
+      alt: "An Urganize task list for Harmattan Gold: each task has an owner and a week, and the owner menu is open on the first cover art draft, listing the artist, the manager, the marketing lead and the designer.",
     },
     sections: [
       {
@@ -368,7 +368,7 @@ export const GUIDES: readonly Guide[] = [
           },
           {
             type: "p",
-            text: "Urganize turns this into your rollout. Each activity is assigned to a person, dated and tracked, and one list shows what is done, what is overdue and what is due this week.",
+            text: "Urganize turns this into your rollout. Each task is assigned to a person, dated and tracked, and one list shows what is done, what is overdue and what is due this week.",
           },
         ],
       },

@@ -1,4 +1,5 @@
 import { ProofLine } from "../ProofLine";
+import { ProofStats } from "../ProofStats";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
 import { WaitlistForm } from "../WaitlistForm";
@@ -65,6 +66,8 @@ export function FinalCTASection() {
                 />
               )}
             </div>
+            {/* The real numbers again at the last ask (#1224). */}
+            <ProofStats />
             <ProofLine
               id="adenaiye"
               className="mt-3 w-full max-w-[30rem] border-t border-[color:var(--marketing-border)] pt-5"

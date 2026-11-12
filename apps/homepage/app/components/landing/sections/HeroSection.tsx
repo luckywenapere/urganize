@@ -1,4 +1,5 @@
-import { AUDIENCE_LINE, PROMISE_LINE } from "@/lib/positioning";
+import { HERO_EYEBROW, HERO_HEADLINE, HERO_SUBHEAD } from "@/lib/positioning";
+import { ProofStats } from "../ProofStats";
 import { VisitorPrice } from "@/app/components/pricing/VisitorPrice";
 import { getTier, PRICING_TIER_ORDER } from "@urganize/pricing";
 
@@ -20,6 +21,12 @@ const FIRST_PAID_TIER = PRICING_TIER_ORDER.find((id) => {
   const tier = getTier(id);
   return !tier.contactSales && (tier.monthlyPrice?.amount ?? 0) > 0;
 });
+
+// The headline's second half takes the accent colour, split at its comma so
+// the words come from lib/positioning.ts and are never typed here.
+const HERO_SPLIT = HERO_HEADLINE.indexOf(", ");
+const HERO_LEAD = HERO_SPLIT === -1 ? HERO_HEADLINE : HERO_HEADLINE.slice(0, HERO_SPLIT + 1);
+const HERO_ACCENT = HERO_SPLIT === -1 ? "" : HERO_HEADLINE.slice(HERO_SPLIT + 2);
 
 const HERO_SHOT_SIZES = "(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw";
 
@@ -57,19 +64,18 @@ export function HeroSection() {
         className="relative mx-auto flex max-w-[60rem] scroll-mt-28 flex-col items-center text-center"
       >
         <HeroCards />
-        {/* What it plans and for whom, before the headline (#1220, from the
-            Coframe review: the headline alone never said what gets planned).
-            The headline and the line under it are the founder's approved
-            positioning (lib/positioning.ts) and stay as they are; this label
-            carries the plain "what". */}
+        {/* THE COFRAME HEADLINE (founder, 2026-11-12, #1224: accept every
+            Coframe recommendation). The headline names the job, the line
+            under it names who it is for, and the 2026-11-09 headline sits
+            above as the label. All three are in lib/positioning.ts. */}
         <p className="hero-fade-in hero-delay-1 mono-label text-balance text-[var(--marketing-accent)]">
-          Plan new music · For {AUDIENCE_LINE}
+          {HERO_EYEBROW}
         </p>
         <h1 className="hero-fade-in hero-delay-1 mt-6 text-balance text-[2.6rem] leading-[1.05] text-[var(--marketing-text)] sm:text-[3.8rem] lg:text-[4.6rem]">
-          Tell it your goals. <span className="block text-[var(--marketing-accent)]">Get a plan that fits.</span>
+          {HERO_LEAD} <span className="block text-[var(--marketing-accent)]">{HERO_ACCENT}</span>
         </h1>
         <p className="hero-fade-in hero-delay-2 mx-auto mt-6 max-w-[40rem] text-balance text-[1.05rem] leading-8 text-[var(--marketing-text-muted)] sm:text-[1.25rem] sm:leading-9">
-          {PROMISE_LINE}
+          {HERO_SUBHEAD}
         </p>
 
         {/* z-[60] keeps the form above the hero-fade-in transform stack and
@@ -86,7 +92,7 @@ export function HeroSection() {
                   keeps "Create your account". The demo sits beside it as a
                   real second button, not a small link. */}
               <div className="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
-                <TrialButton location="hero" size="lg" label="Get my plan" className="w-full sm:w-auto" />
+                <TrialButton location="hero" size="lg" label="Build my release plan" className="w-full sm:w-auto" />
                 <WatchDemo variant="ghost" className="w-full sm:w-auto" />
               </div>
               <p className="mono-label text-[var(--marketing-text-subtle)]">{PRIMARY_CTA.hint}</p>
@@ -109,6 +115,8 @@ export function HeroSection() {
               <WatchDemo variant="link" />
             </p>
           )}
+          {/* Real numbers from our own data, beside the main action (#1224). */}
+          <ProofStats className="mt-1" />
           <ProofLine
             id="zaddyfunds"
             className="mt-2 w-full max-w-[30rem] border-t border-[color:var(--marketing-border)] pt-5"
