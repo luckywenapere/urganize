@@ -9,6 +9,10 @@ import { TeamSheet } from '@/components/team/TeamSheet';
 import { TeamAvatar } from '@/components/team/TeamAvatar';
 import { PersonPanel } from '@/components/team/PersonPanel';
 import { AccessPicker, accessBody, isAccessChoiceReady, type AccessChoice } from '@/components/team/AccessPicker';
+import { TeamDesk, type InviteAction } from '@/components/team/TeamDesk';
+import { SettingsDeskSkeleton } from '@/components/settings/desk/SettingsDesk';
+import { setDeskCount } from '@/components/settings/desk/useDeskCounts';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { isOnline } from '@/lib/presence';
 import { teamPresenceLabel } from '@/lib/home/team-presence';
 import {
@@ -40,6 +44,9 @@ export default function TeamPageClient() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
+  const desktop = useIsDesktopViewport();
+  const [inviteBusy, setInviteBusy] = useState<string | null>(null);
+  const [inviteNotice, setInviteNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const headers = await authHeaders();
@@ -52,6 +59,7 @@ export default function TeamPageClient() {
       }
       const next = (await response.json()) as TeamPageResponse;
       rememberLast('team', 'mine', next);
+      setDeskCount('team', next.people.filter((person) => person.status === 'active').length);
       setData(next);
       setLoadError(null);
       setNow(new Date());
@@ -108,6 +116,62 @@ export default function TeamPageClient() {
     return null;
   };
 
+  // Copy link and Send again (#1226) use the one invite action there is: asking
+  // again mints a fresh link (the old one stops working) and emails it, with
+  // the same role and the same access they were invited with.
+  const reinvite = async (person: TeamPerson, action: InviteAction) => {
+    setInviteBusy(person.memberId);
+    setInviteNotice(null);
+    try {
+      const headers = await authHeaders();
+      if (!headers) {
+        setInviteNotice('Sign in again to do that.');
+        return;
+      }
+      const response = await fetch('/api/workspace/members/invite', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ email: person.email, role: person.role }),
+      });
+      if (!response.ok) {
+        setInviteNotice(await readError(response, 'Could not send the invite again.'));
+        return;
+      }
+      const body = (await response.json().catch(() => ({}))) as { inviteUrl?: string | null; emailSent?: boolean };
+      if (action === 'copy') {
+        let copied = false;
+        if (body.inviteUrl) {
+          try {
+            await navigator.clipboard.writeText(body.inviteUrl);
+            copied = true;
+          } catch {
+            copied = false;
+          }
+        }
+        setInviteNotice(
+          copied
+            ? `New link for ${person.email} copied. Their old link no longer works.`
+            : body.inviteUrl
+              ? `Could not copy. Their new link: ${body.inviteUrl}`
+              : 'Could not make a link.'
+        );
+      } else {
+        setInviteNotice(
+          body.emailSent
+            ? `Sent again to ${person.email}.`
+            : `We could not email ${person.email}. Use Copy link and send it on WhatsApp.`
+        );
+      }
+      void load();
+    } catch {
+      setInviteNotice('Could not reach Urganize. Check your connection and try again.');
+    } finally {
+      setInviteBusy(null);
+    }
+  };
+
+  if (!data && desktop && !loadError) return <SettingsDeskSkeleton rows={5} />;
+
   if (!data) {
     return (
       <div className="pb-10">
@@ -128,6 +192,78 @@ export default function TeamPageClient() {
           <TeamSkeleton />
         )}
       </div>
+    );
+  }
+
+  const sheets = (
+    <>
+      {open ? (
+        <TeamSheet title={open.name} hideTitle onClose={() => setOpenId(null)}>
+          <PersonPanel
+            person={open}
+            now={now}
+            canManage={canManage}
+            onChangeAccess={() => setEditingId(open.memberId)}
+            onRemove={() => setRemovingId(open.memberId)}
+          />
+        </TeamSheet>
+      ) : null}
+
+      {inviting && data.picker ? (
+        <TeamSheet title="Invite someone" variant="center" onClose={() => setInviting(false)}>
+          <InviteForm
+            picker={data.picker}
+            seatsLeft={seatsLeft}
+            onDone={() => {
+              void load();
+            }}
+            onClose={() => setInviting(false)}
+          />
+        </TeamSheet>
+      ) : null}
+
+      {editing && data.picker ? (
+        <TeamSheet title={`${editing.name}'s role and access`} variant="center" onClose={() => setEditingId(null)}>
+          <ChangeAccessForm
+            person={editing}
+            picker={data.picker}
+            onSaved={async () => {
+              setEditingId(null);
+              await load();
+            }}
+          />
+        </TeamSheet>
+      ) : null}
+
+      {removing ? (
+        <TeamSheet
+          title={removing.status === 'invited' ? 'Cancel this invite?' : `Remove ${removing.name}?`}
+          variant="center"
+          onClose={() => setRemovingId(null)}
+        >
+          <RemoveConfirm person={removing} ownerName={data.workspace.ownerName} onConfirm={() => remove(removing)} onCancel={() => setRemovingId(null)} />
+        </TeamSheet>
+      ) : null}
+    </>
+  );
+
+  // On a computer: a table inside the settings menu (#1226). Phones keep the list.
+  if (desktop) {
+    return (
+      <>
+        <TeamDesk
+          data={data}
+          now={now}
+          onOpen={setOpenId}
+          onInvite={() => setInviting(true)}
+          onChangeAccess={setEditingId}
+          onRemove={setRemovingId}
+          onInviteAction={(person, action) => void reinvite(person, action)}
+          inviteBusy={inviteBusy}
+          notice={inviteNotice}
+        />
+        {sheets}
+      </>
     );
   }
 
@@ -226,53 +362,7 @@ export default function TeamPageClient() {
         ) : null}
       </>
 
-      {open ? (
-        <TeamSheet title={open.name} hideTitle onClose={() => setOpenId(null)}>
-          <PersonPanel
-            person={open}
-            now={now}
-            canManage={canManage}
-            onChangeAccess={() => setEditingId(open.memberId)}
-            onRemove={() => setRemovingId(open.memberId)}
-          />
-        </TeamSheet>
-      ) : null}
-
-      {inviting && data.picker ? (
-        <TeamSheet title="Invite someone" variant="center" onClose={() => setInviting(false)}>
-          <InviteForm
-            picker={data.picker}
-            seatsLeft={seatsLeft}
-            onDone={() => {
-              void load();
-            }}
-            onClose={() => setInviting(false)}
-          />
-        </TeamSheet>
-      ) : null}
-
-      {editing && data.picker ? (
-        <TeamSheet title={`${editing.name}'s role and access`} variant="center" onClose={() => setEditingId(null)}>
-          <ChangeAccessForm
-            person={editing}
-            picker={data.picker}
-            onSaved={async () => {
-              setEditingId(null);
-              await load();
-            }}
-          />
-        </TeamSheet>
-      ) : null}
-
-      {removing ? (
-        <TeamSheet
-          title={removing.status === 'invited' ? 'Cancel this invite?' : `Remove ${removing.name}?`}
-          variant="center"
-          onClose={() => setRemovingId(null)}
-        >
-          <RemoveConfirm person={removing} ownerName={data.workspace.ownerName} onConfirm={() => remove(removing)} onCancel={() => setRemovingId(null)} />
-        </TeamSheet>
-      ) : null}
+      {sheets}
     </div>
   );
 }

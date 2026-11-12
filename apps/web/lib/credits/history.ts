@@ -147,3 +147,64 @@ export function formatSignedCredits(credits: number): string {
   if (whole < 0) return `-${Math.abs(whole).toLocaleString('en')}`;
   return '0';
 }
+
+// ── The desktop AI credits page (#1226) ─────────────────────────────────────
+
+/**
+ * "10" for a spend, "+150" for credits added. Every spend line in the history
+ * is something spent, so a minus sign says nothing the line does not; an
+ * addition keeps its plus so the two never read the same.
+ */
+export function formatHistoryAmount(credits: number): string {
+  const whole = Math.trunc(credits);
+  if (whole > 0) return `+${whole.toLocaleString('en')}`;
+  return Math.abs(whole).toLocaleString('en');
+}
+
+const LAGOS_OFFSET_MS = 60 * 60 * 1000;
+const lagosDay = (at: Date): string => new Date(at.getTime() + LAGOS_OFFSET_MS).toISOString().slice(0, 10);
+
+export type HistoryDay = { key: string; label: string; entries: HistoryEntry[] };
+
+/** Newest first, grouped by Lagos day: Today, Yesterday, then "5 Nov" (with the
+ *  year once it is not this year). Keeps the order it is given within a day. */
+export function groupHistoryByDay(entries: readonly HistoryEntry[], now: Date): HistoryDay[] {
+  const today = lagosDay(now);
+  const yesterday = lagosDay(new Date(now.getTime() - 24 * 60 * 60 * 1000));
+  const days: HistoryDay[] = [];
+  for (const entry of entries) {
+    const at = new Date(entry.at);
+    const key = Number.isNaN(at.getTime()) ? 'unknown' : lagosDay(at);
+    let day = days[days.length - 1];
+    if (!day || day.key !== key) {
+      let label = 'Earlier';
+      if (key === today) label = 'Today';
+      else if (key === yesterday) label = 'Yesterday';
+      else if (key !== 'unknown') {
+        const noon = new Date(`${key}T12:00:00Z`);
+        label = noon.toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          ...(key.slice(0, 4) === today.slice(0, 4) ? {} : { year: 'numeric' }),
+          timeZone: 'UTC',
+        });
+      }
+      day = { key, label, entries: [] };
+      days.push(day);
+    }
+    day.entries.push(entry);
+  }
+  return days;
+}
+
+/** The big number on the credits page: what is left of the month's credits. */
+export function creditMeter(input: { balance: number | null; allowance: number }): { left: number; of: number; share: number } {
+  const left = Math.max(0, Math.floor(input.balance ?? 0));
+  const of = Math.max(0, Math.floor(input.allowance));
+  const share = of > 0 ? Math.min(100, Math.round((left / of) * 100)) : 0;
+  return { left, of, share };
+}
+
+/** Paying past your credits is on exactly when the saved cap is above ₦0;
+ *  a ₦0 cap is the existing "off" (CreditCap: "₦0 keeps it off"). */
+export const overageIsOn = (capNaira: number): boolean => capNaira > 0;

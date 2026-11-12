@@ -69,7 +69,14 @@ const CTA_HREF: Record<'plans' | 'change' | 'reactivate', string> = {
   reactivate: '/locked?intent=reactivate',
 };
 
-export function BillingSection() {
+/**
+ * `variant="desk"` (#1226): the computer's Plan and billing page draws the same
+ * status as a card, with the plan name large. Only the frame and the type
+ * change; what it says and every button come from the same code.
+ */
+export function BillingSection({ variant = 'panel' }: { variant?: 'panel' | 'desk' } = {}) {
+  const desk = variant === 'desk';
+  const frameClass = desk ? 'rounded-2xl border border-stroke-default bg-bg-surface p-5' : panelClass;
   const router = useRouter();
   const [snapshot, setSnapshot] = useState<BillingSnapshot | null>(null);
   const [error, setError] = useState('');
@@ -237,7 +244,7 @@ export function BillingSection() {
     }
   }, [load, router]);
 
-  const heading = (
+  const heading = desk ? null : (
     <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
       Billing
     </h2>
@@ -245,7 +252,7 @@ export function BillingSection() {
 
   if (isLoading) {
     return (
-      <section className={panelClass}>
+      <section className={frameClass}>
         {heading}
         <SkeletonBlock className="h-16 w-full rounded-lg" />
       </section>
@@ -254,7 +261,7 @@ export function BillingSection() {
 
   if (error) {
     return (
-      <section className={panelClass}>
+      <section className={frameClass}>
         {heading}
         <div role="alert" className={feedbackErrorClass}>{error}</div>
         <button
@@ -282,7 +289,7 @@ export function BillingSection() {
   const accessUntil = formatBillingDate(snapshot.trialEndsAt) || formatBillingDate(snapshot.expiresAt);
 
   return (
-    <section className={panelClass}>
+    <section className={frameClass}>
       {heading}
       {/* Flat, no card box. Two reasons, and they point the same way: panelClass
           records the founder call that boxed sections read as "plastic" and the
@@ -294,7 +301,8 @@ export function BillingSection() {
           classes and are legible in both themes. */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-content-primary">{title}</p>
+          {desk ? <p className="text-sm text-content-secondary">Your plan</p> : null}
+          <p className={desk ? 'font-display text-2xl text-content-primary' : 'text-sm font-semibold text-content-primary'}>{title}</p>
           {details.map((line) => (
             <p key={line} className="mt-1 text-sm text-content-secondary">
               {line}

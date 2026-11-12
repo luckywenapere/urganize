@@ -10,6 +10,7 @@ import { SubNav } from '@/components/shell/SubNav';
 import { MainMorph } from '@/components/motion/MainMorph';
 import { Sidebar } from '@/components/shell/Sidebar';
 import { SETTINGS_PAGE_HREF } from '@/lib/swipe-nav';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { noteInAppPath } from '@/lib/in-app-history';
 import { PageBar } from '@/components/shell/PageBar';
 import { BottomBar } from '@/components/shell/BottomBar';
@@ -88,6 +89,8 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
   // them apart (read through a store: useSearchParams here would fail the build).
   const releaseParam = useReleaseParamStore((state) => state.releaseId);
   const swipeNav = useSwipeNav();
+  // From lg up Settings is a page of the normal app, top bar and all (#1226).
+  const desktop = useIsDesktopViewport();
   useEffect(() => {
     startSwipeNav();
   }, []);
@@ -133,7 +136,7 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
   // Settings on a computer covers the whole screen (Nov 2, 2026, founder
   // approved docs/mocks/desktop-settings-full): no top bar, no side menu, no
   // floating launcher. The page draws its own X back to where you were.
-  if (pathname === SETTINGS_PAGE_HREF && showWorkspaceChrome) {
+  if (pathname === SETTINGS_PAGE_HREF && showWorkspaceChrome && !desktop) {
     return (
       <>
         {CHAT_HISTORY_ENABLED ? <ChappiHistoryBridge /> : null}
