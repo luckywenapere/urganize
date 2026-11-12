@@ -57,6 +57,8 @@ export type DirectoryFilters = {
   availability: PersonAvailability | null;
   /** Optional so callers that never set it keep compiling. */
   profileType?: ProfileType | null;
+  /** Any of these roles (a hire chip with several, #1221). Empty or absent filters nothing. */
+  roles?: readonly DirectoryRole[] | null;
 };
 
 const normalize = (value: string | null | undefined): string =>
@@ -107,6 +109,7 @@ export function applyDirectoryFilters<T extends DirectoryEntry>(
   const narrowed = entries.filter(
     (entry) =>
       (!filters.role || hasRole(entry, filters.role)) &&
+      (!filters.roles || filters.roles.length === 0 || filters.roles.some((role) => hasRole(entry, role))) &&
       matchesCity(entry, filters.city) &&
       matchesAvailability(entry, filters.availability) &&
       (!filters.profileType || entry.profileType === filters.profileType)

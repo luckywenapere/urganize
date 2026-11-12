@@ -16,6 +16,8 @@ import { isLikelyBot, isPrefetchRequest, publicProfileViewedProperties } from '@
 import { recordPublicProfileView } from '@/lib/profile-growth-server';
 import { headers } from 'next/headers';
 import { ThumbImage } from '@/components/shared/ThumbImage';
+import { DeskProfile } from '@/components/people/DeskProfile';
+import { worksWith } from '@/lib/person-work';
 
 /**
  * A person's public record at /p/{slug}.
@@ -137,9 +139,25 @@ export default async function PersonPage({ params }: PageProps) {
 
   return (
     <div className="kit-island min-h-screen" style={PALETTE}>
-      <main className="mx-auto w-full max-w-[480px] pb-16">
-        {/* Only a public profile reaches this page, and a profile is only public once claimed. */}
-        <ProfileViewBeacon roles={roles.map((entry) => entry.role)} claimed />
+      {/* Only a public profile reaches this page, and a profile is only public once claimed. */}
+      <ProfileViewBeacon roles={roles.map((entry) => entry.role)} claimed />
+
+      <DeskProfile
+        slug={pageSlug}
+        name={profile.displayName}
+        photoUrl={view.photoUrl}
+        role={role}
+        openToWork={profile.availability === 'open'}
+        bio={(view.bio || '').trim()}
+        work={extras.work}
+        coverById={new Map(extras.credits.map((tile) => [tile.id, tile.coverUrl]))}
+        roles={roles}
+        partners={worksWith(extras.managed.names, extras.work)}
+        links={view.links}
+      />
+
+      {/* Phones keep the URG-305 page (#1221 is computer only). */}
+      <main className="mx-auto w-full max-w-[480px] lg:hidden">
 
         {view.photoUrl ? (
           <div aria-hidden="true" className="relative h-[150px] overflow-hidden">
@@ -220,13 +238,15 @@ export default async function PersonPage({ params }: PageProps) {
 
         <div className="px-[22px]">
           <ProfileActions slug={pageSlug} />
-
-          {/* Shown only to the signed-in owner of this page, after it draws. */}
-          <OwnProfileShare slug={pageSlug} />
-
-          <ProfileGrowthFooter slug={pageSlug} />
         </div>
       </main>
+
+      <div className="mx-auto w-full max-w-[480px] px-[22px] pb-16 lg:max-w-[1120px] lg:px-8">
+        {/* Shown only to the signed-in owner of this page, after it draws. */}
+        <OwnProfileShare slug={pageSlug} />
+
+        <ProfileGrowthFooter slug={pageSlug} />
+      </div>
     </div>
   );
 }
