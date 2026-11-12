@@ -18,6 +18,7 @@ import {
   BOARD_HEADLINE_MAX,
   boardPhoneOrder,
   briefCountdown,
+  coverTitleFontSize,
   momentsTrack,
   normalizeHex,
   swatchInk,
@@ -78,6 +79,11 @@ type Props = {
   onPatch: (update: (brief: BriefPayload) => BriefPayload) => void;
   /** Re-read quietly (history and "edited by" move after a save). */
   onRefresh: () => void;
+  /** A wide board's top line, left of Note and Arrange: the brief's title and
+   *  who edited it (#1230). */
+  heading?: ReactNode;
+  /** Under that line, above the cards: the approval round's card. */
+  banner?: ReactNode;
   slots: {
     idea: ReactNode;
     decisions: ReactNode;
@@ -91,7 +97,9 @@ type Props = {
 const WIDE_BOARD_PX = 860;
 
 const CARD = 'relative min-w-0 overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface p-[18px]';
-const LABEL = 'text-[11px] font-bold uppercase tracking-[0.09em] text-content-tertiary';
+// Plain sentence case on a computer (#1230); a phone keeps its small capitals.
+const LABEL =
+  'text-[11px] font-bold uppercase tracking-[0.09em] text-content-tertiary lg:text-[13px] lg:font-semibold lg:normal-case lg:tracking-normal lg:text-content-secondary';
 const LINK_BUTTON = 'motion-focus text-[12.5px] font-semibold text-brand transition-opacity hover:opacity-80';
 const FIELD =
   'w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-[16px] text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none lg:text-sm';
@@ -238,7 +246,7 @@ function CoverCard({ brief, wide }: { brief: BriefPayload; wide: boolean }) {
   return (
     <section
       aria-label="Cover"
-      className={`relative min-w-0 overflow-hidden rounded-2xl ${wide ? 'min-h-[420px]' : 'aspect-[4/5] max-h-[360px] w-full'}`}
+      className={`relative min-w-0 overflow-hidden rounded-2xl ${wide ? 'min-h-[360px]' : 'aspect-[4/5] max-h-[360px] w-full'}`}
       style={{ background: flat }}
     >
       {board.coverUrl ? (
@@ -251,17 +259,33 @@ function CoverCard({ brief, wide }: { brief: BriefPayload; wide: boolean }) {
           />
         </>
       ) : null}
-      <div className="absolute inset-x-5 bottom-5 text-[#f7ecd8] lg:inset-x-6 lg:bottom-6">
-        <p className="text-[11.5px] font-semibold uppercase tracking-[0.12em] opacity-85">{board.artistName || 'Rollout'}</p>
-        <h2
-          className={`mt-1.5 break-words font-display leading-[0.92] tracking-[-0.03em] ${
-            board.title.length > 14 ? 'text-[48px] lg:text-[60px]' : 'text-[64px] lg:text-[88px]'
-          }`}
-        >
-          {board.title}
-        </h2>
-        <p className="mt-3 font-mono text-[12.5px] uppercase">{day ? `Out ${day}` : 'No release day yet'}</p>
-      </div>
+      {wide ? (
+        // A wide board's cover is a quarter of the board (#1230): the title is
+        // sized so its longest word fits, and wraps only at spaces, so it never
+        // breaks mid-word ("Owa / mbe / Seas / on").
+        <div className="absolute inset-x-[18px] bottom-[18px] text-[#f7ecd8] [container-type:inline-size]">
+          <p className="truncate text-[12px] font-bold uppercase tracking-[0.06em] opacity-85">{board.artistName || 'Rollout'}</p>
+          <h2
+            className="mt-1 font-display leading-[1.12] tracking-[-0.01em] [hyphens:none] [overflow-wrap:normal] [word-break:normal]"
+            style={{ fontSize: coverTitleFontSize(board.title) }}
+          >
+            {board.title}
+          </h2>
+          <p className="mt-1.5 text-[13px] opacity-85">{day ? `Out ${day}` : 'No release day yet'}</p>
+        </div>
+      ) : (
+        <div className="absolute inset-x-5 bottom-5 text-[#f7ecd8] lg:inset-x-6 lg:bottom-6">
+          <p className="text-[11.5px] font-semibold uppercase tracking-[0.12em] opacity-85">{board.artistName || 'Rollout'}</p>
+          <h2
+            className={`mt-1.5 break-words font-display leading-[0.92] tracking-[-0.03em] ${
+              board.title.length > 14 ? 'text-[48px] lg:text-[60px]' : 'text-[64px] lg:text-[88px]'
+            }`}
+          >
+            {board.title}
+          </h2>
+          <p className="mt-3 font-mono text-[12.5px] uppercase">{day ? `Out ${day}` : 'No release day yet'}</p>
+        </div>
+      )}
     </section>
   );
 }
@@ -1008,7 +1032,7 @@ function PeopleCard({ brief }: { brief: BriefPayload }) {
                 <p className="truncate text-[14px] font-semibold text-content-primary">{person.name}</p>
                 {person.nextTask ? <p className="truncate text-[12.5px] text-content-secondary">Next: {person.nextTask}</p> : null}
               </div>
-              <span className="shrink-0 font-mono text-[12px] text-content-tertiary">{person.openCount} open</span>
+              <span className="shrink-0 font-mono text-[12px] text-content-tertiary lg:font-sans lg:text-[12.5px]">{person.openCount} open</span>
             </li>
           ))}
         </ul>
@@ -1028,7 +1052,7 @@ function SlotCard({ label, children }: { label: string; children: ReactNode }) {
 
 // ── The board ───────────────────────────────────────────────────────────────
 
-export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props) {
+export function BriefBoard({ brief, onToast, onPatch, onRefresh, heading, banner, slots }: Props) {
   const [boardRef, width] = useWidth<HTMLDivElement>();
   const wide = width >= WIDE_BOARD_PX;
 
@@ -1218,11 +1242,19 @@ export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props)
     <div
       ref={boardRef}
       {...boardDrop.handlers}
-      className={`relative rounded-[20px] bg-bg-sidebar p-3 sm:p-4 ${boardDrop.over ? 'ring-2 ring-brand' : ''}`}
-      style={{
-        backgroundImage: 'radial-gradient(rgb(var(--color-stroke) / 0.11) 1px, transparent 1.2px)',
-        backgroundSize: '20px 20px',
-      }}
+      // A wide board is the cards on the page (#1230). The dotted panel stays
+      // for the phone stack, where it frames one column.
+      className={`relative ${
+        wide ? 'rounded-[20px]' : 'rounded-[20px] bg-bg-sidebar p-3 sm:p-4'
+      } ${boardDrop.over ? 'ring-2 ring-brand ring-offset-4 ring-offset-bg-base' : ''}`}
+      style={
+        wide || width === 0
+          ? undefined
+          : {
+              backgroundImage: 'radial-gradient(rgb(var(--color-stroke) / 0.11) 1px, transparent 1.2px)',
+              backgroundSize: '20px 20px',
+            }
+      }
     >
       {width === 0 ? (
         // Not measured yet: draw nothing for a frame rather than the phone
@@ -1230,17 +1262,18 @@ export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props)
         <div className="min-h-[420px]" aria-busy="true" />
       ) : wide ? (
         <>
-          {canArrange || canNote ? (
-            <div className="mb-3 flex min-h-9 flex-wrap items-center justify-end gap-2">
+          {canArrange || canNote || heading ? (
+            <div className="mb-4 flex min-h-9 flex-wrap items-end justify-end gap-x-4 gap-y-2">
+              {heading ? <div className="mr-auto min-w-0">{heading}</div> : null}
               {boardUploads.uploading ? (
-                <span className="mr-auto inline-flex items-center gap-1.5 text-[13px] text-content-secondary">
+                <span className={`${heading ? '' : 'mr-auto '}inline-flex items-center gap-1.5 text-[13px] text-content-secondary`}>
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                   Adding {boardUploads.uploading} to Look
                 </span>
               ) : null}
               {arranging ? (
                 <>
-                  <p className="mr-auto text-[13px] text-content-secondary">
+                  <p className={`${heading ? '' : 'mr-auto '}text-[13px] text-content-secondary`}>
                     Drag a card to move it. Pull its corner to resize. Arrow keys work too.
                   </p>
                   {arranged ? (
@@ -1289,6 +1322,7 @@ export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props)
               )}
             </div>
           ) : null}
+          {banner}
           {composing ? (
             <div className="mb-4 flex justify-end">
               <NoteComposer
@@ -1352,6 +1386,9 @@ export function BriefBoard({ brief, onToast, onPatch, onRefresh, slots }: Props)
         </>
       ) : (
         <div className="flex flex-col gap-3">
+          {/* Only passed on a computer; a squeezed board still shows them. */}
+          {heading}
+          {banner}
           {(arranged
             ? layoutPhoneOrder(resolved)
             : [

@@ -12,7 +12,7 @@ import type { Task } from '@/lib/tasks';
 import { TasksPanel } from './TasksPanel';
 import { RolloutTabs } from './RolloutTabs';
 import { PlanMenuPillDock } from './PlanMenuPill';
-import { BriefBackButton, BriefEntryButton } from './BriefEntry';
+import { BriefEntryButton } from './BriefEntry';
 import { usePlanMenuFold } from '@/stores/usePlanMenuFold';
 import type { ReleaseCardData } from './catalogue-types';
 import type { RolloutMenuDialogInput } from './useRolloutMenuActions';
@@ -173,15 +173,38 @@ export function WorkspaceDesktopFocused({
     tasksTotal,
   });
 
-  // The brief on the whole screen (#902): one way back, then what you are reading.
+  // The brief on the whole screen (#902). Its path is the one every rollout
+  // page uses (#1230): Home, the rollout (back to the plan, or the ideas), Brief.
   const focus = briefOpen && onCloseBrief;
   const briefCrumb = focus ? (
-    <div className="flex min-w-0 items-center gap-[13px]">
-      <BriefBackButton label={planBuilt ? 'Back to the plan' : 'Back to the ideas'} onBack={onCloseBrief} />
-      <p className="min-w-0 truncate text-[15px] text-content-secondary">
-        <span className="font-semibold text-content-primary">{card.release.title}</span> · Brief
-      </p>
-    </div>
+    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[15px] text-content-secondary">
+      {onClose ? (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={closeLabel ?? 'Back to Home'}
+          className="motion-focus shrink-0 rounded-md hover:text-content-primary"
+        >
+          Home
+        </button>
+      ) : (
+        <span className="shrink-0">Home</span>
+      )}
+      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-content-tertiary" aria-hidden="true" />
+      <button
+        type="button"
+        onClick={onCloseBrief}
+        aria-label={planBuilt ? 'Back to the plan' : 'Back to the ideas'}
+        title={card.release.title}
+        className="motion-focus min-w-0 truncate rounded-md font-semibold text-content-primary hover:underline hover:underline-offset-[3px]"
+      >
+        {card.release.title}
+      </button>
+      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-content-tertiary" aria-hidden="true" />
+      <span aria-current="page" className="shrink-0">
+        Brief
+      </span>
+    </nav>
   ) : null;
 
   const crumb = briefCrumb ?? (

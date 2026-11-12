@@ -13,6 +13,7 @@ import { useCreditBalance } from '@/components/urgans-actions/useCreditBalance';
 import { isCreditsEnabled } from '@/lib/credits/config';
 import { embeddedCostLine } from '@/lib/credits/copy';
 import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
+import { usePageBarEndSlot } from '@/components/shell/PageBar';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { applyRunAction, discardRunAction, runBriefFromIdeas, runDraftBrief } from '@/lib/urgans-actions/client';
 import {
@@ -587,8 +588,29 @@ function IdeaBlock({
 
 // ── States ──────────────────────────────────────────────────────────────────
 
-function Skeleton() {
+function Skeleton({ desk = false }: { desk?: boolean }) {
   const bar = (className: string) => <div className={`animate-pulse rounded-lg bg-bg-elevated ${className}`} />;
+  if (desk) {
+    // The board on a computer (#1230): title line, then four columns, the
+    // cover down two rows beside the countdown and the idea.
+    const card = (className: string) => <div className={`animate-pulse rounded-2xl bg-bg-elevated ${className}`} />;
+    return (
+      <div aria-busy="true" aria-label="Loading the brief">
+        {bar('h-[30px] w-40')}
+        {bar('mt-2.5 h-3 w-64')}
+        <div className="mt-5 grid grid-cols-4 gap-4">
+          {card('row-span-2 h-[360px]')}
+          {card('h-[172px]')}
+          {card('col-span-2 h-[172px]')}
+          {card('h-[172px]')}
+          {card('h-[172px]')}
+          {card('h-[172px]')}
+          {card('col-span-2 h-[220px]')}
+          {card('col-span-2 h-[220px]')}
+        </div>
+      </div>
+    );
+  }
   return (
     <div aria-busy="true" aria-label="Loading the brief">
       {bar('mt-2 h-3 w-2/5')}
@@ -607,6 +629,8 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
   const [roundBusy, setRoundBusy] = useState<'approve' | 'new_version' | 'write' | null>(null);
   const [settlingId, setSettlingId] = useState<string | null>(null);
   const isDesktop = useIsDesktopViewport();
+  // Present and Share sit at the right of the path on a computer (#1230).
+  const pageBarEnd = usePageBarEndSlot(isDesktop);
   // The last copy seen in this page life paints at once; the read below
   // refreshes it (Nov 2, 2026, the load-wait audit). Memory only.
   const [state, setState] = useState<LoadState>(() => {
@@ -843,7 +867,7 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
   if (state.status === 'loading') {
     return (
       <div className="pb-10">
-        <Skeleton />
+        <Skeleton desk={isDesktop} />
       </div>
     );
   }
@@ -968,7 +992,10 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
     <button
       type="button"
       onClick={() => setSheet('share')}
-      className="motion-focus motion-press inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-brand px-3.5 text-[13px] font-semibold text-content-inverse transition-colors hover:bg-brand-hover"
+      // Dark on a computer, beside the path (#1230 mock); the brand fill on a phone.
+      className={`motion-focus motion-press inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold text-content-inverse transition-colors ${
+        board && isDesktop ? 'bg-content-primary hover:opacity-90' : 'bg-brand hover:bg-brand-hover'
+      }`}
     >
       <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
       Share
@@ -986,6 +1013,11 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
     </button>
   );
 
+  // The board on a computer (#1230): a title line with Note and Arrange, the
+  // path above with Present and Share, and plain sentences, no typewriter text.
+  const desk = board && isDesktop;
+  const meta = desk ? 'mt-1 text-[13px] text-content-secondary' : `${board ? '' : 'mt-2 '}font-mono text-[11px] text-content-tertiary`;
+
   // Seen the brief (#897 phase 4): who on the team has opened it.
   const seen = brief.board.seen;
   const seenLine =
@@ -998,19 +1030,20 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
             </span>
           ))}
         </span>
-        <span className="font-mono text-[11px] text-content-tertiary">{seen.line}</span>
+        <span className={`${desk ? 'text-[13px] text-content-secondary' : 'font-mono text-[11px] text-content-tertiary'}`}>{seen.line}</span>
       </span>
     ) : null;
 
   const header = (
-    <div className={board ? 'flex flex-wrap items-center justify-between gap-x-4 gap-y-2' : ''}>
+    <div className={desk ? '' : board ? 'flex flex-wrap items-center justify-between gap-x-4 gap-y-2' : ''}>
+      {desk ? <h2 className="font-display text-[30px] leading-[38px] text-content-primary">The brief</h2> : null}
       {board ? null : (
         <div className="flex items-start justify-between gap-3">
           <p className={titleClass}>Brief</p>
         </div>
       )}
       {showChrome && lockedBrief && round ? (
-        <p className={`${board ? '' : 'mt-2 '}flex flex-wrap items-center gap-1 font-mono text-[11px] text-content-tertiary`}>
+        <p className={`${meta} flex flex-wrap items-center gap-1`}>
           <Lock className="h-3 w-3" aria-hidden="true" />
           Approved{round.approvedByName ? ` by ${round.approvedByName}` : ''} · {formatShortDay(round.approvedAt)}
           {round.version > 1 ? ` · Version ${round.version}` : ''} ·{' '}
@@ -1023,7 +1056,7 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
           </button>
         </p>
       ) : showChrome && round?.state === 'closed' && ideaCount > 0 ? (
-        <p className={`${board ? '' : 'mt-2 '}font-mono text-[11px] text-content-tertiary`}>
+        <p className={meta}>
           From {ideaCount === 1 ? '1 idea' : `${ideaCount} ideas`} · not approved ·{' '}
           <button
             type="button"
@@ -1034,7 +1067,7 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
           </button>
         </p>
       ) : showChrome && brief.updatedByName && editedAgo ? (
-        <p className={`${board ? '' : 'mt-2 '}font-mono text-[11px] text-content-tertiary`}>
+        <p className={meta}>
           Edited by {brief.updatedByName} · {editedAgo} ·{' '}
           <button
             type="button"
@@ -1044,10 +1077,10 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
             History
           </button>
         </p>
-      ) : board ? (
+      ) : board && !desk ? (
         <span />
       ) : null}
-      {board ? (
+      {desk ? null : board ? (
         <span className="flex flex-wrap items-center gap-3">
           {seenLine}
           {presentButton}
@@ -1195,12 +1228,14 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
     // The board (#897): the filled brief, on a computer and a phone alike.
     const hasIdeas = (brief.ideas?.length ?? 0) > 0 && Boolean(brief.round);
     body = (
-      <div className="mt-4">
+      <div className={desk ? 'mt-1' : 'mt-4'}>
         <BriefBoard
           brief={brief}
           onToast={onToast}
           onPatch={patch}
           onRefresh={() => void refresh()}
+          heading={desk ? header : undefined}
+          banner={desk && roundCard ? <div className="mb-4 [&>*]:mt-0">{roundCard}</div> : undefined}
           slots={{
             idea: ideaBlock,
             decisions: bareDecisions,
@@ -1223,8 +1258,26 @@ export function ReleaseBriefScene({ releaseId, onToast, hasPlan = false, onBuild
     <div
       className={`${floatingApprove ? 'pb-28' : 'pb-10'} ${board ? 'lg:max-w-[1240px]' : 'lg:max-w-[860px]'}`}
     >
-      {header}
-      {roundCard}
+      {desk ? null : header}
+      {desk ? null : roundCard}
+      {desk ? (
+        pageBarEnd ? (
+          createPortal(
+            <span className="flex items-center gap-[13px]">
+              {seenLine}
+              {presentButton}
+              {shareButton}
+            </span>,
+            pageBarEnd
+          )
+        ) : (
+          <div className="mb-2 flex items-center justify-end gap-3">
+            {seenLine}
+            {presentButton}
+            {shareButton}
+          </div>
+        )
+      ) : null}
       {body}
       {sheet === 'history' ? <HistorySheet brief={brief} onClose={() => setSheet(null)} /> : null}
       {sheet === 'share' ? (

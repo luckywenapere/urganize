@@ -38,6 +38,16 @@ import { HELP_COPY, type HelpKey } from '@/lib/help-copy';
 import { useSceneData } from './useSceneData';
 import { useSceneDataStore, type MetadataScenePayload } from '@/stores/useSceneDataStore';
 import { currentShareOrigin } from '@/lib/app-hosts';
+import { initialsFor } from '@/lib/release-brief';
+import {
+  creditAnswerLine,
+  detailsProgress,
+  missingRequiredDetails,
+  REQUIRED_DETAILS,
+  splitsChecks,
+  type DetailsFieldKey,
+} from '@/lib/release-details-desk';
+import { DESK_CARD, DeskColumns } from './trm/TrmDesk';
 
 // The metadata hub (URG-108). Self-contained (the EpkSection pattern): takes
 // releaseId, fetches its own data, renders its own loading/empty/error
@@ -198,6 +208,11 @@ type MetadataSectionProps = {
    * on screen. */
   focusField?: MetadataFixField | null;
   onToast?: (message: string, tone: 'success' | 'error' | 'warning') => void;
+  /** 'desk' is the computer page Distribute opens (#1230): every field open in
+   *  three cards, a count and the credits beside them. The steps stay for a phone. */
+  layout?: 'steps' | 'desk';
+  /** Desk only: Done, back to the Distribute checklist. */
+  onDone?: () => void;
 };
 
 export function MetadataSection({
@@ -205,6 +220,8 @@ export function MetadataSection({
   releaseTitle,
   focusField = null,
   onToast,
+  layout = 'steps',
+  onDone,
 }: MetadataSectionProps) {
   // One cached scene covers both endpoints this section reads (metadata +
   // credits), fetched in parallel by the store. Cache-first, so re-opening
@@ -250,13 +267,18 @@ export function MetadataSection({
   // the user is typing. Once they touch a field, the server copy stops being
   // allowed to reseed until the next successful save.
   const isFormDirtyRef = useRef(false);
+  // Whether the form holds the saved values yet. Until it does, nothing is
+  // marked missing on the computer page, so a filled field never flashes red.
+  const formSeededRef = useRef(false);
   const editForm = useCallback((update: (current: MetadataFormState) => MetadataFormState) => {
     isFormDirtyRef.current = true;
+    formSeededRef.current = true;
     setForm(update);
   }, []);
 
   useEffect(() => {
     if (isFormDirtyRef.current || !data) return;
+    formSeededRef.current = true;
     setForm(toFormState(data.metadata));
   }, [data]);
 
@@ -278,6 +300,12 @@ export function MetadataSection({
     element.focus({ preventScroll: true });
     element.scrollIntoView({ block: 'center' });
   }, [focusField, isLoading]);
+
+  // The computer page replaces the checklist it was opened from, so it starts
+  // at the top unless a Fix sent the person to one field (#1230).
+  useEffect(() => {
+    if (layout === 'desk' && !focusField) window.scrollTo({ top: 0 });
+  }, [layout, focusField]);
 
   // --- Credits share link ----------------------------------------------------
   const [isMutatingLink, setIsMutatingLink] = useState(false);
@@ -329,14 +357,14 @@ export function MetadataSection({
     return () => window.clearTimeout(timeout);
   }, [copied]);
 
-  const handleSaveMetadata = async () => {
-    if (isSaving) return;
+  const handleSaveMetadata = async (): Promise<boolean> => {
+    if (isSaving) return false;
     setIsSaving(true);
     try {
       const token = await getAccessToken();
       if (!token) {
         onToast?.('Session expired. Please sign in again.', 'error');
-        return;
+        return false;
       }
       const res = await fetch(`/api/releases/${releaseId}/metadata`, {
         method: 'PATCH',
@@ -349,15 +377,17 @@ export function MetadataSection({
       };
       if (!res.ok) {
         onToast?.(data.error || 'Could not save metadata.', 'error');
-        return;
+        return false;
       }
       const saved = data.metadata ?? null;
       isFormDirtyRef.current = false;
       setForm(toFormState(saved));
       patchScene({ metadata: saved });
       onToast?.('Metadata saved.', 'success');
+      return true;
     } catch (err) {
       onToast?.(err instanceof Error ? err.message : 'Could not save metadata.', 'error');
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -576,6 +606,350 @@ export function MetadataSection({
 
   const answersChipLabel =
     submissions.length > 0 ? `${submissions.length} answer${submissions.length === 1 ? '' : 's'}` : 'No answers yet';
+
+  // ---- The computer page (#1230) ---------------------------------------------
+  // Every field open, grouped the way people think (the song, its codes, who
+  // owns it), with the count and the credits beside them. Same form, same
+  // save, same link and answers as the steps below; only the arrangement.
+  if (layout === 'desk') {
+    // eslint-disable-next-line react-hooks/refs -- read after the seeding render; the setForm that sets it re-renders
+    const missing = new Set<DetailsFieldKey>(isLoading || !formSeededRef.current ? [] : missingRequiredDetails(form));
+    const progress = detailsProgress(form);
+    const set = (key: Exclude<keyof MetadataFormState, 'explicit'>) => (value: string) =>
+      editForm((current) => ({ ...current, [key]: value }));
+    const done = async () => {
+      // Done keeps what was typed: unsaved changes are saved first, and a
+      // failed save keeps the person here with the error.
+      if (isFormDirtyRef.current && !(await handleSaveMetadata())) return;
+      onDone?.();
+    };
+    const checks = splitsChecks(submissions);
+    const fields = (children: React.ReactNode) => <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">{children}</div>;
+    const group = (title: string, children: React.ReactNode) => (
+      <section aria-label={title} className={`${DESK_CARD} p-5`}>
+        <h3 className="mb-3.5 text-[15px] font-semibold text-content-primary">{title}</h3>
+        {children}
+      </section>
+    );
+    const field = (
+      key: Exclude<keyof MetadataFormState, 'explicit' | 'lyrics'>,
+      label: string,
+      options: { note?: string; help?: HelpKey; fieldKey?: MetadataFixField; placeholder?: string } = {}
+    ) => (
+      <DeskField
+        label={label}
+        note={options.note}
+        help={options.help}
+        fieldKey={options.fieldKey}
+        placeholder={options.placeholder}
+        value={form[key]}
+        onChange={set(key)}
+        missingHint={missing.has(key as DetailsFieldKey) ? REQUIRED_DETAILS[key as DetailsFieldKey] : undefined}
+      />
+    );
+
+    const left = loadError && !data ? (
+      <div className={`${DESK_CARD} flex items-center justify-between gap-3 border-status-error/30 bg-status-error/10 p-4`}>
+        <p role="alert" className="text-sm text-status-error">{loadError}</p>
+        <button type="button" onClick={() => void reloadScene()} className={DESK_GHOST}>
+          Retry
+        </button>
+      </div>
+    ) : isLoading ? (
+      <>
+        {[4, 3, 3].map((count, index) => (
+          <div key={index} className={`${DESK_CARD} p-5`}>
+            <SkeletonBlock className="h-4 w-28" />
+            <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3.5">
+              {Array.from({ length: count }, (_, i) => (
+                <div key={i}>
+                  <SkeletonBlock className="h-3 w-20" />
+                  <SkeletonBlock className="mt-2 h-[42px] w-full rounded-[10px]" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </>
+    ) : (
+      <>
+        {loadError ? (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-status-error/30 bg-status-error/10 p-3">
+            <p role="alert" className="text-xs text-status-error">
+              Couldn&rsquo;t refresh this page. Showing what we have. {loadError}
+            </p>
+            <button type="button" onClick={() => void reloadScene()} className={DESK_GHOST}>
+              Retry
+            </button>
+          </div>
+        ) : null}
+        {group(
+          'The song',
+          fields(
+            <>
+              {field('genre', 'Genre', { help: 'metadata.field.genre', fieldKey: 'genre' })}
+              {field('subgenre', 'Subgenre', { help: 'metadata.field.subgenre' })}
+              {field('language', 'Language', { help: 'metadata.field.language', fieldKey: 'language' })}
+              {field('featuredArtists', 'Featured artist', { note: 'If any', fieldKey: 'featured_artists' })}
+              <fieldset className="col-span-2" aria-describedby={missing.has('explicit') ? 'metadata-explicit-hint' : undefined}>
+                <legend className="text-[13px] font-semibold text-content-primary">
+                  Does this song have explicit content (swearing or adult themes)?
+                </legend>
+                <div
+                  className={`mt-1.5 inline-flex items-center gap-1 rounded-[10px] p-1 ${
+                    missing.has('explicit') ? 'border-2 border-status-error' : 'border border-stroke-control'
+                  }`}
+                >
+                  {(
+                    [
+                      [true, 'Yes'],
+                      [false, 'No'],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <label
+                      key={label}
+                      className={`flex h-8 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm ${
+                        form.explicit === value ? 'bg-bg-hover font-semibold text-content-primary' : 'text-content-secondary'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`${explicitGroupName}-explicit-desk`}
+                        id={value ? metadataFieldElementId('explicit') : undefined}
+                        checked={form.explicit === value}
+                        onChange={() => editForm((current) => ({ ...current, explicit: value }))}
+                        className="h-4 w-4 accent-brand"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+                {missing.has('explicit') ? (
+                  <p id="metadata-explicit-hint" className="mt-1.5 text-xs font-semibold text-status-error">
+                    {REQUIRED_DETAILS.explicit}
+                  </p>
+                ) : null}
+              </fieldset>
+              <div className="col-span-2">
+                <label htmlFor={metadataFieldElementId('lyrics')} className="text-[13px] font-semibold text-content-primary">
+                  Lyrics
+                </label>
+                <textarea
+                  id={metadataFieldElementId('lyrics')}
+                  value={form.lyrics}
+                  rows={4}
+                  onChange={(event) => editForm((current) => ({ ...current, lyrics: event.target.value }))}
+                  className={`${DESK_INPUT} ${DESK_INPUT_BORDER} mt-1.5 h-auto resize-y py-2.5 leading-relaxed`}
+                />
+              </div>
+            </>
+          )
+        )}
+        {group(
+          'Codes',
+          fields(
+            <>
+              {field('isrc', 'ISRC', { help: 'metadata.field.isrc' })}
+              {field('upc', 'UPC', { help: 'metadata.field.upc', fieldKey: 'upc' })}
+              {field('iswc', 'ISWC', { help: 'metadata.field.iswc', placeholder: 'T-123456789-1' })}
+            </>
+          )
+        )}
+        {group(
+          'Who owns it',
+          fields(
+            <>
+              {field('labelName', 'Label name', { help: 'metadata.field.labelName' })}
+              {field('pLine', '℗ line', { note: 'The recording', help: 'metadata.field.pLine', placeholder: '℗ 2026 Some Label' })}
+              {field('cLine', '© line', { note: 'The artwork', help: 'metadata.field.cLine', placeholder: '© 2026 Some Label' })}
+            </>
+          )
+        )}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => void handleSaveMetadata()}
+            disabled={isSaving}
+            className="motion-focus motion-press inline-flex h-10 items-center gap-2 rounded-full bg-brand px-5 text-sm font-semibold text-content-inverse transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : null}
+            {isSaving ? 'Saving…' : 'Save details'}
+          </button>
+          <p className="text-[13px] text-content-tertiary">Done saves them too.</p>
+        </div>
+      </>
+    );
+
+    const right = (
+      <div className="sticky top-[136px] flex flex-col gap-4">
+        <section aria-label="How much is filled in" className="flex items-center gap-3 rounded-2xl bg-content-primary px-[18px] py-4 text-content-inverse">
+          <div className="min-w-0 flex-1">
+            {isLoading ? (
+              <>
+                <div className="h-4 w-32 animate-pulse rounded bg-content-inverse/20" />
+                <div className="mt-2 h-3 w-40 animate-pulse rounded bg-content-inverse/15" />
+              </>
+            ) : (
+              <>
+                <p className="font-semibold">
+                  {progress.filled} of {progress.total} filled in
+                </p>
+                <p className="mt-0.5 text-[13px] text-content-inverse/70">{progress.line}</p>
+              </>
+            )}
+          </div>
+          {onDone ? (
+            <button
+              type="button"
+              onClick={() => void done()}
+              disabled={isSaving}
+              className="motion-focus motion-press inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-content-inverse px-4 text-[13px] font-semibold text-content-primary transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : null}
+              Done
+            </button>
+          ) : null}
+        </section>
+
+        <section aria-label="Credits" className={`${DESK_CARD} p-5`}>
+          <h3 id={metadataStepElementId('credits')} tabIndex={-1} className="text-[15px] font-semibold text-content-primary outline-none">
+            Credits
+          </h3>
+          <p className="mt-1 text-[13px] text-content-secondary">
+            Send this link to everyone who worked on the song. Their names and splits land here.
+          </p>
+          {isLoading ? (
+            <SkeletonBlock className="mt-3 h-10 w-full rounded-[10px]" />
+          ) : !link ? (
+            <button
+              type="button"
+              onClick={() => void handleCreateLink()}
+              disabled={isMutatingLink}
+              className="motion-focus motion-press mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+            >
+              {isMutatingLink ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />}
+              {isMutatingLink ? 'Creating…' : 'Create the link'}
+            </button>
+          ) : (
+            <>
+              <div className="mt-3 flex items-center gap-2">
+                <p
+                  title={shareUrl}
+                  className="flex h-10 min-w-0 flex-1 items-center truncate rounded-[10px] border border-stroke-control px-3 text-[13px] text-content-secondary"
+                >
+                  <span className="truncate">{shareUrl.replace(/^https?:\/\//, '')}</span>
+                </p>
+                <button type="button" onClick={() => void handleCopy()} className={DESK_GHOST}>
+                  {copied ? <Check className="h-3.5 w-3.5 text-brand" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
+                  {copied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+              {isLinkClosed ? (
+                <p className="mt-2 text-[12.5px] text-status-warning">This link is closed. No new answers can come in.</p>
+              ) : null}
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px]">
+                <a href={shareUrl} target="_blank" rel="noopener noreferrer" className={DESK_TEXT_BUTTON}>
+                  Open form
+                </a>
+                <button
+                  type="button"
+                  onClick={() => void handleToggleClosed(isLinkClosed ? 'reopen' : 'close')}
+                  disabled={isMutatingLink}
+                  className={DESK_TEXT_BUTTON}
+                >
+                  {isLinkClosed ? 'Reopen link' : 'Close link'}
+                </button>
+                <button type="button" onClick={() => void handleRegenerateLink()} disabled={isMutatingLink} className={DESK_TEXT_BUTTON}>
+                  Make a new link
+                </button>
+              </div>
+            </>
+          )}
+
+          <div id={metadataStepElementId('answers')} tabIndex={-1} className="mt-3.5 outline-none">
+            {isLoading ? null : submissions.length === 0 ? (
+              <p className="border-t border-stroke-default pt-3 text-[13px] text-content-tertiary">
+                {link ? 'No answers yet. They show up here on their own.' : 'Answers show up here once you send the link.'}
+              </p>
+            ) : (
+              <>
+                <ul>
+                  {submissions.map((submission) => (
+                    <li key={submission.id} className="border-t border-stroke-default first:border-t-0">
+                      <details className="group">
+                        <summary className="motion-focus grid cursor-pointer list-none grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-3 py-2.5 [&::-webkit-details-marker]:hidden">
+                          <span
+                            aria-hidden="true"
+                            className="grid h-8 w-8 place-items-center rounded-full bg-bg-hover text-[11px] font-semibold text-content-secondary"
+                          >
+                            {initialsFor(submission.stageName || submission.legalName)}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-medium text-content-primary">
+                              {submission.stageName || submission.legalName}
+                            </span>
+                            <span className="block truncate text-[13px] text-content-secondary">
+                              {creditAnswerLine(
+                                submission.roles.map((role) => RELEASE_CREDIT_ROLE_LABELS[role] || role),
+                                submission
+                              )}
+                            </span>
+                          </span>
+                          <ChevronDown
+                            className="h-4 w-4 shrink-0 text-content-tertiary transition-transform group-open:rotate-180"
+                            aria-hidden="true"
+                          />
+                        </summary>
+                        <div className="pb-3">
+                          <SubmissionCard
+                            submission={submission}
+                            isDeleting={deletingId === submission.id}
+                            onDelete={() => void handleDeleteSubmission(submission.id, submission.legalName)}
+                          />
+                        </div>
+                      </details>
+                    </li>
+                  ))}
+                </ul>
+                {checks.map((check) => (
+                  <div
+                    key={check.label}
+                    className="mt-2.5 flex justify-between gap-3 border-t border-stroke-default pt-2.5 text-[13px] text-content-secondary"
+                  >
+                    <span>{check.label}</span>
+                    <span
+                      className={`font-semibold ${
+                        !check.off ? 'text-brand' : splitsLeft ? 'text-content-secondary' : 'text-status-warning'
+                      }`}
+                    >
+                      {check.value}
+                    </span>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => void handleExportCsv()}
+                  disabled={isExporting}
+                  className={`${DESK_TEXT_BUTTON} mt-3 inline-flex items-center gap-1.5 text-[12.5px]`}
+                >
+                  {isExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Download className="h-3.5 w-3.5" aria-hidden="true" />}
+                  {isExporting ? 'Building…' : 'Download as spreadsheet'}
+                </button>
+                <CreditClaimInvites releaseId={releaseId} refreshKey={submissions.length} />
+              </>
+            )}
+          </div>
+        </section>
+      </div>
+    );
+
+    return (
+      <div className="mt-5">
+        <DeskColumns left={left} right={right} />
+      </div>
+    );
+  }
+
 
   return (
     <div className="mt-8 space-y-4">
@@ -1074,6 +1448,79 @@ export function MetadataSection({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ---- The computer page's pieces (#1230) ------------------------------------
+
+// No border colour here: each use picks one, so a red outline never loses to the grey.
+const DESK_INPUT =
+  'w-full rounded-[10px] bg-bg-base text-sm text-content-primary placeholder:text-content-tertiary outline-none';
+const DESK_INPUT_BORDER = 'border border-stroke-control px-3 focus:border-brand';
+const DESK_GHOST =
+  'motion-focus motion-press inline-flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-stroke-strong px-3.5 text-[13px] font-semibold text-content-primary transition-colors hover:bg-bg-hover';
+const DESK_TEXT_BUTTON =
+  'motion-focus font-semibold text-content-secondary underline-offset-[3px] hover:text-content-primary hover:underline disabled:opacity-60';
+
+/** One box on the computer page: its name, a plain note on what it is, and a
+ *  red outline with where to get it when the store check needs it. */
+function DeskField({
+  label,
+  note,
+  value,
+  onChange,
+  placeholder,
+  help,
+  fieldKey,
+  missingHint,
+}: {
+  label: string;
+  note?: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  help?: HelpKey;
+  fieldKey?: MetadataFixField;
+  missingHint?: string;
+}) {
+  const generatedId = useId();
+  const inputId = fieldKey ? metadataFieldElementId(fieldKey) : generatedId;
+  const hintId = `${inputId}-hint`;
+  const missingId = `${inputId}-missing`;
+  const helpText = help ? HELP_COPY[help].text : null;
+  const describedBy = [missingHint ? missingId : null, helpText ? hintId : null].filter(Boolean).join(' ') || undefined;
+  return (
+    <div className="min-w-0">
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-1">
+          <label htmlFor={inputId} className="truncate text-[13px] font-semibold text-content-primary">
+            {label}
+          </label>
+          {help ? <HelpTip helpKey={help} /> : null}
+        </span>
+        {note ? <span className="shrink-0 text-[13px] text-content-tertiary">{note}</span> : null}
+      </div>
+      <input
+        id={inputId}
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        aria-invalid={missingHint ? true : undefined}
+        aria-describedby={describedBy}
+        onChange={(event) => onChange(event.target.value)}
+        className={`${DESK_INPUT} h-[42px] ${missingHint ? 'border-2 border-status-error px-[11px]' : DESK_INPUT_BORDER}`}
+      />
+      {missingHint ? (
+        <p id={missingId} className="mt-1.5 text-xs font-semibold text-status-error">
+          {missingHint}
+        </p>
+      ) : null}
+      {helpText ? (
+        <p id={hintId} className="sr-only">
+          {helpText}
+        </p>
+      ) : null}
     </div>
   );
 }

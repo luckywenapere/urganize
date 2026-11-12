@@ -8,7 +8,9 @@ import {
   briefProgress,
   momentsTrack,
   BOARD_COLUMNS,
+  BOARD_QUARTER,
   boardPhoneOrder,
+  coverTitleFontSize,
   boardPlacements,
   type BoardCardKey,
   normalizeHex,
@@ -171,15 +173,44 @@ describe('board layout', () => {
     }
   });
 
+  it('lays the whole board on four columns (#1230)', () => {
+    const placed = boardPlacements(all);
+    for (const spot of Object.values(placed)) {
+      expect((spot.x - 1) % BOARD_QUARTER).toBe(0);
+      expect(spot.w % BOARD_QUARTER).toBe(0);
+    }
+    // The cover takes the first column, two rows down; the countdown and the
+    // idea sit beside it, then how it feels, the colours and the people.
+    expect(placed.cover).toEqual({ x: 1, y: 1, w: 3, h: 2 });
+    expect(placed.countdown).toEqual({ x: 4, y: 1, w: 3, h: 1 });
+    expect(placed.idea).toEqual({ x: 7, y: 1, w: 6, h: 1 });
+    expect([placed.feels, placed.palette, placed.people]).toEqual([
+      { x: 4, y: 2, w: 3, h: 1 },
+      { x: 7, y: 2, w: 3, h: 1 },
+      { x: 10, y: 2, w: 3, h: 1 },
+    ]);
+    // Sound beside the look; the moments line across the board.
+    expect(placed.sound).toEqual({ x: 1, y: 3, w: 6, h: 1 });
+    expect(placed.look).toEqual({ x: 7, y: 3, w: 6, h: 1 });
+    expect(placed.moments?.w).toBe(BOARD_COLUMNS);
+  });
+
   it('places only the cards that are there, and closes the gaps they leave', () => {
     const without = boardPlacements(new Set<BoardCardKey>(['cover', 'idea', 'countdown', 'moments', 'people']));
     expect(Object.keys(without).sort()).toEqual(['countdown', 'cover', 'idea', 'moments', 'people']);
-    // No side card: who's on what takes the full width.
-    expect(without.people?.w).toBe(BOARD_COLUMNS);
+    // No feels or colours: the people take the rest of the row beside the cover.
+    expect(without.people).toEqual({ x: 4, y: 2, w: 9, h: 1 });
     // No rows left empty between the top and the moments line.
     const rows = new Set(Object.values(without).flatMap((spot) => Array.from({ length: spot.h }, (_, i) => spot.y + i)));
     const max = Math.max(...rows);
     for (let y = 1; y <= max; y += 1) expect(rows.has(y)).toBe(true);
+  });
+
+  it('spreads the top rows across the board when there is no cover', () => {
+    const placed = boardPlacements(new Set<BoardCardKey>(['idea', 'countdown', 'feels', 'palette', 'people']));
+    expect(placed.countdown).toEqual({ x: 1, y: 1, w: 3, h: 1 });
+    expect(placed.idea).toEqual({ x: 4, y: 1, w: 9, h: 1 });
+    expect(placed.people!.x + placed.people!.w - 1).toBe(BOARD_COLUMNS);
   });
 
   it('reads top to bottom on a phone: the record, where we are, the idea, then the look', () => {
@@ -237,5 +268,21 @@ describe('feelFromModel', () => {
 
   it('keeps a headline to its first line', () => {
     expect(feelFromModel({ headline: 'First line\nSecond line' }).headline).toBe('First line');
+  });
+});
+
+describe('coverTitleFontSize', () => {
+  it('sizes the title so its longest word fits across the cover', () => {
+    expect(coverTitleFontSize('Owambe Season')).toBe('clamp(18px, calc(100cqw / 3.60), 40px)');
+  });
+
+  it('goes smaller for a longer word, and caps a long title lower', () => {
+    expect(coverTitleFontSize('Supercalifragilistic')).toBe('clamp(18px, calc(100cqw / 12.00), 40px)');
+    expect(coverTitleFontSize('A song with a very long name for a cover')).toBe('clamp(18px, calc(100cqw / 3.00), 30px)');
+  });
+
+  it('counts letters, not bytes, and copes with an empty title', () => {
+    expect(coverTitleFontSize('Àṣà')).toBe('clamp(18px, calc(100cqw / 1.80), 40px)');
+    expect(coverTitleFontSize('  ')).toBe('clamp(18px, calc(100cqw / 0.60), 40px)');
   });
 });
