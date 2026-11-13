@@ -16,6 +16,7 @@ import { isCardTrialEnabled } from '@/lib/trial-card';
 import { isCreditsEnabled } from '@/lib/credits/config';
 import { isCancelFlowEnabled } from '@/lib/cancel-flow';
 import { READ_ONLY_REACTIVATE_HREF } from '@/lib/team-billing';
+import { CardTrialBillingCard } from './CardTrialBillingCard';
 import { feedbackErrorClass } from './feedback';
 import { getAccessToken } from './getAccessToken';
 import { panelClass } from './panelClass';
@@ -291,6 +292,8 @@ export function BillingSection({ variant = 'panel' }: { variant?: 'panel' | 'des
   return (
     <section className={frameClass}>
       {heading}
+      {/* A card Bachs holds (customers abroad, #1266). Nothing for anyone else. */}
+      <CardTrialBillingCard />
       {/* Flat, no card box. Two reasons, and they point the same way: panelClass
           records the founder call that boxed sections read as "plastic" and the
           page is now flat regions divided by hairlines — and a box here actively

@@ -1,4 +1,4 @@
-import { INTERVAL_MONTHS, type BillingInterval } from '@urganize/pricing';
+import { INTERVAL_MONTHS, usdCentsToKoboEquivalent, type BillingInterval } from '@urganize/pricing';
 
 // The admin margin view's arithmetic (founder, 2026-10-22). Pure, every number
 // kobo, so the page and the tests read one set of rules. Estimates, labelled as
@@ -34,17 +34,32 @@ const CARD_CAP_KOBO = 2_000_00; // ₦2,000
 const TRANSFER_PERCENT_BPS = 100; // 1%
 const TRANSFER_CAP_KOBO = 300_00; // ₦300
 const BACHS_PERCENT_BPS = 500; // 5%
+const BACHS_DOLLAR_CARD_BPS = 650; // 5% + 1.5% for a card issued outside the US
+const BACHS_DOLLAR_CARD_FLAT_CENTS = 40; // $0.40 a payment
 
 /** Paystack's fee on one payment, kobo, from its published local price.
  *  'other' is priced as a card, the dearer of the two, so the estimate never
  *  flatters the margin. */
-export function estimatePaystackFeeKobo(amountKobo: number, channel: PaymentChannel): number {
+export function estimatePaystackFeeKobo(
+  amountKobo: number,
+  channel: PaymentChannel,
+  options: { dollars?: boolean } = {}
+): number {
   const amount = Math.max(0, Math.round(Number(amountKobo) || 0));
   if (amount === 0 || channel === 'direct_transfer') return 0;
   // Bachs (2026-11-01): the fee depends on how they paid (Naira card 2%,
-  // transfer 1.5% capped at ₦2,000, mobile money 2 to 3%, dollar card 5% +
-  // 40c, crypto 1.5%). Priced at 5%, the dearest, so the estimate never
+  // transfer 1.5% capped at ₦2,000, mobile money 2 to 3%, crypto 1.5%). A
+  // Naira payment is priced at 5%, above all of those, so the estimate never
   // flatters the margin.
+  //
+  // A dollar card (2026-11-14, #1266; docs.bachs.io/for-you/fees) is 5% +
+  // $0.40, plus 1.5% when the card was issued outside the US. We assume it
+  // was: 6.5% + $0.40, the cautious side. The books are in kobo, so the 40
+  // cents is converted. It is charged once a payment; marginRow spreads it
+  // over the months the payment covers.
+  if (channel === 'bachs' && options.dollars) {
+    return Math.round((amount * BACHS_DOLLAR_CARD_BPS) / 10_000) + usdCentsToKoboEquivalent(BACHS_DOLLAR_CARD_FLAT_CENTS);
+  }
   if (channel === 'bachs') return Math.round((amount * BACHS_PERCENT_BPS) / 10_000);
   if (channel === 'transfer') {
     return Math.min(TRANSFER_CAP_KOBO, Math.round((amount * TRANSFER_PERCENT_BPS) / 10_000));
@@ -73,6 +88,8 @@ export type MarginTeamInput = {
   plan: string;
   interval: BillingInterval;
   channel: PaymentChannel;
+  /** Paid in US dollars (a dollar card through Bachs). Unset means Naira. */
+  dollars?: boolean;
   /** How the team came in (workspaces.acquisition_path: self_serve,
    *  concierge, legacy), null when unknown. */
   path: string | null;
@@ -97,7 +114,7 @@ export type MarginTeamRow = MarginTeamInput & {
 export function marginRow(input: MarginTeamInput, creditCostKobo: number): MarginTeamRow {
   const months = INTERVAL_MONTHS[input.interval].covers;
   const cash = Math.round(input.periodAmountKobo / months);
-  const fee = Math.round(estimatePaystackFeeKobo(input.periodAmountKobo, input.channel) / months);
+  const fee = Math.round(estimatePaystackFeeKobo(input.periodAmountKobo, input.channel, { dollars: input.dollars }) / months);
   const credits = Math.round(Math.max(0, input.creditsUsed) * creditCostKobo);
   const contribution = cash - fee - input.trmOwedMonthKobo - credits;
   return {

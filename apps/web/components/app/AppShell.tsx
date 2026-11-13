@@ -18,6 +18,7 @@ import { ToastProvider } from '@/components/shared/ToastProvider';
 import { buildCreatedRolloutIntake } from '@/lib/release-draft-discard';
 import { ChunkRecoveryBridge } from '@/components/providers/ChunkRecoveryBridge';
 import { CardTrialGate } from '@/components/providers/CardTrialGate';
+import { AddCardGate } from '@/components/providers/AddCardGate';
 import { HardPaywallGate } from '@/components/providers/HardPaywallGate';
 import { NativePushBridge } from '@/components/providers/NativePushBridge';
 import { NativeShareBridge } from '@/components/providers/NativeShareBridge';
@@ -240,6 +241,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     // working on credits.
     pathname?.startsWith('/locked/') ||
     pathname === '/start-trial' ||
+    // Card trial for customers abroad (#1266): the add-a-card page.
+    pathname === '/add-card' ||
     // Self-serve checkout and its welcome page (2026-10-22): a held account
     // pays here, so no app chrome and no gates.
     pathname?.startsWith('/checkout') ||
@@ -485,6 +488,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         the moment it reaches app chrome. Renders nothing; a no-op while
         NEXT_PUBLIC_FEATURE_CARD_TRIAL is off. */}
     <CardTrialGate />
+    {/* Card trial for customers abroad (#1266): sends a new owner outside
+        Nigeria to /add-card until a card is in. Renders nothing, and does
+        nothing until Bachs has card trials on for us. */}
+    <AddCardGate />
     {/* Team wall's in-session half: routes a walled team to /locked whenever
         they reach app chrome, so a trial lapsing mid-session (or a Back
         navigation off the wall) does not leave anyone working inside a walled

@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.284.0",
+    title: "Free days with a card, outside Nigeria",
+    tag: "Account",
+    date: "November 14, 2026",
+    highlights: [
+      "If you pay in dollars, you now add a card to start your 3 free days. You pay nothing until they end, and we email you the day before.",
+      "You can cancel or change your card any time in Settings. Cancel before the free days end and you are never charged.",
+    ],
+  },
+  {
     version: "1.283.0",
     title: "3 days free when you join",
     tag: "Account",

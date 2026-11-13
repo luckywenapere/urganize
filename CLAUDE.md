@@ -580,3 +580,64 @@ Founder ask: the Assistant tab is one chat that never resets, and a brief waits 
 - **Schedule:** pg_cron `urganize-morning-briefs` hits `/api/cron/morning-briefs` every 10 minutes 07:00 to 08:50 UTC (8am Lagos), using the Vault secrets `urganize_app_url` and `urganize_cron_secret`. The Vercel cron slots are full. Kill switch: `MORNING_BRIEFS=off`.
 - **Off switch for a person:** Settings, Notifications, "Morning brief".
 - Migration `20261111120000_one_assistant_chat_and_morning_brief.sql` applied 2026-11-11; the chats were backed up first to `backup_urgans_conversations_20261111` (31 rows).
+
+---
+
+## Card trial for customers abroad (2026-11-14, v1.284.0, #1266)
+
+Someone paying in US dollars adds a card on Bachs's page to start their 3 free
+days. Bachs saves the card, charges it when the trial ends, and renews it after
+that. Cancel before the end and the card is never charged. Customers in Nigeria
+keep the trial with no card: Bachs can only renew dollar cards. Mock:
+`docs/mocks/card-trial-abroad/mock.html`.
+
+**No feature flag.** Bachs keeps subscriptions and trials off until its support
+turns them on for an account (asked for by email, 2026-11-14). Until then
+`isCardTrialAvailable` answers no and everyone gets the no-card trial. A yes is
+kept for good in `app_settings` (`bachs_card_trial`); a no is asked again after
+an hour. So it turns itself on the day Bachs does.
+
+- **Rules:** `lib/bachs-trial.ts` (pure, tested). **Bachs and the database:**
+  `lib/bachs-trial-server.ts`. Nothing believes a webhook or a redirect: every
+  write first asks Bachs for the subscription.
+- **Tables** (migration `20261114100000_bachs_card_trial.sql`, applied to
+  production 2026-11-14): `bachs_products` (one Bachs product per plan, period,
+  price and trial length, made the first time it is needed),
+  `bachs_subscriptions` (one row per card trial, first the checkout, then the
+  subscription), `bachs_subscription_invoices` (the invoice id is the lock that
+  applies a paid period once). RLS on, no policies.
+- **Routes:** `POST/GET /api/billing/bachs/trial`, `POST .../cancel`,
+  `POST .../portal` (Bachs's own page for changing the card; the link is never
+  stored or logged). The Bachs webhook now also reads `customer.subscription.*`
+  and `invoice.*`.
+- **The gate:** `/api/subscription-status` returns `addCardRequired`
+  (`resolveCardTrialOwed`): outside Nigeria, card trials available, account made
+  on or after `CARD_TRIAL_SIGNUP_CUTOFF`, sign-up finished, owns its team, never
+  paid, no card yet. `AddCardGate` sends such an account to `/add-card`. Every
+  doubt answers no. Never in the iPhone app.
+- **A paid invoice** is applied with `applyTransferPeriod` to the period end
+  Bachs gives, channel `bachs`. The renewal-reminder sweep skips anyone whose
+  card Bachs charges by itself.
+- **The team stays open one extra day past the trial end** while the card is
+  being charged (`teamTrialEndFor`), or it would meet the billing wall in the
+  gap before Bachs's webhook arrives. A cancelled trial ends on the day.
+- **The reminder** goes the day before the first charge, once
+  (`card_trial_reminder`, transactional, from the morning cron).
+
+**Three things differ from the first plan, on purpose:** the page is `/add-card`
+and the gate is `AddCardGate`, new, beside the retired Paystack funnel
+(`/start-trial`, `CardTrialGate`, `lib/trial-card.ts`), which is untouched;
+coming back from the card page lands on `/add-card?reference=`, not
+`/payment/callback`; and nothing is written to `subscriptions` during the free
+days (only when money arrives), so a trialing account never counts as paying.
+Settings does not show the card's last four digits: Bachs holds the card.
+
+**Also in this change:** the margin page prices a dollar card through Bachs at
+6.5% plus 40 cents (was a flat 5%), per docs.bachs.io/for-you/fees.
+
+**Not verified: nothing has run against Bachs.** No Bachs key is on the build
+machine and card trials are not on for our account yet, so the product, the
+card page, the webhooks, cancel, the card page link and the reminder have never
+run for real. Card changes in Bachs's customer page are off by default and must
+be switched on in the Bachs dashboard. An account still waiting to be let in
+(closed sign-up) is not let in by adding a card.

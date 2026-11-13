@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Card trial abroad</title>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme. */
+  :root {
+    --bg:#f5f0e6; --card:#faf5ec; --tile:#e3ddd0; --side-on:#e6e1d6;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --err:#961a1a; --err-soft:rgba(150,26,26,.08); --ink:#1d2a21; --on-ink:#f5f0e6;
+    --board:#d9d5cc; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/20px 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--text); padding:40px 16px 72px; font-variant-numeric:tabular-nums; }
+  p,h1,h2,h3 { margin:0; }
+  .serif { font-family:'Young Serif', serif; font-weight:400; letter-spacing:0; }
+  .sec { color:var(--sec); } .ter { color:var(--ter); }
+  .wrap { max-width:1240px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; line-height:36px; }
+  .intro p { color:var(--board-sec); max-width:760px; margin-top:8px; }
+  .label { font-size:12px; line-height:16px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin:40px 0 8px; }
+  .row { display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; }
+  .note { max-width:300px; color:var(--board-sec); font-size:13px; line-height:19px; }
+  .note b { color:var(--text); }
+
+  /* Phone frame */
+  .phone { width:375px; min-height:700px; background:var(--bg); border-radius:28px; overflow:hidden; box-shadow:0 12px 32px rgba(26,22,17,.12); display:flex; flex-direction:column; }
+  .status { height:40px; display:flex; justify-content:space-between; align-items:center; padding:0 22px; font-weight:600; font-size:13px; }
+  .scr { padding:8px 20px 24px; display:flex; flex-direction:column; gap:16px; flex:1; }
+  .scr.dim { background:rgba(26,22,17,.35); justify-content:flex-end; padding:0; }
+  .sheet { background:var(--bg); border-radius:20px 20px 0 0; padding:12px 20px 28px; display:flex; flex-direction:column; gap:14px; }
+  .grab { width:40px; height:4px; border-radius:2px; background:var(--line2); margin:0 auto 6px; }
+  h2.t { font-family:'Young Serif', serif; font-weight:400; font-size:24px; line-height:30px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+  .kv { display:flex; justify-content:space-between; gap:12px; }
+  .kv span:first-child { color:var(--sec); }
+  .kv span:last-child { font-weight:600; text-align:right; }
+  .rule { height:1px; background:var(--line); }
+  .btn { display:flex; align-items:center; justify-content:center; height:48px; border-radius:99px; font-weight:600; font-size:15px; }
+  .btn.main { background:var(--ink); color:var(--on-ink); }
+  .btn.ghost { border:1px solid var(--line2); color:var(--text); font-weight:500; }
+  .btn.danger { background:var(--err); color:#fff; }
+  .small { font-size:13px; line-height:18px; color:var(--ter); text-align:center; }
+  .link { color:var(--brand); font-weight:600; text-decoration:underline; text-underline-offset:2px; }
+  .check { display:flex; gap:10px; align-items:flex-start; }
+  .check i { width:20px; height:20px; border-radius:50%; background:var(--brand-soft); color:var(--brand); display:grid; place-items:center; font-style:normal; font-size:12px; flex:none; margin-top:1px; }
+  .steps { display:flex; gap:8px; }
+  .steps div { flex:1; border-top:3px solid var(--line2); padding-top:6px; font-size:12px; line-height:16px; color:var(--ter); }
+  .steps div.on { border-color:var(--brand); color:var(--text); font-weight:600; }
+  .pill { display:inline-flex; align-self:flex-start; padding:2px 10px; border-radius:99px; background:var(--brand-soft); color:var(--brand); font-size:12px; font-weight:700; }
+  .bachs { background:#fff; }
+  .bachs .scr { gap:14px; }
+  .field { height:46px; border:1px solid #c9c4ba; border-radius:10px; display:flex; align-items:center; padding:0 14px; color:#6a665f; }
+  .split { display:flex; gap:10px; } .split .field { flex:1; }
+  .bk { display:flex; align-items:center; gap:8px; font-weight:700; }
+  .bk span { width:22px; height:22px; border-radius:6px; background:#222; }
+</style></head><body><div class="wrap">
+
+<div class="intro">
+  <h1>Card trial, for customers abroad</h1>
+  <p>Anyone paying in dollars adds a card to start their 3 free days. On day 4 the card is charged unless they cancel. Customers in Nigeria keep today's no-card 3-day trial. Example below: Solo Plus at $19 a month, joined 13 November.</p>
+</div>
+
+<div class="label">1. Right after onboarding, abroad only</div>
+<div class="row">
+  <div class="phone"><div class="status"><span>9:41</span><span>5G</span></div><div class="scr">
+    <div class="steps"><div class="on">Your plan</div><div>Add a card</div><div>Start</div></div>
+    <h2 class="t">Try Solo Plus free for 3 days</h2>
+    <p class="sec">Add a card to start. You pay nothing today.</p>
+    <div class="card">
+      <div class="kv"><span>Plan</span><span>Solo Plus</span></div>
+      <div class="kv"><span>Today</span><span>$0</span></div>
+      <div class="kv"><span>From 16 November</span><span>$19 a month</span></div>
+      <div class="rule"></div>
+      <div class="check"><i>✓</i><span>We email you a day before we charge.</span></div>
+      <div class="check"><i>✓</i><span>Cancel any time in Settings, in two taps.</span></div>
+    </div>
+    <a class="link" style="font-size:13px">Change plan</a>
+    <div style="flex:1"></div>
+    <div class="btn main">Add card and start free</div>
+    <p class="small">Your card is handled by Bachs, our payment partner. We never see the number.</p>
+  </div></div>
+  <p class="note"><b>Why a card:</b> people who add one are far more likely to stay and pay. <b>Nigeria:</b> this screen never shows; they get the usual "Your 3-day trial is on" sheet with no card.</p>
+</div>
+
+<div class="label">2. The card page (Bachs)</div>
+<div class="row">
+  <div class="phone bachs"><div class="status"><span>9:41</span><span>5G</span></div><div class="scr">
+    <div class="bk"><span></span>Bachs</div>
+    <p style="font-weight:600;font-size:16px">Urganize · Solo Plus</p>
+    <p class="sec">$0.00 today, then $19.00 a month from 16 Nov</p>
+    <div class="field">Card number</div>
+    <div class="split"><div class="field">MM / YY</div><div class="field">CVC</div></div>
+    <div class="field">Name on card</div>
+    <div style="flex:1"></div>
+    <div class="btn" style="background:#222;color:#fff">Start trial</div>
+  </div></div>
+  <p class="note">Their page, not ours. We only send the plan, the price and the trial length, then bring them back.</p>
+</div>
+
+<div class="label">3. Back in the app</div>
+<div class="row">
+  <div class="phone"><div class="status"><span>9:41</span><span>5G</span></div><div class="scr dim">
+    <div class="sheet"><div class="grab"></div>
+      <span class="pill">Trial on</span>
+      <h2 class="t">You have 3 days free</h2>
+      <p class="sec">Your first $19 is on 16 November. We will remind you the day before.</p>
+      <div class="btn main">Start my first rollout</div>
+    </div>
+  </div></div>
+  <p class="note">If the card fails, they land back on screen 1 with "That card did not go through. Try another card." and stay on the free trial page until one works.</p>
+</div>
+
+<div class="label">4. Settings, Account, Billing</div>
+<div class="row">
+  <div class="phone"><div class="status"><span>9:41</span><span>5G</span></div><div class="scr">
+    <h2 class="t">Billing</h2>
+    <div class="card">
+      <span class="pill">Free trial</span>
+      <div class="kv"><span>Plan</span><span>Solo Plus</span></div>
+      <div class="kv"><span>Trial ends</span><span>16 November</span></div>
+      <div class="kv"><span>Then</span><span>$19 a month</span></div>
+      <div class="kv"><span>Card</span><span>Visa ending 4242</span></div>
+    </div>
+    <div class="btn ghost">Change card</div>
+    <div class="btn ghost">Cancel trial</div>
+  </div></div>
+</div>
+
+<div class="label">5. Cancel</div>
+<div class="row">
+  <div class="phone"><div class="status"><span>9:41</span><span>5G</span></div><div class="scr dim">
+    <div class="sheet"><div class="grab"></div>
+      <h2 class="t">Cancel your trial?</h2>
+      <p class="sec">We will not charge your card. You keep everything until 16 November, then your rollouts are kept but read only.</p>
+      <div class="btn danger">Cancel trial</div>
+      <div class="btn ghost">Keep my trial</div>
+    </div>
+  </div></div>
+  <p class="note">After cancelling, Billing shows "Trial ends 16 November. You will not be charged." with a "Pick a plan" button.</p>
+</div>
+
+<div class="label">6. Reminder email, the day before</div>
+<div class="row">
+  <div class="phone"><div class="status"><span>9:41</span><span>5G</span></div><div class="scr">
+    <p class="ter" style="font-size:12px">From Wena via Urganize</p>
+    <p style="font-weight:600">Your trial ends tomorrow</p>
+    <div class="rule"></div>
+    <p>Hey Ada,</p>
+    <p>Your free days end tomorrow, 16 November. We will charge $19 to your Visa ending 4242 and Solo Plus carries on.</p>
+    <p>Want to stop? <span class="link">Cancel here</span>, it takes a second.</p>
+    <p>Wena<br><span class="ter">Founder, Urganize</span></p>
+  </div></div>
+</div>
+
+</div></body></html>

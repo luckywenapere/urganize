@@ -17,6 +17,7 @@ const SAFE_PATHS = new Set([
   '/invite',
   '/redeem',
   '/start-trial',
+  '/add-card',
   // Self-serve checkout (2026-10-22): paying is how a held account gets in.
   '/checkout',
   // Closed sign-up's invite link page (/start/<code>), 2026-10-15.
