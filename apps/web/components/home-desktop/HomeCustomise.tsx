@@ -2,14 +2,15 @@
 
 // Customise Home (#1182, mock docs/mocks/home-tighter, note 9): drag a block to
 // move it, Remove to hide it, add it back from "Add to Home", Reset, Done.
-// The rules are lib/home-desktop/layout.ts; nothing is saved until Done.
+// The rules are lib/home-desktop/layout.ts; nothing is saved until Done, or
+// until Home is pressed in the top menu, which saves the same way (#1254).
 //
 // Keyboard: every block's handle is a button. With it focused, the up and down
 // arrow keys move the block one place (Home and End send it to the top or the
 // bottom), and the move is read out. The list is one flat grid keyed by block,
 // so a block keeps focus while it moves.
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { GripVertical, Plus } from '@/components/icons';
 import {
   DEFAULT_HOME_LAYOUT,
@@ -24,6 +25,7 @@ import {
   type HomeBlockId,
   type HomeLayout,
 } from '@/lib/home-desktop/layout';
+import { registerHomeEditSave } from '@/lib/home-desktop/edit-save';
 
 const GHOST =
   'motion-focus motion-press inline-flex h-9 items-center rounded-full border border-stroke-control px-4 text-[13px] font-medium text-content-primary hover:bg-bg-hover disabled:opacity-50';
@@ -74,7 +76,8 @@ export function HomeCustomise({
     move(id, to);
   };
 
-  const done = async () => {
+  const done = useCallback(async () => {
+    if (saving) return;
     setSaving(true);
     const ok = await onDone(draft);
     // On success the parent closes this mode; on failure it stays to say so.
@@ -82,7 +85,10 @@ export function HomeCustomise({
       setSaving(false);
       setFailed(true);
     }
-  };
+  }, [draft, onDone, saving]);
+
+  // Pressing Home in the top menu saves too (#1254), the same as Done.
+  useEffect(() => registerHomeEditSave(() => void done()), [done]);
 
   return (
     <div data-home-customise>

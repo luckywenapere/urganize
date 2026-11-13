@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.278.1",
+    tag: "App",
+    date: "November 13, 2026",
+    listed: false,
+    highlights: [
+      "Changing your Home layout on a computer? Pressing Home in the top menu now saves it too, just like Done.",
+    ],
+  },
+  {
     version: "1.278.0",
     title: "Try the assistant without a plan",
     tag: "Account",

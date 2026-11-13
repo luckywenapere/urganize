@@ -3,6 +3,7 @@
 import { hasPullReveal, revealListSearch } from '@/components/shared/PullReveal';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import type { MouseEvent } from 'react';
 import { Logo } from '@urganize/ui';
 import { Search } from '@/components/icons';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
@@ -10,6 +11,7 @@ import { AvatarFace } from '@/components/shell/swipe/AvatarMenu';
 import { SETTINGS_PAGE_HREF } from '@/lib/swipe-nav';
 import { useSettingsPageStore } from '@/stores/useSettingsPageStore';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
+import { saveHomeEdit } from '@/lib/home-desktop/edit-save';
 import { activeShellArea, topBarAreas } from '@/lib/shell-nav';
 import { useShellAreas } from './useShellAreas';
 import { useShellStore } from '@/stores/useShellStore';
@@ -96,6 +98,14 @@ export function TopNav() {
   const openCommand = useShellStore((state) => state.openCommand);
   const tip = useNavTip();
   useArtistFilterSync();
+  // While Customise Home is open, pressing Home saves the layout, the same as
+  // Done (#1254). The link is not followed then, so the editor is not torn down
+  // mid-save; with no editor open this does nothing and the link works as ever.
+  const pressHome = (event: MouseEvent) => {
+    // A press that opens a new tab or window is left alone.
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    if (saveHomeEdit()) event.preventDefault();
+  };
 
   return (
     <header data-shell-topbar className="shell-band sticky top-0 z-30 pt-[env(safe-area-inset-top,0px)]">
@@ -119,6 +129,7 @@ export function TopNav() {
           <Link
             href="/dashboard"
             aria-label="Urganize, Artists"
+            onClick={pressHome}
             className="motion-focus inline-flex rounded-md transition-opacity hover:opacity-80"
           >
             <Logo size="sm" priority className="opacity-95" />
@@ -136,7 +147,14 @@ export function TopNav() {
                 key={area.key}
                 href={area.href}
                 {...tip.bind(area.key)}
-                onClick={area.key === 'catalogue' ? leaveReleaseForCatalog : undefined}
+                onClick={
+                  area.key === 'catalogue'
+                    ? (event) => {
+                        leaveReleaseForCatalog();
+                        pressHome(event);
+                      }
+                    : undefined
+                }
                 aria-current={isActive ? 'page' : undefined}
                 data-tour={area.key === 'catalogue' ? 'nav-catalog' : `shell-${area.key}`}
                 className={`motion-focus motion-press inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-2.5 text-sm font-medium transition-[color,background-color,opacity] xl:px-3.5 ${
