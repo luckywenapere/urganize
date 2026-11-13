@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.282.0",
+    title: "One plan when you pay",
+    tag: "Account",
+    date: "November 13, 2026",
+    highlights: [
+      "When it is time to pick a plan, you now see the one that fits your team, with one price and one button.",
+      "It says why it fits: how many artists and people you have, and the room the plan gives you.",
+      "Want a different one? See all plans is right under it.",
+    ],
+  },
+  {
     version: "1.281.0",
     title: "Task details on a computer",
     tag: "Rollouts",

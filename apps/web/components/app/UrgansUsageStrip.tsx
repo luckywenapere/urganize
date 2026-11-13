@@ -40,7 +40,7 @@ export function UrgansUsageStrip() {
           {isCreditsPurchasable() ? 'Buy credits' : 'History'}
         </Link>
         <Link
-          href="/locked?intent=upgrade"
+          href="/locked?intent=upgrade&need=urgans_monthly_actions"
           className="shrink-0 text-sm font-medium text-brand underline-offset-4 hover:underline"
         >
           See plans
@@ -67,7 +67,7 @@ export function UrgansUsageStrip() {
           : 'They reset on your billing day.'}
       </p>
       <Link
-        href="/locked?intent=upgrade"
+        href="/locked?intent=upgrade&need=urgans_monthly_actions"
         className="shrink-0 text-sm font-medium text-brand underline-offset-4 hover:underline"
       >
         See plans

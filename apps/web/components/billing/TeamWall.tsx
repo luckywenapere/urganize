@@ -48,6 +48,8 @@ import {
   wallStatTiles,
   type WallSummaryCounts,
 } from '@/lib/wall-summary';
+import { isWallNeed, pickWallPlan, wallPlanBadge, wallPlanReason } from '@/lib/wall-plan';
+import { isOnboardingPersona } from '@/lib/onboarding';
 
 // The wall (NEXT_PUBLIC_FEATURE_HARD_PAYWALL). Rendered by /locked when the
 // flag is on; the flag-off page is untouched beside it.
@@ -139,10 +141,13 @@ export function TeamWall() {
   // The plan picked on onboarding's paywall (URG-251 Part 3) opens selected
   // here when the trial ends. Read after mount (localStorage). effectiveTier
   // below still falls back if that tier is not purchasable here.
+  // Also the starting point for the one plan the wall shows (#1258).
+  const [paywallChoiceTier, setPaywallChoiceTier] = useState<PricingTierId | null>(null);
   useEffect(() => {
     const choice = readPaywallPlanChoice();
     if (!choice) return;
     setSelectedTier(choice.tier);
+    setPaywallChoiceTier(choice.tier);
     // A 6-month choice saved before 2026-10-26 opens on monthly instead.
     setSelectedInterval(isSellableInterval(choice.interval) ? choice.interval : DEFAULT_SELLING_INTERVAL);
   }, []);
@@ -156,6 +161,11 @@ export function TeamWall() {
   // What is already theirs, in real numbers. Null until the lookup lands or when it
   // fails, and the wall then falls back to the generic reassurance.
   const [summaryCounts, setSummaryCounts] = useState<WallSummaryCounts | null>(null);
+  // The one plan waits for the counts, so it does not swap plans in front of
+  // them when the numbers land. True once the lookup has answered or failed.
+  const [summarySettled, setSummarySettled] = useState(false);
+  // "See all plans": the four cards as they were before #1258.
+  const [showAllPlans, setShowAllPlans] = useState(false);
   // iPhone app: emailing the owner a link to pay on the web.
   const [linkState, setLinkState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [linkEmail, setLinkEmail] = useState<string | null>(null);
@@ -234,6 +244,9 @@ export function TeamWall() {
   const isDeliberateVisit =
     intent === 'activate' || intent === 'upgrade' || intent === 'reactivate';
   const isUpgradeIntent = intent === 'upgrade';
+  // Which limit sent them here, when the link said (#1258).
+  const needParam = searchParams.get('need');
+  const need = isWallNeed(needParam) ? needParam : null;
   const isReadOnlyTeam = team?.state === 'read_only';
 
   const trackedRef = useRef(false);
@@ -262,7 +275,8 @@ export function TeamWall() {
   // The numbers behind "your things are safe": rollouts, activities and teammates.
   // Telemetry-grade: a failure only means the generic line shows instead.
   useEffect(() => {
-    if (!team || team.hasAccess) return;
+    // A team moving up has access and still needs the counts to pick its plan.
+    if (!team || (team.hasAccess && !isDeliberateVisit)) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -279,12 +293,14 @@ export function TeamWall() {
         }
       } catch {
         // The generic line already says it.
+      } finally {
+        if (!cancelled) setSummarySettled(true);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [team]);
+  }, [team, isDeliberateVisit]);
 
   // Access came back while they were sitting here (the webhook landed, or an
   // admin comped them). Send them back into the app.
@@ -576,6 +592,27 @@ export function TeamWall() {
   const isFirstPlan =
     !isUpgradeIntent && !isReadOnlyTeam && team?.state === 'walled' && introMonthsLeft >= INTRO_MONTHS;
   const anyIntroPrice = offeredTiers.some((tier) => getIntroPrice(tier) !== null);
+  // THE ONE PLAN (#1258): the plan that fits what the team already has, so
+  // paying is one decision rather than a comparison. Null shows every plan.
+  const wallUsage = summaryCounts
+    ? {
+        artists: summaryCounts.artists ?? null,
+        seats: summaryCounts.seats ?? null,
+        activeReleases: summaryCounts.activeReleases ?? null,
+      }
+    : null;
+  const wallPlanInput = {
+    offered: offeredTiers,
+    isUpgrade: isUpgradeIntent,
+    currentTier: isUpgradeIntent ? (team?.tier ?? null) : null,
+    need,
+    persona: isOnboardingPersona(summaryCounts?.persona) ? summaryCounts.persona : null,
+    chosenTier: paywallChoiceTier,
+    usage: wallUsage,
+  };
+  const wallPlan = summarySettled ? pickWallPlan(wallPlanInput) : null;
+  const showOnePlan = Boolean(wallPlan) && !showAllPlans;
+  const cardTiers = showOnePlan && wallPlan ? [wallPlan.tier] : offeredTiers;
   const payLabel = (tier: PricingTierId): string => {
     const price = getTierPriceIn(tier, selectedInterval, currency);
     return price ? `Pay ${formatMoney(price.amount, currency)} and start` : `Get ${getTier(tier).label}`;
@@ -583,7 +620,7 @@ export function TeamWall() {
 
   return (
     <main className="min-h-screen px-4 py-12">
-      <div className={`mx-auto flex w-full flex-col gap-8 ${showCards ? 'max-w-3xl' : 'max-w-xl'}`}>
+      <div className={`mx-auto flex w-full flex-col gap-8 ${showCards && !showOnePlan ? 'max-w-3xl' : 'max-w-xl'}`}>
         <Logo />
 
         <header className={`flex flex-col gap-3 ${showCards ? 'items-center text-center' : ''}`}>
@@ -638,8 +675,18 @@ export function TeamWall() {
                 and the one most teams should take. */}
             {showCards ? (
               <div className="flex flex-col gap-5">
+                {!summarySettled ? (
+                  // The counts decide the plan; hold its place for a moment.
+                  <div aria-hidden="true" className="mx-auto h-[560px] w-full max-w-md animate-pulse rounded-3xl bg-bg-elevated" />
+                ) : (
+                <div className={showOnePlan ? 'mx-auto w-full max-w-md' : ''}>
                 <PlanCards
-                  tiers={offeredTiers}
+                  tiers={cardTiers}
+                  featured={
+                    showOnePlan && wallPlan
+                      ? { badge: wallPlanBadge(wallPlan.kind), reason: wallPlanReason(wallPlan, wallPlanInput) }
+                      : null
+                  }
                   selectedInterval={selectedInterval}
                   onSelectInterval={setSelectedInterval}
                   introMonthsLeft={introMonthsLeft}
@@ -661,6 +708,21 @@ export function TeamWall() {
                           : `Get ${getTier(tier).label}`
                   }
                 />
+                </div>
+                )}
+
+                {summarySettled && wallPlan ? (
+                  <p className="text-center text-sm text-content-secondary">
+                    {showAllPlans ? null : 'Need something different? '}
+                    <button
+                      type="button"
+                      onClick={() => setShowAllPlans((value) => !value)}
+                      className="motion-focus font-semibold text-content-primary underline underline-offset-4 hover:text-brand"
+                    >
+                      {showAllPlans ? 'Back to the plan for you' : 'See all plans'}
+                    </button>
+                  </p>
+                ) : null}
 
                 {checkoutError ? (
                   <p role="alert" className="flex items-start justify-center gap-2 text-sm text-status-error">

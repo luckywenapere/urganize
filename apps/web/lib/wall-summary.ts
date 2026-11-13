@@ -11,6 +11,14 @@ export type WallSummaryCounts = {
   rollouts: number | null;
   activities: number | null;
   teammates: number | null;
+  /** For picking the one plan the wall shows (#1258). Optional: an older
+   *  server sends none, and the wall then picks from who they are alone. */
+  artists?: number | null;
+  /** Everyone on the team, the owner included. */
+  seats?: number | null;
+  activeReleases?: number | null;
+  /** "Who are you?" from sign-up, when they answered. */
+  persona?: string | null;
 };
 
 const noun = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
