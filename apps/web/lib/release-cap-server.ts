@@ -48,7 +48,7 @@ async function findOwnedWorkspaceId(
   }
 }
 
-async function countActiveReleases(
+export async function countActiveReleases(
   client: SupabaseClient,
   ownerUserId: string
 ): Promise<number | null> {

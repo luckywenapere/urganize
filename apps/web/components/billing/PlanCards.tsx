@@ -88,6 +88,10 @@ type PlanCardsProps = {
   /** The plan the team is already on, when moving up: its button says so and
    *  does nothing. */
   currentTier?: PricingTierId | null;
+  /** The one plan picked for this team (#1258): its own badge in place of
+   *  "Most popular", and a line saying why it fits. Only read when one card is
+   *  shown. */
+  featured?: { badge: string; reason: string } | null;
 };
 
 export function PlanCards({
@@ -101,7 +105,9 @@ export function PlanCards({
   disabled,
   buttonLabel,
   currentTier = null,
+  featured = null,
 }: PlanCardsProps) {
+  const feature = tiers.length === 1 ? featured : null;
   return (
     <div className="flex flex-col gap-6">
       <div className="flex justify-center">
@@ -146,7 +152,7 @@ export function PlanCards({
           const features = tierFeatures(tierId, currency);
           // Solo has no plan below it, so its list opens with who it is for.
           const lead = features.heading.startsWith('Everything in') ? features.heading : tier.audience;
-          const recommended = Boolean(tier.recommended);
+          const recommended = Boolean(feature) || Boolean(tier.recommended);
           const busy = busyTier === tierId;
           const current = currentTier === tierId;
           return (
@@ -163,7 +169,7 @@ export function PlanCards({
                 {tier.label}
                 {recommended ? (
                   <span className="whitespace-nowrap rounded-full bg-brand-muted px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-brand">
-                    Most popular
+                    {feature?.badge ?? 'Most popular'}
                   </span>
                 ) : null}
               </h2>
@@ -180,6 +186,11 @@ export function PlanCards({
               <p className="mt-1.5 min-h-5 whitespace-nowrap text-[13px] leading-5 text-content-tertiary">
                 {price?.sub ?? ''}
               </p>
+              {feature ? (
+                <p className="mt-3 rounded-2xl bg-bg-base px-3.5 py-2.5 text-sm leading-snug text-content-primary">
+                  {feature.reason}
+                </p>
+              ) : null}
               <button
                 type="button"
                 disabled={disabled || current}
