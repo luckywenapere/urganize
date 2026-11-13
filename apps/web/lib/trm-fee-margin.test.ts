@@ -43,8 +43,12 @@ const ROOT = join(__dirname, '..');
 const NOW = new Date('2026-10-22T09:00:00.000Z');
 const INTERVALS: BillingInterval[] = ['monthly', 'semiannual', 'annual'];
 
+// The fee maths below is about a team that IS entitled, monthly ones included,
+// so the base config holds the prepay rule off. The rule itself (on by default
+// since 2026-11-13, #1260) has its own tests in pricing-distribution-prepay.test.ts
+// and in the entitlement block here.
 function config(over: Partial<TrmFeeConfig> = {}): TrmFeeConfig {
-  return { ...readTrmFeeConfig({}), ...over };
+  return { ...readTrmFeeConfig({}), distributionRequiresPrepay: false, ...over };
 }
 
 function source(path: string): string {
@@ -66,7 +70,8 @@ describe('TRM fee config', () => {
     expect(c.billingMode).toBe('trm_plan');
     expect(c.feeAnnualKobo).toEqual({ manager: 2_550_000, solo_plus: 2_550_000, pro: 2_550_000, label: 9_000_000 });
     expect(c.feeMonthlyKobo).toEqual({ manager: 710_000, solo_plus: 710_000, pro: 710_000, label: 2_050_000 });
-    expect(c.distributionRequiresPrepay).toBe(false);
+    // On by default since 2026-11-13 (#1260): distribution needs 6 months or a year.
+    expect(c.distributionRequiresPrepay).toBe(true);
   });
 
   it('reads every env var, and falls back rather than to zero', () => {
@@ -162,8 +167,14 @@ describe('who gets distribution', () => {
 
 describe('the pricing cards', () => {
   it('Pro, Label and Group say distribution is included; Solo and Manager pay per single', () => {
-    expect(tierHighlights('pro')).toContain('Distribution for 1 of your artists, 7 releases a month');
-    expect(tierHighlights('label')).toContain('Distribution for 5 of your artists, 10 releases a month');
+    // Monthly is the default view, and since 2026-11-13 (#1260) it waits for a longer plan.
+    expect(tierHighlights('pro')).toContain('Distribution on 6-month and yearly plans');
+    expect(tierHighlights('pro', { distributionRequiresPrepay: false })).toContain(
+      'Distribution for 1 of your artists, 7 releases a month'
+    );
+    expect(tierHighlights('label', { distributionRequiresPrepay: false })).toContain(
+      'Distribution for 5 of your artists, 10 releases a month'
+    );
     expect(tierHighlights('enterprise')).toContain('Distribution included');
     expect(tierHighlights('solo').some((line) => /distribution/i.test(line))).toBe(false);
     expect(tierHighlights('manager').some((line) => /distribution/i.test(line))).toBe(false);

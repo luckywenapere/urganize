@@ -175,7 +175,7 @@ export function PricingTierCards() {
           {tiers.map((tierId) => {
             const tier = getTier(tierId);
             const { figure, unit, sub } = cardPrice(tierId, interval, currency);
-            const features = tierFeatures(tierId, currency);
+            const features = tierFeatures(tierId, currency, interval);
             const badge = BADGE[tierId];
             return (
               <div

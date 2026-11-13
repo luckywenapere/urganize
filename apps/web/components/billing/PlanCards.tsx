@@ -149,7 +149,7 @@ export function PlanCards({
         {tiers.map((tierId) => {
           const tier = getTier(tierId);
           const price = planCardPrice(tierId, selectedInterval, introMonthsLeft, currency);
-          const features = tierFeatures(tierId, currency);
+          const features = tierFeatures(tierId, currency, selectedInterval);
           // Solo has no plan below it, so its list opens with who it is for.
           const lead = features.heading.startsWith('Everything in') ? features.heading : tier.audience;
           const recommended = Boolean(feature) || Boolean(tier.recommended);
