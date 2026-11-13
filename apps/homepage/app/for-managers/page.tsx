@@ -41,7 +41,7 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "You don't start from a blank page for artist number three.",
-    body: "Urganize starts from what each artist wants and makes a plan that fits: 64 tasks for a single, 90 for an EP, 113 for an album. Or make your own, and edit or delete any task.",
+    body: "Urganize starts from what each artist wants and makes a plan that fits: up to 64 tasks for a single, 90 for an EP and 113 for an album. Or make your own, and edit or delete any task.",
     points: [
       "A plan shaped to your goals, or your own",
       "Every task dated back from that drop day",

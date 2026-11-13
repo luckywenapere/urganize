@@ -20,7 +20,7 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 // Real date discipline: moves only when the terms text changes.
-const LAST_UPDATED = "November 10, 2026";
+const LAST_UPDATED = "November 12, 2026";
 
 const CONTACT_HREF =
   "mailto:contact@urganize.app?subject=Terms%20question%20-%20Urganize";
@@ -83,7 +83,7 @@ export default function TermsPage() {
               </p>
             </Section>
 
-            <Section number="04" title="Trial, subscriptions, and billing">
+            <Section number="04" title="Subscriptions and billing">
               <p>
                 Urganize is in public beta, so features may change as we
                 improve it. Anyone can create an account. To plan rollouts and
@@ -98,8 +98,7 @@ export default function TermsPage() {
                 prices, your renewal stays at the price you signed up on unless
                 we agree otherwise with you. You can cancel anytime from
                 Settings; you keep access through the period you already paid
-                for. Access is locked when a trial ends
-                without a subscription, when a payment fails or when a
+                for. Access is locked when a payment fails or when a
                 subscription lapses. Nothing you created is deleted when access
                 is locked.
               </p>

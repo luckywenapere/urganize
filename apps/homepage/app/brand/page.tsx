@@ -33,7 +33,7 @@ const VOICE_PILLARS = [
   {
     title: "Concrete, never overclaiming",
     body: "We don’t advertise what isn’t built. Work not built yet is marked “coming soon,” and screenshots show the real app.",
-    say: "64 tasks, generated from a template.",
+    say: "Up to 64 tasks, tailored from a template.",
     avoid: "AI runs your whole release for you.",
   },
   {
