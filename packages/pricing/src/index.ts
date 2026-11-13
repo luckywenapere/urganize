@@ -790,7 +790,8 @@ export function tierFeatures(
 }
 
 /** The words a card uses when a plan's distribution needs a longer period. */
-const DISTRIBUTION_PREPAY_WORDS = 'on 6-month and yearly plans';
+// Yearly only: the 6-month plan is not on sale (founder, 2026-11-13, #1264).
+const DISTRIBUTION_PREPAY_WORDS = 'on yearly plans';
 
 /** Does this plan's card have to say distribution waits for a longer period?
  *  True for a priced plan that includes distribution when the period shown
@@ -1115,7 +1116,7 @@ export function distributionHighlight(
   // Group is sales-led and has no period on its card: its terms are agreed per deal.
   if (id === 'enterprise') return distributionAllowanceCopy(id) ?? 'Distribution included';
   if (distributionIncluded(id, interval, requiresPrepay)) return distributionAllowanceCopy(id) ?? 'Distribution included';
-  return 'Distribution on 6-month and yearly plans';
+  return 'Distribution on yearly plans';
 }
 
 export function tierHighlights(

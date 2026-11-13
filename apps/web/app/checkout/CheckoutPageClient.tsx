@@ -957,7 +957,7 @@ function CheckoutStep({
                 <p className="mt-2.5 text-[13px] text-content-secondary">
                   {distributionIncluded(intent.plan, period, DISTRIBUTION_REQUIRES_PREPAY)
                     ? 'Distribution through our partner is included.'
-                    : 'Distribution through our partner comes with 6-month and yearly plans.'}
+                    : 'Distribution through our partner comes with yearly plans.'}
                 </p>
               ) : null}
             </section>

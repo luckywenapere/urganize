@@ -70,7 +70,7 @@ describe('TRM fee config', () => {
     expect(c.billingMode).toBe('trm_plan');
     expect(c.feeAnnualKobo).toEqual({ manager: 2_550_000, solo_plus: 2_550_000, pro: 2_550_000, label: 9_000_000 });
     expect(c.feeMonthlyKobo).toEqual({ manager: 710_000, solo_plus: 710_000, pro: 710_000, label: 2_050_000 });
-    // On by default since 2026-11-13 (#1260): distribution needs 6 months or a year.
+    // On by default since 2026-11-13 (#1260): distribution needs a yearly plan (#1264).
     expect(c.distributionRequiresPrepay).toBe(true);
   });
 
@@ -168,7 +168,7 @@ describe('who gets distribution', () => {
 describe('the pricing cards', () => {
   it('Pro, Label and Group say distribution is included; Solo and Manager pay per single', () => {
     // Monthly is the default view, and since 2026-11-13 (#1260) it waits for a longer plan.
-    expect(tierHighlights('pro')).toContain('Distribution on 6-month and yearly plans');
+    expect(tierHighlights('pro')).toContain('Distribution on yearly plans');
     expect(tierHighlights('pro', { distributionRequiresPrepay: false })).toContain(
       'Distribution for 1 of your artists, 7 releases a month'
     );
@@ -186,9 +186,9 @@ describe('the pricing cards', () => {
     }
   });
 
-  it('with the prepay gate on, the monthly view says it needs 6 months or a year', () => {
+  it('with the prepay gate on, the monthly view says it needs a yearly plan', () => {
     expect(tierHighlights('pro', { interval: 'monthly', distributionRequiresPrepay: true })).toContain(
-      'Distribution on 6-month and yearly plans'
+      'Distribution on yearly plans'
     );
     expect(tierHighlights('pro', { interval: 'semiannual', distributionRequiresPrepay: true })).toContain(
       'Distribution for 1 of your artists, 7 releases a month'
@@ -458,11 +458,8 @@ describe('the Distribute step', () => {
     });
   });
 
-  it('offers 6 months first, then a year, each with its saving', () => {
-    expect(prepayOffers('pro')).toEqual([
-      { interval: 'semiannual', priceKobo: 20_000_000, savingNaira: 40_000 },
-      { interval: 'annual', priceKobo: 40_000_000, savingNaira: 80_000 },
-    ]);
+  it('offers a year only, with its saving: 6 months is not on sale (#1264)', () => {
+    expect(prepayOffers('pro')).toEqual([{ interval: 'annual', priceKobo: 40_000_000, savingNaira: 80_000 }]);
   });
 });
 

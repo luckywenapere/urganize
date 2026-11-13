@@ -12,14 +12,15 @@ import {
 import { youGet } from './self-serve';
 import { readTrmFeeConfig } from './trm/partner-fee';
 
-// Distribution comes with 6-month and yearly plans only (founder, 2026-11-13,
+// Distribution comes with yearly plans only (founder, 2026-11-13, #1264;
+// 6-month dropped the same day because it is not on sale) (first #1260,
 // #1260). A monthly Solo Plus team kept about 3,288 naira of 12,000 because we
 // owe TRM its monthly plan price; TRM's yearly plan costs about a third of that
 // per month. The cards must say what the app gives, on every period.
 
-const WAITS = 'on 6-month and yearly plans';
+const WAITS = 'on yearly plans';
 
-describe('distribution needs a 6-month or yearly plan', () => {
+describe('distribution needs a yearly plan', () => {
   it('is on, and the fee config follows it when the env says nothing', () => {
     expect(DISTRIBUTION_REQUIRES_PREPAY).toBe(true);
     expect(readTrmFeeConfig({}).distributionRequiresPrepay).toBe(true);
@@ -38,7 +39,7 @@ describe('distribution needs a 6-month or yearly plan', () => {
     expect(tierStoresLine('label', 'NGN', 'monthly')).toBe(`Singles, EPs and albums for 5 artists ${WAITS}`);
   });
 
-  it('keeps "included" on the yearly and 6-month cards', () => {
+  it('keeps "included" on the yearly card (and for teams already on 6 months)', () => {
     for (const interval of ['annual', 'semiannual'] as const) {
       expect(tierStoresLine('solo_plus', 'NGN', interval)).toBe('Singles and EPs to stores, included');
       expect(tierStoresLine('pro', 'NGN', interval)).toBe('Singles and EPs to stores for 1 artist, included');
@@ -77,12 +78,12 @@ describe('distribution needs a 6-month or yearly plan', () => {
   });
 
   it('uses the rule in the highlight list by default', () => {
-    expect(tierHighlights('pro', { interval: 'monthly' })).toContain('Distribution on 6-month and yearly plans');
-    expect(tierHighlights('pro', { interval: 'annual' }).join(' ')).not.toContain('Distribution on 6-month');
+    expect(tierHighlights('pro', { interval: 'monthly' })).toContain('Distribution on yearly plans');
+    expect(tierHighlights('pro', { interval: 'annual' }).join(' ')).not.toContain('Distribution on yearly');
   });
 
   it('tells checkout the same thing for the period being paid', () => {
-    expect(youGet('solo_plus', true, 'monthly').at(-1)).toEqual({ label: 'Distribution', value: '6-month and yearly plans' });
+    expect(youGet('solo_plus', true, 'monthly').at(-1)).toEqual({ label: 'Distribution', value: 'Yearly plans' });
     expect(youGet('solo_plus', true, 'annual').at(-1)).toEqual({ label: 'Distribution', value: 'Partner' });
     // No period in hand: the row names the partner, as before.
     expect(youGet('pro', true).at(-1)).toEqual({ label: 'Distribution', value: 'Partner' });

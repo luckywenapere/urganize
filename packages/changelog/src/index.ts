@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.282.2",
+    date: "November 13, 2026",
+    listed: false,
+    highlights: [
+      "Sending music to stores comes with yearly plans. We no longer mention a 6-month plan, which is not on sale.",
+    ],
+  },
+  {
     version: "1.282.1",
     date: "November 13, 2026",
     listed: false,

@@ -64,10 +64,12 @@ export type PrepayOffer = {
   savingNaira: number;
 };
 
-/** The prepaid periods for a monthly tier, 6 months first. */
+/** The prepaid period offered to a monthly tier: yearly only, since the
+ *  6-month plan is not on sale (founder, 2026-11-13, #1264). Teams already
+ *  on 6 months keep distribution; they are just never offered it. */
 export function prepayOffers(tier: PricingTierId): PrepayOffer[] {
   const out: PrepayOffer[] = [];
-  for (const interval of ['semiannual', 'annual'] as const) {
+  for (const interval of ['annual'] as const) {
     const price = getTierPrice(tier, interval);
     const saving = intervalSavingNaira(tier, interval);
     if (price && saving !== null) out.push({ interval, priceKobo: price.minorUnit, savingNaira: saving });
