@@ -7,9 +7,11 @@
 // list /admin/metrics leaves out) and test rollouts are excluded. Numbers only
 // ever move up, so an older figure stays true, just modest.
 //
-// Refresh by re-running the same count and changing the three numbers and the
-// date together. Never round up, and never type a number here that was not
-// counted.
+// LIVE SINCE #1248: the homepage now reads the current count from the app
+// (GET /api/public/proof-stats) about once an hour. These numbers are only the
+// FALLBACK for when the app cannot answer. They can stay as they are; refresh
+// them now and then so the fallback is not far behind. Never round up, and
+// never type a number here that was not counted.
 export const PROOF_STATS = {
   measuredOn: "2026-11-12",
   teams: 44,
