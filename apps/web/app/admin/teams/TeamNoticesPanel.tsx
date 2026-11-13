@@ -2,11 +2,15 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import { showPastChanges } from '@/lib/admin-teams-list';
 
 // Emails the owners of teams the founder comped or gave a trial extension
 // before those emails existed. Counts first, then sends one run per press.
 // Pressing again sends the rest: a change already emailed is skipped by its
 // dedupe key on the server, so pressing twice never sends twice.
+//
+// Since 2026-11-12 (#1241) the box shows only while some owner still has an
+// email to get (showPastChanges), or right after a send to report it.
 
 type Counts = {
   emailConfigured: boolean;
@@ -83,6 +87,7 @@ export function TeamNoticesPanel() {
     }
   }, [getToken, loadCounts]);
 
+  if (!showPastChanges(counts) && !result && !error) return null;
   if (!counts) return null;
 
   return (

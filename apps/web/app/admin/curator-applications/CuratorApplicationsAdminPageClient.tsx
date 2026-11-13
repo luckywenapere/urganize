@@ -273,7 +273,7 @@ export default function CuratorApplicationsAdminPageClient() {
                           {applicationSummaryLine(item)}
                         </span>
                       </span>
-                      <span className="self-start pt-1 font-mono text-xs text-content-tertiary">{shortAgo(item.createdAt)}</span>
+                      <span className="self-start pt-1 text-xs tabular-nums text-content-tertiary">{shortAgo(item.createdAt)}</span>
                     </button>
                   </li>
                 );

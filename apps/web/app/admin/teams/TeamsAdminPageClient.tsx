@@ -8,6 +8,8 @@ import { supabase } from '@/lib/supabase/client';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 import { TeamNoticesPanel } from './TeamNoticesPanel';
 import { isTeamBriefEnabled } from '@/lib/team-brief';
+import { RowMenu } from '@/components/settings/desk/RowMenu';
+import { TEAM_FILTERS, dealAwaitingPayment, teamFilterCounts, teamMatchesFilter, type TeamFilter } from '@/lib/admin-teams-list';
 
 // The team brief is hidden (Oct 17, 2026), so its completion column goes too.
 const SHOW_BRIEF = isTeamBriefEnabled();
@@ -23,6 +25,13 @@ const SHOW_BRIEF = isTeamBriefEnabled();
 // Unlike waitlist this refetches rather than splicing, because one action can
 // change several derived fields at once (state, wall date, plan, notes) and a
 // stale row here is a row the founder might act on twice.
+//
+// On a computer since 2026-11-12 (#1241, approved mock): Extend, Comp,
+// Founding and Custom price sit in each row's menu, and "Mark paid" sits on
+// the row only when a recorded deal is waiting on its invoice
+// (dealAwaitingPayment in lib/admin-teams-list.ts); otherwise it is in the
+// menu too. The counts moved into the filter chips and the four count tiles
+// went. The actions and the PATCH they send are unchanged.
 
 type TeamRow = {
   workspaceId: string;
@@ -59,18 +68,6 @@ type TeamsPayload = {
   stats: { total: number; counts: Record<string, number> };
   teams: TeamRow[];
 };
-
-const FILTERS = [
-  { value: 'all', label: 'All' },
-  { value: 'trial', label: 'On trial' },
-  { value: 'walled', label: 'Walled' },
-  { value: 'read_only', label: 'Read only' },
-  { value: 'paid', label: 'Paying' },
-  { value: 'comped', label: 'Comped' },
-  { value: 'deal', label: 'Founding / custom' },
-] as const;
-
-type FilterValue = (typeof FILTERS)[number]['value'];
 
 const STATE_LABEL: Record<string, string> = {
   paid: 'Paying',
@@ -118,7 +115,7 @@ export default function TeamsAdminPageClient() {
   const [payload, setPayload] = useState<TeamsPayload | null>(null);
   const [checked, setChecked] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<FilterValue>('all');
+  const [filter, setFilter] = useState<TeamFilter>('all');
   const [query, setQuery] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -276,16 +273,7 @@ export default function TeamsAdminPageClient() {
     const all = payload?.teams || [];
     const needle = query.trim().toLowerCase();
     return all.filter((team) => {
-      if (filter === 'deal' && !team.billingPlan) return false;
-      if (filter === 'comped' && !team.comped) return false;
-      if (
-        filter !== 'all' &&
-        filter !== 'deal' &&
-        filter !== 'comped' &&
-        team.state !== filter
-      ) {
-        return false;
-      }
+      if (!teamMatchesFilter(team, filter)) return false;
       if (!needle) return true;
       return (
         (team.teamName || '').toLowerCase().includes(needle) ||
@@ -299,21 +287,20 @@ export default function TeamsAdminPageClient() {
     return (
       <AdminPageSkeleton
         titleWidth="w-28"
-        statCards={{ count: 3, gridClassName: 'grid-cols-1 sm:grid-cols-3' }}
-        tallyRows={[FILTERS.length]}
+        tallyRows={[TEAM_FILTERS.length]}
         table={{ columns: 8, rows: 6 }}
       />
     );
   }
 
-  const counts = payload?.stats.counts || {};
+  const chipCounts = teamFilterCounts(payload?.teams || []);
 
   return (
     <div>
       <h1 className="mt-2 font-display text-3xl font-semibold text-content-primary">Teams</h1>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-content-secondary">
-        Every team, what it is on, and when it walls. Extend a trial, comp a team, record a
-        Founding Member rate, or mark a deal paid when it settles by invoice.
+        Every team, what it pays, and what you have changed for it. Each row&apos;s menu extends a
+        trial, comps a team or records a Founding Member or custom rate.
       </p>
 
       {payload && !payload.hardPaywallEnabled ? (
@@ -331,67 +318,46 @@ export default function TeamsAdminPageClient() {
 
       <TeamNoticesPanel />
 
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { label: 'Teams', value: payload?.stats.total ?? 0 },
-          { label: 'On trial', value: counts.trial ?? 0 },
-          { label: 'Walled', value: counts.walled ?? 0 },
-          // A lapsed PAYER, not a lapsed trialist. The most recoverable churn
-          // in this list, which is why it gets its own number.
-          { label: 'Read only', value: counts.read_only ?? 0 },
-        ].map((card) => (
-          <div
-            key={card.label}
-            className="rounded-lg border border-stroke-default bg-bg-surface p-5"
-          >
-            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-content-tertiary">
-              {card.label}
-            </p>
-            <p className="mt-1 font-display text-3xl font-semibold text-content-primary">
-              {card.value}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-5 flex flex-wrap gap-2">
-        {FILTERS.map((option) => {
+      <div className="mt-6 flex flex-wrap items-center gap-2">
+        {TEAM_FILTERS.map((option) => {
           const isActive = filter === option.value;
+          const count = chipCounts[option.value];
           return (
             <button
               key={option.value}
               type="button"
               onClick={() => setFilter(option.value)}
-              className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+              aria-pressed={isActive}
+              className={`motion-focus inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition-colors ${
                 isActive
-                  ? 'border-brand bg-brand/8 text-content-primary'
-                  : 'border-stroke-default bg-bg-elevated text-content-secondary hover:border-stroke-strong hover:text-content-primary'
+                  ? 'border-content-primary bg-content-primary font-semibold text-bg-base'
+                  : 'border-stroke-default text-content-secondary hover:border-stroke-strong hover:text-content-primary'
               }`}
             >
               {option.label}
+              {count > 0 || option.value === 'all' ? (
+                <span className="font-semibold tabular-nums">{count}</span>
+              ) : null}
             </button>
           );
         })}
-      </div>
-
-      <div className="mt-4">
         <input
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search team, owner or email"
           aria-label="Search teams"
-          className="h-10 w-full max-w-sm rounded-lg border border-stroke-control bg-bg-elevated px-3 text-sm text-content-primary placeholder:text-content-tertiary outline-none focus:border-brand"
+          className="h-9 w-full rounded-lg border border-stroke-control bg-bg-elevated px-3 text-sm text-content-primary placeholder:text-content-tertiary outline-none focus:border-brand lg:ml-auto lg:w-72"
         />
       </div>
 
-      <div className="mt-5 overflow-x-auto rounded-lg border border-stroke-default">
-        <table className="w-full min-w-[1100px] text-left text-sm">
+      <div className="mt-4 overflow-x-auto rounded-lg border border-stroke-default lg:overflow-visible">
+        <table className="w-full min-w-[960px] text-left text-sm lg:min-w-0">
           <thead className="bg-bg-elevated text-content-tertiary">
             <tr>
-              {['Team', 'Owner', 'State', 'Walls', 'Deal', ...(SHOW_BRIEF ? ['Brief'] : []), 'Notes', 'Actions'].map((heading) => (
-                <th key={heading} className="px-3 py-2 font-medium">
-                  {heading}
+              {['Team', 'Owner', 'State', 'Walls', 'Deal', ...(SHOW_BRIEF ? ['Brief'] : []), 'Notes', ''].map((heading, index) => (
+                <th key={heading || `col-${index}`} className="px-3 py-2 font-medium">
+                  {heading ? heading : <span className="sr-only">Actions</span>}
                 </th>
               ))}
             </tr>
@@ -499,50 +465,38 @@ export default function TeamsAdminPageClient() {
                   {team.billingNotes || '—'}
                 </td>
                 <td className="px-3 py-3">
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex items-center justify-end gap-1.5">
                     {busyId === team.workspaceId ? (
                       <Loader2 className="size-4 animate-spin text-content-tertiary" />
                     ) : (
                       <>
-                        <button
-                          type="button"
-                          onClick={() => extendTrial(team)}
-                          className="rounded border border-stroke-default px-2 py-1 text-xs text-content-secondary hover:border-stroke-strong hover:text-content-primary"
-                        >
-                          Extend
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void runAction(team.workspaceId, {
-                              action: team.comped ? 'uncomp' : 'comp',
-                            })
-                          }
-                          className="rounded border border-stroke-default px-2 py-1 text-xs text-content-secondary hover:border-stroke-strong hover:text-content-primary"
-                        >
-                          {team.comped ? 'Uncomp' : 'Comp'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeal(team, 'assign_founding')}
-                          className="rounded border border-stroke-default px-2 py-1 text-xs text-content-secondary hover:border-stroke-strong hover:text-content-primary"
-                        >
-                          Founding
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeal(team, 'set_custom_price')}
-                          className="rounded border border-stroke-default px-2 py-1 text-xs text-content-secondary hover:border-stroke-strong hover:text-content-primary"
-                        >
-                          Custom price
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => markPaid(team)}
-                          className="rounded border border-brand/40 bg-brand/8 px-2 py-1 text-xs text-brand hover:bg-brand/12"
-                        >
-                          Mark paid
-                        </button>
+                        {dealAwaitingPayment(team) ? (
+                          <button
+                            type="button"
+                            onClick={() => markPaid(team)}
+                            className="motion-focus inline-flex h-8 items-center whitespace-nowrap rounded-full border border-stroke-strong px-3 text-xs font-semibold text-content-primary hover:bg-bg-hover"
+                          >
+                            Mark paid
+                          </button>
+                        ) : null}
+                        <RowMenu
+                          label={`More for ${team.teamName || 'this team'}`}
+                          items={[
+                            { label: 'Extend the trial', onSelect: () => extendTrial(team) },
+                            {
+                              label: team.comped ? 'Uncomp' : 'Comp',
+                              onSelect: () =>
+                                void runAction(team.workspaceId, {
+                                  action: team.comped ? 'uncomp' : 'comp',
+                                }),
+                            },
+                            { label: 'Founding Member rate', onSelect: () => setDeal(team, 'assign_founding') },
+                            { label: 'Custom price', onSelect: () => setDeal(team, 'set_custom_price') },
+                            ...(dealAwaitingPayment(team)
+                              ? []
+                              : [{ label: 'Mark paid', onSelect: () => markPaid(team) }]),
+                          ]}
+                        />
                       </>
                     )}
                   </div>

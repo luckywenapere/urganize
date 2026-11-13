@@ -101,8 +101,9 @@ export function buttonVariants({
 }
 
 /**
- * A small mono heading over a block ("TODAY", "THIS WEEK"), with an optional
- * info icon and an optional quiet link on the right ("Metrics ›").
+ * A small heading over a block ("Today", "This week"), with an optional info
+ * icon and an optional quiet link on the right ("Metrics ›"). Sentence case
+ * since 2026-11-12 (#1241): no code-style capitals.
  */
 export function SectionLabel({
   children,
@@ -117,7 +118,7 @@ export function SectionLabel({
 }) {
   return (
     <div className="mb-3 flex items-center gap-1.5">
-      <h2 id={id} className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">
+      <h2 id={id} className="text-sm font-semibold text-content-primary">
         {children}
       </h2>
       {info}

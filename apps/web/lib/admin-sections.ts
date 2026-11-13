@@ -294,3 +294,125 @@ export function adminBackTarget(pathname: string): { label: string; href: string
   const tab = ADMIN_PRIMARY_NAV.find((item) => item.key === key);
   return tab ? { label: tab.label, href: tab.href } : null;
 }
+
+// ---------------------------------------------------------------------------
+// The desktop menu (lg and up, 2026-11-12, #1241; founder approved the mock
+// docs/mocks/admin-desktop/mock.html). On a computer the sidebar lists every
+// admin page in four groups instead of the four tabs and "More 22"; the phone
+// keeps the bottom bar and the More page above. Pages that need someone carry
+// a red count, read from the same counts the Overview uses (AdminAttention).
+// ---------------------------------------------------------------------------
+
+/** Which waiting count an entry carries: a key of AdminAttention. */
+export type AdminWaitingKey = 'reports' | 'curatorApplications' | 'pitchPayments';
+
+export type AdminMenuItem = {
+  key: string;
+  label: string;
+  href: string;
+  exact?: boolean;
+  waiting?: AdminWaitingKey;
+};
+
+export type AdminMenuGroup = { key: 'daily' | 'numbers' | 'growth' | 'tools'; label: string; items: AdminMenuItem[] };
+
+export const ADMIN_DESKTOP_MENU: AdminMenuGroup[] = [
+  {
+    key: 'daily',
+    label: 'Every day',
+    items: [
+      { key: 'overview', label: 'Overview', href: '/admin', exact: true },
+      { key: 'teams', label: 'Teams', href: '/admin/teams' },
+      { key: 'issue-reports', label: 'Reports', href: '/admin/issue-reports', waiting: 'reports' },
+      { key: 'curator-applications', label: 'Applications', href: '/admin/curator-applications', waiting: 'curatorApplications' },
+      { key: 'pitch-payments', label: 'Pitch payments', href: '/admin/pitch-payments', waiting: 'pitchPayments' },
+      { key: 'emails', label: 'Emails', href: '/admin/emails' },
+    ],
+  },
+  {
+    key: 'numbers',
+    label: 'Numbers',
+    items: [
+      { key: 'metrics', label: 'Metrics', href: '/admin/metrics' },
+      { key: 'scoreboard', label: 'Scoreboard', href: '/admin/scoreboard' },
+      { key: 'growth', label: 'Growth', href: '/admin/metrics#growth' },
+      { key: 'billing', label: 'Billing margin', href: '/admin/billing' },
+      { key: 'profile-funnel', label: 'Profile funnel', href: '/admin/profile-funnel' },
+      { key: 'nps', label: 'NPS', href: '/admin/nps' },
+      { key: 'onboarding', label: 'Onboarding', href: '/admin/onboarding' },
+      { key: 'self-serve', label: 'Self-serve', href: '/admin/self-serve' },
+    ],
+  },
+  {
+    key: 'growth',
+    label: 'Growth',
+    items: [
+      { key: 'waitlist', label: 'Waitlist', href: '/admin/waitlist' },
+      { key: 'referrals', label: 'Referrals', href: '/admin/referrals' },
+      { key: 'promo-channels', label: 'Promo channels', href: '/admin/promo-channels' },
+      { key: 'featured', label: 'Featured', href: '/admin/featured' },
+      { key: 'directory', label: 'Directory', href: '/admin/directory' },
+      { key: 'interviews', label: 'Interviews', href: '/admin/interviews' },
+    ],
+  },
+  {
+    key: 'tools',
+    label: 'Tools',
+    items: [
+      { key: 'urgans', label: 'AI actions', href: '/admin/urgans' },
+      { key: 'notifications', label: 'Notifications', href: '/admin/notifications' },
+      { key: 'curator-invites', label: 'Curator invites', href: '/admin/curator-invites' },
+      { key: 'claims', label: 'Claims', href: '/admin/claims' },
+      { key: 'seeding', label: 'Seeding', href: '/admin/seeding' },
+      { key: 'chappi', label: 'Chappi', href: '/admin/chappi' },
+      { key: 'more', label: 'Runway and all pages', href: '/admin/more' },
+    ],
+  },
+];
+
+/** Every entry of the desktop menu, in order. */
+export const ADMIN_DESKTOP_ITEMS: AdminMenuItem[] = ADMIN_DESKTOP_MENU.flatMap((group) => group.items);
+
+/** An address with no #fragment: what a pathname can match. */
+function itemPath(item: AdminMenuItem): string | null {
+  return item.href.includes('#') ? null : item.href;
+}
+
+/**
+ * The desktop entry lit for a page: the one whose address the page sits under,
+ * the longest match winning (so /admin/emails/new lights Emails). The Overview
+ * only on /admin itself. Entries pointing into another page (Growth) never light.
+ */
+export function activeDesktopKey(pathname: string): string | null {
+  const path = clean(pathname);
+  if (path === '/admin') return 'overview';
+  let best: { key: string; length: number } | null = null;
+  for (const item of ADMIN_DESKTOP_ITEMS) {
+    const href = itemPath(item);
+    if (!href || item.exact) continue;
+    if (under(path, href) && (!best || href.length > best.length)) best = { key: item.key, length: href.length };
+  }
+  return best?.key ?? null;
+}
+
+/**
+ * The desktop back button: only on a page that is not itself in the menu
+ * (Write an email, Onboarding emails), naming the entry it sits under.
+ */
+export function adminDesktopBackTarget(pathname: string): { label: string; href: string } | null {
+  const path = clean(pathname);
+  if (ADMIN_DESKTOP_ITEMS.some((item) => itemPath(item) === path)) return null;
+  const key = activeDesktopKey(path);
+  const item = key ? ADMIN_DESKTOP_ITEMS.find((entry) => entry.key === key) : null;
+  return item ? { label: item.label, href: item.href } : null;
+}
+
+/** The red count for an entry: a positive number, else nothing to show. */
+export function waitingCount(
+  item: Pick<AdminMenuItem, 'waiting'>,
+  counts: Partial<Record<AdminWaitingKey, number | null | undefined>> | null
+): number | null {
+  if (!item.waiting || !counts) return null;
+  const value = counts[item.waiting];
+  return typeof value === 'number' && value > 0 ? value : null;
+}

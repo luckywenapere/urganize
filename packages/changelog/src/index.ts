@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.279.0",
+    title: "Admin on a computer",
+    tag: "App",
+    listed: false,
+    date: "November 13, 2026",
+    highlights: [
+      "On a computer, the admin menu lists every page in four groups, with a red count on what is waiting.",
+      "The admin Overview starts with what needs you. Teams, Billing margin and Emails are easier to read, and Write an email shows the email beside the form as you type.",
+    ],
+  },
+  {
     version: "1.278.1",
     tag: "App",
     date: "November 13, 2026",

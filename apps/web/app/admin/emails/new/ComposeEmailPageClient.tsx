@@ -18,10 +18,15 @@
 // all three). It is only a draft: the send still needs Send and its confirm.
 // The founder cockpit's "Needs a message" list uses it. page.tsx wraps this in
 // a Suspense boundary because it reads the query string.
+//
+// On a computer since 2026-11-12 (#1241, approved mock): the form on the left
+// and the email as it will arrive on the right, redrawn as you type (the same
+// /preview route, addressed to the first person on the list). Sending, the
+// two-step confirm, the queue and the daily limit are unchanged.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, Mail } from '@/components/icons';
+import { Loader2 } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 import { AUDIENCE_GROUPS, AUDIENCE_GROUP_LABELS, DEFAULT_RECENT_DAYS, isValidEmailAddress } from '@/lib/email/audience';
@@ -157,6 +162,7 @@ export default function ComposeEmailPageClient() {
   const [testLoading, setTestLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const previewSeq = useRef(0);
   const [confirming, setConfirming] = useState(false);
   const [creating, setCreating] = useState(false);
   const [progress, setProgress] = useState<Progress | null>(null);
@@ -255,17 +261,43 @@ export default function ComposeEmailPageClient() {
   const emailConfigured = overview?.emailConfigured !== false;
   const canSend = hasDraft && recipientCount > 0 && !audienceLoading && !creating && !progress?.running && emailConfigured;
 
-  const handlePreview = async () => {
-    setFormError(null);
-    setPreviewLoading(true);
-    const result = await adminRequest<{ subject: string; html: string }>('/api/admin/emails/preview', {
-      method: 'POST',
-      body: { kind: 'announcement', ...draft },
-    });
-    setPreviewLoading(false);
-    if (result.ok) setPreview(result.data);
-    else setFormError(result.error);
-  };
+  const previewName = audienceInfo?.sample[0]?.name || '';
+
+  const handlePreview = useCallback(
+    async (input: { subject: string; body: string; includeGreeting: boolean; signOff: boolean; name: string }) => {
+      const seq = ++previewSeq.current;
+      setPreviewLoading(true);
+      const result = await adminRequest<{ subject: string; html: string }>('/api/admin/emails/preview', {
+        method: 'POST',
+        body: {
+          kind: 'announcement',
+          subject: input.subject,
+          body: input.body,
+          includeGreeting: input.includeGreeting,
+          signOff: input.signOff,
+          recipientName: input.name || undefined,
+        },
+      });
+      if (seq !== previewSeq.current) return; // a newer draft replaced this one
+      setPreviewLoading(false);
+      if (result.ok) setPreview(result.data);
+    },
+    []
+  );
+
+  // The live preview: redrawn half a second after you stop typing.
+  const previewSubject = subject.trim();
+  const previewReady = previewSubject.length > 0 && body.trim().length > 0;
+  useEffect(() => {
+    if (!previewReady) {
+      previewSeq.current += 1; // drop any answer still on its way
+      return;
+    }
+    const timer = setTimeout(() => {
+      void handlePreview({ subject: previewSubject, body, includeGreeting, signOff, name: previewName });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [previewReady, previewSubject, body, includeGreeting, signOff, previewName, handlePreview]);
 
   const handleTest = async () => {
     setFormError(null);
@@ -368,13 +400,9 @@ export default function ComposeEmailPageClient() {
   };
 
   return (
-    <div className="w-full max-w-[720px]">
-      <p className="flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
-        <Mail className="h-4 w-4" aria-hidden="true" />
-        Write an email
-      </p>
-      <h1 className="mt-2 font-display text-3xl font-semibold">Send an email</h1>
-      <p className="mt-2 text-sm leading-6 text-content-secondary">
+    <div className="w-full max-w-[720px] lg:max-w-none">
+      <h1 className="font-display text-3xl font-semibold">Send an email</h1>
+      <p className="mt-2 max-w-3xl text-sm leading-6 text-content-secondary">
         {overview?.from ? <>It comes from {overview.from}. </> : null}
         Replies go to {overview?.replyTo || 'that inbox'}. Everyone gets an unsubscribe link, and anyone who already
         unsubscribed is left out. {describeBudget(budget)}
@@ -401,7 +429,9 @@ export default function ComposeEmailPageClient() {
         {liveMessage}
       </p>
 
-      <section className="mt-8">
+      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-start lg:gap-6">
+      <div className="min-w-0 lg:rounded-2xl lg:border lg:border-stroke-default lg:bg-bg-surface lg:p-6">
+      <section>
         <h2 className="text-sm font-semibold text-content-primary">Who gets it</h2>
         <div role="radiogroup" aria-label="Who gets it" className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {KIND_OPTIONS.map((option) => (
@@ -573,15 +603,6 @@ export default function ComposeEmailPageClient() {
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
-            onClick={() => void handlePreview()}
-            disabled={!hasDraft || previewLoading}
-            className="motion-focus inline-flex items-center gap-2 rounded-full border border-stroke-default px-4 py-2 text-sm font-medium text-content-primary hover:border-stroke-strong disabled:opacity-50"
-          >
-            {previewLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
-            Preview
-          </button>
-          <button
-            type="button"
             onClick={() => void handleTest()}
             disabled={!hasDraft || testLoading || !emailConfigured}
             className="motion-focus inline-flex items-center gap-2 rounded-full border border-stroke-default px-4 py-2 text-sm font-medium text-content-primary hover:border-stroke-strong disabled:opacity-50"
@@ -589,6 +610,7 @@ export default function ComposeEmailPageClient() {
             {testLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
             Send me a test
           </button>
+          <span className="hidden flex-1 lg:block" aria-hidden="true" />
           <button
             type="button"
             onClick={() => void handleSend()}
@@ -622,20 +644,34 @@ export default function ComposeEmailPageClient() {
           </p>
         ) : null}
 
-        {preview ? (
-          <div>
+      </section>
+      </div>
+
+      <section aria-labelledby="compose-preview" className="min-w-0 lg:sticky lg:top-8">
+        <h2 id="compose-preview" className="flex items-center gap-2 text-sm font-semibold text-content-secondary">
+          What they get
+          {previewReady && previewLoading ? <Loader2 className="h-4 w-4 animate-spin text-content-tertiary" aria-hidden="true" /> : null}
+        </h2>
+        {previewReady && preview ? (
+          <div className="mt-2">
             <p className="text-xs text-content-tertiary">
-              Subject: <span className="text-content-secondary">{preview.subject}</span>. The name shown is an example.
+              Subject: <span className="text-content-secondary">{preview.subject}</span>.{' '}
+              {previewName ? <>Addressed to {previewName}, the first on the list.</> : 'The name shown is an example.'}
             </p>
             <iframe
               title="Email preview"
               sandbox=""
               srcDoc={preview.html}
-              className="mt-2 h-[560px] w-full rounded-lg border border-stroke-default bg-white"
+              className="mt-2 h-[560px] w-full rounded-xl border border-stroke-default bg-white lg:h-[640px]"
             />
           </div>
-        ) : null}
+        ) : (
+          <p className="mt-2 rounded-xl border border-dashed border-stroke-default p-6 text-sm text-content-secondary">
+            Write a subject and a message to see the email here.
+          </p>
+        )}
       </section>
+      </div>
 
       <section className="mt-12">
         <h2 className="font-display text-lg font-semibold text-content-primary">Recent emails</h2>
