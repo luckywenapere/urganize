@@ -245,3 +245,13 @@ Connection requests from 5 Nov: 3 of 18 accepted so far, 2 of them replied (Afol
 **Investor and advisor connection requests (4 pending), each with a liked post:** Kehinde Hassan (Christian Rich, angel investor and advisor), Marie Lora-Mungai (creative industries advisor and investor), Oscar "Oskido" Mdlongwa (Kalawa Jazmee, investor), Michael Ugwu (formerly Sony Music West Africa, Freeme, Merlin board). Rus Newton (music tech and Africa investor) needs his email to connect; post liked. Love Akinkunle's (Tafiya Capital) request failed silently three times; post liked. Dropped Sheppard Solomon (job hunting) and Samson Osei (moved into food).
 
 **Round 2 (afternoon):** Ty Conway replied (does concept designs for Mellina Tey, making merch for Sofia Gillani); asked who he co-manages. Connection requests (6), all confirmed in Sent invitations, each with a liked post where they had one: Kay Agyemang (London, label owner and manager), Jeff Gordon (All Star Entertainment, manages Summer Rios and Danielle Cohn), Chilunji Mwambazi (label ops, Addis Ababa), Michael Dodman (Brighton, no posts), Victor Biyere (The Orchard West Africa, reposts only) and Diamond Sheva (DIMA Empire, 11 years in African music; possible advisor). Skipped Alex Cupido and Polsia Ryder (no posts in years) and Frank Uneke (football talent).
+
+## 13 Nov 2026
+
+**Missed call:** Meghan Kek waited in the Friday 4pm call and Oyin didn't join (second miss). Sent an apology offering to fit around her time next week.
+
+**Inbox replies sent (9):** Oluwatosin Ajibode (projects out next month, wants the setup call at the weekend): booking link or a time that suits him. Elvis Ofurum (runs everything on WhatsApp and Drive): what Urganize does, plans for one artist up to a full label, sign-up link. Gregg Miller (hip-hop roster plus 90s legacy acts), Richard M. Ajayi (one artist), IfeOluwa Akinwumi and Emmanuel Nde: asked about their work. Joy Etido Usen (Usen House, events and creative agency): left the door open. Tobias Metzger is happy with his current tools; no reply needed.
+
+**First DMs (2):** Adeniyi Akinbowale (Kneelyo Media) and Neoentle Mokori (Culture Hub ZA, accepted 11 Nov and missed until today).
+
+**Investors, relationship only, no ask (6), each with a liked post:** DM to Adedeji Olowe (Lendsqr, Paystack board chair; already connected) on his WhatsApp + AI post. Connection requests, all confirmed in Sent invitations: Mark Essien (Hotels.ng, TripDesk), Gatumi Aliyu (Vendease, 54gene), Kevwe Jefia, Munachimso Ngozi-Olehi (InnovFrica, Abuja) and Amarachi Nwachukwu (VC, MARL Accelerator).
