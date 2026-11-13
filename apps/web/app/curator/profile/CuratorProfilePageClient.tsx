@@ -10,6 +10,9 @@ import { Camera, Check } from '@/components/icons';
 import { CuratorShell } from '@/components/curator/CuratorShell';
 import { CuratorLoadError } from '@/components/curator/CuratorLoadError';
 import { CuratorPublicPageSection } from '@/components/curator/CuratorPublicPageSection';
+import { PublicPageCard } from '@/components/curator/desk/PublicPageCard';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
+import { isProfileDirty } from '@/lib/curator-desk';
 import { useCuratorStore } from '@/stores/useCuratorStore';
 import { supabase } from '@/lib/supabase/client';
 import { captureAnalyticsEvent, createPostHogEvent } from '@/lib/analytics';
@@ -211,6 +214,134 @@ export function CuratorProfilePageClient() {
   };
 
   const busy = isSaving || isUploading;
+
+  // On a computer (#1237): the form on the left, the public page on the
+  // right. Save lights up only when something really changed (typing a name
+  // back to what it was does not count) and says "Saved" otherwise.
+  const isDesktop = useIsDesktopViewport();
+  const isDirty = isProfileDirty(profile, nameDraft, bioDraft);
+
+  if (isDesktop) {
+    return (
+      <CuratorShell>
+        <div className="mb-5">
+          <h1 className="font-display text-[30px] leading-[38px] text-content-primary">Profile</h1>
+          <p className="mt-1 text-sm text-content-secondary">Artist teams see this beside every playlist you own.</p>
+        </div>
+
+        {loadError ? (
+          <div className="mb-4">
+            <CuratorLoadError
+              message={loadError}
+              variant={profile ? 'banner' : 'blocking'}
+              isRetrying={isLoading}
+              onRetry={() => void loadProfile({ force: true })}
+            />
+          </div>
+        ) : null}
+
+        {loadError && !profile ? null : (
+          <div className="grid grid-cols-[minmax(0,1fr)_340px] items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <form onSubmit={handleSave} className="rounded-2xl border border-stroke-default bg-bg-surface p-5">
+              <div className="flex items-center gap-3.5">
+                <div className="relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full bg-bg-active">
+                  {profile?.photoUrl ? (
+                    <Image src={profile.photoUrl} alt="" fill sizes="64px" className="object-cover" unoptimized />
+                  ) : (
+                    <span className="text-xl font-semibold text-content-secondary">{initialsOf(displayName)}</span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="motion-focus inline-flex h-9 items-center gap-1.5 rounded-full border border-stroke-strong px-4 text-[13px] font-medium text-content-primary transition-colors hover:bg-bg-hover disabled:opacity-50"
+                >
+                  <Camera className="h-3.5 w-3.5" aria-hidden="true" />
+                  {isUploading ? 'Uploading…' : profile?.photoPath ? 'Change photo' : 'Add photo'}
+                </button>
+                {profile?.photoPath ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void handleRemovePhoto()}
+                    className="motion-focus text-[13px] text-content-secondary hover:text-content-primary disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                ) : null}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void handlePhoto(file);
+                  }}
+                />
+              </div>
+
+              <div className="mt-4">
+                <label htmlFor="desk-curator-name" className="mb-1.5 block text-[13px] font-semibold text-content-primary">
+                  Display name
+                </label>
+                <input
+                  id="desk-curator-name"
+                  className="h-11 w-full rounded-xl border border-stroke-control bg-bg-base px-3.5 text-sm text-content-primary focus:border-brand focus:outline-none"
+                  value={displayName}
+                  maxLength={MAX_CURATOR_DISPLAY_NAME_LENGTH}
+                  onChange={(event) => setNameDraft(event.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="mt-4">
+                <div className="mb-1.5 flex items-baseline justify-between">
+                  <label htmlFor="desk-curator-bio" className="text-[13px] font-semibold text-content-primary">
+                    Short bio
+                  </label>
+                  <span className="text-[13px] text-content-tertiary">
+                    {bio.length} of {MAX_CURATOR_BIO_LENGTH}
+                  </span>
+                </div>
+                <textarea
+                  id="desk-curator-bio"
+                  rows={4}
+                  value={bio}
+                  maxLength={MAX_CURATOR_BIO_LENGTH}
+                  onChange={(event) => setBioDraft(event.target.value)}
+                  placeholder="What you look for. How often you refresh your playlists."
+                  className="w-full rounded-xl border border-stroke-control bg-bg-base px-3.5 py-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
+                />
+              </div>
+
+              {error ? (
+                <p role="alert" className="mt-3 text-sm text-status-error">
+                  {error}
+                </p>
+              ) : null}
+
+              <div className="mt-3 flex items-center gap-3">
+                <p aria-live="polite" className="flex-1 text-[13px] text-content-secondary">
+                  {isSaving ? 'Saving…' : isDirty ? 'Not saved yet' : profile ? 'Saved' : ''}
+                </p>
+                <button
+                  type="submit"
+                  disabled={busy || !isDirty || !displayName.trim()}
+                  className="motion-focus inline-flex h-10 items-center rounded-full bg-content-primary px-5 text-sm font-semibold text-bg-base transition-opacity hover:opacity-90 disabled:opacity-40"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+
+            {CURATOR_PAGE_ENABLED ? <PublicPageCard displayName={displayName} /> : null}
+          </div>
+        )}
+      </CuratorShell>
+    );
+  }
 
   return (
     <CuratorShell>

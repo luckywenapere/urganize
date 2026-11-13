@@ -18,7 +18,8 @@
 // AppShell adds /curator to its standalone-route list, so none of the team
 // chrome (topbar, identity card, UrgAns rail, dock) renders around this.
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '@urganize/ui';
@@ -27,6 +28,9 @@ import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 import { HOME_PATH } from '@/lib/home-path';
 import { isPitchPaymentsEnabled } from '@/lib/pitch-payments';
+import { useCuratorStore } from '@/stores/useCuratorStore';
+import { curatorInitials, waitingCount } from '@/lib/curator-desk';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 // Read once at module scope: a NEXT_PUBLIC_ flag is inlined at build time, so
@@ -46,6 +50,19 @@ const TABS = PAYMENTS_ENABLED
   ? [...BASE_TABS, { href: '/curator/earnings', label: 'Earnings', icon: PiggyBank }]
   : BASE_TABS;
 
+// The desktop left menu (#1237): the same pages in reading order, Earnings
+// after Playlists. Earnings stays behind the same flag as the phone tab: its
+// page and route only work once paid pitching is on.
+const DESK_ITEMS: ReadonlyArray<{ href: string; label: string }> = [
+  { href: '/curator', label: 'Pitches' },
+  { href: '/curator/playlists', label: 'Playlists' },
+  ...(PAYMENTS_ENABLED ? [{ href: '/curator/earnings', label: 'Earnings' }] : []),
+  { href: '/curator/profile', label: 'Profile' },
+];
+
+const isActivePath = (pathname: string | null, href: string): boolean =>
+  href === '/curator' ? pathname === '/curator' : Boolean(pathname?.startsWith(href));
+
 export function CuratorShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -58,6 +75,23 @@ export function CuratorShell({ children }: { children: ReactNode }) {
 
   const [isActivating, setIsActivating] = useState(false);
   const [activationError, setActivationError] = useState('');
+
+  // Desktop only: the waiting count in the menu and the avatar in the top bar.
+  // Both come from the store the pages already fill, and the loads coalesce
+  // with the page's own, so this adds no request a page was not making.
+  const isDesktop = useIsDesktopViewport();
+  const pitches = useCuratorStore((state) => state.pitches);
+  const curatorProfile = useCuratorStore((state) => state.profile);
+  const loadPitches = useCuratorStore((state) => state.loadPitches);
+  const loadProfile = useCuratorStore((state) => state.loadProfile);
+  const waiting = useMemo(() => waitingCount(pitches), [pitches]);
+  const isCuratorReady = isAuthenticated && hasCuratorProfile === true;
+
+  useEffect(() => {
+    if (!isDesktop || !isCuratorReady) return;
+    void loadPitches();
+    void loadProfile();
+  }, [isDesktop, isCuratorReady, loadPitches, loadProfile]);
 
   useEffect(() => {
     if (!PITCHING_ENABLED) {
@@ -115,7 +149,7 @@ export function CuratorShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 border-b border-stroke-default bg-bg-base/95 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-stroke-default bg-bg-base/95 backdrop-blur lg:hidden">
         <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between gap-3 px-4">
           {/* The eyebrow is the first thing to go below `sm`: with a dual
               account the right side carries two pills, and logo + eyebrow +
@@ -170,17 +204,107 @@ export function CuratorShell({ children }: { children: ReactNode }) {
         ) : null}
       </header>
 
+      {/* Desktop top bar (#1237): logo, the role chip, the way to the team
+          side, and who is signed in. Sign out lives in the left menu. */}
+      <header className="sticky top-0 z-30 hidden border-b border-stroke-default bg-bg-base/95 backdrop-blur lg:block">
+        <div className="flex h-16 items-center justify-between gap-4 px-8">
+          <div className="flex items-center gap-3">
+            <Logo size="sm" />
+            <span className="rounded-full bg-bg-hover px-2 py-0.5 text-xs font-semibold text-content-secondary">
+              Playlist owner
+            </span>
+          </div>
+          {isCurator ? (
+            <div className="flex items-center gap-2.5">
+              {isCuratorOnly ? (
+                <button
+                  type="button"
+                  onClick={() => void handleActivateTeam()}
+                  disabled={isActivating}
+                  className="motion-focus inline-flex h-9 items-center gap-1.5 rounded-full border border-brand bg-brand/10 px-4 text-[13px] font-semibold text-brand transition-colors hover:bg-brand/20 disabled:opacity-60"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  {isActivating ? 'Setting up…' : 'Run your rollouts'}
+                </button>
+              ) : (
+                <Link
+                  href={HOME_PATH}
+                  className="motion-focus inline-flex h-9 items-center rounded-full border border-stroke-strong px-4 text-[13px] font-medium text-content-primary transition-colors hover:bg-bg-hover"
+                >
+                  Your rollouts
+                </Link>
+              )}
+              <span
+                aria-hidden="true"
+                className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-bg-active text-xs font-semibold text-content-secondary"
+              >
+                {curatorProfile?.photoUrl ? (
+                  <Image src={curatorProfile.photoUrl} alt="" fill sizes="36px" className="object-cover" unoptimized />
+                ) : (
+                  curatorInitials(curatorProfile?.displayName || '')
+                )}
+              </span>
+            </div>
+          ) : null}
+        </div>
+        {activationError ? (
+          <p role="status" className="px-8 pb-2 text-xs text-status-error">
+            {activationError}
+          </p>
+        ) : null}
+      </header>
+
       {/* pb clears the fixed tab row on small screens. */}
-      <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-5 sm:pb-10">
-        {isCurator || isAuthLoading || (isAuthenticated && hasCuratorProfile === null)
-          ? children
-          : null}
+      <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-5 sm:pb-10 lg:grid lg:max-w-[1180px] lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start lg:gap-8 lg:px-6 lg:pb-12 lg:pt-6">
+        {isCurator ? (
+          <nav aria-label="Playlist owner menu" className="sticky top-[88px] hidden lg:block">
+            <ul className="space-y-0.5">
+              {DESK_ITEMS.map((item) => {
+                const isActive = isActivePath(pathname, item.href);
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`motion-focus flex items-center justify-between rounded-[10px] px-3 py-[9px] text-sm transition-colors ${
+                        isActive
+                          ? 'bg-bg-sidebar-active font-semibold text-content-primary'
+                          : 'text-content-secondary hover:bg-bg-hover hover:text-content-primary'
+                      }`}
+                    >
+                      {item.label}
+                      {item.href === '/curator' && waiting > 0 ? (
+                        <span className="rounded-full bg-brand px-[7px] text-xs font-semibold leading-[18px] text-content-inverse">
+                          <span className="sr-only">waiting: </span>
+                          {waiting}
+                        </span>
+                      ) : null}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="mx-1 my-3 h-px bg-stroke-default" />
+            <button
+              type="button"
+              onClick={() => void logout()}
+              className="motion-focus flex w-full items-center rounded-[10px] px-3 py-[9px] text-left text-sm text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+            >
+              Sign out
+            </button>
+          </nav>
+        ) : null}
+        <div className="min-w-0 lg:col-start-2">
+          {isCurator || isAuthLoading || (isAuthenticated && hasCuratorProfile === null)
+            ? children
+            : null}
+        </div>
       </main>
 
       {isCurator ? (
         <nav
           aria-label="Playlist owner sections"
-          className="fixed inset-x-0 bottom-0 z-30 border-t border-stroke-default bg-bg-surface/95 backdrop-blur sm:static sm:mx-auto sm:mb-8 sm:max-w-3xl sm:rounded-xl sm:border"
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-stroke-default bg-bg-surface/95 backdrop-blur sm:static sm:mx-auto sm:mb-8 sm:max-w-3xl sm:rounded-xl sm:border lg:hidden"
         >
           <ul className="mx-auto flex w-full max-w-3xl">
             {TABS.map((tab) => {
