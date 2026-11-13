@@ -28,13 +28,15 @@
 // flag. Nothing here imports it, and TEAM_TRIAL_DAYS is intentionally not
 // trial-card's TRIAL_DAYS.
 
-/** The team trial length. 0 since 2026-10-31 (founder: no free access, pay
- * first): a new team is stamped with a trial that has already ended, so it
- * meets the plan wall straight after "Your team". It was 3 days from
- * 2026-09-10 (14 in the original spec). Deliberately NOT lib/trial-card.ts's
+/** The team trial length: 3 days for every new account, as part of
+ * onboarding (founder, 2026-11-13, #1262). It was 0 from 2026-10-31 (pay
+ * first), when a new team was stamped with a trial that had already ended and
+ * trials were then extended by hand from the admin page. Before that, 3 days
+ * from 2026-09-10 (14 in the original spec). With this above 0, onboarding
+ * skips the plan wall and shows "Your 3-day trial is on" instead. Deliberately NOT lib/trial-card.ts's
  * TRIAL_DAYS (28) — that constant belongs to the superseded card-first funnel
  * and is load-bearing copy on other surfaces. */
-export const TEAM_TRIAL_DAYS = 0;
+export const TEAM_TRIAL_DAYS = 3;
 
 /** The trial indicator appears at this many days left or fewer. Calm and
  * non-blocking until then. Shrunk from 10 to 1 alongside the 2026-09-10

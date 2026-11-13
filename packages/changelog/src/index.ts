@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.283.0",
+    title: "3 days free when you join",
+    tag: "Account",
+    date: "November 13, 2026",
+    highlights: [
+      "Every new account now gets 3 days free with everything open, so you can try it with your team before you pick a plan.",
+    ],
+  },
+  {
     version: "1.282.2",
     date: "November 13, 2026",
     listed: false,
