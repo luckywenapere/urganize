@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.278.0",
+    title: "Try the assistant without a plan",
+    tag: "Account",
+    date: "November 13, 2026",
+    highlights: [
+      "Not ready for a plan? You can now try the assistant for ₦1,500, right from the plans page.",
+      "Pick a credit pack, pay once, and you land straight in the assistant. No subscription.",
+    ],
+  },
+  {
     version: "1.277.3",
     tag: "App",
     date: "November 12, 2026",

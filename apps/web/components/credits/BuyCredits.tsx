@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Loader2 } from '@/components/icons';
-import { authHeaders, readError } from '@/components/press-kits/press-kit-client';
+import { authHeaders } from '@/components/press-kits/press-kit-client';
+import { startCreditsCheckout } from '@/lib/credits/checkout-client';
 import type { CreditAccount } from '@/lib/credits/allowance';
 import { isCreditsPurchasable } from '@/lib/credits/config';
 import { TOPUP_PACKS, creditsForPack, packPriceUsd } from '@/lib/credits/packs';
 import { useVisitorCurrency } from '@/lib/visitor-currency';
 import { isCreditsReference, type CreditsReturnPath } from '@/lib/credits/purchase';
-import { openPaystackCheckout } from '@/lib/pitch-payments-client';
 import { isIOSApp } from '@/lib/platform';
 
 /**
@@ -105,28 +105,11 @@ export function BuyCredits({ account, onPurchased, returnTo = '/dashboard/credit
   }, [onPurchased]);
 
   const buy = useCallback(async (priceNaira: number) => {
-    const headers = await authHeaders();
-    if (!headers) return;
     setBusyPrice(priceNaira);
     setError('');
     try {
-      const response = await fetch('/api/credits/checkout', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ priceNaira, returnTo }),
-      });
-      if (!response.ok) {
-        setError(await readError(response, 'Could not open the payment page. Try again.'));
-        return;
-      }
-      const body = (await response.json()) as { authorizationUrl?: string };
-      if (!body.authorizationUrl) {
-        setError('Could not open the payment page. Try again.');
-        return;
-      }
-      await openPaystackCheckout(body.authorizationUrl);
-    } catch {
-      setError('Could not reach Urganize. Check your connection and try again.');
+      const failure = await startCreditsCheckout(priceNaira, returnTo);
+      if (failure) setError(failure);
     } finally {
       setBusyPrice(null);
     }

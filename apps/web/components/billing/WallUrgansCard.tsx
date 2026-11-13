@@ -20,7 +20,7 @@ export const URGANS_HUB_PATH = '/locked/urgans';
 
 const CREDITS_ENABLED = isCreditsEnabled();
 
-export function WallUrgansCard() {
+export function WallUrgansCard({ hideBuyRow = false }: { hideBuyRow?: boolean } = {}) {
   const { balance: total } = useCreditBalance();
 
   // Credits off, or no balance to speak of (no team, or it could not be read).
@@ -28,6 +28,9 @@ export function WallUrgansCard() {
 
   const left = Math.max(0, Math.floor(total));
   if (left === 0 && !isCreditsPurchasable()) return null;
+  // With nothing left, the "Try the assistant" offer under the plans (#1243)
+  // already sells the credits, so this row would only repeat it.
+  if (left === 0 && hideBuyRow) return null;
 
   // A quiet row, not a card: the plan above is the one thing this page asks for,
   // and a second boxed card with its own filled button would compete with it.

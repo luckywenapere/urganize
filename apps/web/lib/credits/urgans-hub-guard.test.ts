@@ -33,7 +33,12 @@ describe('the AI page behind the wall', () => {
 
   it('exists as a page, and the wall card links to it', () => {
     expect(read('app/locked/urgans/page.tsx')).toContain('UrgansHubClient');
-    expect(read('components/billing/TeamWall.tsx')).toContain('<WallUrgansCard />');
+    expect(read('components/billing/TeamWall.tsx')).toContain('<WallUrgansCard');
+  });
+
+  it('sends a pack bought from the wall offer back to this page (#1243)', () => {
+    expect(read('components/billing/TeamWall.tsx')).toContain('<WallCreditsOffer');
+    expect(read('components/billing/WallCreditsOffer.tsx')).toContain("const RETURN_TO = '/locked/urgans'");
   });
 
   it('bounces a team whose switches are off, and a signed-out visitor', () => {
