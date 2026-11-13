@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { supabase } from '@/lib/supabase/client';
 import {
   Activity,
-  ArrowLeft,
   Bug,
   BellRing,
   ChevronLeft,
@@ -31,7 +32,16 @@ import {
   MoreHorizontal,
   Wallet2,
 } from '@/components/icons';
-import { ADMIN_MORE_SECTIONS, ADMIN_PRIMARY_NAV, activeNavKey, adminBackTarget } from '@/lib/admin-sections';
+import {
+  ADMIN_DESKTOP_MENU,
+  ADMIN_PRIMARY_NAV,
+  activeDesktopKey,
+  activeNavKey,
+  adminBackTarget,
+  adminDesktopBackTarget,
+  waitingCount,
+  type AdminWaitingKey,
+} from '@/lib/admin-sections';
 import { buttonVariants, cn } from '@/components/admin/ui';
 
 // The admin hub's menu: one place linking every internal dashboard (founder
@@ -93,53 +103,108 @@ export const ADMIN_NAV_ITEMS: Array<{
   exact?: boolean;
 }> = ADMIN_PRIMARY_NAV.map((item) => ({ ...item, icon: NAV_ICONS[item.key] ?? LayoutDashboard }));
 
-/** Desktop (lg+) sidebar. Below lg it renders nothing; AdminBottomBar takes over. */
+/** How often the menu's red counts reload while you move around the admin. */
+const ATTENTION_REFRESH_MS = 60 * 1000;
+
+/**
+ * The red counts on the desktop menu: GET /api/admin/attention, the same
+ * head-only counts the Overview reads. Read on first show and again when you
+ * change page, at most once a minute. A failed read shows no counts, never 0.
+ */
+function useAttentionCounts(pathname: string) {
+  const [counts, setCounts] = useState<Partial<Record<AdminWaitingKey, number | null>> | null>(null);
+  const loadedAt = useRef(0);
+
+  useEffect(() => {
+    if (loadedAt.current && Date.now() - loadedAt.current < ATTENTION_REFRESH_MS) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) return;
+        const response = await fetch('/api/admin/attention', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+        if (!response.ok) return;
+        const body = (await response.json().catch(() => ({}))) as {
+          attention?: Partial<Record<AdminWaitingKey, number | null>>;
+        };
+        if (!cancelled && body.attention) {
+          setCounts(body.attention);
+          loadedAt.current = Date.now();
+        }
+      } catch {
+        // No counts is fine: the pages themselves still show what waits.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
+
+  return counts;
+}
+
+/**
+ * Desktop (lg+) sidebar (2026-11-12, #1241; founder approved the mock): every
+ * admin page in four groups, Every day first, with a red count on what waits.
+ * Below lg it renders nothing; AdminBottomBar takes over.
+ */
 export function AdminNav() {
   const pathname = usePathname() || '';
-  const activeKey = activeNavKey(pathname);
+  const activeKey = activeDesktopKey(pathname);
+  const counts = useAttentionCounts(pathname);
 
   return (
-    <nav aria-label="Admin menu" className="hidden shrink-0 flex-col lg:sticky lg:top-8 lg:flex lg:h-fit lg:w-52">
+    <nav aria-label="Admin menu" className="hidden shrink-0 flex-col lg:sticky lg:top-8 lg:flex lg:h-fit lg:w-56">
       {/*
-        The way out. /admin/* renders no app chrome at all (AppShell's
-        showWorkspaceChrome covers only /dashboard and /settings), so without
-        this link the only exits are the browser Back button and typing a URL.
-        Labelled "catalog" to match the identity card's own name for
-        /dashboard. On phone the same exit is the last row on More.
+        The way out. /admin/* renders no app chrome at all, so without this
+        link the only exits are the browser Back button and typing a URL. On
+        phone the same exit is the last row on More.
       */}
       <Link
         href="/dashboard"
-        className="motion-focus mb-4 flex h-9 w-fit items-center gap-2.5 rounded-lg px-3 text-sm text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+        className="motion-focus mb-2 flex h-9 w-fit items-center gap-2 rounded-lg px-3 text-sm text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
       >
-        <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
-        <span className="whitespace-nowrap">Back to catalog</span>
+        <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <span className="whitespace-nowrap">Back to the app</span>
       </Link>
-      <ul className="flex w-full flex-col gap-1">
-        {ADMIN_NAV_ITEMS.map((item) => {
-          const active = activeKey === item.key;
-          return (
-            <li key={item.key}>
-              <Link
-                href={item.href}
-                aria-current={active ? 'page' : undefined}
-                className={cn(
-                  'motion-focus flex h-9 items-center gap-2.5 rounded-lg px-3 text-sm transition-colors',
-                  active
-                    ? 'bg-brand/10 font-medium text-brand'
-                    : 'text-content-secondary hover:bg-bg-hover hover:text-content-primary'
-                )}
-              >
-                <span className="whitespace-nowrap">{item.label}</span>
-                {item.key === 'more' ? (
-                  <span className="ml-auto pl-2 font-mono text-[11px] tabular-nums text-content-tertiary">
-                    {ADMIN_MORE_SECTIONS.length}
-                  </span>
-                ) : null}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+      {ADMIN_DESKTOP_MENU.map((group) => (
+        <div key={group.key} className="mt-3">
+          <h2 className="px-3 pb-1 text-xs font-semibold text-content-tertiary">{group.label}</h2>
+          <ul className="flex w-full flex-col gap-0.5">
+            {group.items.map((item) => {
+              const active = activeKey === item.key;
+              const count = waitingCount(item, counts);
+              return (
+                <li key={item.key}>
+                  <Link
+                    href={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'motion-focus flex h-8 items-center gap-2 rounded-lg px-3 text-sm transition-colors',
+                      active
+                        ? 'bg-bg-hover font-semibold text-content-primary'
+                        : 'text-content-secondary hover:bg-bg-hover hover:text-content-primary'
+                    )}
+                  >
+                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                    {count !== null ? (
+                      <span className="rounded-full bg-status-error px-1.5 text-[11px] font-bold leading-[17px] tabular-nums text-white">
+                        <span className="sr-only">, </span>
+                        {count}
+                        <span className="sr-only"> waiting</span>
+                      </span>
+                    ) : null}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
     </nav>
   );
 }
@@ -183,22 +248,32 @@ export function AdminBottomBar() {
   );
 }
 
-/** The back button of a page below a tab: a ghost button with the parent's name. */
+/**
+ * The back button of a page below a tab: a ghost button with the parent's
+ * name. On a computer the menu already lists every page, so it shows only on
+ * a page the menu does not list (Write an email, Onboarding emails).
+ */
 export function AdminBackButton() {
   const pathname = usePathname() || '';
-  const target = adminBackTarget(pathname);
-  if (!target) return null;
-  return (
+  const phone = adminBackTarget(pathname);
+  const desktop = adminDesktopBackTarget(pathname);
+  const link = (target: { label: string; href: string }, className: string) => (
     <Link
       href={target.href}
       className={buttonVariants({
         variant: 'ghost',
         size: 'sm',
-        className: '-ml-3 mb-3 gap-1 text-sm font-normal',
+        className: cn('-ml-3 mb-3 gap-1 text-sm font-normal', className),
       })}
     >
       <ChevronLeft className="h-4 w-4" aria-hidden="true" />
       {target.label}
     </Link>
+  );
+  return (
+    <>
+      {phone ? link(phone, 'lg:hidden') : null}
+      {desktop ? link(desktop, 'hidden lg:inline-flex') : null}
+    </>
   );
 }

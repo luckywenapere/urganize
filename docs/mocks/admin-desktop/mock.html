@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin, desktop</title>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --side-on:#e6e1d6; --card:#faf5ec; --hover:#ebe6dc; --tile:#e3ddd0;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --err:#961a1a; --err-soft:rgba(150,26,26,.08);
+    --ink:#1d2a21; --on-ink:#f5f0e6; --on-ink2:rgba(245,240,230,.72);
+    --board:#d9d5cc; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/20px 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--text); padding:40px 16px 72px; font-variant-numeric:tabular-nums; }
+  p,h1,h2,h3 { margin:0; }
+  .serif { font-family:'Young Serif', serif; font-weight:400; letter-spacing:0; }
+  .sec { color:var(--sec); } .ter { color:var(--ter); } .err { color:var(--err); }
+  .wrap { max-width:1240px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; line-height:36px; }
+  .intro p { color:var(--board-sec); max-width:760px; margin-top:8px; }
+  .label { font-size:12px; line-height:16px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin:40px 0 8px; }
+
+  .desk { background:var(--bg); border-radius:16px; overflow:hidden; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .bar { height:64px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:0 32px; }
+  .logo { font-family:'Young Serif', serif; font-size:18px; display:flex; align-items:center; gap:8px; }
+  .beta { font:700 10px/16px 'Instrument Sans'; letter-spacing:.06em; padding:0 6px; border-radius:4px; background:var(--brand-soft); color:var(--brand); }
+  .tabs { display:flex; gap:4px; }
+  .tabs span { padding:8px 14px; border-radius:99px; color:var(--sec); }
+  .tabs span.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .icons { display:flex; gap:12px; justify-content:flex-end; align-items:center; }
+  .icons i { width:36px; height:36px; border-radius:50%; border:1px solid var(--line2); }
+  .icons b { width:36px; height:36px; border-radius:50%; background:var(--brand); color:var(--on-ink); display:grid; place-items:center; font-size:12px; }
+
+  /* One content width for Home: 1120. */
+  .page { max-width:1120px; margin:0 auto; padding:8px 0 48px; display:flex; flex-direction:column; gap:16px; }
+
+  .face { width:40px; height:40px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--tile); font-weight:600; font-size:13px; }
+  .cv { width:40px; height:40px; flex:none; border-radius:6px; }
+  .cv.none { background:transparent; border:1.5px dashed var(--line2); display:grid; place-items:center; color:var(--ter); font-size:18px; }
+  .chev { width:8px; height:8px; border-top:1.5px solid var(--ter); border-right:1.5px solid var(--ter); transform:rotate(45deg); flex:none; }
+  .btn { display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 16px; border-radius:99px; font-weight:600; font-size:13px; white-space:nowrap; }
+  .btn.light { background:var(--on-ink); color:var(--ink); }
+  .btn.ghost { border:1px solid var(--line2); color:var(--text); font-weight:500; }
+
+  /* 1. Out now: one quiet line, not a tall card with a full-width button. */
+  .out { display:flex; align-items:center; gap:12px; padding:10px 16px; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+  .out .cv { width:32px; height:32px; background:var(--tile); }
+  .pill { font-size:12px; line-height:20px; font-weight:600; padding:0 8px; border-radius:99px; background:var(--brand-soft); color:var(--brand); }
+  .out .grow { flex:1; min-width:0; }
+  .link { color:var(--brand); font-weight:600; text-decoration:underline; text-underline-offset:3px; }
+  </style></head><body>
+<style>
+  .shell { display:grid; grid-template-columns:220px minmax(0,1fr); gap:32px; padding:24px 32px 48px; align-items:start; }
+  .nav { position:sticky; top:16px; font-size:14px; }
+  .nav .back { color:var(--sec); padding:6px 12px 14px; display:block; }
+  .nav .g { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ter); padding:14px 12px 4px; }
+  .nav a { display:flex; justify-content:space-between; align-items:center; padding:6px 12px; border-radius:8px; color:var(--sec); }
+  .nav a.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .nav em { font-style:normal; font-size:11px; font-weight:700; padding:0 6px; line-height:17px; border-radius:99px; background:var(--err); color:#fff; }
+  h2 { font-family:'Young Serif', serif; font-weight:400; font-size:30px; line-height:38px; }
+  .lead { color:var(--sec); margin-top:4px; max-width:720px; }
+  .top { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; margin-bottom:20px; }
+  .meta { color:var(--sec); font-size:13px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; }
+  .pad { padding:18px 20px; }
+  .btn.dark { background:var(--ink); color:var(--on-ink); }
+  .lab { font-weight:600; display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+  .lab a { font-weight:500; font-size:13px; color:var(--brand); }
+  .live { display:inline-flex; gap:6px; align-items:center; font-size:12px; color:var(--sec); }
+  .live:before { content:''; width:6px; height:6px; border-radius:50%; background:var(--brand); }
+
+  /* overview */
+  .todo { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  .todo .card { padding:16px; border-color:rgba(150,26,26,.25); }
+  .todo .n { font-family:'Young Serif', serif; font-size:30px; line-height:36px; color:var(--err); }
+  .todo .k { font-weight:600; } .todo .s { color:var(--sec); font-size:13px; }
+  .tiles { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-top:16px; }
+  .tiles .card { padding:14px 16px; }
+  .tiles .n { font-family:'Young Serif', serif; font-size:26px; line-height:32px; margin-top:2px; }
+  .tiles .k { color:var(--sec); font-size:13px; } .tiles .s { color:var(--ter); font-size:12px; }
+  .warn { color:var(--err); font-size:12px; font-weight:600; }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; }
+  .kv { display:flex; justify-content:space-between; padding:10px 0; border-top:1px solid var(--line); }
+  .kv:first-of-type { border-top:0; padding-top:0; }
+  .kv b { font-weight:600; } .kv span.s { color:var(--sec); font-size:13px; margin-left:8px; font-weight:400; }
+
+  /* tables */
+  .th, .tr { display:grid; gap:14px; align-items:center; padding:11px 18px; }
+  .th { font-size:12px; font-weight:600; color:var(--ter); border-bottom:1px solid var(--line); }
+  .tr { border-top:1px solid var(--line); font-size:13px; } .th + .tr { border-top:0; }
+  .num { text-align:right; font-variant-numeric:tabular-nums; }
+  .pill { font-size:12px; font-weight:600; padding:1px 8px; border-radius:99px; display:inline-block; }
+  .p-ok { background:var(--brand-soft); color:var(--brand); }
+  .p-mid { background:var(--hover); color:var(--sec); }
+  .p-bad { background:var(--err-soft); color:var(--err); }
+  .dots { color:var(--ter); font-size:18px; text-align:right; }
+  .teams .th, .teams .tr { grid-template-columns:minmax(0,1.3fr) minmax(0,1.3fr) 90px minmax(0,1fr) minmax(0,1.4fr) auto 24px; }
+  .t1 { font-weight:600; font-size:14px; } .t2 { color:var(--ter); font-size:12px; }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .chips span { height:30px; padding:0 12px; border-radius:99px; border:1px solid var(--line2); display:inline-flex; align-items:center; font-size:13px; color:var(--sec); }
+  .chips span.on { background:var(--ink); color:var(--on-ink); border-color:var(--ink); font-weight:600; }
+  .chips span b { margin-left:6px; font-weight:600; }
+  .search { margin-left:auto; height:34px; width:260px; border:1px solid var(--line2); border-radius:10px; padding:0 12px; display:flex; align-items:center; color:var(--ter); font-size:13px; background:var(--card); }
+  .marg .th, .marg .tr { grid-template-columns:minmax(0,1.4fr) 80px 80px 110px 90px 80px 70px 80px 110px; }
+  .total { background:var(--side-on); font-weight:600; }
+  .mstats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+  .mstats .card { padding:14px 16px; } .mstats .n { font-family:'Young Serif', serif; font-size:24px; } .mstats .k { color:var(--sec); font-size:13px; }
+  .mails .th, .mails .tr { grid-template-columns:110px minmax(0,1.6fr) minmax(0,1fr) 150px 100px; }
+
+  /* compose */
+  .compose { display:grid; grid-template-columns:minmax(0,1fr) 420px; gap:24px; align-items:start; }
+  .aud { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .aud div { border:1px solid var(--line2); border-radius:12px; padding:12px 14px; display:grid; grid-template-columns:18px 1fr; gap:10px; }
+  .aud div.on { border:2px solid var(--brand); padding:11px 13px; }
+  .rad { width:16px; height:16px; border-radius:50%; border:1.5px solid var(--line2); margin-top:2px; }
+  .on .rad { border:5px solid var(--brand); }
+  .aud .s { color:var(--sec); font-size:12px; }
+  .f { margin-top:16px; } .f .k { font-weight:600; font-size:13px; margin-bottom:6px; }
+  .inp { height:42px; border:1px solid #6e6f69; border-radius:10px; padding:0 12px; display:flex; align-items:center; background:var(--bg); }
+  .area { min-height:200px; border:1px solid #6e6f69; border-radius:10px; padding:12px; background:var(--bg); line-height:22px; }
+  .mail { background:#fff; border:1px solid var(--line); border-radius:12px; padding:22px; font-family:system-ui, sans-serif; color:#222; font-size:14px; line-height:22px; }
+  .mail .from { font-size:12px; color:#777; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:14px; }
+
+  .notes { margin-top:16px; display:grid; gap:10px; }
+  .note { display:grid; grid-template-columns:28px 1fr; gap:10px; color:var(--board-sec); }
+  .note b { width:24px; height:24px; border-radius:50%; background:var(--ink); color:var(--on-ink); display:grid; place-items:center; font-size:12px; }
+  .note strong { color:var(--text); }
+</style>
+
+<div class="wrap">
+  <div class="intro">
+    <h1>Admin, desktop</h1>
+    <p>Screens 31 to 36. Only you and the team see these, so the bar is "fast to read and hard to get wrong". Admin already uses the width well; these are fixes, not a rebuild. Applications (34) is fine as it is and only picks up the menu and the plain labels.</p>
+  </div>
+
+  <!-- NAV + OVERVIEW -->
+  <div class="label">1. Overview, and the menu</div>
+  <div class="desk">
+    <div class="shell">
+      <div class="nav">
+        <span class="back">&lsaquo; Back to the app</span>
+        <div class="g">Every day</div>
+        <a class="on">Overview</a><a>Teams</a><a>Reports <em>8</em></a><a>Applications <em>7</em></a><a>Pitch payments <em>2</em></a><a>Emails</a>
+        <div class="g">Numbers</div>
+        <a>Metrics</a><a>Scoreboard</a><a>Growth</a><a>Billing margin</a><a>Profile funnel</a><a>NPS</a>
+        <div class="g">Growth</div>
+        <a>Waitlist</a><a>Referrals</a><a>Promo channels</a><a>Featured</a><a>Directory</a><a>Interviews</a>
+        <div class="g">Tools</div>
+        <a>UrgAns</a><a>Notifications</a><a>Curator invites</a><a>Claims</a><a>Seeding</a>
+      </div>
+      <div>
+        <div class="top"><h2>Overview</h2><span class="live">Updated 5 seconds ago</span></div>
+        <div class="todo">
+          <div class="card"><div class="n">8</div><div class="k">Reports</div><div class="s">Oldest 3 days ago</div></div>
+          <div class="card"><div class="n">7</div><div class="k">Applications</div><div class="s">Curators waiting to join</div></div>
+          <div class="card"><div class="n">₦3,200</div><div class="k">Pitch payments</div><div class="s">2 waiting to pay out</div></div>
+          <div class="card"><div class="n">1</div><div class="k">Needs a message</div><div class="s">Nkem pays but was active 1 of 7 days · <span class="link">Draft email</span></div></div>
+        </div>
+        <div class="tiles">
+          <div class="card"><div class="k">Online now</div><div class="n">1</div></div>
+          <div class="card"><div class="k">Active today</div><div class="n">1</div></div>
+          <div class="card"><div class="k">Active yesterday</div><div class="n">1</div></div>
+          <div class="card"><div class="k">People</div><div class="n">4</div><div class="s">+1 this week</div></div>
+          <div class="card"><div class="k">Visits today</div><div class="n">1,240</div></div>
+          <div class="card"><div class="k">Visits since 7 Nov</div><div class="n">918</div><div class="warn">Less than today. Check the count.</div></div>
+        </div>
+        <div class="cols">
+          <div class="card pad"><div class="lab">Today <a>Metrics</a></div>
+            <div class="kv"><span>New sign-ups</span><b>1 <span class="s">1 this week</span></b></div>
+            <div class="kv"><span>Rollouts made</span><b>1 <span class="s">1 this week</span></b></div>
+            <div class="kv"><span>Activities ticked</span><b>1 <span class="s">1 this week</span></b></div></div>
+          <div class="card pad"><div class="lab">This week <a>Scoreboard</a></div>
+            <div class="kv"><span>North Star: active paying teams</span><b>1</b></div>
+            <div class="kv"><span>Weekly active people</span><b>1</b></div>
+            <div class="kv"><span>Active teams with 2 or more people</span><b>13</b></div>
+            <div class="kv"><span>Monthly revenue</span><b>₦731,800</b></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><p><strong>What needs you comes first.</strong> Reports, applications, pitch payments and the person who needs a message are big red numbers across the top. Today they sit in a side column below the counters.</p></div>
+    <div class="note"><b>2</b><p><strong>"More 22" opens up into a grouped menu:</strong> Every day, Numbers, Growth, Tools, with a red count on anything waiting. Today 22 pages hide behind one link.</p></div>
+    <div class="note"><b>3</b><p><strong>A number that cannot be right is flagged.</strong> Visits today (1,240) is more than visits since 7 Nov (918). One of those counts is wrong, and the build should find out which.</p></div>
+    <div class="note"><b>4</b><p><strong>No code-style capitals</strong> ("TODAY", "NEEDS A MESSAGE"), and "MRR" is written as "Monthly revenue".</p></div>
+  </div>
+
+  <!-- TEAMS -->
+  <div class="label">2. Teams</div>
+  <div class="desk">
+    <div class="shell">
+      <div class="nav"><span class="back">&lsaquo; Back to the app</span><div class="g">Every day</div><a>Overview</a><a class="on">Teams</a><a>Reports <em>8</em></a><a>Applications <em>7</em></a><a>Pitch payments <em>2</em></a><a>Emails</a></div>
+      <div>
+        <div class="top"><div><h2>Teams</h2><p class="lead">Every team, what it pays, and what you have changed for it.</p></div></div>
+        <div class="chips" style="margin-bottom:12px"><span class="on">All <b>8</b></span><span>On trial <b>2</b></span><span>Paying</span><span>Walled <b>1</b></span><span>Read only <b>1</b></span><span>Credits only</span><span>Comped</span><span>Founding or custom</span><div class="search">Search team, owner or email</div></div>
+        <div class="card teams">
+          <div class="th"><span>Team</span><span>Owner</span><span>State</span><span>Deal</span><span>Notes</span><span></span><span></span></div>
+          <div class="tr"><div><div class="t1">Coastline Records</div><div class="t2">Since 7 Nov</div></div><div>Aisha Costa<div class="t2">aishacosta@example.com</div></div><span class="pill p-ok">Paying</span><div>Pro, monthly<div class="t2">₦4,800, card</div></div><span class="meta">Paystack card subscription.</span><span></span><span class="dots">⋯</span></div>
+          <div class="tr"><div><div class="t1">Lagos Sound Lab</div><div class="t2">Since 5 Nov</div></div><div>Diego Williams<div class="t2">diegowilliams@example.com</div></div><span class="pill p-mid">Trial, 14 days</span><div>Label, yearly<div class="t2">₦24,000</div></div><span class="meta">Annual label plan under review.</span><span class="btn ghost" style="height:30px">Mark paid</span><span class="dots">⋯</span></div>
+          <div class="tr"><div><div class="t1">Meridian Artists</div><div class="t2">Since 4 Nov</div></div><div>Julia Kowalski<div class="t2">juliak@example.com</div></div><span class="pill p-bad">Read only</span><div>Pro, monthly<div class="t2">₦8,500, lapsed</div></div><span class="meta">Awaiting a new payment method.</span><span></span><span class="dots">⋯</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>5</b><p><strong>Six buttons per row become one menu.</strong> Extend, Comp, Founding and Custom price move into ⋯. "Mark paid" shows on the row only when a deal is waiting on an invoice.</p></div>
+    <div class="note"><b>6</b><p><strong>The counts move into the filters</strong> ("On trial 2"), so the four big tiles go.</p></div>
+    <div class="note"><b>7</b><p><strong>Notices that ask nothing of you go.</strong> The "Past changes" box with an "Email 0 owners" button, and the "wall is switched off" banner, only show when there is something to do or the statement is true.</p></div>
+  </div>
+
+  <!-- BILLING -->
+  <div class="label">3. Billing margin</div>
+  <div class="desk">
+    <div class="shell">
+      <div class="nav"><span class="back">&lsaquo; Back to the app</span><div class="g">Numbers</div><a>Metrics</a><a>Scoreboard</a><a>Growth</a><a class="on">Billing margin</a><a>Profile funnel</a><a>NPS</a></div>
+      <div>
+        <div class="top"><div><h2>Billing margin</h2><p class="lead">This month, per paying team. Prepaid plans are spread over their months. Paystack fees are estimates. Our own accounts are left out.</p></div><span class="btn ghost">Download the TRM sheet</span></div>
+        <div class="mstats">
+          <div class="card"><div class="k">Paying teams</div><div class="n">8</div><div class="meta">3 of them prepaid</div></div>
+          <div class="card"><div class="k">Monthly revenue</div><div class="n">₦31,900</div></div>
+          <div class="card"><div class="k">Left per team</div><div class="n">₦3,398</div><div class="meta">85% of what they pay</div></div>
+          <div class="card"><div class="k">Break-even</div><div class="n">6 teams</div></div>
+        </div>
+        <div class="card marg">
+          <div class="th"><span>Team</span><span>Plan</span><span>Period</span><span>Paid by</span><span class="num">Cash</span><span class="num">Fee</span><span class="num">TRM</span><span class="num">Credits</span><span class="num">Left</span></div>
+          <div class="tr"><span>Coastline Records</span><span>Pro</span><span>Monthly</span><span>Card</span><span class="num">₦4,800</span><span class="num">₦172</span><span class="num">₦120</span><span class="num">₦55</span><span class="num">₦4,053 · 84%</span></div>
+          <div class="tr"><span>Lagos Sound Lab</span><span>Label</span><span>Yearly</span><span>Transfer</span><span class="num">₦2,000</span><span class="num">₦20</span><span class="num">₦150</span><span class="num">₦82</span><span class="num">₦1,748 · 87%</span></div>
+          <div class="tr"><span>Silverline Distribution</span><span>Pro</span><span>Yearly</span><span>Transfer</span><span class="num">₦3,000</span><span class="num">₦25</span><span class="num">₦300</span><span class="num">₦171</span><span class="num" style="color:var(--err);font-weight:600">₦254 · 8%</span></div>
+          <div class="tr total"><span>All 8 teams</span><span></span><span></span><span></span><span class="num">₦31,900</span><span class="num">₦586</span><span class="num">₦940</span><span class="num">₦659</span><span class="num">₦27,180 · 85%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>8</b><p><strong>Numbers line up on the right and are rounded to the naira,</strong> with a total row. Today cells read "12·₦82.08" and "₦1,747.92·87.4%".</p></div>
+    <div class="note"><b>9</b><p><strong>A thin margin is red</strong> (Silverline, 8%), so a bad deal stands out.</p></div>
+    <div class="note"><b>10</b><p><strong>The TRM download is a button at the top,</strong> not a separate section at the bottom with a date picker. It downloads this month; the month is a choice inside it.</p></div>
+  </div>
+
+  <!-- EMAILS -->
+  <div class="label">4. Emails</div>
+  <div class="desk">
+    <div class="shell">
+      <div class="nav"><span class="back">&lsaquo; Back to the app</span><div class="g">Every day</div><a>Overview</a><a>Teams</a><a>Reports <em>8</em></a><a>Applications <em>7</em></a><a>Pitch payments <em>2</em></a><a class="on">Emails</a></div>
+      <div>
+        <div class="top"><div><h2>Emails</h2><p class="lead">Everything Urganize sent, newest first. 2 bounced or went to spam.</p></div><div style="display:flex;gap:8px"><span class="btn ghost">Onboarding emails</span><span class="btn dark">Write an email</span></div></div>
+        <div class="chips" style="margin-bottom:12px"><span class="on">All</span><span>Problems <b>2</b></span><span>Delivered</span><span>Sent</span><span>Skipped</span></div>
+        <div class="card mails">
+          <div class="th"><span>When</span><span>Subject</span><span>To</span><span>Kind</span><span>Status</span></div>
+          <div class="tr"><span class="meta">7 Nov, 8:21</span><b>Start with the release you're on</b><span>Fatima Tanaka</span><span class="meta">Asked for a code</span><span class="pill p-ok">Delivered</span></div>
+          <div class="tr"><span class="meta">5 Nov, 11:50</span><b>Three tasks this week</b><span>Tariq Moreau</span><span class="meta">Weekly reminder</span><span class="pill p-ok">Delivered</span></div>
+          <div class="tr"><span class="meta">4 Nov, 4:25</span><b>Bring one person in</b><span>Emma Okafor</span><span class="meta">Day after release</span><span class="pill p-mid">Sent</span></div>
+          <div class="tr"><span class="meta">2 Nov, 9:02</span><b>Your pitch got a reply</b><span>Leo Ortiz</span><span class="meta">Pitch reply</span><span class="pill p-bad">Bounced</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>11</b><p><strong>One line per email in a table.</strong> Today each email is a tall box, about five per screen.</p></div>
+    <div class="note"><b>12</b><p><strong>Plain names for the email kinds.</strong> "OPT_IN", "CHASE", "claim_code_requested" and "mcp_call" are code names; each gets a short label.</p></div>
+    <div class="note"><b>13</b><p><strong>Problems are a filter with a count,</strong> so the four counter tiles go.</p></div>
+  </div>
+
+  <!-- COMPOSE -->
+  <div class="label">5. Write an email</div>
+  <div class="desk">
+    <div class="shell">
+      <div class="nav"><span class="back">&lsaquo; Back to the app</span><div class="g">Every day</div><a>Overview</a><a>Teams</a><a>Reports <em>8</em></a><a>Applications <em>7</em></a><a>Pitch payments <em>2</em></a><a class="on">Emails</a></div>
+      <div>
+        <div class="top"><div><p class="meta">&lsaquo; Emails</p><h2>Send an email</h2><p class="lead">From Urganize &lt;hello@urganize.app&gt;. Replies go to support@urganize.app. 12 of 100 sent today.</p></div></div>
+        <div class="compose">
+          <div class="card pad">
+            <div class="lab">Who gets it</div>
+            <div class="aud"><div class="on"><span class="rad"></span><div>Everyone<div class="s">Everyone with an account</div></div></div><div><span class="rad"></span><div>A group<div class="s">On a trial, paying, new</div></div></div><div><span class="rad"></span><div>One person<div class="s">Type their email</div></div></div><div><span class="rad"></span><div>The waitlist<div class="s">No account yet</div></div></div></div>
+            <p class="meta" style="margin-top:10px">Goes to <b style="color:var(--text)">8 people</b>. 3 who unsubscribed are left out.</p>
+            <div class="f"><div class="k">Subject</div><div class="inp">Something new in Urganize</div></div>
+            <div class="f"><div class="k">Message</div><div class="area">Hi,<br><br>You can now see your whole team on Home…</div></div>
+            <div style="display:flex;gap:8px;margin-top:14px"><span class="btn ghost">Send me a test</span><span style="flex:1"></span><span class="btn dark">Send to 8 people</span></div>
+          </div>
+          <div>
+            <div class="lab" style="color:var(--sec);font-size:13px">What they get</div>
+            <div class="mail"><div class="from">From Urganize · to Ben Park</div><b>Something new in Urganize</b><p style="margin-top:12px">Hi Ben,</p><p style="margin-top:10px">You can now see your whole team on Home…</p><p style="margin-top:16px;color:#999;font-size:12px">Unsubscribe</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>14</b><p><strong>The email preview sits beside the form,</strong> updating as you type and addressed to the first person on the list, so you check how it reads before you send.</p></div>
+    <div class="note"><b>15</b><p><strong>The send button says how many people,</strong> "Send to 8 people", so the count is the last thing you read before sending.</p></div>
+  </div>
+</div>
+
+</body></html>

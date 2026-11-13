@@ -5,6 +5,11 @@
 // its published price), what we owe TRM, what their UrgAns credits cost us, and
 // what is left. Data from GET /api/admin/billing; ADMIN_EMAILS gates it server
 // side, and anyone else is sent to /dashboard (the /admin/nps pattern).
+//
+// Since 2026-11-12 (#1241, approved mock): numbers right aligned, whole naira
+// and whole percents, a total row, a thin margin (under THIN_MARGIN_SHARE) in
+// red, and the TRM download as a button at the top with its month beside it.
+// Display only: every sum is lib/billing-margin.ts, unchanged.
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -13,6 +18,8 @@ import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 import { formatNaira } from '@/lib/money';
+import { cn } from '@/lib/utils';
+import { THIN_MARGIN_SHARE, isThinMargin, marginColumnTotals, wholeNaira, wholePercent } from '@/lib/billing-margin-display';
 import type { BillingMarginView } from '@/lib/billing-margin-server';
 import type { PaymentChannel } from '@/lib/billing-margin';
 
@@ -30,8 +37,6 @@ const PATH_LABEL: Record<string, string> = {
   legacy: 'Legacy',
 };
 
-const money = (kobo: number): string => (kobo < 0 ? `−${formatNaira(-kobo)}` : formatNaira(kobo));
-const share = (value: number | null): string => (value === null ? '—' : `${(value * 100).toFixed(1)}%`);
 
 function thisMonth(): string {
   const now = new Date();
@@ -121,32 +126,71 @@ export default function BillingMarginAdminPageClient() {
   }
 
   const { totals } = data;
-  const tiles: Array<{ label: string; value: string }> = [
-    { label: 'Paying teams', value: `${totals.payingTeams}${totals.prepaidTeams ? ` · ${totals.prepaidTeams} prepaid` : ''}` },
-    { label: 'MRR', value: money(totals.mrrKobo) },
+  const columnTotals = marginColumnTotals(data.rows);
+  const tiles: Array<{ label: string; value: string; note?: string }> = [
     {
-      label: 'Contribution per team',
-      value: totals.contributionPerTeamKobo === null ? '—' : `${money(totals.contributionPerTeamKobo)} · ${share(totals.contributionShare)}`,
+      label: 'Paying teams',
+      value: String(totals.payingTeams),
+      note: totals.prepaidTeams ? `${totals.prepaidTeams} of them prepaid` : undefined,
+    },
+    { label: 'Monthly revenue', value: wholeNaira(totals.mrrKobo) },
+    {
+      label: 'Left per team',
+      value: totals.contributionPerTeamKobo === null ? '—' : wholeNaira(totals.contributionPerTeamKobo),
+      note: totals.contributionShare === null ? undefined : `${wholePercent(totals.contributionShare)} of what they pay`,
     },
     {
       label: 'Break-even',
-      value: totals.breakEvenTeams === null ? 'Set FIXED_COSTS_MONTHLY_KOBO' : `${totals.breakEvenTeams} teams`,
+      value: totals.breakEvenTeams === null ? 'Not set' : `${totals.breakEvenTeams} teams`,
+      note: totals.breakEvenTeams === null ? 'Set FIXED_COSTS_MONTHLY_KOBO' : undefined,
     },
   ];
+  const head = 'px-3 py-2.5 text-xs font-semibold text-content-tertiary';
+  const num = 'px-3 py-2.5 text-right tabular-nums whitespace-nowrap';
 
   return (
     <div>
-      <h1 className="mt-2 font-display text-3xl font-semibold">Billing margin</h1>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-content-secondary">
-        This month, per paying team. Prepaid plans are spread over their months. Paystack fees are estimates from its published
-        price; credits cost {formatNaira(data.creditCostKobo)} each. Our own accounts are left out.
-      </p>
+      <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-semibold">Billing margin</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-content-secondary">
+            This month, per paying team. Prepaid plans are spread over their months. Paystack fees are estimates from its
+            published price; credits cost {formatNaira(data.creditCostKobo)} each. Our own accounts are left out.
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <label className="sr-only" htmlFor="trm-month">
+            Month for the TRM sheet
+          </label>
+          <input
+            id="trm-month"
+            type="month"
+            value={month}
+            onChange={(event) => setMonth(event.target.value)}
+            className="h-10 rounded-full border border-stroke-control bg-bg-base px-3 text-sm text-content-primary"
+          />
+          <button
+            type="button"
+            onClick={() => void downloadCsv()}
+            disabled={csvState === 'busy' || !month}
+            className="motion-focus inline-flex h-10 items-center whitespace-nowrap rounded-full border border-stroke-strong px-4 text-sm font-semibold text-content-primary hover:bg-bg-hover disabled:opacity-50"
+          >
+            {csvState === 'busy' ? 'Building…' : 'Download the TRM sheet'}
+          </button>
+        </div>
+      </div>
+      {csvError ? (
+        <p role="alert" className="mt-3 text-sm text-status-error">
+          {csvError}
+        </p>
+      ) : null}
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {tiles.map((tile) => (
-          <div key={tile.label} className="border border-stroke-default bg-bg-surface p-4">
-            <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-content-secondary">{tile.label}</p>
-            <p className="mt-2 text-lg font-semibold text-content-primary">{tile.value}</p>
+          <div key={tile.label} className="rounded-2xl border border-stroke-default bg-bg-surface p-4">
+            <p className="text-sm text-content-secondary">{tile.label}</p>
+            <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-content-primary">{tile.value}</p>
+            {tile.note ? <p className="mt-0.5 text-xs text-content-tertiary">{tile.note}</p> : null}
           </div>
         ))}
       </div>
@@ -157,13 +201,18 @@ export default function BillingMarginAdminPageClient() {
         </p>
       ) : null}
 
-      <div className="mt-6 overflow-x-auto border border-stroke-default">
+      <div className="mt-6 overflow-x-auto rounded-2xl border border-stroke-default bg-bg-surface">
         <table className="w-full min-w-[1000px] text-left text-sm">
-          <thead className="bg-bg-surface text-content-secondary">
+          <thead className="border-b border-stroke-default">
             <tr>
-              {['Team', 'Plan', 'Period', 'Paid by', 'Came in', 'Cash', 'Paystack fee', 'TRM owed', 'Credits', 'Contribution'].map((head) => (
-                <th key={head} scope="col" className="px-3 py-2.5 font-mono text-[11px] font-medium uppercase tracking-[0.08em]">
-                  {head}
+              {['Team', 'Plan', 'Period', 'Paid by', 'Came in'].map((label) => (
+                <th key={label} scope="col" className={head}>
+                  {label}
+                </th>
+              ))}
+              {['Cash', 'Paystack fee', 'TRM owed', 'Credits', 'Left'].map((label) => (
+                <th key={label} scope="col" className={cn(head, 'text-right')}>
+                  {label}
                 </th>
               ))}
             </tr>
@@ -176,65 +225,58 @@ export default function BillingMarginAdminPageClient() {
                 </td>
               </tr>
             ) : (
-              data.rows.map((row) => (
-                <tr key={row.workspaceId} className="border-t border-stroke-default">
-                  <td className="px-3 py-2.5 text-content-primary">{row.teamName}</td>
-                  <td className="px-3 py-2.5 capitalize">{row.plan}</td>
-                  <td className="px-3 py-2.5">{intervalLabel(row.interval)}</td>
-                  <td className="px-3 py-2.5">{CHANNEL_LABEL[row.channel]}</td>
-                  <td className="px-3 py-2.5">{row.path ? (PATH_LABEL[row.path] ?? row.path) : '—'}</td>
-                  <td className="px-3 py-2.5 tabular-nums">{money(row.cashMonthKobo)}</td>
-                  <td className="px-3 py-2.5 tabular-nums">{money(row.paystackFeeMonthKobo)}</td>
-                  <td className="px-3 py-2.5 tabular-nums">{money(row.trmOwedMonthKobo)}</td>
-                  <td className="px-3 py-2.5 tabular-nums">
-                    {row.creditsUsed.toLocaleString('en-US')} · {money(row.creditCostKobo)}
-                  </td>
-                  <td className="px-3 py-2.5 tabular-nums text-content-primary">
-                    {money(row.contributionKobo)} · {share(row.contributionShare)}
-                  </td>
-                </tr>
-              ))
+              data.rows.map((row) => {
+                const thin = isThinMargin(row.contributionShare);
+                return (
+                  <tr key={row.workspaceId} className="border-t border-stroke-subtle first:border-t-0">
+                    <td className="px-3 py-2.5 text-content-primary">{row.teamName}</td>
+                    <td className="px-3 py-2.5 capitalize">{row.plan}</td>
+                    <td className="px-3 py-2.5">{intervalLabel(row.interval)}</td>
+                    <td className="px-3 py-2.5">{CHANNEL_LABEL[row.channel]}</td>
+                    <td className="px-3 py-2.5">{row.path ? (PATH_LABEL[row.path] ?? row.path) : '—'}</td>
+                    <td className={num}>{wholeNaira(row.cashMonthKobo)}</td>
+                    <td className={num}>{wholeNaira(row.paystackFeeMonthKobo)}</td>
+                    <td className={num}>{wholeNaira(row.trmOwedMonthKobo)}</td>
+                    <td className={num} title={`${row.creditsUsed.toLocaleString('en-US')} credits used`}>
+                      {wholeNaira(row.creditCostKobo)}
+                    </td>
+                    <td className={cn(num, thin ? 'font-semibold text-status-error' : 'text-content-primary')}>
+                      {wholeNaira(row.contributionKobo)} · {wholePercent(row.contributionShare)}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
+          {data.rows.length > 0 ? (
+            <tfoot>
+              <tr className="border-t border-stroke-default bg-bg-hover font-semibold text-content-primary">
+                <th scope="row" colSpan={5} className="px-3 py-2.5 text-left font-semibold">
+                  All {totals.payingTeams} {totals.payingTeams === 1 ? 'team' : 'teams'}
+                </th>
+                <td className={num}>{wholeNaira(columnTotals.cashKobo)}</td>
+                <td className={num}>{wholeNaira(columnTotals.paystackFeeKobo)}</td>
+                <td className={num}>{wholeNaira(columnTotals.trmOwedKobo)}</td>
+                <td className={num}>{wholeNaira(columnTotals.creditCostKobo)}</td>
+                <td className={cn(num, isThinMargin(totals.contributionShare) && 'text-status-error')}>
+                  {wholeNaira(totals.contributionKobo)} · {wholePercent(totals.contributionShare)}
+                </td>
+              </tr>
+            </tfoot>
+          ) : null}
         </table>
       </div>
-
-      <section className="mt-10">
-        <h2 className="font-display text-xl font-semibold">What we owe TRM</h2>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-content-secondary">
-          {data.trm.costBasis === 'fixed' ? 'A fixed fee per team with distribution' : 'A share of what each team paid'},{' '}
-          {data.trm.billingMode === 'trm_plan'
-            ? "on TRM's monthly plan for monthly teams and its yearly plan for 6-month and yearly teams"
-            : data.trm.billingMode === 'monthly_prorata'
-              ? 'billed month by month'
-              : 'a year paid upfront'}. Download a month to send
-          with the payment. Nothing is paid automatically.
-        </p>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-sm">
-            <span className="text-content-secondary">Month</span>
-            <input
-              type="month"
-              value={month}
-              onChange={(event) => setMonth(event.target.value)}
-              className="h-10 border border-stroke-control bg-bg-base px-3 text-content-primary"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={() => void downloadCsv()}
-            disabled={csvState === 'busy' || !month}
-            className="motion-focus inline-flex h-10 items-center border border-stroke-strong px-4 text-sm font-semibold text-content-primary hover:bg-bg-hover disabled:opacity-50"
-          >
-            {csvState === 'busy' ? 'Building…' : 'Download CSV'}
-          </button>
-        </div>
-        {csvError ? (
-          <p role="alert" className="mt-3 text-sm text-status-error">
-            {csvError}
-          </p>
-        ) : null}
-      </section>
+      <p className="mt-2 max-w-3xl text-xs leading-5 text-content-tertiary">
+        Left under {wholePercent(THIN_MARGIN_SHARE)} of what a team pays is shown in red. The TRM sheet:{' '}
+        {data.trm.costBasis === 'fixed' ? 'a fixed fee per team with distribution' : 'a share of what each team paid'},{' '}
+        {data.trm.billingMode === 'trm_plan'
+          ? "on TRM's monthly plan for monthly teams and its yearly plan for 6-month and yearly teams"
+          : data.trm.billingMode === 'monthly_prorata'
+            ? 'billed month by month'
+            : 'a year paid upfront'}
+        . Send it with the payment; nothing is paid automatically.
+      </p>
     </div>
   );
+
 }

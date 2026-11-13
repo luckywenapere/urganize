@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { buildUsageMetrics, type MetricsPerson, type MetricsRelease, type UsageMetricsInput } from './usage-metrics';
-import { attentionRows, buildAdminOverview, sinceLabel, updatedAgo } from './admin-overview';
+import {
+  attentionRows,
+  buildAdminOverview,
+  needsYouCards,
+  sinceLabel,
+  updatedAgo,
+  visitsAllTimeLabel,
+} from './admin-overview';
 
 // The one-screen admin Overview (URG-369). Its day numbers come from the
 // Metrics rules, so these check the new "today" block and the picking.
@@ -168,5 +175,58 @@ describe('Updated Xs ago', () => {
     expect(updatedAgo(iso(40_000), NOW)).toBe('Updated 40s ago');
     expect(updatedAgo(iso(3 * 60_000), NOW)).toBe('Updated 3m ago');
     expect(updatedAgo(null, NOW)).toBe('');
+  });
+});
+
+describe('the needs you row (2026-11-12, #1241)', () => {
+  const team = { workspaceId: 'w' } as unknown as NonNullable<Parameters<typeof needsYouCards>[0]['atRisk']>[number];
+
+  it('is always the same four cards, in order', () => {
+    const cards = needsYouCards({ attention: { reports: 8, pitchPayments: 2, curatorApplications: 7 }, atRisk: [team] });
+    expect(cards.map((card) => card.label)).toEqual(['Reports', 'Applications', 'Pitch payments', 'Needs a message']);
+    expect(cards.map((card) => card.count)).toEqual([8, 7, 2, 1]);
+    expect(cards.every((card) => card.waiting)).toBe(true);
+  });
+
+  it('is quiet at zero and says so; a count it could not read is a dash, never zero', () => {
+    const cards = needsYouCards({ attention: { reports: 0, pitchPayments: null }, atRisk: null });
+    expect(cards[0]).toMatchObject({ count: 0, waiting: false, note: 'Nothing waiting' });
+    expect(cards[1]).toMatchObject({ count: null, waiting: false, note: "Couldn't read" });
+    expect(cards[2]).toMatchObject({ count: null, waiting: false });
+    expect(cards[3]).toMatchObject({ count: null, waiting: false, href: null });
+  });
+
+  it('opens the page that clears each count', () => {
+    const cards = needsYouCards({ attention: { reports: 1, pitchPayments: 1, curatorApplications: 1 }, atRisk: [] });
+    expect(cards.slice(0, 3).map((card) => card.href)).toEqual([
+      '/admin/issue-reports',
+      '/admin/curator-applications',
+      '/admin/pitch-payments',
+    ]);
+  });
+});
+
+describe('the visits counters', () => {
+  it('labels the all-time count with the day counting started', () => {
+    expect(visitsAllTimeLabel('2026-07-24')).toBe('Visits since 24 Jul');
+    expect(visitsAllTimeLabel(null)).toBe('Visits all time');
+  });
+
+  // The screenshot behind the 2026-11-12 mock read "Visits today 1,240" above
+  // "Visits since 7 Nov 918". Both counts come from the same rows with the same
+  // filter, so today can never pass all time; this holds the rule in place.
+  it('never counts more visits today than all time', () => {
+    const opens = [
+      { userId: 'a', at: NOW.getTime() - HOUR },
+      { userId: 'a', at: NOW.getTime() - 2 * HOUR },
+      { userId: 'b', at: NOW.getTime() - 3 * DAY },
+      { userId: 'ours', at: NOW.getTime() - HOUR },
+    ];
+    const metrics = buildUsageMetrics(
+      input({ appOpens: opens, appOpensAll: opens, hiddenUserIds: new Set(['ours']) })
+    );
+    expect(metrics.today.visits).toBe(2);
+    expect(metrics.visits.allTime).toBe(3);
+    expect(metrics.today.visits).toBeLessThanOrEqual(metrics.visits.allTime ?? 0);
   });
 });

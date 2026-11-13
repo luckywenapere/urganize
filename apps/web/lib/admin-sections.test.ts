@@ -7,8 +7,13 @@ import {
   ADMIN_REDIRECTS,
   ADMIN_SECTIONS,
   ADMIN_SECTION_GROUPS,
+  ADMIN_DESKTOP_ITEMS,
+  ADMIN_DESKTOP_MENU,
+  activeDesktopKey,
   activeNavKey,
   adminBackTarget,
+  adminDesktopBackTarget,
+  waitingCount,
   matchesSearch,
   moreSectionsInGroup,
   sectionsInGroup,
@@ -33,11 +38,12 @@ describe('admin menu', () => {
     for (const item of ADMIN_PRIMARY_NAV) expect(pageExists(item.href), item.href).toBe(true);
   });
 
-  it('the phone bar and the desktop sidebar both draw the one shared list', () => {
+  it('the phone bar draws the shared tabs; the desktop sidebar draws the grouped menu', () => {
     const nav = read('components/admin/AdminNav.tsx');
     expect(nav).toContain('ADMIN_PRIMARY_NAV.map(');
     expect(nav).toContain('export function AdminBottomBar');
-    expect(nav.match(/ADMIN_NAV_ITEMS\.map\(/g)?.length).toBe(2);
+    expect(nav.match(/ADMIN_NAV_ITEMS\.map\(/g)?.length).toBe(1);
+    expect(nav).toContain('ADMIN_DESKTOP_MENU.map(');
     expect(nav).not.toMatch(/href: '\/admin\/(growth|chappi|nps|waitlist|scoreboard|metrics)'/);
     const layout = read('app/admin/layout.tsx');
     for (const tag of ['<AdminNav />', '<AdminBottomBar />', '<AdminBackButton />']) expect(layout).toContain(tag);
@@ -53,7 +59,7 @@ describe('admin menu', () => {
     expect(nav).not.toMatch(/stripFade|stripRef|scrollLeft|maskImage|overflow-x-auto/);
     expect(nav).not.toMatch(/>\s*Catalog\s*</);
     // The desktop sidebar keeps the way out; on phone it is the foot of More.
-    expect(nav).toContain('Back to catalog');
+    expect(nav).toContain('Back to the app');
     expect(nav).toMatch(/aria-label="Admin menu" className="hidden [^"]*lg:flex/);
     expect(read('app/admin/more/MoreAdminPageClient.tsx')).toMatch(/href="\/dashboard"[\s\S]*Back to catalog/);
   });
@@ -214,5 +220,67 @@ describe('panels moved off the Overview, not deleted', () => {
     expect(view.match(/buttonVariants\(/g)?.length).toBe(2); // the compose link and its mailto fallback
     expect(view).not.toMatch(/<(FunnelStrip|UrgansPanel|ChurnPanel|RunwayPanel|PersonaSplitPanel|DirectoryTilePanel|AdminBarChart)/);
     expect(read('components/admin/MetricsView.tsx')).toContain('id="metrics-now"');
+  });
+});
+
+describe('the desktop menu (2026-11-12, #1241)', () => {
+  it('groups into Every day, Numbers, Growth and Tools, every entry once', () => {
+    expect(ADMIN_DESKTOP_MENU.map((group) => group.label)).toEqual(['Every day', 'Numbers', 'Growth', 'Tools']);
+    expect(ADMIN_DESKTOP_MENU[0].items.map((item) => item.label)).toEqual([
+      'Overview',
+      'Teams',
+      'Reports',
+      'Applications',
+      'Pitch payments',
+      'Emails',
+    ]);
+    const keys = ADMIN_DESKTOP_ITEMS.map((item) => item.key);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('lists every dashboard, More, and every admin page folder on disk', () => {
+    const keys = new Set(ADMIN_DESKTOP_ITEMS.map((item) => item.key));
+    for (const section of ADMIN_SECTIONS) expect(keys.has(section.key), section.key).toBe(true);
+    expect(keys.has('more')).toBe(true);
+    const hrefs = new Set(ADMIN_DESKTOP_ITEMS.map((item) => item.href.split('#')[0]));
+    const folders = readdirSync(path.join(root, 'app', 'admin'), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && existsSync(path.join(root, 'app', 'admin', entry.name, 'page.tsx')))
+      .map((entry) => `/admin/${entry.name}`)
+      .filter((href) => !ADMIN_REDIRECTS[href]);
+    for (const href of folders) expect(hrefs.has(href), href).toBe(true);
+    for (const item of ADMIN_DESKTOP_ITEMS) expect(pageExists(item.href.split('#')[0]), item.href).toBe(true);
+  });
+
+  it('puts a waiting count only on Reports, Applications and Pitch payments', () => {
+    const waiting = ADMIN_DESKTOP_ITEMS.filter((item) => item.waiting).map((item) => item.key);
+    expect(waiting).toEqual(['issue-reports', 'curator-applications', 'pitch-payments']);
+  });
+
+  it('shows a count only when it is above zero', () => {
+    const reports = ADMIN_DESKTOP_ITEMS.find((item) => item.key === 'issue-reports')!;
+    expect(waitingCount(reports, { reports: 8 })).toBe(8);
+    expect(waitingCount(reports, { reports: 0 })).toBe(null);
+    expect(waitingCount(reports, { reports: null })).toBe(null);
+    expect(waitingCount(reports, null)).toBe(null);
+    expect(waitingCount({}, { reports: 3 })).toBe(null);
+  });
+
+  it('lights the entry a page sits under, the longest match winning', () => {
+    expect(activeDesktopKey('/admin')).toBe('overview');
+    expect(activeDesktopKey('/admin/')).toBe('overview');
+    expect(activeDesktopKey('/admin/metrics')).toBe('metrics');
+    expect(activeDesktopKey('/admin/metrics#growth')).toBe('metrics');
+    expect(activeDesktopKey('/admin/emails/new')).toBe('emails');
+    expect(activeDesktopKey('/admin/more')).toBe('more');
+    expect(activeDesktopKey('/admin/nps')).toBe('nps');
+    expect(activeDesktopKey('/dashboard')).toBe(null);
+  });
+
+  it('draws a back button on a computer only below an entry', () => {
+    for (const item of ADMIN_DESKTOP_ITEMS) {
+      if (!item.href.includes('#')) expect(adminDesktopBackTarget(item.href), item.href).toBe(null);
+    }
+    expect(adminDesktopBackTarget('/admin/emails/new')).toEqual({ label: 'Emails', href: '/admin/emails' });
+    expect(adminDesktopBackTarget('/admin/emails/sequence')).toEqual({ label: 'Emails', href: '/admin/emails' });
   });
 });

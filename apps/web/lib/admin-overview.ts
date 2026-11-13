@@ -151,3 +151,60 @@ export function sinceLabel(day: string | null): string | null {
   if (!day || !/^\d{4}-\d{2}-\d{2}/.test(day)) return null;
   return `since ${Number(day.slice(8, 10))} ${MONTHS[Number(day.slice(5, 7)) - 1] ?? ''}`.trim();
 }
+
+/**
+ * The "needs you" row at the top of the Overview on a computer (2026-11-12,
+ * #1241, approved mock). Always the same four cards in the same place, so the
+ * eye learns where to look: red when something waits, quiet at zero, and a
+ * dash when the count could not be read (never a made-up zero).
+ */
+export type NeedsYouCard = {
+  key: 'issue-reports' | 'curator-applications' | 'pitch-payments' | 'needs-message';
+  label: string;
+  /** Null when the count could not be read. */
+  count: number | null;
+  href: string | null;
+  /** One short line under the number. */
+  note: string;
+  waiting: boolean;
+};
+
+export function needsYouCards(overview: Pick<AdminOverview, 'attention' | 'atRisk'>): NeedsYouCard[] {
+  const { attention } = overview;
+  const card = (
+    key: NeedsYouCard['key'],
+    label: string,
+    count: number | null | undefined,
+    href: string | null,
+    waitingNote: string
+  ): NeedsYouCard => {
+    const value = typeof count === 'number' ? count : null;
+    const waiting = value !== null && value > 0;
+    return {
+      key,
+      label,
+      count: value,
+      href,
+      note: value === null ? "Couldn't read" : waiting ? waitingNote : 'Nothing waiting',
+      waiting,
+    };
+  };
+  return [
+    card('issue-reports', 'Reports', attention.reports, '/admin/issue-reports', 'Not in Linear yet'),
+    card(
+      'curator-applications',
+      'Applications',
+      attention.curatorApplications,
+      '/admin/curator-applications',
+      'Playlist owners waiting for an answer'
+    ),
+    card('pitch-payments', 'Pitch payments', attention.pitchPayments, '/admin/pitch-payments', 'Payouts, quotes or refunds to check'),
+    card('needs-message', 'Needs a message', overview.atRisk ? overview.atRisk.length : null, null, 'Teams that went quiet'),
+  ];
+}
+
+/** The last counter's label: "Visits since 24 Jul", or "Visits all time" with no date. */
+export function visitsAllTimeLabel(since: string | null): string {
+  const label = sinceLabel(since);
+  return label ? `Visits ${label}` : 'Visits all time';
+}
