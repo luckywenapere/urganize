@@ -1,6 +1,8 @@
 'use client';
 
 import { Fragment, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   AlignLeft,
   CalendarDays,
@@ -8,6 +10,7 @@ import {
   CircleDot,
   Layers,
   Pin,
+  Sparkles,
   Trash2,
   UserCircle2,
   X,
@@ -35,6 +38,7 @@ import {
   formatFileSize,
   getRelativeDueLabel,
   getTaskStatusLabel,
+  isClosedStatus,
   isEventMilestone,
   isTypingTarget,
   type TaskDetail,
@@ -63,6 +67,27 @@ import { ThreadMessageList } from '@/components/threads/ThreadMessageList';
 import { ThreadComposer } from '@/components/threads/ThreadComposer';
 import type { ThreadMessage } from '@/types/thread';
 import { useNextMovesStore } from '@/stores/useNextMovesStore';
+import { useAuthStore } from '@/lib/auth-store';
+import { useChappiStore } from '@/stores/useChappiStore';
+import { assistantHref } from '@/lib/assistant-chats';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
+import {
+  buildBlockedBanner,
+  buildLateBanner,
+  buildProvenanceLine,
+  firstUnmetDependency,
+  formatDayInWords,
+  moveToThisWeekDate,
+} from '@/lib/task-detail-desktop';
+import {
+  DESKTOP_CONTROL_CLASS,
+  DESKTOP_DARK_BUTTON_CLASS,
+  DESKTOP_GHOST_BUTTON_CLASS,
+  DesktopBanner,
+  DesktopField,
+  DesktopLinkedTasks,
+  DesktopMoreMenu,
+} from '@/components/tasks/TaskDetailDesktopParts';
 
 // Feature flag (URG-203): task attachments stay dark until
 // NEXT_PUBLIC_FEATURE_TASK_ATTACHMENTS is 'true' (URG-182 precedent — same
@@ -79,6 +104,19 @@ const CHAT_OPEN_STORAGE_KEY = 'urganize.task-chat-open';
 // The activity chat is hidden (founder, 2026-10-26: nobody used it). Data and
 // routes stay; set true to bring the section back.
 const TASK_CHAT_ENABLED = false;
+
+// "Ask AI about this" needs the assistant (#1251).
+const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+
+// "To Do" reads "To do" on the desktop pop-up (#1251): sentence case.
+const sentenceCase = (label: string) => label.charAt(0) + label.slice(1).toLowerCase();
+
+// The status dot in the desktop pop-up's Status field.
+const STATUS_DOT_CLASS: Partial<Record<TaskStatus, string>> = {
+  in_progress: 'bg-status-warning',
+  done: 'bg-brand',
+  blocked: 'bg-status-error',
+};
 
 // 2026-07-23 (founder calls): the Priority selector, the Tag row, and the
 // Activity feed were all removed from this view. Priority is gone as a
@@ -150,6 +188,8 @@ type TaskDetailViewProps = {
   members: WorkspaceMember[];
   isUploadingAttachment: boolean;
   prerequisites: DependencyTaskSummary[];
+  /** The tasks that wait on this one: "Waiting on this" on a computer (#1251). */
+  dependents?: DependencyTaskSummary[];
   statusBlockerMessage: string;
   /** Back to the task list. Replaces the drawer's onClose. */
   onBack: () => void;
@@ -181,6 +221,7 @@ export function TaskDetailView({
   members,
   isUploadingAttachment,
   prerequisites,
+  dependents = [],
   statusBlockerMessage,
   onBack,
   onSavePatch,
@@ -254,6 +295,14 @@ export function TaskDetailView({
     ? storeReleases.find((r) => r.id === task.releaseId)?.releaseDate ?? null
     : null;
   const datePhase = task ? resolveTaskPhase({ dueDate: task.dueDate }, releaseDateForPhase) : null;
+  // The desktop layout (#1251): one branch mounts, never both, so the fields'
+  // own fetches (find someone, the brief switch, people) run once.
+  const isDesktop = useIsDesktopViewport();
+  const router = useRouter();
+  const viewerUserId = useAuthStore((state) => state.user?.id ?? null);
+  const storeRelease = task?.releaseId ? storeReleases.find((r) => r.id === task.releaseId) : undefined;
+  const artistName = task?.release?.artistName || storeRelease?.artistName || null;
+  const releaseType = storeRelease?.releaseType ?? null;
 
   // Title is a textarea (so long titles WRAP on narrow screens instead of
   // cropping inside a single-line input) that auto-grows to fit its content.
@@ -477,6 +526,417 @@ export function TaskDetailView({
       ) : null}
     </div>
   );
+
+  const confirmDelete = () => {
+    if (window.confirm('Delete this activity? This cannot be undone.')) {
+      void onDeleteTask();
+    }
+  };
+
+  // ── On a computer (#1251, founder-approved mock docs/mocks/task-modal-desktop):
+  // two columns. What the task is and what to do on the left; its settings,
+  // each with a label, on the right; and a banner that answers "what do I do
+  // about this now?" at the top. The phone keeps the single column below.
+  if (isDesktop && (task || isLoading)) {
+    if (!task) {
+      // Mirrors the desktop layout: top bar, title, two notes lines, and the
+      // right column's labelled fields.
+      return (
+        <section aria-label="Activity detail" aria-busy="true" className="flex min-w-0 flex-1 flex-col">
+          <div className="flex items-center gap-3 border-b border-stroke-subtle px-5 py-3.5">
+            <div className="h-4 w-56 skeleton-shimmer" />
+            <div className="ml-auto h-8 w-8 rounded-lg skeleton-shimmer" />
+          </div>
+          <div className="grid flex-1 grid-cols-[minmax(0,1fr)_280px]">
+            <div className="space-y-6 border-r border-stroke-subtle px-7 py-6">
+              <div className="flex items-center gap-3.5">
+                <div className="h-[26px] w-[26px] shrink-0 rounded-full skeleton-shimmer" />
+                <div className="h-8 w-2/3 skeleton-shimmer" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 w-24 skeleton-shimmer" />
+                <div className="h-4 w-full skeleton-shimmer" />
+                <div className="h-4 w-4/5 skeleton-shimmer" />
+              </div>
+            </div>
+            <div className="space-y-4 bg-bg-base p-5">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={`task-field-${index}`} className="space-y-1.5">
+                  <div className="h-3 w-12 skeleton-shimmer" />
+                  <div className="h-9 w-full rounded-[10px] skeleton-shimmer" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    const isOpenWork = !isClosedStatus(task.status);
+    const unmet = isOpenWork ? firstUnmetDependency(task.dependencies, prerequisites) : null;
+    const blocked = unmet
+      ? buildBlockedBanner(
+          {
+            title: unmet.title,
+            dueDate: unmet.dueDate,
+            assigneeName: unmet.assigneeName ?? null,
+            assigneeUserId: unmet.assigneeUserId ?? null,
+          },
+          viewerUserId
+        )
+      : null;
+    const late =
+      !blocked && !isEventMilestone(task)
+        ? buildLateBanner({
+            dueDate: task.dueDate,
+            status: task.status,
+            completedAt: task.completedAt,
+            compressedRunway: task.compressedRunway,
+            releaseDate: releaseDateForPhase,
+            releaseType,
+          })
+        : null;
+    const dateOnly = isDateOnlyDue(task.dueDate);
+    const dueWords = task.dueDate
+      ? dateOnly
+        ? formatDayInWords(task.dueDate)
+        : `${formatDayInWords(task.dueDate)}, ${new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' }).format(new Date(task.dueDate))}`
+      : '';
+    const lastChange = task.activity?.length
+      ? [...task.activity].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
+      : null;
+    const provenance = buildProvenanceLine({
+      fromPlan: Boolean(task.templateTaskId) || task.autoGenerated,
+      releaseType: task.releaseId ? releaseType : null,
+      lastChange,
+    });
+    const crumbTitle = releaseTitle ?? task.record?.title ?? null;
+    const askUrgans = () => {
+      useChappiStore
+        .getState()
+        .setInput(`Help me with "${task.title}"${releaseTitle ? ` on ${releaseTitle}` : ''}.`);
+      onBack();
+      router.push(assistantHref(task.releaseId));
+    };
+
+    return (
+      <section aria-label="Activity detail" className="flex min-w-0 flex-1 flex-col">
+        <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-stroke-subtle bg-bg-surface px-5 py-3">
+          <p className="min-w-0 flex-1 truncate text-[13px] text-content-secondary">
+            {crumbTitle ? (
+              <>
+                {artistName ? (
+                  <>
+                    {artistName}
+                    <span aria-hidden="true" className="mx-1.5">
+                      ›
+                    </span>
+                  </>
+                ) : null}
+                <span className="font-semibold text-content-primary">{crumbTitle}</span>
+                <span aria-hidden="true" className="mx-1.5">
+                  ›
+                </span>
+                Plan
+              </>
+            ) : (
+              'Activity'
+            )}
+          </p>
+          {task.releaseId ? (
+            <Link
+              href={`/dashboard?release=${encodeURIComponent(task.releaseId)}`}
+              onClick={onBack}
+              className={DESKTOP_GHOST_BUTTON_CLASS}
+            >
+              Open rollout
+            </Link>
+          ) : null}
+          {task.releaseId ? (
+            <button
+              type="button"
+              onClick={() => void onSavePatch({ planKey: task.planKey !== true })}
+              aria-pressed={task.planKey === true}
+              aria-label={task.planKey === true ? 'Remove from key activities' : 'Add to key activities'}
+              title={task.planKey === true ? 'Remove from key activities' : 'Add to key activities'}
+              className={`motion-focus motion-press grid h-8 w-8 place-items-center rounded-lg transition-colors [@media(hover:hover)]:hover:bg-bg-hover ${
+                task.planKey === true ? 'text-brand' : 'text-content-secondary [@media(hover:hover)]:hover:text-content-primary'
+              }`}
+            >
+              <Pin className={`pointer-events-none h-4 w-4 ${task.planKey === true ? 'fill-current' : ''}`} aria-hidden="true" />
+            </button>
+          ) : null}
+          <DesktopMoreMenu onDelete={confirmDelete} />
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Close activity"
+            title="Close"
+            className="motion-focus motion-press grid h-8 w-8 place-items-center rounded-lg text-content-secondary transition-colors [@media(hover:hover)]:hover:bg-bg-hover [@media(hover:hover)]:hover:text-content-primary"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="grid flex-1 grid-cols-[minmax(0,1fr)_280px]">
+          <div className="min-w-0 border-r border-stroke-subtle px-7 pb-7 pt-6">
+            {error ? (
+              <div role="alert" className="mb-4 rounded-xl border border-status-error/30 bg-status-error/10 px-4 py-3 text-sm text-status-error">
+                {error}
+              </div>
+            ) : null}
+            <div className="flex items-start gap-3.5">
+              <TaskCompletionCheckbox
+                taskId={task.id}
+                status={task.status}
+                taskTitle={task.title}
+                onToggle={() => onSavePatch({ status: task.status === 'done' ? 'todo' : 'done' })}
+                className="mt-1.5"
+              />
+              <textarea
+                ref={titleRef}
+                rows={1}
+                value={title}
+                onChange={(event) => setTitle(event.target.value.replace(/\n/g, ' '))}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    event.currentTarget.blur();
+                  }
+                }}
+                onBlur={() => {
+                  if (title.trim() && title.trim() !== task.title) {
+                    void onSavePatch({ title: title.trim() });
+                  }
+                }}
+                aria-label="Title"
+                placeholder="Activity title"
+                className="motion-focus min-w-0 flex-1 resize-none overflow-hidden border-b border-transparent bg-transparent pb-1 font-display text-[28px] font-normal leading-[34px] text-content-primary outline-none transition-colors placeholder:text-content-tertiary focus:border-stroke-strong"
+              />
+            </div>
+
+            {blocked ? <DesktopBanner tone="waiting" title={blocked.title} body={blocked.body} /> : null}
+            {late ? (
+              <DesktopBanner tone="late" title={late.title} body={late.body}>
+                <button
+                  type="button"
+                  onClick={() => void onSavePatch({ dueDate: moveToThisWeekDate() })}
+                  className={DESKTOP_GHOST_BUTTON_CLASS}
+                >
+                  Move to this week
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void onSavePatch({ status: 'done' })}
+                  className={DESKTOP_DARK_BUTTON_CLASS}
+                >
+                  Mark done
+                </button>
+              </DesktopBanner>
+            ) : null}
+            {statusBlockerMessage ? (
+              <p role="alert" className="mt-3 rounded-lg border border-status-warning/35 bg-status-warning/10 px-3 py-2 text-xs text-status-warning">
+                {statusBlockerMessage}
+              </p>
+            ) : null}
+
+            <section className="mt-6">
+              <label htmlFor={`task-notes-${task.id}`} className="block text-[13px] font-semibold text-content-secondary">
+                What to do
+              </label>
+              <textarea
+                id={`task-notes-${task.id}`}
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                onBlur={() => {
+                  if ((task.description || '') !== description) {
+                    void onSavePatch({ description: description || null });
+                  }
+                }}
+                rows={4}
+                className="motion-focus -mx-2 mt-1 min-h-[96px] w-[calc(100%+1rem)] resize-y rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-[15px] leading-6 text-content-primary transition-colors placeholder:text-content-tertiary [@media(hover:hover)]:hover:border-stroke-default focus:border-brand focus:bg-bg-elevated"
+                placeholder="Add notes, context or links."
+              />
+            </section>
+
+            {isEditorialPitchTask(task.templateTaskId) && showEditorialPitch(releaseDateForPhase) ? (
+              <div className="mt-6">
+                <EditorialPitchPanel key={task.id} taskId={task.id} releaseId={task.releaseId ?? null} />
+              </div>
+            ) : null}
+            {task.releaseId && isSmartLinkTask(task) ? (
+              <div className="mt-6">
+                <SmartLinkTaskPanel key={task.id} releaseId={task.releaseId} />
+              </div>
+            ) : null}
+
+            <DesktopLinkedTasks
+              heading="Needs first"
+              ids={task.dependencies}
+              tasks={prerequisites}
+              onOpen={onOpenPrerequisite}
+            />
+            <DesktopLinkedTasks
+              heading="Waiting on this"
+              ids={dependents.map((dependent) => dependent.id)}
+              tasks={dependents}
+              onOpen={onOpenPrerequisite}
+            />
+
+            <FindSomeoneRow
+              taskId={task.id}
+              releaseId={task.releaseId ?? null}
+              templateTaskId={task.templateTaskId}
+              status={task.status}
+              variant="card"
+            />
+
+            {TASK_OUTCOMES_ENABLED && task.outcome ? (
+              <section className="mt-6 rounded-xl border border-stroke-default p-4">
+                <h3 className="text-[13px] font-semibold text-content-secondary">How it went</h3>
+                <p className="mt-1 text-sm font-semibold text-content-primary">{TASK_OUTCOME_LABELS[task.outcome.outcome]}</p>
+                <p className="mt-1 text-sm text-content-secondary">{task.outcome.summary}</p>
+                {task.outcome.note ? (
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-content-secondary">{task.outcome.note}</p>
+                ) : null}
+              </section>
+            ) : null}
+          </div>
+
+          <aside className="min-w-0 bg-bg-base p-5">
+            <DesktopField label="Status" htmlFor={`task-status-${task.id}`}>
+              <span className="relative block">
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none absolute left-3 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full ${
+                    STATUS_DOT_CLASS[task.status] ?? 'bg-content-tertiary'
+                  }`}
+                />
+                <select
+                  id={`task-status-${task.id}`}
+                  value={task.status}
+                  onChange={(event) => void onSavePatch({ status: event.target.value as TaskStatus })}
+                  className={`${DESKTOP_CONTROL_CLASS} pl-7 pr-8`}
+                >
+                  {selectableTaskStatuses(task.status).map((status) => (
+                    <option key={status} value={status} className="bg-bg-elevated text-content-primary">
+                      {sentenceCase(getTaskStatusLabel(status))}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-tertiary" aria-hidden="true" />
+              </span>
+            </DesktopField>
+
+            <DesktopField label="Who">
+              <TaskMemberSelect
+                density="compact"
+                triggerClassName={`${DESKTOP_CONTROL_CLASS} flex items-center gap-2 text-left`}
+                members={members}
+                selectedMember={selectedAssignee}
+                isLoading={isLoadingMembers}
+                selectedLabel={chase.person ? `${chase.person.name} · WhatsApp` : null}
+                onSelectMember={(member) => {
+                  setSelectedAssignee(member);
+                  if (chase.person) void chase.takeBack();
+                  void onSavePatch({ assignedToUserId: member?.userId || null });
+                }}
+                footer={inviteFooter}
+              />
+              <TaskChaseTrail person={chase.person} trail={chase.trail} />
+            </DesktopField>
+
+            <TaskPersonSelect
+              taskId={task.id}
+              rowClassName="group flex items-center gap-2 border-t border-stroke-subtle py-2.5"
+              iconClassName="h-4 w-4 shrink-0 text-content-tertiary"
+              fieldClassName="min-w-0 flex-1"
+              controlClassName={DESKTOP_CONTROL_CLASS}
+            />
+
+            <DesktopField label="Due" htmlFor={`task-due-${task.id}`}>
+              {/* The date reads in words ("Wed 16 Sep"); the native picker
+                  sits over it, unseen, and opens on click. */}
+              <span className="relative block rounded-[10px] focus-within:ring-2 focus-within:ring-brand/40">
+                <span
+                  aria-hidden="true"
+                  className={`${DESKTOP_CONTROL_CLASS} pointer-events-none flex items-center ${
+                    late ? 'text-status-error' : dueWords ? '' : 'text-content-tertiary'
+                  }`}
+                >
+                  {dueWords || 'No due date'}
+                  <ChevronDown className="ml-auto h-4 w-4 text-content-tertiary" aria-hidden="true" />
+                </span>
+                <input
+                  id={`task-due-${task.id}`}
+                  type={dateOnly || !task.dueDate ? 'date' : 'datetime-local'}
+                  value={dateOnly || !task.dueDate ? dueDateOnlyValue(task.dueDate) : dueDateTimeLocalValue(task.dueDate)}
+                  onChange={(event) => void onSavePatch({ dueDate: event.target.value || null })}
+                  onClick={(event) => {
+                    try {
+                      event.currentTarget.showPicker?.();
+                    } catch {
+                      // Some browsers refuse showPicker; the field still takes typing.
+                    }
+                  }}
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                />
+              </span>
+            </DesktopField>
+
+            {task.releaseId ? (
+              <DesktopField
+                label="Phase"
+                htmlFor={`task-phase-${task.id}`}
+                hint={!task.phase && datePhase && releaseDateForPhase ? 'Set by its date. Change it to pin it.' : undefined}
+              >
+                <span className="relative block">
+                  <select
+                    id={`task-phase-${task.id}`}
+                    value={task.phase ?? ''}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      void onSavePatch({ phase: isRolloutPhase(value) ? value : null });
+                    }}
+                    className={`${DESKTOP_CONTROL_CLASS} pr-8`}
+                  >
+                    <option value="" className="bg-bg-elevated text-content-primary">
+                      {task.phase
+                        ? 'Follow its date'
+                        : datePhase && releaseDateForPhase
+                          ? ROLLOUT_PHASE_LABELS[datePhase]
+                          : 'From its date'}
+                    </option>
+                    {ROLLOUT_PHASE_ORDER.map((phase) => (
+                      <option key={phase} value={phase} className="bg-bg-elevated text-content-primary">
+                        {ROLLOUT_PHASE_LABELS[phase]}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-tertiary" aria-hidden="true" />
+                </span>
+              </DesktopField>
+            ) : null}
+
+            <BriefToggleRow taskId={task.id} releaseId={task.releaseId ?? null} onBrief={task.onBrief} variant="field" />
+
+            {CHAPPI_ENABLED ? (
+              <button
+                type="button"
+                onClick={askUrgans}
+                className="motion-focus motion-press mt-3.5 flex h-[38px] w-full items-center justify-center gap-2 rounded-full border border-stroke-strong text-[13px] font-semibold text-content-primary transition-colors [@media(hover:hover)]:hover:bg-bg-hover"
+              >
+                <Sparkles className="h-4 w-4" aria-hidden="true" />
+                Ask AI about this
+              </button>
+            ) : null}
+
+            {provenance ? <p className="mt-4 text-xs leading-[18px] text-content-tertiary">{provenance}</p> : null}
+          </aside>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section aria-label="Activity detail" className="flex min-w-0 flex-1 flex-col">

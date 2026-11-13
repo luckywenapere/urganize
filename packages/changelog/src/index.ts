@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.281.0",
+    title: "Task details on a computer",
+    tag: "Rollouts",
+    date: "November 13, 2026",
+    highlights: [
+      "On a computer, a task opens wider, in two columns: what to do on the left, status, who, due date and phase on the right.",
+      "A late task says how late it is, with Move to this week and Mark done beside it. A task waiting on someone says who.",
+      "You can now see which tasks are waiting on this one.",
+    ],
+  },
+  {
     version: "1.280.0",
     title: "Playlist owner screens use the whole screen on a computer",
     tag: "Pitching",

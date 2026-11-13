@@ -16,14 +16,17 @@ export function BriefToggleRow({
   taskId,
   releaseId,
   onBrief,
-  rowClassName,
-  iconClassName,
+  rowClassName = '',
+  iconClassName = '',
+  variant = 'row',
 }: {
   taskId: string;
   releaseId: string | null;
   onBrief: boolean | undefined;
-  rowClassName: string;
-  iconClassName: string;
+  rowClassName?: string;
+  iconClassName?: string;
+  /** 'field': the desktop pop-up's right column, label, switch and hint (#1251). */
+  variant?: 'row' | 'field';
 }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -57,27 +60,46 @@ export function BriefToggleRow({
     }
   };
 
+  const switchButton = (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label="Show on the brief"
+      onClick={() => void toggle()}
+      disabled={saving}
+      className={`motion-focus relative h-6 w-10 shrink-0 rounded-full transition-colors disabled:opacity-60 ${
+        on ? 'bg-brand' : 'bg-bg-hover ring-1 ring-inset ring-stroke-strong'
+      } ${variant === 'row' ? 'mr-2' : ''}`}
+    >
+      <span
+        aria-hidden="true"
+        className={`absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[18px]' : 'translate-x-0.5'}`}
+      />
+    </button>
+  );
+
+  if (variant === 'field') {
+    return (
+      <div className="border-t border-stroke-subtle py-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[13px] font-semibold text-content-primary">On the brief</span>
+          {switchButton}
+        </div>
+        <p className="mt-1 text-xs text-content-tertiary">
+          {on ? 'Shows on the rollout’s brief.' : 'Not on the rollout’s brief.'}
+        </p>
+        {error ? <p className="mt-1 text-xs text-status-error">{error}</p> : null}
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className={rowClassName}>
         <BookOpen className={iconClassName} aria-hidden="true" />
         <span className="flex-1 px-2 text-sm text-content-secondary">On the brief</span>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={on}
-          aria-label="Show on the brief"
-          onClick={() => void toggle()}
-          disabled={saving}
-          className={`motion-focus relative mr-2 h-6 w-10 shrink-0 rounded-full transition-colors disabled:opacity-60 ${
-            on ? 'bg-brand' : 'bg-bg-hover ring-1 ring-inset ring-stroke-strong'
-          }`}
-        >
-          <span
-            aria-hidden="true"
-            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[18px]' : 'translate-x-0.5'}`}
-          />
-        </button>
+        {switchButton}
       </div>
       {error ? <p className="mt-1 pl-7 text-xs text-status-error">{error}</p> : null}
     </div>

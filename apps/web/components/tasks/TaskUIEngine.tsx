@@ -18,7 +18,8 @@ import type { DependencyTaskSummary } from '@/components/tasks/TaskDependenciesS
 import { UndoCompletionToast } from '@/components/tasks/UndoCompletionToast';
 import { type ReleaseOption } from '@/lib/release-helpers';
 import { isTypingTarget, type TaskCreateSource, type TaskDetail, type WorkspaceMember } from '@/lib/tasks';
-import type { RolloutPhase } from '@/types/tasks';
+import type { RolloutPhase, Task } from '@/types/tasks';
+import { findDependents } from '@/lib/task-detail-desktop';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useAuthStore } from '@/lib/auth-store';
 import { rememberTaskCanComment, seedTaskCanComment } from '@/lib/task-thread-access-seed';
@@ -90,7 +91,7 @@ function warmTaskSurfaces() {
 /** Shown for the moment the detail chunk is still downloading on a cold tap. */
 function TaskDetailLoading() {
   return (
-    <div className="space-y-4" aria-busy="true" aria-label="Loading activity">
+    <div className="space-y-4 lg:p-7" aria-busy="true" aria-label="Loading activity">
       <SkeletonBlock className="h-7 w-2/3 rounded-lg" />
       <SkeletonBlock className="h-4 w-1/3 rounded" />
       <SkeletonBlock className="h-24 rounded-xl" />
@@ -149,6 +150,7 @@ type TaskDetailRenderState = {
   members: WorkspaceMember[];
   isUploadingAttachment: boolean;
   prerequisites: DependencyTaskSummary[];
+  dependents: DependencyTaskSummary[];
   statusBlockerMessage: string;
   onBack: () => void;
   onSavePatch: (patch: TaskDetailPatchInput) => Promise<void>;
@@ -160,6 +162,18 @@ type TaskDetailRenderState = {
   onEditComment: (commentId: string, content: string) => Promise<void>;
   onDeleteComment: (commentId: string) => Promise<void>;
 };
+
+function toDependencySummary(candidate: Task): DependencyTaskSummary {
+  return {
+    id: candidate.id,
+    title: candidate.title,
+    status: candidate.status,
+    dueDate: candidate.dueDate,
+    completedAt: candidate.completedAt,
+    assigneeName: candidate.assignee?.name || candidate.assignedTo || null,
+    assigneeUserId: candidate.assignedToUserId,
+  };
+}
 
 const TaskDetailRenderContext = createContext<TaskDetailRenderState | null>(null);
 
@@ -940,15 +954,16 @@ export function TaskUIEngine({ bridge }: { bridge: TaskUIEngineBridge }) {
     }
 
     const idSet = new Set(ids);
-    return storeTasks
-      .filter((candidate) => idSet.has(candidate.id))
-      .map((candidate) => ({
-        id: candidate.id,
-        title: candidate.title,
-        status: candidate.status,
-        dueDate: candidate.dueDate,
-      }));
+    return storeTasks.filter((candidate) => idSet.has(candidate.id)).map(toDependencySummary);
   }, [storeTasks, task?.dependencies]);
+
+  // "Waiting on this" (#1251): the tasks whose dependencies name this one, from
+  // the same store the prerequisites come from.
+  const activeId = task?.id ?? null;
+  const dependents = useMemo<DependencyTaskSummary[]>(
+    () => (activeId ? findDependents(activeId, storeTasks).map(toDependencySummary) : []),
+    [storeTasks, activeId]
+  );
 
   // Plain object — saveTaskPatch / deleteTask / uploadAttachment / etc. are
   // recreated every render today (no useCallback wrap), so memoizing this
@@ -965,6 +980,7 @@ export function TaskUIEngine({ bridge }: { bridge: TaskUIEngineBridge }) {
     members,
     isUploadingAttachment,
     prerequisites,
+    dependents,
     statusBlockerMessage,
     onBack: closeTask,
     onSavePatch: saveTaskPatch,
@@ -1125,14 +1141,14 @@ function TaskDetailModal() {
         role="dialog"
         aria-modal="true"
         aria-label="Activity detail"
-        className="task-sheet-panel urg-cartouche flex h-[92dvh] max-h-[92dvh] focus:outline-none w-full flex-col overflow-hidden rounded-t-2xl border-t border-stroke-strong bg-bg-surface sm:h-[min(88dvh,56rem)] sm:max-h-[88dvh] sm:rounded-2xl shadow-[0_28px_80px_-38px_rgb(var(--shadow-ink)/calc(0.68*var(--shadow-alpha-scale)))] sm:max-w-2xl sm:border"
+        className="task-sheet-panel urg-cartouche flex h-[92dvh] max-h-[92dvh] focus:outline-none w-full flex-col overflow-hidden rounded-t-2xl border-t border-stroke-strong bg-bg-surface sm:h-[min(88dvh,56rem)] sm:max-h-[88dvh] sm:rounded-2xl shadow-[0_28px_80px_-38px_rgb(var(--shadow-ink)/calc(0.68*var(--shadow-alpha-scale)))] sm:max-w-2xl sm:border lg:h-auto lg:max-w-[920px] lg:rounded-[20px]"
       >
         {/* Fixed height from sm up (2026-10-26, founder call): the card spends
             the viewport's height instead of shrinking to its content. The body
             is a flex column so TaskDetailView can split it 1.618 : 1 between
             the fields and the chat; scrolling stays as the fallback for a very
             short window or a long list of attachments. */}
-        <div ref={bodyRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-5 [overflow-anchor:none] sm:p-6">
+        <div ref={bodyRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-5 [overflow-anchor:none] sm:p-6 lg:p-0">
           <TaskDetailView
             isLoading={state.isLoading}
             isLoadingMembers={state.isLoadingMembers}
@@ -1141,6 +1157,7 @@ function TaskDetailModal() {
             members={state.members}
             isUploadingAttachment={state.isUploadingAttachment}
             prerequisites={state.prerequisites}
+            dependents={state.dependents}
             statusBlockerMessage={state.statusBlockerMessage}
             onBack={state.onBack}
             onSavePatch={state.onSavePatch}
