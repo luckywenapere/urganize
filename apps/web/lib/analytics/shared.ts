@@ -712,6 +712,10 @@ export interface AnalyticsEventPropertiesMap {
   dva_copied: SelfServeEventProperties;
   access_auto_approved: SelfServeEventProperties;
   welcome_viewed: SelfServeEventProperties;
+  // Card trial for customers abroad (#1266).
+  card_trial_card_page_opened: SelfServeEventProperties;
+  card_trial_started: SelfServeEventProperties;
+  card_trial_cancelled: SelfServeEventProperties;
   setup_call_clicked: SelfServeEventProperties;
   checklist_step_done: SelfServeEventProperties;
   checklist_dismissed: SelfServeEventProperties;

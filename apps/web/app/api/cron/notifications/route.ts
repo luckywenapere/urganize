@@ -8,6 +8,7 @@ import { GRANT_RUN_BUDGET_MS } from '@/lib/grants/weekly-run';
 import { runPauseSweep } from '@/lib/cancel-flow-server';
 import { runFrontDeskDigest } from '@/lib/front-desk/digest-server';
 import { runRenewalReminderSweep, runSelfServeNudgeSweep } from '@/lib/self-serve-lifecycle-server';
+import { runCardTrialReminderSweep } from '@/lib/bachs-trial-server';
 
 // The push flush and the outbox drain below share this minute (lib/push-limits.ts).
 export const maxDuration = 60;
@@ -64,6 +65,8 @@ export async function GET(request: NextRequest) {
   // email once (a lifecycle_sends row), inside the day's budget, never throws.
   const selfServeNudges = await runSelfServeNudgeSweep(adminClient);
   const renewalReminders = await runRenewalReminderSweep(adminClient);
+  // Card trials (#1266): the day before the first charge, once each.
+  const cardTrialReminders = await runCardTrialReminderSweep(adminClient);
 
   // The email outbox (2026-09-30): the onboarding sequence's days 2 to 7, and
   // any broadcast the day's email limit held back. A passenger on this cron for
@@ -77,5 +80,5 @@ export async function GET(request: NextRequest) {
     maxSends: 80,
   });
 
-  return NextResponse.json({ ok: true, ...result, email, grants, pauses, frontDesk, selfServeNudges, renewalReminders });
+  return NextResponse.json({ ok: true, ...result, email, grants, pauses, frontDesk, selfServeNudges, renewalReminders, cardTrialReminders });
 }

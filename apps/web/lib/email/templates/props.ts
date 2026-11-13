@@ -28,6 +28,7 @@ import type { ClaimPageEmailProps } from './ClaimPageEmail';
 import type { DirectoryInviteEmailProps } from './DirectoryInviteEmail';
 import type { SelfServeNudgeEmailProps } from './SelfServeNudgeEmail';
 import type { RenewalReminderEmailProps } from './RenewalReminderEmail';
+import type { CardTrialReminderEmailProps } from './CardTrialReminderEmail';
 import type { HelpRequestEmailProps } from './HelpRequestEmail';
 import type { CuratorApplicationApprovedEmailProps } from './CuratorApplicationApprovedEmail';
 
@@ -60,6 +61,7 @@ export type EmailTemplateProps = {
   directory_invite: DirectoryInviteEmailProps;
   self_serve_nudge: SelfServeNudgeEmailProps;
   renewal_reminder: RenewalReminderEmailProps;
+  card_trial_reminder: CardTrialReminderEmailProps;
   help_request: HelpRequestEmailProps;
   curator_application_approved: CuratorApplicationApprovedEmailProps;
 };

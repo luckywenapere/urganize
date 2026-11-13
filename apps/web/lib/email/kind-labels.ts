@@ -37,6 +37,7 @@ export const EMAIL_TEMPLATE_LABELS: Record<EmailTemplateId, string> = {
   directory_invite: 'Directory invite',
   self_serve_nudge: 'Checkout nudge',
   renewal_reminder: 'Renewal reminder',
+  card_trial_reminder: 'Card trial reminder',
   help_request: 'Help request',
   curator_application_approved: 'Application approved',
 };

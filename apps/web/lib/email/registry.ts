@@ -324,6 +324,17 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     fromAddress: 'billing@urganize.app',
     replyTo: 'support@urganize.app',
   },
+  card_trial_reminder: {
+    id: 'card_trial_reminder',
+    category: 'transactional',
+    name: 'Card trial ends tomorrow',
+    description:
+      'Card trial for customers abroad: the day before the first charge, once, with the way to cancel. Copy in lib/bachs-trial.ts (cardTrialReminderCopy).',
+    placeholderCopy: false,
+    fromName: 'Oyin at Urganize',
+    fromAddress: 'wenapere@urganize.app',
+    replyTo: 'wenapere@urganize.app',
+  },
   curator_application_approved: {
     id: 'curator_application_approved',
     category: 'transactional',

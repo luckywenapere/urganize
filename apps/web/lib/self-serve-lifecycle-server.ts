@@ -21,6 +21,7 @@ import { settingsDeepLink } from '@/lib/settings-nav';
 import { loadChecklistTeam } from '@/lib/self-serve-checklist-server';
 import { loadPaymentAccount, trackSelfServe } from '@/lib/self-serve-server';
 import { loadIntroMonthsLeft } from '@/lib/referrals-server';
+import { loadSelfRenewingUserIds } from '@/lib/bachs-trial-server';
 import { getChargePrice, getTierPriceUsd } from '@urganize/pricing';
 import {
   checkoutPath,
@@ -181,6 +182,8 @@ export async function runRenewalReminderSweep(admin: Admin, now = new Date()): P
     if (teams.error) return result;
     let budget = await readBudget(admin, now);
     const horizon = new Date(now.getTime() + 8 * DAY_MS).toISOString();
+    // A card Bachs charges by itself (#1266) renews itself: no reminder to pay.
+    const selfRenewing = await loadSelfRenewingUserIds(admin);
 
     for (const team of (teams.data ?? []) as Array<{ id: string; owner_id: string; payment_method: string }>) {
       const sub = await admin
@@ -194,6 +197,7 @@ export async function runRenewalReminderSweep(admin: Admin, now = new Date()): P
         status: string | null;
         expires_at: string | null;
       } | null;
+      if (selfRenewing.has(team.owner_id)) continue;
       if (sub.error || !row?.expires_at || row.status !== 'active') continue;
       if (row.expires_at > horizon || !isCheckoutPlan(row.plan)) continue;
       const sentKeys = await loadSentKeys(admin, team.id, 'renewal_reminder');

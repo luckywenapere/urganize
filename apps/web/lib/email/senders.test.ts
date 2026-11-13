@@ -45,6 +45,7 @@ const EXPECTED: Record<EmailTemplateId, { from: string; replyTo: string | null }
   onboarding_step: FOUNDER,
   self_serve_nudge: FOUNDER,
   renewal_reminder: BILLING,
+  card_trial_reminder: FOUNDER,
   help_request: { from: 'Urganize Help <notifications@urganize.app>', replyTo: null },
   announcement: HELLO,
   founder_billing_alert: ALERTS,

@@ -58,6 +58,8 @@ export async function trackSelfServe(
   userId: string | null,
   name:
     | 'access_auto_approved'
+    | 'card_trial_started'
+    | 'card_trial_cancelled'
     | 'checkout_succeeded'
     | 'checkout_failed'
     | 'dva_shown'

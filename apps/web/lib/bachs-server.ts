@@ -38,7 +38,7 @@ function secretKey(): string | null {
   return process.env.BACHS_SECRET_KEY?.trim() || null;
 }
 
-async function bachsFetch(path: string, init: RequestInit & { idempotencyKey?: string } = {}): Promise<Response> {
+export async function bachsFetch(path: string, init: RequestInit & { idempotencyKey?: string } = {}): Promise<Response> {
   const key = secretKey();
   if (!key) throw new Error('Bachs is not configured.');
   const controller = new AbortController();

@@ -77,6 +77,26 @@ export function trmOwedMonthKobo(input: {
   return monthlyTrmFeeKobo(input.plan, input.config, input.interval);
 }
 
+/**
+ * Owners who pay in US dollars through Bachs (#1266): a paid dollar checkout,
+ * or a card Bachs charges by itself. Their fee is the dollar-card one. A read
+ * that fails leaves the set short, which prices that team at the Naira rate.
+ */
+async function loadDollarPayers(admin: SupabaseClient, ownerIds: string[]): Promise<Set<string>> {
+  const payers = new Set<string>();
+  if (!ownerIds.length) return payers;
+  const ids = ownerIds.slice(0, 1000);
+  const [checkouts, invoices] = await Promise.all([
+    admin.from('bachs_checkouts').select('user_id, purpose').eq('status', 'paid').eq('currency', 'USD').in('user_id', ids).limit(5000),
+    admin.from('bachs_subscription_invoices').select('user_id').in('user_id', ids).limit(5000),
+  ]);
+  for (const row of (checkouts.data ?? []) as Array<{ user_id: string; purpose: string | null }>) {
+    if ((row.purpose ?? 'plan') === 'plan') payers.add(row.user_id);
+  }
+  for (const row of (invoices.data ?? []) as Array<{ user_id: string }>) payers.add(row.user_id);
+  return payers;
+}
+
 export async function loadBillingMargin(
   admin: SupabaseClient,
   input: { now: Date; isInternalEmail: (email: string) => boolean; env?: Record<string, string | undefined> }
@@ -99,7 +119,7 @@ export async function loadBillingMargin(
   const subscriptions = ((subs.data ?? []) as SubscriptionRow[]).filter((row) => Boolean(row.plan));
   const ownerIds = [...new Set(subscriptions.map((row) => row.user_id))];
 
-  const [profiles, workspaces, channels] = await Promise.all([
+  const [profiles, workspaces, channels, dollarPayers] = await Promise.all([
     ownerIds.length
       ? admin.from('profiles').select('id, email').in('id', ownerIds.slice(0, 1000))
       : Promise.resolve({ data: [], error: null }),
@@ -110,6 +130,7 @@ export async function loadBillingMargin(
           .in('owner_id', ownerIds.slice(0, 1000))
       : Promise.resolve({ data: [], error: null }),
     loadLatestChargeChannels(admin, ownerIds),
+    loadDollarPayers(admin, ownerIds),
   ]);
   if (profiles.error) notRead.push('profiles');
   if (workspaces.error) notRead.push('workspaces');
@@ -185,6 +206,7 @@ export async function loadBillingMargin(
         // The latest charge says how they paid; before any charge is recorded,
         // the team's own payment_method (self-serve checkout) does.
         channel: channels.get(sub.user_id) ?? team?.method ?? 'other',
+        dollars: dollarPayers.has(sub.user_id),
         path: team?.path ?? null,
         periodAmountKobo,
         trmOwedMonthKobo: trmOwedMonthKobo({

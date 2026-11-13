@@ -190,6 +190,13 @@ const LOADERS: LoaderMap = {
       subject: (p) => m.selfServeNudgeSubject(p),
     };
   },
+  card_trial_reminder: async () => {
+    const m = await import('./CardTrialReminderEmail');
+    return {
+      element: (p) => createElement(m.CardTrialReminderEmail, p),
+      subject: (p) => m.cardTrialReminderSubject(p),
+    };
+  },
   renewal_reminder: async () => {
     const m = await import('./RenewalReminderEmail');
     return {

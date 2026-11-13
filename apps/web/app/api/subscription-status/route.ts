@@ -15,6 +15,8 @@ import { purchasableTiers } from '@/lib/billing-plans';
 import { isBachsConfigured, payerCurrency, shouldOfferBachs } from '@/lib/bachs';
 import { loadIntroMonthsLeft } from '@/lib/referrals-server';
 import { resolveOnboardingSetupRequired } from '@/lib/onboarding-setup';
+import { CARD_TRIAL_SIGNUP_CUTOFF, resolveCardTrialOwed } from '@/lib/bachs-trial';
+import { hasCardTrialSubscription, isCardTrialAvailable } from '@/lib/bachs-trial-server';
 
 // cardTrialRequired — the card-before-trial gate signal (NEXT_PUBLIC_FEATURE_CARD_TRIAL).
 //
@@ -146,6 +148,52 @@ async function computeOnboardingSetupRequired(userId: string, supabaseUrl: strin
   }
 }
 
+// addCardRequired: the card trial for customers abroad (2026-11-14, #1266).
+// True for a new owner outside Nigeria who has finished signing up and has not
+// yet put a card in, and only once Bachs has card trials on for us. The rule is
+// resolveCardTrialOwed (lib/bachs-trial.ts); this only gathers its facts.
+//
+// Ordered so almost everyone leaves before a single read: Nigeria and unknown
+// country first, then anyone who has paid, then (one profile read) anyone made
+// before the cutoff. Every failure answers false: a wrong true walls somebody
+// out. NOT the retired cardTrialRequired above, which nothing here touches.
+async function computeAddCardRequired(
+  request: NextRequest,
+  userId: string,
+  supabaseUrl: string,
+  snapshot: SubscriptionSnapshot
+): Promise<boolean> {
+  const offered = shouldOfferBachs(isBachsConfigured(), request.headers.get('x-vercel-ip-country'));
+  if (!offered || snapshot.paidAt) return false;
+  const admin = createAdminClient(supabaseUrl);
+  if (!admin) return false;
+  try {
+    const profile = await admin.from('profiles').select('created_at, role, onboarding_completed').eq('id', userId).maybeSingle();
+    if (profile.error || !profile.data) return false;
+    const createdAtIso = profile.data.created_at ? String(profile.data.created_at) : null;
+    if (!createdAtIso || Date.parse(createdAtIso) < Date.parse(CARD_TRIAL_SIGNUP_CUTOFF)) return false;
+    const [membership, hasSubscription] = await Promise.all([
+      admin.from('workspace_members').select('id').eq('user_id', userId).eq('status', 'active').neq('role', 'owner').limit(1),
+      hasCardTrialSubscription(admin, userId),
+    ]);
+    if (hasSubscription !== false) return false;
+    const owed = {
+      offered,
+      createdAtIso,
+      role: profile.data.role ? String(profile.data.role) : null,
+      onboardingCompleted: typeof profile.data.onboarding_completed === 'boolean' ? profile.data.onboarding_completed : null,
+      isInvitedMember: membership.error ? null : (membership.data?.length ?? 0) > 0,
+      paidAt: snapshot.paidAt,
+      hasSubscription,
+    };
+    // Asked last: it may have to ask Bachs, and only a real candidate is worth that.
+    if (!resolveCardTrialOwed({ ...owed, available: true })) return false;
+    return resolveCardTrialOwed({ ...owed, available: await isCardTrialAvailable(admin) });
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(request: NextRequest) {
   const auth = await getAuthenticatedUser(request);
   if ('error' in auth) {
@@ -173,6 +221,7 @@ export async function GET(request: NextRequest) {
       paidAt: null,
       allowlisted: true,
       cardTrialRequired: false,
+      addCardRequired: false,
       onboardingCompleted: null,
       accessApproved: true,
     });
@@ -229,6 +278,7 @@ export async function GET(request: NextRequest) {
     paidAt: snapshot.paidAt,
     pendingPlan: snapshot.pendingPlan,
     cardTrialRequired: cardTrialFacts.required,
+    addCardRequired: await computeAddCardRequired(request, auth.user.id, auth.supabaseUrl, snapshot),
     onboardingCompleted: cardTrialFacts.onboardingCompleted,
     onboardingSetupRequired,
     accessApproved,
