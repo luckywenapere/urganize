@@ -10,7 +10,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { INTRO_MONTHS, PRICING_TIERS, type BillingInterval } from '@urganize/pricing';
+import {
+  DISTRIBUTION_REQUIRES_PREPAY,
+  INTRO_MONTHS,
+  PRICING_TIERS,
+  distributionIncluded,
+  type BillingInterval,
+} from '@urganize/pricing';
 import { Logo, LoadingMark } from '@urganize/ui';
 import { useAuthStore } from '@/lib/auth-store';
 import { BOOK_CALL_LABEL, needsOnboardingCall } from '@/lib/call-led';
@@ -948,7 +954,11 @@ function CheckoutStep({
                 ))}
               </dl>
               {options.distributionOn && PRICING_TIERS[intent.plan].includesDistribution ? (
-                <p className="mt-2.5 text-[13px] text-content-secondary">Distribution through our partner is included.</p>
+                <p className="mt-2.5 text-[13px] text-content-secondary">
+                  {distributionIncluded(intent.plan, period, DISTRIBUTION_REQUIRES_PREPAY)
+                    ? 'Distribution through our partner is included.'
+                    : 'Distribution through our partner comes with 6-month and yearly plans.'}
+                </p>
               ) : null}
             </section>
 
@@ -1162,7 +1172,7 @@ function CheckoutStep({
             <div className="rounded-2xl border border-stroke-default bg-bg-surface px-5 py-4">
               <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">You get</div>
               <dl className="mt-2 divide-y divide-stroke-subtle">
-                {youGet(intent.plan, options.distributionOn).map((row) => (
+                {youGet(intent.plan, options.distributionOn, period).map((row) => (
                   <div key={row.label} className="flex items-center justify-between py-2.5">
                     <dt className="text-content-secondary">{row.label}</dt>
                     <dd className="font-mono text-content-primary">{row.value}</dd>

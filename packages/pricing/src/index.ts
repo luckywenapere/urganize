@@ -736,7 +736,11 @@ export function tierOutcomes(id: PricingTierId, currency: PricingCurrencyCode = 
 
 /** The feature list under a pricing card: a lead-in line, then what this plan
  *  adds. Each line must be true of the product today. */
-export function tierFeatures(id: PricingTierId, currency: PricingCurrencyCode = 'NGN'): { heading: string; lines: string[] } {
+export function tierFeatures(
+  id: PricingTierId,
+  currency: PricingCurrencyCode = 'NGN',
+  interval: BillingInterval = DEFAULT_SELLING_INTERVAL
+): { heading: string; lines: string[] } {
   // Pricing v4 (founder-approved mock, 2026-11-08, docs/mocks/pricing-v4).
   // Each side of the page starts with a full list (Solo, Pro) and every plan
   // after it says what it adds. Every number comes from `limits`, the credits
@@ -749,7 +753,7 @@ export function tierFeatures(id: PricingTierId, currency: PricingCurrencyCode = 
       ? 'Unlimited rollouts at a time'
       : `${limits.activeReleases} ${limits.activeReleases === 1 ? 'rollout' : 'rollouts'} at a time`;
   const roster = `${limits.artists ?? 'Unlimited'} artists, ${limits.seats ?? 'unlimited'} people`;
-  const stores = tierStoresLine(id, currency);
+  const stores = tierStoresLine(id, currency, interval);
   switch (id) {
     case 'solo': {
       // The Free plan led this side until 2026-11-09; Solo now carries the full list.
@@ -785,30 +789,58 @@ export function tierFeatures(id: PricingTierId, currency: PricingCurrencyCode = 
   }
 }
 
-/** How a plan's music gets to the stores, as a pricing card line. */
-export function tierStoresLine(id: PricingTierId, currency: PricingCurrencyCode = 'NGN'): string {
+/** The words a card uses when a plan's distribution needs a longer period. */
+const DISTRIBUTION_PREPAY_WORDS = 'on 6-month and yearly plans';
+
+/** Does this plan's card have to say distribution waits for a longer period?
+ *  True for a priced plan that includes distribution when the period shown
+ *  would not get it. Group (sales-led) agrees its own terms, so never. */
+function distributionWaitsForPrepay(id: PricingTierId, interval: BillingInterval): boolean {
+  const tier = PRICING_TIERS[id];
+  if (!tier.includesDistribution || id === 'enterprise') return false;
+  return !distributionIncluded(id, interval, DISTRIBUTION_REQUIRES_PREPAY);
+}
+
+/** How a plan's music gets to the stores, as a pricing card line.
+ *
+ *  Takes the period the card is showing (2026-11-13, #1260): with
+ *  DISTRIBUTION_REQUIRES_PREPAY on, a monthly team does not get distribution,
+ *  so the monthly card must not say "included". The card and the app read the
+ *  same rule (distributionIncluded), so they cannot disagree. */
+export function tierStoresLine(
+  id: PricingTierId,
+  currency: PricingCurrencyCode = 'NGN',
+  interval: BillingInterval = DEFAULT_SELLING_INTERVAL
+): string {
   const single = currency === 'USD' ? formatMoney(EXTRA_RELEASE_PRICE_USD, 'USD') : formatMoney(EXTRA_RELEASE_PRICE_NAIRA, 'NGN');
   const allowance = DISTRIBUTION_ALLOWANCE[id];
-  if (id === 'solo_plus') return 'Singles and EPs to stores, included';
+  const tail = distributionWaitsForPrepay(id, interval) ? ` ${DISTRIBUTION_PREPAY_WORDS}` : ', included';
+  if (id === 'solo_plus') return `Singles and EPs to stores${tail}`;
   if (id === 'label' || id === 'enterprise') {
     const artists = DISTRIBUTION_ALLOWANCE.label?.artists ?? 5;
-    return `Singles, EPs and albums for ${artists} artists, included`;
+    return `Singles, EPs and albums for ${artists} artists${tail}`;
   }
   if (allowance) {
-    return `Singles and EPs to stores for ${allowance.artists} ${allowance.artists === 1 ? 'artist' : 'artists'}, included`;
+    return `Singles and EPs to stores for ${allowance.artists} ${allowance.artists === 1 ? 'artist' : 'artists'}${tail}`;
   }
   return `Send singles to stores for ${single} each`;
 }
 
-/** The same fact, short, for the compare table. */
+/** The same fact, short, for the compare table. The table shows no period, so
+ *  it states the rule itself whenever a monthly team would not get it. */
 export function tierStoresCell(id: PricingTierId, currency: PricingCurrencyCode = 'NGN'): string {
   const single = currency === 'USD' ? formatMoney(EXTRA_RELEASE_PRICE_USD, 'USD') : formatMoney(EXTRA_RELEASE_PRICE_NAIRA, 'NGN');
   const allowance = DISTRIBUTION_ALLOWANCE[id];
-  if (id === 'solo_plus') return 'Singles and EPs included';
+  const waits = distributionWaitsForPrepay(id, 'monthly');
+  if (id === 'solo_plus') return waits ? `Singles and EPs ${DISTRIBUTION_PREPAY_WORDS}` : 'Singles and EPs included';
   if (id === 'label' || id === 'enterprise') {
-    return `Singles, EPs, albums, ${DISTRIBUTION_ALLOWANCE.label?.artists ?? 5} artists`;
+    const base = `Singles, EPs, albums, ${DISTRIBUTION_ALLOWANCE.label?.artists ?? 5} artists`;
+    return waits ? `${base}, ${DISTRIBUTION_PREPAY_WORDS}` : base;
   }
-  if (allowance) return `Singles and EPs, ${allowance.artists} ${allowance.artists === 1 ? 'artist' : 'artists'}`;
+  if (allowance) {
+    const base = `Singles and EPs, ${allowance.artists} ${allowance.artists === 1 ? 'artist' : 'artists'}`;
+    return waits ? `${base}, ${DISTRIBUTION_PREPAY_WORDS}` : base;
+  }
   return `${single} a single`;
 }
 
@@ -846,6 +878,21 @@ export function intervalSavingNaira(id: PricingTierId, interval: BillingInterval
 export function monthlyEquivalentKobo(amountKobo: number, interval: BillingInterval): number {
   return Math.round(amountKobo / INTERVAL_MONTHS[interval].covers);
 }
+
+/** Distribution comes with 6-month and yearly plans only (founder, 2026-11-13,
+ *  #1260). On: a monthly team on a plan that includes distribution is told it
+ *  needs a longer period, and the pricing cards say so.
+ *
+ *  WHY: a monthly team costs us TRM's monthly plan price every month (5,680
+ *  naira of Solo Plus's 12,000), while TRM's yearly plan costs about 1,700 a
+ *  month. Monthly Solo Plus kept less than Solo did.
+ *
+ *  It is a constant here, not only an env var, because the marketing site
+ *  cannot read apps/web's env and the cards on both must say the same thing.
+ *  apps/web still lets DISTRIBUTION_REQUIRES_PREPAY=false in the env turn the
+ *  ENTITLEMENT off (lib/trm/partner-fee.ts), but the cards follow this value,
+ *  so change it here and redeploy rather than using the env alone. */
+export const DISTRIBUTION_REQUIRES_PREPAY = true;
 
 /** Does a team on this tier and interval get "Distribution included"?
  *
@@ -1065,6 +1112,8 @@ export function distributionHighlight(
   requiresPrepay: boolean
 ): string | null {
   if (!PRICING_TIERS[id].includesDistribution) return null;
+  // Group is sales-led and has no period on its card: its terms are agreed per deal.
+  if (id === 'enterprise') return distributionAllowanceCopy(id) ?? 'Distribution included';
   if (distributionIncluded(id, interval, requiresPrepay)) return distributionAllowanceCopy(id) ?? 'Distribution included';
   return 'Distribution on 6-month and yearly plans';
 }
@@ -1111,7 +1160,7 @@ export function tierHighlights(
   const distribution = distributionHighlight(
     id,
     opts.interval ?? DEFAULT_SELLING_INTERVAL,
-    opts.distributionRequiresPrepay ?? false
+    opts.distributionRequiresPrepay ?? DISTRIBUTION_REQUIRES_PREPAY
   );
   // A plan without included distribution pays for each release; a plan with it
   // pays for releases past its allowance. Same per-type price either way.

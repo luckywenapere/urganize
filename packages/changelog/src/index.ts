@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.282.1",
+    date: "November 13, 2026",
+    listed: false,
+    highlights: [
+      "Sending music to stores now comes with 6-month and yearly plans. Plan cards and checkout say so when you look at monthly.",
+    ],
+  },
+  {
     version: "1.282.0",
     title: "One plan when you pay",
     tag: "Account",

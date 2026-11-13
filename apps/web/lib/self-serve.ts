@@ -11,6 +11,8 @@ import {
   PRICING_TIERS,
   getChargePrice,
   getIntroPrice,
+  DISTRIBUTION_REQUIRES_PREPAY,
+  distributionIncluded,
   getTierPrice,
   intervalLabel,
   type BillingInterval,
@@ -160,7 +162,7 @@ export type YouGetRow = { label: string; value: string };
 
 /** "You get", from the plan's own limits. Distribution only shows while the
  *  partner send is on. */
-export function youGet(plan: CheckoutPlan, distributionOn: boolean): YouGetRow[] {
+export function youGet(plan: CheckoutPlan, distributionOn: boolean, period?: BillingInterval): YouGetRow[] {
   const limits = PRICING_TIERS[plan].limits;
   const rows: YouGetRow[] = [
     { label: 'Artists', value: limits.artists === null ? 'No limit' : String(limits.artists) },
@@ -169,7 +171,10 @@ export function youGet(plan: CheckoutPlan, distributionOn: boolean): YouGetRow[]
   ];
   // Only a plan that includes distribution (Pro and Label since 2026-11-07).
   if (distributionOn && PRICING_TIERS[plan].includesDistribution) {
-    rows.push({ label: 'Distribution', value: 'Partner' });
+    // With a period in hand, say when that period does not get it (#1260):
+    // distribution comes with 6-month and yearly plans.
+    const waits = period !== undefined && !distributionIncluded(plan, period, DISTRIBUTION_REQUIRES_PREPAY);
+    rows.push({ label: 'Distribution', value: waits ? '6-month and yearly plans' : 'Partner' });
   }
   return rows;
 }

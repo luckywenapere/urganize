@@ -1,4 +1,5 @@
 import {
+  DISTRIBUTION_REQUIRES_PREPAY,
   INTERVAL_MONTHS,
   distributionIncluded,
   trmOwedFor,
@@ -79,6 +80,16 @@ function readKobo(raw: string | undefined, fallback: number): number {
   return Number.isInteger(value) && value >= 0 ? value : fallback;
 }
 
+/** The prepay rule from env. Unset or unreadable follows the shared default in
+ *  @urganize/pricing (on since 2026-11-13, #1260), the value the pricing cards
+ *  read, so the app and the cards agree unless the env says otherwise. */
+function readRequiresPrepay(raw: string | undefined): boolean {
+  const text = String(raw ?? '').trim().toLowerCase();
+  if (text === 'true') return true;
+  if (text === 'false') return false;
+  return DISTRIBUTION_REQUIRES_PREPAY;
+}
+
 /** "10" or "10.5" -> 1000 or 1050 basis points; anything else -> null. */
 export function readRevenueShareBps(raw: string | undefined): number | null {
   const text = String(raw ?? '').trim();
@@ -118,8 +129,7 @@ export function readTrmFeeConfig(env: Env = process.env): TrmFeeConfig {
       label: readKobo(env.TRM_FEE_LABEL_MONTHLY_KOBO, DEFAULT_TRM_FEE_LABEL_MONTHLY_KOBO),
     },
     revenueShareBps,
-    distributionRequiresPrepay:
-      String(env.DISTRIBUTION_REQUIRES_PREPAY ?? '').trim().toLowerCase() === 'true',
+    distributionRequiresPrepay: readRequiresPrepay(env.DISTRIBUTION_REQUIRES_PREPAY),
   };
 }
 

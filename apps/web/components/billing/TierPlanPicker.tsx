@@ -140,7 +140,7 @@ export function TierPlanPicker({
   disabled,
 }: TierPlanPickerProps) {
   const selected = getTier(selectedTier);
-  const features = tierFeatures(selectedTier, currency);
+  const features = tierFeatures(selectedTier, currency, selectedInterval);
   // "Manager includes everything in Solo, and:" / "Solo includes:".
   const lead =
     features.heading === 'What you get:'
