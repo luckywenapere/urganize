@@ -11,6 +11,11 @@ export type DependencyTaskSummary = {
   title: string;
   status: TaskStatus;
   dueDate: string | null;
+  /** For "Done 9 Sep" on the desktop pop-up (#1251). */
+  completedAt?: string | null;
+  /** Who holds it: the desktop pop-up's face and "Waiting on Maya". */
+  assigneeName?: string | null;
+  assigneeUserId?: string | null;
 };
 
 type TaskDependenciesSectionProps = {

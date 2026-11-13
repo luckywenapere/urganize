@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Users } from '@/components/icons';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { supabase } from '@/lib/supabase/client';
-import { roleNeededForTask } from '@/lib/directory-roles';
+import { DIRECTORY_ROLE_LABELS, roleNeededForTask } from '@/lib/directory-roles';
 import { describeFindSomeone, findSomeoneHref, type TaskAsk } from '@/lib/find-someone';
 
 const REQUESTS_ENABLED =
@@ -28,15 +28,19 @@ export function FindSomeoneRow({
   releaseId,
   templateTaskId,
   status,
-  rowClassName,
-  iconClassName,
+  rowClassName = '',
+  iconClassName = '',
+  variant = 'row',
 }: {
   taskId: string;
   releaseId: string | null;
   templateTaskId: string | null;
   status: string;
-  rowClassName: string;
-  iconClassName: string;
+  rowClassName?: string;
+  iconClassName?: string;
+  /** 'card': the desktop pop-up's short card (#1251). No count of open people
+   *  is shown: the directory has no cheap count to read here. */
+  variant?: 'row' | 'card';
 }) {
   const role = roleNeededForTask(templateTaskId);
   const live =
@@ -74,6 +78,32 @@ export function FindSomeoneRow({
 
   if (!live || !role || !releaseId) return null;
   const view = describeFindSomeone(role, asks);
+
+  if (variant === 'card') {
+    const roleName = DIRECTORY_ROLE_LABELS[role].toLowerCase();
+    return (
+      <div className="mt-6 flex items-center gap-3 rounded-xl border border-dashed border-stroke-strong p-3.5">
+        <Users className="h-4 w-4 shrink-0 text-content-tertiary" aria-hidden="true" />
+        {view.kind === 'find' ? (
+          <>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-content-primary">No {roleName} yet?</p>
+              <p className="text-[13px] text-content-secondary">Find one in the Directory who is open to work.</p>
+            </div>
+            <Link
+              href={findSomeoneHref({ role, releaseId, taskId })}
+              onClick={closeTask}
+              className="motion-focus motion-press inline-flex h-8 shrink-0 items-center rounded-full border border-stroke-strong px-3 text-[13px] font-medium text-content-primary transition-colors [@media(hover:hover)]:hover:bg-bg-hover"
+            >
+              Find one
+            </Link>
+          </>
+        ) : (
+          <p className="min-w-0 flex-1 text-sm text-content-secondary">{view.text}</p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={rowClassName}>

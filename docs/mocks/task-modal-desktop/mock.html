@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Task pop-up, desktop</title>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --side-on:#e6e1d6; --card:#faf5ec; --hover:#ebe6dc; --tile:#e3ddd0;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --err:#961a1a; --err-soft:rgba(150,26,26,.08);
+    --ink:#1d2a21; --on-ink:#f5f0e6; --on-ink2:rgba(245,240,230,.72);
+    --board:#d9d5cc; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/20px 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--text); padding:40px 16px 72px; font-variant-numeric:tabular-nums; }
+  p,h1,h2,h3 { margin:0; }
+  .serif { font-family:'Young Serif', serif; font-weight:400; letter-spacing:0; }
+  .sec { color:var(--sec); } .ter { color:var(--ter); } .err { color:var(--err); }
+  .wrap { max-width:1240px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; line-height:36px; }
+  .intro p { color:var(--board-sec); max-width:760px; margin-top:8px; }
+  .label { font-size:12px; line-height:16px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin:40px 0 8px; }
+
+  .desk { background:var(--bg); border-radius:16px; overflow:hidden; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .bar { height:64px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:0 32px; }
+  .logo { font-family:'Young Serif', serif; font-size:18px; display:flex; align-items:center; gap:8px; }
+  .beta { font:700 10px/16px 'Instrument Sans'; letter-spacing:.06em; padding:0 6px; border-radius:4px; background:var(--brand-soft); color:var(--brand); }
+  .tabs { display:flex; gap:4px; }
+  .tabs span { padding:8px 14px; border-radius:99px; color:var(--sec); }
+  .tabs span.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .icons { display:flex; gap:12px; justify-content:flex-end; align-items:center; }
+  .icons i { width:36px; height:36px; border-radius:50%; border:1px solid var(--line2); }
+  .icons b { width:36px; height:36px; border-radius:50%; background:var(--brand); color:var(--on-ink); display:grid; place-items:center; font-size:12px; }
+
+  /* One content width for Home: 1120. */
+  .page { max-width:1120px; margin:0 auto; padding:8px 0 48px; display:flex; flex-direction:column; gap:16px; }
+
+  .face { width:40px; height:40px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--tile); font-weight:600; font-size:13px; }
+  .cv { width:40px; height:40px; flex:none; border-radius:6px; }
+  .cv.none { background:transparent; border:1.5px dashed var(--line2); display:grid; place-items:center; color:var(--ter); font-size:18px; }
+  .chev { width:8px; height:8px; border-top:1.5px solid var(--ter); border-right:1.5px solid var(--ter); transform:rotate(45deg); flex:none; }
+  .btn { display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 16px; border-radius:99px; font-weight:600; font-size:13px; white-space:nowrap; }
+  .btn.light { background:var(--on-ink); color:var(--ink); }
+  .btn.ghost { border:1px solid var(--line2); color:var(--text); font-weight:500; }
+
+  /* 1. Out now: one quiet line, not a tall card with a full-width button. */
+  .out { display:flex; align-items:center; gap:12px; padding:10px 16px; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+  .out .cv { width:32px; height:32px; background:var(--tile); }
+  .pill { font-size:12px; line-height:20px; font-weight:600; padding:0 8px; border-radius:99px; background:var(--brand-soft); color:var(--brand); }
+  .out .grow { flex:1; min-width:0; }
+  .link { color:var(--brand); font-weight:600; text-decoration:underline; text-underline-offset:3px; }
+  </style></head><body>
+<style>
+  .stage { position:relative; height:780px; background:var(--bg); overflow:hidden; }
+  .dim { position:absolute; inset:0; background:rgba(26,22,17,.35); }
+  .ghost { position:absolute; inset:0; padding:24px 32px; opacity:.5; }
+  .ghost div { background:var(--card); border-radius:16px; margin-bottom:16px; }
+  .modal { position:absolute; left:50%; top:36px; transform:translateX(-50%); width:920px; background:var(--card); border-radius:20px; box-shadow:0 24px 64px rgba(26,22,17,.25); overflow:hidden; }
+  .mtop { display:flex; align-items:center; gap:12px; padding:14px 20px; border-bottom:1px solid var(--line); }
+  .crumb { color:var(--sec); font-size:13px; flex:1; }
+  .crumb b { color:var(--text); font-weight:600; }
+  .ib { width:32px; height:32px; border-radius:8px; display:grid; place-items:center; color:var(--sec); border:1px solid transparent; font-size:15px; }
+  .ib:hover { background:var(--hover); }
+  .body { display:grid; grid-template-columns:minmax(0,1fr) 280px; }
+  .main { padding:24px 28px 28px; border-right:1px solid var(--line); }
+  .tline { display:flex; gap:14px; align-items:flex-start; }
+  .ck { width:26px; height:26px; border-radius:50%; border:2px solid var(--line2); flex:none; margin-top:4px; }
+  .title { font-family:'Young Serif', serif; font-weight:400; font-size:28px; line-height:34px; }
+  .late { margin-top:16px; display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:12px; background:var(--err-soft); }
+  .late .t { flex:1; color:var(--err); font-weight:600; }
+  .late .t span { display:block; color:var(--sec); font-weight:400; font-size:13px; }
+  .wait { margin-top:16px; display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:12px; background:var(--hover); }
+  .wait .t { flex:1; font-weight:600; } .wait .t span { display:block; color:var(--sec); font-weight:400; font-size:13px; }
+  .btn.dark { background:var(--ink); color:var(--on-ink); }
+  .btn.sm { height:32px; padding:0 12px; }
+  .sec2 { margin-top:24px; }
+  .h { font-size:13px; font-weight:600; color:var(--sec); margin-bottom:8px; display:flex; justify-content:space-between; }
+  .h a { color:var(--brand); font-weight:600; }
+  .notes { font-size:15px; line-height:24px; color:var(--text); }
+  .dep { display:grid; grid-template-columns:22px minmax(0,1fr) auto auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); }
+  .dep:first-of-type { border-top:0; padding-top:2px; }
+  .dot { width:18px; height:18px; border-radius:50%; border:1.5px solid var(--line2); }
+  .dot.done { background:var(--brand); border-color:var(--brand); color:#fff; font-size:11px; display:grid; place-items:center; }
+  .dep .t { font-weight:500; } .dep .t.done { color:var(--sec); text-decoration:line-through; }
+  .dep .d { color:var(--sec); font-size:13px; }
+  .face { width:24px; height:24px; font-size:10px; }
+  .help { margin-top:24px; display:flex; gap:12px; align-items:center; padding:14px; border:1px dashed var(--line2); border-radius:12px; }
+  .help .t { flex:1; } .help .t b { display:block; } .help .t span { color:var(--sec); font-size:13px; }
+  .side { padding:20px; background:var(--bg); }
+  .prop { padding:10px 0; border-top:1px solid var(--line); }
+  .prop:first-child { border-top:0; padding-top:0; }
+  .prop .k { font-size:12px; font-weight:600; color:var(--ter); margin-bottom:6px; }
+  .val { display:flex; align-items:center; gap:8px; height:36px; padding:0 10px; border-radius:10px; border:1px solid var(--line2); background:var(--card); }
+  .val .chev { margin-left:auto; transform:rotate(135deg); margin-top:-4px; }
+  .st { width:8px; height:8px; border-radius:50%; background:var(--ter); }
+  .st.prog { background:#b07a12; }
+  .sw { display:flex; justify-content:space-between; align-items:center; }
+  .sw i { width:32px; height:20px; border-radius:99px; background:var(--brand); position:relative; }
+  .sw i:after { content:''; position:absolute; right:3px; top:3px; width:14px; height:14px; border-radius:50%; background:#fff; }
+  .sw i.off { background:var(--tile); } .sw i.off:after { right:auto; left:3px; }
+  .hint { font-size:12px; color:var(--ter); margin-top:4px; }
+  .ask { margin-top:14px; display:flex; align-items:center; gap:8px; justify-content:center; height:38px; border-radius:99px; border:1px solid var(--line2); font-weight:600; font-size:13px; }
+  .made { font-size:12px; color:var(--ter); margin-top:16px; line-height:18px; }
+
+  .notesl { margin-top:16px; display:grid; gap:10px; }
+  .note { display:grid; grid-template-columns:28px 1fr; gap:10px; color:var(--board-sec); }
+  .note b { width:24px; height:24px; border-radius:50%; background:var(--ink); color:var(--on-ink); display:grid; place-items:center; font-size:12px; }
+  .note strong { color:var(--text); }
+</style>
+
+<div class="wrap">
+  <div class="intro">
+    <h1>Task pop-up, desktop</h1>
+    <p>The window that opens when you click a task anywhere: Home, the plan, Activities. Today it is a narrow column with an icon on every line and no labels. On a computer it gets two columns: what the task is on the left, its settings on the right, and a clear answer to "what do I do about this now?" at the top.</p>
+  </div>
+
+  <div class="label">1. A late task</div>
+  <div class="stage">
+    <div class="ghost"><div style="height:200px"></div><div style="height:220px"></div><div style="height:180px"></div></div>
+    <div class="dim"></div>
+    <div class="modal">
+      <div class="mtop">
+        <span class="crumb">The Harbour Lights &rsaquo; <b>Salt and Signal</b> &rsaquo; Plan</span>
+        <span class="btn ghost sm">Open rollout</span>
+        <span class="ib" title="Key activity">☆</span><span class="ib" title="More">⋯</span><span class="ib" title="Close">✕</span>
+      </div>
+      <div class="body">
+        <div class="main">
+          <div class="tline"><span class="ck"></span><h2 class="title">Brief the designer on album cover art</h2></div>
+          <div class="late"><div class="t">58 days late<span>It was due Wed 16 Sep. The album is out Wed 6 Jan.</span></div><span class="btn ghost sm">Move to this week</span><span class="btn dark sm">Mark done</span></div>
+
+          <div class="sec2"><div class="h">What to do</div>
+            <p class="notes">Brief the album cover: concept, references, dimensions, and how the single covers should relate to it. Album art carries the narrative and every later channel pulls from it, so it starts before either single is designed.</p></div>
+
+          <div class="sec2"><div class="h">Needs first</div>
+            <div class="dep"><span class="dot done">✓</span><span class="t done">Define the album narrative</span><span class="d">Done 9 Sep</span><span></span></div></div>
+
+          <div class="sec2"><div class="h">Waiting on this</div>
+            <div class="dep"><span class="dot"></span><span class="t">Album cover art first draft delivered</span><span class="d">Due 30 Sep</span><span class="face">O</span></div>
+            <div class="dep"><span class="dot"></span><span class="t">Plan the album content shoot</span><span class="d">Due 7 Oct</span><span class="face">O</span></div></div>
+
+          <div class="help"><div class="t"><b>No designer yet?</b><span>4 graphic designers in the Directory are open to work.</span></div><span class="btn ghost sm">Find one</span></div>
+        </div>
+        <div class="side">
+          <div class="prop"><div class="k">Status</div><div class="val"><span class="st"></span>To do<span class="chev"></span></div></div>
+          <div class="prop"><div class="k">Who</div><div class="val"><span class="face">O</span>Oyin (you)<span class="chev"></span></div></div>
+          <div class="prop"><div class="k">Due</div><div class="val" style="color:var(--err)">Wed 16 Sep<span class="chev"></span></div></div>
+          <div class="prop"><div class="k">Phase</div><div class="val">Pre-release<span class="chev"></span></div><div class="hint">Set by its date. Change it to pin it.</div></div>
+          <div class="prop"><div class="sw"><span style="font-size:13px;font-weight:600">On the brief</span><i></i></div><div class="hint">Shows on the rollout's brief.</div></div>
+          <div class="ask">Ask UrgAns about this</div>
+          <p class="made">From the album plan. Last changed by Oyin on 12 Nov.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notesl">
+    <div class="note"><b>1</b><p><strong>Wider, in two columns.</strong> What the task is and what to do sit on the left; status, who, due, phase and "On the brief" sit on the right with a small label each. Today it is a 670px column where every line is just an icon and a value, so you have to guess which line is which.</p></div>
+    <div class="note"><b>2</b><p><strong>A late task says so, with the two fixes beside it:</strong> "Move to this week" and "Mark done". Today it is a small red "58 days overdue" and you have to find the date field yourself.</p></div>
+    <div class="note"><b>3</b><p><strong>"To Do" appears once,</strong> in Status. Today it shows twice: under the title and again on the first line.</p></div>
+    <div class="note"><b>4</b><p><strong>Dates in words:</strong> "Wed 16 Sep", not "16/09/2026". "Pre-release (from its date)" becomes "Pre-release" with a short hint under it.</p></div>
+    <div class="note"><b>5</b><p><strong>What it unlocks, not just what it needs.</strong> "Needs first" is today's "Depends on". "Waiting on this" is new: the tasks that cannot start until this one is done, which is the reason to do it now. Both come from the dependencies the plan already has.</p></div>
+    <div class="note"><b>6</b><p><strong>Where it lives, at the top:</strong> artist, rollout and "Open rollout". Today the only clue is "Salt and Signal" in small grey text.</p></div>
+    <div class="note"><b>7</b><p><strong>"Find graphic designer" becomes a short card</strong> that says how many are open to work, instead of a lone green link.</p></div>
+    <div class="note"><b>8</b><p><strong>The key-activity pin, delete and close stay top right.</strong> Delete moves into the ⋯ menu so it is not one click from the close button.</p></div>
+  </div>
+
+  <div class="label">2. A task that is waiting on someone else</div>
+  <div class="stage" style="height:560px">
+    <div class="ghost"><div style="height:200px"></div><div style="height:220px"></div></div>
+    <div class="dim"></div>
+    <div class="modal">
+      <div class="mtop"><span class="crumb">Zainab Oyelaran &rsaquo; <b>Blue Season</b> &rsaquo; Plan</span><span class="btn ghost sm">Open rollout</span><span class="ib">☆</span><span class="ib">⋯</span><span class="ib">✕</span></div>
+      <div class="body">
+        <div class="main">
+          <div class="tline"><span class="ck" style="border-style:dashed"></span><h2 class="title">Confirm lead single playlist placements</h2></div>
+          <div class="wait"><div class="t">Waiting on Maya<span>"Pitch the lead single to editors" is not done yet. It was due Fri 6 Nov.</span></div><span class="btn ghost sm">Nudge Maya</span></div>
+          <div class="sec2"><div class="h">What to do</div><p class="notes">Check which playlists said yes, and add the dates they go live to the plan.</p></div>
+          <div class="sec2"><div class="h">Needs first</div>
+            <div class="dep"><span class="dot"></span><span class="t">Pitch the lead single to editors</span><span class="d" style="color:var(--err)">7 days late</span><span class="face">M</span></div></div>
+        </div>
+        <div class="side">
+          <div class="prop"><div class="k">Status</div><div class="val"><span class="st"></span>To do<span class="chev"></span></div></div>
+          <div class="prop"><div class="k">Who</div><div class="val"><span class="face">O</span>Oyin (you)<span class="chev"></span></div></div>
+          <div class="prop"><div class="k">Due</div><div class="val">Fri 13 Nov<span class="chev"></span></div></div>
+          <div class="ask">Ask UrgAns about this</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notesl">
+    <div class="note"><b>9</b><p><strong>A blocked task says who it is waiting on</strong> and lets you nudge them. Today the reason is a line further down the window.</p></div>
+    <div class="note"><b>10</b><p><strong>Nudge sends Maya an in-app notification.</strong> No email. If that needs new plumbing, the build will say so before adding it.</p></div>
+  </div>
+</div>
+
+</body></html>

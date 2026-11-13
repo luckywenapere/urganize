@@ -21,6 +21,8 @@ type TaskMemberSelectProps = {
    * density prop.
    */
   density?: 'comfortable' | 'compact';
+  /** Replaces the trigger's classes: the desktop pop-up's boxed field (#1251). */
+  triggerClassName?: string;
   /**
    * Rendered at the base of the open menu, BELOW and OUTSIDE the list.
    * TaskDetailView passes its invite-a-teammate form here (2026-09-05): the
@@ -105,6 +107,7 @@ export function TaskMemberSelect({
   density = 'comfortable',
   footer,
   selectedLabel = null,
+  triggerClassName,
 }: TaskMemberSelectProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -150,8 +153,9 @@ export function TaskMemberSelect({
     setOpen(false);
   };
 
-  const triggerClass =
-    density === 'compact'
+  const triggerClass = triggerClassName
+    ? triggerClassName
+    : density === 'compact'
       ? 'motion-focus flex h-9 w-full items-center gap-2 rounded-lg border border-transparent bg-transparent px-2 text-left text-sm text-content-primary transition-colors [@media(hover:hover)]:hover:border-stroke-default [@media(hover:hover)]:hover:bg-bg-elevated focus:border-brand focus:bg-bg-elevated'
       : 'motion-focus input flex h-12 items-center gap-2 rounded-[18px] text-left';
 
