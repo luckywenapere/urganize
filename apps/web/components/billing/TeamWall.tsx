@@ -39,6 +39,10 @@ import { HelpTip } from '@/components/shared/HelpTip';
 import { TierPlanPicker, planChargeNote } from '@/components/billing/TierPlanPicker';
 import { PlanCards } from '@/components/billing/PlanCards';
 import { WallUrgansCard } from '@/components/billing/WallUrgansCard';
+import { WallCreditsOffer } from '@/components/billing/WallCreditsOffer';
+import { useCreditBalance } from '@/components/urgans-actions/useCreditBalance';
+import { isCreditsPurchasable } from '@/lib/credits/config';
+import { showWallCreditsOffer } from '@/lib/credits/wall-offer';
 import { readPaywallPlanChoice } from '@/lib/onboarding-paywall';
 import {
   wallStatTiles,
@@ -206,6 +210,8 @@ export function TeamWall() {
   // from inside a reviewed iOS app. Defaults false so the pre-hydration render
   // matches the server's, then flips post-mount (the LockedPageClient pattern).
   const [isIOSNativeApp, setIsIOSNativeApp] = useState(false);
+  // For the ₦1,500 assistant offer: hidden once credits are known to be waiting.
+  const { balance: creditBalance, account: creditAccount } = useCreditBalance();
 
   // The owner may reach this page from the trial indicator while they still
   // have access, to pay early. Without this the hasAccess bounce below would
@@ -555,6 +561,14 @@ export function TeamWall() {
   // Dollars outside Nigeria (#1120): the server says which, from where the
   // payer is and whether Bachs can charge them. Naira when it does not say.
   const currency = team?.currency === 'USD' ? 'USD' : 'NGN';
+  const showCreditsOffer = showWallCreditsOffer({
+    purchasable: isCreditsPurchasable(),
+    isIOSApp: isIOSNativeApp,
+    isOwnerOrAdmin: isOwner,
+    isUpgradeIntent,
+    teamState: team?.state ?? null,
+    balance: creditBalance,
+  });
   // No starting price in dollars.
   const introMonthsLeft = currency === 'USD' ? 0 : (team?.introMonthsLeft ?? 0);
   // A team that has never paid (2026-10-31, no trial): this is its first
@@ -847,6 +861,10 @@ export function TeamWall() {
               </Card>
             )}
 
+            {/* The ₦1,500 assistant offer (#1243): a second choice right under the
+                plans, for a team with no plan. Rules in lib/credits/wall-offer.ts. */}
+            {showCreditsOffer ? <WallCreditsOffer account={creditAccount} currency={currency} /> : null}
+
             {/* Talk to us: a quiet second path, not a rival button. One filled action
                 converts best; teams that close over an invoice still find this in one
                 tap, right under the thing they are deciding about. */}
@@ -917,7 +935,7 @@ export function TeamWall() {
 
         {/* UrgAns stays usable on credits, changes included, while the rest of the
             app is behind the wall. Renders nothing with credits off or no balance. */}
-        <WallUrgansCard />
+        <WallUrgansCard hideBuyRow={showCreditsOffer} />
 
         <p className="text-center text-xs text-content-tertiary">
           {user?.email ? (
