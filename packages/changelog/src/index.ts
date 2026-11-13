@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.280.0",
+    title: "Playlist owner screens use the whole screen on a computer",
+    tag: "Pitching",
+    date: "November 13, 2026",
+    highlights: [
+      "On a computer, your pitches, playlists and profile now have a menu on the left instead of a bar at the bottom.",
+      "Pitches show as a list with the open song beside it. Pressing Listen marks it as listened.",
+      "Your playlists are a table, and your profile sits next to your public page link.",
+    ],
+  },
+  {
     version: "1.279.0",
     title: "Admin on a computer",
     tag: "App",

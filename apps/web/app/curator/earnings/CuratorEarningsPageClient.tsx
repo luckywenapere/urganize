@@ -14,7 +14,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CuratorShell } from '@/components/curator/CuratorShell';
 import { CuratorLoadError } from '@/components/curator/CuratorLoadError';
-import { CuratorEarningsSkeleton } from '@/components/loading/CuratorSkeleton';
+import { CuratorEarningsDeskSkeleton, CuratorEarningsSkeleton } from '@/components/loading/CuratorSkeleton';
+import { EarningsDesk } from '@/components/curator/desk/EarningsDesk';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
+import { useCuratorStore } from '@/stores/useCuratorStore';
 import { PitchTerms } from '@/components/pitching/PitchTerms';
 import { CURATOR_TERMS } from '@/lib/pitch-payment-terms';
 import {
@@ -70,14 +73,25 @@ const secondaryButtonClass =
 
 type BankWizardStep = 'idle' | 'form' | 'confirm' | 'terms';
 
+/** 'desk' is the card beside the history on a computer (#1237). */
+type SectionVariant = 'phone' | 'desk';
+
+const DESK_CARD = 'space-y-3 rounded-2xl border border-stroke-default bg-bg-surface p-5';
+const PHONE_CARD = 'space-y-3 rounded-xl border border-stroke-default bg-bg-surface p-4';
+const DESK_TITLE = 'text-[13px] font-semibold text-content-primary';
+const PHONE_TITLE = 'text-[11px] uppercase tracking-[0.16em] text-content-tertiary';
+
 /** Bank account: add, confirm the name at the bank, accept the terms, save. */
 function PayoutAccountSection({
   earnings,
   onSaved,
+  variant = 'phone',
 }: {
   earnings: CuratorEarnings;
   onSaved: () => void;
+  variant?: SectionVariant;
 }) {
+  const isDesk = variant === 'desk';
   const account = earnings.payoutAccount;
   const [step, setStep] = useState<BankWizardStep>('idle');
   const [banks, setBanks] = useState<PaystackBank[] | null>(null);
@@ -174,11 +188,32 @@ function PayoutAccountSection({
   };
 
   return (
-    <section className="space-y-3 rounded-xl border border-stroke-default bg-bg-surface p-4">
-      <p className="text-[11px] uppercase tracking-[0.16em] text-content-tertiary">Bank account</p>
+    <section className={isDesk ? DESK_CARD : PHONE_CARD}>
+      <p className={isDesk ? DESK_TITLE : PHONE_TITLE}>{isDesk ? 'Paid into' : 'Bank account'}</p>
 
       {step === 'idle' ? (
-        account ? (
+        account && isDesk ? (
+          // On a computer, Remove sits inside Change, so it is never one click
+          // from cutting off the money.
+          <div className="space-y-2">
+            <p
+              className={`text-sm ${
+                account.status === 'needs_review' ? 'text-status-warning' : 'text-content-primary'
+              }`}
+            >
+              {account.status === 'needs_review'
+                ? NAME_MISMATCH
+                : `${account.bankName} ending ${account.accountLast4}`}
+            </p>
+            <button
+              type="button"
+              onClick={() => void openForm()}
+              className="motion-focus text-[13px] font-semibold text-brand underline underline-offset-[3px]"
+            >
+              Change
+            </button>
+          </div>
+        ) : account ? (
           <div className="space-y-3">
             <p
               className={`text-sm ${
@@ -241,6 +276,16 @@ function PayoutAccountSection({
               </button>
             ) : null}
           </div>
+          {isDesk && account ? (
+            <button
+              type="button"
+              onClick={() => void remove()}
+              disabled={isBusy}
+              className="motion-focus text-[13px] text-status-error hover:underline disabled:opacity-50"
+            >
+              Remove this bank account
+            </button>
+          ) : null}
         </div>
       ) : null}
 
@@ -307,7 +352,16 @@ function priceNotLiveReason(earnings: CuratorEarnings): Parameters<typeof priceN
 }
 
 /** The pitch price: set it, see the share preview, switch paid pitches on or off. */
-function PricingSection({ earnings, onSaved }: { earnings: CuratorEarnings; onSaved: () => void }) {
+function PricingSection({
+  earnings,
+  onSaved,
+  variant = 'phone',
+}: {
+  earnings: CuratorEarnings;
+  onSaved: () => void;
+  variant?: SectionVariant;
+}) {
+  const isDesk = variant === 'desk';
   const pricing = earnings.pricing;
   const [priceInput, setPriceInput] = useState(() =>
     pricing?.priceKobo ? String(Math.round(pricing.priceKobo / 100)) : ''
@@ -360,8 +414,8 @@ function PricingSection({ earnings, onSaved }: { earnings: CuratorEarnings; onSa
   };
 
   return (
-    <section className="space-y-3 rounded-xl border border-stroke-default bg-bg-surface p-4">
-      <p className="text-[11px] uppercase tracking-[0.16em] text-content-tertiary">Your price</p>
+    <section className={isDesk ? DESK_CARD : PHONE_CARD}>
+      <p className={isDesk ? DESK_TITLE : PHONE_TITLE}>Your price</p>
 
       <div className="flex items-center gap-2">
         <span className="text-sm text-content-tertiary">₦</span>
@@ -389,11 +443,11 @@ function PricingSection({ earnings, onSaved }: { earnings: CuratorEarnings; onSa
 
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={() => void submit()} disabled={isBusy} className={primaryButtonClass}>
-          {isBusy ? 'Saving…' : isLive ? 'Update price' : TAKE_PAID_PITCHES}
+          {isBusy ? 'Saving…' : isLive ? (isDesk ? 'Save' : 'Update price') : TAKE_PAID_PITCHES}
         </button>
         {isLive ? (
           <button type="button" onClick={() => void stop()} disabled={isBusy} className={secondaryButtonClass}>
-            {STOP_PAID_PITCHES}
+            {isDesk ? 'Stop charging' : STOP_PAID_PITCHES}
           </button>
         ) : null}
       </div>
@@ -470,6 +524,68 @@ export function CuratorEarningsPageClient() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const isDesktop = useIsDesktopViewport();
+  const pitches = useCuratorStore((state) => state.pitches);
+  const pitchesHydrated = useCuratorStore((state) => state.hydrated);
+  const isLoadingPitches = useCuratorStore((state) => state.isLoadingPitches);
+  const loadPitches = useCuratorStore((state) => state.loadPitches);
+
+  // "Waiting on replies" reads the inbox, so a computer loads it here too.
+  useEffect(() => {
+    if (isDesktop) void loadPitches();
+  }, [isDesktop, loadPitches]);
+
+  if (isDesktop) {
+    return (
+      <CuratorShell>
+        {loadError ? (
+          <div className="mb-4">
+            <CuratorLoadError
+              message={loadError}
+              variant={earnings ? 'banner' : 'blocking'}
+              isRetrying={isLoading}
+              onRetry={() => void load()}
+            />
+          </div>
+        ) : null}
+        {isLoading && !earnings ? (
+          <>
+            <div className="mb-5 space-y-2">
+              <h1 className="font-display text-[30px] leading-[38px] text-content-primary">Earnings</h1>
+              <p className="text-sm text-content-secondary">Artists pay you each time you listen and reply.</p>
+            </div>
+            <CuratorEarningsDeskSkeleton />
+          </>
+        ) : earnings ? (
+          <EarningsDesk
+            earnings={earnings}
+            pitches={pitches}
+            pitchesLoaded={pitchesHydrated && !isLoadingPitches}
+            notices={
+              earnings.paused || earnings.strikeCount > 0 || earnings.recoveryOwedKobo > 0 ? (
+                <div className="mt-4 space-y-2">
+                  {earnings.paused ? (
+                    <p role="status" className="rounded-xl border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">
+                      {INBOX_PAUSED}
+                    </p>
+                  ) : null}
+                  {earnings.strikeCount > 0 ? (
+                    <p className="text-sm text-content-secondary">{strikesLine(earnings.strikeCount)}</p>
+                  ) : null}
+                  {earnings.recoveryOwedKobo > 0 ? (
+                    <p className="text-sm text-status-warning">{recoveryOwedLine(earnings.recoveryOwedKobo)}</p>
+                  ) : null}
+                </div>
+              ) : null
+            }
+            priceCard={<PricingSection earnings={earnings} onSaved={() => void load()} variant="desk" />}
+            bankCard={<PayoutAccountSection earnings={earnings} onSaved={() => void load()} variant="desk" />}
+          />
+        ) : null}
+      </CuratorShell>
+    );
+  }
 
   return (
     <CuratorShell>

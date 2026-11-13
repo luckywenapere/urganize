@@ -16,7 +16,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, Headphones, ExternalLink, Inbox } from '@/components/icons';
 import { CuratorShell } from '@/components/curator/CuratorShell';
-import { CuratorInboxSkeleton } from '@/components/loading/CuratorSkeleton';
+import { CuratorInboxDeskSkeleton, CuratorInboxSkeleton } from '@/components/loading/CuratorSkeleton';
+import { PitchInboxDesk } from '@/components/curator/desk/PitchInboxDesk';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { CuratorLoadError } from '@/components/curator/CuratorLoadError';
 import { useCuratorStore } from '@/stores/useCuratorStore';
 import {
@@ -455,6 +457,32 @@ export function CuratorInboxPageClient() {
       return pitches.filter((pitch) => pitch.status === 'added' || pitch.status === 'passed');
     return pitches;
   }, [filter, pitches]);
+
+  const isDesktop = useIsDesktopViewport();
+
+  if (isDesktop) {
+    return (
+      <CuratorShell>
+        <PitchInboxDesk
+          pitches={pitches}
+          isLoading={isLoading && !hydrated}
+          skeleton={<CuratorInboxDeskSkeleton />}
+          errorBanner={
+            loadError ? (
+              <div className="mb-4">
+                <CuratorLoadError
+                  message={loadError}
+                  variant="banner"
+                  isRetrying={isLoading}
+                  onRetry={() => void loadPitches({ force: true })}
+                />
+              </div>
+            ) : null
+          }
+        />
+      </CuratorShell>
+    );
+  }
 
   return (
     <CuratorShell>
