@@ -174,7 +174,7 @@ export function youGet(plan: CheckoutPlan, distributionOn: boolean, period?: Bil
     // With a period in hand, say when that period does not get it (#1260):
     // distribution comes with 6-month and yearly plans.
     const waits = period !== undefined && !distributionIncluded(plan, period, DISTRIBUTION_REQUIRES_PREPAY);
-    rows.push({ label: 'Distribution', value: waits ? '6-month and yearly plans' : 'Partner' });
+    rows.push({ label: 'Distribution', value: waits ? 'Yearly plans' : 'Partner' });
   }
   return rows;
 }

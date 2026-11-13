@@ -15,8 +15,8 @@ import type { DistributionPlan } from './useDistributionPlan';
  *
  * Manager and Label include distribution; Solo does not. With
  * DISTRIBUTION_REQUIRES_PREPAY on (default off), a monthly team is told
- * distribution comes with 6-month and yearly plans. A team paying by transfer
- * goes to /checkout for the 6 months; a card team cannot change period there
+ * distribution comes with yearly plans (the 6-month plan is not on sale,
+ * #1264). A team paying by transfer goes to /checkout for the year; a card team cannot change period there
  * (self-serve checkout keeps a card plan's period), so it asks us and the
  * founder swaps the Paystack plan by hand. The team is registered on TRM, and
  * we owe TRM, only once it sends a release (recordTrmFeeForSend).
@@ -89,26 +89,26 @@ export function DistributionPlanCard({
   }
 
   if (plan.state === 'needs_prepay') {
-    const six = plan.offers.find((offer) => offer.interval === 'semiannual');
+    const year = plan.offers.find((offer) => offer.interval === 'annual');
     const byTransfer = plan.paymentMethod === 'transfer' || plan.paymentMethod === 'direct_transfer';
     const accept = () =>
       captureAnalyticsEvent({
         name: 'prepay_upsell_accepted',
-        properties: { plan: plan.tier, period: 'semiannual', method: plan.paymentMethod, source: 'distribute' },
+        properties: { plan: plan.tier, period: 'annual', method: plan.paymentMethod, source: 'distribute' },
       });
     return (
       <div className="border border-stroke-default bg-bg-surface lg:rounded-2xl lg:px-5 p-4 sm:p-5">
-        <p className="text-[15px] font-semibold text-content-primary lg:font-display lg:text-lg lg:font-normal">Distribution comes with 6-month and yearly plans</p>
-        {plan.canSwitch && six ? (
+        <p className="text-[15px] font-semibold text-content-primary lg:font-display lg:text-lg lg:font-normal">Distribution comes with yearly plans</p>
+        {plan.canSwitch && year ? (
           <>
             <div className="mt-4">
               {byTransfer ? (
                 <Link
-                  href={`/checkout?plan=${plan.tier}&period=semiannual&method=transfer`}
+                  href={`/checkout?plan=${plan.tier}&period=annual&method=transfer`}
                   className={OUTLINE}
                   onClick={accept}
                 >
-                  Pay for 6 months
+                  Pay for a year
                 </Link>
               ) : (
                 <a href={SWITCH_MAILTO} className={OUTLINE} onClick={accept}>
@@ -117,12 +117,12 @@ export function DistributionPlanCard({
               )}
             </div>
             <p className={`mt-3 ${MONO}`}>
-              {formatNaira(six.priceKobo)} for 6 months. You save {formatNaira(six.savingNaira * 100)}.
+              {formatNaira(year.priceKobo)} for a year. You save {formatNaira(year.savingNaira * 100)}.
             </p>
           </>
         ) : (
           <p className="mt-1 text-sm text-content-secondary">
-            Ask {plan.ownerName || 'the team owner'} to switch to 6 months.
+            Ask {plan.ownerName || 'the team owner'} to switch to yearly.
           </p>
         )}
       </div>
