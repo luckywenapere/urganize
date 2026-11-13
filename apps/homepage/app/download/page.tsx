@@ -38,10 +38,11 @@ const LAUNCH_AT = Date.parse("2026-08-07T23:00:00Z");
 
 export const dynamic = "force-dynamic";
 
-// Bump both when a new APK is dropped into public/downloads/urganize.apk —
-// they ship in the same commit, so they can't drift. The filename stays
-// versionless on purpose: links people have already shared keep working.
-const APP_VERSION = "1.54.0";
+// Update the size when a new APK is dropped into public/downloads/urganize.apk.
+// The filename stays versionless on purpose: links people have already shared
+// keep working. No version number on the page any more (#1240): it was typed
+// by hand, so it read 1.54.0 beside a site on v1.2xx, and the app loads the
+// live site anyway, so the number told nobody anything useful.
 const APK_SIZE = "41 MB";
 
 const bodyText = "text-[var(--marketing-text-muted)]";
@@ -107,7 +108,7 @@ export default async function DownloadPage() {
           </p>
 
           <p className="mt-10 text-sm text-[var(--marketing-text-subtle)]">
-            Version {APP_VERSION} ·{" "}
+            Always up to date.{" "}
             <a
               href="mailto:contact@urganize.app?subject=Urganize%20for%20Android"
               className="text-[var(--marketing-accent)] hover:opacity-80"

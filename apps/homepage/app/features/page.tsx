@@ -60,7 +60,7 @@ const features = [
     // 64 activities / 11 weeks, EP 90 / 16, album 113 / 21. The still
     // below has the EP one picked, so the copy names all three rather than
     // describing a single next to a 90-activity image.
-    body: "Urganize asks about your goals and makes a plan that fits: 64 tasks for a single, 90 for an EP, 113 for an album. Or start from a blank plan of your own.",
+    body: "Urganize asks about your goals and makes a plan that fits: up to 64 tasks for a single, 90 for an EP and 113 for an album. Or start from a blank plan of your own.",
     points: [
       "Singles, EPs and albums each get their own playbook",
       "Every task dated back from drop day",

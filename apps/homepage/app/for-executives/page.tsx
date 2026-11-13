@@ -72,7 +72,7 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "Every rollout runs the same way, whoever runs it.",
-    body: "Urganize asks about each artist's goals and makes a plan that fits: 64 tasks for a single, 90 for an EP, 113 for an album. Or make your own. Your newest manager delivers a rollout the same way your best one does, and anyone can edit or delete a task that does not apply.",
+    body: "Urganize asks about each artist's goals and makes a plan that fits: up to 64 tasks for a single, 90 for an EP and 113 for an album. Or make your own. Your newest manager delivers a rollout the same way your best one does, and anyone can edit or delete a task that does not apply.",
     points: [
       "A plan shaped to each artist’s goals",
       "Every task dated around that release day",

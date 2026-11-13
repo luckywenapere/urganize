@@ -62,7 +62,7 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "The song took an afternoon. The rollout still takes weeks.",
-    body: "Urganize asks about your goals and makes a plan that fits: 64 tasks for a single, 90 for an EP, 113 for an album. Or make your own, and delete whatever does not apply to how you work.",
+    body: "Urganize asks about your goals and makes a plan that fits: up to 64 tasks for a single, 90 for an EP and 113 for an album. Or make your own, and delete whatever does not apply to how you work.",
     points: [
       "A plan shaped to your goals, or your own",
       "Every task dated around that release day",
