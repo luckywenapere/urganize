@@ -130,7 +130,7 @@ export function OnboardingTrialSheetHost() {
   return (
     <Sheet open={open} onClose={() => close(false)} labelledBy="trial-sheet-title">
       <h2 id="trial-sheet-title" className="pr-9 font-display text-[26px] font-normal leading-tight">
-        Your 3-day trial is on
+        Your {TEAM_TRIAL_DAYS}-day trial is on
       </h2>
       <p className="mt-2 text-[15px] text-content-secondary">Everything is open for your whole team. No card needed.</p>
       {ios ? (

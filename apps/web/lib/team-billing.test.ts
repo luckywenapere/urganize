@@ -37,8 +37,8 @@ const trialingTeam: WorkspaceBillingFields = {
 };
 
 describe('team-billing constants', () => {
-  it('gives a new team no trial: pay first (2026-10-31)', () => {
-    expect(TEAM_TRIAL_DAYS).toBe(0);
+  it('gives every new account a 3-day trial (2026-11-13, #1262)', () => {
+    expect(TEAM_TRIAL_DAYS).toBe(3);
   });
 
   it('shows the indicator only on the trial\'s final day', () => {
@@ -217,14 +217,17 @@ describe('resolveTeamAccess — migration assignment matrix', () => {
     expect(result.trialDaysLeft).toBe(3);
   });
 
-  it('a new team stamped with no trial is walled straight away (2026-10-31)', () => {
-    const result = resolveTeamAccess({
+  it('a new team gets the 3-day trial, then the wall (2026-11-13, #1262)', () => {
+    const team = { ...trialingTeam, trialStartedAt: NOW.toISOString(), trialEndsAt: at(TEAM_TRIAL_DAYS * DAY) };
+    const result = resolveTeamAccess({ ownerHasAccess: false, team, now: NOW, graceMs: 0 });
+    expect(result.hasAccess).toBe(true);
+    const afterTrial = resolveTeamAccess({
       ownerHasAccess: false,
-      team: { ...trialingTeam, trialStartedAt: NOW.toISOString(), trialEndsAt: at(TEAM_TRIAL_DAYS * DAY) },
-      now: NOW,
+      team,
+      now: new Date(NOW.getTime() + TEAM_TRIAL_DAYS * DAY + 1000),
       graceMs: 0,
     });
-    expect(result.hasAccess).toBe(false);
+    expect(afterTrial.hasAccess).toBe(false);
     // The server passes the 15-minute grace; a zero-length trial gets none.
     const withGrace = resolveTeamAccess({
       ownerHasAccess: false,
