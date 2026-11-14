@@ -128,6 +128,64 @@ describe('confirmation gate, end to end through the runner', () => {
     expect(result.clientActions).toEqual([]);
   });
 
+  // #1272: a confirm builder may hand back the arguments to run with, so that
+  // approving runs exactly what the card showed. The pitch tool uses it to pin
+  // the real playlist id when the model gave a name.
+  it('puts the arguments a confirm builder pinned on the card, not the model’s own', async () => {
+    const PLAYLIST = '2f1c6a50-0000-4000-8000-0000000000a1';
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_PITCHING', 'true');
+    const nextModelTurn = modelCalls('pitch_song', {
+      releaseId: 'rel-1',
+      playlistId: 'Afro Fridays',
+      songTitle: 'Lagos Nights',
+      songUrl: 'https://open.spotify.com/track/abc',
+    });
+
+    fetchMock.mockImplementation(async (url: string) => {
+      if (String(url).includes('/chat/completions')) return jsonResponse(nextModelTurn());
+      if (String(url).includes('/api/pitching/playlists')) {
+        return jsonResponse({
+          playlists: [{ id: PLAYLIST, name: 'Afro Fridays', curatorName: 'Tolu', platform: 'spotify', creditPrice: 0 }],
+        });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    const result = await runChappiAgent({
+      ctx,
+      system: 'system',
+      messages: [{ id: 'm1', role: 'user', content: 'pitch Lagos Nights to Afro Fridays' }],
+    });
+
+    expect(executeToolCall).not.toHaveBeenCalled();
+    expect(result.pendingConfirmation?.toolName).toBe('pitch_song');
+    // What Approve will run: the real id and name, with the model's other arguments.
+    expect(result.pendingConfirmation?.args).toMatchObject({
+      releaseId: 'rel-1',
+      playlistId: PLAYLIST,
+      playlistName: 'Afro Fridays',
+      songTitle: 'Lagos Nights',
+    });
+    vi.unstubAllEnvs();
+  });
+
+  it('keeps the model’s own arguments on the card when the builder pins none', async () => {
+    const nextModelTurn = modelCalls('delete_note', { noteId: 'note-1', extra: 'kept' });
+    fetchMock.mockImplementation(async (url: string) => {
+      if (String(url).includes('/chat/completions')) return jsonResponse(nextModelTurn());
+      if (String(url).includes('/api/notes')) return jsonResponse({ notes: [{ id: 'note-1', body: 'A note' }] });
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    const result = await runChappiAgent({
+      ctx,
+      system: 'system',
+      messages: [{ id: 'm1', role: 'user', content: 'delete that note' }],
+    });
+
+    expect(result.pendingConfirmation?.args).toEqual({ noteId: 'note-1', extra: 'kept' });
+  });
+
   it('tells the model it only proposed, so it cannot claim the deletion happened', async () => {
     const nextModelTurn = modelCalls('delete_note', { noteId: 'note-1' });
     const gatewayBodies: string[] = [];

@@ -319,6 +319,104 @@ describe('pitch_song when the model gives a name, not an id (#1267)', () => {
   });
 });
 
+/**
+ * #1272: the card carries the playlist it showed. An approved card replays the
+ * arguments it was built from, so a card built from a NAME used to look that
+ * name up a second time when the user approved it. If the playlist had been
+ * renamed in between, or a second playlist had taken the name, the pitch could
+ * go to a different playlist than the one on the card. Now the card pins the
+ * real id (and its name, for the closing line), and approving sends to that id
+ * without reading the list again.
+ */
+describe('pitch_song pins the playlist the card showed (#1272)', () => {
+  const AFRO = '2f1c6a50-0000-4000-8000-0000000000a1';
+  const OTHER = '2f1c6a50-0000-4000-8000-0000000000b2';
+  const listed = [
+    { id: AFRO, name: 'Afro Fridays', curatorName: 'Tolu', platform: 'spotify', creditPrice: 100 },
+    { id: OTHER, name: 'Chill Lagos', curatorName: 'Ada', platform: 'spotify', creditPrice: 0 },
+  ];
+  const routes = (rows: unknown[]) => ({ 'GET /api/pitching/playlists': { status: 200, body: { playlists: rows } } });
+
+  type Card = { ok: boolean; args?: Record<string, unknown> };
+  const confirm = (playlistId: string) =>
+    tool('pitch_song').confirm!(ctx, { ...args, playlistId }) as Promise<Card>;
+
+  it('puts the real id and name on the card when the model gave a name', async () => {
+    answer(routes(listed));
+
+    const card = await confirm('afro fridays');
+
+    expect(card.ok).toBe(true);
+    expect(card.args).toEqual({ ...args, playlistId: AFRO, playlistName: 'Afro Fridays' });
+  });
+
+  it('keeps everything else the model sent', async () => {
+    answer(routes(listed));
+
+    const card = await confirm('Chill Lagos');
+
+    expect(card.args).toMatchObject({
+      releaseId: 'rel-1',
+      songTitle: 'Lagos Nights',
+      songUrl: 'https://open.spotify.com/track/abc',
+      note: 'Fits your Friday list.',
+    });
+  });
+
+  it('pins the id too when the model already gave one', async () => {
+    answer(routes(listed));
+
+    const card = await confirm(OTHER);
+
+    expect(card.args).toMatchObject({ playlistId: OTHER, playlistName: 'Chill Lagos' });
+  });
+
+  it('keeps a curator’s own words out of the pinned name', async () => {
+    answer(routes([{ id: AFRO, name: 'Afro\nFridays   ', curatorName: 'Tolu', platform: 'spotify', creditPrice: 0 }]));
+
+    const card = await confirm('Afro Fridays');
+
+    expect(card.args?.playlistName).toBe('Afro Fridays');
+  });
+
+  it('sends to the pinned playlist even if its name has changed or been taken since', async () => {
+    // The card was built when AFRO was "Afro Fridays". Now AFRO is renamed and
+    // another playlist has taken the old name.
+    answer({
+      ...routes([
+        { id: AFRO, name: 'Renamed List', curatorName: 'Tolu', platform: 'spotify', creditPrice: 100 },
+        { id: OTHER, name: 'Afro Fridays', curatorName: 'Ada', platform: 'spotify', creditPrice: 0 },
+      ]),
+      'POST /api/pitching/send': { status: 201, body: { pitches: [{}], charged: 100, balance: 20 } },
+    });
+
+    const result = await tool('pitch_song').execute(ctx, {
+      ...args,
+      playlistId: AFRO,
+      playlistName: 'Afro Fridays',
+    });
+
+    expect(posts()).toHaveLength(1);
+    expect(posts()[0].body?.playlistIds).toEqual([AFRO]);
+    // Nothing is looked up a second time.
+    expect(calls.filter((call) => call.url.startsWith('/api/pitching/playlists'))).toHaveLength(0);
+    expect(result).toEqual({
+      ok: true,
+      summary: 'Pitched "Lagos Nights" to Afro Fridays. 100 credits used, 20 left.',
+    });
+  });
+
+  it('still says where the pitch went on the free route', async () => {
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_PITCH_CREDITS', 'false');
+    answer({ 'POST /api/pitching/pitches': { status: 201, body: { pitch: {} } } });
+
+    const result = await tool('pitch_song').execute(ctx, { ...args, playlistId: AFRO, playlistName: 'Afro Fridays' });
+
+    expect(posts()[0].body?.playlistId).toBe(AFRO);
+    expect(result).toEqual({ ok: true, summary: 'Pitched "Lagos Nights" to Afro Fridays.' });
+  });
+});
+
 describe('matchPlaylist', () => {
   it('finds by id first, even when a name would also match', () => {
     const odd = [...playlists, { id: 'Chill Lagos', name: 'Something Else' }];
