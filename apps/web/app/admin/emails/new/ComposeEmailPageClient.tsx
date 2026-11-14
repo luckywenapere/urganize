@@ -32,10 +32,17 @@ import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 import { AUDIENCE_GROUPS, AUDIENCE_GROUP_LABELS, DEFAULT_RECENT_DAYS, isValidEmailAddress } from '@/lib/email/audience';
 import { ANNOUNCEMENT_BODY_MAX, ANNOUNCEMENT_SUBJECT_MAX } from '@/lib/email/announcement';
 import type { BroadcastCounts, BroadcastSummary } from '@/lib/email/broadcast-server';
+import {
+  audienceKey,
+  audienceRequest,
+  countedFor,
+  type AudienceChoice,
+  type AudienceKind,
+  type Counted,
+} from '@/lib/email/compose-audience';
 import { parseComposePrefill } from '@/lib/email/compose-prefill';
 import { adminRequest, describeBudget, type BudgetPayload } from '../emailAdminApi';
 
-type AudienceKind = 'everyone' | 'group' | 'person' | 'waitlist';
 type GroupKey = (typeof AUDIENCE_GROUPS)[number];
 
 type Overview = {
@@ -145,9 +152,18 @@ export default function ComposeEmailPageClient() {
   const [group, setGroup] = useState<GroupKey>('trial');
   const [days, setDays] = useState(String(DEFAULT_RECENT_DAYS));
   const [personEmail, setPersonEmail] = useState(prefill?.to ?? '');
-  const [audienceInfo, setAudienceInfo] = useState<AudienceInfo | null>(null);
+  // The count, with the audience it was made for. It is shown only while that
+  // is the audience chosen now (countedFor, #1274), so the button can never
+  // carry a number from a different audience than the one that will be sent.
+  const [counted, setCounted] = useState<Counted<AudienceInfo> | null>(null);
   const [audienceLoading, setAudienceLoading] = useState(false);
-  const [audienceError, setAudienceError] = useState<string | null>(null);
+  // The choice as it stands now, for a recount that was not started by a click.
+  const choiceRef = useRef<AudienceChoice>({
+    kind: prefill?.to ? 'person' : 'everyone',
+    group: 'trial',
+    days: String(DEFAULT_RECENT_DAYS),
+    personEmail: prefill?.to ?? '',
+  });
   const audienceSeq = useRef(0);
   const audienceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -179,64 +195,49 @@ export default function ComposeEmailPageClient() {
     return true;
   }, [router]);
 
-  const checkAudience = useCallback(
-    (next: { kind: AudienceKind; group: GroupKey; days: string; personEmail: string }) => {
-      if (audienceTimer.current) clearTimeout(audienceTimer.current);
-      const seq = ++audienceSeq.current;
-      if (next.kind === 'person' && !isValidEmailAddress(next.personEmail)) {
-        setAudienceInfo(null);
-        setAudienceError(null);
-        setAudienceLoading(false);
-        return;
-      }
-      setAudienceLoading(true);
-      audienceTimer.current = setTimeout(async () => {
-        const audience =
-          next.kind === 'group'
-            ? { kind: 'group', group: next.group, days: next.group === 'recent' ? next.days : undefined }
-            : next.kind === 'person'
-              ? { kind: 'person', email: next.personEmail }
-              : { kind: next.kind };
-        const result = await adminRequest<AudienceInfo>('/api/admin/emails/audience', {
-          method: 'POST',
-          body: { audience },
-        });
-        if (seq !== audienceSeq.current) return; // a newer choice replaced this one
-        setAudienceLoading(false);
-        if (result.ok) {
-          setAudienceInfo(result.data);
-          setAudienceError(null);
-        } else {
-          setAudienceInfo(null);
-          setAudienceError(result.error);
-        }
-      }, 350);
-    },
-    []
-  );
+  const checkAudience = useCallback((next: AudienceChoice) => {
+    if (audienceTimer.current) clearTimeout(audienceTimer.current);
+    const seq = ++audienceSeq.current;
+    if (next.kind === 'person' && !isValidEmailAddress(next.personEmail)) {
+      setCounted(null);
+      setAudienceLoading(false);
+      return;
+    }
+    setAudienceLoading(true);
+    const key = audienceKey(next);
+    audienceTimer.current = setTimeout(async () => {
+      const result = await adminRequest<AudienceInfo>('/api/admin/emails/audience', {
+        method: 'POST',
+        body: { audience: audienceRequest(next) },
+      });
+      if (seq !== audienceSeq.current) return; // a newer choice replaced this one
+      setAudienceLoading(false);
+      setCounted(result.ok ? { key, info: result.data, error: null } : { key, info: null, error: result.error });
+      // A number that lands under an open confirm is a number the admin has
+      // not read yet: ask again.
+      setConfirming(false);
+    }, 350);
+  }, []);
 
+  // Runs once per signed-in person, not on every refresh of the sign-in. It
+  // used to depend on the whole `user` object, so a background refresh ran it
+  // again and recounted the STARTING audience over the one chosen since (#1274).
+  const userId = user?.id ?? null;
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
+    if (!userId) {
       router.replace('/auth');
       return;
     }
     let cancelled = false;
     (async () => {
       const ok = await loadOverview();
-      if (!cancelled && ok) {
-        checkAudience({
-          kind: prefill?.to ? 'person' : 'everyone',
-          group: 'trial',
-          days: String(DEFAULT_RECENT_DAYS),
-          personEmail: prefill?.to ?? '',
-        });
-      }
+      if (!cancelled && ok) checkAudience(choiceRef.current);
     })();
     return () => {
       cancelled = true;
     };
-  }, [authLoading, user, router, loadOverview, checkAudience, prefill]);
+  }, [authLoading, userId, router, loadOverview, checkAudience]);
 
   useEffect(
     () => () => {
@@ -246,7 +247,8 @@ export default function ComposeEmailPageClient() {
   );
 
   const chooseAudience = (patch: Partial<{ kind: AudienceKind; group: GroupKey; days: string; personEmail: string }>) => {
-    const next = { kind, group, days, personEmail, ...patch };
+    const next: AudienceChoice = { kind, group, days, personEmail, ...patch };
+    choiceRef.current = next;
     if (patch.kind !== undefined) setKind(patch.kind);
     if (patch.group !== undefined) setGroup(patch.group);
     if (patch.days !== undefined) setDays(patch.days);
@@ -254,6 +256,11 @@ export default function ComposeEmailPageClient() {
     setConfirming(false);
     checkAudience(next);
   };
+
+  // The count for the audience chosen right now, or nothing while it is being counted.
+  const current = countedFor(counted, { kind, group, days, personEmail });
+  const audienceInfo = current?.info ?? null;
+  const audienceError = current?.error ?? null;
 
   const draft = { subject: subject.trim(), body, includeGreeting, signOff };
   const hasDraft = draft.subject.length > 0 && body.trim().length > 0;
@@ -349,15 +356,9 @@ export default function ComposeEmailPageClient() {
     setConfirming(false);
     setFormError(null);
     setCreating(true);
-    const audience =
-      kind === 'group'
-        ? { kind: 'group', group, days: group === 'recent' ? days : undefined }
-        : kind === 'person'
-          ? { kind: 'person', email: personEmail }
-          : { kind };
     const result = await adminRequest<{ broadcastId: string; total: number }>('/api/admin/emails/broadcasts', {
       method: 'POST',
-      body: { audience, draft },
+      body: { audience: audienceRequest({ kind, group, days, personEmail }), draft },
     });
     setCreating(false);
     if (!result.ok) {
