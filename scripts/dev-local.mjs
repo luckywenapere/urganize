@@ -113,6 +113,14 @@ const FLAGS_OFF = new Set([
   'NEXT_PUBLIC_FEATURE_PUSH_PROMPT', // needs VAPID keys
   'NEXT_PUBLIC_FEATURE_URGANS_VOICE', // needs an AI key
 ]);
+// Flags that are on in production but that the scan below cannot see, because
+// the code reads them through a helper (trimmed and lowercased first) rather
+// than `=== 'true'`. Without this the credits system is off locally, so plan
+// allowances, the credit balance and anything paid for in credits (an AI pitch
+// to a paid playlist) cannot be tested (#1271).
+const FLAGS_ON = new Set([
+  'NEXT_PUBLIC_FEATURE_URGANS_CREDITS', // on in production since v1.55.0; lib/credits/config.ts
+]);
 const flagPattern = /NEXT_PUBLIC_FEATURE_[A-Z0-9_]+(?=\s*===\s*'true')/g;
 function scanFlags(dir, found) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -129,6 +137,7 @@ for (const dir of ['app', 'components', 'lib', 'stores']) {
   if (!existsSync(join(WEB, dir))) continue;
   for (const flag of scanFlags(join(WEB, dir), new Set())) env[flag] = FLAGS_OFF.has(flag) ? 'false' : 'true';
 }
+for (const flag of FLAGS_ON) env[flag] = 'true';
 
 // 4. Optional overrides from apps/web/.env.local-test.
 const overridePath = join(WEB, '.env.local-test');
