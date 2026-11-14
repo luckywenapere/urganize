@@ -14,7 +14,7 @@
 // it is its own piece of work.
 
 import { randomUUID } from 'node:crypto';
-import { MAX_PITCH_NOTE_LENGTH, PITCH_PLATFORMS } from '@/lib/pitching';
+import { MAX_PITCH_NOTE_LENGTH, PITCH_PLATFORMS, PITCH_PLATFORM_LABELS } from '@/lib/pitching';
 import { isPitchCreditsEnabled } from '@/lib/pitch-credits';
 import { isSocialShareEnabled, shareDisplayTitle } from '@/lib/social-share';
 import {
@@ -24,6 +24,7 @@ import {
   fail,
   isFlagGateOff,
   type ChappiTool,
+  type ChappiToolContext,
   type InternalApiResponse,
 } from './shared';
 
@@ -64,13 +65,126 @@ export function pitchRefusal(res: InternalApiResponse): string {
 /** Bound the browse payload — the route returns up to 200 playlists. */
 const MAX_LISTED_PLAYLISTS = 30;
 
+// ── Finding the playlist the user means (#1267) ─────────────────────────────
+//
+// The model is asked for a playlist id and, in practice, hands over whatever
+// the user said: a name. The one user who tried this named Spotify and Apple
+// Music playlists that are not on Urganize at all, and the tool answered "That
+// playlist was not found." seven times without ever saying which playlists
+// CAN be pitched. So a name is accepted as well as an id, and a miss hands the
+// real list back, in words the model can pass straight on.
+
+type Playlist = Record<string, unknown>;
+
+/** A name with case, spacing and punctuation taken out, for comparing. */
+function nameKey(value: string): string {
+  return value
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
+export type PlaylistMatch =
+  | { kind: 'found'; playlist: Playlist }
+  | { kind: 'ambiguous'; matches: Playlist[] }
+  | { kind: 'missing' };
+
+/**
+ * The playlist `wanted` points at: by id first, then by its whole name. Never
+ * by part of a name: a pitch cannot be taken back, so "Fridays" must not
+ * become "Afro Fridays" on a guess. Two playlists can share a name (one
+ * curator, the same list on two platforms), and that is for the user to settle.
+ */
+export function matchPlaylist(playlists: Playlist[], wanted: string): PlaylistMatch {
+  const byId = playlists.find((entry) => String(entry.id ?? '') === wanted);
+  if (byId) return { kind: 'found', playlist: byId };
+
+  const key = nameKey(wanted);
+  if (!key) return { kind: 'missing' };
+  const byName = playlists.filter((entry) => nameKey(String(entry.name ?? '')) === key);
+  if (byName.length === 1) return { kind: 'found', playlist: byName[0] };
+  if (byName.length > 1) return { kind: 'ambiguous', matches: byName };
+  return { kind: 'missing' };
+}
+
+/** A curator's own words (a playlist or display name) kept to one line, so they cannot break out of a list. */
+function oneLine(value: unknown): string {
+  return String(value ?? '').replace(/\s+/g, ' ').trim();
+}
+
+/** "Afro Fridays (Spotify, by Tolu, 100 credits)": one playlist, as a line the model can show. */
+function describePlaylist(playlist: Playlist): string {
+  const platform = String(playlist.platform ?? '');
+  const parts = [
+    PITCH_PLATFORM_LABELS[platform as keyof typeof PITCH_PLATFORM_LABELS] ?? platform,
+    playlist.curatorName ? `by ${oneLine(playlist.curatorName)}` : '',
+  ];
+  if (isPitchCreditsEnabled()) {
+    const credits = creditsOf(playlist);
+    parts.push(credits > 0 ? plural(credits) : 'free');
+  }
+  return `${oneLine(playlist.name)} (${parts.filter(Boolean).join(', ')})`;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function notOnUrganize(wanted: string, playlists: Playlist[]): string {
+  // An id the model made up is not something to quote back as a name.
+  const what = UUID.test(wanted) ? 'That playlist' : `"${wanted}"`;
+  if (playlists.length === 0) {
+    return `${what} is not on Urganize, and there are no playlists to pitch to right now. Tell the user that plainly.`;
+  }
+  const shown = playlists.slice(0, MAX_LISTED_PLAYLISTS);
+  const more =
+    playlists.length > shown.length
+      ? `\nThere are ${playlists.length - shown.length} more: call list_pitch_playlists with a platform or genre to see them.`
+      : '';
+  return [
+    `${what} is not on Urganize, so it cannot be pitched from here. Only playlists whose curators have joined Urganize can be pitched. Spotify and Apple Music editorial playlists, and any other playlist outside Urganize, cannot.`,
+    'Tell the user that plainly, show them these playlists, and ask which one they want:',
+    ...shown.map((playlist) => `- ${describePlaylist(playlist)}`),
+    `Pass the name exactly as it is written here (if two share a name, ask the user which platform first). Do not try another name that is not on this list.${more}`,
+  ].join('\n');
+}
+
+function sharedName(wanted: string, matches: Playlist[]): string {
+  return [
+    `${matches.length} playlists are called "${wanted}". Ask the user which one they mean, then call pitch_song again with that playlist's id:`,
+    ...matches.map((playlist) => `- ${describePlaylist(playlist)}, id ${String(playlist.id ?? '')}`),
+  ].join('\n');
+}
+
+type PlaylistLookup = { ok: true; playlist: Playlist } | { ok: false; summary: string };
+
+/**
+ * Reads the playlists a team can pitch to and picks out the one meant. Used by
+ * the card and by the send, because an approved card carries the model's own
+ * arguments: a name on the card is still a name when it is sent.
+ *
+ * A list that cannot be read gives its own reason. It used to fall through to
+ * "That playlist was not found.", which blamed the playlist for a paywall or a
+ * server error.
+ */
+async function findPitchPlaylist(ctx: ChappiToolContext, wanted: string): Promise<PlaylistLookup> {
+  const res = await callInternalApi(ctx, '/api/pitching/playlists', { method: 'GET' });
+  if (isFlagGateOff(res)) return { ok: false, summary: PITCHING_OFF };
+  if (!res.ok) return { ok: false, summary: apiError(res, 'Could not load the playlists.') };
+
+  const playlists = Array.isArray(res.body.playlists) ? (res.body.playlists as Playlist[]) : [];
+  const match = matchPlaylist(playlists, wanted);
+  if (match.kind === 'found') return { ok: true, playlist: match.playlist };
+  if (match.kind === 'ambiguous') return { ok: false, summary: sharedName(wanted, match.matches) };
+  return { ok: false, summary: notOnUrganize(wanted, playlists) };
+}
+
 export const PROMO_TOOLS: ChappiTool[] = [
   {
     name: 'list_pitch_playlists',
     kind: 'read',
     level: 'read',
     description:
-      'Browse curator playlists a song can be pitched to, optionally filtered by platform or genre. `credits` is what one pitch costs (0 means free).',
+      'The only playlists a song can be pitched to from Urganize: the ones whose curators have joined. Call this before you propose a pitch and show the user the ones that fit. Optionally filtered by platform or genre. `credits` is what one pitch costs (0 means free).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -171,12 +285,15 @@ export const PROMO_TOOLS: ChappiTool[] = [
     kind: 'mutate',
     level: 'confirm',
     description:
-      "Pitch a song from a rollout to a curator's playlist. A paid playlist is charged from the team's credits when sent. Requires the user to approve a confirmation card — calling this only proposes it, and nothing reaches the curator until they approve.",
+      "Pitch a song from a rollout to a curator's playlist. Only a playlist from list_pitch_playlists can be pitched: call that first. Spotify and Apple Music editorial playlists, and any playlist outside Urganize, cannot be pitched from here. A paid playlist is charged from the team's credits when sent. Requires the user to approve a confirmation card — calling this only proposes it, and nothing reaches the curator until they approve.",
     inputSchema: {
       type: 'object',
       properties: {
         releaseId: { type: 'string' },
-        playlistId: { type: 'string' },
+        playlistId: {
+          type: 'string',
+          description: "The playlist's id from list_pitch_playlists. Its exact name also works.",
+        },
         songTitle: { type: 'string' },
         songUrl: { type: 'string', description: 'A link the curator can listen from.' },
         songPlatform: { type: 'string', enum: [...PITCH_PLATFORMS] },
@@ -208,13 +325,9 @@ export const PROMO_TOOLS: ChappiTool[] = [
 
       // Name the playlist and curator on the card — "pitch to playlist abc123"
       // is not something anyone can meaningfully approve.
-      const res = await callInternalApi(ctx, '/api/pitching/playlists', { method: 'GET' });
-      if (isFlagGateOff(res)) return { ok: false, summary: PITCHING_OFF };
-      const playlists = Array.isArray(res.body.playlists)
-        ? (res.body.playlists as Record<string, unknown>[])
-        : [];
-      const playlist = playlists.find((entry) => String(entry.id ?? '') === playlistId);
-      if (!playlist) return { ok: false, summary: 'That playlist was not found.' };
+      const found = await findPitchPlaylist(ctx, playlistId);
+      if (!found.ok) return { ok: false, summary: found.summary };
+      const playlist = found.playlist;
 
       const curator = String(playlist.curatorName ?? 'the curator');
       const credits = creditsOf(playlist);
@@ -240,6 +353,20 @@ export const PROMO_TOOLS: ChappiTool[] = [
       }
       const note = argString(args, 'note') || undefined;
 
+      // The approved card carries the model's own arguments, so `playlistId`
+      // can still be a name here. Send the real id, and say where it went.
+      // A real id goes straight to the route, as it always did: the route
+      // gives its own reason for a paused curator or a playlist that is gone,
+      // and nothing is read twice.
+      let realPlaylistId = playlistId;
+      let sent = `Pitched "${songTitle}".`;
+      if (!UUID.test(playlistId)) {
+        const found = await findPitchPlaylist(ctx, playlistId);
+        if (!found.ok) return fail(found.summary);
+        realPlaylistId = String(found.playlist.id ?? '');
+        sent = `Pitched "${songTitle}" to ${oneLine(found.playlist.name) || 'the playlist'}.`;
+      }
+
       // With pitch credits on, every pitch goes through the credits route,
       // the same one Pitch this! uses: it charges a paid playlist and sends a
       // Free one for nothing. The free route refuses paid playlists, so it is
@@ -249,7 +376,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
       if (isPitchCreditsEnabled()) {
         const res = await callInternalApi(ctx, '/api/pitching/send', {
           method: 'POST',
-          body: { releaseId, playlistIds: [playlistId], songTitle, songUrl, note, requestId: randomUUID() },
+          body: { releaseId, playlistIds: [realPlaylistId], songTitle, songUrl, note, requestId: randomUUID() },
         });
         if (isFlagGateOff(res)) return fail(PITCHING_OFF);
         if (!res.ok) return fail(pitchRefusal(res));
@@ -259,14 +386,14 @@ export const PROMO_TOOLS: ChappiTool[] = [
           Number.isFinite(charged) && charged > 0
             ? ` ${plural(charged)} used${typeof balance === 'number' ? `, ${balance} left` : ''}.`
             : '';
-        return { ok: true, summary: `Pitched "${songTitle}".${cost}` };
+        return { ok: true, summary: `${sent}${cost}` };
       }
 
       const res = await callInternalApi(ctx, '/api/pitching/pitches', {
         method: 'POST',
         body: {
           releaseId,
-          playlistId,
+          playlistId: realPlaylistId,
           songTitle,
           songUrl,
           songPlatform: argString(args, 'songPlatform') || undefined,
@@ -275,7 +402,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
       });
       if (isFlagGateOff(res)) return fail(PITCHING_OFF);
       if (!res.ok) return fail(pitchRefusal(res));
-      return { ok: true, summary: `Pitched "${songTitle}".` };
+      return { ok: true, summary: sent };
     },
   },
   {

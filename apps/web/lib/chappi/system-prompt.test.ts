@@ -45,6 +45,24 @@ describe('the system prompt', () => {
     expect(ROLE).toContain('pass from_offer true');
   });
 
+  // #1267: a user named playlists that are not on Urganize. The model never
+  // looked the real ones up, repeated "not found" seven times, and twice said
+  // "I'll submit the pitch now" without calling anything. 17 paid messages.
+  it('only pitches to playlists from its own list, and says what it cannot reach (#1267)', () => {
+    expect(ROLE).toContain('call list_pitch_playlists before you propose pitch_song');
+    expect(ROLE).toContain('A list of playlists the user types or pastes is not that list');
+    expect(ROLE).toMatch(/Spotify and Apple Music editorial playlists[^.]*cannot be pitched from here/);
+    expect(ROLE).toContain('Spotify for Artists');
+  });
+
+  it('writes the pitch itself when asked to draft one (#1267)', () => {
+    expect(ROLE).toContain('When the user asks you to draft a pitch, write the note yourself');
+  });
+
+  it('never says it is about to act without acting (#1267)', () => {
+    expect(ROLE).toContain('Never end a reply by saying you are about to do something');
+  });
+
   it('names every insight tool it tells the model about', () => {
     expect(ROLE).toContain('compare_releases');
     expect(ROLE).toContain('get_team_workload');
