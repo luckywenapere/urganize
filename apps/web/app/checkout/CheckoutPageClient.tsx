@@ -821,7 +821,7 @@ function CheckoutStep({
       : 'The change starts when your current period ends.'
     : bachs
       ? currency === 'USD'
-        ? 'Prices are in US dollars. Each payment covers the time you pick, and we remind you before it ends.'
+        ? 'Prices are in US dollars. A processing fee is added to each payment. Each payment covers the time you pick, and we remind you before it ends.'
         : 'You see the amount in your own money on the next page. Each payment covers the time you pick, and we remind you before it ends.'
       : effectiveMethod === 'card'
       ? SELF_SERVE_COPY.cardFine
