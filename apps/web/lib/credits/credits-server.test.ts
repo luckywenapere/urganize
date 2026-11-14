@@ -9,6 +9,7 @@ import {
   getCreditSnapshot,
   hasEverPurchased,
   readBalances,
+  restoreTrialCredits,
   settleTurn,
 } from './credits-server';
 import { turnCharge, type UsageCall } from './pricing';
@@ -29,6 +30,12 @@ type FakeOptions = {
   /** How many kind='topup' ledger rows exist. */
   topupRows?: number;
   topupReadFails?: boolean;
+  /** The kind='expire' trial rows the team has, newest first (what a restore reads). */
+  expireRows?: Array<{ id: string; credits: number }>;
+  expireReadFails?: boolean;
+  /** How many `restore:trial:<team>:…` rows exist (what the next removal counts). */
+  restoreRows?: number;
+  restoreReadFails?: boolean;
 };
 
 /**
@@ -70,16 +77,33 @@ function fakeClient(opts: FakeOptions = {}) {
           inserted.push(row);
           return { error: null };
         },
-        select: () => ({
-          eq: () => ({
-            eq: () => ({
-              limit: async () =>
-                opts.topupReadFails
+        select: () => {
+          // Records the filters, so a read of the trial removals (kind 'expire')
+          // can be told from the read of top-ups that hasEverPurchased makes.
+          const filters: Record<string, unknown> = {};
+          const chain = {
+            eq: (column: string, value: unknown) => {
+              filters[column] = value;
+              return chain;
+            },
+            order: () => chain,
+            like: async () =>
+              opts.restoreReadFails
+                ? { data: null, error: { message: 'boom' } }
+                : { data: Array.from({ length: opts.restoreRows ?? 0 }, () => ({ id: 'r' })), error: null },
+            limit: async () => {
+              if (filters.kind === 'expire') {
+                return opts.expireReadFails
                   ? { data: null, error: { message: 'boom' } }
-                  : { data: Array.from({ length: opts.topupRows ?? 0 }, () => ({ id: 'x' })), error: null },
-            }),
-          }),
-        }),
+                  : { data: opts.expireRows ?? [], error: null };
+              }
+              return opts.topupReadFails
+                ? { data: null, error: { message: 'boom' } }
+                : { data: Array.from({ length: opts.topupRows ?? 0 }, () => ({ id: 'x' })), error: null };
+            },
+          };
+          return chain;
+        },
       };
     }),
   };
@@ -236,6 +260,89 @@ describe('expireTrialCredits', () => {
     }
     expect(inserted).toHaveLength(0);
   });
+
+  // #1286: an extended trial gets its credits back (restoreTrialCredits), and
+  // when that trial ends too the leftovers must be removable again. A removal
+  // used to be once per team, ever, so the second one hit the first one's key
+  // and the credits stayed.
+  it('removes the leftovers of an extended trial that ended again, under a key of its own', async () => {
+    const { client, inserted } = fakeClient({ restoreRows: 1 });
+    expect(await expireTrialCredits(client, input)).toBe(true);
+    expect(await expireTrialCredits(client, input)).toBe(true);
+    expect(inserted).toEqual([
+      expect.objectContaining({ pool: 'trial', kind: 'expire', credits: -37, dedupe_key: 'expire:trial:ws-1:1' }),
+    ]);
+  });
+
+  it('numbers each removal after the credits given back before it', async () => {
+    const { client, inserted } = fakeClient({ restoreRows: 3 });
+    await expireTrialCredits(client, input);
+    expect(inserted[0]).toMatchObject({ dedupe_key: 'expire:trial:ws-1:3' });
+  });
+
+  it('takes nothing when it cannot tell how many times credits were given back', async () => {
+    const { client, inserted } = fakeClient({ restoreReadFails: true });
+    expect(await expireTrialCredits(client, input)).toBe(false);
+    expect(inserted).toHaveLength(0);
+  });
+});
+
+describe('restoreTrialCredits', () => {
+  const input = { workspaceId: 'ws-1', ownerUserId: 'owner-1', actorUserId: 'admin-1' };
+
+  it('gives back exactly what the newest removal took, to the trial source, once', async () => {
+    const { client, inserted } = fakeClient({ expireRows: [{ id: 'exp-1', credits: -50 }] });
+
+    expect(await restoreTrialCredits(client, input)).toBe(50);
+    expect(await restoreTrialCredits(client, input)).toBe(0);
+
+    expect(inserted).toEqual([
+      expect.objectContaining({
+        workspace_id: 'ws-1',
+        owner_user_id: 'owner-1',
+        actor_user_id: 'admin-1',
+        pool: 'trial',
+        kind: 'adjust',
+        credits: 50,
+        dedupe_key: 'restore:trial:ws-1:exp-1',
+        metadata: expect.objectContaining({ source: 'trial_extended' }),
+      }),
+    ]);
+  });
+
+  it('writes nothing for a team whose trial credits were never taken back', async () => {
+    const { client, inserted } = fakeClient({ expireRows: [] });
+    expect(await restoreTrialCredits(client, input)).toBe(0);
+    expect(inserted).toHaveLength(0);
+  });
+
+  it('writes nothing when it cannot read the removals', async () => {
+    const { client, inserted } = fakeClient({ expireReadFails: true });
+    expect(await restoreTrialCredits(client, input)).toBe(0);
+    expect(inserted).toHaveLength(0);
+  });
+
+  it('writes nothing for a removal that is not a removal of credits', async () => {
+    for (const credits of [0, 12, Number.NaN]) {
+      const { client, inserted } = fakeClient({ expireRows: [{ id: 'exp-1', credits }] });
+      expect(await restoreTrialCredits(client, input), String(credits)).toBe(0);
+      expect(inserted).toHaveLength(0);
+    }
+  });
+
+  it('says nothing was given back when the row could not be written', async () => {
+    const { client } = fakeClient({
+      expireRows: [{ id: 'exp-1', credits: -50 }],
+      insertError: { code: '42501', message: 'denied' },
+    });
+    expect(await restoreTrialCredits(client, input)).toBe(0);
+  });
+
+  it('works without an owner on the row', async () => {
+    const { client, inserted } = fakeClient({ expireRows: [{ id: 'exp-1', credits: -50 }] });
+    expect(await restoreTrialCredits(client, { ...input, ownerUserId: null })).toBe(50);
+    expect(inserted[0]).toMatchObject({ owner_user_id: null });
+  });
 });
 
 describe('getCreditSnapshot', () => {
@@ -311,6 +418,18 @@ describe('getCreditSnapshot', () => {
 
       expect(inserted).toEqual([expect.objectContaining({ pool: 'trial', kind: 'expire', credits: -31 })]);
       expect(snap).toMatchObject({ account: 'credits_only', trial: 0, topup: 12, total: 12, nextGrantAt: null });
+    });
+
+    // #1286: credits given back by an extension are taken again when that trial
+    // ends too, and the snapshot reports what is really left.
+    it('takes the credits an extension gave back when the extended trial ends with nothing bought', async () => {
+      const { client, inserted } = fakeClient({ rpc: balancesRpc({ trial: 50, topup: 0 }), restoreRows: 1 });
+      const snap = await getCreditSnapshot(client, { ...base, team: walled });
+
+      expect(inserted).toEqual([
+        expect.objectContaining({ pool: 'trial', kind: 'expire', credits: -50, dedupe_key: 'expire:trial:ws-1:1' }),
+      ]);
+      expect(snap).toMatchObject({ trial: 0, total: 0 });
     });
 
     it('keeps them if the owner bought a plan', async () => {

@@ -12,6 +12,7 @@ import { intervalCoveringPeriod } from '@/lib/trm/partner-fee';
 import { notifyFounder } from '@/lib/billing-alerts-server';
 import { loadBriefCompletionByWorkspace } from '@/lib/team-brief-server';
 import { sendTeamAdminNotice } from '@/lib/team-notices-server';
+import { restoreTrialCredits } from '@/lib/credits/credits-server';
 
 // /api/admin/teams — the founder's billing console, and the review surface for
 // the migration that started every existing team's trial.
@@ -403,6 +404,18 @@ export async function PATCH(request: NextRequest) {
         { status: 500 }
       );
     }
+  }
+
+  // An extension that landed gives back the trial credits taken when the trial
+  // ended, so the extended trial is not a trial with no credits (#1286). Nothing
+  // happens for a team that never lost them, and a second extension gives
+  // nothing more. It never fails the action: restoreTrialCredits does not throw.
+  if (action.type === 'extend_trial') {
+    eventMetadata.trialCreditsRestored = await restoreTrialCredits(client, {
+      workspaceId: workspace.id,
+      ownerUserId: workspace.owner_id,
+      actorUserId: admin.userId,
+    });
   }
 
   // Tell the owner when the founder gives the team free access or extends its
