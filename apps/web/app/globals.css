@@ -3158,43 +3158,6 @@ html[data-native-shell][data-boot-light] .urg-boot-frame .app-wordmark {
   transform: translateY(calc(-1 * var(--boot-shift, 0px)));
 }
 
-/* "from Urganization" at the foot of the boot frame (founder, 2026-10-18).
- * Sits above the home indicator; in the phone app the frame is always the
- * dark launch ground, so the label keeps the dark theme's secondary grey and
- * the logo stays white (the .app-wordmark invert is cancelled above). */
-.urg-boot-from {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 44px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  pointer-events: none;
-}
-
-.urg-boot-from-label {
-  font-size: 13px;
-  line-height: 1;
-  letter-spacing: 0.01em;
-  color: rgb(var(--color-text-secondary));
-}
-
-html[data-native-shell] .urg-boot-from-label {
-  color: rgb(146 146 145);
-}
-
-html[data-native-shell][data-boot-light] .urg-boot-from-label {
-  color: rgb(75 71 64);
-}
-
-.urg-boot-from-logo {
-  /* Mark beside the caps wordmark, mark height = 1.618 x letter height (founder, 2026-10-26). */
-  width: 165.6px;
-  height: auto;
-}
-
 /* ------------------------------------------------------------------------- *
  * The shell's soft band (design overhaul, 2026-10-04).
  *

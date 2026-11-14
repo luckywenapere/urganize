@@ -101,21 +101,6 @@ export function LoadingScreen({
         style={{ width: `${BOOT_MARK_WIDTH}px` }}
       />
       <span className="sr-only">{title}</span>
-      {/* "from Urganization", the company lockup under the product, the way
-          Meta signs its apps (founder, 2026-10-18). Since 2026-10-26 the mark
-          sits left of the caps wordmark at 1.618 x the letter height (founder approved mocks).
-          Bottom of the frame, above the home indicator. Decorative: aria-hidden. */}
-      <div className="urg-boot-from" aria-hidden="true" data-boot-from="">
-        <span className="urg-boot-from-label">from</span>
-        {/* eslint-disable-next-line @next/next/no-img-element -- static SVG, no optimizer needed */}
-        <img
-          src="/images/urganization-logo-horizontal.svg"
-          alt=""
-          width={166}
-          height={21}
-          className="app-wordmark urg-boot-from-logo"
-        />
-      </div>
     </div>
   );
 
