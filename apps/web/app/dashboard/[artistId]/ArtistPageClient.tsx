@@ -520,7 +520,7 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
               <span className="font-normal text-content-secondary">
                 {' · '}
                 {typeLabel}
-                {!rollingOut && !recent && release.releaseDate ? `, ${release.releaseDate.slice(0, 4)}` : ''}
+                {!rollingOut && release.releaseDate ? `, ${release.releaseDate.slice(0, 4)}` : ''}
               </span>
             </p>
             {rollingOut && counts && counts.total > 0 ? (

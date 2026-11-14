@@ -309,29 +309,21 @@ export function ArtistCatalogueCard({
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
+                    {/* Same line as an Out now row: the title, then a quiet "· Single, 2026". */}
                     <p className="flex min-w-0 items-center gap-2 text-sm font-semibold text-content-primary">
-                      <span className="truncate">{row.title}</span>
+                      <span className="truncate">
+                        {row.title}
+                        <span className="font-normal text-content-secondary">
+                          {' · '}
+                          {kindLabel(row.kind)}
+                          {row.release_date ? `, ${row.release_date.slice(0, 4)}` : ''}
+                        </span>
+                      </span>
                       {isNewRelease(row.release_date, today) ? (
                         <span className="shrink-0 rounded bg-brand/10 px-1.5 text-[10.5px] font-bold uppercase leading-4 tracking-[0.06em] text-brand">
                           New
                         </span>
                       ) : null}
-                    </p>
-                    <p className="truncate text-xs text-content-secondary">
-                      {kindLabel(row.kind)}
-                      {row.release_date ? `, ${row.release_date.slice(0, 4)}` : ''}
-                    </p>
-                    <p className="flex flex-wrap gap-x-2 font-mono text-xs text-content-tertiary">
-                      {hasCode ? (
-                        <>
-                          {row.upc ? <span>UPC {row.upc}</span> : null}
-                          {row.isrc ? <span>ISRC {row.isrc}</span> : null}
-                        </>
-                      ) : lookingUp ? (
-                        'Looking up codes…'
-                      ) : (
-                        'UPC and ISRC not found yet'
-                      )}
                     </p>
                   </div>
                   {hasAction ? (
