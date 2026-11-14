@@ -256,6 +256,7 @@ describe('the words', () => {
     expect(copy.today).toBe('$0');
     expect(copy.thenLabel).toBe('From 23 November');
     expect(copy.thenValue).toBe('$19 a month');
+    expect(copy.feeNote).toBe('A card processing fee is added to each payment.');
     expect(cardTrialOfferCopy({ planName: 'Pro', amountUsd: 790, period: 'annual', trialDays: 3, now: NOW }).thenValue).toBe(
       '$790 a year'
     );
@@ -280,7 +281,7 @@ describe('the words', () => {
       cancelUrl: 'https://team.urganize.app/dashboard?settings=billing',
     });
     expect(copy.subject).toBe('Your trial ends on 21 November');
-    expect(copy.body).toContain('We will charge $19 to your card');
+    expect(copy.body).toContain('We will charge $19 plus a card processing fee to your card');
     expect(copy.body).toContain('[Cancel here](https://team.urganize.app/dashboard?settings=billing)');
     expect(copy.body).not.toMatch(/—|workspace/i);
   });

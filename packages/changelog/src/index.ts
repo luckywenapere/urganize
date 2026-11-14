@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.284.4",
+    tag: "Account",
+    date: "November 14, 2026",
+    highlights: [
+      "If you pay by card in dollars, a card processing fee is added to each payment. The add-a-card page and the email before your first charge now say so.",
+    ],
+  },
+  {
     version: "1.284.3",
     tag: "AI",
     date: "November 14, 2026",
