@@ -179,9 +179,57 @@
   .note { display:grid; grid-template-columns:28px 1fr; gap:10px; color:var(--board-sec); }
   .note b { width:24px; height:24px; border-radius:50%; background:var(--ink); color:var(--on-ink); display:grid; place-items:center; font-size:12px; }
   .note strong { color:var(--text); }
+
+  /* v2: depth and style */
+  .ask { position:relative; display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:28px; padding:32px;
+         background:var(--ink); color:var(--on-ink); border:0; border-radius:24px;
+         box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 24px 48px -16px rgba(29,42,33,.45), 0 4px 12px rgba(29,42,33,.18);
+         background-image:
+           repeating-linear-gradient(0deg, rgba(245,240,230,.035) 0 1px, transparent 1px 3px),
+           repeating-linear-gradient(90deg, rgba(245,240,230,.03) 0 1px, transparent 1px 4px); }
+  .glow { position:absolute; inset:0; border-radius:24px; overflow:hidden; pointer-events:none; }
+  .glow::before { content:''; position:absolute; width:520px; height:520px; left:-140px; top:-260px; border-radius:50%;
+          background:radial-gradient(closest-side, rgba(127,217,154,.28), rgba(127,217,154,0)); }
+  .ask:has(.menu) { margin-bottom:170px; }
+  .ask .menu { box-shadow:0 24px 48px -12px rgba(0,0,0,.45), 0 0 0 1px rgba(26,22,17,.08); }
+  .askl { position:relative; display:flex; flex-direction:column; min-width:0; }
+  .hello { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:#7fd99a; letter-spacing:.02em; }
+  .spark { width:10px; height:10px; background:#7fd99a; transform:rotate(45deg); border-radius:2px; box-shadow:0 0 0 4px rgba(127,217,154,.18), 0 0 18px rgba(127,217,154,.7); }
+  .ask h2 { font-size:38px; line-height:44px; margin-top:10px; color:var(--on-ink); letter-spacing:-.01em; }
+  .ask h2 em { font-style:normal; color:rgba(245,240,230,.62); }
+  .ask .box { margin-top:22px; background:#fbf7ef; border:0; border-radius:18px; padding:16px 16px 12px; color:var(--text);
+              box-shadow:0 0 0 1px rgba(245,240,230,.5), 0 18px 36px -12px rgba(0,0,0,.55), 0 2px 0 rgba(255,255,255,.9) inset; }
+  .ask .box.on { box-shadow:0 0 0 2px #7fd99a, 0 0 0 7px rgba(127,217,154,.22), 0 18px 36px -12px rgba(0,0,0,.55); }
+  .ask .ph { font-size:17px; }
+  .ask .tools .ic, .ask .pick { background:#fff; }
+  .ask .tools .send { width:40px; height:40px; background:#d9d3c5; color:#6a665f; }
+  .ask .tools .send.go { background:#14643a; color:#fff; box-shadow:0 6px 14px -4px rgba(20,100,58,.7); }
+  .ask .sugs { margin-top:18px; }
+  .ask .sugs span.sg { height:36px; border:1px solid rgba(245,240,230,.18); background:rgba(245,240,230,.07); color:var(--on-ink); gap:8px; backdrop-filter:blur(4px); }
+  .m { width:8px; height:8px; border-radius:50%; flex:none; }
+  .m.late { background:#ff9d8f; } .m.today { background:#7fd99a; } .m.plan { background:#f0c66b; } .m.write { background:#a9c4ff; }
+  .next { position:relative; background:rgba(245,240,230,.07); border:1px solid rgba(245,240,230,.14); border-radius:18px; padding:18px;
+          box-shadow:0 1px 0 rgba(255,255,255,.06) inset; display:flex; flex-direction:column; }
+  .next .eb { font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--on-ink2); }
+  .nrow { display:flex; gap:12px; align-items:center; margin-top:12px; }
+  .cover { width:64px; height:64px; border-radius:10px; background:#5b2a86; flex:none; display:grid; place-items:end start; padding:6px;
+           box-shadow:0 10px 20px -6px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.12) inset; transform:rotate(-3deg); }
+  .cover span { font-family:'Young Serif', serif; font-size:10px; line-height:11px; color:rgba(255,255,255,.85); }
+  .nt { font-family:'Young Serif', serif; font-size:20px; line-height:24px; } .nb { color:var(--on-ink2); font-size:13px; }
+  .count { display:flex; align-items:center; gap:12px; margin-top:16px; }
+  .count b { font-family:'Young Serif', serif; font-weight:400; font-size:56px; line-height:52px; color:#7fd99a; }
+  .count span { color:var(--on-ink2); font-size:13px; line-height:18px; }
+  .next .prog { height:4px; border-radius:99px; background:rgba(245,240,230,.16); margin-top:14px; overflow:hidden; }
+  .next .prog i { display:block; width:35%; height:100%; background:#7fd99a; }
+  .nm { font-size:13px; color:var(--on-ink2); margin-top:8px; } .nm em { font-style:normal; color:#ffb4a8; font-weight:600; }
+  .open { margin-top:auto; padding-top:14px; font-weight:600; font-size:13px; color:var(--on-ink); }
+  .ask .menu { color:var(--text); }
+  /* cards under the hero get a little lift too */
+  .tcard, .out { box-shadow:0 1px 2px rgba(26,22,17,.05), 0 8px 20px -12px rgba(26,22,17,.18); }
+  .apage .box { background:#fbf7ef; border:0; box-shadow:0 0 0 1px var(--line2), 0 12px 28px -14px rgba(26,22,17,.35); }
 </style></head><body>
 <div class="wrap">
-  <div class="intro"><h1>Chat on Home, desktop</h1>
+  <div class="intro"><h1>Chat on Home, desktop (version 2)</h1>
   <p>The first thing on Home becomes a box you can type into. Type, press Enter, and you land in the Assistant with your message already sent. Everything else on Home stays, one step down.</p></div>
 
   <div class="label">1. Home, as you arrive</div>
@@ -192,14 +240,21 @@
       <div class="icons"><i></i><b>OY</b></div>
     </div>
     <div class="page">
-      <div class="ask">
-        <h2>Good evening, Oyin. What do you need?</h2>
+      <div class="ask"><div class="glow"></div><div class="askl">
+        <p class="hello"><span class="spark"></span>Sunday evening</p><h2>Good evening, Oyin.<br><em>What do you need?</em></h2>
         <div class="box">
           <p class="ph">Ask AI about your rollouts, or tell it what to do<span class="caret"></span></p>
           <div class="tools"><span class="ic">+</span><span class="pick">About: Everything <i></i></span><span class="hint">Enter to send</span><span class="send">&uarr;</span></div>
         </div>
-        <div class="sugs"><span>What is late on Blue Season?</span><span>What should I do today?</span><span>Plan the next record for Ayo Kanmi</span><span>Write a status update for Zainab</span></div>
-      </div>
+        <div class="sugs"><span class="sg"><i class="m late"></i>What is late on Blue Season?</span><span class="sg"><i class="m today"></i>What should I do today?</span><span class="sg"><i class="m plan"></i>Plan the next record for Ayo Kanmi</span><span class="sg"><i class="m write"></i>Write a status update for Zainab</span></div></div><div class="next">
+          <p class="eb">Next drop</p>
+          <div class="nrow"><div class="cover"><span>Blue<br>Season</span></div>
+            <div><p class="nt">Blue Season</p><p class="nb">Zainab Oyelaran &middot; EP</p></div></div>
+          <div class="count"><b>8</b><span>days to go<br>Wed 18 Nov</span></div>
+          <div class="prog"><i></i></div>
+          <p class="nm">30 of 86 done &middot; <em>34 late</em></p>
+          <span class="open">Open rollout &rarr;</span>
+        </div></div>
 
 
       <div class="out">
@@ -208,22 +263,6 @@
         <p class="grow"><b>Blessings</b> <span class="sec">by Ayo Kanmi. Looking for it on streaming. This can take a few hours.</span></p>
         <span class="link">Type the code yourself</span>
         <span class="x">×</span>
-      </div>
-
-      <div class="hero">
-        <div class="art"></div>
-        <div>
-          <p class="eyebrow">NEXT DROP</p>
-          <h3>Blue Season</h3>
-          <p class="by">Zainab Oyelaran · EP</p>
-          <div class="prog"><i></i></div>
-          <p class="meta">30 of 86 tasks done · 2 due this week · <span class="late">34 late</span></p>
-        </div>
-        <div class="right">
-          <p class="num">8</p>
-          <p class="by">days to go · Wed 18 Nov</p>
-          <p style="margin-top:12px"><span class="btn light">Open rollout</span></p>
-        </div>
       </div>
 
       <div class="tasks">
@@ -248,7 +287,7 @@
       
     </div>
   </div>
-<div class="notes"><div class="note"><b>1</b><p><strong>The chat box is the first section,</strong> above Next drop and My tasks. It greets you by name and time of day.</p></div><div class="note"><b>2</b><p><strong>Four suggestions, written from your own data:</strong> your nearest rollout, your late tasks, an artist with nothing planned. Click one and it is sent, the same as typing it.</p></div><div class="note"><b>3</b><p><strong>It says "AI", not a product name,</strong> as everywhere since 3 Nov.</p></div><div class="note"><b>4</b><p><strong>The + adds a file or photo, and "About" picks a rollout.</strong> See the next frame.</p></div><div class="note"><b>5</b><p><strong>Next drop, My tasks, Delegated, Team and Artists are unchanged,</strong> one step lower. In Customise Home the chat box can be moved or removed like the other blocks.</p></div></div>
+<div class="notes"><div class="note"><b>1</b><p><strong>One dark card leads Home: the chat on the left, your next drop on the right.</strong> It replaces today's Next drop card, so there is still only one big card, and the countdown is still the first number you see.</p></div><div class="note"><b>2</b><p><strong>Four suggestions, written from your own data:</strong> your nearest rollout, your late tasks, an artist with nothing planned. Click one and it is sent, the same as typing it.</p></div><div class="note"><b>3</b><p><strong>It says "AI", not a product name,</strong> as everywhere since 3 Nov.</p></div><div class="note"><b>4</b><p><strong>The + adds a file or photo, and "About" picks a rollout.</strong> See the next frame.</p></div><div class="note"><b>5</b><p><strong>My tasks, Delegated, Team and Artists are unchanged below it.</strong> In Customise Home the chat box can be moved or removed like the other blocks.</p></div></div>
   <div class="label">2. Typing</div>
   <div class="desk">
     <div class="bar">
@@ -257,8 +296,8 @@
       <div class="icons"><i></i><b>OY</b></div>
     </div>
     <div class="page">
-      <div class="ask">
-        <h2>Good evening, Oyin. What do you need?</h2>
+      <div class="ask"><div class="glow"></div><div class="askl">
+        <p class="hello"><span class="spark"></span>Sunday evening</p><h2>Good evening, Oyin.<br><em>What do you need?</em></h2>
         <div class="box on">
           <p class="ph typed">What is late and who has it<span class="caret"></span></p>
           <div class="tools"><span class="ic">+</span><span class="pick set"><span class="cvs"></span>Blue Season <i></i></span><div class="menu">
@@ -270,25 +309,16 @@
   <div class="mi"><span class="cvs"></span><div>Salt and Signal<div class="k">The Harbour Lights &middot; in 54 days</div></div></div>
 </div><span class="hint">Enter to send</span><span class="send go">&uarr;</span></div>
         </div>
-        <div class="sugs"><span>What is late on Blue Season?</span><span>What should I do today?</span><span>Plan the next record for Ayo Kanmi</span><span>Write a status update for Zainab</span></div>
-      </div>
-<div class="fade" style="max-height:230px;opacity:.35"><div class="hero">
-        <div class="art"></div>
-        <div>
-          <p class="eyebrow">NEXT DROP</p>
-          <h3>Blue Season</h3>
-          <p class="by">Zainab Oyelaran · EP</p>
+        <div class="sugs"><span class="sg"><i class="m late"></i>What is late on Blue Season?</span><span class="sg"><i class="m today"></i>What should I do today?</span><span class="sg"><i class="m plan"></i>Plan the next record for Ayo Kanmi</span><span class="sg"><i class="m write"></i>Write a status update for Zainab</span></div></div><div class="next">
+          <p class="eb">Next drop</p>
+          <div class="nrow"><div class="cover"><span>Blue<br>Season</span></div>
+            <div><p class="nt">Blue Season</p><p class="nb">Zainab Oyelaran &middot; EP</p></div></div>
+          <div class="count"><b>8</b><span>days to go<br>Wed 18 Nov</span></div>
           <div class="prog"><i></i></div>
-          <p class="meta">30 of 86 tasks done · 2 due this week · <span class="late">34 late</span></p>
-        </div>
-        <div class="right">
-          <p class="num">8</p>
-          <p class="by">days to go · Wed 18 Nov</p>
-          <p style="margin-top:12px"><span class="btn light">Open rollout</span></p>
-        </div>
-      </div>
-
-      </div></div></div>
+          <p class="nm">30 of 86 done &middot; <em>34 late</em></p>
+          <span class="open">Open rollout &rarr;</span>
+        </div></div>
+</div></div>
 <div class="notes"><div class="note"><b>6</b><p><strong>Pick what the question is about.</strong> The "About" button opens your rollouts, nearest drop first, with Everything at the top. Pick Blue Season and you can just type "what is late", without naming it.</p></div><div class="note"><b>7</b><p><strong>It starts on Everything.</strong> If you only have one rollout, it starts on that one.</p></div><div class="note"><b>8</b><p><strong>The box lights up green and the arrow turns dark</strong> once there is something to send. Enter sends. Shift and Enter makes a new line.</p></div></div>
   <div class="label">3. After Enter: the Assistant</div>
   <div class="desk">
