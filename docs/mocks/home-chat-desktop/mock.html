@@ -147,6 +147,24 @@
   .tools .hint { margin-left:auto; font-size:12px; color:var(--ter); }
   .tools .send { width:36px; height:36px; border-radius:50%; background:var(--tile); color:var(--sec); display:grid; place-items:center; font-weight:700; }
   .tools .send.go { background:var(--ink); color:var(--on-ink); }
+  .pick { height:32px; padding:0 12px; border-radius:99px; border:1px solid var(--line2); display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:500; background:var(--card); }
+  .pick i { width:6px; height:6px; border-right:1.5px solid var(--sec); border-bottom:1.5px solid var(--sec); transform:rotate(45deg); margin-top:-3px; }
+  .pick.set { border-color:var(--brand); color:var(--brand); background:var(--brand-soft); }
+  .pick .cvs { width:18px; height:18px; border-radius:4px; background:#5b2a86; }
+  .tools { position:relative; }
+  .menu { position:absolute; left:42px; top:38px; width:320px; background:var(--card); border:1px solid var(--line2); border-radius:14px; box-shadow:0 12px 32px rgba(26,22,17,.16); padding:6px; z-index:2; }
+  .menu .mi { display:flex; gap:10px; align-items:center; padding:8px 10px; border-radius:8px; font-size:14px; }
+  .menu .mi.on { background:var(--side-on); font-weight:600; }
+  .menu .mi .cvs { width:28px; height:28px; border-radius:6px; background:var(--tile); flex:none; }
+  .menu .mi .k { color:var(--sec); font-size:12px; font-weight:400; }
+  .menu .mi .tk { margin-left:auto; color:var(--brand); }
+  .menu .sep { height:1px; background:var(--line); margin:4px 6px; }
+  .asplit { display:grid; grid-template-columns:240px minmax(0,1fr); gap:32px; max-width:1040px; margin:0 auto; padding:24px 0 0; }
+  .aside a { display:flex; gap:10px; align-items:center; padding:8px 10px; border-radius:10px; color:var(--sec); font-size:14px; }
+  .aside a.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .aside .g { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ter); padding:14px 10px 4px; }
+  .aside .cvs { width:22px; height:22px; border-radius:5px; background:var(--tile); }
+  .asplit .apage { margin:0; padding-top:0; max-width:none; }
   .sugs { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
   .sugs span { height:34px; padding:0 14px; border-radius:99px; border:1px solid var(--line2); display:inline-flex; align-items:center; font-size:13px; color:var(--sec); }
   .fade { max-height:150px; overflow:hidden; opacity:.6; -webkit-mask-image:linear-gradient(#000,transparent); mask-image:linear-gradient(#000,transparent); }
@@ -178,7 +196,7 @@
         <h2>Good evening, Oyin. What do you need?</h2>
         <div class="box">
           <p class="ph">Ask AI about your rollouts, or tell it what to do<span class="caret"></span></p>
-          <div class="tools"><span class="ic">+</span><span class="hint">Enter to send</span><span class="send">&uarr;</span></div>
+          <div class="tools"><span class="ic">+</span><span class="pick">About: Everything <i></i></span><span class="hint">Enter to send</span><span class="send">&uarr;</span></div>
         </div>
         <div class="sugs"><span>What is late on Blue Season?</span><span>What should I do today?</span><span>Plan the next record for Ayo Kanmi</span><span>Write a status update for Zainab</span></div>
       </div>
@@ -230,7 +248,7 @@
       
     </div>
   </div>
-<div class="notes"><div class="note"><b>1</b><p><strong>The chat box is the first section,</strong> above Next drop and My tasks. It greets you by name and time of day.</p></div><div class="note"><b>2</b><p><strong>Four suggestions, written from your own data:</strong> your nearest rollout, your late tasks, an artist with nothing planned. Click one and it is sent, the same as typing it.</p></div><div class="note"><b>3</b><p><strong>It says "AI", not a product name,</strong> as everywhere since 3 Nov.</p></div><div class="note"><b>4</b><p><strong>The + adds a file or photo,</strong> the same menu the Assistant has.</p></div><div class="note"><b>5</b><p><strong>Next drop, My tasks, Delegated, Team and Artists are unchanged,</strong> one step lower. In Customise Home the chat box can be moved or removed like the other blocks.</p></div></div>
+<div class="notes"><div class="note"><b>1</b><p><strong>The chat box is the first section,</strong> above Next drop and My tasks. It greets you by name and time of day.</p></div><div class="note"><b>2</b><p><strong>Four suggestions, written from your own data:</strong> your nearest rollout, your late tasks, an artist with nothing planned. Click one and it is sent, the same as typing it.</p></div><div class="note"><b>3</b><p><strong>It says "AI", not a product name,</strong> as everywhere since 3 Nov.</p></div><div class="note"><b>4</b><p><strong>The + adds a file or photo, and "About" picks a rollout.</strong> See the next frame.</p></div><div class="note"><b>5</b><p><strong>Next drop, My tasks, Delegated, Team and Artists are unchanged,</strong> one step lower. In Customise Home the chat box can be moved or removed like the other blocks.</p></div></div>
   <div class="label">2. Typing</div>
   <div class="desk">
     <div class="bar">
@@ -242,12 +260,19 @@
       <div class="ask">
         <h2>Good evening, Oyin. What do you need?</h2>
         <div class="box on">
-          <p class="ph typed">What is late on Blue Season and who has it<span class="caret"></span></p>
-          <div class="tools"><span class="ic">+</span><span class="hint">Enter to send</span><span class="send go">&uarr;</span></div>
+          <p class="ph typed">What is late and who has it<span class="caret"></span></p>
+          <div class="tools"><span class="ic">+</span><span class="pick set"><span class="cvs"></span>Blue Season <i></i></span><div class="menu">
+  <div class="mi"><span class="cvs" style="background:var(--ink)"></span><div>Everything<div class="k">All artists and rollouts</div></div></div>
+  <div class="sep"></div>
+  <div class="mi on"><span class="cvs" style="background:#5b2a86"></span><div>Blue Season<div class="k">Zainab Oyelaran &middot; in 8 days</div></div><span class="tk">&#10003;</span></div>
+  <div class="mi"><span class="cvs"></span><div>Night Bus<div class="k">Ayo Kanmi &middot; in 19 days</div></div></div>
+  <div class="mi"><span class="cvs"></span><div>Midnight Drive<div class="k">Victory &middot; in 21 days</div></div></div>
+  <div class="mi"><span class="cvs"></span><div>Salt and Signal<div class="k">The Harbour Lights &middot; in 54 days</div></div></div>
+</div><span class="hint">Enter to send</span><span class="send go">&uarr;</span></div>
         </div>
         <div class="sugs"><span>What is late on Blue Season?</span><span>What should I do today?</span><span>Plan the next record for Ayo Kanmi</span><span>Write a status update for Zainab</span></div>
       </div>
-<div class="fade"><div class="hero">
+<div class="fade" style="max-height:230px;opacity:.35"><div class="hero">
         <div class="art"></div>
         <div>
           <p class="eyebrow">NEXT DROP</p>
@@ -264,12 +289,13 @@
       </div>
 
       </div></div></div>
-<div class="notes"><div class="note"><b>6</b><p><strong>The box lights up green and the arrow turns dark</strong> once there is something to send. Enter sends. Shift and Enter makes a new line.</p></div></div>
+<div class="notes"><div class="note"><b>6</b><p><strong>Pick what the question is about.</strong> The "About" button opens your rollouts, nearest drop first, with Everything at the top. Pick Blue Season and you can just type "what is late", without naming it.</p></div><div class="note"><b>7</b><p><strong>It starts on Everything.</strong> If you only have one rollout, it starts on that one.</p></div><div class="note"><b>8</b><p><strong>The box lights up green and the arrow turns dark</strong> once there is something to send. Enter sends. Shift and Enter makes a new line.</p></div></div>
   <div class="label">3. After Enter: the Assistant</div>
   <div class="desk">
     <div class="bar"><div class="logo">Urganize <span class="beta">BETA</span></div><div class="tabs"><span>Home</span><span class="on">Assistant</span></div><div class="icons"><i></i><b>OY</b></div></div>
+    <div class="asplit"><div class="aside"><a>Ask about everything</a><div class="g">Rollout chats</div><a class="on"><span class="cvs" style="background:#5b2a86"></span>Blue Season</a><a><span class="cvs"></span>Night Bus</a><a><span class="cvs"></span>Midnight Drive</a><a><span class="cvs"></span>Salt and Signal</a></div>
     <div class="apage">
-      <span class="me">What is late on Blue Season and who has it</span>
+      <span class="me">What is late and who has it</span>
       <div class="ai"><b>34 tasks are late on Blue Season.</b> Most are yours. The three that block the most:
         <div class="li"><i></i><span><b>Confirm the EP tracklist</b>, you, 6 days late. 4 tasks wait on it.</span></div>
         <div class="li"><i></i><span><b>Upload the final master</b>, Chidera, 3 days late.</span></div>
@@ -277,7 +303,7 @@
         <div class="acts"><span class="btn ghost">Show all 34</span><span class="btn ghost">Move mine to this week</span></div>
       </div>
       <div class="box"><p class="ph" style="min-height:24px">Reply<span class="caret"></span></p><div class="tools"><span class="ic">+</span><span class="hint">Enter to send</span><span class="send">&uarr;</span></div></div>
-    </div>
+    </div></div>
   </div>
-<div class="notes"><div class="note"><b>7</b><p><strong>You land in the Assistant with the message sent and the answer arriving.</strong> It joins your one ongoing chat, so there is no second conversation. The box you typed in glides down to the bottom of the page.</p></div><div class="note"><b>8</b><p><strong>Home in the top bar takes you back.</strong> The box on Home is empty again. The conversation stays in the Assistant.</p></div><div class="note"><b>9</b><p><strong>On a phone nothing changes.</strong> The phone already has this box at the bottom of Home. This brings the same idea to computers, at the top.</p></div></div>
+<div class="notes"><div class="note"><b>9</b><p><strong>You land in the Assistant with the message sent and the answer arriving.</strong> With a rollout picked, it goes into the chat for that rollout, where the team can see it. With Everything, it goes into your own chat.</p></div><div class="note"><b>10</b><p><strong>Home in the top bar takes you back.</strong> The box on Home is empty again. The conversation stays in the Assistant.</p></div><div class="note"><b>11</b><p><strong>On a phone nothing changes.</strong> The phone already has this box at the bottom of Home. This brings the same idea to computers, at the top.</p></div></div>
 </div></body></html>
