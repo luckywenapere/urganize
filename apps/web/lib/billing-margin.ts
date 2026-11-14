@@ -1,4 +1,4 @@
-import { INTERVAL_MONTHS, usdCentsToKoboEquivalent, type BillingInterval } from '@urganize/pricing';
+import { INTERVAL_MONTHS, type BillingInterval } from '@urganize/pricing';
 
 // The admin margin view's arithmetic (founder, 2026-10-22). Pure, every number
 // kobo, so the page and the tests read one set of rules. Estimates, labelled as
@@ -34,8 +34,6 @@ const CARD_CAP_KOBO = 2_000_00; // ₦2,000
 const TRANSFER_PERCENT_BPS = 100; // 1%
 const TRANSFER_CAP_KOBO = 300_00; // ₦300
 const BACHS_PERCENT_BPS = 500; // 5%
-const BACHS_DOLLAR_CARD_BPS = 650; // 5% + 1.5% for a card issued outside the US
-const BACHS_DOLLAR_CARD_FLAT_CENTS = 40; // $0.40 a payment
 
 /** Paystack's fee on one payment, kobo, from its published local price.
  *  'other' is priced as a card, the dearer of the two, so the estimate never
@@ -52,14 +50,13 @@ export function estimatePaystackFeeKobo(
   // Naira payment is priced at 5%, above all of those, so the estimate never
   // flatters the margin.
   //
-  // A dollar card (2026-11-14, #1266; docs.bachs.io/for-you/fees) is 5% +
-  // $0.40, plus 1.5% when the card was issued outside the US. We assume it
-  // was: 6.5% + $0.40, the cautious side. The books are in kobo, so the 40
-  // cents is converted. It is charged once a payment; marginRow spreads it
-  // over the months the payment covers.
-  if (channel === 'bachs' && options.dollars) {
-    return Math.round((amount * BACHS_DOLLAR_CARD_BPS) / 10_000) + usdCentsToKoboEquivalent(BACHS_DOLLAR_CARD_FLAT_CENTS);
-  }
+  // A dollar card costs us nothing (2026-11-14, #1276). Our Bachs account is
+  // set to "Customer pays fees": Bachs adds its fee (5% + $0.40, plus 1.5% for
+  // a card issued outside the US) on top of our price and the whole price
+  // reaches us. Measured in sandbox: a $9.00 plan charged the card $9.85 and
+  // settled $9.00. If that Bachs setting ever changes, this is 6.5% + $0.40.
+  // Naira payments through Bachs were not measured, so they keep the 5%.
+  if (channel === 'bachs' && options.dollars) return 0;
   if (channel === 'bachs') return Math.round((amount * BACHS_PERCENT_BPS) / 10_000);
   if (channel === 'transfer') {
     return Math.min(TRANSFER_CAP_KOBO, Math.round((amount * TRANSFER_PERCENT_BPS) / 10_000));

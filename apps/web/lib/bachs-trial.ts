@@ -262,7 +262,13 @@ export type CardTrialOfferCopy = {
   today: string;
   thenLabel: string;
   thenValue: string;
+  /** Bachs adds its card fee on top of our price (#1276). */
+  feeNote: string;
 };
+
+/** Our Bachs account is set to "Customer pays fees": the card is charged our
+ *  price plus Bachs's fee, so every place that names the charge says so (#1276). */
+export const CARD_FEE_NOTE = 'A card processing fee is added to each payment.';
 
 /** The add-a-card screen. The first charge day is today plus the free days. */
 export function cardTrialOfferCopy(input: {
@@ -279,6 +285,7 @@ export function cardTrialOfferCopy(input: {
     today: '$0',
     thenLabel: `From ${formatChargeDay(firstCharge)}`,
     thenValue: pricePerPeriod(input.amountUsd, input.period),
+    feeNote: CARD_FEE_NOTE,
   };
 }
 
@@ -309,7 +316,7 @@ export function cardTrialReminderCopy(input: {
   return {
     subject: `Your trial ends on ${day}`,
     body: [
-      `Your free days end on ${day}. We will charge ${formatUsd(input.amountUsd)} to your card that day and ${input.planName} carries on.`,
+      `Your free days end on ${day}. We will charge ${formatUsd(input.amountUsd)} plus a card processing fee to your card that day and ${input.planName} carries on.`,
       `Want to stop? [Cancel here](${input.cancelUrl}). It takes a second, and you keep everything until ${day}.`,
     ].join('\n\n'),
   };

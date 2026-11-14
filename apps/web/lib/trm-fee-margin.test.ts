@@ -496,22 +496,21 @@ describe('the margin view', () => {
     expect(mapPaystackChannel('dedicated_nuban')).toBe('transfer');
   });
 
-  it('prices a dollar card through Bachs at 6.5% plus 40 cents', () => {
-    // docs.bachs.io/for-you/fees: 5% + $0.40, plus 1.5% for a card issued
-    // outside the US, which is what we assume (the cautious side).
-    const forty = usdCentsToKoboEquivalent(40);
+  it('counts no fee on a dollar card through Bachs: the customer pays it', () => {
+    // Our Bachs account is set to "Customer pays fees" (#1276), so the whole
+    // price reaches us.
     const nineteen = usdCentsToKoboEquivalent(1900);
-    expect(estimatePaystackFeeKobo(nineteen, 'bachs', { dollars: true })).toBe(Math.round((nineteen * 650) / 10_000) + forty);
+    expect(estimatePaystackFeeKobo(nineteen, 'bachs', { dollars: true })).toBe(0);
     // A Naira payment through Bachs keeps the flat 5%.
     expect(estimatePaystackFeeKobo(30_000_00, 'bachs')).toBe(1_500_00);
     expect(estimatePaystackFeeKobo(0, 'bachs', { dollars: true })).toBe(0);
-    // The 40 cents is charged once per payment, so a year spreads it over 12.
     const year = usdCentsToKoboEquivalent(19000);
     const row = marginRow(
       { workspaceId: 'w', teamName: 'T', plan: 'solo_plus', interval: 'annual', channel: 'bachs', dollars: true, path: null, periodAmountKobo: year, trmOwedMonthKobo: 0, creditsUsed: 0 },
       684
     );
-    expect(row.paystackFeeMonthKobo).toBe(Math.round((Math.round((year * 650) / 10_000) + forty) / 12));
+    expect(row.paystackFeeMonthKobo).toBe(0);
+    expect(row.contributionKobo).toBe(Math.round(year / 12));
     expect(mapPaystackChannel('ussd')).toBe('other');
   });
 

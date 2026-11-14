@@ -278,6 +278,7 @@ export default function AddCardPageClient() {
         <ul className="mt-1 flex flex-col gap-2 border-t border-stroke-default pt-3">
           <Tick>We email you a day before we charge.</Tick>
           <Tick>Cancel any time in Settings, in two taps.</Tick>
+          <Tick>{copy.feeNote}</Tick>
         </ul>
       </div>
 
