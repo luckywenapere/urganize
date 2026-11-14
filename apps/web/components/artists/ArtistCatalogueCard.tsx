@@ -19,6 +19,7 @@ import { olderSongsNotRolledOut } from '@/lib/artist-page-data';
 import { lagosToday } from '@/lib/next-records';
 import { kindLabel } from './ImportParts';
 import { PoweredByAltlink } from '@/components/releases/PoweredByAltlink';
+import { SmartLinkBox } from '@/components/releases/SmartLinkBox';
 
 const SHOWN_AT_FIRST = 8;
 const POLL_MS = 6000;
@@ -334,19 +335,26 @@ export function ArtistCatalogueCard({
                     </p>
                   </div>
                   {hasAction ? (
-                  <div className="col-start-2 justify-self-start sm:col-start-auto sm:justify-self-end sm:text-right">
+                  <div
+                    className={`col-start-2 sm:col-start-auto sm:justify-self-end sm:text-right ${
+                      row.link?.url ? 'justify-self-stretch' : 'justify-self-start'
+                    }`}
+                  >
                     {row.link?.url ? (
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:flex-col sm:items-end sm:gap-1">
-                        <a
-                          href={row.link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="max-w-44 truncate text-xs font-medium text-status-success underline-offset-2 hover:underline lg:hidden"
+                      <div className="flex flex-col sm:items-end">
+                        {/* The same box as the Out now card at the top: tap to copy. */}
+                        <SmartLinkBox
+                          url={row.link.url}
+                          title={row.title}
+                          releaseId={row.id}
+                          className="w-full text-left sm:w-52 lg:hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void copy(row.link?.url ?? '', row.id)}
+                          className={`${smallButton} hidden lg:inline-flex`}
                         >
-                          {row.link.url.replace(/^https?:\/\//, '')}
-                        </a>
-                        <button type="button" onClick={() => void copy(row.link?.url ?? '', row.id)} className={smallButton}>
-                          {justCopied === row.id ? 'Copied' : <>Copy<span className="hidden lg:inline">&nbsp;link</span></>}
+                          {justCopied === row.id ? 'Copied' : 'Copy link'}
                         </button>
                       </div>
                     ) : hasCode ? (
