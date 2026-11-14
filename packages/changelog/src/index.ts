@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.284.1",
+    tag: "Rollouts",
+    date: "November 14, 2026",
+    highlights: [
+      "On an artist's page, older songs now show their smart link in the same box as new ones. Tap it to copy.",
+      "The song type and year now sit beside the title, and the UPC and ISRC lines are gone.",
+    ],
+  },
+  {
     version: "1.284.0",
     title: "Free days with a card, outside Nigeria",
     tag: "Account",
