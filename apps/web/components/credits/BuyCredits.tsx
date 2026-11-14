@@ -137,6 +137,8 @@ export function BuyCredits({ account, onPurchased, returnTo = '/dashboard/credit
       </h2>
       <p className="mt-1 text-sm text-content-secondary">
         Credits never expire. You pay once, with your card or bank, and they are added straight away.
+        {/* Dollars go through Bachs, which adds its fee on top of our price (#1293). */}
+        {currency === 'USD' ? ' A processing fee is added to each payment.' : null}
       </p>
 
       {notice ? (
