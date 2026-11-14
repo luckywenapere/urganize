@@ -50,6 +50,12 @@ one.
 | Bank transfer invoice (`openTransferInvoice`) | A transfer landing mid-replace turned a paid invoice into a cancelled one | Cancel only the invoice as it was read |
 | UrgAns embedded actions | A slow failure could overwrite a row a retry already settled | Failure and result writes are conditional on the claim |
 
+## Fixed since
+
+| Machine | What could happen | Fix |
+|---|---|---|
+| Admin email composer (`ComposeEmailPageClient`, #1274) | A background sign-in refresh recounted the starting audience over the one chosen, so "Send to 124 people" sat over a one-person send (and a count of one could sit over a send to everyone) | `lib/email/compose-audience.ts`: the count carries the audience it was made for and shows only while that is the audience chosen now; the first-load recount runs once per person, from the current choice; a count landing under an open confirm cancels it |
+
 ## Still open, ranked
 
 Money first, then data, then screens. None of these was changed in #1148
