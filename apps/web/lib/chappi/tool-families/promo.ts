@@ -341,6 +341,14 @@ export const PROMO_TOOLS: ChappiTool[] = [
         title: `Pitch "${songTitle}" to ${playlist.name}?`,
         detail: `${curator} gets the song, your link${note ? ' and your note' : ''}, and can answer from their own inbox. A pitch cannot be taken back.${cost}`,
         confirmLabel: 'Send pitch',
+        // Approving replays these. Pin the real id (and the name, for the
+        // closing line) so the pitch goes to the playlist the card showed,
+        // even if the name the model used changes hands before the tap (#1272).
+        args: {
+          ...args,
+          playlistId: String(playlist.id ?? playlistId),
+          playlistName: oneLine(playlist.name).slice(0, 120),
+        },
       };
     },
     execute: async (ctx, args) => {
@@ -353,13 +361,15 @@ export const PROMO_TOOLS: ChappiTool[] = [
       }
       const note = argString(args, 'note') || undefined;
 
-      // The approved card carries the model's own arguments, so `playlistId`
-      // can still be a name here. Send the real id, and say where it went.
-      // A real id goes straight to the route, as it always did: the route
-      // gives its own reason for a paused curator or a playlist that is gone,
-      // and nothing is read twice.
+      // A card built by `confirm` carries the real id and the playlist's name
+      // (#1272), so it goes straight to the route: the route gives its own
+      // reason for a paused curator or a playlist that is gone, and nothing is
+      // read twice. A call that did not come through a card (or an old card)
+      // can still carry a name in `playlistId`: look that up, send the real
+      // id, and say where it went.
       let realPlaylistId = playlistId;
-      let sent = `Pitched "${songTitle}".`;
+      const pinnedName = oneLine(argString(args, 'playlistName')).slice(0, 120);
+      let sent = pinnedName ? `Pitched "${songTitle}" to ${pinnedName}.` : `Pitched "${songTitle}".`;
       if (!UUID.test(playlistId)) {
         const found = await findPitchPlaylist(ctx, playlistId);
         if (!found.ok) return fail(found.summary);

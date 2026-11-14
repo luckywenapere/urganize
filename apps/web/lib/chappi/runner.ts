@@ -687,7 +687,9 @@ export async function runChappiAgent(params: {
             if (outcome.ok) {
               pendingConfirmation = {
                 toolName: toolName as ChappiToolName,
-                args: toolArgs,
+                // What Approve runs: the builder's resolved arguments when it
+                // gave any, else the model's own (#1272).
+                args: outcome.args ?? toolArgs,
                 title: outcome.title,
                 detail: outcome.detail,
                 confirmLabel: outcome.confirmLabel,

@@ -87,6 +87,14 @@ export type ChappiConfirmOutcome =
       /** The card makes the user type this phrase (or DELETE) before the button
        * works, and sends what they typed as args.confirmation. */
       typedConfirmation?: { phrase: string };
+      /**
+       * The arguments to run with when the user approves. Absent means the ones
+       * the model sent. An approved card replays its arguments, so a builder that
+       * resolved something the model only named (a playlist found by its name)
+       * returns the resolved arguments here, and approving runs exactly what the
+       * card showed instead of looking the name up a second time (#1272).
+       */
+      args?: Record<string, unknown>;
     }
   | { ok: false; summary: string };
 
