@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.284.3",
+    tag: "AI",
+    date: "November 14, 2026",
+    highlights: [
+      "UrgAns can only pitch to curators who are on Urganize. When you name a playlist that is not one of them, it now says so and shows you the ones you can pitch to. Before, it kept saying the playlist was not found.",
+      "Tell UrgAns a playlist by its name and it finds it.",
+    ],
+  },
+  {
     version: "1.284.2",
     tag: "App",
     date: "November 14, 2026",
