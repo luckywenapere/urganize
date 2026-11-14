@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.284.2",
+    tag: "App",
+    date: "November 14, 2026",
+    highlights: [
+      "The loading screen is cleaner. The \"from Urganization\" line at the bottom is gone.",
+    ],
+  },
+  {
     version: "1.284.1",
     tag: "Rollouts",
     date: "November 14, 2026",
