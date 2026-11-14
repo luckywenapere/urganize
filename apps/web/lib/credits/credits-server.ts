@@ -293,6 +293,26 @@ export async function expireTrialCredits(
 ): Promise<boolean> {
   const credits = Math.floor(input.credits);
   if (!(credits > 0)) return false;
+
+  // The first removal keeps its original key. Each time an extension gave the
+  // credits back (restoreTrialCredits), the next removal gets a key of its own,
+  // numbered by how many were given back, so the extended trial's leftovers can
+  // be taken again instead of hitting the first removal's key and staying (#1286).
+  // If the count cannot be read, nothing is taken: removing is the side that
+  // fails toward keeping.
+  let givenBack = 0;
+  try {
+    const restores = await client
+      .from(TABLE)
+      .select('id')
+      .eq('workspace_id', input.workspaceId)
+      .like('dedupe_key', `${RESTORE_KEY_PREFIX}${input.workspaceId}:%`);
+    if (restores.error) return false;
+    givenBack = restores.data?.length ?? 0;
+  } catch {
+    return false;
+  }
+
   return insertOnce(
     client,
     {
@@ -301,11 +321,69 @@ export async function expireTrialCredits(
       pool: 'trial',
       kind: 'expire',
       credits: -credits,
-      dedupe_key: `expire:trial:${input.workspaceId}`,
+      dedupe_key: givenBack > 0 ? `expire:trial:${input.workspaceId}:${givenBack}` : `expire:trial:${input.workspaceId}`,
       metadata: { source: 'trial_ended_without_purchase' },
     },
     'remove the leftover trial credits'
   );
+}
+
+/** Keys of the rows that give a trial's credits back: `restore:trial:<team>:<removal row id>`. */
+const RESTORE_KEY_PREFIX = 'restore:trial:';
+
+/**
+ * Give back the trial credits a team lost when its trial ended, because the
+ * founder has extended the trial (the admin's Extend trial, #1286). Before this
+ * an extension gave the days back but not the credits: the removal and the grant
+ * are each once per team, ever, so an extended trial ran with no credits at all
+ * and the team met "You are out of AI credits" in the middle of it.
+ *
+ * Reads the team's newest removal (`kind` expire, trial source) and writes one
+ * row, in the trial source, for exactly what it took. The row's key names that
+ * removal, so each removal is given back at most once, however often the trial
+ * is extended. A team that never lost its trial credits gets nothing. Returns
+ * how many credits were given back, 0 when none were or it could not be written
+ * or read. Never throws.
+ */
+export async function restoreTrialCredits(
+  client: SupabaseClient,
+  input: { workspaceId: string; ownerUserId: string | null; actorUserId: string }
+): Promise<number> {
+  try {
+    const removals = await client
+      .from(TABLE)
+      .select('id, credits')
+      .eq('workspace_id', input.workspaceId)
+      .eq('pool', 'trial')
+      .eq('kind', 'expire')
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (removals.error) {
+      console.error('[credits] could not read the trial removals:', removals.error.message);
+      return 0;
+    }
+    const removal = (removals.data?.[0] ?? null) as { id?: unknown; credits?: unknown } | null;
+    const credits = removal ? -asNumber(removal.credits) : 0;
+    if (!removal || typeof removal.id !== 'string' || !(credits > 0)) return 0;
+
+    const { error } = await client.from(TABLE).insert({
+      workspace_id: input.workspaceId,
+      owner_user_id: input.ownerUserId,
+      actor_user_id: input.actorUserId,
+      pool: 'trial',
+      kind: 'adjust',
+      credits,
+      dedupe_key: `${RESTORE_KEY_PREFIX}${input.workspaceId}:${removal.id}`,
+      metadata: { source: 'trial_extended', note: 'Trial extended: trial credits given back' },
+    });
+    if (!error) return credits;
+    // Already given back for this removal: told twice, given once.
+    if (error.code !== UNIQUE_VIOLATION) console.error('[credits] could not give the trial credits back:', error.message);
+    return 0;
+  } catch (error) {
+    console.error('[credits] could not give the trial credits back:', error);
+    return 0;
+  }
 }
 
 /**
