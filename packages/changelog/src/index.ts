@@ -71,8 +71,8 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "November 14, 2026",
     highlights: [
-      "UrgAns can only pitch to curators who are on Urganize. When you name a playlist that is not one of them, it now says so and shows you the ones you can pitch to. Before, it kept saying the playlist was not found.",
-      "Tell UrgAns a playlist by its name and it finds it.",
+      "The AI can only pitch to curators who are on Urganize. When you name a playlist that is not one of them, it now says so and shows you the ones you can pitch to. Before, it kept saying the playlist was not found.",
+      "Tell the AI a playlist by its name and it finds it.",
     ],
   },
   {
@@ -287,8 +287,8 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "November 12, 2026",
     highlights: [
-      "UrgAns can now pitch your song to playlists that cost credits. Before, it said the song was already pitched and nothing went out.",
-      "Before you send, UrgAns shows how many credits the pitch uses, and tells you plainly when you need more.",
+      "The AI can now pitch your song to playlists that cost credits. Before, it said the song was already pitched and nothing went out.",
+      "Before you send, the AI shows how many credits the pitch uses, and tells you plainly when you need more.",
     ],
   },
   {
@@ -493,7 +493,7 @@ export const changelog: Release[] = [
     tag: "AI",
     date: "November 10, 2026",
     highlights: [
-      "The soft blur above the UrgAns reply box is shorter now, so you see more of the chat on your phone.",
+      "The soft blur above the AI reply box is shorter now, so you see more of the chat on your phone.",
       "Tap a song's smart link to copy it. The Copy and Share buttons are gone.",
     ],
   },
@@ -504,7 +504,7 @@ export const changelog: Release[] = [
     date: "November 9, 2026",
     highlights: [
       "Urganize now introduces itself as an app that helps artists, managers and record labels plan new music and keep track of every task.",
-      "UrgAns, the sign-in page and our emails describe it the same way.",
+      "The AI, the sign-in page and our emails describe it the same way.",
     ],
   },
   {
@@ -629,7 +629,7 @@ export const changelog: Release[] = [
     tag: "Account",
     date: "November 6, 2026",
     highlights: [
-      "When you buy UrgAns credits, they now show up on your account straight away.",
+      "When you buy AI credits, they now show up on your account straight away.",
     ],
   },
   {

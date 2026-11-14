@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { join, relative, sep } from 'path';
 import { describe, expect, it } from 'vitest';
+import { changelog } from '@urganize/changelog';
 
 /**
  * The assistant is called "AI" in copy, never "UrgAns" (founder call,
@@ -10,7 +11,23 @@ import { describe, expect, it } from 'vitest';
  * UrgansPanel, the Chappi env vars), so this looks for the capitalised word
  * "UrgAns" outside comments, which is how the name was always written in copy.
  * Test files and the changelog's old entries are history and are not read.
+ *
+ * The changelog's NEW entries are read (#1273): the rename went out in
+ * v1.245.1, and five entries written after it still used the old name because
+ * nothing checked them. Entries up to v1.245.1 stay as they were written.
  */
+
+const RENAME_VERSION = '1.245.1';
+
+/** Whether version `a` is newer than version `b` (plain x.y.z numbers). */
+function isNewer(a: string, b: string): boolean {
+  const left = a.split('.').map(Number);
+  const right = b.split('.').map(Number);
+  for (let i = 0; i < 3; i += 1) {
+    if ((left[i] ?? 0) !== (right[i] ?? 0)) return (left[i] ?? 0) > (right[i] ?? 0);
+  }
+  return false;
+}
 
 const WEB = join(__dirname, '..');
 const ROOT = join(WEB, '..', '..');
@@ -65,4 +82,21 @@ describe('the name UrgAns is gone from copy', () => {
     });
     expect(hits).toEqual([]);
   }, 30_000);
+
+  it('never says "UrgAns" in a What\'s new entry written after the rename', () => {
+    const fresh = changelog.filter((entry) => isNewer(entry.version, RENAME_VERSION));
+    // The rename is far enough back that there are always entries to read.
+    expect(fresh.length).toBeGreaterThan(50);
+    const hits = fresh.flatMap((entry) =>
+      [entry.title ?? '', ...entry.highlights]
+        .filter((line) => /\bUrgAns\b/.test(line))
+        .map((line) => `v${entry.version}: ${line.slice(0, 120)}`)
+    );
+    expect(hits).toEqual([]);
+  });
+
+  it('leaves the entries from before the rename as they were written', () => {
+    const old = changelog.filter((entry) => !isNewer(entry.version, RENAME_VERSION));
+    expect(old.some((entry) => entry.highlights.some((line) => /\bUrgAns\b/.test(line)))).toBe(true);
+  });
 });
