@@ -25,7 +25,7 @@ import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { TEAM_TRIAL_DAYS } from '@/lib/team-billing';
 import { CHECKOUT_PLANS, isCheckoutPlan, type CheckoutPlan } from '@/lib/self-serve';
 import { clearOnboardingLanding, readOnboardingLanding, trialSheetTier } from '@/lib/onboarding-landing';
-import { cardTrialOfferCopy, formatChargeDay, formatUsd, pricePerPeriod, type CardTrialPeriod } from '@/lib/bachs-trial';
+import { CARD_FEE_NOTE, cardTrialOfferCopy, formatChargeDay, formatUsd, pricePerPeriod, type CardTrialPeriod } from '@/lib/bachs-trial';
 import {
   Heading,
   Lede,
@@ -241,6 +241,7 @@ export default function AddCardPageClient() {
             : `Your first ${formatUsd(started.amountUsd)} comes after your free days. We will remind you the day before.`}
         </Lede>
         <p className="mt-2 text-[15px] text-content-secondary">You can cancel any time in Settings.</p>
+        <p className="mt-2 text-[15px] text-content-secondary">{CARD_FEE_NOTE}</p>
         <button type="button" onClick={enterApp} className={`${primaryButtonClass} mt-8`}>
           Start my first rollout
         </button>
