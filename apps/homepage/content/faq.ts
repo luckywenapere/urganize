@@ -1,4 +1,4 @@
-import { EXTRA_RELEASE_PRICE_NAIRA, PRICING_TIERS } from "@urganize/pricing";
+import { EXTRA_RELEASE_PRICE_NAIRA, EXTRA_RELEASE_PRICE_USD, PRICING_TIERS, formatMoney } from "@urganize/pricing";
 
 // The homepage FAQ, as data (2026-09-02). One list feeds both the visible
 // <details> accordion in FaqSection and the FAQPage JSON-LD in app/page.tsx,
@@ -11,12 +11,23 @@ import { EXTRA_RELEASE_PRICE_NAIRA, PRICING_TIERS } from "@urganize/pricing";
 // one-tap test path (v1.16.0), the Android app is only ever "offered inside
 // Urganize" (private beta, no store listing). Plain words, short sentences,
 // no Oxford comma — the copy rules every marketing string follows.
-export type FaqItem = { question: string; answer: string };
+// `answer` is plain text for the JSON-LD and llms.txt, which cannot know where
+// the reader is, so a price there names both currencies. `segments`, when
+// present, is what the page shows: a `{ price }` part renders in the visitor's
+// own currency (#1301).
+export type FaqPrice = "single";
+export type FaqItem = {
+  question: string;
+  answer: string;
+  segments?: readonly (string | { price: FaqPrice })[];
+};
 
 const artistsOn = (value: number | null) => (value === null ? "no limit" : `up to ${value}`);
 const managerArtists = artistsOn(PRICING_TIERS.manager.limits.artists);
 const proArtists = artistsOn(PRICING_TIERS.pro.limits.artists);
-const singlePrice = `₦${EXTRA_RELEASE_PRICE_NAIRA.toLocaleString("en-US")}`;
+const singlePriceBoth = `${formatMoney(EXTRA_RELEASE_PRICE_NAIRA, "NGN")} in Nigeria, ${formatMoney(EXTRA_RELEASE_PRICE_USD, "USD")} elsewhere`;
+const distributionBefore = `It sends your music to stores through our distribution partner. Solo Plus, ${PRICING_TIERS.pro.label} and Label include it. On Solo and ${PRICING_TIERS.manager.label} a single is `;
+const distributionAfter = ". You still post yourself.";
 
 // HOMEPAGE V2 (2026-10-17, URG-334; reworked 2026-10-19, URG-405: WhatsApp
 // adoption and no-release questions replace "Do I pay per person?" and "Does it
@@ -53,6 +64,7 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   },
   {
     question: "Does it post or distribute for me?",
-    answer: `It sends your music to stores through our distribution partner. Solo Plus, ${PRICING_TIERS.pro.label} and Label include it. On Solo and ${PRICING_TIERS.manager.label} a single is ${singlePrice}. You still post yourself.`,
+    answer: `${distributionBefore}${singlePriceBoth}${distributionAfter}`,
+    segments: [distributionBefore, { price: "single" }, distributionAfter],
   },
 ];

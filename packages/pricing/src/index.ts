@@ -1231,6 +1231,23 @@ export function pricingCurrencyForCountry(country: string | null | undefined): P
   return code === 'NG' ? 'NGN' : 'USD';
 }
 
+/** The cookie the marketing site's proxy sets from the visitor's country, so
+ *  a page can show the right currency before it paints (#1301). Not secret:
+ *  it only says which currency to show. */
+export const VISITOR_CURRENCY_COOKIE = 'urg_currency';
+
+/** The currency a cookie header says, or null when it says nothing usable. */
+export function currencyFromCookieHeader(cookieHeader: string | null | undefined): PricingCurrencyCode | null {
+  if (!cookieHeader) return null;
+  for (const part of cookieHeader.split(';')) {
+    const [name, ...rest] = part.trim().split('=');
+    if (name !== VISITOR_CURRENCY_COOKIE) continue;
+    const value = rest.join('=').trim();
+    return isPricingCurrency(value) ? value : null;
+  }
+  return null;
+}
+
 /** A tier's dollar price for one interval, amount in whole dollars and
  *  minorUnit in cents. Null for a tier with no dollar price (Label) or a
  *  sales-led tier. */

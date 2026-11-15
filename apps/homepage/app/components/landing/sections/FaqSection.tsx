@@ -1,5 +1,6 @@
 import { changelog } from "@/content/changelog";
 import { FAQ_ITEMS } from "@/content/faq";
+import { VisitorMoney } from "@/app/components/pricing/VisitorMoney";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
 import { centeredHeadlineClass } from "./shared";
@@ -56,7 +57,11 @@ export function FaqSection() {
                 </span>
               </summary>
               <p className="pb-6 text-base leading-8 text-[var(--marketing-text-muted)]">
-                {item.answer}
+                {item.segments
+                  ? item.segments.map((part, index) =>
+                      typeof part === "string" ? part : <VisitorMoney key={index} price={part.price} />
+                    )
+                  : item.answer}
               </p>
             </details>
           ))}

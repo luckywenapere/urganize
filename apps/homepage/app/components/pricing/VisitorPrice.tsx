@@ -22,5 +22,5 @@ export function VisitorPrice({
   const price = getTier(tierId).contactSales
     ? formatTierFromPrice(tierId, interval)
     : formatTierPrice(tierId, interval, currency);
-  return <>{price ?? fallback}</>;
+  return <span data-visitor-price>{price ?? fallback}</span>;
 }
