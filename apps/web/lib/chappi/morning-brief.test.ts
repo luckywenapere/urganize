@@ -197,3 +197,92 @@ describe('morningBriefText', () => {
     expect(text).toContain('Coming up:');
   });
 });
+
+describe('the brief follows the answers (#1314)', () => {
+  const REL2 = '44444444-4444-4444-8444-444444444444';
+  const releases = [
+    { id: REL, title: 'Midnight', artistName: 'Dorian', artistId: 'dorian', releaseDate: '2026-11-20' },
+    { id: REL2, title: 'Okada', artistName: 'Ayo', artistId: 'ayo', releaseDate: '2026-11-15' },
+  ];
+
+  it('leaves a brief with no answers as it was', () => {
+    const brief = buildMorningBrief(input({ tasks: [task({ dueDate: '2026-11-09' })] }));
+    expect(brief.order).toBeUndefined();
+    expect(brief.because).toBeUndefined();
+    expect(brief.waiting).toBeUndefined();
+    expect(brief.question).toBeUndefined();
+  });
+
+  it('puts release days first and says why', () => {
+    const brief = buildMorningBrief(input({ prefs: { top: { value: 'releases', at: '2026-11-10' } } }));
+    expect(brief.order?.[0]).toBe('upcoming');
+    expect(brief.because).toBe('Release days first, like you asked');
+  });
+
+  it('shows only today when asked, and the focus artist first', () => {
+    const brief = buildMorningBrief(
+      input({
+        releases,
+        tasks: [
+          task({ title: 'Later', dueDate: '2026-11-14', releaseId: REL }),
+          task({ title: 'Late Midnight', dueDate: '2026-11-09', releaseId: REL }),
+          task({ title: 'Today Okada', dueDate: '2026-11-11', releaseId: REL2 }),
+        ],
+        prefs: {
+          horizon: { value: 'today', at: '2026-11-10' },
+          artist: { value: 'ayo', name: 'Ayo', month: '2026-11', at: '2026-11-10' },
+        },
+      })
+    );
+    // Only today: 'Later' is gone. Late work still leads; the focus artist only
+    // goes first within the same urgency.
+    expect(brief.needs.map((item) => item.text.split(' · ')[0])).toEqual(['Late Midnight', 'Today Okada']);
+    expect(brief.upcoming[0].text).toContain('Okada');
+  });
+
+  it('never lets the focus artist push late work out', () => {
+    const brief = buildMorningBrief(
+      input({
+        releases,
+        tasks: [
+          ...[1, 2, 3, 4].map((n) => task({ title: `Ayo ${n}`, dueDate: '2026-11-13', releaseId: REL2 })),
+          task({ title: 'Late Midnight', dueDate: '2026-11-09', releaseId: REL }),
+        ],
+        prefs: { artist: { value: 'ayo', name: 'Ayo', month: '2026-11', at: '2026-11-10' } },
+      })
+    );
+    expect(brief.needs[0].text.split(' · ')[0]).toBe('Late Midnight');
+  });
+
+  it('adds the watched teammate\'s late work', () => {
+    const brief = buildMorningBrief(
+      input({
+        tasks: [
+          task({ title: 'Mix', assignedToUserId: ADA, dueDate: '2026-11-08' }),
+          task({ title: 'Not late', assignedToUserId: ADA, dueDate: '2026-11-12' }),
+        ],
+        prefs: { watch: { value: ADA, name: 'Ada Obi', at: '2026-11-10' } },
+      })
+    );
+    expect(brief.waitingOn).toBe('Ada');
+    expect(brief.waiting?.map((item) => item.meta)).toEqual(['3 days late']);
+    expect(morningBriefText(brief)).toContain('Waiting on Ada');
+  });
+
+  it('carries the question through storage and into the text', () => {
+    const question = {
+      id: 'top' as const,
+      text: 'What do you want at the top each morning?',
+      choices: [
+        { id: 'late', label: "What's late" },
+        { id: 'releases', label: 'Release days' },
+      ],
+    };
+    const brief = buildMorningBrief(input({ question, prefs: { top: { value: 'team', at: '2026-11-10' } } }));
+    const back = sanitizeMorningBrief(JSON.parse(JSON.stringify(brief)));
+    expect(back?.question).toEqual(question);
+    expect(back?.order).toEqual(brief.order);
+    expect(back?.because).toBe(brief.because);
+    expect(morningBriefText(brief)).toContain("Today's question");
+  });
+});

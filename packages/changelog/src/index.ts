@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.288.0",
+    title: "Your morning brief asks one question a day",
+    tag: "AI",
+    date: "November 16, 2026",
+    highlights: [
+      "From your second morning, the brief ends with one short question. Tap an answer and tomorrow's brief follows it.",
+      "See or clear your answers, or turn the questions off, in Settings under Notifications.",
+    ],
+  },
+  {
     version: "1.287.0",
     title: "Your wallpaper on your phone",
     tag: "App",

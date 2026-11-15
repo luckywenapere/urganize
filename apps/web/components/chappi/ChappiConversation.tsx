@@ -68,7 +68,8 @@ import {
   newChatId,
 } from '@/lib/chappi/conversation-history';
 import { useTaskStore } from '@/stores/useTaskStore';
-import { ChappiBriefCard } from '@/components/chappi/ChappiBriefCard';
+import { ChappiBriefCard, type BriefTapOutcome } from '@/components/chappi/ChappiBriefCard';
+import { answerBriefQuestion } from '@/lib/chappi/brief-answer-client';
 import { ChappiEarlierMessages } from '@/components/chappi/ChappiEarlierMessages';
 import { dayLinesFor } from '@/lib/chappi/day-divider';
 import { ChatDayLine } from '@/components/chappi/ChatDayLine';
@@ -763,6 +764,21 @@ export function ChappiConversation({
   // The recap card reports "saved" / "could not save" back into the log. Same
   // rule as the upload handlers above: only into the transcript it sat in.
   const handleReportRecap = (message: string) => reportFromCard(message);
+
+  // A tap on the morning brief's question (#1314). Saved first, then the tap
+  // shows as the person's turn and the reply says what changes. The ids are
+  // fixed per brief day, so the card can find its answer and nothing doubles.
+  // An answer given on another tab or device comes back as `already`, and is
+  // shown the same way.
+  const handleBriefAnswer = async (date: string, choiceId: string): Promise<BriefTapOutcome> => {
+    const result = await answerBriefQuestion(date, choiceId);
+    if (!result.ok) return { error: result.error, closed: result.closed };
+    const answerId = `brief-answer-${date}`;
+    if (useChappiStore.getState().messages.some((message) => message.id === answerId)) return null;
+    appendMessage({ id: answerId, role: 'user', content: result.label });
+    appendMessage({ id: `brief-ack-${date}`, role: 'assistant', content: result.ack });
+    return null;
+  };
 
   // A chip under the project offer: the choice is the user's turn, the tasks
   // are added straight through the task route (no model, no credits), and the
@@ -1886,6 +1902,7 @@ export function ChappiConversation({
             }
             onCoverArtUploaded={handleCoverArtUploaded}
             onDismissCoverArtUpload={() => setCoverArtReleaseId(null)}
+            onBriefAnswer={handleBriefAnswer}
             recap={
               recapRelease
                 ? { releaseId: recapRelease.id, releaseTitle: recapRelease.title }
@@ -1984,6 +2001,8 @@ type TranscriptProps = {
   coverArtUpload: { releaseId: string; releaseTitle: string } | null;
   onCoverArtUploaded: (coverArt: ReleaseCoverArt) => void;
   onDismissCoverArtUpload: () => void;
+  /** Saves a tap on the morning brief's question (#1314). */
+  onBriefAnswer: (date: string, choiceId: string) => Promise<BriefTapOutcome>;
   /** A finished recap poster the assistant put in the log, ready to save. */
   recap: { releaseId: string; releaseTitle: string } | null;
   onDismissRecap: () => void;
@@ -2022,6 +2041,7 @@ function Transcript({
   coverArtUpload,
   onCoverArtUploaded,
   onDismissCoverArtUpload,
+  onBriefAnswer,
   recap,
   onDismissRecap,
   onReportRecap,
@@ -2032,6 +2052,8 @@ function Transcript({
 }: TranscriptProps) {
   // Day lines in the one chat (#1207): above the first message of each day.
   const dayLines = dayLinesFor(messages);
+  // Only the newest brief's question can be answered (#1314).
+  const latestBriefId = [...messages].reverse().find((entry) => entry.kind === 'brief' && entry.brief)?.id ?? null;
   return (
     <div className="space-y-5 pb-2">
       <ChappiEarlierMessages />
@@ -2044,7 +2066,12 @@ function Transcript({
             {message.content}
           </p>
         ) : message.kind === 'brief' && message.brief ? (
-          <ChappiBriefCard brief={message.brief} messageId={markMessages ? message.id : undefined} />
+          <ChappiBriefCard
+            brief={message.brief}
+            messageId={markMessages ? message.id : undefined}
+            answer={messages.find((entry) => entry.id === `brief-answer-${message.brief?.date}`)?.content ?? null}
+            onAnswer={message.id === latestBriefId ? onBriefAnswer : undefined}
+          />
         ) : message.role === 'user' ? (
           <div data-message-id={markMessages ? message.id : undefined} className="flex justify-end">
             <div className="flex max-w-[85%] flex-col items-end">

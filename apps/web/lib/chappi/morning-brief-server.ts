@@ -26,12 +26,15 @@ import { firstNameFrom } from '@/lib/home/header';
 import { sendPushToUsers } from '@/lib/push-server';
 import { URGANS_HREF } from '@/lib/shell-nav';
 import { appendToMainChat } from './conversations-server';
+import { readBriefPrefs, updateBriefPrefs } from './brief-answers-server';
+import { pickBriefQuestion, type BriefPerson, type BriefPrefs, type BriefQuestion } from './brief-questions';
 import {
   BRIEF_WORDING_SCHEMA,
   applyBriefWording,
   buildBriefWordingMessages,
   buildMorningBrief,
   lagosDateKey,
+  MORNING_BRIEFS_TABLE,
   morningBriefPushBody,
   morningBriefText,
   parseBriefWording,
@@ -39,7 +42,7 @@ import {
   type MorningBrief,
 } from './morning-brief';
 
-export const MORNING_BRIEFS_TABLE = 'morning_briefs';
+export { MORNING_BRIEFS_TABLE };
 const ACTIVE_DAYS = 14;
 const WORDING_TIMEOUT_MS = 8_000;
 const CONCURRENCY = 3;
@@ -162,6 +165,52 @@ export async function writeMorningBrief(
       assignedToUserId: task.assignedToUserId,
       assigneeName: task.assignee?.name ?? null,
     }));
+    // One question a day (#1314): whether this is their first brief (no
+    // question on the first one), and who the questions can name.
+    const earlierRead = await admin
+      .from(MORNING_BRIEFS_TABLE)
+      .select('id')
+      .eq('user_id', userId)
+      .lt('brief_date', date)
+      .limit(1);
+    const artists: BriefPerson[] = [];
+    const seenArtists = new Set<string>();
+    for (const release of commandCenter.releases) {
+      const artistId = release.artistId ? String(release.artistId) : '';
+      if (!artistId || seenArtists.has(artistId) || !release.artistName) continue;
+      seenArtists.add(artistId);
+      artists.push({ id: artistId, name: release.artistName });
+    }
+    const teammates: BriefPerson[] = [];
+    const seenPeople = new Set<string>([userId]);
+    for (const task of tasks) {
+      const id = task.assignedToUserId;
+      if (!id || seenPeople.has(id) || !task.assigneeName?.trim()) continue;
+      seenPeople.add(id);
+      teammates.push({ id, name: task.assigneeName.trim() });
+    }
+    // The question is saved BEFORE the brief goes out, so a tap on it always
+    // finds it. A failed read or save asks nothing today rather than guess.
+    let prefs: BriefPrefs = {};
+    let question: BriefQuestion | null = null;
+    if (!earlierRead.error) {
+      const picked = await updateBriefPrefs(admin, userId, (current) => {
+        const result = pickBriefQuestion(current, {
+          today: date,
+          hadEarlierBrief: (earlierRead.data ?? []).length > 0,
+          artists,
+          teammates,
+        });
+        const changed = JSON.stringify(result.prefs) !== JSON.stringify(current);
+        return { prefs: changed ? result.prefs : null, value: result.question };
+      });
+      if (picked.ok) {
+        prefs = picked.prefs;
+        question = picked.value;
+      }
+    }
+    if (!question) prefs = (await readBriefPrefs(admin, userId)) ?? prefs;
+
     const facts = buildMorningBrief({
       userId,
       firstName: home.header.firstName || firstNameFrom(null),
@@ -170,10 +219,13 @@ export async function writeMorningBrief(
         id: release.id,
         title: release.title,
         artistName: release.artistName,
+        artistId: release.artistId ?? null,
         releaseDate: release.releaseDate,
       })),
       since: new Date(now.getTime() - 24 * 3600_000),
       now,
+      prefs,
+      question,
     });
     const brief = applyBriefWording(facts, await wordBrief(admin, facts, userId, null));
 
