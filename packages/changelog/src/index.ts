@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.287.1",
+    tag: "App",
+    date: "November 15, 2026",
+    highlights: [
+      "Your Home wallpaper now stays still while you scroll, on your phone, tablet and computer.",
+    ],
+  },
+  {
     version: "1.287.0",
     title: "Your wallpaper on your phone",
     tag: "App",
