@@ -65,7 +65,7 @@ export const LANDING_SHARE_DESCRIPTION = SHARE_DESCRIPTION;
 // Bump this string every time public/opengraph-image.jpg changes so the
 // URL is new to every platform and the very next fetch pulls fresh bytes,
 // instead of depending on a manual re-scrape request or an unknown TTL.
-const SHARE_IMAGE_VERSION = "2026-11-15-group-chat";
+const SHARE_IMAGE_VERSION = "2026-11-15-dm-sans";
 
 const SHARE_IMAGE = {
   url: `${SITE_URL}/opengraph-image.jpg?v=${SHARE_IMAGE_VERSION}`,
@@ -108,7 +108,7 @@ const SHARE_IMAGE = {
 //    Do7SrY1rfUe9AnuvdARCMu) and update its alt here in the same commit;
 //  - bump SHARE_CARDS_VERSION whenever any file in public/share/ changes, or
 //    WhatsApp and X keep showing the old picture.
-const SHARE_CARDS_VERSION = "2026-11-15-one-plan";
+const SHARE_CARDS_VERSION = "2026-11-15-dm-sans";
 // 2026-11-15 (#1299): features, for-managers and for-executives redrawn with
 // their new H1s by scripts/generate-share-cards.mjs, which is now their source.
 // 2026-11-10 (#1173, mocks approved by the founder): features.jpg and

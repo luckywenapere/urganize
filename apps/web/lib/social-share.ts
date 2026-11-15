@@ -446,7 +446,7 @@ export function buildSnapchatCaption(
 
 // ── The image ───────────────────────────────────────────────────────────────
 
-/** Top-left of the poster, in the catalog voice (Space Mono, uppercase). */
+/** Top-left of the poster, in the catalog voice (DM Mono, uppercase). */
 export function shareEyebrow(releaseType: DbReleaseType): string {
   return `NEW ${releaseNoun(releaseType).toUpperCase()}`;
 }
@@ -506,9 +506,11 @@ const TEXT_COLUMN: Record<ShareFormat, Record<'cover' | 'type', number>> = {
   status: { type: 888, cover: 888 },
 };
 
-// A deliberately wide estimate of one character of Young Serif, as a
-// share of the font size. Measured on the rendered posters it runs 0.43 to
-// 0.48; 0.5 leaves a margin, so a line sized against it always fits.
+// A deliberately wide estimate of one character of display type, as a share
+// of the font size. Measured on the rendered posters in Young Serif it ran
+// 0.43 to 0.48; DM Sans Bold, the display face since 2026-11-15 (#1312), is
+// narrower than Young Serif in every glyph set checked, so 0.5 still leaves a
+// margin and a line sized against it always fits.
 const DISPLAY_CHAR_EM = 0.5;
 
 /** The largest size at which `characters` of display type fit in `column`. */

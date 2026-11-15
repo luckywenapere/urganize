@@ -104,10 +104,10 @@ const CARDS = {
 };
 
 const page = ({ path, lead, accent, body }) => `<!doctype html><html><head><meta charset="utf-8"><style>
-@font-face{font-family:YS;src:url(${url(join(FONTS, 'YoungSerif-Regular.ttf'))})}
-@font-face{font-family:SM;src:url(${url(join(FONTS, 'SpaceMono-Regular.ttf'))})}
-@font-face{font-family:SG;font-weight:400;src:url(${url(join(FONTS, 'SpaceGrotesk-Regular.ttf'))})}
-@font-face{font-family:SG;font-weight:500;src:url(${url(join(FONTS, 'SpaceGrotesk-Medium.ttf'))})}
+@font-face{font-family:YS;src:url(${url(join(FONTS, 'DMSans-Bold.ttf'))})}
+@font-face{font-family:SM;src:url(${url(join(FONTS, 'DMMono-Regular.ttf'))})}
+@font-face{font-family:SG;font-weight:400;src:url(${url(join(FONTS, 'DMSans-Regular.ttf'))})}
+@font-face{font-family:SG;font-weight:500;src:url(${url(join(FONTS, 'DMSans-Medium.ttf'))})}
 *{margin:0;box-sizing:border-box;font-style:normal}
 body{width:1200px;height:630px;overflow:hidden;background:#f5f0e6;color:#1a1611;font-family:SG;font-size:17px}
 .top{display:flex;justify-content:space-between;align-items:center;padding:38px 64px 0}

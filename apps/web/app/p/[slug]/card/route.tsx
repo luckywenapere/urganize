@@ -86,7 +86,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ slu
             top: 72,
             left: 78,
             color: ACCENT,
-            fontFamily: 'Space Grotesk',
+            fontFamily: 'DM Sans',
             fontWeight: 500,
             fontSize: 36,
             letterSpacing: 10,
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ slu
           URGANIZE
         </div>
         <div style={{ position: 'absolute', left: 78, right: 78, bottom: 84, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', fontFamily: 'Young Serif', fontSize: nameSize, lineHeight: 0.95 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', fontFamily: 'DM Sans Display', fontSize: nameSize, lineHeight: 0.95 }}>
             <span>{last ? first : ''}</span>
             <span style={{ display: 'flex' }}>
               {last || first}
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ slu
             </span>
           </div>
           {role ? (
-            <div style={{ marginTop: 30, fontFamily: 'Space Mono', fontSize: 39, color: MUTED, letterSpacing: 2 }}>
+            <div style={{ marginTop: 30, fontFamily: 'DM Mono', fontSize: 39, color: MUTED, letterSpacing: 2 }}>
               {role.toUpperCase()}
             </div>
           ) : null}
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ slu
                     alignItems: 'center',
                     justifyContent: 'center',
                     overflow: 'hidden',
-                    fontFamily: 'Space Grotesk',
+                    fontFamily: 'DM Sans',
                     fontSize: 40,
                   }}
                 >
@@ -147,7 +147,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ slu
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontFamily: 'Space Grotesk',
+              fontFamily: 'DM Sans',
               fontWeight: 500,
               fontSize: 42,
             }}

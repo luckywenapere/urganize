@@ -6,9 +6,11 @@ import path from 'node:path';
 // Satori, which backs next/og's ImageResponse, needs raw font binaries and
 // cannot read next/font's CSS variables. It also does not support variable
 // fonts or woff2, which is why these are STATIC ttf cuts checked into the repo
-// rather than anything pulled from Google at build time. Young Serif ships
-// as its one regular cut; Space Grotesk stays for the card's body text because
-// Instrument Sans is only published as a variable font, which satori cannot read.
+// rather than anything pulled from Google at build time. Since 2026-11-15
+// (#1312) every poster wears DM Sans, the Urganize logo's lettering, and DM
+// Mono. Headlines use the family 'DM Sans Display', which is the Bold cut on
+// its own: the poster files ask for a display face by family name, and this
+// way a headline is bold whatever weight its style asks for.
 //
 // Vercel's output tracing cannot see a runtime readFile, so
 // next.config.js declares outputFileTracingIncludes for this route. If a
@@ -17,17 +19,19 @@ import path from 'node:path';
 export type RecapFont = {
   name: string;
   data: Buffer;
-  weight: 400 | 500 | 600;
+  weight: 400 | 500 | 600 | 700;
   style: 'normal';
 };
 
 const FONT_DIR = path.join(process.cwd(), 'assets', 'fonts');
 
-const FONT_FILES: Array<{ file: string; name: string; weight: 400 | 500 | 600 }> = [
-  { file: 'YoungSerif-Regular.ttf', name: 'Young Serif', weight: 400 },
-  { file: 'SpaceGrotesk-Regular.ttf', name: 'Space Grotesk', weight: 400 },
-  { file: 'SpaceGrotesk-Medium.ttf', name: 'Space Grotesk', weight: 500 },
-  { file: 'SpaceMono-Regular.ttf', name: 'Space Mono', weight: 400 },
+const FONT_FILES: Array<{ file: string; name: string; weight: 400 | 500 | 600 | 700 }> = [
+  { file: 'DMSans-Bold.ttf', name: 'DM Sans Display', weight: 400 },
+  { file: 'DMSans-Regular.ttf', name: 'DM Sans', weight: 400 },
+  { file: 'DMSans-Medium.ttf', name: 'DM Sans', weight: 500 },
+  { file: 'DMSans-SemiBold.ttf', name: 'DM Sans', weight: 600 },
+  { file: 'DMSans-Bold.ttf', name: 'DM Sans', weight: 700 },
+  { file: 'DMMono-Regular.ttf', name: 'DM Mono', weight: 400 },
 ];
 
 // Module-level cache: a warm lambda reads these off disk exactly once, which

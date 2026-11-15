@@ -14,8 +14,8 @@
 // THE 2026-10-31 CARD (#939, founder approved the mock). Centred, so the logo,
 // headline and timeline pill all survive WhatsApp's small square thumbnail,
 // which crops the middle 630x630. Logo on top, "From idea / to execution." in
-// Young Serif, a cream pill holding a release timeline that ends in a gold
-// drop-day diamond, two curved ribbons carrying real plan steps in Space Mono
+// DM Sans Bold, a cream pill holding a release timeline that ends in a gold
+// drop-day diamond, two curved ribbons carrying real plan steps in DM Mono
 // that cross behind the pill, all on the homepage dawn (green sky, gold glow)
 // with a blurred timeline screenshot and grain behind it.
 //
@@ -81,8 +81,8 @@ const RIBBON_TWO =
   'follow up with the blogs · remind the team on WhatsApp · plan the next one ·';
 
 const html = `<!doctype html><html><head><meta charset="utf-8"><style>
-@font-face{font-family:YS;src:url(${url(join(FONTS, 'YoungSerif-Regular.ttf'))})}
-@font-face{font-family:SM;src:url(${url(join(FONTS, 'SpaceMono-Regular.ttf'))})}
+@font-face{font-family:YS;src:url(${url(join(FONTS, 'DMSans-Bold.ttf'))})}
+@font-face{font-family:SM;src:url(${url(join(FONTS, 'DMMono-Regular.ttf'))})}
 *{margin:0;box-sizing:border-box}
 body{width:1200px;height:630px;overflow:hidden;background:#0c0c0d}
 .card{position:relative;width:1200px;height:630px;overflow:hidden;background:

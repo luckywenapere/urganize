@@ -54,8 +54,8 @@ html[data-marketing-theme="dark"] .ug-stage {
 }
 
 .ug-stage .ss-stage {
-  --ss-font: var(--font-urg-sans), "Instrument Sans", system-ui, sans-serif;
-  --ss-mono: var(--font-home-mono), "Space Mono", ui-monospace, monospace;
+  --ss-font: var(--font-home-display), "DM Sans", system-ui, sans-serif;
+  --ss-mono: var(--font-home-mono), "DM Mono", ui-monospace, monospace;
   --ss-canvas: #f0ebe1;
   --ss-surface: var(--ug-surface);
   --ss-well: #efe9de;
@@ -126,7 +126,7 @@ html[data-marketing-theme="dark"] .ug-stage .ss-stage {
 
 .ug-stage .ug-cover { position: relative; flex: none; border-radius: 6px; overflow: hidden; }
 .ug-stage .ug-cover__moon { position: absolute; width: 46%; height: 46%; right: 10%; top: 10%; border-radius: 50%; background: rgba(255, 255, 255, 0.22); }
-.ug-stage .ug-cover__t { position: absolute; left: 4px; bottom: 5px; right: 4px; font-family: var(--font-home-display), 'Young Serif', Georgia, serif; font-size: 5.5px; line-height: 1.1; color: #fff; font-weight: 700; }
+.ug-stage .ug-cover__t { position: absolute; left: 4px; bottom: 5px; right: 4px; font-family: var(--font-home-display), "DM Sans", system-ui, sans-serif; font-size: 5.5px; line-height: 1.1; color: #fff; font-weight: 700; }
 
 .ug-stage .ug-draft { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ug-draft); background: var(--ug-draft-bg); padding: 4px 9px; border-radius: 999px; }
 .ug-stage .ug-draft__dot { width: 5px; height: 5px; border-radius: 50%; background: var(--ug-draft); }
