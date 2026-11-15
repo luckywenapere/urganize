@@ -27,6 +27,7 @@ import { isHomeLocation } from '@/lib/home-path';
 import { useReleaseParamStore } from '@/stores/useReleaseParamStore';
 import { ReleaseParamSync } from './ReleaseParamSync';
 import { RootShellSkeleton } from '@/components/loading/RootShellSkeleton';
+import { AppWallpaperMark } from '@/components/app/AppWallpaper';
 import { WorkspacePageErrorBoundary } from '@/components/app/WorkspacePageErrorBoundary';
 import { ChappiHistoryBridge } from '@/components/chappi/ChappiHistoryBridge';
 import { isChappiHistoryEnabled } from '@/lib/chappi/history-flag';
@@ -126,6 +127,7 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
       <>
         {CHAT_HISTORY_ENABLED ? <ChappiHistoryBridge /> : null}
         <ReleaseParamSync />
+        <AppWallpaperMark />
         <SwipeFrame userName={workspaceUserName} showHelp={showHelpMenu}>
           {children}
         </SwipeFrame>
@@ -141,6 +143,7 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
       <>
         {CHAT_HISTORY_ENABLED ? <ChappiHistoryBridge /> : null}
         <ReleaseParamSync />
+        <AppWallpaperMark />
         <div className="app-layout min-h-dvh">
           <main id="main-content" tabIndex={-1} className="min-h-dvh pb-10 focus:outline-none">
             <WorkspacePageErrorBoundary>
@@ -159,6 +162,8 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
     <>
       {CHAT_HISTORY_ENABLED ? <ChappiHistoryBridge /> : null}
       <ReleaseParamSync />
+      {/* The wallpaper behind the signed-in app (#1320). */}
+      {showWorkspaceChrome ? <AppWallpaperMark /> : null}
       {showWorkspaceChrome ? (
         // PAGE WIDTH SOURCE OF TRUTH.
         // The inner mx-auto max-w-[1440px] wrapper below is the ONLY place

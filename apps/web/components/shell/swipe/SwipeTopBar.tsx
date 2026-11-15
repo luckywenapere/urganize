@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '@urganize/ui';
-import { SWIPE_TABS, lerpIndicator, swipeAreaForPath, swipeBackAction, swipeBackFor, swipeTabIndex, type SwipeTabKey } from '@/lib/swipe-nav';
+import { SWIPE_TABS, lerpIndicator, swipeAreaForPath, swipeBackAction, swipeBackFor, swipeLitTab, swipeTabIndex, swipeUnderline, type SwipeTabKey } from '@/lib/swipe-nav';
 import { readPreviousLocation } from '@/lib/nav-history';
 import { ArrowLeft } from '@/components/icons';
 import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
@@ -49,16 +49,18 @@ export function SwipeTopBar({ showHelp, pagerActive }: { showHelp: boolean; page
       });
     let rects = measure();
     const paint = (progress: number) => {
-      const { left, width } = lerpIndicator(rects, progress);
+      // The rollout chats sit inside Ask Chappi, so the underline holds there;
+      // on the way to Settings it fades, and the ring on your photo says where
+      // you are instead (#1320).
+      const underline = swipeUnderline(progress);
+      const { left, width } = lerpIndicator(rects, underline.tab);
       indicator.style.transform = `translateX(${left}px)`;
       indicator.style.width = `${width}px`;
-      // Past the last tab is the Settings page: the underline fades out there,
-      // and the ring on your photo says where you are instead.
-      indicator.style.opacity = String(Math.max(0, Math.min(1, SWIPE_TABS.length - progress)));
-      // Label colour follows the same progress: full at its page, 45% a page away.
+      indicator.style.opacity = String(underline.opacity);
+      // Label colour follows the same progress: full at its tab, 45% a tab away.
       labelRefs.current.forEach((label, i) => {
         if (!label) return;
-        const near = Math.max(0, 1 - Math.abs(progress - i));
+        const near = Math.max(0, 1 - Math.abs(underline.tab - i));
         // Opacity, not a colour, so the light theme keeps its own ink.
         label.style.opacity = String(0.45 + 0.55 * near);
       });
@@ -95,19 +97,22 @@ export function SwipeTopBar({ showHelp, pagerActive }: { showHelp: boolean; page
     go(key);
   };
 
+  // From md (768px, tablets) the bar takes the computer's shape: the mark on
+  // the left, the tabs in the middle, 72px tall (#1320), so a tablet does not
+  // look like a different app. Below md it is the phone bar.
   return (
     <header
-      className="swipe-topbar sticky top-0 z-40 shrink-0 bg-bg-base pt-[env(safe-area-inset-top,0px)] lg:border-b lg:border-content-primary/[0.06]"
+      className="swipe-topbar sticky top-0 z-40 shrink-0 bg-bg-base pt-[env(safe-area-inset-top,0px)] md:border-b md:border-content-primary/[0.06]"
       data-swipe-topbar
     >
-      <div className="relative flex h-[50px] items-center px-5 lg:h-[72px] lg:px-8">
-        <Link href={SWIPE_TABS[0].href} className="motion-focus hidden items-center lg:flex" aria-label="Urganize, Artists">
+      <div className="relative flex h-[50px] items-center px-5 md:h-[72px] md:px-8">
+        <Link href={SWIPE_TABS[0].href} className="motion-focus hidden items-center md:flex" aria-label="Urganize, Artists">
           <Logo size="sm" priority />
         </Link>
-        <nav aria-label="Primary" className="flex h-full items-center lg:absolute lg:inset-y-0 lg:left-1/2 lg:-translate-x-1/2">
-          <div ref={rowRef} className="relative flex h-full items-center gap-6 lg:gap-14">
+        <nav aria-label="Primary" className="flex h-full items-center md:absolute md:inset-y-0 md:left-1/2 md:-translate-x-1/2">
+          <div ref={rowRef} className="relative flex h-full items-center gap-6 md:gap-14">
             {SWIPE_TABS.map((tab, i) => {
-              const active = area === tab.key;
+              const active = area !== null && swipeLitTab(area) === tab.key;
               return (
                 <Link
                   key={tab.key}
@@ -118,7 +123,7 @@ export function SwipeTopBar({ showHelp, pagerActive }: { showHelp: boolean; page
                   onClick={onTab(tab.key)}
                   aria-current={active ? 'page' : undefined}
                   data-swipe-tab={tab.key}
-                  className="motion-focus relative flex h-full items-center text-[17px] font-semibold lg:text-[19px]"
+                  className="motion-focus relative flex h-full items-center text-[17px] font-semibold md:text-[19px]"
                 >
                   <span
                     ref={(el) => {
@@ -128,9 +133,9 @@ export function SwipeTopBar({ showHelp, pagerActive }: { showHelp: boolean; page
                   >
                     {tab.label}
                   </span>
-                  {tab.key === 'urgans' && unread > 0 && area !== 'urgans' ? (
+                  {tab.key === 'urgans' && unread > 0 && (area === null || swipeLitTab(area) !== 'urgans') ? (
                     <>
-                      <span aria-hidden="true" className="absolute -right-2 top-[13px] h-1.5 w-1.5 rounded-full bg-brand lg:top-[23px]" />
+                      <span aria-hidden="true" className="absolute -right-2 top-[13px] h-1.5 w-1.5 rounded-full bg-brand md:top-[23px]" />
                       <span className="sr-only">, something needs you</span>
                     </>
                   ) : null}
@@ -140,7 +145,7 @@ export function SwipeTopBar({ showHelp, pagerActive }: { showHelp: boolean; page
             <span
               ref={indicatorRef}
               aria-hidden="true"
-              className="pointer-events-none absolute bottom-1 left-0 h-[2.5px] rounded-full bg-brand lg:bottom-2.5"
+              className="pointer-events-none absolute bottom-1 left-0 h-[2.5px] rounded-full bg-brand md:bottom-2.5"
               style={{ width: 0 }}
             />
           </div>

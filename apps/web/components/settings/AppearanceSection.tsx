@@ -1,24 +1,17 @@
 'use client';
 
-import { ThemeToggle } from '@urganize/ui';
 import { panelClass } from './panelClass';
 import { InfoTip } from '@/components/shared/HelpTip';
-import { HomeWallpaperChoice } from '@/components/home-desktop/HomeWallpaper';
-import { HOME_WALLPAPER_COPY } from '@/lib/home-desktop/wallpaper';
+import { AppearanceChoice } from './AppearanceChoice';
 
 export function AppearanceSection() {
   return (
     <section id="theme" className={`${panelClass} scroll-mt-4`}>
       <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary flex items-center gap-2">Appearance
-        <InfoTip label="Appearance" text="Choose how Urganize looks on this device." />
+        <InfoTip label="Appearance" text="Choose how Urganize looks on this device. It also sets the picture behind every page." />
       </h2>
-      <ThemeToggle />
-      {/* Home wallpaper (#1305), on a computer and a phone (#1318). */}
-      <div className="mt-6 max-w-[360px]">
-        <h3 className="text-sm font-semibold text-content-primary">Home wallpaper</h3>
-        <p className="mt-0.5 text-[13px] leading-[18px] text-content-secondary">{HOME_WALLPAPER_COPY.settingsAbout}</p>
-        <HomeWallpaperChoice source="settings" className="mt-3" />
-      </div>
+      {/* Light, Dark, Auto, System (#1320): the theme and the wallpaper. */}
+      <AppearanceChoice />
     </section>
   );
 }

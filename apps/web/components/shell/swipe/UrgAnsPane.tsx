@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Home as HomeIcon } from '@/components/icons';
+import { Home as HomeIcon, MessageSquare } from '@/components/icons';
 import { ChappiConversation } from '@/components/chappi/ChappiConversation';
 import { ChappiScopePicker } from '@/components/chappi/ChappiScopePicker';
 import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
@@ -13,7 +13,8 @@ import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { isChappiHistoryEnabled } from '@/lib/chappi/history-flag';
 import { formatRelativeTime } from '@/lib/relative-time';
 import { getNotificationMessage, type TaskNotification } from '@/lib/tasks';
-import { readUrgansLink } from '@/lib/swipe-nav';
+import { SESSIONS_HREF, readUrgansLink } from '@/lib/swipe-nav';
+import Link from 'next/link';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { refreshMainChat, useChappiHistoryStore } from '@/stores/useChappiHistoryStore';
 import { showMain } from './main-thread';
@@ -156,6 +157,21 @@ export function UrgAnsPane({ active }: { active: boolean }) {
           scopedReleaseId={scopedReleaseId}
           onSelect={setScopedReleaseId}
         />
+        {/* The rollout chats live inside Ask Chappi, as on the computer
+            (#1320): the phone has two tabs now, Home and Ask Chappi. */}
+        <Link
+          href={SESSIONS_HREF}
+          onClick={(event) => {
+            const go = useSwipeNavStore.getState().go;
+            if (!go || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+            event.preventDefault();
+            go('sessions');
+          }}
+          className="motion-focus motion-press ml-auto inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface/70 px-3.5 text-[13px] font-semibold text-content-primary"
+        >
+          <MessageSquare className="h-4 w-4" aria-hidden="true" />
+          Rollouts
+        </Link>
       </div>
       <div className="shrink-0">
         <InviteTeamBanner />

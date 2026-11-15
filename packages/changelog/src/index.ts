@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.289.0",
+    title: "A picture behind every page",
+    tag: "App",
+    date: "November 16, 2026",
+    highlights: [
+      "A calm picture now sits behind every page, on your phone, tablet and computer.",
+      "Settings, Appearance has four choices: Light, Dark, Auto and System. Auto changes the picture with the time of day.",
+      "On your phone and tablet the menu is now Home and Ask Chappi. Your rollout chats open from the Rollouts button in Ask Chappi.",
+    ],
+  },
+  {
     version: "1.288.0",
     title: "Your morning brief asks one question a day",
     tag: "AI",

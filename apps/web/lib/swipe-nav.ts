@@ -1,6 +1,7 @@
 // The swipe navigation (URG-380, Oyin approved the mocks Oct 18, 2026).
 //
-// Three top tabs you swipe between, Home · Assistant · Sessions (Team moved
+// Two top tabs you swipe between since #1320, Home · Ask Chappi (the rollout
+// chats are a page inside Ask Chappi) (Team moved
 // into the avatar's account page Nov 1, 2026 and Sessions took its place, one
 // per rollout, founder call), and one avatar menu for everything else. The bottom bar and the More sheet go away while it
 // is on. On for everyone since v1.160.5; a person can opt out (see
@@ -11,7 +12,7 @@
 // unit tested without a DOM. The numbers are the approved motion spec in
 // /workspace/work/nav-swipe-mocks/notes.md, copied, never re-tuned by eye.
 
-import { URGANS_HREF, ARTISTS_HREF, TEAM_HREF, CATALOGUE_LABEL } from './shell-nav';
+import { URGANS_HREF, ARTISTS_HREF, TEAM_HREF, CATALOGUE_LABEL, CHAT_NAV_LABEL } from './shell-nav';
 import { artistIdFromPath } from './artist-page';
 
 export type SwipeTabKey = 'artists' | 'urgans' | 'sessions' | 'settings';
@@ -25,20 +26,45 @@ export const SESSIONS_HREF = '/dashboard/sessions';
 
 export type SwipeTab = { key: SwipeTabKey; label: string; href: string };
 
+// Two tabs, the same as the computer's top bar (#1320, Oyin: "reduce to 2 and
+// change to ask chappi ... flow like the desktop"): Home and Ask Chappi. The
+// rollout chats (the Rollouts tab from Nov 2, 2026) are now a page inside Ask
+// Chappi, the way the computer keeps them in Ask Chappi's left column (#1218):
+// the Rollouts button at the top of Ask Chappi opens them, and a swipe on from
+// Ask Chappi reaches them too.
 export const SWIPE_TABS: readonly SwipeTab[] = [
   // The same word as the classic menu (Home since Oct 30, 2026, #886, #892).
   { key: 'artists', label: CATALOGUE_LABEL, href: ARTISTS_HREF },
-  { key: 'urgans', label: 'Assistant', href: URGANS_HREF },
-  // Named Rollouts (Nov 2, 2026, founder): one chat per rollout. The address
-  // and the key stay 'sessions'.
-  { key: 'sessions', label: 'Rollouts', href: SESSIONS_HREF },
+  { key: 'urgans', label: CHAT_NAV_LABEL, href: URGANS_HREF },
 ];
 
-/** Every page of the swipe row: the three tabs, then Settings. */
+/** Every page of the swipe row: the two tabs, the rollout chats (inside Ask
+ *  Chappi, no tab of their own; the key and address stay 'sessions'), then
+ *  Settings. */
 export const SWIPE_PAGES: readonly SwipeTab[] = [
   ...SWIPE_TABS,
+  { key: 'sessions', label: 'Rollouts', href: SESSIONS_HREF },
   { key: 'settings', label: 'Settings', href: SETTINGS_PAGE_HREF },
 ];
+
+/** The tab lit for a page: the rollout chats belong to Ask Chappi, Settings to
+ *  no tab (the ring on your photo says where you are). */
+export function swipeLitTab(key: SwipeTabKey): SwipeTabKey | null {
+  if (key === 'sessions') return 'urgans';
+  return SWIPE_TABS.some((tab) => tab.key === key) ? key : null;
+}
+
+/** Where the underline sits for the pager's progress (in pages): it follows
+ *  the swipe across the tabs, holds under Ask Chappi on the rollout chats, and
+ *  fades out on the way to Settings. */
+export function swipeUnderline(progress: number): { tab: number; opacity: number } {
+  const last = SWIPE_TABS.length - 1;
+  const settings = SWIPE_PAGES.findIndex((page) => page.key === 'settings');
+  return {
+    tab: Math.max(0, Math.min(last, progress)),
+    opacity: Math.max(0, Math.min(1, settings - progress)),
+  };
+}
 
 /** The user_metadata key a person's own choice is kept in (false = classic). */
 export const SWIPE_NAV_METADATA_KEY = 'swipe_nav';

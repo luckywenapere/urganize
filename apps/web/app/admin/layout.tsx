@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { AdminBackButton, AdminBottomBar, AdminNav } from '@/components/admin/AdminNav';
+import { AppWallpaperMark } from '@/components/app/AppWallpaper';
 
 // The admin hub (founder request, 2026-07-30): every internal dashboard is
 // reachable from one place. This layout owns the page frame for all
@@ -30,6 +31,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </div>
       </div>
       <AdminBottomBar />
+      <AppWallpaperMark />
     </main>
   );
 }
