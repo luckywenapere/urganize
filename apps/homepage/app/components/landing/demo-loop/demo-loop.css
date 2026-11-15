@@ -52,8 +52,8 @@ html[data-marketing-theme="dark"] .urg-demo {
 }
 
 .urg-demo .ss-stage {
-  --ss-font: var(--font-urg-sans), "Instrument Sans", system-ui, sans-serif;
-  --ss-mono: var(--font-home-mono), "Space Mono", ui-monospace, monospace;
+  --ss-font: var(--font-home-display), "DM Sans", system-ui, sans-serif;
+  --ss-mono: var(--font-home-mono), "DM Mono", ui-monospace, monospace;
   --ss-canvas: var(--ud-canvas);
   --ss-surface: var(--ud-body);
   --ss-chrome: var(--ud-chrome);
@@ -141,7 +141,7 @@ html[data-marketing-theme="dark"] .urg-demo {
 }
 
 .urg-demo .urg-hero__title {
-  font-family: var(--font-home-display), "Young Serif", Georgia, serif;
+  font-family: var(--font-home-display), "DM Sans", system-ui, sans-serif;
   font-size: 26px;
   line-height: 1.2;
   color: var(--ss-text-strong);
@@ -233,7 +233,7 @@ html[data-marketing-theme="dark"] .urg-demo {
 }
 
 .urg-demo .urg-card__title {
-  font-family: var(--font-home-display), "Young Serif", Georgia, serif;
+  font-family: var(--font-home-display), "DM Sans", system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.35;
   color: var(--ss-text-strong);

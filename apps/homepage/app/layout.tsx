@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Instrument_Sans } from "next/font/google";
 import "./globals.css";
 import { LANDING_DESCRIPTION, LANDING_TITLE, ORGANIZATION_ID } from "@/lib/seo";
 import { PRICING_TIER_ORDER, getTier, getTierPrice } from "@urganize/pricing";
@@ -68,17 +67,9 @@ const LANDING_KEYWORDS = [
   "music team task management",
 ] as const;
 
-// Typography (2026-10-18, URG-383). Every marketing page wears the
-// homepage's type: Young Serif for display and Space Mono for meta
-// (components/landing/home-fonts.ts, the same instances the homepage uses, so
-// nothing is requested twice), Instrument Sans for body. Cormorant Garamond
-// and IBM Plex Mono left with it, and so did Roboto Mono, which was loaded on
-// every page and used by none.
-const instrumentSans = Instrument_Sans({
-  variable: "--font-urg-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
+// Typography (2026-11-15, #1312): every marketing page wears DM Sans, the
+// logo's lettering, and DM Mono for meta. Both come from
+// components/landing/home-fonts.ts, the same instances the homepage uses.
 
 // JSON-LD Schema Data
 // Entity facts (2026-09-30, global-branding pass). A brand search for
@@ -243,7 +234,7 @@ export default function RootLayout({
       lang="en"
       data-marketing-theme="dark"
       suppressHydrationWarning
-      className={`${instrumentSans.variable} ${homeFontVariables}`}
+      className={homeFontVariables}
     >
       <head>
         <meta name="apple-mobile-web-app-title" content="Urganize" />

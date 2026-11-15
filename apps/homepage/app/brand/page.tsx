@@ -62,9 +62,8 @@ const COLORS = [
 ] as const;
 
 const FONTS = [
-  { name: "Young Serif", role: "Headlines (the serif)" },
-  { name: "Instrument Sans", role: "Body text" },
-  { name: "Space Mono", role: "Small uppercase labels" },
+  { name: "DM Sans", role: "Headlines, bold, and body text. The logo's own lettering." },
+  { name: "DM Mono", role: "Small uppercase labels" },
 ] as const;
 
 const LOGO_DOWNLOADS = [

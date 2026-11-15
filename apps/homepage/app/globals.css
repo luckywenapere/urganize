@@ -75,10 +75,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
-  /* The homepage's type on every page (2026-10-18, URG-383): Young Serif and
-     Space Mono come from components/landing/home-fonts.ts via app/layout.tsx. */
-  --font-display: var(--font-home-display), Georgia, serif;
+  --font-sans: var(--font-home-display), ui-sans-serif, system-ui, sans-serif;
+  /* The homepage's type on every page (2026-11-15, #1312): DM Sans and
+     DM Mono come from components/landing/home-fonts.ts via app/layout.tsx. */
+  --font-display: var(--font-home-display), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-home-mono), ui-monospace, monospace;
   --font-data: var(--font-home-mono), ui-monospace, monospace;
 }
@@ -208,19 +208,16 @@ html[data-marketing-theme="dark"] .theme-shot-light {
   h6 {
     color: var(--marketing-text);
     font-family: var(--font-display);
-    /* Young Serif ships one weight (400) and is wider than the Cormorant it
-       replaced (2026-10-18, URG-383): headings take the homepage's 400 and
-       -0.025em, and never fake a bold or an italic it does not have. */
-    font-weight: 400;
+    /* DM Sans Bold, the wordmark's weight, slightly tight (2026-11-15, #1312). */
+    font-weight: 700;
     font-synthesis: none;
     line-height: 1.08;
     letter-spacing: -0.025em;
     margin: 0;
   }
 
-  /* Young Serif runs wide, so a heading's last word drops to a line of its
-     own more often than Cormorant's did: balance the lines on every page but
-     the homepage, which sets its own (2026-10-18, URG-383). */
+  /* Balance heading lines on every page but the homepage, which sets its own
+     (2026-10-18, URG-383). */
   :is(h1, h2, h3, h4):not(.home-v2 *) {
     text-wrap: balance;
   }
@@ -448,8 +445,8 @@ html[data-marketing-theme="dark"] .home-v2 {
 .home-v2 h1,
 .home-v2 h2,
 .home-v2 h3 {
-  font-family: var(--font-home-display), Georgia, serif;
-  font-weight: 400;
+  font-family: var(--font-home-display), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
   letter-spacing: -0.025em;
 }
 
@@ -859,7 +856,7 @@ html[data-marketing-theme="dark"] .page-sky {
    Markup in app/changelog/page.tsx. The rail is one hairline down the left
    of each month's entries; a feature entry gets an accent dot, the folded
    "smaller improvements" group a hollow one. Meta (tag · date · version) is
-   quiet Space Mono so the title and its one line of benefit lead.
+   quiet DM Mono so the title and its one line of benefit lead.
    ------------------------------------------------------------------------ */
 .changelog-rail {
   position: relative;

@@ -35,9 +35,9 @@ import type { DbReleaseType } from '@/types/releases';
 // is still cream or ink, picked for contrast. The layout never changes with the
 // colors, so a brand poster is the same designed poster in other clothes.
 
-const FRAUNCES = 'Young Serif';
-const GROTESK = 'Space Grotesk';
-const MONO = 'Space Mono';
+const FRAUNCES = 'DM Sans Display';
+const GROTESK = 'DM Sans';
+const MONO = 'DM Mono';
 
 export type ShareCardProps = {
   format: ShareFormat;

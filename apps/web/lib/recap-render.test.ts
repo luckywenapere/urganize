@@ -46,9 +46,9 @@ async function renderPng(size: RecapCardSize, overrides: Partial<Parameters<type
 }
 
 describe('recap fonts', () => {
-  it('loads all four static cuts as parseable TrueType', async () => {
+  it('loads all six static cuts as parseable TrueType', async () => {
     const fonts = await loadRecapFonts();
-    expect(fonts).toHaveLength(4);
+    expect(fonts).toHaveLength(6);
     for (const font of fonts) {
       // 0x00010000 is the TrueType version tag. A woff2 (which satori cannot
       // read) would start with 'wOF2' instead.
@@ -56,10 +56,12 @@ describe('recap fonts', () => {
       expect(font.data.length).toBeGreaterThan(1000);
     }
     expect(fonts.map((font) => `${font.name}:${font.weight}`).sort()).toEqual([
-      'Space Grotesk:400',
-      'Space Grotesk:500',
-      'Space Mono:400',
-      'Young Serif:400',
+      'DM Mono:400',
+      'DM Sans Display:400',
+      'DM Sans:400',
+      'DM Sans:500',
+      'DM Sans:600',
+      'DM Sans:700',
     ]);
   });
 });

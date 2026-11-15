@@ -24,9 +24,9 @@ const FOREST = '#14643A';
 const SPRING = '#7FD99A';
 const CREAM = '#F5F0E6';
 
-const FRAUNCES = 'Young Serif';
-const GROTESK = 'Space Grotesk';
-const MONO = 'Space Mono';
+const FRAUNCES = 'DM Sans Display';
+const GROTESK = 'DM Sans';
+const MONO = 'DM Mono';
 
 export type RecapCardProps = {
   size: RecapCardSize;
