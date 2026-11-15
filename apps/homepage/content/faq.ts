@@ -26,7 +26,7 @@ const artistsOn = (value: number | null) => (value === null ? "no limit" : `up t
 const managerArtists = artistsOn(PRICING_TIERS.manager.limits.artists);
 const proArtists = artistsOn(PRICING_TIERS.pro.limits.artists);
 const singlePriceBoth = `${formatMoney(EXTRA_RELEASE_PRICE_NAIRA, "NGN")} in Nigeria, ${formatMoney(EXTRA_RELEASE_PRICE_USD, "USD")} elsewhere`;
-const distributionBefore = `It sends your music to stores through our distribution partner. Solo Plus, ${PRICING_TIERS.pro.label} and Label include it. On Solo and ${PRICING_TIERS.manager.label} a single is `;
+const distributionBefore = `It sends your music to stores through our distribution partner. Solo Plus is the first plan that includes it, and ${PRICING_TIERS.pro.label} and Label do too. On Solo and ${PRICING_TIERS.manager.label} a single is `;
 const distributionAfter = ". You still post yourself.";
 
 // HOMEPAGE V2 (2026-10-17, URG-334; reworked 2026-10-19, URG-405: WhatsApp
@@ -55,7 +55,7 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   {
     question: "What if I don’t have a release right now?",
     answer:
-      "Start the next one early. Plan it now and find opportunities that fit your music.",
+      "You don’t need one. Use it for shows, pitching and press, and start the next release early.",
   },
   {
     question: "Is it for one artist or a roster?",

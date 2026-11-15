@@ -97,8 +97,8 @@ export function PricingPageClient() {
                 positioning (asks about your goals, or make your own), so check
                 it against lib/positioning by eye when that changes. */}
             <p className="hero-fade-in hero-delay-2 mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl">
-              Whichever you pick, Urganize asks about your goals and builds a release plan that fits.
-              You can also make your own.
+              Whichever you pick, Urganize asks about your goals and makes the plan.
+              Every task gets one owner and one date.
             </p>
 
             <div className="hero-fade-in hero-delay-3 mt-10">

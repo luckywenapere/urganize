@@ -1,0 +1,91 @@
+<title>Urganize landing copy mock</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Space+Grotesk:wght@400;500;600&family=Space+Mono&display=swap">
+<style>
+/* Layout: one column. The new hero as it would look, then old vs new lines, then the pricing row without Solo Plus. Light theme only, on purpose (app light tokens). */
+:root{
+  --bg:#f5f0e6; --surface:#faf5ec; --side:#f0ebe1; --brand:#14643a; --ink:#1a1611; --ink2:#4b4740; --ink3:#6a665f; --line:#d9d2c3; --old:#961a1a;
+  --display:"Fraunces",Georgia,serif; --body:"Space Grotesk",system-ui,sans-serif; --mono:"Space Mono",ui-monospace,monospace;
+}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px}
+.wrap{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:48px}
+.tag{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+h2{font-family:var(--body);font-weight:600;font-size:20px;margin:6px 0 0}
+.note{color:var(--ink2);max-width:65ch;margin:6px 0 0}
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:48px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:20px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--brand);max-width:44ch;text-wrap:balance}
+.hero h1{font-family:var(--display);font-weight:600;font-size:clamp(2.1rem,6vw,3.9rem);line-height:1.05;margin:0;text-wrap:balance;max-width:14ch}
+.hero h1 span{display:block;color:var(--brand)}
+.sub{font-size:clamp(1rem,2.2vw,1.2rem);color:var(--ink2);max-width:40rem;margin:0;text-wrap:balance}
+.btns{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.btn{font:600 15px var(--body);padding:13px 22px;border-radius:999px;border:1px solid var(--brand)}
+.btn.p{background:var(--brand);color:#f5f0e6}.btn.g{color:var(--brand)}
+.hint{font-family:var(--mono);font-size:12px;color:var(--ink3)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:15px}
+th{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);text-align:left;padding:8px 12px;border-bottom:1px solid var(--line)}
+td{padding:14px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+td:first-child{font-weight:600;width:19%}
+td.old{color:var(--old);width:36%}
+td.new b{font-weight:600}
+.alt{display:block;color:var(--ink3);font-size:13px;margin-top:6px}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.plan{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:4px}
+.plan .n{font-weight:600}.plan .p{font-family:var(--display);font-size:26px;font-variant-numeric:tabular-nums}
+.plan .w{color:var(--ink2);font-size:14px}
+.plan.gone{border-style:dashed;background:transparent;color:var(--ink3)}
+.plan.gone .n,.plan.gone .p{text-decoration:line-through;color:var(--old)}
+ol{margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-width:70ch}
+</style>
+
+<div class="wrap">
+  <section>
+    <div class="tag">1 · The new hero, as it would look</div>
+    <div class="hero" style="margin-top:12px">
+      <div class="eyebrow">Planning and coordination for recording artists, managers and labels</div>
+      <h1>A music career shouldn't run <span>on a group chat.</span></h1>
+      <p class="sub">Tell it your goals. It makes the plan. Every task has one owner and one date. It reminds each person, so nobody has to chase.</p>
+      <div class="btns"><span class="btn p">Build my plan</span><span class="btn g">Watch the demo</span></div>
+      <div class="hint">Public beta · Plans from ₦5,000 a month</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="tag">2 · Every line that changes</div>
+    <p class="note">These live in one file and feed the page titles, search results, share card, sign-in page, emails and store listing. The line in bold is my pick. The grey line is a second choice.</p>
+    <div class="scroll" style="margin-top:12px"><table>
+      <tr><th>Where</th><th>Now</th><th>New</th></tr>
+      <tr><td>What it is</td><td class="old">Urganize is an app that helps artists, managers and record labels plan new music and keep track of every task.</td><td class="new"><b>Urganize is a planning and coordination app for recording artists, managers and labels.</b></td></tr>
+      <tr><td>Label above headline</td><td class="old">Tell it your goals. Get a plan that fits.</td><td class="new"><b>Planning and coordination for recording artists, managers and labels</b></td></tr>
+      <tr><td>Headline</td><td class="old">Plan your next release, task by task.</td><td class="new"><b>A music career shouldn't run on a group chat.</b><span class="alt">Or: A music career is a team sport with no shared plan.</span></td></tr>
+      <tr><td>Line under it</td><td class="old">Urganize builds a release plan for artists, managers and record labels, then tracks every task until it's out.</td><td class="new"><b>Tell it your goals. It makes the plan. Every task has one owner and one date. It reminds each person, so nobody has to chase.</b></td></tr>
+      <tr><td>Main button</td><td class="old">Build my release plan</td><td class="new"><b>Build my plan</b></td></tr>
+      <tr><td>Short line<br><span class="alt">tab titles, bios, share card</span></td><td class="old">Plan new music. Track every task.</td><td class="new"><b>One plan. Every task has an owner.</b><span class="alt">Or: One plan for your whole music team.</span></td></tr>
+      <tr><td>Homepage title</td><td class="old">Urganize: Plan new music, track every task</td><td class="new"><b>Urganize: Planning and coordination for music teams</b></td></tr>
+      <tr><td>Search result text</td><td class="old">Urganize helps artists, managers and record labels plan new music and keep track of every task. Tell it your goals and it makes a plan that fits.</td><td class="new"><b>Urganize is a planning and coordination app for recording artists, managers and labels. Tell it your goals. It makes the plan and reminds each person.</b></td></tr>
+      <tr><td>Long description<br><span class="alt">about text, store listing, AI's answer to "what is Urganize"</span></td><td class="old">…It asks about your goals, then makes a plan that fits. You can also make your own. Use it solo or with a team. After every task, Urganize asks how it went, so you can see what worked when the release is out.</td><td class="new"><b>Urganize is a planning and coordination app for recording artists, managers and labels. Tell it your goals and it makes the plan: releases, shows, pitching, press and distribution. Every task has one owner and one date. It reminds each person, so nobody has to chase.</b></td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="tag">3 · Pricing: Solo Plus stays, and says it includes distribution</div>
+    <p class="note">No plan is removed and no price changes. Solo Plus is the first plan that includes distribution, so its card should lead with that. Today it only says so in a small line. One true detail the card must keep: distribution comes with yearly plans, not monthly.</p>
+    <div class="plans" style="margin-top:12px">
+      <div class="plan"><div class="n">Solo</div><div class="p">₦5,000</div><div class="w">For an artist with new music coming. Singles to stores for ₦2,000 each.</div></div>
+      <div class="plan" style="border-color:var(--brand)"><div class="n">Solo Plus <span class="tag" style="color:var(--brand)">Distribution included</span></div><div class="p">₦12,000</div><div class="w"><b>New line:</b> For an artist who puts out music often. Your singles and EPs go to stores, included.</div><div class="w" style="color:var(--old)">Now: For an artist who puts out music often.</div></div>
+      <div class="plan"><div class="n">Pro</div><div class="p">₦15,000</div><div class="w">For a manager with a few artists.</div></div>
+      <div class="plan"><div class="n">Pro Plus</div><div class="p">₦40,000</div><div class="w">For a manager running a roster. Distribution included.</div></div>
+      <div class="plan"><div class="n">Label</div><div class="p">₦100,000</div><div class="w">For a label with a full roster.</div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="tag">4 · What I need from you</div>
+    <ol>
+      <li><b>Copy:</b> yes to the bold lines, or tell me which to swap.</li>
+      <li><b>Solo Plus card:</b> yes to the "Distribution included" tag and the new line.</li>
+      <li><b>Screenshots:</b> tell me when you are at the machine. Chrome opens and you sign in to the Northline Music demo team.</li>
+    </ol>
+  </section>
+</div>

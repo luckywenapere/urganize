@@ -63,8 +63,8 @@ export default function TermsPage() {
 
             <Section number="02" title="The service">
               <p>
-                Urganize helps artists, managers and record labels plan new
-                music and keep track of every task: a plan built from your
+                Urganize is a planning and coordination app for recording
+                artists, managers and labels: a plan built from your
                 goals or one you make yourself, tasks with owners and dates,
                 cover art and release details, press kits, event milestones,
                 pitching to curators and opportunities, distribution through

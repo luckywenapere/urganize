@@ -303,7 +303,7 @@ export default function ChangelogPage() {
 
           <div className="border-t border-[color:var(--marketing-border)] pt-10">
             <p className="text-[var(--marketing-text-muted)]">
-              Plan your next release on Urganize.
+              Put your music on one plan with Urganize.
             </p>
             <a
               href={PRIMARY_CTA.href}

@@ -642,7 +642,7 @@ export function TeamWall() {
                 : isReadOnlyTeam
                   ? 'Start making changes again.'
                   : isFirstPlan
-                    ? 'Run your next release like a pro.'
+                    ? 'Run your music like a pro.'
                     : 'Pick up where you left off.'}
             </h1>
             <HelpTip

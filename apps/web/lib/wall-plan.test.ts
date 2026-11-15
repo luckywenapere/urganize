@@ -129,7 +129,7 @@ describe('the copy', () => {
 
   it('gives one artist a plain line', () => {
     const text = wallPlanReason({ tier: 'solo', kind: 'solo' }, { usage: usage(1, 1) });
-    expect(text).toBe('Everything you need for your next release, with room for 2 more people on your team.');
+    expect(text).toBe('Everything you need to plan your music, with room for 2 more people on your team.');
     plain(text);
   });
 

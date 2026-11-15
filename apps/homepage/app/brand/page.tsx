@@ -26,7 +26,7 @@ export const metadata: Metadata = buildPageMetadata({
 const VOICE_PILLARS = [
   {
     title: "Plain-spoken, no jargon",
-    body: "We say “the plan and the tasks for your new music,” not “a synergistic platform.” If a sentence needs a decoder, rewrite it.",
+    body: "We say “one plan, and an owner for every task,” not “a synergistic platform.” If a sentence needs a decoder, rewrite it.",
     say: "Every task has an owner and a date.",
     avoid: "Holistic asset-lifecycle management.",
   },
@@ -149,9 +149,9 @@ export default function BrandPage() {
               <div>
                 <h3 className="text-sm text-[var(--marketing-text)]">Mission</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  Planning new music runs on chats, spreadsheets and memory. Urganize gives
-                  artists, managers and record labels one plan that fits their goals, and
-                  keeps track of every task.
+                  A music career runs on chats, spreadsheets and memory. Urganize gives
+                  recording artists, managers and labels one plan that fits their goals,
+                  with one owner and one date for every task.
                 </p>
               </div>
 
@@ -181,7 +181,7 @@ export default function BrandPage() {
                   What we believe
                 </h3>
                 <ul className={`mt-1.5 list-disc space-y-1 pl-5 ${bodyText}`}>
-                  <li>New music is the spine. Every feature helps you plan it and finish every task.</li>
+                  <li>The plan is the spine. Every feature helps a team make it and finish every task.</li>
                   <li>We are opinionated on purpose: if it doesn’t cut the chaos, it’s out.</li>
                   <li>
                     That’s why we don’t do revenue tracking, legal contracts or analytics

@@ -926,7 +926,7 @@ export default function OnboardingPage() {
             Create your account
           </h1>
           <p className="mt-2 text-[15px] text-content-secondary">
-            <span className="lg:hidden">Plan every release with your team. </span>It takes a minute.
+            <span className="lg:hidden">One plan for you and your team. </span>It takes a minute.
           </p>
 
           {/* Signing up needs JavaScript. Say so instead of a button that does nothing. */}

@@ -19,7 +19,7 @@ import { PRIMARY_CTA } from "@/lib/app-urls";
 
 export const metadata: Metadata = {
   ...buildPageMetadata({
-    title: "Release planning for AI artists",
+    title: "Planning for AI artists",
     description:
       "Making the song got fast. The rollout did not. Tell Urganize your goals and get a plan that fits, or make your own, with an owner on every task.",
     path: "/for-ai-artists",
@@ -250,8 +250,7 @@ export default function ForAiArtistsPage() {
                 Urganize does not make the music.
               </h2>
               <p className="mx-auto mt-6 max-w-[38rem] text-balance text-base leading-8 text-[var(--marketing-text-muted)]">
-                Keep whatever you use to make music. Urganize plans the release
-                and keeps track of every task.
+                Keep whatever you use to make music. Urganize makes the plan and keeps track of every task.
               </p>
             </div>
           </SectionShell>
