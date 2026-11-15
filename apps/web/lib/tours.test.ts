@@ -73,9 +73,9 @@ describe('the rollout tour', () => {
     expect(last.fallbackAnchor).toBe('nav-team');
     // The classic bar gives its Team tab that anchor; the swipe nav's Team row
     // is in the account page, so its avatar carries it.
-    const bottom = readFileSync(path.join(process.cwd(), 'components/shell/BottomBar.tsx'), 'utf8');
+    const bottom = readFileSync(path.join(process.cwd(), 'components/shell/BottomBar.tsx'), 'utf8').replace(/\r\n/g, '\n');
     expect(bottom).toContain("tab.key === 'team' ? 'nav-team'");
-    const avatar = readFileSync(path.join(process.cwd(), 'components/shell/swipe/AvatarMenu.tsx'), 'utf8');
+    const avatar = readFileSync(path.join(process.cwd(), 'components/shell/swipe/AvatarMenu.tsx'), 'utf8').replace(/\r\n/g, '\n');
     expect(avatar).toContain('data-tour="nav-team"');
   });
 
@@ -85,7 +85,7 @@ describe('the rollout tour', () => {
 });
 
 describe('tour loops load the way the Stageshow note says (#971)', () => {
-  const read = (file: string) => readFileSync(path.join(process.cwd(), file), 'utf8');
+  const read = (file: string) => readFileSync(path.join(process.cwd(), file), 'utf8').replace(/\r\n/g, '\n');
   const wrapper = read('components/tours/TourStepLoop.tsx');
 
   it('loads the kit lazily, client only', () => {
@@ -97,8 +97,14 @@ describe('tour loops load the way the Stageshow note says (#971)', () => {
   });
 
   it('never mounts the loop under reduced motion', () => {
-    expect(wrapper).toContain("matchMedia('(prefers-reduced-motion: reduce)')");
+    // The media query moved into a shared hook (2026-11-01, #971 follow-up), which
+    // starts false so the poster paints first and the kit never loads under
+    // reduced motion. Hold both halves: the wrapper uses it, and it still asks.
+    expect(wrapper).toContain('const motion = usePrefersMotion();');
     expect(wrapper).toContain('{motion ? (');
+    const hook = read('lib/use-prefers-motion.ts');
+    expect(hook).toContain("matchMedia('(prefers-reduced-motion: reduce)')");
+    expect(hook).toContain('useState(false)');
   });
 
   it('has a light and a dark poster for every loop', () => {
@@ -126,7 +132,7 @@ describe('the welcome tour stays removed (2026-10-11, founder call)', () => {
 
   it('has no auto-start hook and no catalog tour left in the source', () => {
     for (const file of files) {
-      const source = readFileSync(file, 'utf8');
+      const source = readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
       expect(source, file).not.toMatch(/useCatalogTourAutoStart|CATALOG_TOUR_STEPS|requestReplay\(|readTourSeen\([^)]*'catalog'/);
     }
   });

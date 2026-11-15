@@ -42,11 +42,11 @@ describe('isAwayFromLatest', () => {
 
 describe('the composer overlap is one number', () => {
   it('the sentinel height and the composer margin follow COMPOSER_OVERLAP_PX', () => {
-    const source = readFileSync(join(__dirname, '../components/chappi/ChappiConversation.tsx'), 'utf8');
-    // 40px is Tailwind's 10 (2.5rem): the sentinel is h-12 (one step taller, so
-    // the last line clears the frost), the wrapper pulls up by -mt-10.
-    expect(COMPOSER_OVERLAP_PX).toBe(40);
-    expect(source).toContain('-mt-10');
+    const source = readFileSync(join(__dirname, '../components/chappi/ChappiConversation.tsx'), 'utf8').replace(/\r\n/g, '\n');
+    // 16px is Tailwind's 4 (1rem): the wrapper pulls up by -mt-4, and the h-12
+    // sentinel is taller than the overlap so the last line clears the frost.
+    expect(COMPOSER_OVERLAP_PX).toBe(16);
+    expect(source).toContain('-mt-4 shrink-0');
     expect(source).toMatch(/ref=\{bottomRef\}[^>]*className="h-12/);
   });
 });

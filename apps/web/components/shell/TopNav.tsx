@@ -13,6 +13,7 @@ import { SETTINGS_PAGE_HREF } from '@/lib/swipe-nav';
 import { useSettingsPageStore } from '@/stores/useSettingsPageStore';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { saveHomeEdit } from '@/lib/home-desktop/edit-save';
+import { markNavigationBlocked } from '@/lib/nav-stall-watch';
 import { activeShellArea, topBarAreas } from '@/lib/shell-nav';
 import { useShellAreas } from './useShellAreas';
 import { useShellStore } from '@/stores/useShellStore';
@@ -105,7 +106,11 @@ export function TopNav() {
   const pressHome = (event: MouseEvent) => {
     // A press that opens a new tab or window is left alone.
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
-    if (saveHomeEdit()) event.preventDefault();
+    if (!saveHomeEdit()) return;
+    // Refused on purpose, so tell the stall watchdog, or it loads /dashboard
+    // itself seven seconds later (lib/nav-blocked-guard.test.ts).
+    event.preventDefault();
+    markNavigationBlocked(event.nativeEvent);
   };
 
   return (

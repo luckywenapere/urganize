@@ -18,8 +18,9 @@ export const SCROLL_TO_LATEST_THRESHOLD_PX = 200;
 /** How far the transcript scrolls under the composer's frosted ground (px).
  *  The bottom sentinel is this tall, so a message scrolled to the end still
  *  clears the frost. Keep it equal to the composer wrapper's negative top
- *  margin in ChappiConversation. */
-export const COMPOSER_OVERLAP_PX = 40;
+ *  margin in ChappiConversation (-mt-4). It was 40 until 2026-11-10, when the
+ *  founder cut the frost to about the height of the box. */
+export const COMPOSER_OVERLAP_PX = 16;
 
 export type ScrollMetrics = {
   scrollTop: number;

@@ -58,6 +58,6 @@ describe('the curated programme seed', () => {
   it('matches the generated migration exactly', () => {
     const sql = programmesSeedSql(SEED_PROGRAMMES);
     if (process.env.GRANT_SEED_WRITE === '1') writeFileSync(MIGRATION, sql);
-    expect(readFileSync(MIGRATION, 'utf8')).toBe(sql);
+    expect(readFileSync(MIGRATION, 'utf8').replace(/\r\n/g, '\n')).toBe(sql);
   });
 });

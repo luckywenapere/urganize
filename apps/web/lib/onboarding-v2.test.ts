@@ -36,7 +36,7 @@ import { getAuthoredTemplate } from './release-templates/loader';
 const APP_ROOT = join(__dirname, '..');
 const REPO_ROOT = join(APP_ROOT, '..', '..');
 const code = (path: string) =>
-  readFileSync(join(APP_ROOT, path), 'utf8')
+  readFileSync(join(APP_ROOT, path), 'utf8').replace(/\r\n/g, '\n')
     .replace(/(^|[^:])\/\/.*$/gm, '$1')
     .replace(/\/\*[\s\S]*?\*\//g, '');
 
@@ -244,7 +244,7 @@ describe('paywall (URG-251 Part 3)', () => {
   });
 
   it('quotes every testimonial verbatim from the signed-off source', () => {
-    const source = readFileSync(join(REPO_ROOT, 'apps/homepage/content/testimonials.ts'), 'utf8').replace(
+    const source = readFileSync(join(REPO_ROOT, 'apps/homepage/content/testimonials.ts'), 'utf8').replace(/\r\n/g, '\n').replace(
       /\s+/g,
       ' '
     );

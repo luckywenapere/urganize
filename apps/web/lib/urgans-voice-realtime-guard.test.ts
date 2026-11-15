@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 // Structural guard on Talk to UrgAns (the urgans-voice-guard.test.ts pattern).
@@ -17,9 +17,9 @@ const strip = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, '').replac
 const routeFiles = readdirSync(ROUTES_DIR, { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => join(ROUTES_DIR, entry.name, 'route.ts'));
-const routes = new Map(routeFiles.map((file) => [file.split('/voice/')[1], strip(readFileSync(file, 'utf8'))]));
-const shared = strip(readFileSync(join(ROUTES_DIR, '_shared.ts'), 'utf8'));
-const server = strip(readFileSync(join(process.cwd(), 'lib/urgans-voice-realtime-server.ts'), 'utf8'));
+const routes = new Map(routeFiles.map((file) => [relative(ROUTES_DIR, file).split(sep).join('/'), strip(readFileSync(file, 'utf8').replace(/\r\n/g, '\n'))]));
+const shared = strip(readFileSync(join(ROUTES_DIR, '_shared.ts'), 'utf8').replace(/\r\n/g, '\n'));
+const server = strip(readFileSync(join(process.cwd(), 'lib/urgans-voice-realtime-server.ts'), 'utf8').replace(/\r\n/g, '\n'));
 
 describe('the voice routes', () => {
   it('are the six the spec and the cascade need', () => {
