@@ -16,6 +16,8 @@ import { useAuthStore } from '@/lib/auth-store';
 import { errorMessage } from '@/lib/errors';
 import { pushStatusLabel } from '@/lib/push-status-label';
 import { AccountPhotoSettings } from '@/components/settings/AccountPhotoSettings';
+import { HomeWallpaperChoice } from '@/components/home-desktop/HomeWallpaper';
+import { HOME_WALLPAPER_COPY } from '@/lib/home-desktop/wallpaper';
 import { usePushToggle } from '@/components/settings/PushNotificationsSection';
 import { SwipeSheet } from './SwipeSheet';
 
@@ -166,6 +168,15 @@ export function ProfileRows({ part = 'all' }: { part?: 'all' | 'profile' | 'appe
           <div className="flex min-h-[54px] items-center justify-between gap-3 py-2 text-[16px]">
             <span className="text-content-primary/60">Appearance</span>
             <ThemeToggle compact />
+          </div>
+        </RowGroup>
+        {/* Home wallpaper (#1318): the same choice as Home's own button and
+            Customise Home, on a phone and on a computer. */}
+        <RowGroup>
+          <div id="wallpaper" className="scroll-mt-4 py-4">
+            <p className="text-[16px] text-content-primary/60">{HOME_WALLPAPER_COPY.title}</p>
+            <p className="mt-0.5 text-[13px] leading-[18px] text-content-secondary">{HOME_WALLPAPER_COPY.settingsAbout}</p>
+            <HomeWallpaperChoice source="settings" className="mt-3" />
           </div>
         </RowGroup>
       </div>
