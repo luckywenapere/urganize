@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Newspaper } from '@/components/icons';
 
 import { useAuthStore } from '@/lib/auth-store';
+import { BriefQuestionsSection } from './BriefQuestionsSection';
 import { SettingRow, settingRowButtonClass } from './SettingRow';
 
 // The morning brief's off switch (#1207, Oyin, 11 Nov 2026). The brief is on
@@ -34,30 +35,33 @@ export function MorningBriefSection() {
   };
 
   return (
-    <SettingRow
-      icon={
-        <Newspaper
-          className={`h-4 w-4 ${isEnabled ? 'text-brand' : 'text-content-tertiary'}`}
-          aria-hidden="true"
-        />
-      }
-      title="Morning brief"
-      description={
-        isEnabled
-          ? 'Every morning at 8am, a short brief waits in your Assistant chat, with a notification.'
-          : 'No morning brief. Turn it on to get one each day at 8am.'
-      }
-      action={
-        <button
-          type="button"
-          onClick={() => void handleToggle()}
-          disabled={isWorking}
-          className={settingRowButtonClass(isEnabled)}
-        >
-          {isWorking ? 'Working…' : isEnabled ? 'Turn off' : 'Turn on'}
-        </button>
-      }
-      error={error}
-    />
+    <>
+      <SettingRow
+        icon={
+          <Newspaper
+            className={`h-4 w-4 ${isEnabled ? 'text-brand' : 'text-content-tertiary'}`}
+            aria-hidden="true"
+          />
+        }
+        title="Morning brief"
+        description={
+          isEnabled
+            ? 'Every morning at 8am, a short brief waits in your Assistant chat, with a notification.'
+            : 'No morning brief. Turn it on to get one each day at 8am.'
+        }
+        action={
+          <button
+            type="button"
+            onClick={() => void handleToggle()}
+            disabled={isWorking}
+            className={settingRowButtonClass(isEnabled)}
+          >
+            {isWorking ? 'Working…' : isEnabled ? 'Turn off' : 'Turn on'}
+          </button>
+        }
+        error={error}
+      />
+      {isEnabled ? <BriefQuestionsSection /> : null}
+    </>
   );
 }

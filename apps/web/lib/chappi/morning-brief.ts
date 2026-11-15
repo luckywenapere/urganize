@@ -10,6 +10,20 @@
 // the opening line and pick which item to do first (applyBriefWording), and a
 // brief without AI is complete on its own.
 
+import {
+  briefBecauseLine,
+  briefSectionOrder,
+  focusArtist,
+  sanitizeBriefQuestion,
+  watchedTeammate,
+  type BriefPrefs,
+  type BriefQuestion,
+  type BriefSectionKey,
+} from './brief-questions';
+
+/** The once-a-day lock and the stored brief (one row per person per day). */
+export const MORNING_BRIEFS_TABLE = 'morning_briefs';
+
 export const MORNING_BRIEF_VERSION = 1;
 
 /** How many lines each section may show. A brief is read in a minute. */
@@ -54,6 +68,18 @@ export type MorningBrief = {
   changed: MorningBriefItem[];
   upcoming: MorningBriefItem[];
   next: MorningBriefNext | null;
+  /** Late work of the teammate the person asked to watch (#1314). */
+  waiting?: MorningBriefItem[];
+  /** The watched teammate's first name, for the "Waiting on" heading. */
+  waitingOn?: string;
+  /** The order of the parts, from the person's answer (#1314). Default
+   *  needs, waiting, changed, upcoming. */
+  order?: BriefSectionKey[];
+  /** The line saying why the brief looks this way, e.g. "Late work first,
+   *  like you asked" (#1314). */
+  because?: string;
+  /** Today's question (#1314, lib/chappi/brief-questions.ts). */
+  question?: BriefQuestion;
 };
 
 // ── Inputs ─────────────────────────────────────────────────────────────────
@@ -74,6 +100,7 @@ export type BriefRelease = {
   title: string;
   artistName: string;
   releaseDate: string | null;
+  artistId?: string | null;
 };
 
 export type BriefInput = {
@@ -84,6 +111,10 @@ export type BriefInput = {
   /** Start of "since yesterday". */
   since: Date;
   now: Date;
+  /** What the person told the brief (#1314). */
+  prefs?: BriefPrefs;
+  /** Today's question, picked by pickBriefQuestion. */
+  question?: BriefQuestion | null;
 };
 
 // ── Lagos calendar ────────────────────────────────────────────────────────
@@ -144,16 +175,24 @@ function withRelease(title: string, releaseTitle: string | null | undefined): st
  */
 export function buildMorningBrief(input: BriefInput): MorningBrief {
   const { now, userId } = input;
+  const prefs = input.prefs ?? {};
+  const today = lagosDateKey(now);
+  const onlyToday = prefs.horizon?.value === 'today';
+  const focus = focusArtist(prefs, today);
+  const watch = watchedTeammate(prefs);
   const releaseById = new Map(input.releases.map((release) => [release.id, release]));
   const releaseTitle = (id: string | null) => (id ? releaseById.get(id)?.title ?? null : null);
+  // The focus artist's work goes first within each part (#1314).
+  const isFocus = (releaseId: string | null) =>
+    Boolean(focus && releaseId && releaseById.get(releaseId)?.artistId === focus.id);
 
   // What needs you: your own open work, latest first by urgency.
-  type Scored = { item: MorningBriefItem; rank: number; days: number };
+  type Scored = { item: MorningBriefItem; rank: number; days: number; focus: boolean };
   const mine: Scored[] = [];
   for (const task of input.tasks) {
     if (task.assignedToUserId !== userId || isClosed(task.status) || !task.dueDate) continue;
     const days = lagosDaysUntil(task.dueDate, now);
-    if (days === null || days > BRIEF_WEEK_DAYS) continue;
+    if (days === null || days > (onlyToday ? 0 : BRIEF_WEEK_DAYS)) continue;
     let meta: string;
     let tone: MorningBriefTone = 'plain';
     if (days < 0) {
@@ -170,12 +209,33 @@ export function buildMorningBrief(input: BriefInput): MorningBrief {
       item: { text: clip(withRelease(task.title, releaseTitle(task.releaseId)), MAX_TEXT), meta, tone, taskId: task.id },
       rank: days < 0 ? 0 : days === 0 ? 1 : 2,
       days,
+      focus: isFocus(task.releaseId),
     });
   }
-  mine.sort((a, b) => a.rank - b.rank || a.days - b.days);
+  // Urgency first (late, today, this week); the focus artist leads within each.
+  mine.sort((a, b) => a.rank - b.rank || Number(b.focus) - Number(a.focus) || a.days - b.days);
   const lateCount = mine.filter((entry) => entry.rank === 0).length;
   const todayCount = mine.filter((entry) => entry.rank === 1).length;
   const needs = mine.slice(0, BRIEF_SECTION_LIMIT).map((entry) => entry.item);
+
+  // Waiting on the teammate the person asked to watch: their late work (#1314).
+  const waiting: MorningBriefItem[] = [];
+  if (watch && watch.id !== userId) {
+    const late = input.tasks
+      .filter((task) => task.assignedToUserId === watch.id && !isClosed(task.status) && task.dueDate)
+      .map((task) => ({ task, days: lagosDaysUntil(task.dueDate ?? '', now) }))
+      .filter((entry): entry is { task: BriefTask; days: number } => entry.days !== null && entry.days < 0)
+      .sort((a, b) => a.days - b.days)
+      .slice(0, BRIEF_SECTION_LIMIT);
+    for (const { task, days } of late) {
+      waiting.push({
+        text: clip(withRelease(task.title, releaseTitle(task.releaseId)), MAX_TEXT),
+        meta: `${plural(-days, 'day', 'days')} late`,
+        tone: 'late',
+        taskId: task.id,
+      });
+    }
+  }
 
   // What changed since yesterday: work teammates finished on rollouts you see.
   const since = input.since.getTime();
@@ -209,7 +269,7 @@ export function buildMorningBrief(input: BriefInput): MorningBrief {
       (entry): entry is { release: BriefRelease; days: number } =>
         entry.days !== null && entry.days >= 0 && entry.days <= BRIEF_UPCOMING_DAYS
     )
-    .sort((a, b) => a.days - b.days)
+    .sort((a, b) => Number(isFocus(b.release.id)) - Number(isFocus(a.release.id)) || a.days - b.days)
     .slice(0, BRIEF_SECTION_LIMIT);
   const upcoming: MorningBriefItem[] = soon.map(({ release, days }) => ({
     text: clip(days === 0 ? `${release.title} comes out today` : `${release.title} comes out`, MAX_TEXT),
@@ -221,9 +281,9 @@ export function buildMorningBrief(input: BriefInput): MorningBrief {
   const nearest = soon[0]?.release ?? null;
   const nearestDays = soon[0]?.days ?? null;
 
-  return {
+  const brief: MorningBrief = {
     v: MORNING_BRIEF_VERSION,
-    date: lagosDateKey(now),
+    date: today,
     greeting: clip(`Good morning, ${input.firstName || 'there'}`, MAX_GREETING),
     lede: templateLede({ lateCount, todayCount, changedCount: changed.length, nearest, nearestDays }),
     needs,
@@ -231,6 +291,35 @@ export function buildMorningBrief(input: BriefInput): MorningBrief {
     upcoming,
     next: templateNext(needs, nearest),
   };
+  if (waiting.length > 0 && watch) {
+    brief.waiting = waiting;
+    brief.waitingOn = clip(watch.name.trim().split(/\s+/)[0] || watch.name, MAX_META);
+  }
+  if (prefs.top) brief.order = briefSectionOrder(prefs);
+  const because = briefBecauseLine(prefs, today);
+  if (because) brief.because = because;
+  if (input.question) brief.question = input.question;
+  return brief;
+}
+
+/** The section heading for each part of the brief. */
+export function briefSectionTitle(key: BriefSectionKey, brief: Pick<MorningBrief, 'waitingOn'>): string {
+  switch (key) {
+    case 'needs':
+      return 'Needs you today';
+    case 'waiting':
+      return brief.waitingOn ? `Waiting on ${brief.waitingOn}` : 'Waiting on your team';
+    case 'changed':
+      return 'Since yesterday';
+    case 'upcoming':
+      return 'Coming up';
+  }
+}
+
+/** The parts of a brief in the order to show them. */
+export function briefSections(brief: MorningBrief): { key: BriefSectionKey; items: MorningBriefItem[] }[] {
+  const order = brief.order ?? briefSectionOrder({});
+  return order.map((key) => ({ key, items: (key === 'waiting' ? brief.waiting : brief[key]) ?? [] }));
 }
 
 function templateLede(facts: {
@@ -371,10 +460,12 @@ export function morningBriefText(brief: MorningBrief): string {
     lines.push('', `${title}:`);
     for (const item of items) lines.push(`- ${item.text}${item.meta ? ` (${item.meta})` : ''}`);
   };
-  section('Needs you today', brief.needs);
-  section('Since yesterday', brief.changed);
-  section('Coming up', brief.upcoming);
+  if (brief.because) lines.push(`(${brief.because})`);
+  for (const { key, items } of briefSections(brief)) section(briefSectionTitle(key, brief), items);
   if (brief.next) lines.push('', `First: ${brief.next.text}`);
+  if (brief.question) {
+    lines.push('', `Today's question: ${brief.question.text} (${brief.question.choices.map((c) => c.label).join(' / ')})`);
+  }
   return lines.join('\n');
 }
 
@@ -432,7 +523,7 @@ export function sanitizeMorningBrief(raw: unknown): MorningBrief | null {
       if (typeof href === 'string' && isInAppPath(href)) next.href = href;
     }
   }
-  return {
+  const brief: MorningBrief = {
     v: MORNING_BRIEF_VERSION,
     date: value.date,
     greeting: clip(value.greeting, MAX_GREETING),
@@ -442,4 +533,18 @@ export function sanitizeMorningBrief(raw: unknown): MorningBrief | null {
     upcoming: cleanItems(value.upcoming),
     next,
   };
+  const waiting = cleanItems(value.waiting);
+  if (waiting.length > 0) brief.waiting = waiting;
+  if (typeof value.waitingOn === 'string' && value.waitingOn.trim()) brief.waitingOn = clip(value.waitingOn, MAX_META);
+  if (Array.isArray(value.order)) {
+    const keys = ['needs', 'waiting', 'changed', 'upcoming'] as const;
+    const order = value.order.filter((key, index, all): key is BriefSectionKey =>
+      (keys as readonly unknown[]).includes(key) && all.indexOf(key) === index
+    );
+    if (order.length === keys.length) brief.order = order;
+  }
+  if (typeof value.because === 'string' && value.because.trim()) brief.because = clip(value.because, 120);
+  const question = sanitizeBriefQuestion(value.question);
+  if (question) brief.question = question;
+  return brief;
 }
