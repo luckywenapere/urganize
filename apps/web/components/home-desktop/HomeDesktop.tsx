@@ -6,6 +6,12 @@
 // Delegated, Team and Artists. Phones keep their own Home: this is
 // mounted only at lg and up by app/dashboard/artists/ArtistsPageClient.tsx.
 //
+// Since #1305 (founder approved docs/mocks/home-wallpaper) nothing here sits
+// in a card: each block is a heading with one thin line under it and thin
+// lines between its rows, and every column of the artists list starts on the
+// same left edge as its heading. The person can put a wallpaper behind it
+// (HomeWallpaper.tsx).
+//
 // "See all" (decided here, using views that already exist): My tasks opens the
 // Team page with your own panel open, which lists all your open tasks grouped
 // Late / This week / Later. Delegated opens the Team page, where each person's
@@ -19,10 +25,17 @@ import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { useAuthStore } from '@/lib/auth-store';
 import { artistHref } from '@/lib/artist-page';
-import { describeDaysToGo, sortBySoonestDrop } from '@/lib/artists-list';
+import { sortBySoonestDrop } from '@/lib/artists-list';
 import { isChappiEnabled } from '@/lib/chappi/config';
+import { dropCountdown } from '@/lib/home-desktop/countdown';
 import { layoutRows, type HomeBlockId, type HomeLayout } from '@/lib/home-desktop/layout';
-import { focusMyTasks, selectDelegated, selectMyTasks } from '@/lib/home-desktop/tasks';
+import {
+  countDelegatedPeople,
+  countRollouts,
+  focusMyTasks,
+  selectDelegated,
+  selectMyTasks,
+} from '@/lib/home-desktop/tasks';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { TEAM_HREF } from '@/lib/team-page';
 import { useHomeLayoutStore } from '@/stores/useHomeLayoutStore';
@@ -47,18 +60,18 @@ import { HomeChatCard, HomeChatCardSkeleton } from './HomeChatCard';
 import { HomeCustomise } from './HomeCustomise';
 import { DelegatedCard, MyTasksCard, type HomeTaskPerson, type HomeTaskPlace } from './HomeTaskCards';
 import { HomeTeamRow, HomeTeamRowSkeleton, TEAM_INVITE_HREF, teamPersonHref } from './HomeTeamRow';
+import { HOME_GHOST, HOME_ROW_RULE, HOME_RULE } from './home-style';
 
 const ASK_ENABLED = isChappiEnabled();
 /** One content width for Home on a computer. */
 export const HOME_DESKTOP_WIDTH = 'mx-auto w-full max-w-[1120px]';
 
-// Who, next rollout, when it drops, tasks, arrow. The columns sit close so the
-// eye does not cross empty space (mock notes 2 and 4).
+// Who, next rollout, when it drops, tasks, arrow. The Drops column is wide
+// enough for "57 days · Wed 18 Nov" on one line.
 const ROW_GRID =
-  'grid grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_8.5rem_10rem_1rem] items-center gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_9.25rem_13.75rem_1rem] xl:gap-6';
+  'grid grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_10.75rem_8rem_1rem] items-center gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_11.5rem_12.5rem_1rem] xl:gap-6';
 
-const GHOST =
-  'motion-focus motion-press inline-flex h-9 items-center gap-1.5 rounded-full border border-stroke-control px-4 text-[13px] font-medium text-content-primary hover:bg-bg-hover';
+const GHOST = HOME_GHOST;
 
 export function HomeDesktop({
   list,
@@ -98,13 +111,9 @@ export function HomeDesktop({
   const myFocus = useMemo(() => focusMyTasks(tasks, viewerId, releaseDays, today), [tasks, viewerId, releaseDays, today]);
   const mine = useMemo(() => selectMyTasks(myFocus, viewerId, today), [myFocus, viewerId, today]);
   // The same numbers on your own tile, so Home never shows two counts for you.
-  const myLoad = useMemo(
-    () => ({
-      open: myFocus.length,
-      late: myFocus.filter((task) => Boolean(task.dueDate && task.dueDate.slice(0, 10) < today)).length,
-    }),
-    [myFocus, today]
-  );
+  const myLoad = useMemo(() => ({ open: myFocus.length }), [myFocus]);
+  const myRollouts = useMemo(() => countRollouts(myFocus), [myFocus]);
+  const holders = useMemo(() => countDelegatedPeople(tasks, viewerId, ownedReleaseIds), [tasks, viewerId, ownedReleaseIds]);
   const delegated = useMemo(
     () => selectDelegated(tasks, viewerId, ownedReleaseIds, today),
     [tasks, viewerId, ownedReleaseIds, today]
@@ -151,7 +160,13 @@ export function HomeDesktop({
         return list.spotlight ? <Spotlight row={list.spotlight} /> : null;
       case 'my_tasks':
         return (
-          <MyTasksCard pick={mine} today={today} places={places} seeAllHref={me ? teamPersonHref(me.memberId) : TEAM_HREF} />
+          <MyTasksCard
+            pick={mine}
+            today={today}
+            places={places}
+            rollouts={myRollouts}
+            seeAllHref={me ? teamPersonHref(me.memberId) : TEAM_HREF}
+          />
         );
       case 'delegated':
         return (
@@ -161,6 +176,7 @@ export function HomeDesktop({
             places={places}
             seeAllHref={TEAM_HREF}
             people={people}
+            holders={holders}
             alone={activeCount === 1}
             inviteHref={team?.viewer.canManage ? TEAM_INVITE_HREF : null}
           />
@@ -174,11 +190,11 @@ export function HomeDesktop({
   };
 
   return (
-    <div className={`${HOME_DESKTOP_WIDTH} section-list-enter flex flex-col gap-4 pb-12`} data-home-layout="desktop">
+    <div className={`${HOME_DESKTOP_WIDTH} section-list-enter flex flex-col gap-7 pb-12`} data-home-layout="desktop">
       {layoutRows(layout.order).map((row) => (
         <ErrorBoundary key={row.join('+')} name={`home-desktop-${row.join('-')}`} onError={reportBoundaryError}>
           {row.length === 2 ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-10 xl:gap-14">
               {block(row[0])}
               {block(row[1])}
             </div>
@@ -196,7 +212,9 @@ export function HomeDesktop({
   );
 }
 
-/** Every artist and their next rollout, soonest drop first (mock notes 2 to 6). */
+/** Every artist and their next rollout, soonest drop first (mock notes 2 to 6).
+ *  No card: a heading, a thin line, the column names, then the rows. Each
+ *  column's content starts on its heading's left edge (#1305, note 1). */
 function ArtistsBlock({
   rows,
   setArtistPhoto,
@@ -206,35 +224,34 @@ function ArtistsBlock({
 }) {
   const openAddArtist = useShellStore((state) => state.openAddArtist);
   return (
-    <section data-home-block="artists" aria-label="Artists" className="mt-2">
-      <div className="flex items-end justify-between gap-4">
+    <section data-home-block="artists" aria-label="Your artists">
+      <div className={`flex items-center justify-between gap-4 border-b ${HOME_RULE} pb-2.5`}>
         <h2 className="font-display text-[22px] font-normal leading-7 text-content-primary">
-          Artists
-          <span className="font-sans text-sm font-medium text-content-secondary"> · {rows.length}</span>
+          Your artists
+          <span className="ml-2 font-sans text-sm font-medium tabular-nums text-content-secondary">{rows.length}</span>
         </h2>
         <button type="button" onClick={() => openAddArtist()} className={GHOST}>
           <Plus className="h-4 w-4" aria-hidden="true" />
           Add artist
         </button>
       </div>
-      <div className="mt-3 overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
-        {/* Header text lines up with the names and titles, not the faces (#878). */}
-        <div className={`${ROW_GRID} border-b border-stroke-subtle py-2.5 pl-[4.75rem] pr-5 text-xs font-semibold text-content-secondary`}>
-          <span>Artist</span>
-          <span className="pl-[3.25rem]">Next rollout</span>
-          <span>Drops</span>
-          <span>Tasks</span>
-          <span />
-        </div>
-        <ul className="divide-y divide-stroke-subtle">
-          {rows.map((row) => (
-            <ArtistRow key={row.artist.id} row={row} setArtistPhoto={setArtistPhoto} />
-          ))}
-        </ul>
+      <div className={`${ROW_GRID} pb-1.5 pt-3 text-xs font-semibold leading-4 text-content-secondary`}>
+        <span>Artist</span>
+        <span>Next rollout</span>
+        <span>Drops</span>
+        <span>Tasks</span>
+        <span />
+      </div>
+      <ul>
+        {rows.map((row) => (
+          <ArtistRow key={row.artist.id} row={row} setArtistPhoto={setArtistPhoto} />
+        ))}
+      </ul>
+      <div className={`border-t ${HOME_ROW_RULE}`}>
         <button
           type="button"
           onClick={() => openAddArtist()}
-          className="motion-focus flex w-full items-center gap-3 border-t border-stroke-subtle px-5 py-3.5 text-left text-sm font-medium text-content-secondary transition-colors hover:bg-bg-hover/60 hover:text-content-primary"
+          className="motion-focus -mx-3 flex w-[calc(100%+1.5rem)] items-center gap-3 rounded-2xl px-3 py-4 text-left text-sm font-medium text-content-secondary transition-colors hover:bg-bg-hover/60 hover:text-content-primary"
         >
           <span
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-[1.5px] border-dashed border-stroke-control text-content-tertiary"
@@ -259,9 +276,9 @@ function ArtistRow({
   setArtistPhoto: (artistId: string, url: string | null) => void;
 }) {
   const { artist, next } = row;
-  const day = next ? shortDay(next.releaseDate) : null;
+  const drop = next ? dropCountdown(row.daysToGo, shortDay(next.releaseDate)) : null;
   return (
-    <li className="relative">
+    <li className={`relative border-t ${HOME_ROW_RULE}`}>
       <ProfilePhotoPicker
         name={artist.name}
         photoUrl={artist.photoUrl}
@@ -270,24 +287,21 @@ function ArtistRow({
         save={(path) => saveArtistPhoto(artist.id, path)}
         onChange={(url) => setArtistPhoto(artist.id, url)}
         surface="artist_photo"
-        className="absolute left-5 top-1/2 z-10 -translate-y-1/2"
+        className="absolute left-0 top-1/2 z-10 -translate-y-1/2"
       />
       <Link
         href={artistHref(artist.id)}
-        className={`motion-focus ${ROW_GRID} min-h-[68px] py-3 pl-[4.75rem] pr-5 transition-colors hover:bg-bg-hover/60`}
+        className={`motion-focus ${ROW_GRID} -mx-3 min-h-[72px] w-[calc(100%+1.5rem)] rounded-2xl px-3 py-4 transition-colors hover:bg-bg-hover/60`}
       >
-        <span className="min-w-0">
+        <span className="min-w-0 pl-[3.25rem]">
           <span className="block truncate font-display text-[17px] leading-[22px] text-content-primary">{artist.name}</span>
-          <span
-            className={`block text-xs leading-4 ${
-              row.status === 'quiet' ? 'font-medium text-content-tertiary' : 'font-semibold text-brand'
-            }`}
-          >
-            {STATUS_WORD[row.status]}
-          </span>
+          {/* An artist with a rollout in flight needs no label; one with nothing planned says so. */}
+          {row.status !== 'rolling_out' ? (
+            <span className="block text-xs font-medium leading-4 text-content-tertiary">{STATUS_WORD[row.status]}</span>
+          ) : null}
         </span>
         <span className="flex min-w-0 items-center gap-3">
-          <Cover release={next} size={40} />
+          <Cover release={next} size={44} className="!rounded-xl" />
           <span className="min-w-0">
             {next ? (
               <>
@@ -307,27 +321,26 @@ function ArtistRow({
           </span>
         </span>
         <span className="min-w-0">
-          {next && day && row.daysToGo !== null ? (
-            <>
-              <span className="block text-sm font-semibold leading-5 text-content-primary">{day}</span>
-              <span className="block text-xs leading-4 text-content-secondary">{describeDaysToGo(row.daysToGo)}</span>
-            </>
+          {drop ? (
+            <span className="flex items-baseline gap-1.5 whitespace-nowrap tabular-nums">
+              {drop.number ? (
+                <span className="min-w-9 font-display text-[26px] leading-7 text-content-primary">{drop.number}</span>
+              ) : null}
+              <span className="text-[13px] font-medium leading-5 text-content-secondary">{drop.rest}</span>
+            </span>
           ) : next ? (
             <span className="block text-xs leading-4 text-content-secondary">No date yet</span>
           ) : null}
         </span>
         <span className="min-w-0">
           {row.total > 0 ? (
-            <span className="block h-1 w-full overflow-hidden rounded-full bg-bg-hover">
+            <span className="block h-1.5 w-full overflow-hidden rounded-full bg-bg-hover">
               <span className="block h-full rounded-full bg-brand" style={{ width: `${percent(row)}%` }} />
             </span>
           ) : null}
-          {row.dueThisWeek > 0 || row.late > 0 ? (
-            <span className="mt-1.5 flex gap-2.5 text-xs leading-4 text-content-secondary">
-              {row.dueThisWeek > 0 ? <span>{row.dueThisWeek} due</span> : null}
-              {/* One red number, not a red pill on every row (mock note 5). */}
-              {row.late > 0 ? <span className="font-semibold text-status-error">{row.late} late</span> : null}
-            </span>
+          {/* What is due, not a late count: a late task says so on its own row. */}
+          {row.dueThisWeek > 0 ? (
+            <span className="mt-1.5 block text-xs leading-4 tabular-nums text-content-secondary">{row.dueThisWeek} due</span>
           ) : null}
         </span>
         <ChevronRight className="h-4 w-4 text-content-tertiary" aria-hidden="true" />
@@ -338,12 +351,13 @@ function ArtistRow({
 
 /**
  * Home's loading shape on a computer: the default blocks with the live line
- * boxes (#1297), so nothing jumps when Home lands. The chat card, then the two
- * task cards at their full five rows (HOME_TASK_LIMIT), the team row, and the
- * artists list with its heading, column header and "Add an artist" row.
+ * boxes (#1297), and no cards (#1305), so nothing jumps when Home lands. The
+ * chat block, then the two task lists at their full five rows
+ * (HOME_TASK_LIMIT), the team row, and the artists list with its heading,
+ * column names and "Add an artist" row.
  */
 export function HomeDesktopSkeleton() {
-  const bar = 'animate-pulse rounded bg-bg-hover';
+  const bar = 'animate-pulse rounded-full bg-bg-hover';
   // One line box: the live text's line height, with a bar inside it.
   const line = (height: string, width: string, size: string) => (
     <span className={`flex ${height} items-center`}>
@@ -351,20 +365,26 @@ export function HomeDesktopSkeleton() {
     </span>
   );
   return (
-    <div className={`${HOME_DESKTOP_WIDTH} flex flex-col gap-4 pb-12`} aria-busy="true" data-home-layout="desktop">
+    <div className={`${HOME_DESKTOP_WIDTH} flex flex-col gap-7 pb-12`} aria-busy="true" data-home-layout="desktop">
       {ASK_ENABLED ? <HomeChatCardSkeleton /> : <div className="h-[184px] animate-pulse rounded-2xl bg-bg-hover" />}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-10 xl:gap-14">
         {(['mine', 'delegated'] as const).map((card) => (
-          <div key={card} className="min-w-0 rounded-2xl border border-stroke-default bg-bg-surface px-5 pb-2 pt-1.5">
-            {/* Head: the serif title (leading-6) and See all. */}
-            <div className="flex items-center justify-between gap-3 pb-2 pt-3">
-              {line('h-6', 'w-36', 'h-4')}
-              {line('h-5', 'w-12', 'h-3')}
+          <div key={card} className="min-w-0">
+            {/* Head: the count, the title over its small line, and See all. */}
+            <div className={`flex min-h-[54px] items-center justify-between gap-3 border-b ${HOME_RULE} pb-2.5`}>
+              <span className="flex items-center gap-3">
+                <span className={`block h-9 w-7 ${bar} !rounded-xl`} />
+                <span>
+                  {line('h-6', 'w-24', 'h-4')}
+                  {line('h-[18px]', 'w-32', 'h-3')}
+                </span>
+              </span>
+              {line('h-5', 'w-14', 'h-3')}
             </div>
             {[0, 1, 2, 3, 4].map((row) => (
-              <div key={row} className="flex min-w-0 items-center gap-3 border-t border-stroke-subtle py-2.5">
+              <div key={row} className={`flex min-w-0 items-center gap-3 border-t ${HOME_ROW_RULE} py-3 first:border-t-0`}>
                 {card === 'mine' ? (
-                  <span className="h-5 w-5 shrink-0 animate-pulse rounded-full bg-bg-hover" />
+                  <span className="h-[22px] w-[22px] shrink-0 animate-pulse rounded-full bg-bg-hover" />
                 ) : (
                   <span className="h-7 w-7 shrink-0 animate-pulse rounded-full bg-bg-hover" />
                 )}
@@ -379,35 +399,43 @@ export function HomeDesktopSkeleton() {
         ))}
       </div>
       <HomeTeamRowSkeleton />
-      <div className="mt-2">
-        {/* Head: "Artists · n" (leading-7) and the Add artist pill (h-9). */}
-        <div className="flex items-end justify-between gap-4">
-          {line('h-7', 'w-32', 'h-5')}
-          <span className="h-9 w-28 animate-pulse rounded-full bg-bg-hover" />
+      <div>
+        {/* Head: "Your artists n" (leading-7) and the Add artist pill (h-10). */}
+        <div className={`flex items-center justify-between gap-4 border-b ${HOME_RULE} pb-2.5`}>
+          {line('h-7', 'w-36', 'h-5')}
+          <span className="h-10 w-28 animate-pulse rounded-full bg-bg-hover" />
         </div>
-        <div className="mt-3 overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
-          {/* The column header: text-xs over py-2.5. */}
-          <div className="flex items-center gap-5 border-b border-stroke-subtle py-2.5 pl-[4.75rem] pr-5">
-            {['w-10', 'w-20', 'w-10', 'w-10'].map((width, index) => (
-              <span key={index}>{line('h-4', width, 'h-2.5')}</span>
-            ))}
-          </div>
-          <ul className="divide-y divide-stroke-subtle">
-            {[0, 1, 2].map((key) => (
-              <li key={key} className="flex min-h-[68px] items-center gap-4 px-5 py-3">
+        {/* The column names: text-xs over pt-3 pb-1.5, on the row grid. */}
+        <div className={`${ROW_GRID} pb-1.5 pt-3`}>
+          {['w-10', 'w-20', 'w-10', 'w-10'].map((width, index) => (
+            <span key={index}>{line('h-4', width, 'h-2.5')}</span>
+          ))}
+          <span />
+        </div>
+        <ul>
+          {[0, 1, 2].map((key) => (
+            <li key={key} className={`${ROW_GRID} min-h-[72px] border-t ${HOME_ROW_RULE} py-4`}>
+              <span className="flex min-w-0 items-center gap-3">
                 <span className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-bg-hover" />
-                <span className="min-w-0 flex-1">
-                  {line('h-[22px]', 'w-32', 'h-4')}
-                  {line('h-4', 'w-16', 'h-3')}
+                {line('h-[22px]', 'w-32', 'h-4')}
+              </span>
+              <span className="flex min-w-0 items-center gap-3">
+                <span className="h-11 w-11 shrink-0 animate-pulse rounded-xl bg-bg-hover" />
+                <span>
+                  {line('h-5', 'w-28', 'h-3.5')}
+                  {line('h-4', 'w-12', 'h-3')}
                 </span>
-              </li>
-            ))}
-          </ul>
-          {/* "Add an artist": py-3.5 around a 40px circle. */}
-          <div className="flex items-center gap-3 border-t border-stroke-subtle px-5 py-3.5">
-            <span className="h-10 w-10 shrink-0 rounded-full border-[1.5px] border-dashed border-stroke-control" />
-            {line('h-5', 'w-24', 'h-3.5')}
-          </div>
+              </span>
+              {line('h-7', 'w-28', 'h-4')}
+              <span className={`block h-1.5 w-full ${bar}`} />
+              <span />
+            </li>
+          ))}
+        </ul>
+        {/* "Add an artist": py-4 around a 40px circle. */}
+        <div className={`flex items-center gap-3 border-t ${HOME_ROW_RULE} py-4`}>
+          <span className="h-10 w-10 shrink-0 rounded-full border-[1.5px] border-dashed border-stroke-control" />
+          {line('h-5', 'w-24', 'h-3.5')}
         </div>
       </div>
     </div>

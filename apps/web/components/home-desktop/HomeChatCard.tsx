@@ -1,9 +1,10 @@
 'use client';
 
 // The first block of Home on a computer (#1295, part of #1175; founder
-// approved docs/mocks/home-chat-desktop): one dark card, a box to ask AI on the
-// left and the Next drop on the right. It replaces the Next drop banner, so
-// Home still leads with one big card and the countdown is still on it.
+// approved docs/mocks/home-chat-desktop): a box to ask AI on the left and the
+// Next drop on the right. Since #1305 (docs/mocks/home-wallpaper) it has no
+// card: the greeting, the box, the suggestions and the Next drop sit on the
+// page, with one thin line between the chat and the Next drop.
 //
 // Sending hands the message to the Assistant the way the phone's box and the
 // rollout pages' box do (HomeAskBar, PageComposer in SwipeFrame): the chat it
@@ -38,26 +39,13 @@ import {
   defaultAboutId,
   type AboutOption,
   type ChatSuggestion,
-  type SuggestionKind,
 } from '@/lib/home-desktop/chat-card';
 import { URGANS_HREF } from '@/lib/shell-nav';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { showRolloutSession } from '@/stores/useChappiHistoryStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { displayReleaseTitle } from '@/types/releases';
-
-const INK = '#1d2a21';
-// A fine woven texture on the ink, as the mock: two sets of hairlines.
-const WEAVE =
-  'repeating-linear-gradient(0deg, rgba(245,240,230,.035) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(245,240,230,.03) 0 1px, transparent 1px 4px)';
-const GLOW = 'radial-gradient(closest-side, rgba(127,217,154,.28), rgba(127,217,154,0))';
-
-const DOT: Record<SuggestionKind, string> = {
-  late: 'bg-[#ff9d8f]',
-  today: 'bg-[#7fd99a]',
-  plan: 'bg-[#f0c66b]',
-  write: 'bg-[#a9c4ff]',
-};
+import { HOME_RULE } from './home-style';
 
 export function HomeChatCard({ rows, spotlight, today }: { rows: ListRow[]; spotlight: ListRow | null; today: string }) {
   const router = useRouter();
@@ -166,31 +154,20 @@ export function HomeChatCard({ rows, spotlight, today }: { rows: ListRow[]; spot
     <section
       data-home-block="next_drop"
       aria-label="Ask AI"
-      className="relative grid grid-cols-[minmax(0,1fr)_17rem] gap-6 rounded-[24px] p-7 text-[#f5f0e6] shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_24px_48px_-16px_rgba(29,42,33,.45),0_4px_12px_rgba(29,42,33,.18)] xl:grid-cols-[minmax(0,1fr)_300px] xl:gap-7 xl:p-8"
-      style={{ backgroundColor: INK, backgroundImage: WEAVE }}
+      className="grid grid-cols-[minmax(0,1fr)_16rem] gap-8 pb-1 pt-4 xl:grid-cols-[minmax(0,1fr)_300px] xl:gap-14"
     >
-      {/* A soft green glow behind the greeting. Decoration, not a placeholder. */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden rounded-[24px]">
-        <div className="absolute -left-36 -top-64 h-[520px] w-[520px] rounded-full" style={{ backgroundImage: GLOW }} />
-      </div>
-
-      <div className="relative flex min-w-0 flex-col">
-        <p className="flex items-center gap-2 text-[13px] font-semibold tracking-[0.02em] text-[#7fd99a]">
-          <span
-            aria-hidden="true"
-            className="h-2.5 w-2.5 rotate-45 rounded-[2px] bg-[#7fd99a] shadow-[0_0_0_4px_rgba(127,217,154,.18),0_0_18px_rgba(127,217,154,.7)]"
-          />
-          {hello.line}
-        </p>
-        <h2 className="mt-2.5 font-display text-[34px] font-normal leading-[42px] tracking-[-0.01em] xl:text-[38px] xl:leading-[44px]">
+      <div className="flex min-w-0 flex-col">
+        <p className="text-[13px] font-medium leading-5 text-content-secondary">{hello.line}</p>
+        <h2 className="mt-2.5 font-display text-[34px] font-normal leading-[42px] tracking-[-0.01em] text-content-primary xl:text-[40px] xl:leading-[44px]">
           {hello.greeting}
           <br />
-          <span className="text-[#f5f0e6]/60">{CHAT_CARD_COPY.ask}</span>
+          <span className="text-content-tertiary">{CHAT_CARD_COPY.ask}</span>
         </h2>
 
         <form
           onSubmit={onSubmit}
-          className="group mt-5 rounded-[18px] bg-[#fbf7ef] px-4 pb-3 pt-4 text-[#1a1611] shadow-[0_0_0_1px_rgba(245,240,230,.5),0_18px_36px_-12px_rgba(0,0,0,.55),inset_0_2px_0_rgba(255,255,255,.9)] transition-shadow focus-within:shadow-[0_0_0_2px_#7fd99a,0_0_0_7px_rgba(127,217,154,.22),0_18px_36px_-12px_rgba(0,0,0,.55)]"
+          data-home-chat-box
+          className="mt-[22px] rounded-[24px] bg-bg-surface px-[18px] pb-3.5 pt-[18px] shadow-[0_0_0_1.5px_var(--home-line-strong)] transition-shadow focus-within:shadow-[0_0_0_2px_rgb(var(--color-brand))]"
         >
           <ChappiAttachmentTray attachments={attach.attachments} pending={attach.pending} onRemove={attach.remove} />
           <label htmlFor="home-chat-box" className="sr-only">
@@ -212,16 +189,16 @@ export function HomeChatCard({ rows, spotlight, today }: { rows: ListRow[]; spot
             placeholder={CHAT_CARD_COPY.placeholder}
             disabled={sending}
             autoComplete="off"
-            className="block min-h-12 w-full resize-none bg-transparent text-[17px] leading-6 text-[#1a1611] outline-none focus:outline-none focus-visible:outline-none placeholder:text-[#6a665f] disabled:opacity-60"
+            className="block min-h-12 w-full resize-none bg-transparent text-[17px] leading-6 text-content-primary outline-none focus:outline-none focus-visible:outline-none placeholder:text-content-tertiary disabled:opacity-60"
           />
           <div className="mt-2 flex items-center gap-2.5">
             <ChappiAttachMenu
               disabled={sending}
               onFiles={(files) => void attach.addFiles(files)}
-              triggerClassName="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[rgba(26,22,17,.18)] bg-white text-[#4b4740] transition-colors hover:text-[#1a1611] disabled:opacity-40"
+              triggerClassName="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full border border-stroke-control text-content-secondary transition-colors hover:text-content-primary disabled:opacity-40"
             />
             <AboutPicker options={options} value={aboutId} onChange={setPicked} disabled={sending} />
-            <span className="ml-auto text-xs text-[#6a665f]" aria-hidden="true">
+            <span className="ml-auto text-xs text-content-tertiary" aria-hidden="true">
               {CHAT_CARD_COPY.enterHint}
             </span>
             <button
@@ -230,8 +207,8 @@ export function HomeChatCard({ rows, spotlight, today }: { rows: ListRow[]; spot
               aria-label="Send to AI"
               className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
                 hasContent && !sending
-                  ? 'bg-[#14643a] text-white shadow-[0_6px_14px_-4px_rgba(20,100,58,.7)]'
-                  : 'bg-[#d9d3c5] text-[#6a665f]'
+                  ? 'bg-brand text-content-inverse'
+                  : 'bg-bg-hover text-content-secondary'
               }`}
             >
               {sending ? (
@@ -242,7 +219,7 @@ export function HomeChatCard({ rows, spotlight, today }: { rows: ListRow[]; spot
             </button>
           </div>
           {attach.error ? (
-            <p role="alert" className="mt-2 text-xs text-[#961a1a]">
+            <p role="alert" className="mt-2 text-xs text-status-error">
               {attach.error}
             </p>
           ) : null}
@@ -264,15 +241,15 @@ export function HomeChatCard({ rows, spotlight, today }: { rows: ListRow[]; spot
   );
 }
 
+/** A suggestion: an outlined pill, no dot. */
 function SuggestionChip({ chip, disabled, onPick }: { chip: ChatSuggestion; disabled: boolean; onPick: () => void }) {
   return (
     <button
       type="button"
       onClick={onPick}
       disabled={disabled}
-      className="motion-focus motion-press inline-flex h-9 items-center gap-2 rounded-full border border-[#f5f0e6]/[.18] bg-[#f5f0e6]/[.07] px-3.5 text-[13px] text-[#f5f0e6] backdrop-blur-[4px] transition-colors hover:bg-[#f5f0e6]/[.13] disabled:opacity-50"
+      className="motion-focus motion-press inline-flex h-[38px] items-center rounded-full px-4 text-[13px] text-content-primary shadow-[0_0_0_1px_var(--home-line-strong)] transition-colors hover:bg-bg-hover/60 disabled:opacity-50"
     >
-      <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${DOT[chip.kind]}`} />
       {chip.text}
     </button>
   );
@@ -337,7 +314,7 @@ function AboutPicker({
   };
 
   const row =
-    'motion-focus flex w-full min-w-0 items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-content-primary transition-colors hover:bg-bg-hover';
+    'motion-focus flex w-full min-w-0 items-center gap-2.5 rounded-[14px] px-2.5 py-2 text-left text-sm text-content-primary transition-colors hover:bg-bg-hover';
 
   return (
     <div ref={rootRef} className="relative min-w-0">
@@ -350,8 +327,8 @@ function AboutPicker({
         aria-controls={open ? panelId : undefined}
         className={`motion-focus inline-flex h-8 max-w-[15rem] items-center gap-2 rounded-full border px-3 text-[13px] font-medium transition-colors disabled:opacity-50 ${
           current
-            ? 'border-[#14643a] bg-[#e6eee6] text-[#14643a]'
-            : 'border-[rgba(26,22,17,.18)] bg-white text-[#1a1611] hover:bg-[#f5f0e6]'
+            ? 'border-brand bg-brand/10 text-brand'
+            : 'border-stroke-control text-content-primary hover:bg-bg-hover/60'
         }`}
       >
         {current ? (
@@ -366,10 +343,10 @@ function AboutPicker({
           id={panelId}
           role="group"
           aria-label="What your message is about"
-          className="absolute left-0 top-full z-50 mt-2 max-h-[22rem] w-80 overflow-y-auto rounded-[14px] border border-stroke-default bg-bg-surface p-1.5 shadow-[0_24px_48px_-12px_rgba(0,0,0,.45)]"
+          className="absolute left-0 top-full z-50 mt-2 max-h-[22rem] w-80 overflow-y-auto rounded-[20px] border border-stroke-default bg-bg-surface p-1.5 shadow-[0_24px_48px_-12px_rgba(0,0,0,.45)]"
         >
           <button type="button" onClick={() => choose(null)} aria-current={value === null ? 'true' : undefined} className={`${row} ${value === null ? 'bg-bg-sidebar-active font-semibold' : ''}`}>
-            <span aria-hidden="true" className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-[#1d2a21] text-[#7fd99a]">
+            <span aria-hidden="true" className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-bg-hover text-content-secondary">
               <Sparkles className="h-3.5 w-3.5" />
             </span>
             <span className="min-w-0 flex-1">
@@ -389,7 +366,7 @@ function AboutPicker({
                 aria-current={on ? 'true' : undefined}
                 className={`${row} ${on ? 'bg-bg-sidebar-active font-semibold' : ''}`}
               >
-                <Cover release={releaseById.get(option.id) ?? null} size={28} />
+                <Cover release={releaseById.get(option.id) ?? null} size={28} className="!rounded-lg" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate">{option.title}</span>
                   <span className="block truncate text-xs font-normal text-content-secondary">{option.detail}</span>
@@ -404,19 +381,19 @@ function AboutPicker({
   );
 }
 
-/** The Next drop, on the right of the card: what the old banner showed, smaller. */
+/** The Next drop, to the right of the chat, past one thin line. No late count
+ *  here: a late task says so on its own row (#1305). */
 function NextDropPanel({ row }: { row: ListRow | null }) {
   const release = row?.next ?? null;
-  const panel =
-    'relative flex flex-col rounded-[18px] border border-[#f5f0e6]/[.14] bg-[#f5f0e6]/[.07] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,.06)]';
-  const eyebrow = 'text-[11px] font-bold uppercase tracking-[0.1em] text-[#f5f0e6]/70';
+  const panel = `flex min-w-0 flex-col border-l ${HOME_RULE} pl-8 xl:pl-10`;
+  const eyebrow = 'text-[13px] font-medium leading-5 text-content-secondary';
 
   if (!row || !release || row.daysToGo === null) {
     return (
       <div className={panel}>
         <p className={eyebrow}>Next drop</p>
-        <p className="mt-3 font-display text-xl leading-6">{CHAT_CARD_COPY.noDropTitle}</p>
-        <p className="mt-1.5 text-[13px] leading-5 text-[#f5f0e6]/70">{CHAT_CARD_COPY.noDropLine}</p>
+        <p className="mt-3 font-display text-xl leading-6 text-content-primary">{CHAT_CARD_COPY.noDropTitle}</p>
+        <p className="mt-1.5 text-[13px] leading-5 text-content-secondary">{CHAT_CARD_COPY.noDropLine}</p>
       </div>
     );
   }
@@ -427,26 +404,21 @@ function NextDropPanel({ row }: { row: ListRow | null }) {
     <Link
       href={releaseHref(release.id)}
       onClick={() => captureAnalyticsEvent({ name: 'artists_list_action', properties: { artist_id: row.artist.id, action: 'spotlight' } })}
-      className={`${panel} motion-focus group transition-colors hover:bg-[#f5f0e6]/[.1]`}
+      className={`${panel} motion-focus group`}
     >
       <p className={eyebrow}>Next drop</p>
       <span className="mt-3 flex min-w-0 items-center gap-3">
-        <Cover
-          release={release}
-          size={64}
-          onInk
-          className="-rotate-3 !rounded-[10px] shadow-[0_10px_20px_-6px_rgba(0,0,0,.6),inset_0_0_0_1px_rgba(255,255,255,.12)]"
-        />
+        <Cover release={release} size={64} className="!rounded-[14px]" />
         <span className="min-w-0">
-          <span className="block truncate font-display text-xl leading-6">{displayReleaseTitle(release.title)}</span>
-          <span className="block truncate text-[13px] text-[#f5f0e6]/70">
+          <span className="block truncate font-display text-xl leading-6 text-content-primary">{displayReleaseTitle(release.title)}</span>
+          <span className="block truncate text-[13px] leading-5 text-content-secondary">
             {row.artist.name} · {typeLabel(release)}
           </span>
         </span>
       </span>
       <span className="mt-4 flex items-center gap-3">
-        <span className="font-display text-[56px] leading-[52px] tabular-nums text-[#7fd99a]">{days === 0 ? 'Today' : days}</span>
-        <span className="text-[13px] leading-[18px] text-[#f5f0e6]/70">
+        <span className="font-display text-[56px] leading-[52px] tabular-nums text-content-primary">{days === 0 ? 'Today' : days}</span>
+        <span className="text-[13px] leading-[18px] text-content-secondary">
           {days === 0 ? 'it drops' : days === 1 ? 'day to go' : 'days to go'}
           <br />
           {shortDay(release.releaseDate)}
@@ -454,23 +426,16 @@ function NextDropPanel({ row }: { row: ListRow | null }) {
       </span>
       {row.total > 0 ? (
         <>
-          <span className="mt-3.5 block h-1 overflow-hidden rounded-full bg-[#f5f0e6]/[.16]">
-            <span className="block h-full rounded-full bg-[#7fd99a]" style={{ width: `${percent(row)}%` }} />
+          <span className="mt-3.5 block h-1.5 overflow-hidden rounded-full bg-bg-hover">
+            <span className="block h-full rounded-full bg-brand" style={{ width: `${percent(row)}%` }} />
           </span>
-          <span className="mt-2 block text-[13px] text-[#f5f0e6]/70">
+          <span className="mt-2 block text-[13px] leading-5 text-content-secondary">
             {row.done} of {row.total} done
-            {row.late > 0 ? (
-              <>
-                {' · '}
-                <span className="font-semibold text-[#ffb4a8]">{row.late} late</span>
-              </>
-            ) : open === 0 ? (
-              ' · all done'
-            ) : null}
+            {open === 0 ? ' · all done' : null}
           </span>
         </>
       ) : null}
-      <span className="mt-auto inline-flex items-center gap-1.5 pt-3.5 text-[13px] font-semibold text-[#f5f0e6]">
+      <span className="mt-auto inline-flex items-center gap-1.5 pt-3.5 text-[13px] font-semibold text-content-primary">
         Open rollout
         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
       </span>
@@ -479,21 +444,19 @@ function NextDropPanel({ row }: { row: ListRow | null }) {
 }
 
 /**
- * The card's loading shape, for HomeDesktopSkeleton: the same ink card, padding
- * and columns, with the greeting, the box, the chips and the panel as quiet
- * blocks, so nothing moves when Home lands.
+ * The block's loading shape, for HomeDesktopSkeleton: the same columns and
+ * line boxes with no card, so nothing moves when Home lands.
  */
 export function HomeChatCardSkeleton() {
-  const bar = 'block animate-pulse rounded bg-[#f5f0e6]/[.12]';
+  const bar = 'block animate-pulse rounded-full bg-bg-hover';
   return (
     <div
       aria-hidden="true"
       data-skeleton="home-chat"
-      className="grid grid-cols-[minmax(0,1fr)_17rem] gap-6 rounded-[24px] p-7 xl:grid-cols-[minmax(0,1fr)_300px] xl:gap-7 xl:p-8"
-      style={{ backgroundColor: INK }}
+      className="grid grid-cols-[minmax(0,1fr)_16rem] gap-8 pb-1 pt-4 xl:grid-cols-[minmax(0,1fr)_300px] xl:gap-14"
     >
       <div className="flex min-w-0 flex-col">
-        {/* Line boxes of the live card: the day line, the two greeting lines,
+        {/* Line boxes of the live block: the day line, the two greeting lines,
             the box, and the suggestions, which usually wrap to two rows. */}
         <span className="flex h-5 items-center">
           <span className={`h-3.5 w-32 ${bar}`} />
@@ -502,17 +465,33 @@ export function HomeChatCardSkeleton() {
           <span className={`h-8 w-72 ${bar}`} />
           <span className={`h-8 w-56 ${bar}`} />
         </span>
-        <span className="mt-5 block h-[124px] rounded-[18px] bg-[#fbf7ef]/90" />
+        <span className="mt-[22px] block h-[128px] rounded-[24px] shadow-[0_0_0_1.5px_var(--home-line-strong)]" />
         <span className="mt-[18px] flex flex-col gap-2">
           <span className="flex gap-2">
             {['w-48', 'w-44', 'w-52'].map((width) => (
-              <span key={width} className={`h-9 rounded-full ${width} ${bar}`} />
+              <span key={width} className={`h-[38px] ${width} ${bar}`} />
             ))}
           </span>
-          <span className={`h-9 w-52 rounded-full ${bar}`} />
+          <span className={`h-[38px] w-52 ${bar}`} />
         </span>
       </div>
-      <span className="block rounded-[18px] border border-[#f5f0e6]/[.14] bg-[#f5f0e6]/[.07]" />
+      <div className={`flex min-w-0 flex-col border-l ${HOME_RULE} pl-8 xl:pl-10`}>
+        <span className="flex h-5 items-center">
+          <span className={`h-3 w-16 ${bar}`} />
+        </span>
+        <span className="mt-3 flex items-center gap-3">
+          <span className="h-16 w-16 shrink-0 animate-pulse rounded-[14px] bg-bg-hover" />
+          <span className="min-w-0 flex-1 space-y-2">
+            <span className={`h-4 w-28 ${bar}`} />
+            <span className={`h-3 w-20 ${bar}`} />
+          </span>
+        </span>
+        <span className="mt-4 block h-[52px] w-32 animate-pulse rounded-2xl bg-bg-hover" />
+        <span className={`mt-3.5 h-1.5 w-full ${bar}`} />
+        <span className="mt-2 flex h-5 items-center">
+          <span className={`h-3 w-24 ${bar}`} />
+        </span>
+      </div>
     </div>
   );
 }

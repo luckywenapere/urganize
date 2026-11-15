@@ -166,7 +166,7 @@ function OutNowCard({
     };
     return (
       <section
-        className="flex min-h-[52px] items-center gap-3 rounded-xl border border-stroke-default bg-bg-surface py-2 pl-4 pr-2"
+        className="flex min-h-[40px] items-center gap-3"
         data-home-block="out-now"
         aria-label={`${title} is out now`}
       >

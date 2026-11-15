@@ -163,10 +163,11 @@ describe('buildChatSuggestions', () => {
     expect(plan?.text).toBe('Plan the next record for Quiet One');
   });
 
-  it('never says a product name, only AI', () => {
+  it('asks in plain words and never names the product', () => {
+    expect(CHAT_CARD_COPY.ask).toBe('What is on your mind?');
+    expect(CHAT_CARD_COPY.placeholder).toBe('What is slipping? Who is waiting on you? What comes next? Just ask.');
     const all = [CHAT_CARD_COPY.placeholder, CHAT_CARD_COPY.ask, CHAT_CARD_COPY.everythingDetail].join(' ');
-    expect(all).toContain('AI');
-    expect(all).not.toMatch(/urgans|chappi/i);
+    expect(all).not.toMatch(/urgans|chappi|assistant/i);
     expect(all).not.toContain('—');
   });
 });

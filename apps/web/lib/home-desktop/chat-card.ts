@@ -7,8 +7,8 @@ import { greetingForHour } from '../home/header';
 import type { ArtistStatus } from '../artists-list';
 
 export const CHAT_CARD_COPY = {
-  ask: 'What do you need?',
-  placeholder: 'Ask AI about your rollouts, or tell it what to do',
+  ask: 'What is on your mind?',
+  placeholder: 'What is slipping? Who is waiting on you? What comes next? Just ask.',
   everything: 'Everything',
   everythingDetail: 'All artists and rollouts',
   enterHint: 'Enter to send',

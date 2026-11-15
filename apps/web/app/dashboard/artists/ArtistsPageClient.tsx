@@ -28,6 +28,7 @@ import { artistHomeId } from '@/lib/artist-home';
 import ArtistPageClient from '@/app/dashboard/[artistId]/ArtistPageClient';
 import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { HomeDesktop, HomeDesktopSkeleton } from '@/components/home-desktop/HomeDesktop';
+import { HomeWallpaperLayer } from '@/components/home-desktop/HomeWallpaper';
 import {
   Cover,
   STATUS_WORD,
@@ -124,6 +125,8 @@ export default function ArtistsPageClient({
       <div>
         <DuplicateArtistsPrompt />
         <StreamingLinkPrompt />
+        {/* The person's wallpaper, from the first paint (#1305). Computers only. */}
+        <HomeWallpaperLayer />
         <div className="pt-5 sm:pt-6" />
         {loading || !commandCenterSettled ? (
           <HomeDesktopSkeleton />

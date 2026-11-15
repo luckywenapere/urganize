@@ -62,6 +62,10 @@ describe('shell nav', () => {
   it('leaves Rollouts out of the computer top bar (Nov 12, 2026, #1218): its chats live in the Assistant', () => {
     const areas = buildShellAreas(ALL_OFF);
     expect(topBarAreas(areas).map((a) => a.key)).toEqual(['catalogue', 'urgans']);
+    // The chat's tab reads "Ask Chappi" on a computer (#1305); the area itself
+    // and the phone's tab keep their name.
+    expect(topBarAreas(areas).find((a) => a.key === 'urgans')?.label).toBe('Ask Chappi');
+    expect(areas.find((a) => a.key === 'urgans')?.label).toBe('Assistant');
     expect(topBarAreas(buildShellAreas(ALL_ON)).map((a) => a.key)).toEqual(['catalogue', 'urgans', 'relationships', 'opportunities']);
     // The phone's bottom bar keeps it.
     expect(buildMobileTabs(areas).map((t) => t.key)).toContain('rollouts');

@@ -137,6 +137,38 @@ export function selectDelegated<T extends HomeTaskInput>(
   return { open: open.length, rows };
 }
 
+/** How many rollouts a set of tasks sits on, for "open across 2 rollouts". */
+export function countRollouts(tasks: readonly { releaseId: string | null }[]): number {
+  return new Set(tasks.map((task) => task.releaseId).filter(Boolean)).size;
+}
+
+/** How many people hold open work the viewer handed out (selectDelegated's rule). */
+export function countDelegatedPeople(
+  tasks: readonly HomeTaskInput[],
+  viewerId: string,
+  ownedReleaseIds: ReadonlySet<string>
+): number {
+  if (!viewerId) return 0;
+  const holders = new Set<string>();
+  for (const task of tasks) {
+    if (!task.assignedToUserId || task.assignedToUserId === viewerId || !isOpen(task)) continue;
+    if (task.createdBy === viewerId || (task.releaseId !== null && ownedReleaseIds.has(task.releaseId))) {
+      holders.add(task.assignedToUserId);
+    }
+  }
+  return holders.size;
+}
+
+/** The small line beside a heading's count: "open across 2 rollouts", "with 3 people". */
+export function homeTaskSubline(kind: 'mine' | 'delegated', count: number): string | null {
+  if (kind === 'mine') {
+    if (count <= 0) return 'open';
+    return count === 1 ? 'open on 1 rollout' : `open across ${count} rollouts`;
+  }
+  if (count <= 0) return null;
+  return count === 1 ? 'with 1 person' : `with ${count} people`;
+}
+
 /** "6 days late", "Today", "Tomorrow", "Thu 12 Nov", or "No date". */
 export function homeDueLabel(dueDate: string | null, today: string): { text: string; late: boolean } {
   const day = dayOf(dueDate);
