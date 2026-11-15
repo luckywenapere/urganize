@@ -1006,3 +1006,10 @@ html[data-marketing-theme="dark"] .page-sky {
     mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 2rem), transparent 100%);
   }
 }
+
+/* Prices in the visitor's currency from the first paint (#1301). The inline
+   script in layout.tsx marks a visitor outside Nigeria; their prices stay
+   hidden (keeping their space) until the page has switched them to dollars. */
+html[data-currency="USD"]:not([data-currency-ready]) [data-visitor-price] {
+  visibility: hidden;
+}

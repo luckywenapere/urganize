@@ -278,6 +278,27 @@ export default function RootLayout({
           }}
         />
 
+        {/* Prices in the visitor's currency from the first paint (#1301).
+            proxy.ts sets urg_currency from the visitor's country. Outside
+            Nigeria this hides every price (data-visitor-price) until the page
+            has swapped it to dollars, so naira never shows. The timeout is a
+            safety net: if the page's scripts never run, prices still appear. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  if (/(?:^|; *)urg_currency=USD(?:;|$)/.test(document.cookie)) {
+                    var root = document.documentElement;
+                    root.dataset.currency = 'USD';
+                    setTimeout(function () { root.dataset.currencyReady = '1'; }, 3000);
+                  }
+                } catch (_) {}
+              })();
+            `,
+          }}
+        />
+
         {/* JSON-LD STRUCTURED DATA */}
         <script
           type="application/ld+json"

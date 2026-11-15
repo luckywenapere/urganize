@@ -103,7 +103,7 @@ export function PricingTierCards() {
   const tiers = TIER_GROUPS[group];
 
   return (
-    <section className="relative px-6 pb-20">
+    <section data-visitor-price className="relative px-6 pb-20">
       <div className="mx-auto max-w-6xl">
         {/* Who it is for first, then how often you pay: both reprice the cards. */}
         <div className="mb-3 flex justify-center">
