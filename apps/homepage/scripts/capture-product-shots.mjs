@@ -72,6 +72,14 @@ const MODE = args.mode ?? "capture";
 const BASE = (args.base ?? "https://team.urganize.app").replace(/\/$/, "");
 const LOGIN_TIMEOUT_MS = Number(args["login-timeout"] ?? 15 * 60 * 1000);
 const ONLY = args.only ? new Set(args.only.split(",").map((s) => s.trim())) : null;
+// THE ACCOUNT GUARD (2026-11-15, #1299). A run that month was signed in to the
+// founder's own account and the seed step wrote demo artists and rollouts into
+// it. Seeding now refuses to start unless the signed-in email is the one named
+// here, and a capture run checks it too when it is given.
+const EXPECTED_ACCOUNT = String(args.account ?? process.env.SHOTS_ACCOUNT ?? "").trim().toLowerCase();
+// A one-time sign-in link for the demo account (Supabase admin generate_link),
+// read from the environment so it never lands in a command line or a log.
+const LOGIN_URL = process.env.SHOTS_LOGIN_URL ?? "";
 
 // ---------------------------------------------------------------------------
 // The demo team. Fictional artists and titles: no real client data may appear
@@ -357,6 +365,15 @@ window.__urg = window.__urg || {
     }
     return "";
   },
+  email() {
+    for (const key of Object.keys(localStorage)) {
+      if (!/^sb-.*-auth-token$/.test(key)) continue;
+      let raw = localStorage.getItem(key) || "";
+      if (raw.startsWith("base64-")) raw = atob(raw.slice(7));
+      try { const json = JSON.parse(raw); const user = json.user || (json.currentSession && json.currentSession.user) || {}; return String(user.email || "").toLowerCase(); } catch { return ""; }
+    }
+    return "";
+  },
   async api(method, url, body) {
     const headers = { Authorization: "Bearer " + this.token() };
     if (body !== undefined) headers["Content-Type"] = "application/json";
@@ -486,6 +503,12 @@ async function seed(client) {
       if (!id) throw new Error(`release ${plan.title}: no id in ${JSON.stringify(created.json).slice(0, 200)}`);
       release = { id, title: plan.title };
       log(" +", plan.title, id);
+    } else if (String(release.releaseDate ?? release.release_date ?? "").slice(0, 10) !== ymdWeeksOut(plan.weeksOut)) {
+      // A demo team left alone for a month has release days in the past, and
+      // every screen then says "late". The schedule route moves the rollout
+      // AND its activities to the new day.
+      await api("POST", `/api/releases/${release.id}/schedule`, { releaseDate: ymdWeeksOut(plan.weeksOut) });
+      log(" ~", plan.title, "moved to", ymdWeeksOut(plan.weeksOut));
     }
     seeded.push({ ...plan, id: release.id });
   }
@@ -518,8 +541,12 @@ async function seed(client) {
     const byDue = [...tasks].sort((a, b) => String(a.dueDate ?? "").localeCompare(String(b.dueDate ?? "")));
     const target = Math.round(tasks.length * plan.done);
     let changed = 0;
+    const today = new Date().toISOString().slice(0, 10);
     for (const [index, task] of byDue.entries()) {
-      const want = index < target ? "done" : "todo";
+      // Nothing in a marketing shot is ever late: an activity whose day has
+      // passed is done, whatever share of the plan was asked for.
+      const past = task.dueDate && String(task.dueDate).slice(0, 10) < today;
+      const want = index < target || past ? "done" : "todo";
       if ((task.status === "done") === (want === "done")) continue;
       await api("PATCH", `/api/tasks/${task.id}`, { status: want }, { allow: [400, 409] });
       changed += 1;
@@ -676,6 +703,22 @@ async function encodePng(buffer, width) {
   return { out, width: meta.width, height: meta.height };
 }
 
+// Strips and cards that sit over a page and are not the product: the terms
+// notice and the "turn on notifications" card. Each is found by its own words
+// and the SMALLEST box holding them is hidden (the outermost one that starts
+// with the same words is the whole page, which is how a phone shot once came
+// out blank). Nothing is clicked, so the account is left as it was.
+async function hideStrips(client) {
+  await client.evaluate(`(() => {
+    for (const words of [/^We updated our terms/, /^Never miss a deadline/]) {
+      const hits = [...document.querySelectorAll("div, aside, section")].filter((el) => words.test(el.innerText.trim()) && el.innerText.length < 400);
+      const box = hits.find((el) => getComputedStyle(el).position === "fixed") || hits[0];
+      if (box) box.style.display = "none";
+    }
+    return true;
+  })()`);
+}
+
 async function captureShot(client, shot, context) {
   const viewport = VIEWPORTS[shot.viewport];
   const themes = shot.themes ?? ["light", "dark"];
@@ -707,6 +750,15 @@ async function captureShot(client, shot, context) {
   // take a few seconds on a fresh session, and a card with a blank box where
   // the artwork should be is the one thing a catalog screenshot must not show.
   await client.waitFor("[...document.images].filter((img) => img.getBoundingClientRect().width > 0).every((img) => img.complete && img.naturalWidth > 0)", "images", 25_000).catch(() => console.warn("[shot] some images never decoded"));
+  // A shot of grey loading bars is not a shot of the product.
+  await client.waitFor(`![...document.querySelectorAll(".skeleton-shimmer, [data-skeleton]")].some((el) => el.getBoundingClientRect().width > 0)`, "loading bars", 25_000).catch(() => console.warn(`[shot] ${shot.name}: still loading after 25s`));
+  // "Find <artist> on streaming" opens over Home and Artists for a demo artist
+  // with no streaming link; put it away for this visit.
+  await client.evaluate(`(() => { const b = [...document.querySelectorAll("button")].find((el) => el.innerText.trim() === "Not now"); if (b) b.click(); return true; })()`);
+  await sleep(400);
+  // The "We updated our terms" strip sits above every page until someone
+  // taps Got it; hide it for the picture and leave the account as it is.
+  await hideStrips(client);
   if (shot.rail !== "keep" && shot.viewport === "desktop") {
     // The UrgAns side rail arms itself open once per session; the shots want
     // the product, not the assistant, unless they are about the assistant.
@@ -716,6 +768,14 @@ async function captureShot(client, shot, context) {
   await hideChrome(client, [...PROMPT_CARDS, ...(shot.hide ?? [])]);
   await anonymise(client);
   await sleep(800);
+  // The streaming sheet can open a few seconds after the page settles, so
+  // look for it once more right before the picture.
+  for (let i = 0; i < 6; i += 1) {
+    const closed = await client.evaluate(`(() => { if (!/Find .+ on streaming/.test(document.body.innerText)) return false; const b = [...document.querySelectorAll("button")].find((el) => el.innerText.trim() === "Not now"); if (b) b.click(); return true; })()`);
+    await sleep(500);
+    if (closed) { await sleep(600); break; }
+  }
+  await hideStrips(client);
 
   const files = {};
   for (const [index, theme] of themes.entries()) {
@@ -823,14 +883,23 @@ async function main() {
     await client.send("Page.enable");
     await client.send("Runtime.enable");
 
-    await client.send("Page.navigate", { url: `${BASE}/auth` });
-    console.log("\nA Chrome window is open at the sign-in page. Sign in to the DEMO account (email + password).");
+    await client.send("Page.navigate", { url: LOGIN_URL || `${BASE}/auth` });
+    console.log(LOGIN_URL ? "\nSigning in with the one-time link." : "\nA Chrome window is open at the sign-in page. Sign in to the DEMO account (email + password).");
     console.log("Waiting for the app to land on /dashboard …\n");
     // Sign-in lands on /dashboard/home since the Home tab shipped, so any
     // /dashboard path counts as signed in.
     await client.waitFor(`location.pathname === "/dashboard" || location.pathname.startsWith("/dashboard/")`, "sign-in", LOGIN_TIMEOUT_MS);
     await sleep(1500);
     await client.evaluate(PAGE_API);
+
+    const signedInAs = await client.evaluate("__urg.email()");
+    if ((MODE === "seed" || MODE === "all") && !EXPECTED_ACCOUNT) {
+      throw new Error("Seeding writes to the signed-in team. Name the demo account with --account=<email> (or SHOTS_ACCOUNT) first.");
+    }
+    if (EXPECTED_ACCOUNT && signedInAs !== EXPECTED_ACCOUNT) {
+      throw new Error("Signed in to a different account than --account names. Nothing was changed. Sign in to the demo account and run again.");
+    }
+    console.log(EXPECTED_ACCOUNT ? "[account] signed in to the demo account" : "[account] no --account given, capture only");
 
     let context = readContext();
     if (MODE === "seed" || MODE === "all") {
