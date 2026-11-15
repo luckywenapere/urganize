@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
-import { Instrument_Sans, Young_Serif, Space_Mono } from 'next/font/google';
+import { DM_Sans, DM_Mono } from 'next/font/google';
 import { AppShell } from '@/components/app/AppShell';
 import { CursorRefresher } from '@/components/app/CursorRefresher';
 import { LegacyHostHandoff } from '@/components/app/LegacyHostHandoff';
@@ -11,33 +11,30 @@ import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import { BRAND_LINE, META_DESCRIPTION, SHARE_DESCRIPTION, SHARE_HEADLINE, SHARE_TITLE } from '@/lib/positioning';
 import './globals.css';
 
-// Self-hosted via next/font (preloaded, no third-party request chain). Per
-// the Urganize Brand Bible (URG 001): Instrument Sans is the body/UI workhorse (swapped from Space Grotesk 2026-10-05, founder call: Space Grotesk had become the stock "designed" grotesque)
-// (--font-sans), Young Serif is the display face used large and with restraint
-// for headlines (--font-display), Space Mono carries the "catalog" metadata
-// voice — dates, statuses, counts, IDs (--font-mono). IBM Plex Sans is
-// retired; globals.css binds all three variables below.
-const instrumentSans = Instrument_Sans({
+// Self-hosted via next/font (preloaded, no third-party request chain). The app
+// uses the Urganize logo's family since 2026-11-15 (founder approved, #1307):
+// DM Sans is the body/UI face (--font-sans) and, in bold with slightly tight
+// tracking, the display face for headlines and big numbers (--font-display);
+// DM Mono carries the "catalog" metadata voice: dates, statuses, counts, IDs
+// (--font-mono). Instrument Sans, Young Serif and Space Mono are retired;
+// globals.css binds all three variables below.
+//
+// DM Sans is a variable font, so one file covers 400 to 700.
+const dmSans = DM_Sans({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-instrument-sans',
+  variable: '--font-dm-sans',
 });
-const youngSerif = Young_Serif({
+const dmMono = DM_Mono({
   subsets: ['latin'],
-  weight: '400',
-  display: 'swap',
-  variable: '--font-young-serif',
-});
-const spaceMono = Space_Mono({
-  subsets: ['latin'],
-  weight: ['400', '700'],
+  weight: ['400', '500'],
   display: 'swap',
   // Not preloaded (2026-10-11): the mono face only dresses dates, counts and
   // statuses inside the workspace. /auth never uses it, but a preload hint
   // made every first visit fetch both weights before sign-in. It still loads
   // on demand (display: swap) wherever --font-mono is used.
   preload: false,
-  variable: '--font-space-mono',
+  variable: '--font-dm-mono',
 });
 
 const appName = 'Urganize';
@@ -150,7 +147,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       lang="en"
       suppressHydrationWarning
       data-theme="dark"
-      className={`dark ${TEXTILE_ENABLED ? 'urg-textile ' : ''}${instrumentSans.variable} ${youngSerif.variable} ${spaceMono.variable}`}
+      className={`dark ${TEXTILE_ENABLED ? 'urg-textile ' : ''}${dmSans.variable} ${dmMono.variable}`}
     >
       <head>
         {/* First, so a sign-in link that lands on the old host moves to the

@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.285.4",
+    tag: "App",
+    date: "November 15, 2026",
+    highlights: [
+      "The app now uses the same lettering as the Urganize logo.",
+    ],
+  },
+  {
     version: "1.285.3",
     tag: "App",
     date: "November 15, 2026",

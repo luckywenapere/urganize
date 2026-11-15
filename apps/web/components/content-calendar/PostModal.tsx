@@ -304,7 +304,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
           <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[var(--cc-border)] p-4 sm:p-5">
             <h2
               id="post-modal-title"
-              className="font-[family-name:var(--font-cc-display)] text-xl font-medium text-[var(--cc-text)]"
+              className="font-[family-name:var(--font-cc-display)] text-xl font-bold tracking-[-0.02em] text-[var(--cc-text)]"
             >
               {isEditMode ? 'Edit post' : 'New post'}
             </h2>
