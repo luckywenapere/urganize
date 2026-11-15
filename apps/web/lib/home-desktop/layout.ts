@@ -4,7 +4,10 @@
 // store that already exists. Pure: the store in stores/useHomeLayoutStore.ts
 // does the reading and writing.
 
-export const HOME_BLOCK_IDS = ['out_now', 'next_drop', 'my_tasks', 'delegated', 'team', 'artists', 'ask'] as const;
+// 'next_drop' is the chat card since #1295 (the Next drop sits inside it); the
+// id stays so saved layouts keep its place. The separate 'ask' box it
+// replaced is gone: a saved layout that names it simply drops it.
+export const HOME_BLOCK_IDS = ['out_now', 'next_drop', 'my_tasks', 'delegated', 'team', 'artists'] as const;
 
 export type HomeBlockId = (typeof HOME_BLOCK_IDS)[number];
 
@@ -19,8 +22,9 @@ export type HomeLayout = {
 export const LOCKED_HOME_BLOCK: HomeBlockId = 'artists';
 
 export const DEFAULT_HOME_LAYOUT: HomeLayout = {
-  order: ['out_now', 'next_drop', 'my_tasks', 'delegated', 'team', 'artists'],
-  removed: ['ask'],
+  // The chat card leads Home (#1295, mock home-chat-desktop note 1).
+  order: ['next_drop', 'out_now', 'my_tasks', 'delegated', 'team', 'artists'],
+  removed: [],
 };
 
 export const HOME_LAYOUT_SCOPE = 'home';
@@ -29,12 +33,11 @@ const VERSION = 1;
 
 export const HOME_BLOCK_COPY: Record<HomeBlockId, { title: string; about: string }> = {
   out_now: { title: 'Out now', about: 'Songs that just came out and their streaming links. Shows only when there is one.' },
-  next_drop: { title: 'Next drop', about: 'The rollout that drops soonest, with the countdown.' },
+  next_drop: { title: 'Ask AI and Next drop', about: 'The box to ask AI, beside the rollout that drops soonest.' },
   my_tasks: { title: 'My tasks', about: 'Tasks assigned to you.' },
   delegated: { title: 'Delegated', about: 'Tasks you gave to someone else.' },
   team: { title: 'Team', about: 'Each person and how much is on them.' },
   artists: { title: 'Artists', about: 'Every artist and their next rollout.' },
-  ask: { title: 'Ask the Assistant', about: 'The ask box.' },
 };
 
 const isBlockId = (value: unknown): value is HomeBlockId =>

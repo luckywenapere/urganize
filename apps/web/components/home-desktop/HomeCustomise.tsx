@@ -36,7 +36,7 @@ export function HomeCustomise({
   onDone,
 }: {
   initial: HomeLayout;
-  /** Blocks this build can draw (the ask box needs the Assistant switched on). */
+  /** Every block, on Home or under "Add to Home". */
   available: readonly HomeBlockId[];
   /** Called with the layout to keep. Resolves false when saving failed. */
   onDone: (layout: HomeLayout) => Promise<boolean>;

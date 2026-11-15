@@ -2,8 +2,8 @@
 
 // Home on a computer (#1182, founder approved mock docs/mocks/home-tighter).
 // One content width (1120), and blocks the person can reorder and remove:
-// Out now (one line), Next drop, My tasks, Delegated, Team, Artists
-// and, from "Add to Home", the ask box. Phones keep their own Home: this is
+// the chat card with the Next drop (#1295), Out now (one line), My tasks,
+// Delegated, Team and Artists. Phones keep their own Home: this is
 // mounted only at lg and up by app/dashboard/artists/ArtistsPageClient.tsx.
 //
 // "See all" (decided here, using views that already exist): My tasks opens the
@@ -12,9 +12,9 @@
 // card shows what they hold. There is no separate tasks page to send them to
 // (/dashboard/tasks redirects to Home).
 
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowUp, ChevronRight, Plus } from '@/components/icons';
+import { ChevronRight, Plus } from '@/components/icons';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { useAuthStore } from '@/lib/auth-store';
@@ -25,7 +25,6 @@ import { layoutRows, type HomeBlockId, type HomeLayout } from '@/lib/home-deskto
 import { focusMyTasks, selectDelegated, selectMyTasks } from '@/lib/home-desktop/tasks';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { TEAM_HREF } from '@/lib/team-page';
-import { useChappiStore } from '@/stores/useChappiStore';
 import { useHomeLayoutStore } from '@/stores/useHomeLayoutStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useShellStore } from '@/stores/useShellStore';
@@ -44,6 +43,7 @@ import {
   type ArtistsListData,
   type ListRow,
 } from '@/components/artists/ArtistListParts';
+import { HomeChatCard, HomeChatCardSkeleton } from './HomeChatCard';
 import { HomeCustomise } from './HomeCustomise';
 import { DelegatedCard, MyTasksCard, type HomeTaskPerson, type HomeTaskPlace } from './HomeTaskCards';
 import { HomeTeamRow, HomeTeamRowSkeleton, TEAM_INVITE_HREF, teamPersonHref } from './HomeTeamRow';
@@ -120,10 +120,7 @@ export function HomeDesktop({
 
   const me = team?.people.find((person) => person.isCurrentUser) ?? null;
   const activeCount = team ? team.people.filter((person) => person.status === 'active').length : null;
-  const available = useMemo<HomeBlockId[]>(
-    () => layout.order.concat(layout.removed).filter((id) => id !== 'ask' || ASK_ENABLED),
-    [layout]
-  );
+  const available = useMemo<HomeBlockId[]>(() => layout.order.concat(layout.removed), [layout]);
 
   // One skeleton, then the person's own layout: never the default for a frame.
   if (!layoutLoaded) return <HomeDesktopSkeleton />;
@@ -149,6 +146,8 @@ export function HomeDesktop({
       case 'out_now':
         return <OutNowCards variant="line" />;
       case 'next_drop':
+        // The chat card (#1295). Without the Assistant it is the old banner.
+        if (ASK_ENABLED) return <HomeChatCard rows={rows} spotlight={list.spotlight} today={today} />;
         return list.spotlight ? <Spotlight row={list.spotlight} /> : null;
       case 'my_tasks':
         return (
@@ -171,8 +170,6 @@ export function HomeDesktop({
         return team ? <HomeTeamRow team={team} mine={myLoad} /> : teamFailed ? null : <HomeTeamRowSkeleton />;
       case 'artists':
         return <ArtistsBlock rows={rows} setArtistPhoto={setArtistPhoto} />;
-      case 'ask':
-        return ASK_ENABLED ? <AskBlock /> : null;
     }
   };
 
@@ -339,59 +336,12 @@ function ArtistRow({
   );
 }
 
-/**
- * The ask box, offered under "Add to Home". Home on a computer carries no
- * conversation (founder, 2026-10-27, lib/home-desktop-chat-guard.test.ts), so
- * this only takes the question: sending it opens the Assistant's drawer with
- * the question in its box, the same thing "Ask AI" in the search bar does.
- */
-function AskBlock() {
-  const setInput = useChappiStore((state) => state.setInput);
-  const setRailOpen = useChappiStore((state) => state.setRailOpen);
-  const [question, setQuestion] = useState('');
-  const send = (event: FormEvent) => {
-    event.preventDefault();
-    const text = question.trim();
-    if (!text) return;
-    setInput(text);
-    setRailOpen(true);
-    setQuestion('');
-  };
-  return (
-    <form
-      onSubmit={send}
-      data-home-block="ask"
-      className="flex items-center gap-2 rounded-2xl border border-stroke-control bg-bg-surface py-2 pl-5 pr-2 focus-within:border-content-secondary"
-    >
-      <label htmlFor="home-ask" className="sr-only">
-        Ask the Assistant
-      </label>
-      <input
-        id="home-ask"
-        value={question}
-        onChange={(event) => setQuestion(event.target.value)}
-        placeholder="Ask the Assistant about a rollout, a task or a date"
-        autoComplete="off"
-        className="h-10 min-w-0 flex-1 bg-transparent text-sm text-content-primary outline-none placeholder:text-content-tertiary"
-      />
-      <button
-        type="submit"
-        disabled={!question.trim()}
-        aria-label="Ask the Assistant"
-        className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand text-content-inverse disabled:opacity-40"
-      >
-        <ArrowUp className="h-4 w-4" aria-hidden="true" />
-      </button>
-    </form>
-  );
-}
-
 /** Home's loading shape on a computer: the default blocks, so nothing jumps. */
 export function HomeDesktopSkeleton() {
   const bar = 'animate-pulse rounded bg-bg-hover';
   return (
     <div className={`${HOME_DESKTOP_WIDTH} flex flex-col gap-4 pb-12`} aria-busy="true" data-home-layout="desktop">
-      <div className="h-[184px] animate-pulse rounded-2xl bg-bg-hover" />
+      {ASK_ENABLED ? <HomeChatCardSkeleton /> : <div className="h-[184px] animate-pulse rounded-2xl bg-bg-hover" />}
       <div className="grid grid-cols-2 gap-4">
         {[0, 1].map((card) => (
           <div key={card} className="rounded-2xl border border-stroke-default bg-bg-surface px-5 pb-2 pt-1.5">

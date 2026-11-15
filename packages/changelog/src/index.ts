@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.285.0",
+    title: "Ask AI from the top of Home",
+    tag: "AI",
+    date: "November 15, 2026",
+    highlights: [
+      "On a computer, Home now opens with a box to ask AI, next to your next drop. Type and press Enter, and the answer starts in the Assistant.",
+      "Pick a rollout under About and your question goes to that rollout's chat. Or tap one of the suggestions made from your own work.",
+    ],
+  },
+  {
     version: "1.284.4",
     tag: "Account",
     date: "November 14, 2026",

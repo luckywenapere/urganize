@@ -486,6 +486,9 @@ export interface AnalyticsEventPropertiesMap {
   };
   /** The Artists list's Next drop banner (#878): a tap opens that rollout. */
   artists_list_action: { artist_id: string; action: 'spotlight' };
+  /** The chat card on Home on a computer (#1295): a message sent from the box
+   *  or a suggestion, and whether it went to a rollout's chat. No text. */
+  home_chat_sent: { source: 'box' | 'suggestion'; about: 'rollout' | 'everything'; files: number };
   /** The Out now card on Home (#1086): the smart link copied or shared. */
   out_now_link_copied: { release_id: string };
   out_now_link_shared: { release_id: string };

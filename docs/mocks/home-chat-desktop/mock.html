@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chat on Home, desktop</title>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --side-on:#e6e1d6; --card:#faf5ec; --hover:#ebe6dc; --tile:#e3ddd0;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --err:#961a1a; --err-soft:rgba(150,26,26,.08);
+    --ink:#1d2a21; --on-ink:#f5f0e6; --on-ink2:rgba(245,240,230,.72);
+    --board:#d9d5cc; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/20px 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--text); padding:40px 16px 72px; font-variant-numeric:tabular-nums; }
+  p,h1,h2,h3 { margin:0; }
+  .serif { font-family:'Young Serif', serif; font-weight:400; letter-spacing:0; }
+  .sec { color:var(--sec); } .ter { color:var(--ter); } .err { color:var(--err); }
+  .wrap { max-width:1240px; margin:0 auto; }
+  .intro h1 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; line-height:36px; }
+  .intro p { color:var(--board-sec); max-width:760px; margin-top:8px; }
+  .label { font-size:12px; line-height:16px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin:40px 0 8px; }
+
+  .desk { background:var(--bg); border-radius:16px; overflow:hidden; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .bar { height:64px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:0 32px; }
+  .logo { font-family:'Young Serif', serif; font-size:18px; display:flex; align-items:center; gap:8px; }
+  .beta { font:700 10px/16px 'Instrument Sans'; letter-spacing:.06em; padding:0 6px; border-radius:4px; background:var(--brand-soft); color:var(--brand); }
+  .tabs { display:flex; gap:4px; }
+  .tabs span { padding:8px 14px; border-radius:99px; color:var(--sec); }
+  .tabs span.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .icons { display:flex; gap:12px; justify-content:flex-end; align-items:center; }
+  .icons i { width:36px; height:36px; border-radius:50%; border:1px solid var(--line2); }
+  .icons b { width:36px; height:36px; border-radius:50%; background:var(--brand); color:var(--on-ink); display:grid; place-items:center; font-size:12px; }
+
+  /* One content width for Home: 1120. */
+  .page { max-width:1120px; margin:0 auto; padding:8px 0 48px; display:flex; flex-direction:column; gap:16px; }
+
+  .face { width:40px; height:40px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--tile); font-weight:600; font-size:13px; }
+  .cv { width:40px; height:40px; flex:none; border-radius:6px; }
+  .cv.none { background:transparent; border:1.5px dashed var(--line2); display:grid; place-items:center; color:var(--ter); font-size:18px; }
+  .chev { width:8px; height:8px; border-top:1.5px solid var(--ter); border-right:1.5px solid var(--ter); transform:rotate(45deg); flex:none; }
+  .btn { display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 16px; border-radius:99px; font-weight:600; font-size:13px; white-space:nowrap; }
+  .btn.light { background:var(--on-ink); color:var(--ink); }
+  .btn.ghost { border:1px solid var(--line2); color:var(--text); font-weight:500; }
+
+  /* 1. Out now: one quiet line, not a tall card with a full-width button. */
+  .out { display:flex; align-items:center; gap:12px; padding:10px 16px; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+  .out .cv { width:32px; height:32px; background:var(--tile); }
+  .pill { font-size:12px; line-height:20px; font-weight:600; padding:0 8px; border-radius:99px; background:var(--brand-soft); color:var(--brand); }
+  .out .grow { flex:1; min-width:0; }
+  .link { color:var(--brand); font-weight:600; text-decoration:underline; text-underline-offset:3px; }
+  .x { color:var(--ter); font-size:18px; padding:0 4px; }
+
+  /* 2. Next drop: unchanged in shape. */
+  .hero { background:var(--ink); color:var(--on-ink); border-radius:16px; padding:24px; display:flex; align-items:center; gap:24px; }
+  .hero .art { width:120px; height:120px; border-radius:8px; background:#5b2a86; flex:none; }
+  .hero .eyebrow { font-size:11px; font-weight:700; letter-spacing:.1em; color:var(--on-ink2); }
+  .hero h3 { font-family:'Young Serif', serif; font-weight:400; font-size:32px; line-height:40px; margin-top:4px; }
+  .hero .by { color:var(--on-ink2); margin-top:2px; }
+  .hero .prog { width:280px; height:4px; border-radius:99px; background:rgba(245,240,230,.18); margin-top:14px; overflow:hidden; }
+  .hero .prog i { display:block; width:35%; height:100%; background:#7fd99a; }
+  .hero .meta { margin-top:8px; color:var(--on-ink2); }
+  .hero .late { color:#ffb4a8; font-weight:600; }
+  .hero .right { margin-left:auto; text-align:right; }
+  .hero .num { font-family:'Young Serif', serif; font-size:56px; line-height:56px; }
+
+  /* 3. The list: head with the count and the one action; rows read left to right without a gap. */
+  .lhead { display:flex; align-items:flex-end; justify-content:space-between; margin-top:16px; }
+  .lhead h3 { font-family:'Young Serif', serif; font-weight:400; font-size:22px; line-height:28px; }
+  .list { background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+  .row { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1.3fr) 148px 220px 16px; align-items:center; gap:24px; padding:14px 20px; border-top:1px solid var(--line); }
+  .row:first-child { border-top:0; }
+  .row.th { padding:10px 20px; font-size:12px; font-weight:600; color:var(--sec); }
+  .who, .what { display:flex; align-items:center; gap:12px; min-width:0; }
+  .who .name { font-family:'Young Serif', serif; font-size:17px; line-height:22px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .state { font-size:12px; line-height:16px; font-weight:600; color:var(--brand); }
+  .state.quiet { color:var(--ter); font-weight:500; }
+  .what .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .what .k { font-size:12px; line-height:16px; color:var(--sec); }
+  .when .d { font-weight:600; }
+  .when .n { font-size:12px; line-height:16px; color:var(--sec); }
+  .work .bar2 { height:4px; border-radius:99px; background:var(--line2); overflow:hidden; }
+  .work .bar2 i { display:block; height:100%; background:var(--brand); }
+  .work .n { font-size:12px; line-height:16px; color:var(--sec); margin-top:6px; display:flex; gap:10px; }
+  .work .n b { font-weight:600; color:var(--err); }
+  .add { display:flex; align-items:center; gap:12px; padding:14px 20px; border-top:1px solid var(--line); color:var(--sec); font-weight:500; }
+  .add i { width:40px; height:40px; border-radius:50%; border:1.5px dashed var(--line2); display:grid; place-items:center; font-style:normal; font-size:18px; color:var(--ter); }
+
+  /* 7. Tasks on Home: mine on the left, the ones I handed out on the right. */
+  .tasks { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .tcard { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:6px 20px 8px; min-width:0; }
+  .thead { display:flex; align-items:baseline; justify-content:space-between; padding:12px 0 8px; }
+  .thead h3 { font-family:'Young Serif', serif; font-weight:400; font-size:18px; line-height:24px; }
+  .thead h3 span { font:500 13px/20px 'Instrument Sans'; color:var(--sec); }
+  .thead .link { font-size:13px; }
+  .trow { display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--line); min-width:0; }
+  .ck { width:20px; height:20px; border-radius:50%; border:1.5px solid var(--line2); flex:none; }
+  .face.sm { width:28px; height:28px; font-size:11px; font-style:normal; }
+  .tt { flex:1; min-width:0; }
+  .tt .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tt .k { font-size:12px; line-height:16px; color:var(--sec); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .due { font-size:13px; color:var(--sec); white-space:nowrap; }
+  .due.late { color:var(--err); font-weight:600; }
+  .due.ok { color:var(--brand); font-weight:600; }
+  .trow.done .t { color:var(--sec); text-decoration:line-through; }
+
+  /* 8. The team on Home (desktop only): one row of people, each with their load. */
+  .team { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+  .person { display:flex; align-items:center; gap:12px; padding:14px 16px; background:var(--card); border:1px solid var(--line); border-radius:14px; min-width:0; }
+  .person.invite { background:transparent; border-style:dashed; border-color:var(--line2); }
+  .face.dash { background:transparent; border:1.5px dashed var(--line2); color:var(--ter); font-size:18px; font-weight:400; }
+  .pt { min-width:0; }
+  .pt .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pt .k { font-size:12px; line-height:16px; color:var(--sec); }
+  .pt .c { font-size:12px; line-height:16px; color:var(--sec); margin-top:2px; }
+  .pt .c b { color:var(--err); font-weight:600; }
+  .you { font-size:11px; font-weight:600; color:var(--brand); background:var(--brand-soft); border-radius:99px; padding:1px 6px; margin-left:4px; }
+
+  /* 9. Customise Home: reorder, remove, add back. */
+  .editbar { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 16px; border-radius:12px; background:var(--brand-soft); }
+  .edit-grid, .tray { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .w { grid-column:span 2; position:relative; padding:16px 110px 16px 48px; border:1.5px dashed var(--line2); border-radius:14px; background:var(--card); }
+  .w.half, .w.add2 { grid-column:span 1; }
+  .w.add2 { padding-left:16px; background:transparent; }
+  .w .wt { font-weight:600; }
+  .w .k { font-size:12px; line-height:16px; color:var(--sec); margin-top:2px; }
+  .grip { position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--ter); letter-spacing:-2px; cursor:grab; }
+  .rm, .w .link { position:absolute; right:16px; top:50%; transform:translateY(-50%); font-size:13px; font-weight:600; color:var(--err); }
+  .rm.off { color:var(--ter); font-weight:500; }
+  .w .link { color:var(--brand); }
+
+  .notes { margin-top:24px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .note { background:#e9e5db; border-radius:12px; padding:16px; color:var(--board-sec); }
+  .note b { display:block; color:var(--text); margin-bottom:4px; }
+
+  .ask { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:28px 32px 24px; }
+  .ask h2 { font-family:'Young Serif', serif; font-weight:400; font-size:28px; line-height:36px; }
+  .box { margin-top:16px; border:1.5px solid #6e6f69; border-radius:16px; background:var(--bg); padding:14px 16px 10px; }
+  .box.on { border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft); }
+  .ph { font-size:16px; line-height:24px; color:var(--ter); min-height:48px; }
+  .ph.typed { color:var(--text); }
+  .caret { display:inline-block; width:1.5px; height:18px; background:var(--text); margin-left:2px; vertical-align:-3px; }
+  .tools { display:flex; align-items:center; gap:10px; }
+  .tools .ic { width:32px; height:32px; border-radius:50%; border:1px solid var(--line2); display:grid; place-items:center; color:var(--sec); font-size:18px; }
+  .tools .hint { margin-left:auto; font-size:12px; color:var(--ter); }
+  .tools .send { width:36px; height:36px; border-radius:50%; background:var(--tile); color:var(--sec); display:grid; place-items:center; font-weight:700; }
+  .tools .send.go { background:var(--ink); color:var(--on-ink); }
+  .pick { height:32px; padding:0 12px; border-radius:99px; border:1px solid var(--line2); display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:500; background:var(--card); }
+  .pick i { width:6px; height:6px; border-right:1.5px solid var(--sec); border-bottom:1.5px solid var(--sec); transform:rotate(45deg); margin-top:-3px; }
+  .pick.set { border-color:var(--brand); color:var(--brand); background:var(--brand-soft); }
+  .pick .cvs { width:18px; height:18px; border-radius:4px; background:#5b2a86; }
+  .tools { position:relative; }
+  .menu { position:absolute; left:42px; top:38px; width:320px; background:var(--card); border:1px solid var(--line2); border-radius:14px; box-shadow:0 12px 32px rgba(26,22,17,.16); padding:6px; z-index:2; }
+  .menu .mi { display:flex; gap:10px; align-items:center; padding:8px 10px; border-radius:8px; font-size:14px; }
+  .menu .mi.on { background:var(--side-on); font-weight:600; }
+  .menu .mi .cvs { width:28px; height:28px; border-radius:6px; background:var(--tile); flex:none; }
+  .menu .mi .k { color:var(--sec); font-size:12px; font-weight:400; }
+  .menu .mi .tk { margin-left:auto; color:var(--brand); }
+  .menu .sep { height:1px; background:var(--line); margin:4px 6px; }
+  .asplit { display:grid; grid-template-columns:240px minmax(0,1fr); gap:32px; max-width:1040px; margin:0 auto; padding:24px 0 0; }
+  .aside a { display:flex; gap:10px; align-items:center; padding:8px 10px; border-radius:10px; color:var(--sec); font-size:14px; }
+  .aside a.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .aside .g { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ter); padding:14px 10px 4px; }
+  .aside .cvs { width:22px; height:22px; border-radius:5px; background:var(--tile); }
+  .asplit .apage { margin:0; padding-top:0; max-width:none; }
+  .sugs { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .sugs span { height:34px; padding:0 14px; border-radius:99px; border:1px solid var(--line2); display:inline-flex; align-items:center; font-size:13px; color:var(--sec); }
+  .fade { max-height:150px; overflow:hidden; opacity:.6; -webkit-mask-image:linear-gradient(#000,transparent); mask-image:linear-gradient(#000,transparent); }
+  .apage { max-width:760px; margin:0 auto; padding:24px 0 32px; min-height:440px; display:flex; flex-direction:column; }
+  .me { align-self:flex-end; background:var(--ink); color:var(--on-ink); padding:10px 16px; border-radius:18px 18px 4px 18px; font-size:15px; }
+  .ai { margin-top:20px; font-size:15px; line-height:24px; max-width:620px; }
+  .ai b { font-weight:600; }
+  .ai .li { display:flex; gap:10px; margin-top:8px; } .ai .li i { width:6px; height:6px; border-radius:50%; background:var(--err); margin-top:9px; flex:none; }
+  .acts { display:flex; gap:8px; margin-top:14px; }
+  .apage .box { margin-top:auto; }
+  .notes { margin-top:16px; display:grid; gap:10px; }
+  .note { display:grid; grid-template-columns:28px 1fr; gap:10px; color:var(--board-sec); }
+  .note b { width:24px; height:24px; border-radius:50%; background:var(--ink); color:var(--on-ink); display:grid; place-items:center; font-size:12px; }
+  .note strong { color:var(--text); }
+
+  /* v2: depth and style */
+  .ask { position:relative; display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:28px; padding:32px;
+         background:var(--ink); color:var(--on-ink); border:0; border-radius:24px;
+         box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 24px 48px -16px rgba(29,42,33,.45), 0 4px 12px rgba(29,42,33,.18);
+         background-image:
+           repeating-linear-gradient(0deg, rgba(245,240,230,.035) 0 1px, transparent 1px 3px),
+           repeating-linear-gradient(90deg, rgba(245,240,230,.03) 0 1px, transparent 1px 4px); }
+  .glow { position:absolute; inset:0; border-radius:24px; overflow:hidden; pointer-events:none; }
+  .glow::before { content:''; position:absolute; width:520px; height:520px; left:-140px; top:-260px; border-radius:50%;
+          background:radial-gradient(closest-side, rgba(127,217,154,.28), rgba(127,217,154,0)); }
+  .ask:has(.menu) { margin-bottom:170px; }
+  .ask .menu { box-shadow:0 24px 48px -12px rgba(0,0,0,.45), 0 0 0 1px rgba(26,22,17,.08); }
+  .askl { position:relative; display:flex; flex-direction:column; min-width:0; }
+  .hello { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:#7fd99a; letter-spacing:.02em; }
+  .spark { width:10px; height:10px; background:#7fd99a; transform:rotate(45deg); border-radius:2px; box-shadow:0 0 0 4px rgba(127,217,154,.18), 0 0 18px rgba(127,217,154,.7); }
+  .ask h2 { font-size:38px; line-height:44px; margin-top:10px; color:var(--on-ink); letter-spacing:-.01em; }
+  .ask h2 em { font-style:normal; color:rgba(245,240,230,.62); }
+  .ask .box { margin-top:22px; background:#fbf7ef; border:0; border-radius:18px; padding:16px 16px 12px; color:var(--text);
+              box-shadow:0 0 0 1px rgba(245,240,230,.5), 0 18px 36px -12px rgba(0,0,0,.55), 0 2px 0 rgba(255,255,255,.9) inset; }
+  .ask .box.on { box-shadow:0 0 0 2px #7fd99a, 0 0 0 7px rgba(127,217,154,.22), 0 18px 36px -12px rgba(0,0,0,.55); }
+  .ask .ph { font-size:17px; }
+  .ask .tools .ic, .ask .pick { background:#fff; }
+  .ask .tools .send { width:40px; height:40px; background:#d9d3c5; color:#6a665f; }
+  .ask .tools .send.go { background:#14643a; color:#fff; box-shadow:0 6px 14px -4px rgba(20,100,58,.7); }
+  .ask .sugs { margin-top:18px; }
+  .ask .sugs span.sg { height:36px; border:1px solid rgba(245,240,230,.18); background:rgba(245,240,230,.07); color:var(--on-ink); gap:8px; backdrop-filter:blur(4px); }
+  .m { width:8px; height:8px; border-radius:50%; flex:none; }
+  .m.late { background:#ff9d8f; } .m.today { background:#7fd99a; } .m.plan { background:#f0c66b; } .m.write { background:#a9c4ff; }
+  .next { position:relative; background:rgba(245,240,230,.07); border:1px solid rgba(245,240,230,.14); border-radius:18px; padding:18px;
+          box-shadow:0 1px 0 rgba(255,255,255,.06) inset; display:flex; flex-direction:column; }
+  .next .eb { font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--on-ink2); }
+  .nrow { display:flex; gap:12px; align-items:center; margin-top:12px; }
+  .cover { width:64px; height:64px; border-radius:10px; background:#5b2a86; flex:none; display:grid; place-items:end start; padding:6px;
+           box-shadow:0 10px 20px -6px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.12) inset; transform:rotate(-3deg); }
+  .cover span { font-family:'Young Serif', serif; font-size:10px; line-height:11px; color:rgba(255,255,255,.85); }
+  .nt { font-family:'Young Serif', serif; font-size:20px; line-height:24px; } .nb { color:var(--on-ink2); font-size:13px; }
+  .count { display:flex; align-items:center; gap:12px; margin-top:16px; }
+  .count b { font-family:'Young Serif', serif; font-weight:400; font-size:56px; line-height:52px; color:#7fd99a; }
+  .count span { color:var(--on-ink2); font-size:13px; line-height:18px; }
+  .next .prog { height:4px; border-radius:99px; background:rgba(245,240,230,.16); margin-top:14px; overflow:hidden; }
+  .next .prog i { display:block; width:35%; height:100%; background:#7fd99a; }
+  .nm { font-size:13px; color:var(--on-ink2); margin-top:8px; } .nm em { font-style:normal; color:#ffb4a8; font-weight:600; }
+  .open { margin-top:auto; padding-top:14px; font-weight:600; font-size:13px; color:var(--on-ink); }
+  .ask .menu { color:var(--text); }
+  /* cards under the hero get a little lift too */
+  .tcard, .out { box-shadow:0 1px 2px rgba(26,22,17,.05), 0 8px 20px -12px rgba(26,22,17,.18); }
+  .apage .box { background:#fbf7ef; border:0; box-shadow:0 0 0 1px var(--line2), 0 12px 28px -14px rgba(26,22,17,.35); }
+</style></head><body>
+<div class="wrap">
+  <div class="intro"><h1>Chat on Home, desktop (version 2)</h1>
+  <p>The first thing on Home becomes a box you can type into. Type, press Enter, and you land in the Assistant with your message already sent. Everything else on Home stays, one step down.</p></div>
+
+  <div class="label">1. Home, as you arrive</div>
+  <div class="desk">
+    <div class="bar">
+      <div class="logo">Urganize <span class="beta">BETA</span></div>
+      <div class="tabs"><span class="on">Home</span><span>Assistant</span></div>
+      <div class="icons"><i></i><b>OY</b></div>
+    </div>
+    <div class="page">
+      <div class="ask"><div class="glow"></div><div class="askl">
+        <p class="hello"><span class="spark"></span>Sunday evening</p><h2>Good evening, Oyin.<br><em>What do you need?</em></h2>
+        <div class="box">
+          <p class="ph">Ask AI about your rollouts, or tell it what to do<span class="caret"></span></p>
+          <div class="tools"><span class="ic">+</span><span class="pick">About: Everything <i></i></span><span class="hint">Enter to send</span><span class="send">&uarr;</span></div>
+        </div>
+        <div class="sugs"><span class="sg"><i class="m late"></i>What is late on Blue Season?</span><span class="sg"><i class="m today"></i>What should I do today?</span><span class="sg"><i class="m plan"></i>Plan the next record for Ayo Kanmi</span><span class="sg"><i class="m write"></i>Write a status update for Zainab</span></div></div><div class="next">
+          <p class="eb">Next drop</p>
+          <div class="nrow"><div class="cover"><span>Blue<br>Season</span></div>
+            <div><p class="nt">Blue Season</p><p class="nb">Zainab Oyelaran &middot; EP</p></div></div>
+          <div class="count"><b>8</b><span>days to go<br>Wed 18 Nov</span></div>
+          <div class="prog"><i></i></div>
+          <p class="nm">30 of 86 done &middot; <em>34 late</em></p>
+          <span class="open">Open rollout &rarr;</span>
+        </div></div>
+
+
+      <div class="out">
+        <div class="cv"></div>
+        <span class="pill">Out now</span>
+        <p class="grow"><b>Blessings</b> <span class="sec">by Ayo Kanmi. Looking for it on streaming. This can take a few hours.</span></p>
+        <span class="link">Type the code yourself</span>
+        <span class="x">×</span>
+      </div>
+
+      <div class="tasks">
+        <div class="tcard">
+          <div class="thead"><h3>My tasks <span>· 7 open</span></h3><span class="link">See all</span></div>
+          <div class="trow"><i class="ck"></i><div class="tt"><p class="t">Confirm the EP tracklist</p><p class="k">Blue Season · Zainab Oyelaran</p></div><span class="due late">6 days late</span></div>
+          <div class="trow"><i class="ck"></i><div class="tt"><p class="t">Approve the cover art</p><p class="k">Blue Season · Zainab Oyelaran</p></div><span class="due late">2 days late</span></div>
+          <div class="trow"><i class="ck"></i><div class="tt"><p class="t">Send the pre-save reminder</p><p class="k">Blue Season · Zainab Oyelaran</p></div><span class="due">Today</span></div>
+          <div class="trow"><i class="ck"></i><div class="tt"><p class="t">Book the video shoot</p><p class="k">Night Bus · Ayo Kanmi</p></div><span class="due">Thu 12 Nov</span></div>
+          <div class="trow"><i class="ck"></i><div class="tt"><p class="t">Write the press release</p><p class="k">Night Bus · Ayo Kanmi</p></div><span class="due">Mon 16 Nov</span></div>
+        </div>
+        <div class="tcard">
+          <div class="thead"><h3>Delegated <span>· 5 open</span></h3><span class="link">See all</span></div>
+          <div class="trow"><i class="face sm">CH</i><div class="tt"><p class="t">Upload the final master</p><p class="k">Chidera · Blue Season</p></div><span class="due late">3 days late</span></div>
+          <div class="trow"><i class="face sm">CH</i><div class="tt"><p class="t">Confirm the lead single playlist list</p><p class="k">Chidera · Blue Season</p></div><span class="due">Tomorrow</span></div>
+          <div class="trow"><i class="face sm">ZO</i><div class="tt"><p class="t">Record the countdown video</p><p class="k">Zainab Oyelaran · Blue Season</p></div><span class="due">Fri 13 Nov</span></div>
+          <div class="trow"><i class="face sm">AK</i><div class="tt"><p class="t">Send the artist bio</p><p class="k">Ayo Kanmi · Night Bus</p></div><span class="due">Mon 16 Nov</span></div>
+          <div class="trow done"><i class="face sm">CH</i><div class="tt"><p class="t">Set the genre and lyrics</p><p class="k">Chidera · Blue Season</p></div><span class="due ok">Done today</span></div>
+        </div>
+      </div>
+
+      
+    </div>
+  </div>
+<div class="notes"><div class="note"><b>1</b><p><strong>One dark card leads Home: the chat on the left, your next drop on the right.</strong> It replaces today's Next drop card, so there is still only one big card, and the countdown is still the first number you see.</p></div><div class="note"><b>2</b><p><strong>Four suggestions, written from your own data:</strong> your nearest rollout, your late tasks, an artist with nothing planned. Click one and it is sent, the same as typing it.</p></div><div class="note"><b>3</b><p><strong>It says "AI", not a product name,</strong> as everywhere since 3 Nov.</p></div><div class="note"><b>4</b><p><strong>The + adds a file or photo, and "About" picks a rollout.</strong> See the next frame.</p></div><div class="note"><b>5</b><p><strong>My tasks, Delegated, Team and Artists are unchanged below it.</strong> In Customise Home the chat box can be moved or removed like the other blocks.</p></div></div>
+  <div class="label">2. Typing</div>
+  <div class="desk">
+    <div class="bar">
+      <div class="logo">Urganize <span class="beta">BETA</span></div>
+      <div class="tabs"><span class="on">Home</span><span>Assistant</span></div>
+      <div class="icons"><i></i><b>OY</b></div>
+    </div>
+    <div class="page">
+      <div class="ask"><div class="glow"></div><div class="askl">
+        <p class="hello"><span class="spark"></span>Sunday evening</p><h2>Good evening, Oyin.<br><em>What do you need?</em></h2>
+        <div class="box on">
+          <p class="ph typed">What is late and who has it<span class="caret"></span></p>
+          <div class="tools"><span class="ic">+</span><span class="pick set"><span class="cvs"></span>Blue Season <i></i></span><div class="menu">
+  <div class="mi"><span class="cvs" style="background:var(--ink)"></span><div>Everything<div class="k">All artists and rollouts</div></div></div>
+  <div class="sep"></div>
+  <div class="mi on"><span class="cvs" style="background:#5b2a86"></span><div>Blue Season<div class="k">Zainab Oyelaran &middot; in 8 days</div></div><span class="tk">&#10003;</span></div>
+  <div class="mi"><span class="cvs"></span><div>Night Bus<div class="k">Ayo Kanmi &middot; in 19 days</div></div></div>
+  <div class="mi"><span class="cvs"></span><div>Midnight Drive<div class="k">Victory &middot; in 21 days</div></div></div>
+  <div class="mi"><span class="cvs"></span><div>Salt and Signal<div class="k">The Harbour Lights &middot; in 54 days</div></div></div>
+</div><span class="hint">Enter to send</span><span class="send go">&uarr;</span></div>
+        </div>
+        <div class="sugs"><span class="sg"><i class="m late"></i>What is late on Blue Season?</span><span class="sg"><i class="m today"></i>What should I do today?</span><span class="sg"><i class="m plan"></i>Plan the next record for Ayo Kanmi</span><span class="sg"><i class="m write"></i>Write a status update for Zainab</span></div></div><div class="next">
+          <p class="eb">Next drop</p>
+          <div class="nrow"><div class="cover"><span>Blue<br>Season</span></div>
+            <div><p class="nt">Blue Season</p><p class="nb">Zainab Oyelaran &middot; EP</p></div></div>
+          <div class="count"><b>8</b><span>days to go<br>Wed 18 Nov</span></div>
+          <div class="prog"><i></i></div>
+          <p class="nm">30 of 86 done &middot; <em>34 late</em></p>
+          <span class="open">Open rollout &rarr;</span>
+        </div></div>
+</div></div>
+<div class="notes"><div class="note"><b>6</b><p><strong>Pick what the question is about.</strong> The "About" button opens your rollouts, nearest drop first, with Everything at the top. Pick Blue Season and you can just type "what is late", without naming it.</p></div><div class="note"><b>7</b><p><strong>It starts on Everything.</strong> If you only have one rollout, it starts on that one.</p></div><div class="note"><b>8</b><p><strong>The box lights up green and the arrow turns dark</strong> once there is something to send. Enter sends. Shift and Enter makes a new line.</p></div></div>
+  <div class="label">3. After Enter: the Assistant</div>
+  <div class="desk">
+    <div class="bar"><div class="logo">Urganize <span class="beta">BETA</span></div><div class="tabs"><span>Home</span><span class="on">Assistant</span></div><div class="icons"><i></i><b>OY</b></div></div>
+    <div class="asplit"><div class="aside"><a>Ask about everything</a><div class="g">Rollout chats</div><a class="on"><span class="cvs" style="background:#5b2a86"></span>Blue Season</a><a><span class="cvs"></span>Night Bus</a><a><span class="cvs"></span>Midnight Drive</a><a><span class="cvs"></span>Salt and Signal</a></div>
+    <div class="apage">
+      <span class="me">What is late and who has it</span>
+      <div class="ai"><b>34 tasks are late on Blue Season.</b> Most are yours. The three that block the most:
+        <div class="li"><i></i><span><b>Confirm the EP tracklist</b>, you, 6 days late. 4 tasks wait on it.</span></div>
+        <div class="li"><i></i><span><b>Upload the final master</b>, Chidera, 3 days late.</span></div>
+        <div class="li"><i></i><span><b>Approve the cover art</b>, you, 2 days late.</span></div>
+        <div class="acts"><span class="btn ghost">Show all 34</span><span class="btn ghost">Move mine to this week</span></div>
+      </div>
+      <div class="box"><p class="ph" style="min-height:24px">Reply<span class="caret"></span></p><div class="tools"><span class="ic">+</span><span class="hint">Enter to send</span><span class="send">&uarr;</span></div></div>
+    </div></div>
+  </div>
+<div class="notes"><div class="note"><b>9</b><p><strong>You land in the Assistant with the message sent and the answer arriving.</strong> With a rollout picked, it goes into the chat for that rollout, where the team can see it. With Everything, it goes into your own chat.</p></div><div class="note"><b>10</b><p><strong>Home in the top bar takes you back.</strong> The box on Home is empty again. The conversation stays in the Assistant.</p></div><div class="note"><b>11</b><p><strong>On a phone nothing changes.</strong> The phone already has this box at the bottom of Home. This brings the same idea to computers, at the top.</p></div></div>
+</div></body></html>

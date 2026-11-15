@@ -7,6 +7,9 @@ import { useKeepInViewport } from '@/lib/use-keep-in-viewport';
 type ChappiAttachMenuProps = {
   disabled?: boolean;
   onFiles: (files: File[]) => void;
+  /** Replaces the + button's look (Home's chat card on a computer draws it on a
+   *  cream box that stays light in both themes). */
+  triggerClassName?: string;
 };
 
 // The camera row only makes sense on a phone or tablet. A desktop browser
@@ -36,7 +39,7 @@ const FILE_ACCEPT = '.pdf,.docx,.xlsx,.txt,.md,.markdown,.csv,.tsv,.json,.log,.s
  * Tab, and a menu would promise arrow keys they never had. Opens upward, like
  * the scope picker beside it, because the composer sits at the bottom.
  */
-export function ChappiAttachMenu({ disabled, onFiles }: ChappiAttachMenuProps) {
+export function ChappiAttachMenu({ disabled, onFiles, triggerClassName }: ChappiAttachMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -96,7 +99,10 @@ export function ChappiAttachMenu({ disabled, onFiles }: ChappiAttachMenuProps) {
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         aria-label="Attach a photo or file"
-        className="hit-44 motion-press relative grid h-9 w-9 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-elevated hover:text-content-primary disabled:opacity-40"
+        className={
+          triggerClassName ??
+          'hit-44 motion-press relative grid h-9 w-9 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-elevated hover:text-content-primary disabled:opacity-40'
+        }
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
       </button>
