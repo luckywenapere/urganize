@@ -5,7 +5,7 @@ import { useVisitorCurrency } from "@/lib/visitor-currency";
 
 /**
  * A plan's price in the visitor's currency (#1120): "₦15,000/month" in
- * Nigeria, "$29/month" everywhere else, "Custom" for Label. For server-rendered
+ * Nigeria, "$28/month" everywhere else, "Custom" for Label. For server-rendered
  * sections: it renders the Naira price first and swaps to dollars once the
  * page knows where the visitor is.
  */

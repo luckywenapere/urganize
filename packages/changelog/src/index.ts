@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.285.3",
+    tag: "App",
+    date: "November 15, 2026",
+    highlights: [
+      "If you pay in dollars, plans now cost $8, $18, $28 and $80 a month, and your next payment uses the new price.",
+    ],
+  },
+  {
     version: "1.285.2",
     tag: "App",
     date: "November 15, 2026",

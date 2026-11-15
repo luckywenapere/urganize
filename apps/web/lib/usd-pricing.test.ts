@@ -21,16 +21,17 @@ import { bachsRowAmountMinor, bachsRowCurrency, payerCurrency, remoteCheckoutIsP
 // deliberate edit here, not a side effect.
 
 describe('the dollar ladder', () => {
-  it('is Solo $9, Manager $29 and Pro $79 a month', () => {
-    expect(getTierPriceUsd('solo', 'monthly')).toEqual({ amount: 9, minorUnit: 900 });
-    expect(getTierPriceUsd('manager', 'monthly')).toEqual({ amount: 29, minorUnit: 2_900 });
-    expect(getTierPriceUsd('pro', 'monthly')).toEqual({ amount: 79, minorUnit: 7_900 });
+  it('is Solo $8, Solo Plus $18, Manager $28 and Pro $80 a month', () => {
+    expect(getTierPriceUsd('solo', 'monthly')).toEqual({ amount: 8, minorUnit: 800 });
+    expect(getTierPriceUsd('solo_plus', 'monthly')).toEqual({ amount: 18, minorUnit: 1_800 });
+    expect(getTierPriceUsd('manager', 'monthly')).toEqual({ amount: 28, minorUnit: 2_800 });
+    expect(getTierPriceUsd('pro', 'monthly')).toEqual({ amount: 80, minorUnit: 8_000 });
   });
 
   it('charges ten months for a year, the same rule as Naira', () => {
-    expect(getTierPriceUsd('solo', 'annual')?.amount).toBe(90);
-    expect(getTierPriceUsd('manager', 'annual')?.amount).toBe(290);
-    expect(getTierPriceUsd('pro', 'annual')?.amount).toBe(790);
+    expect(getTierPriceUsd('solo', 'annual')?.amount).toBe(80);
+    expect(getTierPriceUsd('manager', 'annual')?.amount).toBe(280);
+    expect(getTierPriceUsd('pro', 'annual')?.amount).toBe(800);
   });
 
   it('shows no price for Label in either currency', () => {
@@ -42,8 +43,8 @@ describe('the dollar ladder', () => {
   });
 
   it('formats dollars the way the cards read them', () => {
-    expect(formatTierPrice('manager', 'monthly', 'USD')).toBe('$29/month');
-    expect(formatTierPrice('pro', 'annual', 'USD')).toBe('$790/year');
+    expect(formatTierPrice('manager', 'monthly', 'USD')).toBe('$28/month');
+    expect(formatTierPrice('pro', 'annual', 'USD')).toBe('$800/year');
     expect(formatMoney(1.5, 'USD')).toBe('$1.50');
     // Naira is unchanged by default.
     expect(formatTierPrice('manager', 'monthly')).toBe('₦15,000/month');
