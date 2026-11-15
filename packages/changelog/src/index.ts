@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.287.0",
+    title: "Your wallpaper on your phone",
+    tag: "App",
+    date: "November 15, 2026",
+    highlights: [
+      "Your Home wallpaper now shows on your phone too.",
+      "Pick or change it any time in Settings, under Appearance.",
+    ],
+  },
+  {
     version: "1.286.2",
     title: "The wallpaper moves with the page",
     tag: "App",
