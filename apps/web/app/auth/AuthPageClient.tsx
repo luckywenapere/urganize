@@ -502,12 +502,10 @@ export default function AuthPage() {
             <div className="flex flex-col items-center px-4 pt-12 text-center lg:mx-auto lg:my-auto lg:w-full lg:max-w-[400px] lg:items-stretch lg:px-0 lg:py-12 lg:text-left">
               {/* Young Serif at its real weight, never a fake bold. */}
               <h1 className="text-balance font-display text-[34px] font-normal leading-10 tracking-[-0.012em] text-content-primary lg:text-[40px] lg:leading-[46px]">
-                <span className="lg:hidden">Plan new music. Track every task.</span>
-                <span className="hidden lg:inline">From idea to execution.</span>
+                One plan. Every task has an owner.
               </h1>
               <p className="mt-3 text-base leading-[23px] text-content-secondary lg:mt-2 lg:text-[15px] lg:leading-[22px]">
-                <span className="lg:hidden">Tell it your goals and get a plan that fits. Use it solo or with your team.</span>
-                <span className="hidden lg:inline">Plan every release with your team, in one place.</span>
+                Tell it your goals. It makes the plan and reminds each person.
               </p>
 
               {/* Signing in needs JavaScript. Say so instead of leaving the user

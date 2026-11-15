@@ -35,10 +35,9 @@ export function WelcomeEmail({ recipientName, unsubscribeUrl }: WelcomeEmailProp
         Wena here. I&rsquo;m the founder of Urganize. Thanks for signing up.
       </Paragraph>
       <Paragraph>
-        I built this because running a rollout across group chats and spreadsheets kept breaking my
-        own team. In Urganize you tell it your goals and get a plan that fits, with every task in
-        order and dated, or you make your own. After every task it asks how it went, so you can see
-        what worked once it’s out.
+        I built this because running music across group chats and spreadsheets kept breaking my
+        own team. In Urganize you tell it your goals and it makes the plan. Every task has one
+        owner and one date, and it reminds each person, so nobody has to chase.
       </Paragraph>
       <Paragraph>
         If anything feels confusing or missing,{' '}

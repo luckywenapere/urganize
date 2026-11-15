@@ -13,9 +13,9 @@ import type { ProductShot } from "@/content/product-shots";
 import { PRIMARY_CTA } from "@/lib/app-urls";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Plan new music, track every task, pitch with a press kit",
+  title: "One plan, an owner for every task, a press kit to pitch with",
   description:
-    "Tell Urganize your goals and get a plan that fits, or make your own. Track every task, solo or with a team. After each task it asks how it went.",
+    "Tell Urganize your goals and it makes the plan: releases, shows, pitching and press. Every task has one owner and one date, and each person gets a reminder.",
   path: "/features",
   shareCard: "features",
 });
@@ -165,9 +165,9 @@ export default function FeaturesPage() {
               Features
             </p>
             <h1 className="mt-8 text-balance text-[2.25rem] leading-[1.06] text-[var(--marketing-text)] sm:text-[3.6rem]">
-              Plan new music.{" "}
+              One plan.{" "}
               <span className="text-[var(--marketing-accent)]">
-                Keep track of every task.
+                Every task has an owner.
               </span>
             </h1>
             {/* The 2026-08-19 brief banned container metaphors ("live in one
@@ -297,7 +297,7 @@ export default function FeaturesPage() {
           <SectionShell containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10">
             <div className="text-center">
               <h2 className={headlineClass}>
-                Run your next release without the chasing.
+                Run your music without the chasing.
               </h2>
               <div className="mt-10 flex w-full flex-col items-center gap-4">
                 <TrialButton location="features_cta" size="lg" className="w-full sm:w-auto" />

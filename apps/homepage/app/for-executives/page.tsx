@@ -21,7 +21,7 @@ import { PRIMARY_CTA } from "@/lib/app-urls";
 export const metadata: Metadata = buildPageMetadata({
   title: "Planning and task tracking for record labels",
   description:
-    "Plan new music across your roster. Each artist's plan fits their goals, every task has an owner and you see what worked for each one.",
+    "One plan for every artist on your roster. Each plan fits the artist's goals, every task has an owner and you see what is late before it slips.",
   path: "/for-executives",
   shareCard: "for-executives",
 });
@@ -123,16 +123,16 @@ export default function ForExecutivesPage() {
                 SHARE_IMAGE in lib/seo.ts). Same words on the card and on
                 the executive page on purpose. */}
             <h1 className="mt-8 text-balance text-[2.25rem] leading-[1.06] text-[var(--marketing-text)] sm:text-[3.6rem]">
-              Every artist&apos;s new music.{" "}
+              Your whole roster.{" "}
               <span className="text-[var(--marketing-accent)]">
                 Every task tracked.
               </span>
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
-              You answer for rollouts you did not personally run. The plan
+              You answer for work you did not personally run. The plan
               sits in someone else&apos;s head, the status sits in someone
               else&apos;s chat and you find out a date slipped after it
-              slipped. Urganize gives every rollout the same plan and shows
+              slipped. Urganize puts every artist&apos;s work on a plan and shows
               you all of them at once.
             </p>
             {/* Since the 2026-09-02 homepage overhaul the ask is the free

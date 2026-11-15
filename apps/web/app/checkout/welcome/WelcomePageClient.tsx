@@ -95,7 +95,7 @@ export default function WelcomePageClient() {
       <div className="w-full max-w-md space-y-6">
         <Logo />
         <h1 className="font-display text-3xl leading-tight text-content-primary">
-          {firstName ? `Welcome, ${firstName}. ` : 'Welcome. '}Let&apos;s plan your next release.
+          {firstName ? `Welcome, ${firstName}. ` : 'Welcome. '}Let&apos;s make your plan.
         </h1>
         <p className="text-content-secondary">
           Add the release you&apos;re working on. AI writes the plan in under a minute, and you change anything you

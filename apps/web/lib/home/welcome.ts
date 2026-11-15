@@ -7,6 +7,6 @@
 // lib/house-copy-ratchet.test.ts and press-kit-copy-guard.test.ts enforce them.
 
 export const WELCOME_EYEBROW = 'Welcome to Urganize';
-export const WELCOME_LINE = 'Tell me about your next release. I will help you plan it.';
+export const WELCOME_LINE = 'Tell me what you are working on. I will help you plan it.';
 export const WELCOME_PRIMARY = 'Start a rollout';
 export const WELCOME_SECONDARY = 'Just looking? Try a practice rollout';

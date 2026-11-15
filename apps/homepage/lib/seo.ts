@@ -65,7 +65,7 @@ export const LANDING_SHARE_DESCRIPTION = SHARE_DESCRIPTION;
 // Bump this string every time public/opengraph-image.jpg changes so the
 // URL is new to every platform and the very next fetch pulls fresh bytes,
 // instead of depending on a manual re-scrape request or an unknown TTL.
-const SHARE_IMAGE_VERSION = "2026-11-09-plan-new-music";
+const SHARE_IMAGE_VERSION = "2026-11-15-group-chat";
 
 const SHARE_IMAGE = {
   url: `${SITE_URL}/opengraph-image.jpg?v=${SHARE_IMAGE_VERSION}`,
@@ -94,7 +94,8 @@ const SHARE_IMAGE = {
   // banned container metaphor.
   // 2026-11-09: the alt describes the picture (headline plus the drop-day
   // track) and no longer appends SHARE_DESCRIPTION, which the card never showed.
-  alt: `Urganize. ${SHARE_HEADLINE} A release timeline ending in a gold drop-day diamond, with plan steps curving around it.`,
+  // 2026-11-15 (#1299): the new headline, and the art shows more than a release.
+  alt: `Urganize. ${SHARE_HEADLINE} Plan steps for releases, shows, pitching and press curve around a pill that reads one plan, one owner per task.`,
 };
 
 // Each main page's own share card (#964, mock approved by the founder
@@ -107,16 +108,18 @@ const SHARE_IMAGE = {
 //    Do7SrY1rfUe9AnuvdARCMu) and update its alt here in the same commit;
 //  - bump SHARE_CARDS_VERSION whenever any file in public/share/ changes, or
 //    WhatsApp and X keep showing the old picture.
-const SHARE_CARDS_VERSION = "2026-11-10-new-headlines";
+const SHARE_CARDS_VERSION = "2026-11-15-one-plan";
+// 2026-11-15 (#1299): features, for-managers and for-executives redrawn with
+// their new H1s by scripts/generate-share-cards.mjs, which is now their source.
 // 2026-11-10 (#1173, mocks approved by the founder): features.jpg and
 // for-executives.jpg redrawn with the pages' new H1s from #1153. Same frame and
 // product slice as the 1 Nov cards; only the headline changed.
 
 const SHARE_CARDS = {
   pricing: "Urganize pricing. Pay for the roster, not the headcount. The Northline Music team list on one plan.",
-  features: "Urganize features. Plan new music. Keep track of every task. A task list where every task has an owner and a due date.",
-  "for-managers": "Urganize for artist managers. Every artist’s release. One screen, not five chats. Five artists’ rollouts on one list, with progress.",
-  "for-executives": "Urganize for record labels. Every artist’s new music. Every task tracked. The roster with each artist’s next release and its status.",
+  features: "Urganize features. One plan. Every task has an owner. A task list where every task has an owner and a due date.",
+  "for-managers": "Urganize for artist managers. Every artist’s plan. One screen, not five chats. Five artists’ rollouts on one list, with progress.",
+  "for-executives": "Urganize for record labels. Your whole roster. Every task tracked. The roster with what is next for each artist and its status.",
   "for-curators": "Urganize for curators. People pitch you all day. Answer in one tap. The pitch inbox with one pitch marked Added.",
   "for-ai-artists": "Urganize for AI artists. You can make a song in an hour. Releasing one still takes weeks. A three-week plan up to release day.",
   guides: "Urganize guides. Plan a music release, step by step. A list of steps by week and role.",

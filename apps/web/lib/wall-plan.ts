@@ -144,5 +144,5 @@ export function wallPlanReason(plan: WallPlan, input: Pick<WallPlanInput, 'curre
   }
 
   const extra = limits.seats === null ? 'as many people as you like' : count(Math.max(0, limits.seats - 1), 'more person', 'more people');
-  return `Everything you need for your next release, with room for ${extra} on your team.`;
+  return `Everything you need to plan your music, with room for ${extra} on your team.`;
 }

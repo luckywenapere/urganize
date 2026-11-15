@@ -65,7 +65,7 @@ const LANDING_KEYWORDS = [
   "artist management app",
   "music task tracker",
   "record label software",
-  "release planner for artists",
+  "music team task management",
 ] as const;
 
 // Typography (2026-10-18, URG-383). Every marketing page wears the

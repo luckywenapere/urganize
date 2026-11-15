@@ -24,7 +24,13 @@
 // Chromium through Playwright. Playwright is not a repo dependency: Claude's
 // cloud containers have it preinstalled; on a laptop run
 // `npx -y playwright@1 install chromium` once and use `NODE_PATH` or a global
-// install so `require('playwright')` resolves.
+// install so `require('playwright')` resolves. Set CHROME_PATH to a Chrome or
+// Chromium binary when Playwright's own download is missing.
+//
+// THE 2026-11-15 CARD (#1299). Same frame, new words: the homepage headline
+// "A music career shouldn't run / on a group chat.", ribbons that carry steps
+// from more than a release (a show, a pitch, press), and a pill that names
+// the idea (one plan, one owner per task) where the drop-day timeline was.
 //
 // WHY A JPEG. The grain makes a PNG about 750 KB, over what WhatsApp will show
 // as a large preview. A quality-86 JPEG is about 70 KB and looks the same.
@@ -59,19 +65,20 @@ const WEB = join(HOMEPAGE, '..', 'web');
 const url = (path) => pathToFileURL(path).href;
 const FONTS = join(WEB, 'assets', 'fonts');
 
-// Kept in step with SHARE_HEADLINE in lib/positioning.ts by hand: this script
+// Kept in step with HERO_HEADLINE_LEAD and HERO_HEADLINE_ACCENT in
+// lib/positioning.ts by hand (SHARE_HEADLINE is the two joined): this script
 // runs outside the TypeScript build and cannot import it.
-const LINE_ONE = 'Plan new music.';
-const LINE_TWO = 'Track every task.';
+const LINE_ONE = 'A music career shouldn’t run';
+const LINE_TWO = 'on a group chat.';
 
-// Real steps from the single playbook, so the ribbons show the product's own
-// words. Two ribbons, each one long line that runs off both edges.
+// Real kinds of work a team plans here, a release next to a show, a pitch and
+// press, so the ribbons do not say the product is only for releases. Two ribbons, each one long line that runs off both edges.
 const RIBBON_ONE =
-  'brief the designer on cover art · lock the master file · write the song metadata · ' +
-  'pitch to Spotify editorial · cover art final approved · upload track and metadata ·';
+  'brief the designer on cover art · book the venue for the show · write the song metadata · ' +
+  'pitch to playlist curators · send the press kit · upload track and metadata ·';
 const RIBBON_TWO =
-  'choose the distributor · confirm the release date · begin playlist outreach · ' +
-  'release day: post the drop · compile first-week stats · plan the next one ·';
+  'choose the distributor · confirm the release date · lock the set list · ' +
+  'follow up with the blogs · remind the team on WhatsApp · plan the next one ·';
 
 const html = `<!doctype html><html><head><meta charset="utf-8"><style>
 @font-face{font-family:YS;src:url(${url(join(FONTS, 'YoungSerif-Regular.ttf'))})}
@@ -89,15 +96,12 @@ body{width:1200px;height:630px;overflow:hidden;background:#0c0c0d}
 svg.rib{position:absolute;inset:0}
 .center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center}
 .logo{margin-top:64px;height:40px}
-h1{margin-top:58px;font-family:YS;font-weight:400;font-size:84px;line-height:1.02;letter-spacing:-.02em;color:#F5F0E6;text-align:center;text-shadow:0 4px 40px rgba(0,0,0,.5)}
+h1{margin-top:54px;font-family:YS;font-weight:400;font-size:74px;line-height:1.04;letter-spacing:-.02em;color:#F5F0E6;text-align:center;text-shadow:0 4px 40px rgba(0,0,0,.5)}
 h1 span{display:block;color:#7FD99A}
 .pill{margin-top:42px;display:flex;align-items:center;height:66px;padding:0 26px;border-radius:999px;background:#F5F0E6;box-shadow:0 0 0 5px rgba(12,12,13,.85),0 0 0 6px rgba(245,240,230,.35),0 20px 50px rgba(0,0,0,.55)}
-.tl{position:relative;width:250px;height:20px;display:flex;align-items:center;justify-content:space-between}
-.tl:before{content:"";position:absolute;left:0;right:0;top:9px;height:2px;background:rgba(13,18,14,.18)}
-.tl:after{content:"";position:absolute;left:0;width:64%;top:9px;height:2px;background:#2f6b4a}
-.dot{position:relative;z-index:1;width:12px;height:12px;border-radius:50%;background:#2f6b4a}
-.dot.todo{background:#F5F0E6;border:2px solid rgba(13,18,14,.35)}
-.drop{position:relative;z-index:1;width:18px;height:18px;transform:rotate(45deg);background:#E9C46A;border:2px solid #b8902f;margin-left:4px}
+.who{display:flex}
+.who i{display:flex;align-items:center;justify-content:center;width:34px;height:34px;margin-left:-8px;border-radius:50%;border:2px solid #F5F0E6;font:normal 12px SM;color:#F5F0E6}
+.who i:first-child{margin-left:0}
 .label{font-family:SM;font-size:15px;letter-spacing:.12em;color:#0D120E;margin-left:18px}
 </style></head><body><div class="card">
 <img class="shot" src="${url(join(HOMEPAGE, 'public', 'images', 'product', 'timeline-dark.png'))}">
@@ -115,7 +119,7 @@ h1 span{display:block;color:#7FD99A}
 <div class="center">
   <img class="logo" src="${url(join(HOMEPAGE, 'public', 'images', 'urganize-logo.png'))}">
   <h1>${LINE_ONE}<span>${LINE_TWO}</span></h1>
-  <div class="pill"><div class="tl"><i class="dot"></i><i class="dot"></i><i class="dot"></i><i class="dot"></i><i class="dot todo"></i><i class="dot todo"></i><i class="drop"></i></div><span class="label">DROP DAY</span></div>
+  <div class="pill"><div class="who"><i style="background:#14643a">DO</i><i style="background:#7a1f3a">ZB</i><i style="background:#1f3a7a">TA</i></div><span class="label">ONE PLAN · ONE OWNER PER TASK</span></div>
 </div>
 </div></body></html>`;
 
@@ -125,7 +129,7 @@ const dir = mkdtempSync(join(tmpdir(), 'urganize-og-'));
 const htmlPath = join(dir, 'card.html');
 writeFileSync(htmlPath, html);
 
-const browser = await chromium.launch();
+const browser = await chromium.launch(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {});
 try {
   const page = await browser.newPage({ viewport: { width: 1200, height: 630 } });
   await page.goto(url(htmlPath), { waitUntil: 'load' });

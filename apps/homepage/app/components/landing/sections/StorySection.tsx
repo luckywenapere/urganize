@@ -86,7 +86,7 @@ const STEPS: readonly {
   },
   {
     title: "See what\u2019s late, and what worked.",
-    line: "One timeline shows what\u2019s done, what\u2019s late and what\u2019s next. After every task, Urganize asks how it went, so you can see what worked when the release is out.",
+    line: "One timeline shows what\u2019s done, what\u2019s late and what\u2019s next. After every task, Urganize asks how it went, so you can see what worked.",
     demo: "late",
     alt: "A rollout's timeline in Urganize: Pitch to curators is marked Overdue once today passes its date, then moved to a later day that still lands before release day.",
   },

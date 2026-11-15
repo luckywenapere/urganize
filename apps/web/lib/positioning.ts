@@ -47,85 +47,80 @@
  */
 
 /**
- * POSITIONING SINCE 2026-11-09 (founder, issue #1153): "Urganize is an app that
- * helps artists, managers and record labels plan new music and keep track of
- * every task. It asks about your goals, then makes a plan that fits. You can
- * also make your own. Use it solo or with a team. After every task, Urganize
- * asks how it went..." The founder's last clause, "so it keeps learning from
- * you", was swapped for "so you can see what worked when the release is out"
- * (founder approved): the answers feed the post-release review, and nothing
- * yet feeds them back into the next plan. Put "keeps learning" back only once
- * the planner reads task outcomes.
+ * POSITIONING SINCE 2026-11-15 (founder, issue #1299; he said it first on
+ * 2026-11-10): "Urganize is a planning and coordination app for recording
+ * artists, managers and labels." It is NOT a release planner. A release is one
+ * kind of work, next to shows, pitching, press, distribution and the team
+ * itself. The headline and the line under it are his too, first approved for
+ * the pre-seed deck: "A music career shouldn't run on a group chat." and "Tell
+ * it your goals. It makes the plan. Every task has one owner and one date. It
+ * reminds each person, so nobody has to chase."
  *
- * Retired the same day: "From idea to execution." (2026-10-31 to 2026-11-09),
- * "where music teams manage everything from idea to execution", the hero
- * promise "Everyone knows their job till drop day. Nobody has to chase
- * anybody." and "Built for artists and their teams.". Their history is in git.
+ * Retired the same day (2026-11-09 to 2026-11-15, #1153 and #1224): "Plan new
+ * music. Track every task.", "an app that helps artists, managers and record
+ * labels plan new music and keep track of every task", the headline "Plan your
+ * next release, task by task." and "Urganize builds a release plan for...".
+ * They described one kind of work as if it were the whole product. Their
+ * history is in git.
+ *
+ * Still not said: "keeps learning". Task answers feed the review after the
+ * work is done; nothing yet feeds them back into the next plan.
  */
 
 /**
  * The core line without its subject, for a sentence that already names
- * Urganize ("Urganize, an app that helps...", "inside Urganize, an app that
- * helps...").
+ * Urganize ("Urganize, a planning and coordination app for...").
  */
-export const CORE_CLAUSE =
-  'an app that helps artists, managers and record labels plan new music and keep track of every task';
+export const CORE_CLAUSE = 'a planning and coordination app for recording artists, managers and labels';
 
 /** The core line, the founder's words. Introduces the product anywhere a whole sentence fits. */
 export const CORE_LINE = `Urganize is ${CORE_CLAUSE}.`;
 
 /**
  * The short line. Page titles, meta titles, tight bios, the footer, the share
- * card. Founder approved 2026-11-09.
+ * card. Founder approved 2026-11-15.
  */
-export const SHORT_LINE = 'Plan new music. Track every task.';
+export const SHORT_LINE = 'One plan. Every task has an owner.';
 
 /**
- * The homepage headline. Coframe's test, accepted by the founder 2026-11-12
- * (#1224): name the job and who it is for in the headline itself, because
- * "Tell it your goals. Get a plan that fits." never said what gets planned.
- * The old headline lives on as HERO_EYEBROW, the line above it.
+ * The homepage headline, in two parts so the page can colour the second
+ * without typing the words again. Founder's line, approved 2026-11-15.
  */
-export const HERO_HEADLINE = 'Plan your next release, task by task.';
+export const HERO_HEADLINE_LEAD = "A music career shouldn't run";
+export const HERO_HEADLINE_ACCENT = 'on a group chat.';
+export const HERO_HEADLINE = `${HERO_HEADLINE_LEAD} ${HERO_HEADLINE_ACCENT}`;
 
-/** The line above the headline: the 2026-11-09 headline, kept as Coframe advised. */
-export const HERO_EYEBROW = 'Tell it your goals. Get a plan that fits.';
+/** The line above the headline: what it is and who it is for. */
+export const HERO_EYEBROW = 'Planning and coordination for recording artists, managers and labels';
 
-/**
- * The line under the headline (Coframe, #1224). Coframe wrote "until it
- * ships"; the house word is never "ship", so it says "until it's out".
- */
+/** The line under the headline. The founder's words. */
 export const HERO_SUBHEAD =
-  "Urganize builds a release plan for artists, managers and record labels, then tracks every task until it's out.";
+  'Tell it your goals. It makes the plan. Every task has one owner and one date. It reminds each person, so nobody has to chase.';
 
-/**
- * The line under the headline: the rest of the positioning in one breath.
- * Founder approved 2026-11-09.
- */
-export const PROMISE_LINE = 'Or make your own. Use it solo or with your team, and keep track of every task.';
+/** What the plan covers, in one breath. A release is one kind of work among these. */
+export const PROMISE_LINE = 'Releases, shows, pitching, press and distribution, on one plan.';
 
 /**
  * The learning loop, in words that are true today: the "how did it go?" sheet
- * after a task is live, and its answers feed the post-release review.
+ * after a task is live, and its answers feed the review.
  */
-export const LEARNING_LINE =
-  'After every task, Urganize asks how it went, so you can see what worked when the release is out.';
+export const LEARNING_LINE = 'After every task, Urganize asks how it went, so you can see what worked.';
 
 /**
- * Who it is for, in the fixed order artists, managers, record labels.
+ * Who it is for, in the fixed order recording artists, managers, labels.
  *
  * ARTISTS ALWAYS LEAD, and the order is never reordered for emphasis. It is
  * data rather than a baked string so the guard can pin the order rather than
- * pin one sentence that happens to contain it. "Record labels" since
- * 2026-11-09, the founder's word.
+ * pin one sentence that happens to contain it. "Recording artists" and
+ * "labels" since 2026-11-15, the founder's words.
  */
-export const AUDIENCE = ['artists', 'managers', 'record labels'] as const;
+export const AUDIENCE = ['recording artists', 'managers', 'labels'] as const;
 
-/** "artists, managers and record labels", built from the list above. No Oxford comma. */
+/** "recording artists, managers and labels", built from the list above. No Oxford comma. */
 export const AUDIENCE_LINE = `${AUDIENCE.slice(0, -1).join(', ')} and ${AUDIENCE[AUDIENCE.length - 1]}`;
 
 /** The brand line. The homepage title and the app's default title. */
-export const BRAND_LINE = 'Urganize: Plan new music, track every task';
+export const BRAND_LINE = 'Urganize: Planning and coordination for music teams';
 
 /**
  * Under 80 characters. Bios, the footer tagline, anywhere a single line is all
@@ -141,27 +136,23 @@ export const SHORT_DESCRIPTION = CORE_LINE;
 
 /**
  * The search description: the homepage meta description and JSON-LD. Under
- * 160 characters so Google shows it whole. Founder approved 2026-11-09.
+ * 160 characters so Google shows it whole. Founder approved 2026-11-15.
  */
-export const META_DESCRIPTION =
-  'Urganize helps artists, managers and record labels plan new music and keep track of every task. ' +
-  'Tell it your goals and it makes a plan that fits.';
+export const META_DESCRIPTION = `${CORE_LINE} Tell it your goals. It makes the plan and reminds each person.`;
 
 /**
- * The long description: the founder's positioning in full, with the learning
- * line in its true form. Used wherever there is room: the brand page, UrgAns,
- * the store listing.
+ * The long description: the positioning in full. Used wherever there is room:
+ * the brand page, the AI, the store listing.
  */
 export const CANONICAL_DESCRIPTION =
-  `${CORE_LINE} It asks about your goals, then makes a plan that fits. ` +
-  'You can also make your own. Use it solo or with a team. ' +
-  LEARNING_LINE;
+  `${CORE_LINE} Tell it your goals and it makes the plan: releases, shows, pitching, press and distribution. ` +
+  'Every task has one owner and one date. It reminds each person, so nobody has to chase.';
 
 /**
  * The link preview: the share card's headline and the title and text
  * WhatsApp, X and LinkedIn show under it.
  */
-export const SHARE_HEADLINE = SHORT_LINE;
+export const SHARE_HEADLINE = HERO_HEADLINE;
 export const SHARE_TITLE = BRAND_LINE;
 export const SHARE_DESCRIPTION = CORE_LINE;
 

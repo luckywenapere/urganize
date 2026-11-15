@@ -46,7 +46,7 @@ export function FinalCTASection() {
             clear of the header, not hidden behind it (scroll-mt-24 settled it
             flush against the header). */}
         <div id="join" className="scroll-mt-28 text-center">
-          <h2 className={centeredHeadlineClass}>Plan your next release around your goals.</h2>
+          <h2 className={centeredHeadlineClass}>Put your music career on one plan.</h2>
 
           {/* The waitlist form, always open (2026-10-07); a Create your account button
               while sign-up is open (2026-11-10, #1176). */}

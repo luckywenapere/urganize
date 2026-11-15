@@ -51,7 +51,7 @@ export function PainSection() {
       >
         <div className="mx-auto max-w-[44rem] text-center">
           <h2 className={centeredHeadlineClass}>
-            Releases shouldn&rsquo;t live in the group chat.
+            Your plan shouldn&rsquo;t live in the group chat.
           </h2>
         </div>
 

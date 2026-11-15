@@ -51,14 +51,14 @@ const appDescription = META_DESCRIPTION;
 // apps cache the bytes per URL, and the unversioned PNG kept WhatsApp showing
 // a months-old card. Bump with SHARE_IMAGE_VERSION in apps/homepage/lib/seo.ts
 // whenever scripts/generate-og-image.mjs is re-run.
-const SHARE_IMAGE_VERSION = '2026-11-09-plan-new-music';
+const SHARE_IMAGE_VERSION = '2026-11-15-group-chat';
 const shareImage = {
   url: `/opengraph-image.jpg?v=${SHARE_IMAGE_VERSION}`,
   width: 1200,
   height: 630,
-  // Describes the picture, which shows only the headline and a timeline
-  // (2026-11-09, #1153); same alt as apps/homepage/lib/seo.ts.
-  alt: `Urganize. ${SHARE_HEADLINE} A release timeline ending in a gold drop-day diamond, with plan steps curving around it.`,
+  // Describes the picture (2026-11-15, #1299); same alt as
+  // apps/homepage/lib/seo.ts.
+  alt: `Urganize. ${SHARE_HEADLINE} Plan steps for releases, shows, pitching and press curve around a pill that reads one plan, one owner per task.`,
 };
 
 function getMetadataBase() {

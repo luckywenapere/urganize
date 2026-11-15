@@ -16,7 +16,7 @@ import type { ProductShot } from "@/content/product-shots";
 export const metadata: Metadata = buildPageMetadata({
   title: "Why Urganize over WhatsApp and Google Drive",
   description:
-    "WhatsApp and Drive hold the chat. Urganize helps you plan new music and keep track of every task: a plan built from your goals, solo or with a team.",
+    "WhatsApp and Drive hold the chat. Urganize holds the plan: every task has one owner and one date, and each person gets a reminder.",
   path: "/why-urganize",
 });
 
@@ -124,9 +124,9 @@ export default function WhyUrganizePage() {
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
               A group chat is good for talking. It is bad at holding a plan,
-              even for one artist. Add a second release, a third artist and a
-              team passing work around, and things start to drop. Urganize
-              plans your release and keeps track of every task.
+              even for one artist. Add a second release, a show, a third artist and
+              a team passing work around, and things start to drop. Urganize
+              makes the plan and gives every task one owner and one date.
             </p>
             {/* CTA moved into the hero (2026-08-05): the page previously had
                 no ask until the very bottom, five screens down, so anyone
@@ -276,7 +276,7 @@ export default function WhyUrganizePage() {
         <ScrollReveal>
           <SectionShell containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10">
             <div className="text-center">
-              <h2 className={headlineClass}>Keep the chat for talking. Put the release on a plan.</h2>
+              <h2 className={headlineClass}>Keep the chat for talking. Put the work on a plan.</h2>
               <div className="mt-10 flex w-full flex-col items-center gap-3">
                 <TrialButton location="why_urganize_cta" size="lg" className="w-full sm:w-auto" />
                 <p className="mt-4 text-sm leading-6 text-[var(--marketing-text-muted)]">{PRIMARY_CTA.note}</p>

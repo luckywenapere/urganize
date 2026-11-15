@@ -196,7 +196,7 @@ describe('referral code field (URG-251 Part 1)', () => {
 
 describe('paywall (URG-251 Part 3)', () => {
   it('uses the headline Oyin picked, and the landing page wording for the logos', () => {
-    expect(PAYWALL_HEADLINE).toBe('Run your next release like a pro.');
+    expect(PAYWALL_HEADLINE).toBe('Run your music like a pro.');
     expect(PAYWALL_LOGOS_LINE).toBe('Shaped with managers from');
     const ui = code('lib/onboarding-paywall.ts');
     expect(ui).not.toMatch(/trusted by/i);

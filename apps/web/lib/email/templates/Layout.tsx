@@ -58,7 +58,7 @@ export function EmailLayout({ preview, children, footer, socials = true }: Email
           </Section>
           <Hr style={{ borderColor: HAIRLINE, margin: '20px 0 14px' }} />
           <Text style={{ margin: 0, color: MUTED_TEXT, fontSize: '12px', lineHeight: '1.6' }}>
-            Urganize. Plan new music. Track every task.
+            Urganize. One plan. Every task has an owner.
           </Text>
           {socials ? <SocialFooter /> : null}
           {footer ? <>{footer}</> : null}

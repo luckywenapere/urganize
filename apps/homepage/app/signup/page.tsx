@@ -76,8 +76,8 @@ export default function SignupPage() {
                 {SIGNUP_OPEN ? "Create your account" : "Join the waitlist"}
               </h1>
               <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
-                Tell Urganize your goals and get a plan that fits. Or make
-                your own.
+                Tell Urganize your goals. It makes the plan and reminds each
+                person.
               </p>
 
               <div className="mt-10">
@@ -122,8 +122,8 @@ export default function SignupPage() {
               Who Urganize is for
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">
-              Artists, managers and record labels. Use it on your own or with
-              a team to plan new music and keep track of every task. See{" "}
+              Recording artists, managers and labels. Use it on your own or
+              with a team to plan the work and give every task one owner. See{" "}
               <Link
                 href="/features"
                 className="underline underline-offset-4 hover:text-[var(--marketing-text)]"

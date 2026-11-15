@@ -206,7 +206,7 @@ const questions = (currency: PricingCurrencyCode) => [
     q: 'How much does it cost?',
     // Read from the pricing package so a reprice can never leave this answer
     // disagreeing with the plan cards above it.
-    a: `Solo is ${monthlyFigure('solo', currency)} a month and Solo Plus is ${monthlyFigure('solo_plus', currency)}. For a team, Pro is ${monthlyFigure('manager', currency)} and Pro Plus is ${monthlyFigure('pro', currency)}. Label is priced with you. One price covers your whole team.`,
+    a: `Solo is ${monthlyFigure('solo', currency)} a month. Solo Plus, the first plan with distribution, is ${monthlyFigure('solo_plus', currency)}. For a team, Pro is ${monthlyFigure('manager', currency)} and Pro Plus is ${monthlyFigure('pro', currency)}. Label is priced with you. One price covers your whole team.`,
   },
 ];
 

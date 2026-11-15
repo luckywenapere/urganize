@@ -321,7 +321,7 @@ export function buildReviewAiMessages(input: {
   thin: boolean;
 }): Array<{ role: 'system' | 'user'; content: string }> {
   const system = [
-    'You are the AI in Urganize, a release-planning app for music managers.',
+    'You are the AI in Urganize, a planning and coordination app for music teams.',
     "A release came out. Write the team's post-release review in one or two short plain sentences, under 280 characters.",
     'Either say plainly that the rollout went to plan, or give at most two concrete changes for next time, grounded only in the data and answers given.',
     'Use the team\'s own words where you can. No praise words, no emojis, no em dashes, no invented numbers.',

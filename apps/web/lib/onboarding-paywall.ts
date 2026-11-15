@@ -3,7 +3,7 @@
  * 2026-10-14; founder decisions in the issue's comments).
  *
  * What is decided here, pure so vitest holds it:
- *  - the headline, exactly "Run your next release like a pro." (no number:
+ *  - the headline, exactly "Run your music like a pro." (no number:
  *    the founder dropped the task count on 2026-10-14),
  *  - the logo strip's line, "Shaped with managers from", the landing page's
  *    wording (AffiliationsSection). Never "Trusted by": those companies have
@@ -25,7 +25,7 @@
 import { isBillingInterval, isPricingTierId, type BillingInterval, type PricingTierId } from '@urganize/pricing';
 import type { OnboardingPersona, OnboardingWhereStuck } from './onboarding';
 
-export const PAYWALL_HEADLINE = 'Run your next release like a pro.';
+export const PAYWALL_HEADLINE = 'Run your music like a pro.';
 export const PAYWALL_LOGOS_LINE = 'Shaped with managers from';
 export const PAYWALL_CTA = 'Start my free trial';
 export const PAYWALL_CHAT_LINE = 'Questions? Chat with us';

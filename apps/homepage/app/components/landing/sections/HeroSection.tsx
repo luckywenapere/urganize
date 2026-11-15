@@ -1,4 +1,4 @@
-import { HERO_EYEBROW, HERO_HEADLINE, HERO_SUBHEAD } from "@/lib/positioning";
+import { HERO_EYEBROW, HERO_HEADLINE_ACCENT, HERO_HEADLINE_LEAD, HERO_SUBHEAD } from "@/lib/positioning";
 import { ProofStats } from "../ProofStats";
 import { VisitorPrice } from "@/app/components/pricing/VisitorPrice";
 import { getTier, PRICING_TIER_ORDER } from "@urganize/pricing";
@@ -22,11 +22,10 @@ const FIRST_PAID_TIER = PRICING_TIER_ORDER.find((id) => {
   return !tier.contactSales && (tier.monthlyPrice?.amount ?? 0) > 0;
 });
 
-// The headline's second half takes the accent colour, split at its comma so
-// the words come from lib/positioning.ts and are never typed here.
-const HERO_SPLIT = HERO_HEADLINE.indexOf(", ");
-const HERO_LEAD = HERO_SPLIT === -1 ? HERO_HEADLINE : HERO_HEADLINE.slice(0, HERO_SPLIT + 1);
-const HERO_ACCENT = HERO_SPLIT === -1 ? "" : HERO_HEADLINE.slice(HERO_SPLIT + 2);
+// The headline's second half takes the accent colour. Both halves come from
+// lib/positioning.ts and are never typed here.
+const HERO_LEAD = HERO_HEADLINE_LEAD;
+const HERO_ACCENT = HERO_HEADLINE_ACCENT;
 
 const HERO_SHOT_SIZES = "(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw";
 
@@ -92,7 +91,7 @@ export function HeroSection() {
                   keeps "Create your account". The demo sits beside it as a
                   real second button, not a small link. */}
               <div className="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
-                <TrialButton location="hero" size="lg" label="Build my release plan" className="w-full sm:w-auto" />
+                <TrialButton location="hero" size="lg" label="Build my plan" className="w-full sm:w-auto" />
                 <WatchDemo variant="ghost" className="w-full sm:w-auto" />
               </div>
               <p className="mono-label text-[var(--marketing-text-subtle)]">{PRIMARY_CTA.hint}</p>

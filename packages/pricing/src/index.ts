@@ -507,7 +507,10 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
   solo_plus: {
     id: 'solo_plus',
     label: 'Solo Plus',
-    audience: 'For an artist who puts out music often.',
+    // Says outright that this is where distribution starts (founder,
+    // 2026-11-15, #1299). It does not say "included": on a monthly plan
+    // distribution waits for a yearly one, and the stores line says which.
+    audience: 'For an artist who puts out music often. The first plan with distribution.',
     outcomeHeading: 'Keep releasing without the busywork',
     outcomes: [
       'A rollout plan made for you, every step and date',

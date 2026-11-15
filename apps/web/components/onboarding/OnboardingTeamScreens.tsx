@@ -287,7 +287,7 @@ export function SetupTeamScreen({
       left={
         <>
           <Heading>{teamMade ? 'Your team' : 'Set up your team'}</Heading>
-          <Lede>Your team is everyone who works on your releases. You can invite them next.</Lede>
+          <Lede>Your team is everyone who works on your music. You can invite them next.</Lede>
           {checkFailed ? <p className={hintClass}>Couldn&apos;t check for invites. We&apos;ll keep looking.</p> : null}
           <AccountPhotoRow name={account.name || account.email} />
           <Chips account={account} />

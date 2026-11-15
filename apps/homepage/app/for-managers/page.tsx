@@ -18,7 +18,7 @@ import type { ProductShot } from "@/content/product-shots";
 import { PRIMARY_CTA } from "@/lib/app-urls";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Release planning software for artist managers",
+  title: "Planning and coordination software for artist managers",
   description:
     "For artist managers. Urganize asks about each artist's goals, makes a plan that fits and keeps track of every task.",
   path: "/for-managers",
@@ -114,7 +114,7 @@ export default function ForManagersPage() {
               For artist managers
             </p>
             <h1 className="mt-8 text-balance text-[2.25rem] leading-[1.06] text-[var(--marketing-text)] sm:text-[3.6rem]">
-              Every artist&rsquo;s release.{" "}
+              Every artist&rsquo;s plan.{" "}
               <span className="text-[var(--marketing-accent)]">
                 One screen, not five chats.
               </span>

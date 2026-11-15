@@ -29,8 +29,8 @@ export default function GuidesPage() {
               Plan a music release, step by step
             </h1>
             <p className="mt-4 max-w-[38rem] text-[var(--marketing-text-muted)]">
-              Plain answers for anyone planning new music. Each one
-              comes from the plan Urganize builds for a single.
+              Plain answers for anyone putting music out. Each one comes
+              from a plan Urganize builds.
             </p>
           </PageDawn>
 
@@ -55,7 +55,7 @@ export default function GuidesPage() {
           {/* Closing ask (2026-10-19, founder call). */}
           <div className="mt-12 flex flex-col items-start gap-4">
             <p className="text-[var(--marketing-text-muted)]">
-              Want this plan built for your next release?
+              Want a plan like this built for you?
             </p>
             <TrialButton location="guide_index_cta" />
           </div>
