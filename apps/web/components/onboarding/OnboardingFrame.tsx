@@ -3,7 +3,7 @@
 // The onboarding frame (#854, design-direction.md): the app with the lights
 // half on. Logo top left and the avatar top right, where the app's top bar
 // puts them; one 480px column on a phone, two columns on a computer; the
-// question is the page heading in Young Serif at its real weight.
+// question is the page heading in the display face (DM Sans Bold).
 //
 // One look for every control here: one spring-green primary pill with ink
 // text, outlined secondaries, sentence-case labels, and one radius scale

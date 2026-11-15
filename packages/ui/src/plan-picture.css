@@ -145,6 +145,7 @@ html[data-theme="dark"] .plan-shot {
 
 .plan-shot__who i {
   font-family: var(--font-display);
+  font-weight: 700;
   font-size: calc(10 * var(--px));
   font-style: normal;
   color: var(--ps-ink-2);

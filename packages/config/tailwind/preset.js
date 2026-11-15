@@ -79,9 +79,9 @@ const preset = {
         // a consumer that never defines the variables.
         sans: ["var(--font-sans)", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
         display: ["var(--font-display)", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
-        // Space Mono carries the Brand Bible's "catalog" metadata voice —
+        // DM Mono carries the Brand Bible's "catalog" metadata voice —
         // dates, statuses, counts, IDs. Resolves through --font-mono
-        // (bound in apps/web/app/globals.css to next/font's Space Mono),
+        // (bound in apps/web/app/globals.css to next/font's DM Mono),
         // same pattern as sans/display above.
         mono: ["var(--font-mono)", "JetBrains Mono", "monospace"]
       },

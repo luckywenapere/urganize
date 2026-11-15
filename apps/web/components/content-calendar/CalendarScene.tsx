@@ -483,7 +483,7 @@ export function CalendarScene({ release, onToast }: CalendarSceneProps) {
                 bare <h1>: it is the heading row of this island, and a future
                 sibling belongs beside the title, not under it. */}
             <div className="mt-1 flex items-center gap-3">
-              <h1 className="font-[family-name:var(--font-cc-display)] text-3xl font-medium tracking-tight text-[var(--cc-text)] [@media(min-width:1024px)_and_(max-height:900px)]:text-2xl">
+              <h1 className="font-[family-name:var(--font-cc-display)] text-3xl font-bold tracking-tight text-[var(--cc-text)] [@media(min-width:1024px)_and_(max-height:900px)]:text-2xl">
                 {release.title}
               </h1>
             </div>

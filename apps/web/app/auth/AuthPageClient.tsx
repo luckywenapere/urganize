@@ -500,7 +500,7 @@ export default function AuthPage() {
               </header>
 
             <div className="flex flex-col items-center px-4 pt-12 text-center lg:mx-auto lg:my-auto lg:w-full lg:max-w-[400px] lg:items-stretch lg:px-0 lg:py-12 lg:text-left">
-              {/* Young Serif at its real weight, never a fake bold. */}
+              {/* DM Sans Bold: the font-display rule in globals.css sets the weight. */}
               <h1 className="text-balance font-display text-[34px] font-normal leading-10 tracking-[-0.012em] text-content-primary lg:text-[40px] lg:leading-[46px]">
                 One plan. Every task has an owner.
               </h1>
