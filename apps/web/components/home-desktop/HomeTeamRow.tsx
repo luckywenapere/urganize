@@ -5,51 +5,47 @@
 // The data is the Team page's own (GET /api/team), so the counts are the same
 // numbers the Team page shows and follow the viewer's own access limits.
 // A person opens on the Team page with their tasks beside them.
+//
+// Since #1305 (docs/mocks/home-wallpaper) there are no tiles: one row of faces
+// and names under a heading with a thin line, and no late count (a late task
+// says so on its own row).
 
 import Link from 'next/link';
-import { Plus } from '@/components/icons';
+import { ArrowRight, Plus } from '@/components/icons';
 import { ProfileFace } from '@/components/shared/ProfileFace';
 import { TEAM_COPY, TEAM_HREF, TEAM_ROLE_LABEL, type TeamPageResponse } from '@/lib/team-page';
+import { HOME_MORE, HOME_RULE } from './home-style';
 
-/** Tiles in the row, the invite tile included. */
+/** Places in the row, the invite included. */
 const SLOTS = 5;
 
 export const teamPersonHref = (memberId: string) => `${TEAM_HREF}?person=${encodeURIComponent(memberId)}`;
 export const TEAM_INVITE_HREF = `${TEAM_HREF}?invite=1`;
 
-const TILE = 'flex min-w-0 items-center gap-3 rounded-[14px] px-4 py-3.5';
+const PERSON = 'motion-focus motion-press -mx-2 flex min-w-0 items-center gap-3 rounded-2xl px-2 py-2 transition-colors hover:bg-bg-hover/60';
 
 export function HomeTeamHead({ count }: { count: number | null }) {
   return (
-    <div className="flex items-end justify-between gap-4">
+    <div className={`flex items-center justify-between gap-4 border-b ${HOME_RULE} pb-2.5`}>
       <h2 className="font-display text-[22px] font-normal leading-7 text-content-primary">
-        Team
+        Your team
         {count !== null ? (
-          <span className="font-sans text-sm font-medium text-content-secondary">
-            {' '}
-            · {count === 1 ? '1 person' : `${count} people`}
+          <span className="ml-2 font-sans text-sm font-medium text-content-secondary">
+            {count === 1 ? '1 person' : `${count} people`}
           </span>
         ) : null}
       </h2>
-      <Link href={TEAM_HREF} className="motion-focus text-[13px] font-semibold text-brand underline underline-offset-[3px]">
+      <Link href={TEAM_HREF} className={HOME_MORE}>
         Open team
+        <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
       </Link>
     </div>
   );
 }
 
-function Load({ open, late }: { open: number; late: number }) {
-  if (open === 0) return <span className="block text-xs leading-4 text-content-secondary">Nothing open</span>;
+function Load({ open }: { open: number }) {
   return (
-    <span className="block text-xs leading-4 text-content-secondary">
-      {open} open
-      {late > 0 ? (
-        <>
-          {' · '}
-          <span className="font-semibold text-status-error">{late} late</span>
-        </>
-      ) : null}
-    </span>
+    <span className="block text-xs leading-4 text-content-secondary">{open === 0 ? 'Nothing open' : `${open} open`}</span>
   );
 }
 
@@ -58,8 +54,8 @@ export function HomeTeamRow({
   mine,
 }: {
   team: TeamPageResponse;
-  /** The viewer's own load as My tasks counts it, shown on their tile. */
-  mine?: { open: number; late: number };
+  /** The viewer's own load as My tasks counts it, shown beside their name. */
+  mine?: { open: number };
 }) {
   const active = team.people.filter((person) => person.status === 'active');
   // You first, then the Team page's own order (online, then most recent).
@@ -72,16 +68,13 @@ export function HomeTeamRow({
   const more = people.length - shown.length;
 
   return (
-    <section data-home-block="team" aria-label="Team">
+    <section data-home-block="team" aria-label="Your team">
       <HomeTeamHead count={people.length} />
-      <ul className="mt-3 grid grid-cols-5 gap-3">
+      <ul className="mt-3 grid grid-cols-5 gap-6 xl:gap-8">
         {shown.map((person) => (
           <li key={person.memberId} className="min-w-0">
-            <Link
-              href={teamPersonHref(person.memberId)}
-              className={`motion-focus motion-press ${TILE} h-full border border-stroke-default bg-bg-surface transition-colors hover:bg-bg-hover/60`}
-            >
-              <ProfileFace name={person.name} photoUrl={person.avatarUrl} size={40} />
+            <Link href={teamPersonHref(person.memberId)} className={PERSON}>
+              <ProfileFace name={person.name} photoUrl={person.avatarUrl} size={44} />
               <span className="min-w-0">
                 <span className="flex min-w-0 items-center gap-1.5">
                   <span className="truncate text-sm font-semibold text-content-primary">{person.name}</span>
@@ -92,29 +85,23 @@ export function HomeTeamRow({
                   ) : null}
                 </span>
                 <span className="block truncate text-xs leading-4 text-content-secondary">{TEAM_ROLE_LABEL[person.role]}</span>
-                <Load {...(person.isCurrentUser && mine ? mine : person.summary)} />
+                <Load open={person.isCurrentUser && mine ? mine.open : person.summary.open} />
               </span>
             </Link>
           </li>
         ))}
         {overflow ? (
           <li className="min-w-0">
-            <Link
-              href={TEAM_HREF}
-              className={`motion-focus motion-press ${TILE} h-full border border-stroke-default bg-bg-surface text-sm font-semibold text-content-primary hover:bg-bg-hover/60`}
-            >
+            <Link href={TEAM_HREF} className={`${PERSON} h-full text-sm font-semibold text-content-primary`}>
               {more} more
             </Link>
           </li>
         ) : null}
         {canInvite ? (
           <li className="min-w-0">
-            <Link
-              href={TEAM_INVITE_HREF}
-              className={`motion-focus motion-press ${TILE} h-full border-[1.5px] border-dashed border-stroke-control hover:bg-bg-hover/60`}
-            >
+            <Link href={TEAM_INVITE_HREF} className={PERSON}>
               <span
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-[1.5px] border-dashed border-stroke-control text-content-tertiary"
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-full border-[1.5px] border-dashed border-stroke-control text-content-tertiary"
                 aria-hidden="true"
               >
                 <Plus className="h-4 w-4" />
@@ -130,7 +117,7 @@ export function HomeTeamRow({
             </Link>
           </li>
         ) : people.length <= 1 ? (
-          <li className="col-span-2 flex items-center px-1 text-sm text-content-secondary">It is just you for now.</li>
+          <li className="col-span-2 flex items-center text-sm text-content-secondary">It is just you for now.</li>
         ) : null}
       </ul>
     </section>
@@ -142,14 +129,14 @@ export function HomeTeamRowSkeleton() {
   return (
     <section aria-hidden="true">
       <HomeTeamHead count={null} />
-      <ul className="mt-3 grid grid-cols-5 gap-3">
+      <ul className="mt-3 grid grid-cols-5 gap-6 xl:gap-8">
         {[0, 1, 2].map((key) => (
-          <li key={key} className={`${TILE} border border-stroke-default bg-bg-surface`}>
-            <span className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-bg-hover" />
+          <li key={key} className="flex h-[68px] min-w-0 items-center gap-3 py-2">
+            <span className="h-11 w-11 shrink-0 animate-pulse rounded-full bg-bg-hover" />
             <span className="min-w-0 flex-1 space-y-1.5">
-              <span className="block h-3.5 w-20 animate-pulse rounded bg-bg-hover" />
-              <span className="block h-3 w-12 animate-pulse rounded bg-bg-hover" />
-              <span className="block h-3 w-14 animate-pulse rounded bg-bg-hover" />
+              <span className="block h-3.5 w-20 animate-pulse rounded-full bg-bg-hover" />
+              <span className="block h-3 w-12 animate-pulse rounded-full bg-bg-hover" />
+              <span className="block h-3 w-14 animate-pulse rounded-full bg-bg-hover" />
             </span>
           </li>
         ))}

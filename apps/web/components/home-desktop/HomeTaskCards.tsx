@@ -5,6 +5,10 @@
 // is lib/home-desktop/tasks.ts. Ticking goes through TaskCompletionCheckbox,
 // the same path every task list uses, so blockers and the unlock of the tasks
 // that wait on this one still apply.
+//
+// Since #1305 (docs/mocks/home-wallpaper) there is no card: a heading with its
+// count, one thin line under it, and thin lines between the rows. A late task
+// says so in red on its own row; the heading carries no late count.
 
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
@@ -12,8 +16,10 @@ import { ProfileFace } from '@/components/shared/ProfileFace';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import type { ExecutionTask } from '@/lib/execution-types';
-import { homeDueLabel, type HomeTaskPick, type HomeTaskRow } from '@/lib/home-desktop/tasks';
+import { homeDueLabel, homeTaskSubline, type HomeTaskPick, type HomeTaskRow } from '@/lib/home-desktop/tasks';
 import { displayReleaseTitle } from '@/types/releases';
+import { ArrowRight } from '@/components/icons';
+import { HOME_MORE, HOME_ROW_RULE, HOME_RULE } from './home-style';
 
 export type HomeTaskPlace = { title: string; artistName: string };
 export type HomeTaskPerson = { name: string; photoUrl: string | null };
@@ -29,30 +35,40 @@ type CardProps = {
 function TaskCard({
   title,
   open,
+  sub,
   seeAllHref,
   children,
   block,
 }: {
   title: string;
   open: number;
+  /** The small line under the title: "open across 2 rollouts", "with 3 people". */
+  sub: string | null;
   seeAllHref: string;
   children: ReactNode;
   block: string;
 }) {
   return (
-    <section
-      className="min-w-0 rounded-2xl border border-stroke-default bg-bg-surface px-5 pb-2 pt-1.5"
-      data-home-block={block}
-      aria-label={title}
-    >
-      <div className="flex items-baseline justify-between gap-3 pb-2 pt-3">
-        <h2 className="font-display text-lg font-normal leading-6 text-content-primary">
-          {title}
-          {open > 0 ? <span className="font-sans text-[13px] font-medium text-content-secondary"> · {open} open</span> : null}
-        </h2>
+    <section className="min-w-0" data-home-block={block} aria-label={title}>
+      <div className={`flex min-h-[54px] items-center justify-between gap-3 border-b ${HOME_RULE} pb-2.5`}>
+        <div className="flex min-w-0 items-center gap-3">
+          {open > 0 ? (
+            <span className="font-display text-4xl leading-9 tabular-nums text-content-primary" aria-hidden="true">
+              {open}
+            </span>
+          ) : null}
+          <div className="min-w-0">
+            <h2 className="font-display text-xl font-normal leading-6 text-content-primary">
+              {title}
+              {open > 0 ? <span className="sr-only">, {open} open</span> : null}
+            </h2>
+            {open > 0 && sub ? <p className="truncate text-[13px] leading-[18px] text-content-secondary">{sub}</p> : null}
+          </div>
+        </div>
         {open > 0 ? (
-          <Link href={seeAllHref} className="motion-focus text-[13px] font-semibold text-brand underline underline-offset-[3px]">
+          <Link href={seeAllHref} className={HOME_MORE}>
             See all
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         ) : null}
       </div>
@@ -62,8 +78,10 @@ function TaskCard({
 }
 
 function EmptyLine({ children }: { children: ReactNode }) {
-  return <div className="border-t border-stroke-subtle py-5 text-sm text-content-secondary">{children}</div>;
+  return <div className="py-5 text-sm text-content-secondary">{children}</div>;
 }
+
+const ROW = `flex min-w-0 items-center gap-3 border-t ${HOME_ROW_RULE} py-3 first:border-t-0`;
 
 function placeParts(task: ExecutionTask, places: ReadonlyMap<string, HomeTaskPlace>): string[] {
   const place = task.releaseId ? places.get(task.releaseId) : null;
@@ -99,7 +117,7 @@ function RowText({ row, under }: { row: HomeTaskRow<ExecutionTask>; under: strin
 }
 
 /** Open tasks assigned to the viewer. Each can be ticked off here. */
-export function MyTasksCard({ pick, today, places, seeAllHref }: CardProps) {
+export function MyTasksCard({ pick, today, places, seeAllHref, rollouts }: CardProps & { /** Rollouts the open tasks sit on. */ rollouts: number }) {
   // A refusal ("finish X first") belongs to the list it was shown against:
   // once the rows change it is stale, so it is kept with the rows it was for.
   const shownFor = pick.rows.map((row) => row.id).join();
@@ -107,19 +125,19 @@ export function MyTasksCard({ pick, today, places, seeAllHref }: CardProps) {
   const blocker = refusal && refusal.rows === shownFor ? refusal.text : null;
   const setBlocker = (text: string) => setRefusal({ text, rows: shownFor });
   return (
-    <TaskCard title="My tasks" open={pick.open} seeAllHref={seeAllHref} block="my-tasks">
+    <TaskCard title="My tasks" open={pick.open} sub={homeTaskSubline('mine', rollouts)} seeAllHref={seeAllHref} block="my-tasks">
       {pick.rows.length === 0 ? (
         <EmptyLine>Nothing is assigned to you right now.</EmptyLine>
       ) : (
         <ul>
           {pick.rows.map((row) => (
-            <li key={row.id} className="flex min-w-0 items-center gap-3 border-t border-stroke-subtle py-2.5">
+            <li key={row.id} className={ROW}>
               <TaskCompletionCheckbox
                 taskId={row.id}
                 status={row.task.status}
                 taskTitle={row.task.title}
                 onBlocker={setBlocker}
-                className="!h-5 !w-5"
+                className="!h-[22px] !w-[22px]"
               />
               <RowText row={row} under={placeParts(row.task, places).join(' · ')} />
               <Due row={row} today={today} />
@@ -128,7 +146,7 @@ export function MyTasksCard({ pick, today, places, seeAllHref }: CardProps) {
         </ul>
       )}
       {blocker ? (
-        <p role="alert" className="border-t border-stroke-subtle py-2.5 text-[13px] text-status-error">
+        <p role="alert" className={`border-t ${HOME_ROW_RULE} py-3 text-[13px] text-status-error`}>
           {blocker}
         </p>
       ) : null}
@@ -145,7 +163,10 @@ export function DelegatedCard({
   people,
   alone,
   inviteHref,
+  holders,
 }: CardProps & {
+  /** People holding the open tasks. */
+  holders: number;
   /** Faces and names by user id, from the team. */
   people: ReadonlyMap<string, HomeTaskPerson>;
   /** True when the viewer is the only person on the team. */
@@ -154,7 +175,7 @@ export function DelegatedCard({
   inviteHref: string | null;
 }) {
   return (
-    <TaskCard title="Delegated" open={pick.open} seeAllHref={seeAllHref} block="delegated">
+    <TaskCard title="Delegated" open={pick.open} sub={homeTaskSubline('delegated', holders)} seeAllHref={seeAllHref} block="delegated">
       {pick.rows.length === 0 ? (
         <EmptyLine>
           {alone ? 'It is just you for now, so there is nobody to hand work to.' : 'You have not given anyone a task.'}
@@ -174,7 +195,7 @@ export function DelegatedCard({
             const name = person?.name || row.task.assignee?.name || row.task.assignedTo || 'A teammate';
             const rollout = placeParts(row.task, places)[0];
             return (
-              <li key={row.id} className="flex min-w-0 items-center gap-3 border-t border-stroke-subtle py-2.5">
+              <li key={row.id} className={ROW}>
                 <ProfileFace name={name} photoUrl={person?.photoUrl ?? null} size={28} />
                 <RowText row={row} under={[name, rollout].filter(Boolean).join(' · ')} />
                 <Due row={row} today={today} />

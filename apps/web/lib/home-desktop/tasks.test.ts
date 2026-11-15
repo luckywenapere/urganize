@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   HOME_TASK_LIMIT,
+  countDelegatedPeople,
+  countRollouts,
   focusMyTasks,
   homeDueLabel,
+  homeTaskSubline,
   selectDelegated,
   selectMyTasks,
   type HomeFocusTask,
@@ -213,5 +216,30 @@ describe('focusMyTasks', () => {
   it('leaves done and cancelled work out', () => {
     const tasks = [plan({ id: 'done', planKey: true, status: 'done' }), plan({ id: 'open', planKey: true })];
     expect(ids(focusMyTasks(tasks, ME, new Map(), TODAY))).toEqual(['open']);
+  });
+});
+
+describe('the line under a task heading', () => {
+  it('counts the rollouts my open tasks sit on', () => {
+    expect(countRollouts([{ releaseId: 'a' }, { releaseId: 'a' }, { releaseId: 'b' }, { releaseId: null }])).toBe(2);
+    expect(homeTaskSubline('mine', 2)).toBe('open across 2 rollouts');
+    expect(homeTaskSubline('mine', 1)).toBe('open on 1 rollout');
+    expect(homeTaskSubline('mine', 0)).toBe('open');
+  });
+
+  it('counts the people holding what I handed out, open tasks only', () => {
+    const owned = new Set(['r1']);
+    const tasks = [
+      task({ id: 'a', assignedToUserId: 'u2', releaseId: 'r1', createdBy: 'planner' }),
+      task({ id: 'b', assignedToUserId: 'u2', createdBy: ME }),
+      task({ id: 'c', assignedToUserId: 'u3', createdBy: ME }),
+      task({ id: 'd', assignedToUserId: 'u4', createdBy: ME, status: 'done' }),
+      task({ id: 'e', assignedToUserId: ME, createdBy: ME }),
+      task({ id: 'f', assignedToUserId: 'u5', createdBy: 'someone' }),
+    ];
+    expect(countDelegatedPeople(tasks, ME, owned)).toBe(2);
+    expect(homeTaskSubline('delegated', 3)).toBe('with 3 people');
+    expect(homeTaskSubline('delegated', 1)).toBe('with 1 person');
+    expect(homeTaskSubline('delegated', 0)).toBeNull();
   });
 });

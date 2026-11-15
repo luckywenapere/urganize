@@ -26,6 +26,8 @@ import {
   type HomeLayout,
 } from '@/lib/home-desktop/layout';
 import { registerHomeEditSave } from '@/lib/home-desktop/edit-save';
+import { HOME_WALLPAPER_COPY } from '@/lib/home-desktop/wallpaper';
+import { HomeWallpaperChoice } from './HomeWallpaper';
 
 const GHOST =
   'motion-focus motion-press inline-flex h-9 items-center rounded-full border border-stroke-control px-4 text-[13px] font-medium text-content-primary hover:bg-bg-hover disabled:opacity-50';
@@ -92,7 +94,7 @@ export function HomeCustomise({
 
   return (
     <div data-home-customise>
-      <div className="flex items-center justify-between gap-4 rounded-xl bg-brand/10 px-4 py-3">
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-brand/10 px-4 py-3">
         <p className="min-w-0 text-sm text-content-secondary">
           <span className="font-semibold text-content-primary">Customise Home</span> · Drag to reorder. Remove what you
           don&apos;t use. Only you see this layout.
@@ -145,7 +147,7 @@ export function HomeCustomise({
               }}
               onDrop={(event) => event.preventDefault()}
               onDragEnd={() => setDragging(null)}
-              className={`flex items-center gap-3 rounded-[14px] border-[1.5px] border-dashed border-stroke-control bg-bg-surface py-3.5 pl-2 pr-4 ${
+              className={`flex items-center gap-3 rounded-2xl border-[1.5px] border-dashed border-stroke-control bg-bg-surface py-3.5 pl-2 pr-4 ${
                 paired.has(id) ? 'col-span-1' : 'col-span-2'
               } ${dragging === id ? 'opacity-50' : ''}`}
             >
@@ -190,7 +192,7 @@ export function HomeCustomise({
               return (
                 <li
                   key={id}
-                  className="flex items-center gap-3 rounded-[14px] border-[1.5px] border-dashed border-stroke-control px-4 py-3.5"
+                  className="flex items-center gap-3 rounded-2xl border-[1.5px] border-dashed border-stroke-control px-4 py-3.5"
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-semibold text-content-primary">{copy.title}</span>
@@ -214,6 +216,16 @@ export function HomeCustomise({
           </ul>
         </>
       ) : null}
+
+      {/* The wallpaper (#1305): the same choice as the top bar's button and
+          Settings. It saves as it is picked, apart from the layout's Done. */}
+      <section aria-labelledby="home-customise-wallpaper" className="mt-8 max-w-[360px]">
+        <h2 id="home-customise-wallpaper" className="font-display text-lg font-normal leading-6 text-content-primary">
+          {HOME_WALLPAPER_COPY.title}
+        </h2>
+        <p className="mt-0.5 text-[13px] leading-[18px] text-content-secondary">{HOME_WALLPAPER_COPY.about}</p>
+        <HomeWallpaperChoice source="customise" className="mt-3" />
+      </section>
 
       <p className="sr-only" role="status" aria-live="polite">
         {said}

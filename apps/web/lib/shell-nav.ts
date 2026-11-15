@@ -263,8 +263,15 @@ export function activeShellArea(areas: ShellArea[], pathname: string): ShellArea
  *  rollout's chat now sits in the Assistant's left column. This reverses the
  *  Nov 2, 2026 call that made Rollouts a top tab. The phone keeps its tab. */
 export function topBarAreas(areas: ShellArea[]): ShellArea[] {
-  return areas.filter((area) => area.key !== 'rollouts');
+  return areas
+    .filter((area) => area.key !== 'rollouts')
+    .map((area) => (area.key === 'urgans' ? { ...area, label: TOP_BAR_CHAT_LABEL } : area));
 }
+
+/** The chat's tab in the computer's top bar (Nov 15, 2026, #1305, founder
+ *  approved docs/mocks/home-wallpaper). The label only: the route, the keys
+ *  and the phone's "Assistant" tab are unchanged. */
+export const TOP_BAR_CHAT_LABEL = 'Ask Chappi';
 
 /** The sub-tab row is only worth a line of screen when there is a choice. */
 export function visibleSubTabs(area: ShellArea | null): ShellSubTab[] {

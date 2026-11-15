@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.286.0",
+    title: "Pick a wallpaper for Home",
+    tag: "App",
+    date: "November 15, 2026",
+    highlights: [
+      "Home on a computer is calmer. The boxes are gone, there are fewer marks, and each column lines up under its heading.",
+      "You can put a picture behind Home: a forest or a night sky. Press the picture button at the top right. Your pick is saved to your account.",
+      "The chat tab at the top now says Ask Chappi.",
+    ],
+  },
+  {
     version: "1.285.4",
     tag: "App",
     date: "November 15, 2026",

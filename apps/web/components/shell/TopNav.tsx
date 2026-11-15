@@ -7,6 +7,7 @@ import type { MouseEvent } from 'react';
 import { Logo } from '@urganize/ui';
 import { Search } from '@/components/icons';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
+import { HomeWallpaperButton } from '@/components/home-desktop/HomeWallpaper';
 import { AvatarFace } from '@/components/shell/swipe/AvatarMenu';
 import { SETTINGS_PAGE_HREF } from '@/lib/swipe-nav';
 import { useSettingsPageStore } from '@/stores/useSettingsPageStore';
@@ -185,6 +186,8 @@ export function TopNav() {
               button before it is desktop only too: on a phone search is the
               first row of More. */}
           <NotificationsBell />
+          {/* Home on a computer only, until the person first sets a wallpaper (#1305). */}
+          <HomeWallpaperButton />
           {/* Your photo opens Settings as a page (Nov 2, 2026, docs/mocks/desktop-nav);
               a thin light outline while it is open, as on the phone. */}
           <Link

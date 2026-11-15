@@ -489,6 +489,8 @@ export interface AnalyticsEventPropertiesMap {
   /** The chat card on Home on a computer (#1295): a message sent from the box
    *  or a suggestion, and whether it went to a rollout's chat. No text. */
   home_chat_sent: { source: 'box' | 'suggestion'; about: 'rollout' | 'everything'; files: number };
+  /** The wallpaper behind Home on a computer (#1305): which one, and where it was picked. */
+  home_wallpaper_set: { wallpaper: 'none' | 'forest' | 'night_sky'; source: 'home' | 'customise' | 'settings' };
   /** The Out now card on Home (#1086): the smart link copied or shared. */
   out_now_link_copied: { release_id: string };
   out_now_link_shared: { release_id: string };
