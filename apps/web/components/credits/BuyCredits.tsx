@@ -1,5 +1,6 @@
 'use client';
 
+import { usePurchasePromptsAllowed } from '@/lib/use-purchase-prompts';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Loader2 } from '@/components/icons';
 import { authHeaders } from '@/components/press-kits/press-kit-client';
@@ -46,7 +47,15 @@ const dollars = (value: number): string => `$${value.toLocaleString('en')}`;
 const VERIFY_ATTEMPTS = 6;
 const VERIFY_GAP_MS = 2000;
 
+/** Hidden inside the iPhone app: Apple (3.1.1) bars an iOS app from selling
+ * digital goods outside its own payment system. */
 export function BuyCredits({ account, onPurchased, returnTo = '/dashboard/credits' }: Props) {
+  const purchasePromptsAllowed = usePurchasePromptsAllowed();
+  if (!purchasePromptsAllowed) return null;
+  return <BuyCreditsInner account={account} onPurchased={onPurchased} returnTo={returnTo} />;
+}
+
+function BuyCreditsInner({ account, onPurchased, returnTo = '/dashboard/credits' }: Props) {
   const [busyPrice, setBusyPrice] = useState<number | null>(null);
   const currency = useVisitorCurrency();
   const [error, setError] = useState('');

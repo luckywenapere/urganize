@@ -21,6 +21,7 @@ const WALL_SCREENS = new Set([
   'app/start-trial/StartTrialPageClient.tsx',
   'app/payment/callback/page.tsx',
   'components/billing/TeamWall.tsx',
+  'app/checkout/CheckoutPageClient.tsx',
 ]);
 
 // Not screens a person reads: redirects and the gate itself. The wall they
@@ -28,9 +29,13 @@ const WALL_SCREENS = new Set([
 const REDIRECTS = new Set([
   'components/providers/HardPaywallGate.tsx',
   'components/app/AppShell.tsx',
+  // Redirects to /locked when an account is not approved yet; no link is shown.
+  'app/onboarding/OnboardingPageClient.tsx',
+  'app/r/[code]/FriendLinkClient.tsx',
 ]);
 
-const LINKS_TO_WALL = /['"`]\/locked(?:[?'"`])/;
+// The plan wall (/locked) and, since Oct 2026, the self-serve /checkout page.
+const LINKS_TO_WALL = /['"`]\/(?:locked|checkout)(?:[?'"`])/;
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -69,7 +74,7 @@ describe('iOS purchase prompts', () => {
     for (const file of files) {
       const rel = relative(ROOT, file).split(sep).join('/');
       const code = stripComments(readFileSync(file, 'utf8'));
-      if (/openExternalUrl\(\s*['"`]https:\/\/app\.urganize\.app\/(locked|start-trial)/.test(code)) {
+      if (/openExternalUrl\(\s*['"`]https:\/\/(?:app|team)\.urganize\.app\/(locked|start-trial|checkout)/.test(code)) {
         offenders.push(rel);
       }
     }

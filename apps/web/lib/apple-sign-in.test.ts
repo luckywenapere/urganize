@@ -72,7 +72,7 @@ describe('every screen that offers Google also offers Apple', () => {
   const SCREENS_WITH_GOOGLE = [
     'app/auth/AuthPageClient.tsx',
     'app/curator/join/[code]/CuratorJoinPageClient.tsx',
-    'app/invite/accept/page.tsx',
+    'app/invite/accept/InviteAcceptPageClient.tsx',
     'app/onboarding/OnboardingPageClient.tsx',
   ];
 

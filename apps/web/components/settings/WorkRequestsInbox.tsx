@@ -1,5 +1,6 @@
 'use client';
 
+import { usePurchasePromptsAllowed } from '@/lib/use-purchase-prompts';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Loader2 } from '@/components/icons';
@@ -42,6 +43,7 @@ type IncomingRequest = {
 };
 
 export function WorkRequestsInbox() {
+  const purchasePromptsAllowed = usePurchasePromptsAllowed();
   const [requests, setRequests] = useState<IncomingRequest[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [busyId, setBusyId] = useState('');
@@ -151,7 +153,7 @@ export function WorkRequestsInbox() {
       {error ? (
         <p role="alert" className="mt-2 text-sm text-status-error">
           {error}{' '}
-          {needsPlan ? (
+          {needsPlan && purchasePromptsAllowed ? (
             <Link href="/locked?intent=upgrade" className="font-medium underline">
               See plans
             </Link>

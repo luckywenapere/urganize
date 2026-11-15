@@ -1,5 +1,6 @@
 'use client';
 
+import { usePurchasePromptsAllowed } from '@/lib/use-purchase-prompts';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -34,6 +35,7 @@ const CREDITS_ENABLED = isCreditsEnabled();
 const CHAPPI_ENABLED = isChappiEnabled();
 
 export default function UrgansHubClient() {
+  const purchasePromptsAllowed = usePurchasePromptsAllowed();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const isAuthLoading = useAuthStore((state) => state.isLoading);
@@ -67,7 +69,7 @@ export default function UrgansHubClient() {
             className="inline-flex w-fit items-center gap-2 text-sm text-content-secondary hover:text-content-primary"
           >
             <ArrowLeft className="size-4" aria-hidden="true" />
-            Back to plans
+            {purchasePromptsAllowed ? 'Back to plans' : 'Back'}
           </Link>
           <h1 className="font-display text-3xl font-semibold text-content-primary">AI</h1>
           <p className="max-w-2xl text-base leading-7 text-content-secondary">

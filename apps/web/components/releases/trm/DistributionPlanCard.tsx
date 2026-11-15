@@ -1,5 +1,6 @@
 'use client';
 
+import { usePurchasePromptsAllowed } from '@/lib/use-purchase-prompts';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
@@ -47,6 +48,7 @@ export function DistributionPlanCard({
   /** The team chose to send with the artist's own TRM account this visit. */
   ownPlan?: boolean;
 }) {
+  const purchasePromptsAllowed = usePurchasePromptsAllowed();
   const [dismissed, setDismissed] = useState(false);
   const shownRef = useRef(false);
 
@@ -99,7 +101,7 @@ export function DistributionPlanCard({
     return (
       <div className="border border-stroke-default bg-bg-surface lg:rounded-2xl lg:px-5 p-4 sm:p-5">
         <p className="text-[15px] font-semibold text-content-primary lg:font-display lg:text-lg lg:font-bold lg:tracking-[-0.02em]">Distribution comes with yearly plans</p>
-        {plan.canSwitch && year ? (
+        {purchasePromptsAllowed && plan.canSwitch && year ? (
           <>
             <div className="mt-4">
               {byTransfer ? (
@@ -134,7 +136,7 @@ export function DistributionPlanCard({
       <div className="border border-stroke-default bg-bg-surface lg:rounded-2xl lg:px-5 p-4 sm:p-5">
         <p className="text-[15px] font-semibold text-content-primary lg:font-display lg:text-lg lg:font-bold lg:tracking-[-0.02em]">Your plan ended, so distribution is off</p>
         <p className="mt-1 text-sm text-content-secondary">Releases already out stay out.</p>
-        {plan.canSwitch ? (
+        {purchasePromptsAllowed && plan.canSwitch ? (
           <div className="mt-4">
             <Link href={READ_ONLY_REACTIVATE_HREF} className={OUTLINE}>
               Update payment
@@ -150,7 +152,7 @@ export function DistributionPlanCard({
       <p className="text-[15px] font-semibold text-content-primary lg:font-display lg:text-lg lg:font-bold lg:tracking-[-0.02em]">Distribution comes with Solo Plus, Pro Plus and Label</p>
       <p className="mt-1 text-sm text-content-secondary">Or send it with your own TRM plan.</p>
       <div className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:items-center">
-        {plan.canSwitch ? (
+        {purchasePromptsAllowed && plan.canSwitch ? (
           <Link href="/locked?intent=upgrade" className={OUTLINE}>
             See plans
           </Link>

@@ -14,6 +14,7 @@ const flags: SettingsFlags = {
   teamBrief: false,
   workspace: true,
   pressKits: true,
+  aiConsent: false,
   mcpConnect: false,
   dataExport: false,
 };

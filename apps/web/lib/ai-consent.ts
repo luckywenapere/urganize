@@ -53,7 +53,7 @@ export function isAiConsentRefusal(status: number, payload: unknown): boolean {
 export const AI_CONSENT_COPY = {
   title: 'Turn on AI in Urganize?',
   intro:
-    'UrgAns, voice, rollout planning and status updates use AI from outside companies.',
+    'AI chat, voice, rollout planning and status updates use AI from outside companies.',
   sends:
     'When you use them, Urganize sends the words you type or say, and details of the rollouts you ask about, to our AI partners. Today that is OpenAI, through a service called RodiumAi.',
   limits:
@@ -62,7 +62,7 @@ export const AI_CONSENT_COPY = {
   agree: 'Agree',
   decline: 'Not now',
   settingsTitle: 'AI features',
-  settingsOn: 'UrgAns and other AI features are on. They send what you ask about to our AI partners.',
-  settingsOff: 'AI features are off. Turn them on to use UrgAns, voice and rollout planning.',
+  settingsOn: 'AI features are on. They send what you ask about to our AI partners.',
+  settingsOff: 'AI features are off. Turn them on to use AI chat, voice and rollout planning.',
   declined: 'AI is off, so I can only run quick commands. You can turn it on in Settings.',
 } as const;
