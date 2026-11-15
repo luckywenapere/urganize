@@ -233,6 +233,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-marketing-theme="dark"
+      data-site-wallpaper="night-sky"
       suppressHydrationWarning
       className={homeFontVariables}
     >
@@ -248,21 +249,26 @@ export default function RootLayout({
         <link rel="preconnect" href="https://team.urganize.app" />
         <link rel="dns-prefetch" href="https://team.urganize.app" />
 
-        {/* Resolves and applies the visitor's theme before first paint, so
-            there's no flash of the wrong theme. Falls back to system
-            preference (prefers-color-scheme) when nothing is stored yet —
-            the SSR default above is dark for no-JS clients and crawlers. */}
+        {/* Picks the wallpaper before first paint, so it never flashes
+            (#1325; the rule is lib/theme.ts, change both together). The site
+            always draws its dark look over the picture. The sun and moon
+            button's choice wins (light = forest, dark = night sky); with
+            nothing stored, the visitor's clock decides: the forest from
+            05:00 to 17:59, the night sky otherwise. No-JS clients and
+            crawlers get the night sky from the attributes above. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function () {
                 try {
-                  var key = 'urganize.theme';
-                  var stored = localStorage.getItem(key);
-                  var resolved = stored === 'light' || stored === 'dark'
-                    ? stored
-                    : (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-                  document.documentElement.dataset.marketingTheme = resolved;
+                  var root = document.documentElement;
+                  var stored = localStorage.getItem('urganize.theme');
+                  var hour = new Date().getHours();
+                  var wall = stored === 'light' ? 'forest'
+                    : stored === 'dark' ? 'night-sky'
+                    : (hour >= 5 && hour < 18 ? 'forest' : 'night-sky');
+                  root.dataset.marketingTheme = 'dark';
+                  root.dataset.siteWallpaper = wall;
                 } catch (_) {}
               })();
             `,

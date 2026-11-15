@@ -26,13 +26,33 @@ export const getSystemTheme = (): ThemeMode => {
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 };
 
+// The wallpaper (#1325, the app's own pictures, founder approved the mock in
+// docs/mocks/site-wallpaper). Both pictures are dark, so the site always draws
+// its dark look on top of them, and the sun and moon button picks the picture
+// instead: "light" is the forest, "dark" the night sky. With nothing chosen
+// the visitor's clock decides, the way the app's Auto does: the forest from
+// 05:00 to 17:59, the night sky the rest of the day. The pre-paint script in
+// app/layout.tsx says the same in plain JavaScript; change both together.
+export type SiteWallpaper = "forest" | "night-sky";
+
+export const wallpaperForHour = (hour: number): SiteWallpaper =>
+  hour >= 5 && hour < 18 ? "forest" : "night-sky";
+
+export const wallpaperForTheme = (mode: ThemeMode): SiteWallpaper =>
+  mode === "light" ? "forest" : "night-sky";
+
 export const resolveInitialTheme = (): ThemeMode => {
-  return readStoredTheme() ?? getSystemTheme();
+  const stored = readStoredTheme();
+  if (stored) return stored;
+  if (typeof window === "undefined") return "dark";
+  return wallpaperForHour(new Date().getHours()) === "forest" ? "light" : "dark";
 };
 
 export const applyTheme = (mode: ThemeMode) => {
   if (typeof window === "undefined") return;
-  window.document.documentElement.dataset.marketingTheme = mode;
+  const root = window.document.documentElement;
+  root.dataset.marketingTheme = "dark";
+  root.dataset.siteWallpaper = wallpaperForTheme(mode);
 };
 
 export const persistTheme = (mode: ThemeMode) => {

@@ -23,14 +23,18 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
     persistTheme(next);
   };
 
+  // The button picks the wallpaper now (#1325): the sun shows the forest,
+  // the moon the night sky. The site's own colours stay dark under both.
+  const label = theme === "dark" ? "Show the forest wallpaper" : "Show the night sky wallpaper";
+
   return (
     <button
       type="button"
       onClick={handleToggle}
       disabled={!mounted}
-      aria-label={mounted ? `Switch to ${theme === "dark" ? "light" : "dark"} mode` : undefined}
+      aria-label={mounted ? label : undefined}
       aria-hidden={!mounted}
-      title={mounted ? `Switch to ${theme === "dark" ? "light" : "dark"} mode` : undefined}
+      title={mounted ? label : undefined}
       className={`-mx-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center transition-opacity ${
         mounted ? "opacity-100" : "opacity-0"
       } ${className}`}

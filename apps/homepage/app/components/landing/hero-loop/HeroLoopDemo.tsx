@@ -1,24 +1,26 @@
 'use client'
 
 import { useEffect } from 'react'
-import { Bell, CalendarClock, ChevronLeft, ChevronRight, Circle, Disc3, ListChecks, Mic, Plus, Search } from 'lucide-react'
-import { Avatar, Collapse, Field, Popover, Spinner, Stage, States, Window, type Act, type Layout } from '@urganize/stageshow'
+import { ArrowUp, Bell, ChevronLeft, ChevronRight, Circle, Plus, Search } from 'lucide-react'
+import { Avatar, Collapse, Spinner, Stage, Window, type Act, type Layout } from '@urganize/stageshow'
 import './hero-loop.css'
 
 // Urganize homepage hero loop (#952, item 1 of #951; founder approved the
-// mock). Northline Music demo team, fictional artists. One story: add a release, the plan appears,
-// tasks land on the team. Then back to Rollouts, where the new release now
-// sits on top, and a soft fade resets the loop.
+// mock). Fictional artists. Redrawn 2026-11-15 (#1325) to the app as it is
+// now: Home over the forest wallpaper, with the greeting, the chat box, the
+// Next drop and the artists list, and the Home and Ask Chappi tabs. One
+// story: ask for a plan in the chat box, the plan appears, the tasks land on
+// the team, then back to Home where the new rollout is in the artists list,
+// and a soft fade resets the loop.
 //
 // Loaded only by HeroLoop.tsx, client side, after the poster still has
 // painted. Colours live in hero-loop.css and follow the site's theme toggle;
 // `theme` only tells the kit which cursor and shadows to draw.
 
-type View = 'list' | 'plan'
+type View = 'home' | 'plan'
 type S = {
   view: View
-  open: boolean
-  title: string
+  ask: string
   focus: boolean
   making: boolean
   shown: number // task rows revealed
@@ -27,7 +29,7 @@ type S = {
   dim: boolean
 }
 
-const initial: S = { view: 'list', open: false, title: '', focus: false, making: false, shown: 0, owners: 0, added: false, dim: false }
+const initial: S = { view: 'home', ask: '', focus: false, making: false, shown: 0, owners: 0, added: false, dim: false }
 
 type Person = { name: string; first: string }
 const DAMI: Person = { name: 'Dami Okafor', first: 'Dami' }
@@ -37,22 +39,24 @@ const ADA: Person = { name: 'Ada Nwosu', first: 'Ada' }
 const FEMI: Person = { name: 'Femi Bello', first: 'Femi' }
 
 const TASKS: { title: string; due: string; who: Person }[] = [
-  { title: 'Choose distributor', due: 'Oct 3', who: DAMI },
-  { title: 'Lock the master file', due: 'Oct 6', who: KANMI },
-  { title: 'Brief designer on cover art', due: 'Oct 10', who: TOBI },
-  { title: 'Write song metadata', due: 'Oct 14', who: DAMI },
-  { title: 'Begin playlist outreach', due: 'Oct 24', who: ADA },
-  { title: 'Shoot teaser clips', due: 'Nov 2', who: FEMI },
+  { title: 'Choose distributor', due: 'Nov 17', who: DAMI },
+  { title: 'Lock the master file', due: 'Nov 18', who: KANMI },
+  { title: 'Brief designer on cover art', due: 'Nov 19', who: TOBI },
+  { title: 'Write song metadata', due: 'Nov 20', who: DAMI },
+  { title: 'Begin playlist outreach', due: 'Nov 23', who: ADA },
+  { title: 'Shoot teaser clips', due: 'Nov 25', who: FEMI },
 ]
 
-const ROLLOUTS = [
-  { title: 'Love Letters from Yaba', artist: 'Yaba Kid', date: 'Nov 22, 2026', done: 14, total: 17, art: '#2b2a6b' },
-  { title: 'Sannu Da Zuwa', artist: 'Nasir Sahara', date: 'Apr 4, 2027', done: 11, total: 18, art: '#8e2a2c' },
-  { title: 'Nkem', artist: 'Chi Velvet', date: 'Feb 7, 2027', done: 3, total: 16, art: '#7a5a1c' },
-  { title: 'Ife Mi', artist: 'Temi Ivory', date: 'Dec 13, 2026', done: 4, total: 13, art: '#1f5a6b' },
-  { title: 'Owambe Weather', artist: 'Lagoon Theory', date: 'Oct 24, 2026', done: 17, total: 19, art: '#36561f' },
+// Home's artists list, soonest drop first, as the app draws it (#1305).
+type Row = { artist: string; title: string; type: string; days: number; day: string; done: number; total: number; art: string }
+const ROWS: Row[] = [
+  { artist: 'Yaba Kid', title: 'Love Letters from Yaba', type: 'Single', days: 7, day: 'Sun 22 Nov', done: 14, total: 17, art: '#2b2a6b' },
+  { artist: 'Temi Ivory', title: 'Ife Mi', type: 'Single', days: 28, day: 'Sun 13 Dec', done: 4, total: 13, art: '#1f5a6b' },
+  { artist: 'Chi Velvet', title: 'Nkem', type: 'EP', days: 84, day: 'Sun 7 Feb', done: 3, total: 16, art: '#7a5a1c' },
+  { artist: 'Nasir Sahara', title: 'Sannu Da Zuwa', type: 'Album', days: 140, day: 'Sun 4 Apr', done: 11, total: 18, art: '#8e2a2c' },
 ]
-const NEW = { title: 'Harmattan Gold', artist: 'Kanmi Gold', date: 'Nov 28, 2026', done: 0, total: 18, art: '#a8641a' }
+const NEW: Row = { artist: 'Kanmi Gold', title: 'Harmattan Gold', type: 'Single', days: 13, day: 'Sat 28 Nov', done: 0, total: 18, art: '#a8641a' }
+const ASK = 'Plan Harmattan Gold for Kanmi Gold, out 28 Nov'
 
 const REST = { wide: { x: 640, y: 420 }, compact: { x: 250, y: 430 } }
 
@@ -60,36 +64,27 @@ async function script(a: Act<S>) {
   const compact = a.layout === 'compact'
   await a.wait(700)
 
-  // 1. Add rollout
-  a.mark('add')
-  await a.move({ at: 'add', x: 0.5, y: 0.55 })
-  await a.wait(200)
-  await a.click()
-  await a.set({ open: true })
-  await a.wait(450)
-
-  // 2. Name the release
-  a.mark('type')
-  await a.move({ at: 'title', x: 0.3, y: 0.55 })
+  // 1. Ask Chappi from Home
+  a.mark('ask')
+  await a.move({ at: 'ask', x: 0.35, y: 0.4 })
+  await a.wait(150)
   await a.click()
   await a.set({ focus: true })
-  await a.type('title', 'Harmattan Gold', { interval: 70 })
+  await a.type('ask', ASK, { interval: 45 })
   await a.wait(350)
 
-  // 3. Make the plan
-  a.mark('make')
-  await a.move({ at: 'make', x: 0.5, y: 0.55 })
+  // 2. Send: the plan is made
+  a.mark('send')
+  await a.move({ at: 'send', x: 0.5, y: 0.5 })
   await a.wait(150)
   await a.click()
   await a.set({ making: true, focus: false })
-  await a.wait(900)
-  await a.set({ open: false })
-  await a.wait(150)
-  await a.set({ view: 'plan', making: false })
+  await a.wait(1000)
+  await a.set({ view: 'plan', making: false, ask: '' })
   a.move({ at: 'rest', x: compact ? 0.9 : 0.7, y: 0.4 })
   await a.wait(350)
 
-  // 4. The plan appears, row by row
+  // 3. The plan appears, row by row
   a.mark('plan')
   for (let i = 1; i <= TASKS.length; i++) {
     await a.set({ shown: i })
@@ -97,7 +92,7 @@ async function script(a: Act<S>) {
   }
   await a.wait(500)
 
-  // 5. Tasks land on the team
+  // 4. Tasks land on the team
   a.mark('owners')
   for (let i = 1; i <= TASKS.length; i++) {
     await a.set({ owners: i })
@@ -105,12 +100,12 @@ async function script(a: Act<S>) {
   }
   await a.wait(2200)
 
-  // 6. Back to Rollouts: the new release is on top
+  // 5. Back to Home: the new rollout is in the artists list
   a.mark('back')
   await a.move({ at: 'crumb', x: 0.5, y: 0.55 })
   await a.wait(150)
   await a.click()
-  await a.set({ view: 'list' })
+  await a.set({ view: 'home' })
   await a.wait(250)
   await a.set({ added: true })
   await a.move(compact ? REST.compact : REST.wide)
@@ -133,83 +128,110 @@ function Cover({ color, title, size = 40 }: { color: string; title: string; size
   )
 }
 
-function Draft() {
-  return <span className="ug-draft"><span className="ug-draft__dot" />Draft</span>
-}
-
-function Progress({ done, total }: { done: number; total: number }) {
+function Bar({ done, total }: { done: number; total: number }) {
   return (
-    <span className="ug-progress">
-      <span className="ug-progress__track"><span className="ug-progress__fill" style={{ width: `${(done / total) * 100}%` }} /></span>
-      <span className="ug-mono">{done}/{total}</span>
-    </span>
+    <span className="ug-bar"><span className="ug-bar__fill" style={{ width: `${(done / total) * 100}%` }} /></span>
   )
 }
 
-function RolloutRow({ r, compact }: { r: typeof NEW; compact: boolean }) {
+function ArtistRow({ r, compact }: { r: Row; compact: boolean }) {
   if (compact) {
     return (
-      <div className="ug-card">
-        <div className="ug-card__top">
-          <Cover color={r.art} title={r.title} size={44} />
-          <div className="ug-stack">
-            <span className="ug-strong">{r.title}</span>
-            <span className="ug-muted">{r.artist}</span>
-          </div>
-        </div>
-        <div className="ug-card__meta">
-          <Draft />
-          <span className="ug-muted">{r.date}</span>
-        </div>
-        <Progress done={r.done} total={r.total} />
+      <div className="ug-arow">
+        <Cover color={r.art} title={r.title} size={40} />
+        <span className="ug-stack ug-arow__main">
+          <span className="ug-strong">{r.title}</span>
+          <span className="ug-muted">{r.artist}</span>
+        </span>
+        <span className="ug-drop"><b>{r.days}</b><span>days</span></span>
       </div>
     )
   }
   return (
-    <div className="ug-trow">
-      <span className="ug-trow__main">
-        <Cover color={r.art} title={r.title} />
+    <div className="ug-arow">
+      <span className="ug-arow__who">
+        <Avatar name={r.artist} size={30} style={{ fontSize: 11 }} />
+        <span className="ug-strong ug-name">{r.artist}</span>
+      </span>
+      <span className="ug-arow__what">
+        <Cover color={r.art} title={r.title} size={34} />
         <span className="ug-stack">
           <span className="ug-strong">{r.title}</span>
-          <span className="ug-muted">{r.artist}</span>
+          <span className="ug-muted">{r.type}</span>
         </span>
       </span>
-      <span><Draft /></span>
-      <span className="ug-date">{r.date}</span>
-      <Progress done={r.done} total={r.total} />
+      <span className="ug-drop"><b>{r.days}</b><span>days · {r.day}</span></span>
+      <span className="ug-stack ug-arow__work">
+        <Bar done={r.done} total={r.total} />
+        <span className="ug-mono">{r.done} of {r.total} done</span>
+      </span>
     </div>
   )
 }
 
-function ListView({ s, compact }: { s: S; compact: boolean }) {
+function ChatBox({ s }: { s: S }) {
   return (
-    <div className="ug-view" data-show={s.view === 'list' || undefined}>
-      {compact ? (
-        <div className="ug-mtop">
-          <span className="ug-mtab">Artists</span>
-          <span className="ug-mtab" data-active>Rollouts</span>
-          <span className="ss-window__spacer" />
-          <span className="ug-plus" data-target="add" data-cursor="pointer" data-open={s.open || undefined}><Plus size={18} strokeWidth={1.8} /></span>
-        </div>
-      ) : (
-        <div className="ug-head">
-          <span className="ug-h">Rollouts</span>
-          <span className="ug-add" data-target="add" data-cursor="pointer" data-open={s.open || undefined}>
-            <Plus size={14} strokeWidth={2} />Add rollout
-          </span>
+    <div className="ug-ask" data-focus={s.focus || undefined}>
+      <span className="ug-ask__field" data-target="ask" data-cursor="ibeam">
+        {s.ask ? (
+          <span className="ug-ask__text">{s.ask}{s.focus && <span className="ug-caret" />}</span>
+        ) : (
+          <span className="ug-ask__ph">What is slipping? Who is waiting on you? What comes next? Just ask.</span>
+        )}
+      </span>
+      <span className="ug-ask__tools">
+        <span className="ug-ask__plus"><Plus size={14} strokeWidth={1.8} /></span>
+        <span className="ug-ask__about">About: Everything</span>
+        <span className="ss-window__spacer" />
+        <span className="ug-send" data-target="send" data-cursor="pointer" data-go={s.ask ? true : undefined}>
+          {s.making ? <Spinner size={14} /> : <ArrowUp size={15} strokeWidth={2} />}
+        </span>
+      </span>
+    </div>
+  )
+}
+
+function HomeView({ s, compact }: { s: S; compact: boolean }) {
+  const rows = (
+    <div className="ug-artists">
+      {!compact && (
+        <div className="ug-arow ug-arow--head">
+          <span>Artist</span><span>Next rollout</span><span>Drops</span><span>Tasks</span>
         </div>
       )}
-      <div className="ug-table">
+      <ArtistRow r={ROWS[0]} compact={compact} />
+      <Collapse open={s.added}>
+        <div className="ug-new"><ArtistRow r={NEW} compact={compact} /></div>
+      </Collapse>
+      {ROWS.slice(1).map((r) => <ArtistRow key={r.title} r={r} compact={compact} />)}
+    </div>
+  )
+  return (
+    <div className="ug-view" data-show={s.view === 'home' || undefined}>
+      <div className="ug-top">
+        <div className="ug-top__chat">
+          <p className="ug-hello">Sunday morning</p>
+          <p className="ug-greet">Good morning, Dami.<br /><span>What is on your mind?</span></p>
+          <ChatBox s={s} />
+        </div>
         {!compact && (
-          <div className="ug-trow ug-trow--head">
-            <span>Rollout</span><span>Status</span><span>Release date</span><span>Progress</span>
+          <div className="ug-next">
+            <p className="ug-hello">Next drop</p>
+            <span className="ug-next__row">
+              <Cover color={ROWS[0].art} title={ROWS[0].title} size={44} />
+              <span className="ug-stack">
+                <span className="ug-strong">{ROWS[0].title}</span>
+                <span className="ug-muted">{ROWS[0].artist} · Single</span>
+              </span>
+            </span>
+            <span className="ug-next__count"><b>7</b><span>days to go<br />Sun 22 Nov</span></span>
+            <Bar done={14} total={17} />
+            <span className="ug-muted">14 of 17 done</span>
           </div>
         )}
-        <Collapse open={s.added}>
-          <div className="ug-new"><RolloutRow r={NEW} compact={compact} /></div>
-        </Collapse>
-        {ROLLOUTS.map((r) => <RolloutRow key={r.title} r={r} compact={compact} />)}
       </div>
+      <div className="ug-sec">Your artists</div>
+      {rows}
     </div>
   )
 }
@@ -231,24 +253,23 @@ function PlanView({ s, compact }: { s: S; compact: boolean }) {
     <div className="ug-view" data-show={s.view === 'plan' || undefined}>
       {compact ? (
         <div className="ug-mplan">
-          <span className="ug-back" data-target="crumb" data-cursor="pointer"><ChevronLeft size={16} strokeWidth={1.8} />Rollouts</span>
+          <span className="ug-back" data-target="crumb" data-cursor="pointer"><ChevronLeft size={16} strokeWidth={1.8} />Home</span>
           <div className="ug-mplan__title">
             <Cover color={NEW.art} title={NEW.title} size={44} />
             <div className="ug-stack">
               <span className="ug-strong ug-big">Harmattan Gold</span>
-              <span className="ug-muted">Kanmi Gold · Nov 28</span>
+              <span className="ug-muted">Kanmi Gold · Sat 28 Nov</span>
             </div>
           </div>
         </div>
       ) : (
         <div className="ug-head">
           <span className="ug-crumbs">
-            <span className="ug-crumb" data-target="crumb" data-cursor="pointer">Rollouts</span>
+            <span className="ug-crumb" data-target="crumb" data-cursor="pointer">Home</span>
             <ChevronRight size={15} strokeWidth={1.8} className="ug-icon" />
             <span className="ug-h">Harmattan Gold</span>
             <span className="ug-sep" />
-            <span className="ug-muted">Kanmi Gold</span>
-            <Draft />
+            <span className="ug-muted">Kanmi Gold · Sat 28 Nov</span>
           </span>
           <span className="ug-muted">0 of 18 done</span>
         </div>
@@ -283,80 +304,40 @@ function PlanView({ s, compact }: { s: S; compact: boolean }) {
   )
 }
 
-function Sidebar({ s }: { s: S }) {
-  const plan = s.view === 'plan'
-  return (
-    <div className="ug-side">
-      <div className="ug-nav"><Mic size={16} strokeWidth={1.6} />Artists</div>
-      <div className="ug-nav" data-active={!plan || undefined}><Disc3 size={16} strokeWidth={1.6} />Rollouts</div>
-      <Collapse open={plan}>
-        <div className="ug-side__sec">Plan</div>
-        <div className="ug-nav ug-nav--sub"><CalendarClock size={15} strokeWidth={1.6} />See the timeline</div>
-        <div className="ug-nav ug-nav--sub" data-active><ListChecks size={15} strokeWidth={1.6} />Work the plan</div>
-      </Collapse>
-    </div>
-  )
-}
-
-function NewRollout({ s, compact }: { s: S; compact: boolean }) {
-  return (
-    <Popover show={s.open} origin="top right" className="ug-pop" data-compact={compact || undefined}>
-      <div className="ug-pop__h">New rollout</div>
-      <Field label="Release title" value={s.title} placeholder="What is it called?" focused={s.focus} box={{ 'data-target': 'title', 'data-cursor': 'ibeam' }} />
-      <div className="ug-pop__pair">
-        <Field label="Artist" value="Kanmi Gold" />
-        <Field label="Release date" value="Nov 28, 2026" />
-      </div>
-      <span className="ug-make" data-target="make" data-cursor="pointer" data-busy={s.making || undefined}>
-        <States
-          value={s.making ? 'busy' : 'idle'}
-          states={{
-            idle: <span>Make the plan</span>,
-            busy: <span className="ug-make__busy"><Spinner size={14} />Making the plan</span>,
-          }}
-        />
-      </span>
-    </Popover>
-  )
-}
-
 function Scene({ s, layout }: { s: S; layout: Layout }) {
   const compact = layout === 'compact'
   const body = (
     <div className="ug-app" data-dim={s.dim || undefined}>
       <div className="ug-main" data-target="rest">
-        <ListView s={s} compact={compact} />
+        <HomeView s={s} compact={compact} />
         <PlanView s={s} compact={compact} />
       </div>
-      <NewRollout s={s} compact={compact} />
     </div>
   )
   if (compact) {
-    return <div className="ug-phoneish">{body}</div>
+    return <div className="ug-phoneish ug-wall">{body}</div>
   }
   return (
-    <Window url="team.urganize.app" urlShape="pill" className="ug-window" body={{ className: 'ug-body', 'data-crop': true }}>
+    <Window url="team.urganize.app" urlShape="pill" className="ug-window" body={{ className: 'ug-body ug-wall', 'data-crop': true }}>
       <div className="ug-topbar">
         <span className="ug-word">Urganize<span className="ug-beta">BETA</span></span>
         <span className="ug-tabs">
-          <span>Home</span><span>AI</span><span data-active>Artists</span><span>Relationships</span><span>Opportunities</span>
+          <span data-active>Home</span><span>Ask Chappi</span>
         </span>
         <span className="ug-tools">
           <span className="ug-round"><Search size={15} strokeWidth={1.7} /></span>
           <span className="ug-round"><Bell size={15} strokeWidth={1.7} /></span>
+          <span className="ug-me">DO</span>
         </span>
       </div>
-      <div className="ug-split">
-        <Sidebar s={s} />
-        {body}
-      </div>
+      {body}
     </Window>
   )
 }
 
-// One past the last row, so every task is owned and none wears the brief
-// "just landed" highlight in the still.
-export const POSTER: S = { ...initial, view: 'plan', shown: TASKS.length, owners: TASKS.length + 1 }
+// The still is the loop's last frame: Home, with the new rollout in the
+// artists list (#1325).
+export const POSTER: S = { ...initial, view: 'home', added: true }
 
 const COMPACT = { below: Infinity, width: 358, height: 540 }
 

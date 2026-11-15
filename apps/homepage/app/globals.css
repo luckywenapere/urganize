@@ -1010,3 +1010,68 @@ html[data-marketing-theme="dark"] .page-sky {
 html[data-currency="USD"]:not([data-currency-ready]) [data-visitor-price] {
   visibility: hidden;
 }
+
+/* ---------------------------------------------------------------------------
+   The wallpaper (#1325, founder approved the mock in docs/mocks/site-wallpaper).
+   The app's own pictures sit behind every page, fill the screen and stay still
+   while the page scrolls, as in the app (#1322). The pre-paint script in
+   app/layout.tsx sets data-site-wallpaper and keeps the site on its dark look,
+   because both pictures are dark. A dimming layer over each picture keeps the
+   text readable: the faintest text measures 5.1:1 over the brightest part of
+   the forest and 6.0:1 over the night sky (the app's own measurement, #1305).
+   Page grounds go see-through, cards turn to dark glass, and the header blurs
+   the picture behind it. The hero's painted sky steps aside for the photo.
+   ------------------------------------------------------------------------ */
+html[data-site-wallpaper] {
+  background: #06090a;
+}
+html[data-site-wallpaper] body {
+  background: transparent;
+}
+html[data-site-wallpaper]::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100vh;
+  height: 100lvh;
+  z-index: -1;
+  pointer-events: none;
+  background-color: #06090a;
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+}
+html[data-site-wallpaper="forest"]::before {
+  background-image: linear-gradient(rgba(6, 12, 8, 0.42), rgba(6, 12, 8, 0.58)), url("/images/wallpapers/forest.webp");
+}
+html[data-site-wallpaper="night-sky"]::before {
+  background-image: linear-gradient(rgba(2, 4, 10, 0.36), rgba(2, 4, 10, 0.52)), url("/images/wallpapers/night-sky.webp");
+}
+
+html[data-site-wallpaper][data-marketing-theme="dark"],
+html[data-site-wallpaper][data-marketing-theme="dark"] .home-v2 {
+  --marketing-bg: transparent;
+  --marketing-bg-muted: rgba(12, 14, 13, 0.38);
+  --marketing-surface: rgba(16, 19, 18, 0.62);
+  --marketing-surface-muted: rgba(16, 19, 18, 0.62);
+  --marketing-border: rgba(245, 240, 230, 0.14);
+  --marketing-border-strong: rgba(245, 240, 230, 0.22);
+  --marketing-text-muted: #d2cfc6;
+  --marketing-text-subtle: #b8bab2;
+  --marketing-screen-shell: rgba(16, 19, 18, 0.7);
+}
+
+html[data-site-wallpaper] .hero-sky,
+html[data-site-wallpaper] .page-sky,
+html[data-site-wallpaper] .page-dawn {
+  background: none;
+}
+html[data-site-wallpaper] .hero-sky-grain {
+  display: none;
+}
+/* The fixed header: the picture shows through it, softly blurred. */
+html[data-site-wallpaper] header.fixed {
+  background-color: rgba(6, 9, 10, 0.34);
+}

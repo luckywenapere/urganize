@@ -94,13 +94,6 @@ html[data-marketing-theme="dark"] .ug-stage .ss-stage {
 .ug-stage .ug-tools { display: flex; justify-content: flex-end; gap: 8px; color: var(--ug-text); }
 .ug-stage .ug-round { width: 32px; height: 32px; border-radius: 999px; display: grid; place-items: center; background: var(--ug-surface); box-shadow: 0 0 0 1px var(--ug-line-faint); }
 
-.ug-stage .ug-split { display: flex; flex: 1; min-height: 0; }
-.ug-stage .ug-side { width: 188px; flex: none; padding: 14px 12px 0 16px; display: flex; flex-direction: column; gap: 2px; }
-.ug-stage .ug-nav { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; font-size: 13.5px; color: var(--ug-faint); }
-.ug-stage .ug-nav[data-active] { background: var(--ug-hover); color: var(--ug-ink); }
-.ug-stage .ug-nav--sub { font-size: 13px; padding: 7px 10px 7px 14px; }
-.ug-stage .ug-side__sec { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ug-faint); padding: 12px 10px 4px; }
-
 .ug-stage .ug-app { position: relative; flex: 1; min-width: 0; transition: opacity 420ms ease; }
 .ug-stage .ug-app[data-dim] { opacity: 0; }
 .ug-stage .ug-main { position: relative; height: 100%; }
@@ -109,8 +102,6 @@ html[data-marketing-theme="dark"] .ug-stage .ss-stage {
 
 .ug-stage .ug-head { display: flex; align-items: center; justify-content: space-between; height: 40px; margin-bottom: 14px; gap: 12px; }
 .ug-stage .ug-h { font-size: 16px; font-weight: 600; }
-.ug-stage .ug-add { display: inline-flex; align-items: center; gap: 7px; background: var(--ug-invert); color: var(--ug-invert-text); font-size: 13px; font-weight: 600; padding: 10px 16px; border-radius: 999px; }
-.ug-stage .ug-add[data-hover], .ug-stage .ug-add[data-open] { background: var(--ug-invert-hover); }
 .ug-stage .ug-crumbs { display: flex; align-items: center; gap: 9px; font-size: 14px; }
 .ug-stage .ug-crumb { color: var(--ug-text); padding: 4px 6px; margin: -4px -6px; border-radius: 6px; }
 .ug-stage .ug-crumb[data-hover] { background: var(--ug-hover); }
@@ -127,28 +118,6 @@ html[data-marketing-theme="dark"] .ug-stage .ss-stage {
 .ug-stage .ug-cover { position: relative; flex: none; border-radius: 6px; overflow: hidden; }
 .ug-stage .ug-cover__moon { position: absolute; width: 46%; height: 46%; right: 10%; top: 10%; border-radius: 50%; background: rgba(255, 255, 255, 0.22); }
 .ug-stage .ug-cover__t { position: absolute; left: 4px; bottom: 5px; right: 4px; font-family: var(--font-home-display), "DM Sans", system-ui, sans-serif; font-size: 5.5px; line-height: 1.1; color: #fff; font-weight: 700; }
-
-.ug-stage .ug-draft { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ug-draft); background: var(--ug-draft-bg); padding: 4px 9px; border-radius: 999px; }
-.ug-stage .ug-draft__dot { width: 5px; height: 5px; border-radius: 50%; background: var(--ug-draft); }
-
-.ug-stage .ug-progress { display: inline-flex; align-items: center; gap: 10px; }
-.ug-stage .ug-progress__track { width: 112px; height: 5px; border-radius: 999px; background: var(--ug-line); overflow: hidden; }
-.ug-stage .ug-progress__fill { display: block; height: 100%; background: var(--ug-accent); border-radius: 999px; }
-
-.ug-stage .ug-table { background: var(--ug-surface); border-radius: 14px; box-shadow: 0 0 0 1px var(--ug-line-faint); overflow: hidden; }
-.ug-stage .ug-trow { display: grid; grid-template-columns: minmax(0, 1fr) 110px 130px 170px; align-items: center; padding: 12px 18px; border-top: 1px solid var(--ug-line-faint); }
-.ug-stage .ug-trow--head { border-top: 0; font-size: 12px; color: var(--ug-text); padding: 12px 18px 10px; }
-.ug-stage .ug-trow__main { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.ug-stage .ug-date { font-size: 13px; color: var(--ug-ink); }
-.ug-stage .ug-new { background: var(--ug-fresh); }
-
-/* The new rollout panel, under its button */
-.ug-stage .ug-pop { position: absolute; right: 24px; top: 62px; width: 340px; padding: 18px; --ss-popover-bg: var(--ug-surface); display: flex; flex-direction: column; gap: 12px; z-index: 5; }
-.ug-stage .ug-pop__h { font-size: 15px; font-weight: 600; }
-.ug-stage .ug-pop__pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.ug-stage .ug-make { display: grid; place-items: center; height: 40px; border-radius: 999px; background: var(--ug-accent); color: var(--ug-on-accent); font-size: 13.5px; font-weight: 600; margin-top: 4px; }
-.ug-stage .ug-make[data-hover] { background: var(--ug-accent-hover); }
-.ug-stage .ug-make__busy { display: inline-flex; align-items: center; gap: 8px; }
 
 /* The plan */
 .ug-stage .ug-phases { display: flex; gap: 8px; margin-bottom: 14px; }
@@ -172,15 +141,6 @@ html[data-marketing-theme="dark"] .ug-stage .ss-stage {
 /* Compact: the app's phone layout, pinned from the top */
 .ug-stage .ug-phoneish { position: absolute; left: 0; right: 0; top: 0; height: 620px; background: var(--ug-body); border-radius: 22px; box-shadow: 0 0 0 1px var(--ug-line), 0 12px 40px var(--ug-shadow); overflow: hidden; display: flex; }
 .ug-stage .ug-phoneish .ug-view { padding: 0 16px; }
-.ug-stage .ug-mtop { display: flex; align-items: center; gap: 4px; height: 60px; margin: 0 -16px 14px; padding: 0 16px; border-bottom: 1px solid var(--ug-line-faint); }
-.ug-stage .ug-mtab { font-size: 15px; color: var(--ug-text); padding: 8px 14px; border-radius: 10px; }
-.ug-stage .ug-mtab[data-active] { background: var(--ug-hover); color: var(--ug-ink); }
-.ug-stage .ug-plus { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--ug-surface); box-shadow: 0 0 0 1px var(--ug-line); color: var(--ug-ink); }
-.ug-stage .ug-plus[data-open] { background: var(--ug-hover); }
-.ug-stage .ug-card { padding: 14px 16px; border-bottom: 1px solid var(--ug-line-faint); display: flex; flex-direction: column; gap: 10px; }
-.ug-stage .ug-card__top { display: flex; align-items: center; gap: 12px; }
-.ug-stage .ug-card__meta { display: flex; align-items: center; justify-content: space-between; }
-.ug-stage .ug-phoneish .ug-progress__track { width: 150px; }
 .ug-stage .ug-mplan { padding: 14px 0 14px; }
 .ug-stage .ug-back { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; color: var(--ug-text); padding: 6px 8px 6px 2px; margin-left: -2px; border-radius: 8px; }
 .ug-stage .ug-back[data-hover] { background: var(--ug-hover); }
@@ -190,4 +150,79 @@ html[data-marketing-theme="dark"] .ug-stage .ss-stage {
 .ug-stage .ug-phoneish .ug-owner { width: 78px; }
 .ug-stage .ug-phoneish .ug-owner__none { justify-content: flex-end; }
 .ug-stage .ug-phoneish .ug-phase { padding: 8px 12px; }
-.ug-stage .ug-pop[data-compact] { right: 12px; left: 12px; top: 58px; width: auto; }
+
+/* Home as the app draws it now (#1325): no cards, thin lines, over the forest
+   wallpaper. Both pictures are dark, so the scene always uses the dark set. */
+.ug-stage .ug-wall {
+  background:
+    linear-gradient(rgba(6, 12, 8, 0.5), rgba(6, 12, 8, 0.66)),
+    url("/images/wallpapers/forest.webp") center top / cover no-repeat,
+    #06090a;
+  --ug-ink: #f5f0e6;
+  --ug-text: #d2cfc6;
+  --ug-faint: #b8bab2;
+  --ug-line: rgba(245, 240, 230, 0.26);
+  --ug-line-faint: rgba(245, 240, 230, 0.14);
+  --ug-surface: rgba(16, 19, 18, 0.55);
+  --ug-hover: rgba(245, 240, 230, 0.12);
+  --ug-ring: rgba(245, 240, 230, 0.4);
+  --ug-accent: #7fd99a;
+  --ug-accent-soft: rgba(127, 217, 154, 0.16);
+  --ug-fresh: rgba(127, 217, 154, 0.1);
+  --ug-now-bg: rgba(127, 217, 154, 0.08);
+  --ug-now-line: rgba(127, 217, 154, 0.45);
+  color: var(--ug-ink);
+}
+.ug-stage .ug-me { width: 32px; height: 32px; border-radius: 999px; display: grid; place-items: center; background: #7fd99a; color: #0c0c0d; font-size: 11px; font-weight: 700; }
+.ug-stage .ug-topbar { background: rgba(6, 9, 10, 0.34); }
+
+.ug-stage .ug-app .ug-view { padding: 16px 40px 0; }
+.ug-stage .ug-top { display: grid; grid-template-columns: minmax(0, 1fr) 230px; gap: 32px; }
+.ug-stage .ug-top__chat { min-width: 0; }
+.ug-stage .ug-hello { margin: 0; font-size: 12px; color: var(--ug-text); }
+.ug-stage .ug-greet { margin: 4px 0 0; font-size: 25px; line-height: 29px; font-weight: 700; letter-spacing: -0.02em; color: var(--ug-ink); }
+.ug-stage .ug-greet span { color: var(--ug-faint); }
+.ug-stage .ug-ask { margin-top: 12px; border-radius: 20px; padding: 12px 14px 10px; background: rgba(13, 18, 14, 0.5); box-shadow: 0 0 0 1.5px var(--ug-line); transition: box-shadow 160ms ease; }
+.ug-stage .ug-ask[data-focus] { box-shadow: 0 0 0 2px var(--ug-accent); }
+.ug-stage .ug-ask__field { display: block; min-height: 20px; font-size: 13.5px; line-height: 20px; }
+.ug-stage .ug-ask__ph { color: var(--ug-faint); }
+.ug-stage .ug-ask__text { color: var(--ug-ink); }
+.ug-stage .ug-caret { display: inline-block; width: 1.5px; height: 15px; margin-left: 1px; vertical-align: -2px; background: var(--ug-ink); }
+.ug-stage .ug-ask__tools { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.ug-stage .ug-ask__plus { width: 26px; height: 26px; border-radius: 999px; display: grid; place-items: center; box-shadow: 0 0 0 1px var(--ug-line); color: var(--ug-text); }
+.ug-stage .ug-ask__about { height: 26px; padding: 0 10px; border-radius: 999px; display: inline-flex; align-items: center; font-size: 11.5px; box-shadow: 0 0 0 1px var(--ug-line); color: var(--ug-ink); }
+.ug-stage .ug-send { width: 30px; height: 30px; border-radius: 999px; display: grid; place-items: center; background: var(--ug-hover); color: var(--ug-text); transition: background 160ms ease; }
+.ug-stage .ug-send[data-go] { background: var(--ug-accent); color: #0c0c0d; }
+
+.ug-stage .ug-next { border-left: 1px solid var(--ug-line); padding-left: 24px; display: flex; flex-direction: column; gap: 8px; }
+.ug-stage .ug-next__row { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+.ug-stage .ug-next .ug-cover { border-radius: 12px; }
+.ug-stage .ug-next__count { display: flex; align-items: center; gap: 10px; }
+.ug-stage .ug-next__count b { font-size: 40px; line-height: 40px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ug-stage .ug-next__count span { font-size: 11.5px; line-height: 15px; color: var(--ug-text); }
+
+.ug-stage .ug-sec { margin-top: 18px; padding-bottom: 7px; border-bottom: 1px solid var(--ug-line); font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+.ug-stage .ug-arow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) 150px 140px; align-items: center; gap: 18px; padding: 9px 0; border-top: 1px solid var(--ug-line-faint); }
+.ug-stage .ug-arow--head { border-top: 0; padding: 8px 0 4px; font-size: 11px; font-weight: 600; color: var(--ug-text); }
+.ug-stage .ug-arow__who, .ug-stage .ug-arow__what { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ug-stage .ug-arow .ug-cover { border-radius: 10px; }
+.ug-stage .ug-name { font-size: 14px; font-weight: 600; }
+.ug-stage .ug-drop { display: inline-flex; align-items: baseline; gap: 5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ug-stage .ug-drop b { min-width: 28px; font-size: 19px; font-weight: 700; color: var(--ug-ink); }
+.ug-stage .ug-drop span { font-size: 11.5px; color: var(--ug-text); }
+.ug-stage .ug-arow__work { gap: 5px; }
+.ug-stage .ug-bar { display: block; width: 100%; height: 5px; border-radius: 999px; background: var(--ug-hover); overflow: hidden; }
+.ug-stage .ug-bar__fill { display: block; height: 100%; border-radius: 999px; background: var(--ug-accent); }
+.ug-stage .ug-new { background: var(--ug-fresh); border-radius: 12px; }
+
+/* The plan, on the wallpaper: dark glass under the rows. */
+.ug-stage .ug-wall .ug-tasks, .ug-stage .ug-wall .ug-phase { background: var(--ug-surface); }
+
+/* The phone */
+.ug-stage .ug-phoneish .ug-app .ug-view { padding: 18px 16px 0; }
+.ug-stage .ug-phoneish .ug-top { grid-template-columns: 1fr; }
+.ug-stage .ug-phoneish .ug-greet { font-size: 22px; line-height: 26px; }
+.ug-stage .ug-phoneish .ug-arow { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; padding: 10px 0; }
+.ug-stage .ug-phoneish .ug-arow__main { min-width: 0; }
+.ug-stage .ug-phoneish .ug-strong { overflow: hidden; text-overflow: ellipsis; }
+.ug-stage .ug-phoneish .ug-drop { flex-direction: column; align-items: flex-end; gap: 0; }
