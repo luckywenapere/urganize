@@ -26,8 +26,6 @@ import {
   type HomeLayout,
 } from '@/lib/home-desktop/layout';
 import { registerHomeEditSave } from '@/lib/home-desktop/edit-save';
-import { HOME_WALLPAPER_COPY } from '@/lib/home-desktop/wallpaper';
-import { HomeWallpaperChoice } from './HomeWallpaper';
 
 const GHOST =
   'motion-focus motion-press inline-flex h-9 items-center rounded-full border border-stroke-control px-4 text-[13px] font-medium text-content-primary hover:bg-bg-hover disabled:opacity-50';
@@ -216,16 +214,6 @@ export function HomeCustomise({
           </ul>
         </>
       ) : null}
-
-      {/* The wallpaper (#1305): the same choice as the top bar's button and
-          Settings. It saves as it is picked, apart from the layout's Done. */}
-      <section aria-labelledby="home-customise-wallpaper" className="mt-8 max-w-[360px]">
-        <h2 id="home-customise-wallpaper" className="font-display text-lg font-normal leading-6 text-content-primary">
-          {HOME_WALLPAPER_COPY.title}
-        </h2>
-        <p className="mt-0.5 text-[13px] leading-[18px] text-content-secondary">{HOME_WALLPAPER_COPY.about}</p>
-        <HomeWallpaperChoice source="customise" className="mt-3" />
-      </section>
 
       <p className="sr-only" role="status" aria-live="polite">
         {said}

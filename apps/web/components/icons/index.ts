@@ -107,4 +107,6 @@ export {
   Clock, LinkIcon, MessageSquare,
   // Idea round (2026-10-27): play a kept voice idea.
   Pause, Play,
+  // The Appearance choice (#1320): Light, Dark, System (Auto uses Clock).
+  Sun, Moon, MonitorSmartphone,
 } from 'lucide-react';

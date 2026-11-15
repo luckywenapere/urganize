@@ -186,10 +186,10 @@ export type Profile = {
   motivational_nudges?: boolean;
   /** The morning brief's off switch (#1207). Undefined counts as on. */
   morning_brief?: boolean;
-  /** Home wallpaper on a computer (#1305): 'none', 'forest' or 'night_sky'.
-   * Read through parseHomeWallpaper; missing counts as none. */
+  /** UNUSED since #1320 (the theme choice sets the wallpaper now); the column
+   * stays in the database. Was the Home wallpaper pick (#1305): 'none', 'forest' or 'night_sky'. */
   home_wallpaper?: string | null;
-  /** When a picture was first set. The Home wallpaper button goes once filled. */
+  /** UNUSED since #1320. When a picture was first set. */
   home_wallpaper_set_at?: string | null;
   /** The Settings view override (URG-260, lib/role-views.ts). Null or missing
    * (rows before the column existed) = automatic, from the persona and role. */

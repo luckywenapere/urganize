@@ -113,6 +113,10 @@ export { TEAM_HREF };
  * 2026-10-30, #886, founder: "change the label from Artist to Home"). The
  * Artists tab inside the section keeps its name. */
 export const CATALOGUE_LABEL = 'Home';
+/** The chat's name in every menu, at every width (#1320; the computer's top
+ *  bar since #1305, founder approved docs/mocks/home-wallpaper). The label
+ *  only: the route and the 'urgans' keys stay. */
+export const CHAT_NAV_LABEL = 'Ask Chappi';
 
 export function buildShellAreas(flags: ShellFlags): ShellArea[] {
   // Artists is the section's landing (founder call, 2026-10-17). Since Oct 30,
@@ -198,7 +202,7 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
     // sessions view (UrgansSessionsLayout).
     {
       key: 'urgans',
-      label: 'Assistant',
+      label: CHAT_NAV_LABEL,
       href: URGANS_HREF,
       live: true,
       subTabs: [],
@@ -263,15 +267,8 @@ export function activeShellArea(areas: ShellArea[], pathname: string): ShellArea
  *  rollout's chat now sits in the Assistant's left column. This reverses the
  *  Nov 2, 2026 call that made Rollouts a top tab. The phone keeps its tab. */
 export function topBarAreas(areas: ShellArea[]): ShellArea[] {
-  return areas
-    .filter((area) => area.key !== 'rollouts')
-    .map((area) => (area.key === 'urgans' ? { ...area, label: TOP_BAR_CHAT_LABEL } : area));
+  return areas.filter((area) => area.key !== 'rollouts');
 }
-
-/** The chat's tab in the computer's top bar (Nov 15, 2026, #1305, founder
- *  approved docs/mocks/home-wallpaper). The label only: the route, the keys
- *  and the phone's "Assistant" tab are unchanged. */
-export const TOP_BAR_CHAT_LABEL = 'Ask Chappi';
 
 /** The sub-tab row is only worth a line of screen when there is a choice. */
 export function visibleSubTabs(area: ShellArea | null): ShellSubTab[] {
@@ -292,7 +289,7 @@ export function buildMobileTabs(areas?: ShellArea[]): MobileTab[] {
   const catalogueHref = areas?.find((area) => area.key === 'catalogue')?.href ?? CATALOGUE_HREF;
   const tabs: MobileTab[] = [
     { key: 'catalogue', label: CATALOGUE_LABEL, href: catalogueHref, area: 'catalogue' },
-    { key: 'urgans', label: 'Assistant', href: URGANS_HREF, area: 'urgans' },
+    { key: 'urgans', label: CHAT_NAV_LABEL, href: URGANS_HREF, area: 'urgans' },
   ];
   if (!areas || areas.some((area) => area.key === 'rollouts')) {
     tabs.push({ key: 'rollouts', label: 'Rollouts', href: ROLLOUT_CHATS_HREF, area: 'rollouts' });

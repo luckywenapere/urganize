@@ -76,6 +76,6 @@ describe('the desktop page bar title', () => {
     expect(shellPageTitle(on, '/dashboard/pitching')).toBeNull();
     expect(shellPageTitle(buildShellAreas(ALL_OFF), '/dashboard')).toBe('Rollouts');
     expect(shellPageTitle(on, '/dashboard/distribute')).toBe('Home');
-    expect(shellPageTitle(on, '/dashboard/urgans')).toBe('Assistant');
+    expect(shellPageTitle(on, '/dashboard/urgans')).toBe('Ask Chappi');
   });
 });

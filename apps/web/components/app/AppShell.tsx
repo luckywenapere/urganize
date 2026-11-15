@@ -23,6 +23,7 @@ import { HardPaywallGate } from '@/components/providers/HardPaywallGate';
 import { NativePushBridge } from '@/components/providers/NativePushBridge';
 import { NativeShareBridge } from '@/components/providers/NativeShareBridge';
 import { NativeAppearanceBridge } from '@/components/providers/NativeAppearanceBridge';
+import { AppearanceWatcher } from '@/components/app/AppWallpaper';
 import { KeyboardViewportBridge } from '@/components/providers/KeyboardViewportBridge';
 import { isChappiHistoryEnabled } from '@/lib/chappi/history-flag';
 import { warmChappiHistory } from '@/lib/chappi/history-warm';
@@ -474,6 +475,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <NativePushBridge />
     <NativeShareBridge />
     <NativeAppearanceBridge />
+    <AppearanceWatcher />
     {/* Publishes on-screen-keyboard state to CSS — see globals.css's
         keyboard-aware assistant column block. Renders nothing. */}
     <KeyboardViewportBridge />

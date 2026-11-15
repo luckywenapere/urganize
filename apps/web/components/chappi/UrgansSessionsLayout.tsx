@@ -181,7 +181,7 @@ export function UrgansSessionsLayout({ onNewRelease }: { onNewRelease: () => voi
 
   return (
     <div className="home-split-height mx-auto grid w-full max-w-[1280px] grid-cols-[288px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-stroke-subtle">
-      <h1 className="sr-only">Assistant</h1>
+      <h1 className="sr-only">Ask Chappi</h1>
       <nav
         aria-label="Chats"
         className="flex min-h-0 flex-col gap-1 overflow-y-auto border-r border-stroke-subtle bg-bg-surface p-4"

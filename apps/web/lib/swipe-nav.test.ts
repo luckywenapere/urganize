@@ -214,7 +214,7 @@ describe('swipe nav is for phone-width screens only', () => {
 describe('the swipe tabs', () => {
   it('are Home, Assistant and Sessions, with Team a pushed page that has a way back', async () => {
     const { SWIPE_TABS, swipeBackFor, swipeAreaForPath } = await import('./swipe-nav');
-    expect(SWIPE_TABS.map((tab) => tab.key)).toEqual(['artists', 'urgans', 'sessions']);
+    expect(SWIPE_TABS.map((tab) => tab.key)).toEqual(['artists', 'urgans']);
     expect(swipeTabForPath('/dashboard/sessions')).toBe('sessions');
     expect(swipeTabForPath('/dashboard/sessions/')).toBe('sessions');
     expect(swipeBackFor('/dashboard/team')).toEqual({ href: '/dashboard' });
@@ -225,7 +225,7 @@ describe('the swipe tabs', () => {
 describe('swipeDocumentTitle', () => {
   it('names each swipe tab with the brand once', async () => {
     const { swipeDocumentTitle } = await import('./swipe-nav');
-    expect(swipeDocumentTitle('urgans')).toBe('Assistant | Urganize');
+    expect(swipeDocumentTitle('urgans')).toBe('Ask Chappi | Urganize');
     expect(swipeDocumentTitle('sessions')).toBe('Rollouts | Urganize');
     expect(swipeDocumentTitle('artists')).toBe('Artists | Urganize');
   });
@@ -237,12 +237,34 @@ describe('swipeDocumentTitle', () => {
 });
 
 describe('the Settings page in the swipe row', () => {
-  it('is the fourth page, after the three labelled tabs', async () => {
+  it('is the fourth page, after the two labelled tabs and the rollout chats', async () => {
     const { SWIPE_PAGES, SWIPE_TABS, swipeTabForPath, swipeTabIndex, swipeDocumentTitle } = await import('./swipe-nav');
-    expect(SWIPE_TABS).toHaveLength(3);
+    expect(SWIPE_TABS).toHaveLength(2);
     expect(SWIPE_PAGES.map((page) => page.key)).toEqual(['artists', 'urgans', 'sessions', 'settings']);
     expect(swipeTabForPath('/dashboard/account')).toBe('settings');
     expect(swipeTabIndex('settings')).toBe(3);
     expect(swipeDocumentTitle('settings')).toBe('Settings | Urganize');
+  });
+});
+
+// Two tabs on a phone, the same as the computer (#1320): Home and Ask Chappi.
+// The rollout chats are a page inside Ask Chappi, so the underline stays
+// under Ask Chappi there and only fades on the way to Settings.
+describe('the underline with two tabs', () => {
+  it('holds under Ask Chappi on the rollout chats, then fades to Settings', async () => {
+    const { swipeUnderline } = await import('./swipe-nav');
+    expect(swipeUnderline(0)).toEqual({ tab: 0, opacity: 1 });
+    expect(swipeUnderline(0.5)).toEqual({ tab: 0.5, opacity: 1 });
+    expect(swipeUnderline(1)).toEqual({ tab: 1, opacity: 1 });
+    expect(swipeUnderline(2)).toEqual({ tab: 1, opacity: 1 });
+    expect(swipeUnderline(2.5)).toEqual({ tab: 1, opacity: 0.5 });
+    expect(swipeUnderline(3)).toEqual({ tab: 1, opacity: 0 });
+  });
+  it('lights Ask Chappi on the rollout chats page', async () => {
+    const { swipeLitTab } = await import('./swipe-nav');
+    expect(swipeLitTab('artists')).toBe('artists');
+    expect(swipeLitTab('urgans')).toBe('urgans');
+    expect(swipeLitTab('sessions')).toBe('urgans');
+    expect(swipeLitTab('settings')).toBeNull();
   });
 });

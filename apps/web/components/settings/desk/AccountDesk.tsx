@@ -37,7 +37,7 @@ const LEADS: Partial<Record<DeskPage, string>> = {
   ai: 'What AI knows about your team, and how it chases people.',
   profile: 'Your name, photo and email.',
   notifications: 'What we send you, and when.',
-  appearance: 'Light or dark.',
+  appearance: 'Light, dark, or with the time of day.',
   security: 'Your password, your data, and leaving or deleting.',
   admin: 'Internal dashboards.',
 };

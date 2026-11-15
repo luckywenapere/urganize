@@ -9,8 +9,8 @@
 // Since #1305 (founder approved docs/mocks/home-wallpaper) nothing here sits
 // in a card: each block is a heading with one thin line under it and thin
 // lines between its rows, and every column of the artists list starts on the
-// same left edge as its heading. The person can put a wallpaper behind it
-// (HomeWallpaper.tsx).
+// same left edge as its heading. The wallpaper behind it comes from the theme
+// choice (lib/appearance.ts, #1320).
 //
 // "See all" (decided here, using views that already exist): My tasks opens the
 // Team page with your own panel open, which lists all your open tasks grouped

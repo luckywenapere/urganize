@@ -39,7 +39,6 @@ import {
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { clearAppCaches } from '@/lib/offline/register';
 import { isRecentSignupCooldown } from '@/lib/signup-cooldown';
-import { wallpaperUpdate, type HomeWallpaper } from '@/lib/home-desktop/wallpaper';
 
 // Custom URL scheme registered by the Expo shell (apps/mobile/app.config.ts,
 // `scheme`) — see docs/mobile/auth-setup.md. Google
@@ -489,7 +488,6 @@ interface AuthState {
   updateMotivationalNudges: (enabled: boolean) => Promise<void>;
   /** The morning brief's off switch (#1207). */
   updateMorningBrief: (enabled: boolean) => Promise<void>;
-  updateHomeWallpaper: (wallpaper: HomeWallpaper) => Promise<void>;
   /** URG-260: the Settings view override; null goes back to automatic. */
   updateRoleView: (view: Profile['role_view']) => Promise<void>;
   updateRole: (role: Profile['role']) => Promise<void>;
@@ -1193,41 +1191,6 @@ export const useAuthStore = create<AuthState>()(
           .single();
 
         if (error) {
-          throw new Error(handleSupabaseError(error));
-        }
-
-        set({ user: updatedProfile, error: null });
-      },
-
-      // Home wallpaper (#1305): the person's own pick, on their own row. The
-      // pick shows at once and is put back if the save fails.
-      updateHomeWallpaper: async (wallpaper: HomeWallpaper) => {
-        const currentUser = get().user;
-        if (!currentUser) throw new Error('User not found');
-
-        const now = new Date().toISOString();
-        const change = wallpaperUpdate(wallpaper, currentUser, now);
-        set({ user: { ...currentUser, ...change } });
-
-        const { data: updatedProfile, error } = await supabase
-          .from('profiles')
-          .update({ ...change, updated_at: now })
-          .eq('id', currentUser.id)
-          .select('*')
-          .single();
-
-        if (error) {
-          // Only undo our own change: another save may have landed meanwhile.
-          const latest = get().user;
-          if (latest && latest.id === currentUser.id) {
-            set({
-              user: {
-                ...latest,
-                home_wallpaper: currentUser.home_wallpaper,
-                home_wallpaper_set_at: currentUser.home_wallpaper_set_at,
-              },
-            });
-          }
           throw new Error(handleSupabaseError(error));
         }
 

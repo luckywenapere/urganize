@@ -62,10 +62,10 @@ describe('shell nav', () => {
   it('leaves Rollouts out of the computer top bar (Nov 12, 2026, #1218): its chats live in the Assistant', () => {
     const areas = buildShellAreas(ALL_OFF);
     expect(topBarAreas(areas).map((a) => a.key)).toEqual(['catalogue', 'urgans']);
-    // The chat's tab reads "Ask Chappi" on a computer (#1305); the area itself
-    // and the phone's tab keep their name.
+    // The chat's tab reads "Ask Chappi" at every width since #1320 (the
+    // computer's top bar since #1305).
     expect(topBarAreas(areas).find((a) => a.key === 'urgans')?.label).toBe('Ask Chappi');
-    expect(areas.find((a) => a.key === 'urgans')?.label).toBe('Assistant');
+    expect(areas.find((a) => a.key === 'urgans')?.label).toBe('Ask Chappi');
     expect(topBarAreas(buildShellAreas(ALL_ON)).map((a) => a.key)).toEqual(['catalogue', 'urgans', 'relationships', 'opportunities']);
     // The phone's bottom bar keeps it.
     expect(buildMobileTabs(areas).map((t) => t.key)).toContain('rollouts');
@@ -172,7 +172,7 @@ describe('shell nav', () => {
 
   it('phone bottom bar is Home, Assistant, Team (#876, #886); More holds the rest', () => {
     expect(buildMobileTabs().map((t) => t.key)).toEqual(['catalogue', 'urgans', 'rollouts']);
-    expect(buildMobileTabs().map((t) => t.label)).toEqual(['Home', 'Assistant', 'Rollouts']);
+    expect(buildMobileTabs().map((t) => t.label)).toEqual(['Home', 'Ask Chappi', 'Rollouts']);
     // The Artists tab lands on Artists when the artist page is on, Rollouts when it is off.
     expect(buildMobileTabs(buildShellAreas(ALL_ON))[0].href).toBe('/dashboard');
     expect(buildMobileTabs(buildShellAreas(ALL_OFF))[0].href).toBe('/dashboard');
