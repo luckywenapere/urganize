@@ -336,26 +336,43 @@ function ArtistRow({
   );
 }
 
-/** Home's loading shape on a computer: the default blocks, so nothing jumps. */
+/**
+ * Home's loading shape on a computer: the default blocks with the live line
+ * boxes (#1297), so nothing jumps when Home lands. The chat card, then the two
+ * task cards at their full five rows (HOME_TASK_LIMIT), the team row, and the
+ * artists list with its heading, column header and "Add an artist" row.
+ */
 export function HomeDesktopSkeleton() {
   const bar = 'animate-pulse rounded bg-bg-hover';
+  // One line box: the live text's line height, with a bar inside it.
+  const line = (height: string, width: string, size: string) => (
+    <span className={`flex ${height} items-center`}>
+      <span className={`block ${size} ${width} ${bar}`} />
+    </span>
+  );
   return (
     <div className={`${HOME_DESKTOP_WIDTH} flex flex-col gap-4 pb-12`} aria-busy="true" data-home-layout="desktop">
       {ASK_ENABLED ? <HomeChatCardSkeleton /> : <div className="h-[184px] animate-pulse rounded-2xl bg-bg-hover" />}
       <div className="grid grid-cols-2 gap-4">
-        {[0, 1].map((card) => (
-          <div key={card} className="rounded-2xl border border-stroke-default bg-bg-surface px-5 pb-2 pt-1.5">
-            <div className="pb-2 pt-3">
-              <span className={`block h-5 w-28 ${bar}`} />
+        {(['mine', 'delegated'] as const).map((card) => (
+          <div key={card} className="min-w-0 rounded-2xl border border-stroke-default bg-bg-surface px-5 pb-2 pt-1.5">
+            {/* Head: the serif title (leading-6) and See all. */}
+            <div className="flex items-center justify-between gap-3 pb-2 pt-3">
+              {line('h-6', 'w-36', 'h-4')}
+              {line('h-5', 'w-12', 'h-3')}
             </div>
-            {[0, 1, 2].map((row) => (
-              <div key={row} className="flex items-center gap-3 border-t border-stroke-subtle py-2.5">
-                <span className="h-5 w-5 shrink-0 animate-pulse rounded-full bg-bg-hover" />
-                <span className="min-w-0 flex-1 space-y-1.5">
-                  <span className={`block h-3.5 w-44 ${bar}`} />
-                  <span className={`block h-3 w-28 ${bar}`} />
+            {[0, 1, 2, 3, 4].map((row) => (
+              <div key={row} className="flex min-w-0 items-center gap-3 border-t border-stroke-subtle py-2.5">
+                {card === 'mine' ? (
+                  <span className="h-5 w-5 shrink-0 animate-pulse rounded-full bg-bg-hover" />
+                ) : (
+                  <span className="h-7 w-7 shrink-0 animate-pulse rounded-full bg-bg-hover" />
+                )}
+                <span className="min-w-0 flex-1">
+                  {line('h-5', row % 2 ? 'w-40' : 'w-48', 'h-3.5')}
+                  {line('h-4', 'w-28', 'h-3')}
                 </span>
-                <span className={`h-3 w-14 ${bar}`} />
+                <span className={`h-3 w-14 shrink-0 ${bar}`} />
               </div>
             ))}
           </div>
@@ -363,19 +380,34 @@ export function HomeDesktopSkeleton() {
       </div>
       <HomeTeamRowSkeleton />
       <div className="mt-2">
-        <span className={`block h-6 w-36 ${bar}`} />
+        {/* Head: "Artists · n" (leading-7) and the Add artist pill (h-9). */}
+        <div className="flex items-end justify-between gap-4">
+          {line('h-7', 'w-32', 'h-5')}
+          <span className="h-9 w-28 animate-pulse rounded-full bg-bg-hover" />
+        </div>
         <div className="mt-3 overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
+          {/* The column header: text-xs over py-2.5. */}
+          <div className="flex items-center gap-5 border-b border-stroke-subtle py-2.5 pl-[4.75rem] pr-5">
+            {['w-10', 'w-20', 'w-10', 'w-10'].map((width, index) => (
+              <span key={index}>{line('h-4', width, 'h-2.5')}</span>
+            ))}
+          </div>
           <ul className="divide-y divide-stroke-subtle">
             {[0, 1, 2].map((key) => (
-              <li key={key} className="flex h-[68px] items-center gap-4 px-5">
+              <li key={key} className="flex min-h-[68px] items-center gap-4 px-5 py-3">
                 <span className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-bg-hover" />
-                <span className="min-w-0 flex-1 space-y-1.5">
-                  <span className={`block h-4 w-32 ${bar}`} />
-                  <span className={`block h-3 w-16 ${bar}`} />
+                <span className="min-w-0 flex-1">
+                  {line('h-[22px]', 'w-32', 'h-4')}
+                  {line('h-4', 'w-16', 'h-3')}
                 </span>
               </li>
             ))}
           </ul>
+          {/* "Add an artist": py-3.5 around a 40px circle. */}
+          <div className="flex items-center gap-3 border-t border-stroke-subtle px-5 py-3.5">
+            <span className="h-10 w-10 shrink-0 rounded-full border-[1.5px] border-dashed border-stroke-control" />
+            {line('h-5', 'w-24', 'h-3.5')}
+          </div>
         </div>
       </div>
     </div>

@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.285.1",
+    tag: "App",
+    date: "November 15, 2026",
+    highlights: [
+      "On a computer, Home no longer jumps when it finishes loading.",
+    ],
+  },
+  {
     version: "1.285.0",
     title: "Ask AI from the top of Home",
     tag: "AI",
