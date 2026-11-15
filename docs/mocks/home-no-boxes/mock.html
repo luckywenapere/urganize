@@ -403,9 +403,30 @@
   .row { padding-left:0; padding-right:0; }
   .row.th { border-bottom:0; padding-top:0; padding-bottom:6px; }
   .add { padding-left:0; border-radius:0; }
+
+  /* numbers line up */
+  .when { justify-content:flex-start; gap:10px; }
+  .dn, .row.first .dn { width:40px; min-width:40px; text-align:right; font-variant-numeric:tabular-nums; flex:none; }
+  /* the chat has no card either */
+  .ask { background:none; box-shadow:none !important; border-radius:0; padding:16px 0 4px; color:var(--text); gap:56px; }
+  .hello { color:var(--sec); }
+  .ask h2 { color:var(--text); } .ask h2 em { color:var(--ter); }
+  .ask .box { background:var(--card2); box-shadow:0 0 0 1.5px var(--line2); }
+  .desk.dark .ask .box { background:var(--card); }
+  .ask .box.on { box-shadow:0 0 0 2px var(--brand); }
+  .ask .ph { color:var(--ter); } .ask .ph.typed { color:var(--text); }
+  .caret { background:var(--text); }
+  .ask .tools .ic, .ask .pick { background:none; border-color:var(--line2); color:var(--sec); }
+  .ask .tools .hint { color:var(--ter); }
+  .ask .tools .send { background:var(--tile); color:var(--sec); }
+  .ask .sugs span.sg { background:none; box-shadow:0 0 0 1px var(--line2); color:var(--text); }
+  .next { background:none; border-radius:0; padding:0 0 0 40px; border-left:1px solid var(--line2); color:var(--text); }
+  .next .eb, .nb, .count span, .nm { color:var(--sec); }
+  .nt, .count b, .open { color:var(--text); }
+  .next .prog { background:var(--tile); } .next .prog i { background:var(--brand); }
 </style></head><body>
 <div class="wrap">
-  <div class="intro"><h1>Home, no boxes</h1><p>All the content stays. The boxes around My tasks, Delegated, Your team and Your artists are gone, so everything sits straight on the page. Only the chat keeps its card. Light first, then dark.</p></div>
+  <div class="intro"><h1>Home, no boxes</h1><p>All the content stays. The boxes around My tasks, Delegated, Your team and Your artists are gone, so everything sits straight on the page. The chat has no card either. Light first, then dark.</p></div>
   <div class="label">Light</div>
   <div class="desk">
     <div class="bar">
@@ -532,7 +553,7 @@
       <p style="text-align:center;margin-top:8px"><span class="btn ghost">Customise Home</span></p>
     </div>
   </div>
-<div class="notes"><div class="note"><b>1</b><p><strong>No boxes under the chat.</strong> My tasks, Delegated, Your team and Your artists keep every row they had. They sit on the page with one thin line under each heading and thin lines between rows.</p></div><div class="note"><b>2</b><p><strong>The chat is the only card left,</strong> so it is the one thing your eye lands on.</p></div><div class="note"><b>3</b><p><strong>"Out now" is a plain line,</strong> not a green strip.</p></div><div class="note"><b>4</b><p><strong>Your team is one row of faces and names,</strong> not five tiles.</p></div></div>
+<div class="notes"><div class="note"><b>1</b><p><strong>No boxes under the chat.</strong> My tasks, Delegated, Your team and Your artists keep every row they had. They sit on the page with one thin line under each heading and thin lines between rows.</p></div><div class="note"><b>2</b><p><strong>The green card around the greeting is gone.</strong> The greeting, the chat box and Next drop sit on the page. The chat box keeps a thin outline so you can see where to type.</p></div><div class="note"><b>5</b><p><strong>The countdown numbers line up.</strong> Every number ends at the same point, so the word days starts in one straight line.</p></div><div class="note"><b>3</b><p><strong>"Out now" is a plain line,</strong> not a green strip.</p></div><div class="note"><b>4</b><p><strong>Your team is one row of faces and names,</strong> not five tiles.</p></div></div>
   <div class="label">Dark</div>
   <div class="desk dark">
     <div class="bar">
