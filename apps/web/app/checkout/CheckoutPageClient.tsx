@@ -7,7 +7,8 @@
 // Nothing on this page lets anyone in. A verified Paystack payment does, in
 // the webhook. Card and bank transfer get equal weight.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppleSignInButton } from '@/components/auth/AppleSignInButton';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -19,6 +20,7 @@ import {
 } from '@urganize/pricing';
 import { Logo, LoadingMark } from '@urganize/ui';
 import { useAuthStore } from '@/lib/auth-store';
+import { isIOSApp } from '@/lib/platform';
 import { BOOK_CALL_LABEL, needsOnboardingCall } from '@/lib/call-led';
 import { supabase } from '@/lib/supabase/client';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
@@ -210,7 +212,36 @@ function Mark() {
   );
 }
 
+const noSubscribe = () => () => {};
+const notIOSOnServer = () => false;
+
+/**
+ * Inside the iPhone app Apple (3.1.1, 3.1.3) bars any way to pay outside its
+ * own system, so this page shows no plan, price or payment there: only where
+ * things stand and a way back. Every link to /checkout is already hidden in
+ * the app; this covers someone who lands here anyway.
+ */
 export default function CheckoutPageClient() {
+  const insideIOSApp = useSyncExternalStore(noSubscribe, () => isIOSApp(), notIOSOnServer);
+  if (insideIOSApp) {
+    return (
+      <main className="min-h-screen px-4 py-12">
+        <div className="mx-auto flex w-full max-w-md flex-col gap-6">
+          <Logo />
+          <h1 className="font-display text-2xl font-semibold text-content-primary">
+            Plans can&rsquo;t be changed in the iPhone app.
+          </h1>
+          <Link href="/dashboard" className="text-sm font-medium text-content-secondary underline underline-offset-4">
+            Back to Urganize
+          </Link>
+        </div>
+      </main>
+    );
+  }
+  return <CheckoutPageInner />;
+}
+
+function CheckoutPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const user = useAuthStore((state) => state.user);
@@ -478,6 +509,12 @@ function SignupStep({
 
         <h1 className="mt-8 font-display text-2xl text-content-primary">{SELF_SERVE_COPY.signupTitle}</h1>
 
+        {/* Apple: only inside the iPhone app, above Google as Apple asks (rule 4.8). */}
+        <AppleSignInButton
+          nextPath={here}
+          className={`mt-6 ${outlineButton}`}
+          onError={(message) => setError(message)}
+        />
         <button type="button" onClick={() => void handleGoogle()} className={`mt-6 ${outlineButton}`}>
           Continue with Google
         </button>

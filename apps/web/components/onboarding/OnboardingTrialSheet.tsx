@@ -10,6 +10,7 @@
 // at the moment lib/onboarding-landing.ts picks, and never over the planner's
 // questions.
 
+import { usePurchasePromptsAllowed } from '@/lib/use-purchase-prompts';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
@@ -43,6 +44,7 @@ export function OnboardingTrialSheetHost() {
   const userId = useAuthStore((state) => state.user?.id ?? null);
   const pathname = usePathname();
   const router = useRouter();
+  const purchasePromptsAllowed = usePurchasePromptsAllowed();
   const [landing, setLanding] = useState<OnboardingLanding | null>(null);
   const [open, setOpen] = useState(false);
   const [ios, setIos] = useState(false);
@@ -154,18 +156,20 @@ export function OnboardingTrialSheetHost() {
               ))}
             </ul>
           </div>
-          <p className="mt-3 text-center text-sm">
-            <button
-              type="button"
-              onClick={() => {
-                close(true);
-                router.push('/locked?intent=activate');
-              }}
-              className={textLinkClass}
-            >
-              See all plans
-            </button>
-          </p>
+          {purchasePromptsAllowed ? (
+            <p className="mt-3 text-center text-sm">
+              <button
+                type="button"
+                onClick={() => {
+                  close(true);
+                  router.push('/locked?intent=activate');
+                }}
+                className={textLinkClass}
+              >
+                See all plans
+              </button>
+            </p>
+          ) : null}
         </>
       )}
       <button type="button" onClick={() => close(false)} className={`${primaryButtonClass} mt-[18px]`}>

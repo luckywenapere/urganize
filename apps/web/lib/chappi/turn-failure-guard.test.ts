@@ -36,8 +36,9 @@ describe('submitPrompt failure wiring', () => {
     const body = submitPromptBody();
     expect(body).toMatch(/\} catch (?:\(error\) )?\{\s*(?:telemetry\.failed\([^\n]*\);\s*)?handleFailedTurn\(\);/);
     // The only direct router calls left: inside handleFailedTurn, the missing
-    // token (nothing sent), and the server's own deterministic answer.
-    expect(body.match(/fallBackToRouter\(\);/g)?.length).toBe(3);
+    // token (nothing sent), the server's own deterministic answer, and a
+    // person who said no to AI (also nothing sent; NEXT_PUBLIC_FEATURE_AI_CONSENT).
+    expect(body.match(/fallBackToRouter\(\);/g)?.length).toBe(4);
   });
 
   it('a failed turn refreshes the rollout data', () => {

@@ -97,7 +97,6 @@ function DirectoryFrame() {
 }
 
 function DirectoryBody() {
-  const purchasePromptsAllowed = usePurchasePromptsAllowed();
   const router = useRouter();
   const openSettings = useOpenSettings();
   // Read ONCE, into the initial state, never mirrored. The role gaps panel

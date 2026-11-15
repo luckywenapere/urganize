@@ -1,5 +1,6 @@
 'use client';
 
+import { usePurchasePromptsAllowed } from '@/lib/use-purchase-prompts';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Loader2 } from '@/components/icons';
@@ -71,7 +72,15 @@ const OUTLINE =
   'motion-focus motion-press inline-flex h-9 items-center justify-center gap-2 border border-stroke-strong px-3.5 text-[13.5px] font-semibold text-content-primary hover:bg-bg-hover disabled:opacity-50';
 const LINK = 'motion-focus text-[13px] text-content-secondary underline underline-offset-2 hover:text-content-primary';
 
+/** Hidden inside the iPhone app: Apple (3.1.1) bars an iOS app from selling
+ * digital goods outside its own payment system. */
 export function AddonsSection() {
+  const purchasePromptsAllowed = usePurchasePromptsAllowed();
+  if (!purchasePromptsAllowed) return null;
+  return <AddonsSectionInner />;
+}
+
+function AddonsSectionInner() {
   const [state, setState] = useState<AddonsState | null>(null);
   const [people, setPeople] = useState(1);
   const [artists, setArtists] = useState(1);
