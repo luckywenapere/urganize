@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.286.2",
+    title: "The wallpaper moves with the page",
+    tag: "App",
+    date: "November 15, 2026",
+    highlights: [
+      "The Home wallpaper now scrolls with the page.",
+    ],
+  },
+  {
     version: "1.286.1",
     title: "Shorter headings on Home",
     tag: "App",

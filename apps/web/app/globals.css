@@ -3866,7 +3866,7 @@ html[data-plan-menu='folded'] #subnav-slot-end {
 
 /* The wallpaper. HomeWallpaper.tsx sets html[data-home-wallpaper] while Home
    on a computer is on screen (never on a phone, never on another page). The
-   picture is fixed behind the whole app, under a dimming layer, and the shell
+   picture sits behind the top of the page, under a dimming layer, and the shell
    on top of it reads in the dark theme's colours in either theme, because
    both pictures are dark. Dialogs and sheets that open over Home are drawn
    outside the shell frame, so they keep the person's own theme. */
@@ -3877,15 +3877,25 @@ html[data-plan-menu='folded'] #subnav-slot-end {
   html[data-home-wallpaper] body {
     background: transparent;
   }
+  /* Not fixed (founder, 2026-11-15): the picture sits at the top of the page
+     and scrolls away with it. It covers the first screen and a bit more, then
+     fades into the dark ground the rest of the page sits on. */
+  html[data-home-wallpaper] {
+    position: relative;
+  }
   html[data-home-wallpaper]::before {
     content: '';
-    position: fixed;
-    inset: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: max(120vh, 62vw);
     z-index: -1;
-    background-color: #06090a;
     background-size: cover;
     background-position: center top;
     background-repeat: no-repeat;
+    -webkit-mask-image: linear-gradient(#000 62%, transparent);
+    mask-image: linear-gradient(#000 62%, transparent);
   }
   html[data-home-wallpaper='forest']::before {
     background-image: linear-gradient(rgba(6, 12, 8, 0.34), rgba(6, 12, 8, 0.5)), url('/images/wallpapers/forest.webp');

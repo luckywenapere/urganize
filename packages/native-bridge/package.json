@@ -1,6 +1,6 @@
 {
   "name": "@urganize/native-bridge",
-  "version": "1.286.1",
+  "version": "1.286.2",
   "private": true,
   "description": "Message protocol between the Urganize website and its Expo native shell. Pure TypeScript, imported by apps/web and apps/mobile.",
   "type": "module",
