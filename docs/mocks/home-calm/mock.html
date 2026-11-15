@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Home, calmer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme (html[data-theme='light'] in app/globals.css). */
+  :root {
+    --bg:#f5f0e6; --side-on:#e6e1d6; --card:#faf5ec; --hover:#ebe6dc; --tile:#e3ddd0;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --err:#961a1a; --err-soft:rgba(150,26,26,.08);
+    --ink:#1d2a21; --on-ink:#f5f0e6; --on-ink2:rgba(245,240,230,.72);
+    --board:#d9d5cc; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/20px 'DM Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.01em; color:var(--text); padding:40px 16px 72px; font-variant-numeric:tabular-nums; }
+  p,h1,h2,h3 { margin:0; }
+  .serif { font-family:'DM Sans', sans-serif; font-weight:700; letter-spacing:-.025em; letter-spacing:0; }
+  .sec { color:var(--sec); } .ter { color:var(--ter); } .err { color:var(--err); }
+  .wrap { max-width:1240px; margin:0 auto; }
+  .intro h1 { font-family:'DM Sans', sans-serif; font-weight:700; letter-spacing:-.025em; font-size:28px; line-height:36px; }
+  .intro p { color:var(--board-sec); max-width:760px; margin-top:8px; }
+  .label { font-size:12px; line-height:16px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin:40px 0 8px; }
+
+  .desk { background:var(--bg); border-radius:16px; overflow:hidden; box-shadow:0 12px 32px rgba(26,22,17,.10); }
+  .bar { height:64px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:0 32px; }
+  .logo { font-family:'DM Sans', sans-serif; font-size:18px; display:flex; align-items:center; gap:8px; }
+  .beta { font:700 10px/16px 'DM Sans'; letter-spacing:.06em; padding:0 6px; border-radius:4px; background:var(--brand-soft); color:var(--brand); }
+  .tabs { display:flex; gap:4px; }
+  .tabs span { padding:8px 14px; border-radius:99px; color:var(--sec); }
+  .tabs span.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .icons { display:flex; gap:12px; justify-content:flex-end; align-items:center; }
+  .icons i { width:36px; height:36px; border-radius:50%; border:1px solid var(--line2); }
+  .icons b { width:36px; height:36px; border-radius:50%; background:var(--brand); color:var(--on-ink); display:grid; place-items:center; font-size:12px; }
+
+  /* One content width for Home: 1120. */
+  .page { max-width:1120px; margin:0 auto; padding:8px 0 48px; display:flex; flex-direction:column; gap:16px; }
+
+  .face { width:40px; height:40px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--tile); font-weight:600; font-size:13px; }
+  .cv { width:40px; height:40px; flex:none; border-radius:6px; }
+  .cv.none { background:transparent; border:1.5px dashed var(--line2); display:grid; place-items:center; color:var(--ter); font-size:18px; }
+  .chev { width:8px; height:8px; border-top:1.5px solid var(--ter); border-right:1.5px solid var(--ter); transform:rotate(45deg); flex:none; }
+  .btn { display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 16px; border-radius:99px; font-weight:600; font-size:13px; white-space:nowrap; }
+  .btn.light { background:var(--on-ink); color:var(--ink); }
+  .btn.ghost { border:1px solid var(--line2); color:var(--text); font-weight:500; }
+
+  /* 1. Out now: one quiet line, not a tall card with a full-width button. */
+  .out { display:flex; align-items:center; gap:12px; padding:10px 16px; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+  .out .cv { width:32px; height:32px; background:var(--tile); }
+  .pill { font-size:12px; line-height:20px; font-weight:600; padding:0 8px; border-radius:99px; background:var(--brand-soft); color:var(--brand); }
+  .out .grow { flex:1; min-width:0; }
+  .link { color:var(--brand); font-weight:600; text-decoration:underline; text-underline-offset:3px; }
+  .x { color:var(--ter); font-size:18px; padding:0 4px; }
+
+  /* 2. Next drop: unchanged in shape. */
+  .hero { background:var(--ink); color:var(--on-ink); border-radius:16px; padding:24px; display:flex; align-items:center; gap:24px; }
+  .hero .art { width:120px; height:120px; border-radius:8px; background:#5b2a86; flex:none; }
+  .hero .eyebrow { font-size:11px; font-weight:700; letter-spacing:.1em; color:var(--on-ink2); }
+  .hero h3 { font-family:'DM Sans', sans-serif; font-weight:700; letter-spacing:-.025em; font-size:32px; line-height:40px; margin-top:4px; }
+  .hero .by { color:var(--on-ink2); margin-top:2px; }
+  .hero .prog { width:280px; height:4px; border-radius:99px; background:rgba(245,240,230,.18); margin-top:14px; overflow:hidden; }
+  .hero .prog i { display:block; width:35%; height:100%; background:#7fd99a; }
+  .hero .meta { margin-top:8px; color:var(--on-ink2); }
+  .hero .late { color:#ffb4a8; font-weight:600; }
+  .hero .right { margin-left:auto; text-align:right; }
+  .hero .num { font-family:'DM Sans', sans-serif; font-size:56px; line-height:56px; }
+
+  /* 3. The list: head with the count and the one action; rows read left to right without a gap. */
+  .lhead { display:flex; align-items:flex-end; justify-content:space-between; margin-top:16px; }
+  .lhead h3 { font-family:'DM Sans', sans-serif; font-weight:700; letter-spacing:-.025em; font-size:22px; line-height:28px; }
+  .list { background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+  .row { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1.3fr) 148px 220px 16px; align-items:center; gap:24px; padding:14px 20px; border-top:1px solid var(--line); }
+  .row:first-child { border-top:0; }
+  .row.th { padding:10px 20px; font-size:12px; font-weight:600; color:var(--sec); }
+  .who, .what { display:flex; align-items:center; gap:12px; min-width:0; }
+  .who .name { font-family:'DM Sans', sans-serif; font-size:17px; line-height:22px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .state { font-size:12px; line-height:16px; font-weight:600; color:var(--brand); }
+  .state.quiet { color:var(--ter); font-weight:500; }
+  .what .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .what .k { font-size:12px; line-height:16px; color:var(--sec); }
+  .when .d { font-weight:600; }
+  .when .n { font-size:12px; line-height:16px; color:var(--sec); }
+  .work .bar2 { height:4px; border-radius:99px; background:var(--line2); overflow:hidden; }
+  .work .bar2 i { display:block; height:100%; background:var(--brand); }
+  .work .n { font-size:12px; line-height:16px; color:var(--sec); margin-top:6px; display:flex; gap:10px; }
+  .work .n b { font-weight:600; color:var(--err); }
+  .add { display:flex; align-items:center; gap:12px; padding:14px 20px; border-top:1px solid var(--line); color:var(--sec); font-weight:500; }
+  .add i { width:40px; height:40px; border-radius:50%; border:1.5px dashed var(--line2); display:grid; place-items:center; font-style:normal; font-size:18px; color:var(--ter); }
+
+  /* 7. Tasks on Home: mine on the left, the ones I handed out on the right. */
+  .tasks { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .tcard { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:6px 20px 8px; min-width:0; }
+  .thead { display:flex; align-items:baseline; justify-content:space-between; padding:12px 0 8px; }
+  .thead h3 { font-family:'DM Sans', sans-serif; font-weight:700; letter-spacing:-.025em; font-size:18px; line-height:24px; }
+  .thead h3 span { font:500 13px/20px 'DM Sans'; color:var(--sec); }
+  .thead .link { font-size:13px; }
+  .trow { display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--line); min-width:0; }
+  .ck { width:20px; height:20px; border-radius:50%; border:1.5px solid var(--line2); flex:none; }
+  .face.sm { width:28px; height:28px; font-size:11px; font-style:normal; }
+  .tt { flex:1; min-width:0; }
+  .tt .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tt .k { font-size:12px; line-height:16px; color:var(--sec); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .due { font-size:13px; color:var(--sec); white-space:nowrap; }
+  .due.late { color:var(--err); font-weight:600; }
+  .due.ok { color:var(--brand); font-weight:600; }
+  .trow.done .t { color:var(--sec); text-decoration:line-through; }
+
+  /* 8. The team on Home (desktop only): one row of people, each with their load. */
+  .team { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+  .person { display:flex; align-items:center; gap:12px; padding:14px 16px; background:var(--card); border:1px solid var(--line); border-radius:14px; min-width:0; }
+  .person.invite { background:transparent; border-style:dashed; border-color:var(--line2); }
+  .face.dash { background:transparent; border:1.5px dashed var(--line2); color:var(--ter); font-size:18px; font-weight:400; }
+  .pt { min-width:0; }
+  .pt .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pt .k { font-size:12px; line-height:16px; color:var(--sec); }
+  .pt .c { font-size:12px; line-height:16px; color:var(--sec); margin-top:2px; }
+  .pt .c b { color:var(--err); font-weight:600; }
+  .you { font-size:11px; font-weight:600; color:var(--brand); background:var(--brand-soft); border-radius:99px; padding:1px 6px; margin-left:4px; }
+
+  /* 9. Customise Home: reorder, remove, add back. */
+  .editbar { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 16px; border-radius:12px; background:var(--brand-soft); }
+  .edit-grid, .tray { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .w { grid-column:span 2; position:relative; padding:16px 110px 16px 48px; border:1.5px dashed var(--line2); border-radius:14px; background:var(--card); }
+  .w.half, .w.add2 { grid-column:span 1; }
+  .w.add2 { padding-left:16px; background:transparent; }
+  .w .wt { font-weight:600; }
+  .w .k { font-size:12px; line-height:16px; color:var(--sec); margin-top:2px; }
+  .grip { position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--ter); letter-spacing:-2px; cursor:grab; }
+  .rm, .w .link { position:absolute; right:16px; top:50%; transform:translateY(-50%); font-size:13px; font-weight:600; color:var(--err); }
+  .rm.off { color:var(--ter); font-weight:500; }
+  .w .link { color:var(--brand); }
+
+  .notes { margin-top:24px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .note { background:#e9e5db; border-radius:12px; padding:16px; color:var(--board-sec); }
+  .note b { display:block; color:var(--text); margin-bottom:4px; }
+
+  .ask { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:28px 32px 24px; }
+  .ask h2 { font-family:'DM Sans', sans-serif; font-weight:700; letter-spacing:-.025em; font-size:28px; line-height:36px; }
+  .box { margin-top:16px; border:1.5px solid #6e6f69; border-radius:16px; background:var(--bg); padding:14px 16px 10px; }
+  .box.on { border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft); }
+  .ph { font-size:16px; line-height:24px; color:var(--ter); min-height:48px; }
+  .ph.typed { color:var(--text); }
+  .caret { display:inline-block; width:1.5px; height:18px; background:var(--text); margin-left:2px; vertical-align:-3px; }
+  .tools { display:flex; align-items:center; gap:10px; }
+  .tools .ic { width:32px; height:32px; border-radius:50%; border:1px solid var(--line2); display:grid; place-items:center; color:var(--sec); font-size:18px; }
+  .tools .hint { margin-left:auto; font-size:12px; color:var(--ter); }
+  .tools .send { width:36px; height:36px; border-radius:50%; background:var(--tile); color:var(--sec); display:grid; place-items:center; font-weight:700; }
+  .tools .send.go { background:var(--ink); color:var(--on-ink); }
+  .pick { height:32px; padding:0 12px; border-radius:99px; border:1px solid var(--line2); display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:500; background:var(--card); }
+  .pick i { width:6px; height:6px; border-right:1.5px solid var(--sec); border-bottom:1.5px solid var(--sec); transform:rotate(45deg); margin-top:-3px; }
+  .pick.set { border-color:var(--brand); color:var(--brand); background:var(--brand-soft); }
+  .pick .cvs { width:18px; height:18px; border-radius:4px; background:#5b2a86; }
+  .tools { position:relative; }
+  .menu { position:absolute; left:42px; top:38px; width:320px; background:var(--card); border:1px solid var(--line2); border-radius:14px; box-shadow:0 12px 32px rgba(26,22,17,.16); padding:6px; z-index:2; }
+  .menu .mi { display:flex; gap:10px; align-items:center; padding:8px 10px; border-radius:8px; font-size:14px; }
+  .menu .mi.on { background:var(--side-on); font-weight:600; }
+  .menu .mi .cvs { width:28px; height:28px; border-radius:6px; background:var(--tile); flex:none; }
+  .menu .mi .k { color:var(--sec); font-size:12px; font-weight:400; }
+  .menu .mi .tk { margin-left:auto; color:var(--brand); }
+  .menu .sep { height:1px; background:var(--line); margin:4px 6px; }
+  .asplit { display:grid; grid-template-columns:240px minmax(0,1fr); gap:32px; max-width:1040px; margin:0 auto; padding:24px 0 0; }
+  .aside a { display:flex; gap:10px; align-items:center; padding:8px 10px; border-radius:10px; color:var(--sec); font-size:14px; }
+  .aside a.on { background:var(--side-on); color:var(--text); font-weight:600; }
+  .aside .g { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ter); padding:14px 10px 4px; }
+  .aside .cvs { width:22px; height:22px; border-radius:5px; background:var(--tile); }
+  .asplit .apage { margin:0; padding-top:0; max-width:none; }
+  .sugs { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .sugs span { height:34px; padding:0 14px; border-radius:99px; border:1px solid var(--line2); display:inline-flex; align-items:center; font-size:13px; color:var(--sec); }
+  .fade { max-height:150px; overflow:hidden; opacity:.6; -webkit-mask-image:linear-gradient(#000,transparent); mask-image:linear-gradient(#000,transparent); }
+  .apage { max-width:760px; margin:0 auto; padding:24px 0 32px; min-height:440px; display:flex; flex-direction:column; }
+  .me { align-self:flex-end; background:var(--ink); color:var(--on-ink); padding:10px 16px; border-radius:18px 18px 4px 18px; font-size:15px; }
+  .ai { margin-top:20px; font-size:15px; line-height:24px; max-width:620px; }
+  .ai b { font-weight:600; }
+  .ai .li { display:flex; gap:10px; margin-top:8px; } .ai .li i { width:6px; height:6px; border-radius:50%; background:var(--err); margin-top:9px; flex:none; }
+  .acts { display:flex; gap:8px; margin-top:14px; }
+  .apage .box { margin-top:auto; }
+  .notes { margin-top:16px; display:grid; gap:10px; }
+  .note { display:grid; grid-template-columns:28px 1fr; gap:10px; color:var(--board-sec); }
+  .note b { width:24px; height:24px; border-radius:50%; background:var(--ink); color:var(--on-ink); display:grid; place-items:center; font-size:12px; }
+  .note strong { color:var(--text); }
+
+  /* v2: depth and style */
+  .ask { position:relative; display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:28px; padding:32px;
+         background:var(--ink); color:var(--on-ink); border:0; border-radius:24px;
+         box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 24px 48px -16px rgba(29,42,33,.45), 0 4px 12px rgba(29,42,33,.18);
+         background-image:
+           repeating-linear-gradient(0deg, rgba(245,240,230,.035) 0 1px, transparent 1px 3px),
+           repeating-linear-gradient(90deg, rgba(245,240,230,.03) 0 1px, transparent 1px 4px); }
+  .glow { position:absolute; inset:0; border-radius:24px; overflow:hidden; pointer-events:none; }
+  .glow::before { content:''; position:absolute; width:520px; height:520px; left:-140px; top:-260px; border-radius:50%;
+          background:radial-gradient(closest-side, rgba(127,217,154,.28), rgba(127,217,154,0)); }
+  .ask:has(.menu) { margin-bottom:170px; }
+  .ask .menu { box-shadow:0 24px 48px -12px rgba(0,0,0,.45), 0 0 0 1px rgba(26,22,17,.08); }
+  .askl { position:relative; display:flex; flex-direction:column; min-width:0; }
+  .hello { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:#7fd99a; letter-spacing:.02em; }
+  .spark { width:10px; height:10px; background:#7fd99a; transform:rotate(45deg); border-radius:2px; box-shadow:0 0 0 4px rgba(127,217,154,.18), 0 0 18px rgba(127,217,154,.7); }
+  .ask h2 { font-size:38px; line-height:44px; margin-top:10px; color:var(--on-ink); letter-spacing:-.01em; }
+  .ask h2 em { font-style:normal; color:rgba(245,240,230,.62); }
+  .ask .box { margin-top:22px; background:#fbf7ef; border:0; border-radius:18px; padding:16px 16px 12px; color:var(--text);
+              box-shadow:0 0 0 1px rgba(245,240,230,.5), 0 18px 36px -12px rgba(0,0,0,.55), 0 2px 0 rgba(255,255,255,.9) inset; }
+  .ask .box.on { box-shadow:0 0 0 2px #7fd99a, 0 0 0 7px rgba(127,217,154,.22), 0 18px 36px -12px rgba(0,0,0,.55); }
+  .ask .ph { font-size:17px; }
+  .ask .tools .ic, .ask .pick { background:#fff; }
+  .ask .tools .send { width:40px; height:40px; background:#d9d3c5; color:#6a665f; }
+  .ask .tools .send.go { background:#14643a; color:#fff; box-shadow:0 6px 14px -4px rgba(20,100,58,.7); }
+  .ask .sugs { margin-top:18px; }
+  .ask .sugs span.sg { height:36px; border:1px solid rgba(245,240,230,.18); background:rgba(245,240,230,.07); color:var(--on-ink); gap:8px; backdrop-filter:blur(4px); }
+  .m { width:8px; height:8px; border-radius:50%; flex:none; }
+  .m.late { background:#ff9d8f; } .m.today { background:#7fd99a; } .m.plan { background:#f0c66b; } .m.write { background:#a9c4ff; }
+  .next { position:relative; background:rgba(245,240,230,.07); border:1px solid rgba(245,240,230,.14); border-radius:18px; padding:18px;
+          box-shadow:0 1px 0 rgba(255,255,255,.06) inset; display:flex; flex-direction:column; }
+  .next .eb { font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--on-ink2); }
+  .nrow { display:flex; gap:12px; align-items:center; margin-top:12px; }
+  .cover { width:64px; height:64px; border-radius:10px; background:#5b2a86; flex:none; display:grid; place-items:end start; padding:6px;
+           box-shadow:0 10px 20px -6px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.12) inset; transform:rotate(-3deg); }
+  .cover span { font-family:'DM Sans', sans-serif; font-size:10px; line-height:11px; color:rgba(255,255,255,.85); }
+  .nt { font-family:'DM Sans', sans-serif; font-size:20px; line-height:24px; } .nb { color:var(--on-ink2); font-size:13px; }
+  .count { display:flex; align-items:center; gap:12px; margin-top:16px; }
+  .count b { font-family:'DM Sans', sans-serif; font-weight:700; letter-spacing:-.025em; font-size:56px; line-height:52px; color:#7fd99a; }
+  .count span { color:var(--on-ink2); font-size:13px; line-height:18px; }
+  .next .prog { height:4px; border-radius:99px; background:rgba(245,240,230,.16); margin-top:14px; overflow:hidden; }
+  .next .prog i { display:block; width:35%; height:100%; background:#7fd99a; }
+  .nm { font-size:13px; color:var(--on-ink2); margin-top:8px; } .nm em { font-style:normal; color:#ffb4a8; font-weight:600; }
+  .open { margin-top:auto; padding-top:14px; font-weight:600; font-size:13px; color:var(--on-ink); }
+  .ask .menu { color:var(--text); }
+  /* cards under the hero get a little lift too */
+  .tcard, .out { box-shadow:0 1px 2px rgba(26,22,17,.05), 0 8px 20px -12px rgba(26,22,17,.18); }
+  .apage .box { background:#fbf7ef; border:0; box-shadow:0 0 0 1px var(--line2), 0 12px 28px -14px rgba(26,22,17,.35); }
+
+  /* v3: the same energy on every card */
+  .page { gap:20px; }
+  .weave { background-image:repeating-linear-gradient(0deg, rgba(26,22,17,.018) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(26,22,17,.014) 0 1px, transparent 1px 4px); }
+  .chip { display:inline-flex; align-items:center; height:22px; padding:0 9px; border-radius:99px; font:600 12px/1 'DM Sans'; background:#ece6d9; color:var(--sec); white-space:nowrap; }
+  .chip.red { background:#f6dcd6; color:#8a1a1a; } .chip.grn { background:#d9ecdf; color:#14643a; }
+  .more { font:600 13px/20px 'DM Sans'; color:var(--text); white-space:nowrap; }
+
+  .out { position:relative; overflow:hidden; border:0; border-radius:16px; padding:12px 18px; background:#e4efe4;
+         box-shadow:0 0 0 1px rgba(20,100,58,.18), 0 10px 22px -14px rgba(20,100,58,.45); }
+  .out::before { content:''; position:absolute; left:-60px; top:-90px; width:220px; height:220px; border-radius:50%; background:radial-gradient(closest-side, rgba(127,217,154,.55), rgba(127,217,154,0)); }
+  .out > * { position:relative; }
+  .live { width:10px; height:10px; border-radius:50%; background:#14643a; box-shadow:0 0 0 4px rgba(20,100,58,.18), 0 0 0 9px rgba(20,100,58,.08); flex:none; margin:0 4px; }
+  .out .cv { width:40px; height:40px; border-radius:8px; background:#8a4a1f; transform:rotate(-4deg); display:grid; place-items:end start; padding:4px;
+             box-shadow:0 8px 14px -6px rgba(26,22,17,.5), 0 0 0 1px rgba(255,255,255,.14) inset; }
+  .out .cv span { font:700 8px/8px 'DM Sans', sans-serif; letter-spacing:-.03em; color:rgba(255,255,255,.85); }
+  .out .pill { background:#14643a; color:#fff; }
+
+  .tcard { position:relative; border:0; border-radius:20px; padding:8px 22px 12px; background-color:#fbf7ef;
+           background-image:repeating-linear-gradient(0deg, rgba(26,22,17,.018) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(26,22,17,.014) 0 1px, transparent 1px 4px);
+           box-shadow:0 0 0 1px rgba(26,22,17,.07), 0 1px 0 rgba(255,255,255,.9) inset, 0 22px 40px -22px rgba(26,22,17,.32), 0 3px 8px rgba(26,22,17,.05); }
+  .thead { align-items:center; padding:14px 0 12px; gap:12px; }
+  .hl { display:flex; align-items:center; gap:12px; min-width:0; }
+  .big { font:700 44px/40px 'DM Sans', sans-serif; letter-spacing:-.03em; color:var(--brand); letter-spacing:-.02em; }
+  .thead h3 { font-size:20px; line-height:24px; } .hs { font-size:13px; line-height:18px; color:var(--sec); }
+  .chips { display:flex; align-items:center; gap:6px; } .chips .more { margin-left:8px; }
+  .trow { position:relative; padding:11px 10px; margin:0 -10px; border-top:0; border-radius:12px; }
+  .trow + .trow::before { content:''; position:absolute; left:10px; right:10px; top:0; height:1px; background:var(--line); }
+  .trow.islate { background:rgba(150,26,26,.045); }
+  .trow.islate::after { content:''; position:absolute; left:0; top:10px; bottom:10px; width:3px; border-radius:3px; background:#c0392b; }
+  .trow.islate + .trow::before, .trow.islate::before { display:none; }
+  .ck { width:22px; height:22px; border:1.5px solid #6e6f69; background:#fff; box-shadow:0 1px 2px rgba(26,22,17,.12) inset; }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:6px; vertical-align:1px; }
+  .due { font-weight:500; } .due.late { background:#f6dcd6; color:#8a1a1a; padding:2px 9px; border-radius:99px; font-size:12px; }
+  .face { background:var(--ink); color:var(--on-ink); box-shadow:0 0 0 2px #fbf7ef, 0 0 0 3.5px rgba(29,42,33,.2); }
+  .face.sm.tick { background:#14643a; color:#fff; }
+  .face.dash { background:transparent; color:var(--ter); box-shadow:none; }
+
+  .lhead { margin-top:12px; align-items:center; }
+  .lhead h3 { display:flex; align-items:center; gap:10px; font-size:24px; line-height:30px; }
+  .spark2 { width:10px; height:10px; background:var(--brand); transform:rotate(45deg); border-radius:2px; box-shadow:0 0 0 4px rgba(20,100,58,.14); flex:none; }
+  .cnt { font:600 12px/22px 'DM Sans'; padding:0 9px; border-radius:99px; background:var(--ink); color:var(--on-ink); }
+
+  .person { position:relative; border:0; border-radius:18px; padding:16px; background:#fbf7ef; flex-direction:column; align-items:flex-start; gap:12px;
+            box-shadow:0 0 0 1px rgba(26,22,17,.07), 0 1px 0 rgba(255,255,255,.9) inset, 0 18px 30px -20px rgba(26,22,17,.34); }
+  .person .face { width:48px; height:48px; font-size:15px; }
+  .person.warn .face { box-shadow:0 0 0 2px #fbf7ef, 0 0 0 4px #c0392b; }
+  .person .t { font-size:15px; font-weight:600; } .person .c { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  .you { background:var(--brand-soft); color:var(--brand); }
+  .person.invite { background:transparent; box-shadow:none; border:1.5px dashed #b9b2a3; }
+
+  .list { border:0; border-radius:20px; overflow:hidden; background:#fbf7ef;
+          box-shadow:0 0 0 1px rgba(26,22,17,.07), 0 1px 0 rgba(255,255,255,.9) inset, 0 22px 40px -22px rgba(26,22,17,.32); }
+  .row.th { background:var(--ink); color:rgba(245,240,230,.7); border:0; }
+  .row.th span { color:inherit; }
+  .row { padding-top:14px; padding-bottom:14px; }
+  .row.first { background:linear-gradient(90deg, rgba(127,217,154,.20), rgba(127,217,154,0) 55%); }
+  .row .name { font-family:'DM Sans', sans-serif; font-weight:700; letter-spacing:-.025em; font-size:17px; }
+  .state { display:flex; align-items:center; gap:6px; } .state i { width:7px; height:7px; border-radius:50%; background:#2f9e5e; box-shadow:0 0 0 3px rgba(47,158,94,.18); }
+  .state.quiet { color:var(--ter); }
+  .what .cv { width:44px; height:44px; border-radius:9px; transform:rotate(-4deg); box-shadow:0 10px 16px -8px rgba(26,22,17,.55), 0 0 0 1px rgba(255,255,255,.14) inset; }
+  .what .cv.none { transform:none; box-shadow:none; }
+  .when { display:flex; align-items:center; gap:10px; }
+  .dn { font:700 34px/34px 'DM Sans', sans-serif; letter-spacing:-.03em; color:var(--brand); letter-spacing:-.02em; min-width:44px; text-align:right; }
+  .row.first .dn { color:#c0392b; }
+  .when .n { font-size:12px; color:var(--sec); } .when .d { font-size:13px; font-weight:600; }
+  .bar2 { height:6px; background:#e6dfd0; } .bar2 i { background:linear-gradient(90deg,#14643a,#2f9e5e); border-radius:99px; }
+  .work .n { align-items:center; }
+
+  /* v4: the logo's own type family */
+  body { font-family:'DM Sans', sans-serif; }
+  .logo { font-family:'DM Sans', sans-serif; font-weight:700; letter-spacing:.01em; }
+  h1, h2, h3, .nt, .name, .big, .dn, .count b { font-weight:700; }
+  .ask h2 { letter-spacing:-.035em; font-size:40px; line-height:44px; }
+  .ask h2 em { font-weight:500; }
+  .big, .dn, .count b { font-feature-settings:'tnum'; }
+  .due, .when .d, .chip, .cnt, .hint, .next .eb, .row.th, .nm, .hs { font-family:'DM Mono', monospace; letter-spacing:-.01em; }
+  .due, .when .d { font-size:12px; } .chip, .cnt { font-size:11px; font-weight:500; }
+  .row.th { text-transform:uppercase; letter-spacing:.06em; font-size:11px; }
+  .type { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:8px 0 20px; }
+  .tyc { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px 20px; }
+  .tyc small { font:500 11px/16px 'DM Mono', monospace; text-transform:uppercase; letter-spacing:.06em; color:var(--sec); }
+  .tyc .s1 { font:700 34px/38px 'DM Sans'; letter-spacing:-.03em; margin-top:6px; }
+  .tyc .s2 { font:400 15px/22px 'DM Sans'; margin-top:6px; color:var(--sec); }
+  .tyc .s3 { font:500 14px/22px 'DM Mono', monospace; margin-top:6px; }
+  .tyc.alt .s1 { font:400 36px/38px 'DM Serif Display', serif; letter-spacing:0; }
+
+  /* v5: calm, round, uncluttered */
+  .desk { --card2:#fbf7ef; --chip:#ece6d9; --hero:#22382c; --hero-in:rgba(245,240,230,.07); --hero-line:rgba(245,240,230,.12); --field:#fbf7ef; --shadow:rgba(26,22,17,.22); border-radius:32px; }
+  .desk.dark { --bg:#0d120e; --card:#151c17; --card2:#151c17; --line:rgba(245,240,230,.08); --line2:rgba(245,240,230,.18); --text:#f5f0e6; --sec:#b7b4aa; --ter:#8c8d86;
+               --tile:#252d27; --chip:#232b25; --side-on:#1d251f; --brand:#7fd99a; --brand-soft:rgba(127,217,154,.14); --err:#ff9d8f;
+               --hero:#1a2b21; --field:#f5f0e6; --shadow:rgba(0,0,0,.5); color:var(--text); }
+  .desk.dark .icons b { color:#0d120e; }
+  .desk.dark .logo { color:var(--text); }
+
+  /* chat card: one flat calm green, no grain, no glow */
+  .ask { background:var(--hero); background-image:none; border-radius:32px; padding:36px; gap:32px;
+         box-shadow:0 20px 40px -24px var(--shadow); }
+  .desk.dark .ask { box-shadow:0 0 0 1px var(--hero-line); }
+  .glow { display:none; }
+  .hello { color:rgba(245,240,230,.62); font-weight:500; font-family:'DM Sans'; }
+  .ask h2 em { color:rgba(245,240,230,.55); }
+  .ask .box { background:var(--field); border-radius:24px; padding:18px 18px 14px; box-shadow:0 10px 24px -14px rgba(0,0,0,.5); }
+  .ask .box.on { box-shadow:0 0 0 2px #7fd99a, 0 10px 24px -14px rgba(0,0,0,.5); }
+  .ask .ph { color:#6a665f; } .ask .ph.typed { color:#1a1611; }
+  .ask .tools .ic, .ask .pick { background:#fff; border-color:#d8d1c2; color:#4b4740; }
+  .ask .tools .hint { font-family:'DM Sans'; color:#6a665f; }
+  .ask .tools .send { background:#e3ddd0; color:#6a665f; box-shadow:none; }
+  .ask .sugs span.sg { height:38px; padding:0 16px; border:0; background:var(--hero-in); backdrop-filter:none; }
+  .next { background:var(--hero-in); border:0; border-radius:24px; padding:22px; box-shadow:none; }
+  .next .eb { font-family:'DM Sans'; text-transform:none; letter-spacing:0; font-size:13px; font-weight:500; }
+  .cover { border-radius:14px; transform:none; box-shadow:none; }
+  .count b { color:var(--on-ink); }
+  .next .prog { height:6px; } .nm { font-family:'DM Sans'; }
+
+  /* out now */
+  .out { background:var(--brand-soft); box-shadow:none; border-radius:999px; padding:10px 20px 10px 10px; }
+  .out::before { display:none; }
+  .out .cv { transform:none; box-shadow:none; border-radius:50%; width:36px; height:36px; }
+  .out .cv span { display:none; }
+  .out .pill { background:var(--brand); color:var(--bg); }
+
+  /* cards */
+  .tcard, .person, .list { background:var(--card2); background-image:none; border-radius:28px; box-shadow:0 0 0 1px var(--line), 0 16px 32px -26px var(--shadow); }
+  .tcard { padding:10px 24px 14px; }
+  .big { color:var(--text); font-size:36px; line-height:36px; }
+  .hs { font-family:'DM Sans'; }
+  .trow { border-radius:16px; }
+  .trow.islate, .trow.islate::after { background:none; }
+  .ck { background:transparent; box-shadow:none; border-color:var(--line2); }
+  .due { font-family:'DM Sans'; font-size:13px; }
+  .due.late { background:none; padding:0; color:var(--err); font-weight:600; font-size:13px; }
+  .face { background:var(--tile); color:var(--text); box-shadow:none; }
+  .face.sm.tick { background:var(--brand); color:var(--bg); }
+  .more { color:var(--sec); font-weight:500; }
+
+  .lhead h3 { font-size:22px; gap:8px; }
+  .cnt { background:none; color:var(--sec); font:500 14px/22px 'DM Sans'; padding:0; }
+  .person { border-radius:24px; padding:18px; }
+  .person .c { font-size:13px; color:var(--sec); margin-top:6px; display:block; }
+  .person.invite { background:transparent; box-shadow:none; border:1.5px dashed var(--line2); }
+
+  .row.th { background:none; color:var(--sec); font-family:'DM Sans'; text-transform:none; letter-spacing:0; font-size:12px; border-bottom:1px solid var(--line); }
+  .row { padding-top:16px; padding-bottom:16px; }
+  .row.first { background:none; }
+  .row .name { font-size:16px; }
+  .what .cv { border-radius:12px; transform:none; box-shadow:none; }
+  .dn, .row.first .dn { color:var(--text); font-size:26px; line-height:28px; min-width:36px; }
+  .when .d { font-family:'DM Sans'; font-size:13px; font-weight:500; color:var(--sec); }
+  .when .n { display:none; } .when .d { white-space:nowrap; }
+  .when { gap:8px; align-items:baseline; }
+  .bar2 { background:var(--tile); } .bar2 i { background:var(--brand); }
+  .work .n { font-family:'DM Sans'; }
+  .chip { background:var(--chip); font-family:'DM Sans'; font-size:12px; }
+  .btn { height:40px; padding:0 18px; }
+  .add { border-radius:0 0 28px 28px; }
+  .menu { border-radius:20px; } .menu .mi { border-radius:14px; }
+</style></head><body>
+<div class="wrap">
+  <div class="intro"><h1>Home, calmer</h1><p>Same page and same DM Sans type as the last mock, with your notes applied. Light first, then dark.</p></div>
+  <div class="label">Light</div>
+  <div class="desk">
+    <div class="bar">
+      <div class="logo">Urganize <span class="beta">BETA</span></div>
+      <div class="tabs"><span class="on">Home</span><span>Ask Chappi</span></div>
+      <div class="icons"><i></i><b>OY</b></div>
+    </div>
+    <div class="page">
+      <div class="ask"><div class="glow"></div><div class="askl">
+        <p class="hello">Sunday evening</p><h2>Good evening, Oyin.<br><em>What is on your mind?</em></h2>
+        <div class="box">
+          <p class="ph">What is slipping? Who is waiting on you? What comes next? Just ask.<span class="caret"></span></p>
+          <div class="tools"><span class="ic">+</span><span class="pick">About: Everything <i></i></span><span class="hint">Enter to send</span><span class="send">&uarr;</span></div>
+        </div>
+        <div class="sugs"><span class="sg">What is late on Blue Season?</span><span class="sg">What should I do today?</span><span class="sg">Plan the next record for Ayo Kanmi</span><span class="sg">Write a status update for Zainab</span></div></div><div class="next">
+          <p class="eb">Next drop</p>
+          <div class="nrow"><div class="cover"><span>Blue<br>Season</span></div>
+            <div><p class="nt">Blue Season</p><p class="nb">Zainab Oyelaran &middot; EP</p></div></div>
+          <div class="count"><b>8</b><span>days to go<br>Wed 18 Nov</span></div>
+          <div class="prog"><i></i></div>
+          <p class="nm">30 of 86 done</p>
+          <span class="open">Open rollout &rarr;</span>
+        </div></div>
+
+
+      <div class="out">
+        <div class="cv"><span>Bless<br>ings</span></div>
+        <span class="pill">Out now</span>
+        <p class="grow"><b>Blessings</b> <span class="sec">by Ayo Kanmi. Looking for it on streaming. This can take a few hours.</span></p>
+        <span class="link">Type the code yourself</span>
+        <span class="x">×</span>
+      </div>
+
+      <div class="tasks">
+        <div class="tcard">
+          <div class="thead"><div class="hl"><b class="big">7</b><div><h3>My tasks</h3><p class="hs">open across 2 rollouts</p></div></div><div class="chips"><span class="more">See all &rarr;</span></div></div>
+          <div class="trow"><i class="ck"></i><div class="tt"><p class="t">Confirm the EP tracklist</p><p class="k">Blue Season · Zainab Oyelaran</p></div><span class="due late">6 days late</span></div>
+          <div class="trow"><i class="ck"></i><div class="tt"><p class="t">Approve the cover art</p><p class="k">Blue Season · Zainab Oyelaran</p></div><span class="due late">2 days late</span></div>
+          <div class="trow"><i class="ck"></i><div class="tt"><p class="t">Send the pre-save reminder</p><p class="k">Blue Season · Zainab Oyelaran</p></div><span class="due">Today</span></div>
+          <div class="trow"><i class="ck"></i><div class="tt"><p class="t">Book the video shoot</p><p class="k">Night Bus · Ayo Kanmi</p></div><span class="due">Thu 12 Nov</span></div>
+          <div class="trow"><i class="ck"></i><div class="tt"><p class="t">Write the press release</p><p class="k">Night Bus · Ayo Kanmi</p></div><span class="due">Mon 16 Nov</span></div>
+        </div>
+        <div class="tcard">
+          <div class="thead"><div class="hl"><b class="big">5</b><div><h3>Delegated</h3><p class="hs">with 3 people</p></div></div><div class="chips"><span class="more">See all &rarr;</span></div></div>
+          <div class="trow"><i class="face sm">CH</i><div class="tt"><p class="t">Upload the final master</p><p class="k">Chidera · Blue Season</p></div><span class="due late">3 days late</span></div>
+          <div class="trow"><i class="face sm">CH</i><div class="tt"><p class="t">Confirm the lead single playlist list</p><p class="k">Chidera · Blue Season</p></div><span class="due">Tomorrow</span></div>
+          <div class="trow"><i class="face sm">ZO</i><div class="tt"><p class="t">Record the countdown video</p><p class="k">Zainab Oyelaran · Blue Season</p></div><span class="due">Fri 13 Nov</span></div>
+          <div class="trow"><i class="face sm">AK</i><div class="tt"><p class="t">Send the artist bio</p><p class="k">Ayo Kanmi · Night Bus</p></div><span class="due">Mon 16 Nov</span></div>
+          <div class="trow done"><i class="face sm tick">&#10003;</i><div class="tt"><p class="t">Set the genre and lyrics</p><p class="k">Chidera · Blue Season</p></div><span class="due ok">Done today</span></div>
+        </div>
+      </div>
+<div class="lhead">
+        <h3>Your team <span class="cnt">4 people</span></h3>
+        <span class="more">Open team &rarr;</span>
+      </div>
+      <div class="team">
+        <div class="person"><div class="face">OY</div><div class="pt"><p class="t">Oyin <span class="you">You</span></p><p class="k">Owner</p><p class="c">7 open</p></div></div>
+        <div class="person"><div class="face">CH</div><div class="pt"><p class="t">Chidera</p><p class="k">Manager</p><p class="c">3 open</p></div></div>
+        <div class="person"><div class="face">ZO</div><div class="pt"><p class="t">Zainab Oyelaran</p><p class="k">Artist</p><p class="c">1 open</p></div></div>
+        <div class="person"><div class="face">AK</div><div class="pt"><p class="t">Ayo Kanmi</p><p class="k">Artist</p><p class="c">1 open</p></div></div>
+        <div class="person invite"><div class="face dash">+</div><div class="pt"><p class="t">Invite someone</p><p class="k">6 seats left</p></div></div>
+      </div>
+
+      <div class="lhead">
+        <h3>Your artists <span class="cnt">6</span></h3>
+        <span class="btn ghost">+ Add artist</span>
+      </div>
+
+      <div class="list">
+        <div class="row th"><span>Artist</span><span>Next rollout</span><span>Drops</span><span>Tasks</span><span></span></div>
+
+        <div class="row">
+          <div class="who"><div class="face">ZO</div><div style="min-width:0"><p class="name">Zainab Oyelaran</p></div></div>
+          <div class="what"><div class="cv" style="background:#5b2a86"></div><div style="min-width:0"><p class="t">Blue Season</p><p class="k">EP</p></div></div>
+          <div class="when"><b class="dn">8</b><p class="d">days &middot; Wed 18 Nov</p></div>
+          <div class="work"><div class="bar2"><i style="width:35%"></i></div><p class="n"><span>2 due</span></p></div>
+          <span class="chev"></span>
+        </div>
+
+        <div class="row">
+          <div class="who"><div class="face">AK</div><div style="min-width:0"><p class="name">Ayo Kanmi</p></div></div>
+          <div class="what"><div class="cv" style="background:#1f3a8a"></div><div style="min-width:0"><p class="t">Night Bus</p><p class="k">Single</p></div></div>
+          <div class="when"><b class="dn">22</b><p class="d">days &middot; Wed 2 Dec</p></div>
+          <div class="work"><div class="bar2"><i style="width:8%"></i></div><p class="n"><span>5 due</span></p></div>
+          <span class="chev"></span>
+        </div>
+
+        <div class="row">
+          <div class="who"><div class="face">V</div><div style="min-width:0"><p class="name">Victory</p></div></div>
+          <div class="what"><div class="cv" style="background:var(--tile)"></div><div style="min-width:0"><p class="t">Midnight Drive</p><p class="k">Single</p></div></div>
+          <div class="when"><b class="dn">24</b><p class="d">days &middot; Fri 4 Dec</p></div>
+          <div class="work"></div>
+          <span class="chev"></span>
+        </div>
+
+        <div class="row">
+          <div class="who"><div class="face">TH</div><div style="min-width:0"><p class="name">The Harbour Lights</p></div></div>
+          <div class="what"><div class="cv" style="background:#8a4a1f"></div><div style="min-width:0"><p class="t">Salt and Signal</p><p class="k">Album</p></div></div>
+          <div class="when"><b class="dn">57</b><p class="d">days &middot; Wed 6 Jan</p></div>
+          <div class="work"><div class="bar2"><i style="width:6%"></i></div><p class="n"><span>5 due</span></p></div>
+          <span class="chev"></span>
+        </div>
+
+        <div class="row">
+          <div class="who"><div class="face">L</div><div style="min-width:0"><p class="name">Luckydidthis</p></div></div>
+          <div class="what"><div class="cv" style="background:var(--tile)"></div><div style="min-width:0"><p class="t">Untitled rollout</p><p class="k">Single</p></div></div>
+          <div class="when"><p class="n">No date yet</p></div>
+          <div class="work"></div>
+          <span class="chev"></span>
+        </div>
+
+        <div class="row">
+          <div class="who"><div class="face">BD</div><div style="min-width:0"><p class="name">Babyboy Dorian</p><p class="state quiet">Quiet</p></div></div>
+          <div class="what"><div class="cv none">+</div><div style="min-width:0"><p class="k">Nothing planned</p><p class="link" style="font-size:13px">Start the next record</p></div></div>
+          <div class="when"></div>
+          <div class="work"></div>
+          <span class="chev"></span>
+        </div>
+
+        <div class="add"><i>+</i> Add an artist</div>
+      </div>
+
+      
+      <p style="text-align:center;margin-top:8px"><span class="btn ghost">Customise Home</span></p>
+    </div>
+  </div>
+<div class="notes"><div class="note"><b>1</b><p><strong>The chat card is one calm, flat green.</strong> The woven grain and the glow are gone. It is a softer green than before, so it sits on the cream page without shouting, and still stands apart on the dark page.</p></div><div class="note"><b>2</b><p><strong>The box now speaks to what worries people.</strong> "What is slipping? Who is waiting on you? What comes next? Just ask." It is general, but it names the three things every manager checks.</p></div><div class="note"><b>3</b><p><strong>The top tab says "Ask Chappi".</strong> Everywhere else that said Assistant now says chat.</p></div><div class="note"><b>4</b><p><strong>One family of round corners.</strong> Big cards 32 and 28, panels inside them 24, rows 16, covers 12 to 14. Buttons, chips and the "Out now" strip are full pills.</p></div><div class="note"><b>5</b><p><strong>No diamonds, no dots, no "Rolling out".</strong> Only an artist with nothing planned gets a word: Quiet.</p></div><div class="note"><b>6</b><p><strong>No late counts.</strong> The "34 late" chips are gone from Next drop, the artists list, the team and the card headers. A late task still shows its own date in red, once, on its row.</p></div><div class="note"><b>7</b><p><strong>Plainer cards.</strong> No tilted covers, no red washes, no dark table header, no mono type. One line per fact.</p></div></div>
+  <div class="label">Dark</div>
+  <div class="desk dark">
+    <div class="bar">
+      <div class="logo">Urganize <span class="beta">BETA</span></div>
+      <div class="tabs"><span class="on">Home</span><span>Ask Chappi</span></div>
+      <div class="icons"><i></i><b>OY</b></div>
+    </div>
+    <div class="page">
+      <div class="ask"><div class="glow"></div><div class="askl">
+        <p class="hello">Sunday evening</p><h2>Good evening, Oyin.<br><em>What is on your mind?</em></h2>
+        <div class="box">
+          <p class="ph">What is slipping? Who is waiting on you? What comes next? Just ask.<span class="caret"></span></p>
+          <div class="tools"><span class="ic">+</span><span class="pick">About: Everything <i></i></span><span class="hint">Enter to send</span><span class="send">&uarr;</span></div>
+        </div>
+        <div class="sugs"><span class="sg">What is late on Blue Season?</span><span class="sg">What should I do today?</span><span class="sg">Plan the next record for Ayo Kanmi</span><span class="sg">Write a status update for Zainab</span></div></div><div class="next">
+          <p class="eb">Next drop</p>
+          <div class="nrow"><div class="cover"><span>Blue<br>Season</span></div>
+            <div><p class="nt">Blue Season</p><p class="nb">Zainab Oyelaran &middot; EP</p></div></div>
+          <div class="count"><b>8</b><span>days to go<br>Wed 18 Nov</span></div>
+          <div class="prog"><i></i></div>
+          <p class="nm">30 of 86 done</p>
+          <span class="open">Open rollout &rarr;</span>
+        </div></div>
+
+
+      <div class="out">
+        <div class="cv"><span>Bless<br>ings</span></div>
+        <span class="pill">Out now</span>
+        <p class="grow"><b>Blessings</b> <span class="sec">by Ayo Kanmi. Looking for it on streaming. This can take a few hours.</span></p>
+        <span class="link">Type the code yourself</span>
+        <span class="x">×</span>
+      </div>
+
+      <div class="tasks">
+        <div class="tcard">
+          <div class="thead"><div class="hl"><b class="big">7</b><div><h3>My tasks</h3><p class="hs">open across 2 rollouts</p></div></div><div class="chips"><span class="more">See all &rarr;</span></div></div>
+          <div class="trow"><i class="ck"></i><div class="tt"><p class="t">Confirm the EP tracklist</p><p class="k">Blue Season · Zainab Oyelaran</p></div><span class="due late">6 days late</span></div>
+          <div class="trow"><i class="ck"></i><div class="tt"><p class="t">Approve the cover art</p><p class="k">Blue Season · Zainab Oyelaran</p></div><span class="due late">2 days late</span></div>
+          <div class="trow"><i class="ck"></i><div class="tt"><p class="t">Send the pre-save reminder</p><p class="k">Blue Season · Zainab Oyelaran</p></div><span class="due">Today</span></div>
+          <div class="trow"><i class="ck"></i><div class="tt"><p class="t">Book the video shoot</p><p class="k">Night Bus · Ayo Kanmi</p></div><span class="due">Thu 12 Nov</span></div>
+          <div class="trow"><i class="ck"></i><div class="tt"><p class="t">Write the press release</p><p class="k">Night Bus · Ayo Kanmi</p></div><span class="due">Mon 16 Nov</span></div>
+        </div>
+        <div class="tcard">
+          <div class="thead"><div class="hl"><b class="big">5</b><div><h3>Delegated</h3><p class="hs">with 3 people</p></div></div><div class="chips"><span class="more">See all &rarr;</span></div></div>
+          <div class="trow"><i class="face sm">CH</i><div class="tt"><p class="t">Upload the final master</p><p class="k">Chidera · Blue Season</p></div><span class="due late">3 days late</span></div>
+          <div class="trow"><i class="face sm">CH</i><div class="tt"><p class="t">Confirm the lead single playlist list</p><p class="k">Chidera · Blue Season</p></div><span class="due">Tomorrow</span></div>
+          <div class="trow"><i class="face sm">ZO</i><div class="tt"><p class="t">Record the countdown video</p><p class="k">Zainab Oyelaran · Blue Season</p></div><span class="due">Fri 13 Nov</span></div>
+          <div class="trow"><i class="face sm">AK</i><div class="tt"><p class="t">Send the artist bio</p><p class="k">Ayo Kanmi · Night Bus</p></div><span class="due">Mon 16 Nov</span></div>
+          <div class="trow done"><i class="face sm tick">&#10003;</i><div class="tt"><p class="t">Set the genre and lyrics</p><p class="k">Chidera · Blue Season</p></div><span class="due ok">Done today</span></div>
+        </div>
+      </div>
+<div class="lhead">
+        <h3>Your team <span class="cnt">4 people</span></h3>
+        <span class="more">Open team &rarr;</span>
+      </div>
+      <div class="team">
+        <div class="person"><div class="face">OY</div><div class="pt"><p class="t">Oyin <span class="you">You</span></p><p class="k">Owner</p><p class="c">7 open</p></div></div>
+        <div class="person"><div class="face">CH</div><div class="pt"><p class="t">Chidera</p><p class="k">Manager</p><p class="c">3 open</p></div></div>
+        <div class="person"><div class="face">ZO</div><div class="pt"><p class="t">Zainab Oyelaran</p><p class="k">Artist</p><p class="c">1 open</p></div></div>
+        <div class="person"><div class="face">AK</div><div class="pt"><p class="t">Ayo Kanmi</p><p class="k">Artist</p><p class="c">1 open</p></div></div>
+        <div class="person invite"><div class="face dash">+</div><div class="pt"><p class="t">Invite someone</p><p class="k">6 seats left</p></div></div>
+      </div>
+
+      <div class="lhead">
+        <h3>Your artists <span class="cnt">6</span></h3>
+        <span class="btn ghost">+ Add artist</span>
+      </div>
+
+      <div class="list">
+        <div class="row th"><span>Artist</span><span>Next rollout</span><span>Drops</span><span>Tasks</span><span></span></div>
+
+        <div class="row">
+          <div class="who"><div class="face">ZO</div><div style="min-width:0"><p class="name">Zainab Oyelaran</p></div></div>
+          <div class="what"><div class="cv" style="background:#5b2a86"></div><div style="min-width:0"><p class="t">Blue Season</p><p class="k">EP</p></div></div>
+          <div class="when"><b class="dn">8</b><p class="d">days &middot; Wed 18 Nov</p></div>
+          <div class="work"><div class="bar2"><i style="width:35%"></i></div><p class="n"><span>2 due</span></p></div>
+          <span class="chev"></span>
+        </div>
+
+        <div class="row">
+          <div class="who"><div class="face">AK</div><div style="min-width:0"><p class="name">Ayo Kanmi</p></div></div>
+          <div class="what"><div class="cv" style="background:#1f3a8a"></div><div style="min-width:0"><p class="t">Night Bus</p><p class="k">Single</p></div></div>
+          <div class="when"><b class="dn">22</b><p class="d">days &middot; Wed 2 Dec</p></div>
+          <div class="work"><div class="bar2"><i style="width:8%"></i></div><p class="n"><span>5 due</span></p></div>
+          <span class="chev"></span>
+        </div>
+
+        <div class="row">
+          <div class="who"><div class="face">V</div><div style="min-width:0"><p class="name">Victory</p></div></div>
+          <div class="what"><div class="cv" style="background:var(--tile)"></div><div style="min-width:0"><p class="t">Midnight Drive</p><p class="k">Single</p></div></div>
+          <div class="when"><b class="dn">24</b><p class="d">days &middot; Fri 4 Dec</p></div>
+          <div class="work"></div>
+          <span class="chev"></span>
+        </div>
+
+        <div class="row">
+          <div class="who"><div class="face">TH</div><div style="min-width:0"><p class="name">The Harbour Lights</p></div></div>
+          <div class="what"><div class="cv" style="background:#8a4a1f"></div><div style="min-width:0"><p class="t">Salt and Signal</p><p class="k">Album</p></div></div>
+          <div class="when"><b class="dn">57</b><p class="d">days &middot; Wed 6 Jan</p></div>
+          <div class="work"><div class="bar2"><i style="width:6%"></i></div><p class="n"><span>5 due</span></p></div>
+          <span class="chev"></span>
+        </div>
+
+        <div class="row">
+          <div class="who"><div class="face">L</div><div style="min-width:0"><p class="name">Luckydidthis</p></div></div>
+          <div class="what"><div class="cv" style="background:var(--tile)"></div><div style="min-width:0"><p class="t">Untitled rollout</p><p class="k">Single</p></div></div>
+          <div class="when"><p class="n">No date yet</p></div>
+          <div class="work"></div>
+          <span class="chev"></span>
+        </div>
+
+        <div class="row">
+          <div class="who"><div class="face">BD</div><div style="min-width:0"><p class="name">Babyboy Dorian</p><p class="state quiet">Quiet</p></div></div>
+          <div class="what"><div class="cv none">+</div><div style="min-width:0"><p class="k">Nothing planned</p><p class="link" style="font-size:13px">Start the next record</p></div></div>
+          <div class="when"></div>
+          <div class="work"></div>
+          <span class="chev"></span>
+        </div>
+
+        <div class="add"><i>+</i> Add an artist</div>
+      </div>
+
+      
+      <p style="text-align:center;margin-top:8px"><span class="btn ghost">Customise Home</span></p>
+    </div>
+  </div>
+
+</div></body></html>
