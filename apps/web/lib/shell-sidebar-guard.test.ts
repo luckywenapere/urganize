@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 const WEB = join(__dirname, '..');
 const strip = (text: string) =>
   text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
-const read = (...parts: string[]) => strip(readFileSync(join(WEB, ...parts), 'utf8'));
+const read = (...parts: string[]) => strip(readFileSync(join(WEB, ...parts), 'utf8').replace(/\r\n/g, '\n'));
 
 describe('the top bar', () => {
   const nav = read('components', 'shell', 'TopNav.tsx');
@@ -22,7 +22,8 @@ describe('the top bar', () => {
     expect(nav).toContain('lg:grid-cols-[1fr_auto_1fr]');
     expect(nav).toContain('useShellAreas()');
     expect(nav).toContain('areas.map(');
-    expect(nav).toContain("onClick={area.key === 'catalogue' ? leaveReleaseForCatalog : undefined}");
+    // Catalogue leaves the release, and first saves Customise Home if it is open (#1254).
+    expect(nav).toMatch(/onClick=\{\s*area\.key === 'catalogue'\s*\?\s*\(event\) => \{\s*leaveReleaseForCatalog\(\);\s*pressHome\(event\);\s*\}\s*:\s*undefined\s*\}/);
     expect(nav).not.toContain('useHomeChatStore');
     expect(nav).toContain("aria-current={isActive ? 'page' : undefined}");
     expect(nav).toContain("data-tour={area.key === 'catalogue' ? 'nav-catalog' : `shell-${area.key}`}");

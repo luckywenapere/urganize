@@ -10,7 +10,7 @@
  * preview is hidden from screen readers.
  */
 
-import { Check, Plus } from 'lucide-react';
+import { Check, Plus } from '@/components/icons';
 
 import { isPlannerV2Enabled } from '@/lib/planner-v2/answers';
 import { relativeWhenLabel } from '@/lib/planner-v2/when';

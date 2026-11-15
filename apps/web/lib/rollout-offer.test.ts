@@ -61,7 +61,7 @@ it('uses the approved words', () => {
 // the source, the way the other guard tests do.
 describe('no lock, offers only (wiring)', () => {
   const root = process.cwd();
-  const read = (file: string) => readFileSync(join(root, file), 'utf8');
+  const read = (file: string) => readFileSync(join(root, file), 'utf8').replace(/\r\n/g, '\n');
 
   it('the first-rollout lock is gone', () => {
     expect(existsSync(join(root, 'components/releases/FirstReleaseFocus.tsx'))).toBe(false);

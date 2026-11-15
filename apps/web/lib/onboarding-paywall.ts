@@ -92,9 +92,9 @@ export const PAYWALL_TESTIMONIALS = {
   },
   antoine: {
     quote:
-      'I manage myself, so every dropped ball is mine. The first time I created a release, the whole rollout was already laid out, week by week, activity by activity. I stopped planning from memory.',
+      'I manage myself, so every dropped ball is mine. The first time I created a release, the whole rollout was already laid out, week by week, task by task. I stopped planning from memory.',
     name: 'Antoine',
-    role: 'Artist Manager, Creative Business Academy alum',
+    role: 'Artist bringing his roster onto Urganize, Creative Business Academy alum',
   },
   adenaiye: {
     quote:

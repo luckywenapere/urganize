@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 // is node-only, so these hold the rules at the source: both pages start their
 // list with the same spacer and nothing else, and the tab row draws its own
 // action in the first frame.
-const read = (path: string) => readFileSync(join(__dirname, '..', path), 'utf8');
+const read = (path: string) => readFileSync(join(__dirname, '..', path), 'utf8').replace(/\r\n/g, '\n');
 const artists = read('app/dashboard/artists/ArtistsPageClient.tsx');
 const catalogue = read('components/workspace/CatalogueView.tsx');
 const view = read('components/workspace/WorkspaceView.tsx');

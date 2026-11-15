@@ -10,16 +10,20 @@ describe('links refused on purpose are marked for the stall watchdog', () => {
   // lock and its link catching were removed; see lib/rollout-offer.ts.)
 
   // 2026-10-26: the Home and UrgAns pills are plain links between two views
-  // (Home, and the sessions layout at /dashboard/urgans), so no click of theirs
-  // is refused and nothing needs marking.
-  it('the top bar pills are plain links that refuse no click', () => {
-    const src = readFileSync(join(__dirname, '../components/shell/TopNav.tsx'), 'utf8');
-    expect(src).not.toContain('markNavigationBlocked');
-    expect(src).not.toContain('preventDefault');
+  // (Home, and the sessions layout at /dashboard/urgans). Since #1254 one click
+  // IS refused on purpose: pressing Home while Customise Home is open saves the
+  // layout instead of following the link. That refusal must be marked.
+  it('the top bar refuses a click only when it also marks it for the watchdog', () => {
+    const src = readFileSync(join(__dirname, '../components/shell/TopNav.tsx'), 'utf8').replace(/\r\n/g, '\n');
+    const refusals = src.match(/preventDefault\(\)/g) ?? [];
+    const marks = src.match(/markNavigationBlocked\(event\.nativeEvent\)/g) ?? [];
+    expect(refusals.length).toBe(1);
+    expect(marks.length).toBe(refusals.length);
+    expect(src).toMatch(/event\.preventDefault\(\);\s*markNavigationBlocked\(event\.nativeEvent\);/);
   });
 
   it('the watchdog waits for the click to finish dispatching before it watches', () => {
-    const src = readFileSync(join(__dirname, 'nav-stall-watch.ts'), 'utf8');
+    const src = readFileSync(join(__dirname, 'nav-stall-watch.ts'), 'utf8').replace(/\r\n/g, '\n');
     expect(src).toMatch(/if \(blockedClicks\.has\(event\)\) return;/);
   });
 });

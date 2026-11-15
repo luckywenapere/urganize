@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 const ROOT = join(__dirname, '..');
 const strip = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
-const read = (path: string) => strip(readFileSync(join(ROOT, path), 'utf8'));
+const read = (path: string) => strip(readFileSync(join(ROOT, path), 'utf8').replace(/\r\n/g, '\n'));
 
 function walk(dir: string, found: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -78,7 +78,7 @@ describe('the invite record', () => {
 });
 
 describe('the migration', () => {
-  const sql = readFileSync(join(ROOT, '..', '..', 'supabase', 'migrations', '20261011210000_directory_invites.sql'), 'utf8');
+  const sql = readFileSync(join(ROOT, '..', '..', 'supabase', 'migrations', '20261011210000_directory_invites.sql'), 'utf8').replace(/\r\n/g, '\n');
   it('turns row level security on and writes no policy', () => {
     expect(sql).toMatch(/alter table public\.directory_invites enable row level security/);
     expect(sql).not.toMatch(/create policy/i);

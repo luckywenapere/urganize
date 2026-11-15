@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 // Rollout page, just-planned state (Oct 17, 2026; founder approved the mocks).
 // Every cut is a hide: the components and their data stay, only where they
 // render changes. vitest here is node-only, so this holds the rules at the source.
-const read = (path: string) => readFileSync(join(__dirname, '..', path), 'utf8');
+const read = (path: string) => readFileSync(join(__dirname, '..', path), 'utf8').replace(/\r\n/g, '\n');
 const view = read('components/workspace/WorkspaceView.tsx');
 const timeline = read('components/releases/TimelineScene.tsx');
 const phases = read('components/workspace/RolloutPhases.tsx');
