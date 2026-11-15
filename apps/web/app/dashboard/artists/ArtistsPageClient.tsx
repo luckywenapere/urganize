@@ -113,6 +113,9 @@ export default function ArtistsPageClient({
   if (swipe) {
     return (
       <>
+        {/* The person's wallpaper on a phone too (#1318), only while Home is
+            the tab on screen: the pager keeps every tab mounted. */}
+        {active ? <HomeWallpaperLayer /> : null}
         <SwipeArtists loading={loading} list={list} />
         {opened ? <DuplicateArtistsPrompt /> : null}
         {opened ? <StreamingLinkPrompt /> : null}
@@ -125,7 +128,7 @@ export default function ArtistsPageClient({
       <div>
         <DuplicateArtistsPrompt />
         <StreamingLinkPrompt />
-        {/* The person's wallpaper, from the first paint (#1305). Computers only. */}
+        {/* The person's wallpaper, from the first paint (#1305). */}
         <HomeWallpaperLayer />
         <div className="pt-5 sm:pt-6" />
         {loading || !commandCenterSettled ? (

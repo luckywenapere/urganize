@@ -1,4 +1,4 @@
-// The wallpaper behind Home on a computer (#1305, part of #1175; founder
+// The wallpaper behind Home (#1305, on phones too since #1318; part of #1175; founder
 // approved docs/mocks/home-wallpaper): None, Forest or Night sky, saved on the
 // person's own profiles row (home_wallpaper, home_wallpaper_set_at) so it
 // follows them to any computer. The pure half, tested.
@@ -9,7 +9,7 @@ export type HomeWallpaper = (typeof HOME_WALLPAPERS)[number];
 export const HOME_WALLPAPER_COPY = {
   title: 'Wallpaper',
   about: 'Pick what sits behind Home.',
-  settingsAbout: 'Pick what sits behind Home on a computer. It is saved to your account.',
+  settingsAbout: 'Pick what sits behind Home. It is saved to your account, so it follows you to your phone and computer.',
   button: 'Wallpaper',
   badge: 'New',
   failed: 'We could not save your wallpaper. Check your connection and try again.',

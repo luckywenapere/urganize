@@ -8,9 +8,10 @@
 // the device) and follows them to any computer.
 //
 // Three pieces:
-//  - HomeWallpaperLayer: mounted by Home on a computer only. It marks <html>
+//  - HomeWallpaperLayer: mounted by Home, on a computer and on a phone (#1318,
+//    only while Home is the pager's tab on screen). It marks <html>
 //    with data-home-wallpaper, and globals.css draws the picture, the dimming
-//    layer and the light text from that mark. Phones never mount it.
+//    layer and the light text from that mark.
 //  - HomeWallpaperChoice: the three options as real radio buttons, used in the
 //    top bar's popover, in Customise Home and in Settings.
 //  - HomeWallpaperButton: the small button in the top bar with a "New" badge.

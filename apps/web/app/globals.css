@@ -3865,139 +3865,149 @@ html[data-plan-menu='folded'] #subnav-slot-end {
 }
 
 /* The wallpaper. HomeWallpaper.tsx sets html[data-home-wallpaper] while Home
-   on a computer is on screen (never on a phone, never on another page). The
-   picture sits behind the top of the page, under a dimming layer, and the shell
-   on top of it reads in the dark theme's colours in either theme, because
-   both pictures are dark. Dialogs and sheets that open over Home are drawn
-   outside the shell frame, so they keep the person's own theme. */
-@media (min-width: 1024px) {
-  html[data-home-wallpaper] {
-    background-color: #06090a;
-  }
-  html[data-home-wallpaper] body {
-    background: transparent;
-  }
-  /* Not fixed (founder, 2026-11-15): the picture sits at the top of the page
-     and scrolls away with it. It covers the first screen and a bit more, then
-     fades into the dark ground the rest of the page sits on. */
-  html[data-home-wallpaper] {
-    position: relative;
-  }
-  html[data-home-wallpaper]::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: max(120vh, 62vw);
-    z-index: -1;
-    background-size: cover;
-    background-position: center top;
-    background-repeat: no-repeat;
-    -webkit-mask-image: linear-gradient(#000 62%, transparent);
-    mask-image: linear-gradient(#000 62%, transparent);
-  }
-  html[data-home-wallpaper='forest']::before {
-    background-image: linear-gradient(rgba(6, 12, 8, 0.34), rgba(6, 12, 8, 0.5)), url('/images/wallpapers/forest.webp');
-  }
-  html[data-home-wallpaper='night-sky']::before {
-    background-image: linear-gradient(rgba(2, 4, 10, 0.36), rgba(2, 4, 10, 0.52)), url('/images/wallpapers/night-sky.webp');
-  }
+   is on screen, on a computer and on a phone (phones since 2026-11-15, #1318;
+   never on another page). The picture sits behind the top of the page, under a
+   dimming layer, and the shell on top of it reads in the dark theme's colours
+   in either theme, because both pictures are dark. On a computer the shell is
+   .app-shell-frame; on a phone it is the swipe pager, .swipe-frame. Dialogs and
+   sheets that open over Home are drawn outside both, so they keep the person's
+   own theme. */
+html[data-home-wallpaper] {
+  background-color: #06090a;
+}
+html[data-home-wallpaper] body {
+  background: transparent;
+}
+/* Not fixed (founder, 2026-11-15): the picture sits at the top of the page
+   and scrolls away with it. It covers the first screen and a bit more, then
+   fades into the dark ground the rest of the page sits on. */
+html[data-home-wallpaper] {
+  position: relative;
+}
+html[data-home-wallpaper]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: max(120vh, 62vw);
+  z-index: -1;
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  -webkit-mask-image: linear-gradient(#000 62%, transparent);
+  mask-image: linear-gradient(#000 62%, transparent);
+}
+html[data-home-wallpaper='forest']::before {
+  background-image: linear-gradient(rgba(6, 12, 8, 0.34), rgba(6, 12, 8, 0.5)), url('/images/wallpapers/forest.webp');
+}
+html[data-home-wallpaper='night-sky']::before {
+  background-image: linear-gradient(rgba(2, 4, 10, 0.36), rgba(2, 4, 10, 0.52)), url('/images/wallpapers/night-sky.webp');
+}
 
-  html[data-home-wallpaper] .app-shell-frame {
-    color-scheme: dark;
-    --color-bg-base: 12 12 13;
-    --color-bg-sidebar: 17 17 19;
-    --color-bg-sidebar-active: 44 46 46;
-    --color-bg-surface: 23 23 25;
-    --color-bg-elevated: 27 27 30;
-    --color-bg-overlay: 20 20 22;
-    --color-bg-hover: 58 61 60;
-    --color-bg-active: 58 61 60;
-    --color-brand: 127 217 154;
-    --color-brand-hover: 146 224 170;
-    --color-text-primary: 245 240 230;
-    /* Lighter than the dark theme's own greys: they sit on a picture. */
-    --color-text-secondary: 214 211 203;
-    --color-text-tertiary: 184 186 178;
-    --color-text-quaternary: 62 62 64;
-    --color-text-inverse: 12 12 13;
-    --color-stroke: 245 240 230;
-    --color-stroke-control: 160 162 156;
-    --color-status-success: 74 159 106;
-    --color-status-warning: 240 185 92;
-    --color-status-error: 255 170 160;
-    --color-status-info: 120 169 255;
-    --color-skeleton-base: 27 27 30;
-    --color-skeleton-highlight: 40 40 44;
-    --bg-base: #0c0c0d;
-    --bg-sidebar: #111113;
-    --bg-sidebar-active: #2c2e2e;
-    --bg-surface: #171719;
-    --bg-elevated: #1b1b1e;
-    --bg-overlay: #141416;
-    --bg-hover: #3a3d3c;
-    --bg-active: #3a3d3c;
-    --brand-primary: #7fd99a;
-    --brand-primary-hover: #92e0aa;
-    --brand-primary-muted: rgba(127, 217, 154, 0.14);
-    --brand-primary-subtle: rgba(127, 217, 154, 0.08);
-    --text-primary: #f5f0e6;
-    --text-secondary: rgb(var(--color-text-secondary));
-    --text-tertiary: rgb(var(--color-text-tertiary));
-    --text-quaternary: #3e3e40;
-    --text-inverse: #0c0c0d;
-    --border-subtle: rgba(245, 240, 230, 0.06);
-    --border-default: rgba(245, 240, 230, 0.12);
-    --border-strong: rgba(245, 240, 230, 0.18);
-    --border-control: rgb(var(--color-stroke-control));
-    --border-focus: #7fd99a;
-    --status-success: #4a9f6a;
-    --status-warning: #f0b95c;
-    --status-error: #ffaaa0;
-    --status-info: #78a9ff;
-    --background: var(--color-bg-base);
-    --foreground: var(--color-text-primary);
-    --card: var(--color-bg-surface);
-    --card-foreground: var(--color-text-primary);
-    --popover: var(--color-bg-elevated);
-    --popover-foreground: var(--color-text-primary);
-    --primary: var(--color-brand);
-    --primary-foreground: var(--color-text-inverse);
-    --secondary: var(--color-bg-hover);
-    --secondary-foreground: var(--color-text-primary);
-    --muted: var(--color-bg-hover);
-    --muted-foreground: var(--color-text-secondary);
-    --accent: var(--color-bg-hover);
-    --accent-foreground: var(--color-text-primary);
-    --destructive: var(--color-status-error);
-    --destructive-foreground: var(--color-text-inverse);
-    --border: var(--border-default);
-    --input: var(--color-stroke-control);
-    --ring: var(--color-brand);
-    --home-line: rgba(245, 240, 230, 0.14);
-    --home-line-strong: rgba(245, 240, 230, 0.26);
-    color: rgb(var(--color-text-primary));
-  }
+html[data-home-wallpaper] .app-shell-frame,
+html[data-home-wallpaper] .swipe-frame {
+  color-scheme: dark;
+  --color-bg-base: 12 12 13;
+  --color-bg-sidebar: 17 17 19;
+  --color-bg-sidebar-active: 44 46 46;
+  --color-bg-surface: 23 23 25;
+  --color-bg-elevated: 27 27 30;
+  --color-bg-overlay: 20 20 22;
+  --color-bg-hover: 58 61 60;
+  --color-bg-active: 58 61 60;
+  --color-brand: 127 217 154;
+  --color-brand-hover: 146 224 170;
+  --color-text-primary: 245 240 230;
+  /* Lighter than the dark theme's own greys: they sit on a picture. */
+  --color-text-secondary: 214 211 203;
+  --color-text-tertiary: 184 186 178;
+  --color-text-quaternary: 62 62 64;
+  --color-text-inverse: 12 12 13;
+  --color-stroke: 245 240 230;
+  --color-stroke-control: 160 162 156;
+  --color-status-success: 74 159 106;
+  --color-status-warning: 240 185 92;
+  --color-status-error: 255 170 160;
+  --color-status-info: 120 169 255;
+  --color-skeleton-base: 27 27 30;
+  --color-skeleton-highlight: 40 40 44;
+  --bg-base: #0c0c0d;
+  --bg-sidebar: #111113;
+  --bg-sidebar-active: #2c2e2e;
+  --bg-surface: #171719;
+  --bg-elevated: #1b1b1e;
+  --bg-overlay: #141416;
+  --bg-hover: #3a3d3c;
+  --bg-active: #3a3d3c;
+  --brand-primary: #7fd99a;
+  --brand-primary-hover: #92e0aa;
+  --brand-primary-muted: rgba(127, 217, 154, 0.14);
+  --brand-primary-subtle: rgba(127, 217, 154, 0.08);
+  --text-primary: #f5f0e6;
+  --text-secondary: rgb(var(--color-text-secondary));
+  --text-tertiary: rgb(var(--color-text-tertiary));
+  --text-quaternary: #3e3e40;
+  --text-inverse: #0c0c0d;
+  --border-subtle: rgba(245, 240, 230, 0.06);
+  --border-default: rgba(245, 240, 230, 0.12);
+  --border-strong: rgba(245, 240, 230, 0.18);
+  --border-control: rgb(var(--color-stroke-control));
+  --border-focus: #7fd99a;
+  --status-success: #4a9f6a;
+  --status-warning: #f0b95c;
+  --status-error: #ffaaa0;
+  --status-info: #78a9ff;
+  --background: var(--color-bg-base);
+  --foreground: var(--color-text-primary);
+  --card: var(--color-bg-surface);
+  --card-foreground: var(--color-text-primary);
+  --popover: var(--color-bg-elevated);
+  --popover-foreground: var(--color-text-primary);
+  --primary: var(--color-brand);
+  --primary-foreground: var(--color-text-inverse);
+  --secondary: var(--color-bg-hover);
+  --secondary-foreground: var(--color-text-primary);
+  --muted: var(--color-bg-hover);
+  --muted-foreground: var(--color-text-secondary);
+  --accent: var(--color-bg-hover);
+  --accent-foreground: var(--color-text-primary);
+  --destructive: var(--color-status-error);
+  --destructive-foreground: var(--color-text-inverse);
+  --border: var(--border-default);
+  --input: var(--color-stroke-control);
+  --ring: var(--color-brand);
+  --home-line: rgba(245, 240, 230, 0.14);
+  --home-line-strong: rgba(245, 240, 230, 0.26);
+  color: rgb(var(--color-text-primary));
+}
 
-  /* The top bar lets the picture through, softly blurred, so the page can
-     scroll under it and its words stay readable. */
-  html[data-home-wallpaper] .shell-band::before,
-  html[data-home-wallpaper] .shell-band-sub::before {
-    background-color: rgba(6, 9, 10, 0.34);
-    background-image: none;
-    -webkit-backdrop-filter: blur(18px);
-    backdrop-filter: blur(18px);
-  }
-  /* The white wordmark is right on a dark picture, whatever the theme. */
-  html[data-home-wallpaper] .app-shell-frame .app-wordmark,
-  html[data-home-wallpaper] .app-shell-frame .app-mark-invert {
-    filter: none;
-  }
-  /* The chat box: a see-through dark fill over the picture. */
-  html[data-home-wallpaper] [data-home-chat-box] {
-    background-color: rgba(13, 18, 14, 0.5);
-    -webkit-backdrop-filter: blur(14px);
-    backdrop-filter: blur(14px);
-  }
+/* The top bar lets the picture through, softly blurred, so the page can
+   scroll under it and its words stay readable. */
+html[data-home-wallpaper] .shell-band::before,
+html[data-home-wallpaper] .shell-band-sub::before,
+html[data-home-wallpaper] .swipe-topbar {
+  background-color: rgba(6, 9, 10, 0.34);
+  background-image: none;
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+/* The white wordmark is right on a dark picture, whatever the theme. */
+html[data-home-wallpaper] .app-shell-frame .app-wordmark,
+html[data-home-wallpaper] .app-shell-frame .app-mark-invert,
+html[data-home-wallpaper] .swipe-frame .app-wordmark,
+html[data-home-wallpaper] .swipe-frame .app-mark-invert {
+  filter: none;
+}
+/* The chat box: a see-through dark fill over the picture. */
+html[data-home-wallpaper] [data-home-chat-box] {
+  background-color: rgba(13, 18, 14, 0.5);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+/* On a phone the pager paints its own ground; with a wallpaper it lets the
+   picture through, the way the page does on a computer. */
+html[data-home-wallpaper] .swipe-frame {
+  background: transparent;
 }
