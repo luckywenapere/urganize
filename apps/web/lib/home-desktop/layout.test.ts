@@ -11,9 +11,15 @@ import {
 } from './layout';
 
 describe('the default Home', () => {
-  it('shows six blocks and keeps the ask box in "Add to Home"', () => {
-    expect(DEFAULT_HOME_LAYOUT.order).toEqual(['out_now', 'next_drop', 'my_tasks', 'delegated', 'team', 'artists']);
-    expect(DEFAULT_HOME_LAYOUT.removed).toEqual(['ask']);
+  it('shows six blocks, led by the chat card (#1295)', () => {
+    expect(DEFAULT_HOME_LAYOUT.order).toEqual(['next_drop', 'out_now', 'my_tasks', 'delegated', 'team', 'artists']);
+    expect(DEFAULT_HOME_LAYOUT.removed).toEqual([]);
+  });
+
+  it('drops the old ask box from a saved layout, keeping the rest in place', () => {
+    const layout = readLayout({ v: 1, order: ['team', 'ask', 'next_drop', 'artists'], removed: ['out_now', 'my_tasks', 'delegated'] });
+    expect(layout.order).toEqual(['team', 'next_drop', 'artists']);
+    expect(layout.removed).not.toContain('ask');
   });
 });
 
@@ -38,18 +44,18 @@ describe('readLayout (restore)', () => {
   });
 
   it('always keeps Artists on Home, even if a save removed it', () => {
-    const layout = readLayout({ v: 1, order: ['my_tasks'], removed: ['artists', 'out_now', 'next_drop', 'delegated', 'team', 'ask'] });
+    const layout = readLayout({ v: 1, order: ['my_tasks'], removed: ['artists', 'out_now', 'next_drop', 'delegated', 'team'] });
     expect(layout.order).toEqual(['my_tasks', 'artists']);
     expect(layout.removed).not.toContain('artists');
   });
 
   it('puts a block the save never heard of where the default has it', () => {
     // A save from before "team" existed: neither shown nor removed.
-    const layout = readLayout({ v: 1, order: ['artists', 'my_tasks'], removed: ['out_now', 'next_drop', 'delegated', 'ask'] });
+    const layout = readLayout({ v: 1, order: ['artists', 'my_tasks'], removed: ['out_now', 'next_drop', 'delegated'] });
     expect(layout.order).toContain('team');
     expect(layout.removed).not.toContain('team');
     expect([...layout.order, ...layout.removed].sort()).toEqual(
-      ['artists', 'ask', 'delegated', 'my_tasks', 'next_drop', 'out_now', 'team'].sort()
+      ['artists', 'delegated', 'my_tasks', 'next_drop', 'out_now', 'team'].sort()
     );
   });
 });
@@ -59,16 +65,17 @@ describe('editing', () => {
     expect(moveBlock(DEFAULT_HOME_LAYOUT, 'artists', 0).order[0]).toBe('artists');
     expect(moveBlock(DEFAULT_HOME_LAYOUT, 'out_now', 99).order.at(-1)).toBe('out_now');
     expect(moveBlock(DEFAULT_HOME_LAYOUT, 'out_now', -4).order[0]).toBe('out_now');
-    expect(moveBlock(DEFAULT_HOME_LAYOUT, 'ask', 0)).toEqual(DEFAULT_HOME_LAYOUT);
+    const noTeam = removeBlock(DEFAULT_HOME_LAYOUT, 'team');
+    expect(moveBlock(noTeam, 'team', 0)).toEqual(noTeam);
   });
 
   it('removes a block into "Add to Home" and adds it back at the end', () => {
     const removed = removeBlock(DEFAULT_HOME_LAYOUT, 'team');
     expect(removed.order).not.toContain('team');
-    expect(removed.removed).toEqual(['ask', 'team']);
+    expect(removed.removed).toEqual(['team']);
     const added = addBlock(removed, 'team');
     expect(added.order.at(-1)).toBe('team');
-    expect(added.removed).toEqual(['ask']);
+    expect(added.removed).toEqual([]);
   });
 
   it('never removes Artists', () => {
@@ -79,13 +86,13 @@ describe('editing', () => {
     const before = JSON.stringify(DEFAULT_HOME_LAYOUT);
     moveBlock(DEFAULT_HOME_LAYOUT, 'team', 0);
     removeBlock(DEFAULT_HOME_LAYOUT, 'team');
-    addBlock(DEFAULT_HOME_LAYOUT, 'ask');
+    addBlock(removeBlock(DEFAULT_HOME_LAYOUT, 'team'), 'team');
     expect(JSON.stringify(DEFAULT_HOME_LAYOUT)).toBe(before);
   });
 
   it('knows when a layout is the default again', () => {
     expect(isDefaultLayout(DEFAULT_HOME_LAYOUT)).toBe(true);
-    expect(isDefaultLayout(addBlock(removeBlock(DEFAULT_HOME_LAYOUT, 'artists'), 'ask'))).toBe(false);
+    expect(isDefaultLayout(addBlock(removeBlock(DEFAULT_HOME_LAYOUT, 'team'), 'team'))).toBe(false);
     expect(isDefaultLayout(readLayout(null))).toBe(true);
   });
 });
@@ -93,8 +100,8 @@ describe('editing', () => {
 describe('layoutRows', () => {
   it('sits the two task lists side by side when they are neighbours', () => {
     expect(layoutRows(DEFAULT_HOME_LAYOUT.order)).toEqual([
-      ['out_now'],
       ['next_drop'],
+      ['out_now'],
       ['my_tasks', 'delegated'],
       ['team'],
       ['artists'],
