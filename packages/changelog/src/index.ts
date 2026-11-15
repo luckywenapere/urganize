@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.286.1",
+    title: "Shorter headings on Home",
+    tag: "App",
+    date: "November 15, 2026",
+    highlights: [
+      "On Home, the headings now say Team and Artists.",
+    ],
+  },
+  {
     version: "1.286.0",
     title: "Pick a wallpaper for Home",
     tag: "App",

@@ -224,10 +224,10 @@ function ArtistsBlock({
 }) {
   const openAddArtist = useShellStore((state) => state.openAddArtist);
   return (
-    <section data-home-block="artists" aria-label="Your artists">
+    <section data-home-block="artists" aria-label="Artists">
       <div className={`flex items-center justify-between gap-4 border-b ${HOME_RULE} pb-2.5`}>
         <h2 className="font-display text-[22px] font-normal leading-7 text-content-primary">
-          Your artists
+          Artists
           <span className="ml-2 font-sans text-sm font-medium tabular-nums text-content-secondary">{rows.length}</span>
         </h2>
         <button type="button" onClick={() => openAddArtist()} className={GHOST}>
@@ -400,7 +400,7 @@ export function HomeDesktopSkeleton() {
       </div>
       <HomeTeamRowSkeleton />
       <div>
-        {/* Head: "Your artists n" (leading-7) and the Add artist pill (h-10). */}
+        {/* Head: "Artists n" (leading-7) and the Add artist pill (h-10). */}
         <div className={`flex items-center justify-between gap-4 border-b ${HOME_RULE} pb-2.5`}>
           {line('h-7', 'w-36', 'h-5')}
           <span className="h-10 w-28 animate-pulse rounded-full bg-bg-hover" />

@@ -28,7 +28,7 @@ export function HomeTeamHead({ count }: { count: number | null }) {
   return (
     <div className={`flex items-center justify-between gap-4 border-b ${HOME_RULE} pb-2.5`}>
       <h2 className="font-display text-[22px] font-normal leading-7 text-content-primary">
-        Your team
+        Team
         {count !== null ? (
           <span className="ml-2 font-sans text-sm font-medium text-content-secondary">
             {count === 1 ? '1 person' : `${count} people`}
@@ -68,7 +68,7 @@ export function HomeTeamRow({
   const more = people.length - shown.length;
 
   return (
-    <section data-home-block="team" aria-label="Your team">
+    <section data-home-block="team" aria-label="Team">
       <HomeTeamHead count={people.length} />
       <ul className="mt-3 grid grid-cols-5 gap-6 xl:gap-8">
         {shown.map((person) => (
