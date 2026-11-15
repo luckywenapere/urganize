@@ -1,6 +1,6 @@
 {
   "name": "@urganize/pricing",
-  "version": "1.285.2",
+  "version": "1.285.3",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",

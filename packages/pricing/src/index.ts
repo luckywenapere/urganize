@@ -1206,12 +1206,13 @@ export function formatTierFromPrice(
 
 /** Whole dollars a month. A tier missing here has no dollar price. */
 export const USD_MONTHLY_PRICE: Partial<Record<PricingTierId, number>> = {
-  solo: 9,
-  // Solo Plus in dollars (decided 2026-11-08): $19, the usual price step
-  // between Solo $9 and the first team plan at $29.
-  solo_plus: 19,
-  manager: 29,
-  pro: 79,
+  // Repriced 2026-11-15 (founder, #1306): $8 / $18 / $28 / $80, down from
+  // $9 / $19 / $29 / $79. Everywhere at once, including renewals for people
+  // already paying in dollars, so what a page shows is what a card is charged.
+  solo: 8,
+  solo_plus: 18,
+  manager: 28,
+  pro: 80,
 };
 
 /** Naira per dollar, for our own books only: every amount the app stores
@@ -1272,7 +1273,7 @@ export function getTierPriceIn(
   return currency === 'USD' ? getTierPriceUsd(id, interval) : getTierPrice(id, interval);
 }
 
-/** "₦15,000" or "$29". Whole units; a dollar amount with cents keeps them
+/** "₦15,000" or "$28". Whole units; a dollar amount with cents keeps them
  *  ("$1.50"). */
 export function formatMoney(amount: number, currency: PricingCurrencyCode): string {
   const whole = Number.isInteger(amount);

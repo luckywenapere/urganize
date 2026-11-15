@@ -111,7 +111,7 @@ export function periodAmount(
   return getChargePrice(plan, period, introMonthsLeft)?.amount ?? null;
 }
 
-/** "₦30,000" or "$29": an amount in the payer's currency. */
+/** "₦30,000" or "$28": an amount in the payer's currency. */
 export function formatPrice(amount: number, currency: PricingCurrencyCode = 'NGN'): string {
   return currency === 'USD' ? formatMoney(amount, 'USD') : formatNaira(amount);
 }
