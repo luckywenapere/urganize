@@ -67,6 +67,13 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.289.1",
+    date: "November 16, 2026",
+    highlights: [
+      "The task numbers on Home now update on their own when a task changes, even if Chappi or another device changed it.",
+    ],
+  },
+  {
     version: "1.289.0",
     title: "A picture behind every page",
     tag: "App",

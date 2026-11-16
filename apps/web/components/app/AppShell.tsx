@@ -10,7 +10,7 @@ import { ArtistNameGate } from '@/components/ArtistNameGate';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { installLinkStallWatchdog } from '@/lib/nav-stall-watch';
-import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
+import { TASKS_CHANGED_EVENT, TaskUIProvider } from '@/components/tasks/TaskUIProvider';
 import { NavigationTracker } from '@/components/app/NavigationTracker';
 import { AccountPhotoSync } from '@/components/shared/AccountPhoto';
 import { PresenceBeacon } from '@/components/app/PresenceBeacon';
@@ -312,6 +312,27 @@ export function AppShell({ children }: { children: ReactNode }) {
   // who also runs releases) carries a team role and gets the full app — it
   // reaches its inbox through the identity card's "Playlist pitches" entry.
   const isCuratorAccount = user?.role === 'curator';
+  // Counts on Home ("due this week", late, open) read the tasks store, which
+  // nothing re-read when Chappi or another device changed a task. Re-read
+  // quietly when the app says tasks changed, and when the tab comes back.
+  useEffect(() => {
+    if (!isAuthenticated || isCuratorAccount) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const soon = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => refreshCatalog({ force: true }), 700);
+    };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') soon();
+    };
+    window.addEventListener(TASKS_CHANGED_EVENT, soon);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener(TASKS_CHANGED_EVENT, soon);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [isAuthenticated, isCuratorAccount]);
   // Tri-state (null = the probe has not answered). Used only to decide whether
   // to warm the /curator crossing — see lib/prefetch-routes, which treats null
   // as "not yet" rather than "no".
