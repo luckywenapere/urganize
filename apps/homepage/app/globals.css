@@ -1071,6 +1071,43 @@ html[data-site-wallpaper] .page-dawn {
 html[data-site-wallpaper] .hero-sky-grain {
   display: none;
 }
+/* The home page's wallpaper stops above the app picture (founder, 2026-11-16,
+   reference: hark.com). On the home page the picture is drawn by the hero's
+   own .hero-wallpaper layer instead of the full-screen one: it covers the
+   headline and the buttons, then fades into the plain dark page ground just
+   above the app picture. The app picture sits on that plain ground, so it
+   stands apart from the wallpaper and from the rest of the site. Other pages
+   keep the full picture. The app picture itself is not touched. */
+html[data-site-wallpaper="forest"] {
+  --site-wallpaper-image: linear-gradient(rgba(6, 12, 8, 0.42), rgba(6, 12, 8, 0.58)), url("/images/wallpapers/forest.webp");
+}
+html[data-site-wallpaper="night-sky"] {
+  --site-wallpaper-image: linear-gradient(rgba(2, 4, 10, 0.36), rgba(2, 4, 10, 0.52)), url("/images/wallpapers/night-sky.webp");
+}
+html[data-site-wallpaper]:has(.hero-wallpaper)::before {
+  display: none;
+}
+.hero-wallpaper {
+  display: none;
+}
+html[data-site-wallpaper] .hero-wallpaper {
+  display: block;
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  top: -7rem;
+  bottom: -4rem;
+  pointer-events: none;
+  background-image: var(--site-wallpaper-image);
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  -webkit-mask-image: linear-gradient(#000 0%, #000 50%, transparent 100%);
+  mask-image: linear-gradient(#000 0%, #000 50%, transparent 100%);
+}
+
 /* The fixed header: the picture shows through it, softly blurred. */
 html[data-site-wallpaper] header.fixed {
   background-color: rgba(6, 9, 10, 0.34);

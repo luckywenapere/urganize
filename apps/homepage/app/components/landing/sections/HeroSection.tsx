@@ -62,6 +62,8 @@ export function HeroSection() {
         id="waitlist"
         className="relative mx-auto flex max-w-[60rem] scroll-mt-28 flex-col items-center text-center"
       >
+        {/* The wallpaper stops here, above the app picture (see globals.css). */}
+        <div aria-hidden className="hero-wallpaper" />
         <HeroCards />
         {/* THE COFRAME HEADLINE (founder, 2026-11-12, #1224: accept every
             Coframe recommendation). The headline names the job, the line
