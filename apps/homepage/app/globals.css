@@ -1030,12 +1030,15 @@ html[data-site-wallpaper] body {
 }
 html[data-site-wallpaper]::before {
   content: "";
-  position: fixed;
+  /* Every page: the picture covers the top of the page and fades into the
+     plain dark ground, then scrolls away with the page (founder, 2026-11-16). */
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 100vh;
-  height: 100lvh;
+  height: max(100lvh, 640px);
+  -webkit-mask-image: linear-gradient(#000 0%, #000 45%, transparent 100%);
+  mask-image: linear-gradient(#000 0%, #000 45%, transparent 100%);
   z-index: -1;
   pointer-events: none;
   background-color: #06090a;
@@ -1076,8 +1079,8 @@ html[data-site-wallpaper] .hero-sky-grain {
    own .hero-wallpaper layer instead of the full-screen one: it covers the
    headline and the buttons, then fades into the plain dark page ground just
    above the app picture. The app picture sits on that plain ground, so it
-   stands apart from the wallpaper and from the rest of the site. Other pages
-   keep the full picture. The app picture itself is not touched. */
+   stands apart from the wallpaper and from the rest of the site. Every other page
+   gets the same fade at its top. The app picture itself is not touched. */
 html[data-site-wallpaper="forest"] {
   --site-wallpaper-image: linear-gradient(rgba(6, 12, 8, 0.42), rgba(6, 12, 8, 0.58)), url("/images/wallpapers/forest.webp");
 }
