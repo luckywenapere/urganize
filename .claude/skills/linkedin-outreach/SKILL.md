@@ -3,6 +3,10 @@ name: linkedin-outreach
 description: Run Oyin's LinkedIn outbound for Urganize. Go through his newest connections, like an ICP person's own post, draft a first DM in his voice, get his yes, send, log. Also replies to his inbox. Use when he says "do LinkedIn outreach", "DM my connections", "reply my inbox" or similar.
 ---
 
+<!-- nigerian-voice:start -->
+> **Oyin's voice rule (mandatory, added 16 Nov 2026).** Any words this skill produces that a person will read under Oyin's or Urganize's name (posts, replies, DMs, emails, captions, deck and pitch lines, page and app copy, memos, recaps, changelog entries) must pass the `nigerian-voice` skill before Oyin sees them: `C:\Users\penta\.claude\skills\nigerian-voice\SKILL.md`, with the real-quote evidence in `C:\Users\penta\Documents\Urganize Business\Marketing\shared-knowledge\how they talk.md`. In short: plain Nigerian English, no pidgin from us, no idioms ("fall through the cracks", "on the same page", "die quietly"), no three-beat lines, no em dashes, no support-desk filler ("happy to help", "shout if"), one thought per post, real defendable numbers only, talk about their thing not Urganize, use their words ("artiste", "no structure", "doing everything myself", "promo money", "push"). For deck, pitch and post wording show 3 options first and apply only his pick. Test: would it look normal from a Nigerian artist manager on X? If it reads like a US startup on LinkedIn, rewrite it. Readers here call polished writing "ChatGPT" and it has already cost him followers.
+<!-- nigerian-voice:end -->
+
 # LinkedIn outreach
 
 Outbound only: the first touch, not the sale. Every DM, reply and connection note is shown to Oyin and sent only after his yes. Likes need no approval.
