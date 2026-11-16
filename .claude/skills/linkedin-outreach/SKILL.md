@@ -12,7 +12,7 @@ Outbound only: the first touch, not the sale. Every DM, reply and connection not
 ## Before you start
 
 1. GitHub issue first (`area:partnerships-outreach`, `chore`), reuse an open one if it exists.
-2. Read the memory note on current positioning. When someone asks what Urganize is or does, say it in Oyin's words (5 Nov 2026): "Urganize is where music teams work, from the idea to everything that comes after. Think of it like project management for the music industry: you add a release, you get the plan, and your team knows what to do and when." The broader line "Urganize helps music professionals run their music businesses better" (3 Nov) is fine as a one-liner but too vague on its own. Never reuse an older product line from his past DMs ("the team app for music release" and "AI workspace for music executives" are retired).
+2. Read the memory note on current positioning (`urganize-positioning-current`) before every draft; it wins over this file if they differ. As of 10 Nov 2026, in Oyin's words: **"Urganize is a planning and coordination app for recording artists, managers and labels."** Lead with planning AND coordination: the team works off one plan and everyone knows who does what, by when. **Urganize is NOT a release tool.** Never describe it as running, planning or managing releases, and never say "you add a release and it gives you a plan". If you mention releases at all, they are one kind of work next to shows, pitching, press, distribution and the team. Never take wording from the live site (it still says release) or from his past DMs. Retired, never say: "where music teams work, from the idea to everything that comes after", "software music teams use to run their releases", "the team app for music release", "AI workspace for music executives", "helps music professionals run their music businesses better".
 3. **WhatsApp follow-ups first.** Open `C:\Users\penta\Documents\Urganize Business\Operations\WhatsApp follow-ups.md`. List every row where "Messaged?" is No (name, number, what to say) and ask Oyin if he has messaged them. Only his own "done" moves a row to Done with the date. Ask again at the end of the run if any are still No.
 4. Open LinkedIn in the built-in browser pane. He is signed in there. If a sign-in is blocked, use Claude in Chrome.
 
@@ -65,11 +65,11 @@ Write only in phrases he uses. From his DMs:
 - "Hello good afternoon", "trust you're well?", "Very well thank you."
 - "Oh nice that's exciting.", "Oh very nice", "Appreciate.", "Sounds good"
 - "Who are you working with right now, if you don't mind me asking?"
-- "Do you have a release coming out soon?"
+- "What are you working on at the moment?"
 - "I'm the founder of a music tech startup and we're trying to solve problems for people such as yourself."
 - Only when they ask for a call: "Anytime works, you can pick here https://call.urganize.app"
 
-Short, loose punctuation, no polished marketing lines. Write like him from the first draft: he rejected polished drafts as "robotic". Reuse his phrases but never a product description from his old DMs. When anyone asks what Urganize is, use the description in step 2 of "Before you start", nothing older ("the team app for music release" went out once on 3 Nov and needed a correction).
+Short, loose punctuation, no polished marketing lines. Write like him from the first draft: he rejected polished drafts as "robotic". Reuse his phrases but never a product description from his old DMs. When anyone asks what Urganize is, use the description in step 2 of "Before you start", nothing older. Old release-centred lines went out on 3 Nov and again on 16 Nov and Oyin had to correct them both times.
 
 Second replies stay short. If they say they'll check their calendar, "Sounds good. I'm flexible." is enough.
 
@@ -79,11 +79,11 @@ The link: https://team.urganize.app/auth?mode=signup (opens on "Create your acco
 
 When to send it: they say what they're working on, ask what Urganize is, or sound interested. Say what it is in one line (step 2 of "Before you start"), then the link, then that Oyin will let them in. Example, in his voice:
 
-> Oh nice that's exciting. Urganize is where music teams work, from the idea to everything that comes after. Think of it like project management for the music industry. You can create your account here https://team.urganize.app/auth?mode=signup and I'll let you in once you're on. Let me know when you've signed up
+> Oh nice that's exciting. Urganize is a planning and coordination app for artists, managers and labels. Everyone works off one plan and knows who's doing what, by when. You can create your account here https://team.urganize.app/auth?mode=signup and I'll let you in once you're on. Let me know when you've signed up
 
 **Better: a personal invite link (since 8 Nov 2026).** The general link lands people on "You're on the list" until Oyin lets them in. A personal link lets one person straight in. With Oyin signed in to `/admin` in the browser, make one per interested person: `POST /api/admin/access` with `{"action":"invite","name":"<Name> (LinkedIn)"}` and his session token (what the Let in panel on `/admin/waitlist` does). Each link is `https://team.urganize.app/start/<code>`, works once and expires in 14 days. Never open a link yourself: his signed-in browser could use it up. Keep the links in the "Personal invite links" table of the private WhatsApp follow-ups file, never in the repo or the log, and mark each one sent. If he isn't signed in, use the general link and ask him to sign in for next time. Don't send a second message the same day to someone you already nudged; hold their link for their next reply. Message: "Here's your own link, it lets you straight in without waiting: <link>".
 
-Pricing is being restructured (Nov 2026): quote no prices until the new plans are live. Once the free tier is live, say "you can start free".
+Pricing: the Free plan was removed on 10 Nov 2026. NEVER say "start free" or "free". For interested people mention paid plans without prices, e.g. "there are plans from one artist up to a full label, I can help you pick". Quote no prices.
 
 After sending the general link: add them to the log's "Waiting for Oyin to let them in" table and name them in your summary, so he lets them in and sends the WhatsApp message from `/admin`. If they say they've signed up, flag it to him straight away.
 
@@ -95,7 +95,7 @@ After sending the general link: add them to the log's "Waiting for Oyin to let t
 ## Inbox replies
 
 1. Open `/messaging/?filter=unread`. Opening a thread marks it read, so list every thread you open in case one gets missed. Threads you opened earlier in the session won't show as unread any more, so add them by hand.
-2. Read each thread's last messages before drafting. If they asked a question, answer it. If they named a release or sound interested, send the sign-up link (see "Getting them to sign up"). Offer a call only if they ask for one; calls already booked stay booked.
+2. Read each thread's last messages before drafting. If they asked a question, answer it. If they named a project or sound interested, send the sign-up link (see "Getting them to sign up"). Offer a call only if they ask for one; calls already booked stay booked.
 3. Skip chats that have ended ("Alright thank you", "Thanks"). Don't reply just to have the last word.
 4. Never guess a fact about Oyin or the company. If they ask something you can't find in the thread or memory (e.g. "Does Tangent end with a demo day?"), leave a gap in the draft and ask him.
 5. Old threads: say what you can't tell. E.g. a call agreed months ago with no follow-up: did it happen? Flag it when you show the draft.
