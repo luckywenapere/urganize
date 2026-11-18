@@ -5,6 +5,9 @@ import {
   buildChatSuggestions,
   chatCardGreeting,
   defaultAboutId,
+  PHONE_TRY_CARDS,
+  TRY_CARDS_HIDE_AFTER,
+  showTryCards,
   type SuggestionRow,
 } from './chat-card';
 
@@ -169,5 +172,30 @@ describe('buildChatSuggestions', () => {
     const all = [CHAT_CARD_COPY.placeholder, CHAT_CARD_COPY.ask, CHAT_CARD_COPY.everythingDetail].join(' ');
     expect(all).not.toMatch(/urgans|chappi|assistant/i);
     expect(all).not.toContain('—');
+  });
+});
+
+describe('phone Try one cards (#1339)', () => {
+  it('offers the three cards from the mock, in order', () => {
+    expect(PHONE_TRY_CARDS.map((card) => card.kind)).toEqual(['plan', 'late', 'artist']);
+    expect(PHONE_TRY_CARDS.map((card) => card.title)).toEqual(['Plan a rollout', 'What is late?', 'Add an artist']);
+  });
+
+  it('asks the AI a real question for What is late?', () => {
+    const late = PHONE_TRY_CARDS.find((card) => card.kind === 'late');
+    expect(late?.ask).toBeTruthy();
+    expect(late?.ask?.endsWith('?')).toBe(true);
+  });
+
+  it('shows the cards until a few messages have been sent from Home', () => {
+    expect(showTryCards(0)).toBe(true);
+    expect(showTryCards(TRY_CARDS_HIDE_AFTER - 1)).toBe(true);
+    expect(showTryCards(TRY_CARDS_HIDE_AFTER)).toBe(false);
+    expect(showTryCards(TRY_CARDS_HIDE_AFTER + 5)).toBe(false);
+  });
+
+  it('shows the cards when the count cannot be read', () => {
+    expect(showTryCards(Number.NaN)).toBe(true);
+    expect(showTryCards(-1)).toBe(true);
   });
 });

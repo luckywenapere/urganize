@@ -20,10 +20,17 @@
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, ArrowUp, Check, ChevronDown, Loader2, Sparkles } from '@/components/icons';
+import { ArrowRight, ArrowUp, Check, ChevronDown, Clock, Loader2, Mic, Sparkles, UserPlus } from '@/components/icons';
 import { ChappiAttachMenu } from '@/components/chappi/ChappiAttachMenu';
 import { ChappiAttachmentTray } from '@/components/chappi/ChappiAttachments';
 import { useAttachments } from '@/components/chappi/useAttachments';
+import { useLazyVoiceInput } from '@/components/chappi/useLazyVoiceInput';
+import { useHoldToTalk } from '@/components/chappi/useHoldToTalk';
+import { isUrgansVoiceEnabled } from '@/lib/chappi/config';
+import { COMPOSER_FOCUS_EVENT } from '@/lib/composer-focus';
+import { formatHoldElapsed } from '@/lib/hold-to-talk';
+import { mergeTranscript } from '@/lib/urgans-voice';
+import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
 import { showMain } from '@/components/shell/swipe/main-thread';
 import { Cover, percent, shortDay, typeLabel, type ListRow } from '@/components/artists/ArtistListParts';
 import { assistantHref } from '@/lib/assistant-chats';
@@ -33,28 +40,108 @@ import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { markArrivingFromHome, prefersReducedMotion } from '@/lib/home-chat-glide';
 import {
   CHAT_CARD_COPY,
+  PHONE_TRY_CARDS,
+  TRY_CARDS_LABEL,
   aboutOptions,
   buildChatSuggestions,
   chatCardGreeting,
   defaultAboutId,
+  showTryCards,
   type AboutOption,
   type ChatSuggestion,
+  type TryCard,
 } from '@/lib/home-desktop/chat-card';
 import { URGANS_HREF } from '@/lib/shell-nav';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { showRolloutSession } from '@/stores/useChappiHistoryStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
+import { useShellStore } from '@/stores/useShellStore';
 import { displayReleaseTitle } from '@/types/releases';
 import { HOME_RULE } from './home-style';
 
-export function HomeChatCard({ rows, spotlight, today }: { rows: ListRow[]; spotlight: ListRow | null; today: string }) {
+/** How many messages this person has sent from a phone's Home box, so the
+ *  Try one cards can step aside once they use it (lib: showTryCards). */
+const PHONE_SENT_KEY = 'urganize.home.phone-sent.';
+const VOICE_ENABLED = isUrgansVoiceEnabled();
+
+function readPhoneSent(userId: string | null): number {
+  if (!userId || typeof window === 'undefined') return 0;
+  try {
+    return Number(window.localStorage.getItem(`${PHONE_SENT_KEY}${userId}`) ?? '0');
+  } catch {
+    return 0;
+  }
+}
+
+export function HomeChatCard({
+  rows,
+  spotlight,
+  today,
+  layout = 'desktop',
+}: {
+  rows: ListRow[];
+  spotlight: ListRow | null;
+  today: string;
+  /** 'phone' (#1339, docs/mocks/home-chat-phone, after Linear's phone
+   *  screen): one column at the top of the phone's Home, no Next drop beside
+   *  it, and three Try one cards in place of the suggestion pills. */
+  layout?: 'desktop' | 'phone';
+}) {
+  const phone = layout === 'phone';
   const router = useRouter();
   const name = useAuthStore((state) => state.user?.name ?? null);
+  const userId = useAuthStore((state) => state.user?.id ?? null);
+  const openPlanChoice = useShellStore((state) => state.openPlanChoice);
+  const openAddArtist = useShellStore((state) => state.openAddArtist);
+  // Read on render, so it is right once the signed-in user is known. The
+  // phone's Home only draws in the browser (its rows come from stores loaded
+  // there), so the server never renders a different answer.
+  const phoneSent = phone ? readPhoneSent(userId) : 0;
   const releases = useReleaseStore((state) => state.releases);
   const attach = useAttachments();
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const fieldRef = useRef<HTMLTextAreaElement>(null);
+
+  // On a phone this is Home's only box (#1339), so it says so, takes what
+  // "Ask AI" in the search bar puts in the shared box, and keeps the hold to
+  // talk mic the pinned box had.
+  useEffect(() => {
+    if (!phone) return;
+    const swipe = useSwipeNavStore.getState();
+    swipe.setHomeAsk(true);
+    const focus = () => {
+      const asked = useChappiStore.getState().input;
+      if (asked) setText(asked);
+      fieldRef.current?.focus();
+    };
+    window.addEventListener(COMPOSER_FOCUS_EVENT, focus);
+    return () => {
+      useSwipeNavStore.getState().setHomeAsk(false);
+      window.removeEventListener(COMPOSER_FOCUS_EVENT, focus);
+    };
+  }, [phone]);
+  const textRef = useRef(text);
+  useEffect(() => {
+    textRef.current = text;
+  });
+  const holdSendRef = useRef<() => boolean>(() => false);
+  const sendSpokenRef = useRef<(spoken: string) => void>(() => undefined);
+  const [voice, voiceDriver] = useLazyVoiceInput({
+    enabled: phone && VOICE_ENABLED,
+    onTranscript: (spoken) => {
+      const merged = mergeTranscript(textRef.current, spoken);
+      setText(merged);
+      if (holdSendRef.current()) sendSpokenRef.current(merged);
+    },
+    getHints: () => ({}),
+  });
+  const hold = useHoldToTalk(voice, phone && voice.supported && !sending);
+  useEffect(() => {
+    holdSendRef.current = hold.shouldSend;
+  });
+  const isRecording = voice.state === 'recording';
+  const isTranscribing = voice.state === 'transcribing';
 
   // The device clock, read when Home mounts (Home on a computer only ever
   // draws in the browser, so the server never renders a different hour).
@@ -115,6 +202,13 @@ export function HomeChatCard({ rows, spotlight, today }: { rows: ListRow[]; spot
     const files = source === 'box' ? attach.attachments : [];
     if (sending || attach.pending > 0 || (!trimmed && files.length === 0)) return;
     setSending(true);
+    if (phone && userId) {
+      try {
+        window.localStorage.setItem(`${PHONE_SENT_KEY}${userId}`, String(readPhoneSent(userId) + 1));
+      } catch {
+        // A count that cannot be kept only means the cards stay.
+      }
+    }
     captureAnalyticsEvent({
       name: 'home_chat_sent',
       properties: { source, about: releaseId ? 'rollout' : 'everything', files: files.length },
@@ -135,7 +229,21 @@ export function HomeChatCard({ rows, spotlight, today }: { rows: ListRow[]; spot
     store.setSendInputOnOpen(true);
     if (source === 'box') attach.clear();
     if (!prefersReducedMotion()) markArrivingFromHome();
-    router.push(assistantHref(releaseId));
+    // On a phone the chat sits in the next swipe tab: glide there, as the
+    // pinned box did, rather than pushing a page over the pager.
+    const go = phone && !releaseId ? useSwipeNavStore.getState().go : null;
+    if (go) go('urgans');
+    else router.push(assistantHref(releaseId));
+  };
+  useEffect(() => {
+    sendSpokenRef.current = (spoken) => void send(spoken, aboutId, 'box');
+  });
+
+  const onTryCard = (card: TryCard) => {
+    captureAnalyticsEvent({ name: 'home_try_card', properties: { kind: card.kind } });
+    if (card.kind === 'plan') openPlanChoice();
+    else if (card.kind === 'artist') openAddArtist();
+    else if (card.ask) void send(card.ask, null, 'suggestion');
   };
 
   const onSubmit = (event: FormEvent) => {
@@ -154,11 +262,21 @@ export function HomeChatCard({ rows, spotlight, today }: { rows: ListRow[]; spot
     <section
       data-home-block="next_drop"
       aria-label="Ask AI"
-      className="grid grid-cols-[minmax(0,1fr)_16rem] gap-8 pb-1 pt-4 xl:grid-cols-[minmax(0,1fr)_300px] xl:gap-14"
+      className={
+        phone
+          ? 'pb-1 pt-2'
+          : 'grid grid-cols-[minmax(0,1fr)_16rem] gap-8 pb-1 pt-4 xl:grid-cols-[minmax(0,1fr)_300px] xl:gap-14'
+      }
     >
       <div className="flex min-w-0 flex-col">
         <p className="text-[13px] font-medium leading-5 text-content-secondary">{hello.line}</p>
-        <h2 className="mt-2.5 font-display text-[34px] font-normal leading-[42px] tracking-[-0.01em] text-content-primary xl:text-[40px] xl:leading-[44px]">
+        <h2
+          className={
+            phone
+              ? 'mt-1.5 font-display text-[28px] font-normal leading-[34px] tracking-[-0.01em] text-content-primary'
+              : 'mt-2.5 font-display text-[34px] font-normal leading-[42px] tracking-[-0.01em] text-content-primary xl:text-[40px] xl:leading-[44px]'
+          }
+        >
           {hello.greeting}
           <br />
           <span className="text-content-tertiary">{CHAT_CARD_COPY.ask}</span>
@@ -167,7 +285,7 @@ export function HomeChatCard({ rows, spotlight, today }: { rows: ListRow[]; spot
         <form
           onSubmit={onSubmit}
           data-home-chat-box
-          className="mt-[22px] rounded-[24px] bg-bg-surface px-[18px] pb-3.5 pt-[18px] shadow-[0_0_0_1.5px_var(--home-line-strong)] transition-shadow focus-within:shadow-[0_0_0_2px_rgb(var(--color-brand))]"
+          className={`${phone ? 'mt-4 px-4 pt-4' : 'mt-[22px] px-[18px] pt-[18px]'} rounded-[24px] bg-bg-surface pb-3.5 shadow-[0_0_0_1.5px_var(--home-line-strong)] transition-shadow focus-within:shadow-[0_0_0_2px_rgb(var(--color-brand))]`}
         >
           <ChappiAttachmentTray attachments={attach.attachments} pending={attach.pending} onRemove={attach.remove} />
           <label htmlFor="home-chat-box" className="sr-only">
@@ -180,6 +298,7 @@ export function HomeChatCard({ rows, spotlight, today }: { rows: ListRow[]; spot
             value={text}
             onChange={(event) => setText(event.target.value)}
             onKeyDown={onKeyDown}
+            enterKeyHint="send"
             onPaste={(event) => {
               const pictures = Array.from(event.clipboardData?.files ?? []).filter((file) => file.type.startsWith('image/'));
               if (pictures.length === 0) return;
@@ -198,9 +317,42 @@ export function HomeChatCard({ rows, spotlight, today }: { rows: ListRow[]; spot
               triggerClassName="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full border border-stroke-control text-content-secondary transition-colors hover:text-content-primary disabled:opacity-40"
             />
             <AboutPicker options={options} value={aboutId} onChange={setPicked} disabled={sending} />
-            <span className="ml-auto text-xs text-content-tertiary" aria-hidden="true">
-              {CHAT_CARD_COPY.enterHint}
-            </span>
+            {phone ? (
+              <>
+                {voiceDriver}
+                {isRecording && hold.holding ? (
+                  <span role="status" className="ml-auto truncate text-xs text-content-secondary">
+                    {formatHoldElapsed(voice.elapsed)}{' '}
+                    {hold.cancelArmed ? 'Let go to cancel' : '‹ Slide left to cancel'}
+                  </span>
+                ) : (
+                  <span className="ml-auto" />
+                )}
+                {voice.supported ? (
+                  <button
+                    type="button"
+                    {...hold.buttonProps}
+                    data-recording={isRecording ? 'true' : undefined}
+                    data-holding={hold.holding ? 'true' : undefined}
+                    aria-label={isRecording ? 'Stop recording' : 'Talk to AI'}
+                    disabled={isTranscribing || sending || (voice.state === 'requesting' && !hold.holding)}
+                    className="motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full text-content-secondary transition-[color,background-color,transform] hover:bg-bg-hover hover:text-content-primary disabled:opacity-40 data-[recording=true]:text-status-error data-[holding=true]:scale-125 data-[holding=true]:bg-status-error data-[holding=true]:text-content-inverse"
+                  >
+                    {isTranscribing || voice.state === 'requesting' ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : isRecording ? (
+                      <span className="h-3 w-3 rounded-[3px] bg-current" aria-hidden="true" />
+                    ) : (
+                      <Mic className="h-4 w-4" aria-hidden="true" />
+                    )}
+                  </button>
+                ) : null}
+              </>
+            ) : (
+              <span className="ml-auto text-xs text-content-tertiary" aria-hidden="true">
+                {CHAT_CARD_COPY.enterHint}
+              </span>
+            )}
             <button
               type="submit"
               disabled={!canSend}
@@ -218,6 +370,11 @@ export function HomeChatCard({ rows, spotlight, today }: { rows: ListRow[]; spot
               )}
             </button>
           </div>
+          {phone && voice.error ? (
+            <p role="status" className="mt-2 text-xs text-content-tertiary">
+              {voice.error}
+            </p>
+          ) : null}
           {attach.error ? (
             <p role="alert" className="mt-2 text-xs text-status-error">
               {attach.error}
@@ -225,7 +382,9 @@ export function HomeChatCard({ rows, spotlight, today }: { rows: ListRow[]; spot
           ) : null}
         </form>
 
-        {suggestions.length > 0 ? (
+        {phone ? (
+          showTryCards(phoneSent) ? <TryCards disabled={sending} onPick={onTryCard} /> : null
+        ) : suggestions.length > 0 ? (
           <ul className="mt-[18px] flex flex-wrap gap-2" aria-label="Suggestions">
             {suggestions.map((chip) => (
               <li key={chip.kind}>
@@ -236,8 +395,38 @@ export function HomeChatCard({ rows, spotlight, today }: { rows: ListRow[]; spot
         ) : null}
       </div>
 
-      <NextDropPanel row={spotlight} />
+      {phone ? null : <NextDropPanel row={spotlight} />}
     </section>
+  );
+}
+
+const TRY_CARD_ICON = { plan: Sparkles, late: Clock, artist: UserPlus } as const;
+
+/** The phone's three Try one cards, in one row of three (Linear's examples). */
+function TryCards({ disabled, onPick }: { disabled: boolean; onPick: (card: TryCard) => void }) {
+  return (
+    <div className="mt-5">
+      <p className="text-[13px] leading-5 text-content-secondary">{TRY_CARDS_LABEL}</p>
+      <ul className="mt-2 grid grid-cols-3 gap-2">
+        {PHONE_TRY_CARDS.map((card) => {
+          const Icon = TRY_CARD_ICON[card.kind];
+          return (
+            <li key={card.kind} className="min-w-0">
+              <button
+                type="button"
+                onClick={() => onPick(card)}
+                disabled={disabled}
+                className="motion-focus motion-press flex h-full min-h-[124px] w-full flex-col rounded-2xl bg-bg-surface/85 p-3 text-left shadow-[0_0_0_1px_var(--home-line)] transition-colors hover:bg-bg-surface disabled:opacity-50"
+              >
+                <Icon className="h-4 w-4 text-brand" aria-hidden="true" />
+                <span className="mt-3 text-[13px] font-semibold leading-[17px] text-content-primary">{card.title}</span>
+                <span className="mt-1 text-xs leading-4 text-content-secondary">{card.line}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -492,6 +681,35 @@ export function HomeChatCardSkeleton() {
           <span className={`h-3 w-24 ${bar}`} />
         </span>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The phone block's loading shape (#1339), for the phone's Home while the
+ * roster loads: the day line, the two greeting lines, the box and the three
+ * Try one cards, with the same heights as the live block.
+ */
+export function HomeChatCardPhoneSkeleton() {
+  const bar = 'block animate-pulse rounded-full bg-bg-hover';
+  return (
+    <div aria-hidden="true" data-skeleton="home-chat-phone" className="pb-1 pt-2">
+      <span className="flex h-5 items-center">
+        <span className={`h-3.5 w-28 ${bar}`} />
+      </span>
+      <span className="mt-1.5 flex h-[68px] flex-col justify-around">
+        <span className={`h-7 w-56 ${bar}`} />
+        <span className={`h-7 w-48 ${bar}`} />
+      </span>
+      <span className="mt-4 block h-[122px] rounded-[24px] shadow-[0_0_0_1.5px_var(--home-line-strong)]" />
+      <span className="mt-5 flex h-5 items-center">
+        <span className={`h-3 w-14 ${bar}`} />
+      </span>
+      <span className="mt-2 grid grid-cols-3 gap-2">
+        {[0, 1, 2].map((key) => (
+          <span key={key} className="block h-[124px] animate-pulse rounded-2xl bg-bg-hover" />
+        ))}
+      </span>
     </div>
   );
 }

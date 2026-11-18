@@ -53,6 +53,11 @@ type SwipeNavState = {
   go: ((key: SwipeTabKey, options?: { instant?: boolean }) => void) | null;
   /** The Home card carried into Main, newest turn, until acted on or put away. */
   handoff: Handoff | null;
+  /** Home is drawing its own box to ask AI (#1339), so the pinned box steps
+   *  aside on that tab. Set by the box itself while it is mounted, so the two
+   *  can never disagree (an artist's own Home draws none). */
+  homeAsk: boolean;
+  setHomeAsk: (value: boolean) => void;
   setEnabled: (value: boolean) => void;
   lock: () => () => void;
   setGo: (go: SwipeNavState['go']) => void;
@@ -64,6 +69,8 @@ export const useSwipeNavStore = create<SwipeNavState>((set, get) => ({
   locks: 0,
   go: null,
   handoff: null,
+  homeAsk: false,
+  setHomeAsk: (value) => set({ homeAsk: value }),
   setEnabled: (value) => set({ enabled: ALL_OFF ? false : value }),
   lock: () => {
     set({ locks: get().locks + 1 });
