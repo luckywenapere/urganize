@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.290.0",
+    title: "Ask from the top of Home",
+    tag: "App",
+    date: "November 18, 2026",
+    highlights: [
+      "On your phone, Home now opens with the box to ask the AI, right under the greeting, and your artists below it.",
+      "Three cards under the box get you going: plan a rollout, see what is late, or add an artist.",
+    ],
+  },
+  {
     version: "1.289.1",
     date: "November 16, 2026",
     highlights: [

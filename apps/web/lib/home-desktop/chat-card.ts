@@ -141,3 +141,41 @@ export function buildChatSuggestions(rows: readonly SuggestionRow[]): ChatSugges
   }
   return chips;
 }
+
+/**
+ * The three "Try one" cards under the box on a phone's Home (#1339; founder
+ * approved docs/mocks/home-chat-phone, after Linear's phone screen). Two open
+ * a step (the plan choice, Add an artist); one asks the AI a question.
+ */
+export type TryCard = {
+  kind: 'plan' | 'late' | 'artist';
+  title: string;
+  line: string;
+  /** What the card sends to the AI, when it asks rather than opens a step. */
+  ask?: string;
+};
+
+export const PHONE_TRY_CARDS: readonly TryCard[] = [
+  { kind: 'plan', title: 'Plan a rollout', line: 'Pick a record and the AI builds the plan.' },
+  {
+    kind: 'late',
+    title: 'What is late?',
+    line: 'See what is slipping across your artists.',
+    ask: 'What is late across my artists?',
+  },
+  { kind: 'artist', title: 'Add an artist', line: 'Paste a Spotify link to start their page.' },
+];
+
+export const TRY_CARDS_LABEL = 'Try one';
+
+/** Messages sent from Home after which the cards step aside, so Home stays
+ *  short for someone who already uses the box every day. */
+export const TRY_CARDS_HIDE_AFTER = 3;
+
+/** Whether the cards show, given how many messages were sent from Home. A
+ *  count that cannot be read shows them: a missing hint costs more than an
+ *  extra row. */
+export function showTryCards(sent: number): boolean {
+  if (!Number.isFinite(sent) || sent < 0) return true;
+  return sent < TRY_CARDS_HIDE_AFTER;
+}

@@ -28,6 +28,8 @@ import { artistHomeId } from '@/lib/artist-home';
 import ArtistPageClient from '@/app/dashboard/[artistId]/ArtistPageClient';
 import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { HomeDesktop, HomeDesktopSkeleton } from '@/components/home-desktop/HomeDesktop';
+import { HomeChatCard, HomeChatCardPhoneSkeleton } from '@/components/home-desktop/HomeChatCard';
+import { isChappiEnabled } from '@/lib/chappi/config';
 import {
   Cover,
   STATUS_WORD,
@@ -112,7 +114,7 @@ export default function ArtistsPageClient({
   if (swipe) {
     return (
       <>
-        <SwipeArtists loading={loading} list={list} />
+        <SwipeArtists loading={loading} list={list} today={today} />
         {opened ? <DuplicateArtistsPrompt /> : null}
         {opened ? <StreamingLinkPrompt /> : null}
       </>
@@ -337,8 +339,15 @@ function ArtistRow({
  * when it drops, and its cover. The title, its + and the count line above
  * were removed on Oct 30, 2026 (founder).
  */
-function SwipeArtists({ loading, list }: { loading: boolean; list: ArtistsListData }) {
+const PHONE_ASK_ENABLED = isChappiEnabled();
+
+function SwipeArtists({ loading, list, today }: { loading: boolean; list: ArtistsListData; today: string }) {
   const { rows, spotlight } = list;
+  // The box to ask AI leads the phone's Home (#1339, docs/mocks/home-chat-phone,
+  // after Linear's phone screen): the greeting, the box, three Try one cards,
+  // then the artists under their own label. The pinned box at the bottom of
+  // the screen is not drawn on this tab (SwipeFrame), so there is one box.
+  const askFirst = PHONE_ASK_ENABLED && rows.length > 0;
 
   return (
     <div className="pb-6">
@@ -350,7 +359,17 @@ function SwipeArtists({ loading, list }: { loading: boolean; list: ArtistsListDa
         <HomeBell />
       </div>
       {loading ? (
-        <ul className="mt-[18px]" aria-busy="true">
+        <>
+          {PHONE_ASK_ENABLED ? (
+            <>
+              <HomeChatCardPhoneSkeleton />
+              {/* The Artists label above the rows, as the live Home draws it. */}
+              <span aria-hidden="true" className="mt-6 flex h-6 items-center px-1.5">
+                <span className="h-4 w-16 animate-pulse rounded bg-bg-hover" />
+              </span>
+            </>
+          ) : null}
+          <ul className={PHONE_ASK_ENABLED ? 'mt-2' : 'mt-[18px]'} aria-busy="true">
           {[0, 1, 2].map((key) => (
             <li key={key} className="flex h-[76px] items-center gap-3.5 border-b border-content-primary/[0.07] px-1.5">
               <span className="h-[42px] w-[42px] shrink-0 animate-pulse rounded-full bg-bg-hover" />
@@ -358,16 +377,24 @@ function SwipeArtists({ loading, list }: { loading: boolean; list: ArtistsListDa
             </li>
           ))}
         </ul>
+        </>
       ) : rows.length === 0 ? (
         <div className="mt-2">
           <ArtistsEmpty />
         </div>
       ) : (
         <>
+          {askFirst ? <HomeChatCard rows={rows} spotlight={spotlight} today={today} layout="phone" /> : null}
           <OutNowCards className="mt-4" />
           {spotlight ? (
             <div className="mt-4">
               <Spotlight row={spotlight} compact />
+            </div>
+          ) : null}
+          {askFirst ? (
+            <div className="mt-6 flex items-baseline justify-between px-1.5">
+              <h2 className="text-base font-semibold text-content-primary">Artists</h2>
+              <span className="text-[13px] text-content-secondary">{rows.length}</span>
             </div>
           ) : null}
           <ul className="section-list-enter mt-2">

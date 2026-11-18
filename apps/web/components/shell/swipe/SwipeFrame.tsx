@@ -77,6 +77,9 @@ export function SwipeFrame({
   const loadNeedsYou = useNeedsYouStore((state) => state.load);
   const sessionOpen = useSessionsViewStore((state) => state.releaseId !== null);
   const settingOpen = useSettingsPageStore((state) => state.target !== null);
+  // Home leads with its own box when it draws one (#1339; the box says so
+  // itself, see HomeChatCard), so the pinned box steps aside on that tab.
+  const homeAsksFirst = useSwipeNavStore((state) => state.homeAsk);
 
   // Home remembers the rollout or artist page you left it on (lib/tab-memory.ts).
   const searchString = searchParams.toString();
@@ -151,7 +154,10 @@ export function SwipeFrame({
           </main>
           <BackPill active={tab === 'sessions'} />
           {/* The Sessions list has nowhere to send a message: a session is opened first. */}
-          {CHAPPI_ENABLED && tab !== 'settings' && !(tab === 'sessions' && !sessionOpen) ? (
+          {CHAPPI_ENABLED &&
+          tab !== 'settings' &&
+          !(tab === 'sessions' && !sessionOpen) &&
+          !(tab === 'artists' && homeAsksFirst) ? (
             <SwipeComposer onUrgAns={tab === 'urgans' || tab === 'sessions'} sessionOpen={tab === 'sessions'} />
           ) : null}
         </div>
