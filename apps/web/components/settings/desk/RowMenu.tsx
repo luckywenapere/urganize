@@ -70,7 +70,7 @@ export function RowMenu({ label, items }: { label: string; items: RowMenuItem[] 
           aria-label={label}
           onKeyDown={onMenuKey}
           onClick={(event) => event.stopPropagation()}
-          className="absolute right-0 top-9 z-30 min-w-[200px] rounded-xl border border-stroke-default bg-bg-surface p-1 shadow-[var(--shadow-md)]"
+          className="absolute right-0 top-9 z-30 min-w-[200px] rounded-xl border border-stroke-default bg-bg-surface p-1 shadow-md"
         >
           {items.map((item) => (
             <button

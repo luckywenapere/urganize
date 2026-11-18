@@ -4,6 +4,9 @@
   --background: #0f172a;
   --foreground: #f1f5f9;
   --marketing-bg: #f7f4ee;
+  /* Dropdown menus. Always solid: the page ground (--marketing-bg) goes
+     see-through when the wallpaper is on, and a menu must not (#1337). */
+  --marketing-menu-bg: #f7f4ee;
   --marketing-bg-muted: #fbf8f2;
   --marketing-surface: #ffffff;
   --marketing-surface-muted: #f5f0e8;
@@ -106,6 +109,7 @@ html[data-marketing-theme="light"] {
 html[data-marketing-theme="dark"] {
   color-scheme: dark;
   --marketing-bg: #0c0c0d;
+  --marketing-menu-bg: #0c0c0d;
   --marketing-bg-muted: #121214;
   --marketing-surface: #171719;
   --marketing-surface-muted: #171719;
@@ -427,6 +431,7 @@ html[data-marketing-theme="dark"] .theme-shot-light {
 
 html[data-marketing-theme="dark"] .home-v2 {
   --marketing-bg: #0c0c0d;
+  --marketing-menu-bg: #0c0c0d;
   --marketing-bg-muted: #121214;
   --marketing-surface: #171719;
   --marketing-surface-muted: #171719;
@@ -1056,6 +1061,8 @@ html[data-site-wallpaper="night-sky"]::before {
 html[data-site-wallpaper][data-marketing-theme="dark"],
 html[data-site-wallpaper][data-marketing-theme="dark"] .home-v2 {
   --marketing-bg: transparent;
+  /* Menus stay solid over the picture: a dark ground near the glass cards. */
+  --marketing-menu-bg: #101312;
   --marketing-bg-muted: rgba(12, 14, 13, 0.38);
   --marketing-surface: rgba(16, 19, 18, 0.62);
   --marketing-surface-muted: rgba(16, 19, 18, 0.62);

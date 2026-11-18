@@ -358,8 +358,9 @@ function DesktopFocusedSkeleton({ panelBody }: { panelBody: PanelBody }) {
 
       {/* Line two: the tabs on the left, the plan's tools on the right while
           the plan is what is coming, and the three dots last. Same bleed,
-          rule and padding as the real sticky row in WorkspaceDesktopFocused. */}
-      <div className="-mx-8 flex shrink-0 items-center gap-[13px] border-b border-stroke-subtle px-8 pb-2">
+          padding as the real sticky row in WorkspaceDesktopFocused, and like
+          it no fill and no line at rest (#1337). */}
+      <div className="-mx-8 flex shrink-0 items-center gap-[13px] px-8 pb-2">
         <div className="flex min-w-0 flex-1 items-center gap-1">
           <SkeletonBlock className="h-10 w-32 shrink-0 rounded-lg" />
           <SkeletonBlock className="h-10 w-36 shrink-0 rounded-lg" />
