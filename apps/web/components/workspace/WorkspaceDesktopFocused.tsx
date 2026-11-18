@@ -2,7 +2,7 @@
 
 import { countProgress } from '@/lib/task-progress';
 import { onlyPreProductionWork } from '@/lib/pre-production';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { usePageBarCrumbSlot, usePageBarEndSlot } from '@/components/shell/PageBar';
 import { ChevronRight, Plus } from '@/components/icons';
@@ -151,19 +151,6 @@ export function WorkspaceDesktopFocused({
   const menuFolded = usePlanMenuFold((state) => state.folded);
   const crumbSlot = usePageBarCrumbSlot(true);
   const endSlot = usePageBarEndSlot(true);
-  // True once the tab row has scrolled up to the top bar and is holding there.
-  const tabsSentinelRef = useRef<HTMLDivElement | null>(null);
-  const [tabsStuck, setTabsStuck] = useState(false);
-  useEffect(() => {
-    const node = tabsSentinelRef.current;
-    if (!node || typeof IntersectionObserver === 'undefined') return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setTabsStuck(!entry.isIntersecting && entry.boundingClientRect.top < 80),
-      { rootMargin: '-72px 0px 0px 0px' }
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
   // The same derived status the Catalogue row shows, so opening a rollout
   // that read Released there does not say Draft here.
   const status = displayStatus({
@@ -316,22 +303,20 @@ export function WorkspaceDesktopFocused({
       </div>
 
       {/* The rollout's menu: a row of tabs (the side menu no longer opens,
-          2026-10-26). The row scrolls up with the page, then holds just under
-          the top bar (2026-10-26, founder), gaining a background and a soft
-          shadow as it locks. It sits outside the header block above, so it can
-          stick for the whole page and not only inside that block. */}
+          2026-10-26). It scrolls away with the page (Oyin, 2026-11-18, #1337:
+          "dont make this sticky"; it held under the top bar from 2026-10-26),
+          and has no fill or line, so it does not read as a stray bar on the
+          wallpaper. */}
       {/* Once the song is out, its smart link sits above the tabs (#1092). */}
       {focus ? null : (
         <RolloutOutNowLink releaseId={scopedRelease.id} releaseDate={scopedRelease.releaseDate} title={scopedRelease.title} className="max-w-xl" />
       )}
-      <div ref={tabsSentinelRef} aria-hidden="true" className="-mb-4 h-0" />
       {/* Folded (#898), the pill floats 34 above the bottom of the screen
           (#926), centred on the plan, so the menu is one tap away mid-plan
           too without covering the top of the plan. */}
       {menuFolded && !focus ? <PlanMenuPillDock anchorClassName="-mb-4" /> : null}
       <div
-        data-stuck={tabsStuck ? '' : undefined}
-        className={`${menuFolded || focus ? 'hidden' : ''} sticky top-[72px] z-20 -mx-8 border-b border-stroke-subtle bg-bg-base px-8 pb-2 pt-0 transition-[padding,box-shadow] duration-200 ease-out data-[stuck]:pt-2 data-[stuck]:shadow-[0_8px_16px_-12px_rgb(0_0_0/0.6)]`}
+        className={`${menuFolded || focus ? 'hidden' : ''} relative z-20 -mx-8 px-8 pb-2 pt-0`}
       >
         <RolloutTabs
           releaseId={scopedRelease.id}

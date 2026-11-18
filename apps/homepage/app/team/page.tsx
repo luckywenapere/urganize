@@ -23,7 +23,16 @@ export const metadata: Metadata = buildPageMetadata({
 // Portraits are the illustrated brand set (cream ground, spring-green ink),
 // resized to 640px wide WebP in public/images/team. next/image serves the
 // display size from there, so replacing a portrait is a file swap only.
-const members = [
+type Member = {
+  name: string;
+  role: string;
+  photo: string;
+  bio: string;
+  /** Null when someone has no public profile: their name shows unlinked. */
+  linkedin: string | null;
+};
+
+const members: readonly Member[] = [
   {
     name: "Oyin Wenapere",
     role: "Co-Founder and CEO",
@@ -39,20 +48,13 @@ const members = [
     linkedin: "https://www.linkedin.com/in/tedum-king-kpunee-035556393/",
   },
   {
-    name: "Adamu Kabiru",
-    role: "Community Lead",
-    photo: "/images/team/adamu-kabiru.webp",
-    bio: "Known in Nigeria\u2019s underground scene as Don Baba K. He manages three artists and works as an A&R, event organiser and music PR, so he lives the chasing every day. He also helps upcoming talent grow.",
-    linkedin: null,
-  },
-  {
     name: "Chidera Nnamani",
     role: "Product Ops Lead",
     photo: "/images/team/chidera-nnamani.webp",
     bio: "Manages artists and has run operations at startups, so he sees both the manager\u2019s mess and the system that fixes it. Holds an MBA in Music Management from the Creative Business Academy for Africa, built on engineering and mathematics.",
     linkedin: "https://www.linkedin.com/in/chidera-nnamani/",
   },
-] as const;
+];
 
 export default function TeamPage() {
   return (

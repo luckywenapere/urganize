@@ -67,6 +67,13 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.290.1",
+    date: "November 18, 2026",
+    highlights: [
+      "On a rollout, the row with Work the plan, Distribute now and Pitch this! now scrolls with the page instead of staying stuck at the top, and the plain strip behind it is gone.",
+    ],
+  },
+  {
     version: "1.290.0",
     title: "Ask from the top of Home",
     tag: "App",

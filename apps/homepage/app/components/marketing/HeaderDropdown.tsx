@@ -63,7 +63,7 @@ export function HeaderDropdown({
       <div
         role="menu"
         hidden={!open}
-        className="fixed inset-x-4 top-[76px] z-50 max-h-[calc(100dvh-6rem)] overflow-y-auto border border-[color:var(--marketing-border)] bg-[var(--marketing-bg)] py-2 shadow-lg sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-1 sm:min-w-[11rem]"
+        className="fixed inset-x-4 top-[76px] z-50 max-h-[calc(100dvh-6rem)] overflow-y-auto border border-[color:var(--marketing-border)] bg-[var(--marketing-menu-bg)] py-2 shadow-lg sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-1 sm:min-w-[11rem]"
       >
         {children(() => setOpen(false))}
       </div>
