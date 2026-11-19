@@ -17,6 +17,7 @@
 // Rules (greeting, picker order and default, suggestions) live in
 // lib/home-desktop/chat-card.ts, tested.
 
+import { Button } from '@/components/ui/button';
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -402,7 +403,9 @@ export function HomeChatCard({
 
 const TRY_CARD_ICON = { plan: Sparkles, late: Clock, artist: UserPlus } as const;
 
-/** The phone's three Try one cards, in one row of three (Linear's examples). */
+/** The phone's three Try one cards, in one row of three (Linear's examples):
+ *  shadcn outline Buttons (#1342), a small icon tile and the title, no second
+ *  line. */
 function TryCards({ disabled, onPick }: { disabled: boolean; onPick: (card: TryCard) => void }) {
   return (
     <div className="mt-5">
@@ -412,16 +415,18 @@ function TryCards({ disabled, onPick }: { disabled: boolean; onPick: (card: TryC
           const Icon = TRY_CARD_ICON[card.kind];
           return (
             <li key={card.kind} className="min-w-0">
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={() => onPick(card)}
                 disabled={disabled}
-                className="motion-focus motion-press flex h-full min-h-[124px] w-full flex-col rounded-2xl bg-bg-surface/85 p-3 text-left shadow-[0_0_0_1px_var(--home-line)] transition-colors hover:bg-bg-surface disabled:opacity-50"
+                className="motion-focus motion-press h-[76px] w-full flex-col items-start justify-between whitespace-normal rounded-xl border-stroke-control bg-bg-surface/85 px-2.5 py-2.5 text-left font-normal text-content-primary backdrop-blur-sm hover:bg-bg-surface hover:text-content-primary"
               >
-                <Icon className="h-4 w-4 text-brand" aria-hidden="true" />
-                <span className="mt-3 text-[13px] font-semibold leading-[17px] text-content-primary">{card.title}</span>
-                <span className="mt-1 text-xs leading-4 text-content-secondary">{card.line}</span>
-              </button>
+                <span className="grid h-[26px] w-[26px] place-items-center rounded-lg bg-brand/10 text-brand" aria-hidden="true">
+                  <Icon className="!size-[15px]" />
+                </span>
+                <span className="text-[13px] font-semibold leading-[17px]">{card.title}</span>
+              </Button>
             </li>
           );
         })}
@@ -707,7 +712,7 @@ export function HomeChatCardPhoneSkeleton() {
       </span>
       <span className="mt-2 grid grid-cols-3 gap-2">
         {[0, 1, 2].map((key) => (
-          <span key={key} className="block h-[124px] animate-pulse rounded-2xl bg-bg-hover" />
+          <span key={key} className="block h-[76px] animate-pulse rounded-xl bg-bg-hover" />
         ))}
       </span>
     </div>
