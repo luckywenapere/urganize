@@ -580,7 +580,7 @@ export default function ComposeEmailPageClient() {
               onChange={(event) => setSignOff(event.target.checked)}
               className="h-4 w-4 accent-brand"
             />
-            Sign it &ldquo;Wena, Founder, Urganize&rdquo;
+            Sign it &ldquo;Oyin, Founder, Urganize&rdquo;
           </label>
         </div>
 
