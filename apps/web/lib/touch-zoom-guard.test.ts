@@ -54,6 +54,21 @@ describe('touch-action on the document', () => {
   });
 });
 
+describe('overscroll on the document', () => {
+  // A two-finger swipe down used to rubber-band the whole page, and the fixed
+  // frame (the top bar) went down with it, leaving a gap above the menu. Only
+  // the content panes may bounce; they carry their own `overscroll-contain`.
+  it('html and body do not bounce vertically', () => {
+    expect(declaration('html', 'overscroll-behavior-y')).toEqual(['none']);
+    expect(declaration('body', 'overscroll-behavior-y')).toEqual(['none']);
+  });
+
+  it('html and body still do not scroll sideways on overscroll', () => {
+    expect(declaration('html', 'overscroll-behavior-x')).toEqual(['none']);
+    expect(declaration('body', 'overscroll-behavior-x')).toEqual(['none']);
+  });
+});
+
 describe('the viewport', () => {
   const layout = readFileSync(join(WEB, 'app', 'layout.tsx'), 'utf8');
   const viewport = /export const viewport[^=]*=\s*\{([\s\S]*?)\n\};/.exec(layout);

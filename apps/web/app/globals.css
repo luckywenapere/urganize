@@ -1014,6 +1014,13 @@ html {
      Tailwind's `overflow-x-auto`) still opt back into horizontal panning
      below. */
   overscroll-behavior-x: none;
+  /* No vertical rubber-band on the document itself (Nov 19, 2026 report: a
+     two-finger swipe down dragged the whole app, top bar included, down the
+     screen). The frame is fixed, so a bounce of the page moves the menu with
+     it. Only the content panes bounce, and they carry their own
+     `overscroll-contain`. Like the x rule, this touches gesture handling only,
+     never the overflow box, so it has no sticky-positioning risk. */
+  overscroll-behavior-y: none;
   /* `pan-y pinch-zoom`, not `pan-y` alone (2026-09-30). A reader with low
      vision has to be able to enlarge the page, and this value was the only
      thing stopping them (the viewport meta sets no scale limit). One-finger
@@ -1036,6 +1043,7 @@ body {
   letter-spacing: -0.01em;
   overflow-x: hidden;
   overscroll-behavior-x: none;
+  overscroll-behavior-y: none;
   touch-action: pan-y pinch-zoom;
 }
 

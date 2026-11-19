@@ -1,6 +1,6 @@
 {
   "name": "@urganize/db",
-  "version": "1.290.2",
+  "version": "1.290.3",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",

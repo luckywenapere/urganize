@@ -67,6 +67,13 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.290.3",
+    date: "November 19, 2026",
+    highlights: [
+      "Swiping down with two fingers no longer drags the top menu down the screen. Only the page content moves.",
+    ],
+  },
+  {
     version: "1.290.2",
     date: "November 19, 2026",
     highlights: [
