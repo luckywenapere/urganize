@@ -67,6 +67,13 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.290.2",
+    date: "November 19, 2026",
+    highlights: [
+      "On a computer, the top bar now always stays at the top of the screen, and the \"Enter to send\" text is gone from the Home chat box.",
+    ],
+  },
+  {
     version: "1.290.1",
     date: "November 18, 2026",
     highlights: [
