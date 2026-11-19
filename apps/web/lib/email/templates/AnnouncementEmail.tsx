@@ -33,6 +33,7 @@ export function AnnouncementEmail({
         body={body}
         includeGreeting={includeGreeting}
         signOff={signOff}
+        signature="Oyin"
       />
     </EmailLayout>
   );

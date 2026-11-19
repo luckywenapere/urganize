@@ -132,7 +132,7 @@ describe('the founder signs as Wena', () => {
     expect(welcome.text).toMatch(/Wena\s+Founder, Urganize/);
   });
 
-  it('signs a composer announcement as Wena', async () => {
+  it('signs a composer announcement as Oyin', async () => {
     const { text } = await renderEmail(
       AnnouncementEmail({
         subject: 'News',
@@ -142,9 +142,9 @@ describe('the founder signs as Wena', () => {
         signOff: true,
       })
     );
-    expect(text).toMatch(/Wena\s+Founder, Urganize/);
+    expect(text).toMatch(/Oyin\s+Founder, Urganize/);
     expect(text).not.toContain('Lucky');
-    expect(text).not.toContain('Oyin');
+    expect(text).not.toContain('Wena');
   });
 });
 

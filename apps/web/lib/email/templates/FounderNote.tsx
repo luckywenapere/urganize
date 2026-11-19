@@ -23,6 +23,9 @@ export type FounderNoteBodyProps = {
   body: string;
   includeGreeting?: boolean;
   signOff?: boolean;
+  /** The name the note is signed with. Welcome and onboarding are Wena; the
+   *  admin composer passes its own. */
+  signature?: string;
   /** An optional picture placed after one paragraph (onboarding only). */
   still?: OnboardingStill;
 };
@@ -62,6 +65,7 @@ export function FounderNoteBody({
   body,
   includeGreeting = true,
   signOff = true,
+  signature = "Wena",
   still,
 }: FounderNoteBodyProps) {
   const firstName = firstNameFrom(recipientName);
@@ -90,7 +94,7 @@ export function FounderNoteBody({
       ))}
       {signOff ? (
         <Text style={{ margin: '24px 0 0', color: '#1e2621', fontSize: '15px', lineHeight: '1.65' }}>
-          Wena
+          {signature}
           <br />
           <span style={{ color: MUTED_TEXT, fontSize: '13px' }}>Founder, Urganize</span>
         </Text>
