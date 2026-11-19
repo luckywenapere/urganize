@@ -11,7 +11,6 @@ export const CHAT_CARD_COPY = {
   placeholder: 'What is slipping? Who is waiting on you? What comes next? Just ask.',
   everything: 'Everything',
   everythingDetail: 'All artists and rollouts',
-  enterHint: 'Enter to send',
   noDropTitle: 'Nothing is dated yet',
   noDropLine: 'Give a rollout a release day and its countdown shows here.',
 } as const;

@@ -349,9 +349,7 @@ export function HomeChatCard({
                 ) : null}
               </>
             ) : (
-              <span className="ml-auto text-xs text-content-tertiary" aria-hidden="true">
-                {CHAT_CARD_COPY.enterHint}
-              </span>
+              <span className="ml-auto" />
             )}
             <button
               type="submit"
