@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Phone Next drop and chat fade</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme, plus the dark wallpaper for the chat. */
+  :root {
+    --bg:#f5f0e6; --card:#faf5ec; --hover:#ebe6dc; --tile:#e3ddd0; --side-on:#e6e1d6;
+    --line:rgba(26,22,17,.09); --line2:rgba(26,22,17,.18);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --board:#d9d5cc; --board-sec:#4f4a42;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:14px/20px 'DM Sans', system-ui, sans-serif; -webkit-font-smoothing:antialiased; color:var(--text); padding:32px 16px 64px; }
+  p,h1,h2,h3 { margin:0; }
+  svg { display:block; }
+  .wrap { max-width:1260px; margin:0 auto; }
+  .intro h1 { font-size:26px; line-height:34px; font-weight:600; letter-spacing:-.02em; }
+  .intro p { color:var(--board-sec); max-width:760px; margin-top:8px; }
+  .section { margin-top:40px; }
+  .section h2 { font-size:18px; font-weight:600; letter-spacing:-.01em; }
+  .section > p { color:var(--board-sec); margin-top:4px; max-width:760px; }
+  .row { display:flex; gap:40px; flex-wrap:wrap; margin-top:20px; align-items:flex-start; }
+  .label { font-size:12px; line-height:16px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--board-sec); margin-bottom:10px; }
+
+  .phone { width:375px; height:780px; border-radius:36px; overflow:hidden; position:relative; box-shadow:0 14px 40px rgba(26,22,17,.18);
+    background:linear-gradient(180deg,#e9eadf 0%,#efeadc 30%,#ece4d2 55%,#e6e1cf 100%); }
+  .phone::after { content:''; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(120% 40% at 50% 8%, rgba(255,250,225,.75), transparent 60%); }
+  .in { position:relative; z-index:1; height:100%; display:flex; flex-direction:column; }
+  .top { display:flex; align-items:center; justify-content:space-between; padding:18px 20px 10px; }
+  .tabs { display:flex; gap:20px; font-size:18px; font-weight:600; letter-spacing:-.02em; }
+  .tabs span { color:var(--ter); padding-bottom:6px; }
+  .tabs span.on { color:var(--text); border-bottom:3px solid var(--brand); }
+  .me { width:34px; height:34px; border-radius:50%; background:var(--brand); color:#f5f0e6; display:grid; place-items:center; font-size:12px; font-weight:700; }
+
+  .hello { padding:10px 20px 0; }
+  .eyebrow { font-size:12px; color:var(--sec); }
+  .hello h2 { font-size:26px; line-height:31px; font-weight:600; letter-spacing:-.03em; margin-top:4px; }
+  .hello h2 span { color:var(--sec); }
+  .box { margin:14px 20px 0; background:var(--card); border:1px solid var(--line2); border-radius:18px; padding:14px 14px 10px; box-shadow:0 6px 18px rgba(26,22,17,.06); }
+  .box p { color:var(--ter); font-size:16px; line-height:22px; min-height:44px; }
+  .tools { display:flex; align-items:center; gap:10px; margin-top:6px; }
+  .tools .grow { flex:1; }
+  .chip { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 10px; border-radius:99px; background:var(--brand-soft); color:var(--brand); font-size:12px; font-weight:600; }
+  .plus { width:30px; height:30px; border-radius:50%; border:1px solid var(--line2); display:grid; place-items:center; color:var(--sec); }
+  .go { width:34px; height:34px; border-radius:50%; background:var(--brand); color:#f5f0e6; display:grid; place-items:center; }
+
+  /* Try one, today: three tall cards with a second line. */
+  .try { padding:16px 20px 0; }
+  .try .lab { font-size:13px; color:var(--sec); margin-bottom:8px; }
+  .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .ex { background:rgba(250,245,236,.85); border:1px solid var(--line); border-radius:14px; padding:12px 10px; min-height:118px; }
+  .ex i { display:block; width:18px; height:18px; border-radius:5px; background:var(--brand-soft); margin-bottom:14px; }
+  .ex b { display:block; font-size:13px; line-height:17px; font-weight:600; }
+  .ex small { display:block; margin-top:4px; color:var(--sec); font-size:12px; line-height:16px; }
+
+  /* Try one, new: shadcn outline buttons (Button variant="outline"), icon in a
+     small tinted square, the title only. */
+  .btns { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .sb { height:76px; border-radius:12px; border:1px solid var(--line2); background:rgba(250,245,236,.88);
+    display:flex; flex-direction:column; align-items:flex-start; justify-content:space-between; padding:10px 10px 9px;
+    box-shadow:0 1px 2px rgba(26,22,17,.05); }
+  .sb .ico { width:26px; height:26px; border-radius:8px; background:var(--brand-soft); color:var(--brand); display:grid; place-items:center; }
+  .sb b { font-size:13px; line-height:17px; font-weight:600; }
+
+  /* Next drop, today: the old dark green banner. */
+  .old-drop { margin:16px 20px 0; border-radius:16px; background:#1d2a21; color:#f5f0e6; display:grid; grid-template-columns:72px 1fr auto; gap:12px; align-items:center; padding:16px; }
+  .old-drop .cov { width:72px; height:72px; border-radius:8px; background:linear-gradient(135deg,#3b6fd8,#9cc8ff); box-shadow:0 8px 24px rgba(0,0,0,.25); }
+  .old-drop small { font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:rgba(245,240,230,.7); }
+  .old-drop b { display:block; font-size:20px; line-height:26px; font-weight:600; }
+  .old-drop span { font-size:13px; color:rgba(245,240,230,.7); }
+  .old-drop .num { text-align:right; font-size:36px; line-height:36px; font-weight:600; letter-spacing:-.03em; }
+  .old-drop .num small { display:block; font-size:12px; letter-spacing:0; text-transform:none; font-weight:400; }
+
+  /* Next drop, new: the Home look. Same frosted surface as the Try one
+     buttons, cover and title, the countdown big, a thin progress line. */
+  .drop { margin:16px 20px 0; background:rgba(250,245,236,.88); border:1px solid var(--line2); border-radius:18px; padding:14px; box-shadow:0 6px 18px rgba(26,22,17,.06); }
+  .drop .lab { font-size:13px; color:var(--sec); }
+  .drop .main { display:flex; align-items:center; gap:12px; margin-top:10px; }
+  .drop .cov { width:56px; height:56px; border-radius:12px; background:linear-gradient(135deg,#3b6fd8,#9cc8ff); flex:none; }
+  .drop .t { flex:1; min-width:0; }
+  .drop .t b { display:block; font-size:18px; line-height:22px; font-weight:600; letter-spacing:-.02em; }
+  .drop .t small { color:var(--sec); font-size:13px; }
+  .drop .num { text-align:right; flex:none; }
+  .drop .num b { display:block; font-size:34px; line-height:34px; font-weight:600; letter-spacing:-.03em; }
+  .drop .num small { color:var(--sec); font-size:12px; }
+  .bar { height:6px; border-radius:99px; background:var(--hover); margin-top:12px; overflow:hidden; }
+  .bar i { display:block; height:100%; width:46%; background:var(--brand); border-radius:99px; }
+  .drop .foot { display:flex; justify-content:space-between; align-items:center; margin-top:8px; font-size:13px; color:var(--sec); }
+  .drop .foot strong { color:var(--text); font-weight:600; display:inline-flex; align-items:center; gap:4px; }
+
+  .head { display:flex; justify-content:space-between; align-items:baseline; padding:20px 20px 2px; }
+  .head b { font-size:16px; font-weight:600; }
+  .head span { color:var(--sec); font-size:13px; }
+  .rows { padding:0 20px; }
+  .ar { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--line); }
+  .face { width:40px; height:40px; border-radius:50%; background:var(--tile); display:grid; place-items:center; font-size:12px; font-weight:600; flex:none; }
+  .ar .grow { flex:1; }
+  .ar b { display:block; font-size:16px; line-height:22px; font-weight:600; }
+  .ar small { color:var(--sec); font-size:13px; }
+
+  /* The chat, on the dark wallpaper (what the bug was reported on). */
+  .dark { --text:#f2f0ea; --sec:#b9b6ad; --ter:#8f8c84; --line:rgba(242,240,234,.08); --line2:rgba(242,240,234,.16);
+    background:#0f1612; }
+  .dark::after { background:
+      radial-gradient(90% 35% at 30% 20%, rgba(95,120,95,.45), transparent 70%),
+      radial-gradient(80% 40% at 70% 70%, rgba(70,95,80,.40), transparent 70%),
+      linear-gradient(180deg, rgba(10,14,12,.35), rgba(10,14,12,.55)); }
+  .dark .tabs span.on { color:#f2f0ea; border-bottom-color:#7fd09c; }
+  .chathead { display:flex; align-items:center; gap:12px; padding:4px 16px 8px; color:#f2f0ea; }
+  .back { width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,.08); display:grid; place-items:center; }
+  .chathead b { display:block; font-size:16px; }
+  .chathead small { color:var(--sec); font-size:12px; }
+  .msgs { flex:1; overflow:hidden; padding:0 16px; display:flex; flex-direction:column; justify-content:flex-end; gap:10px; position:relative; }
+  .ai { align-self:flex-start; max-width:86%; background:rgba(28,28,30,.92); color:#f2f0ea; border-radius:16px; padding:12px 14px; font-size:14px; line-height:21px; }
+  .me2 { align-self:flex-end; background:rgba(127,208,156,.22); color:#e8f6ec; border:1px solid rgba(127,208,156,.35); border-radius:16px; padding:8px 12px; font-size:14px; }
+  .acts { display:flex; gap:12px; color:var(--ter); padding-left:4px; font-size:11px; }
+  /* Today: the dark band. */
+  .band { height:26px; margin:0 16px; background:linear-gradient(0deg, #0b0e0c 30%, rgba(11,14,12,.0)); }
+  /* New: no band. The message list fades out over its last 56px (a mask, so
+     the wallpaper shows through as the words fade, never a painted colour). */
+  .fade { -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - 56px), transparent); mask-image:linear-gradient(to bottom, #000 calc(100% - 56px), transparent); }
+  .cbox { margin:10px 16px 18px; height:54px; border-radius:99px; background:rgba(28,30,28,.72); border:1px solid rgba(242,240,234,.16);
+    backdrop-filter:blur(18px); display:flex; align-items:center; gap:12px; padding:0 8px 0 16px; color:var(--ter); font-size:15px; }
+  .cbox .grow { flex:1; }
+  .cbox .go { background:rgba(242,240,234,.12); color:#f2f0ea; }
+  .disc { text-align:center; font-size:11.5px; line-height:15px; color:var(--ter); margin:-10px 16px 12px; }
+  .boxdisc { text-align:center; font-size:11.5px; line-height:15px; color:var(--ter); margin:8px 20px 0; }
+
+  .notes { margin-top:36px; background:var(--card); border-radius:14px; padding:18px 20px; }
+  .notes h3 { font-size:15px; font-weight:600; }
+  .notes ol { margin:8px 0 0; padding-left:20px; color:var(--sec); }
+  .notes li { margin-top:6px; }
+</style></head>
+<body><div class="wrap">
+
+<div class="intro">
+  <h1>Phone: Next drop, Try one and the chat's bottom edge</h1>
+  <p>Issue #1342. Three fixes on a phone. Light mode for Home; the chat is shown on the dark wallpaper because that is where the band shows.</p>
+</div>
+
+<!-- Inline lucide icons (the app's icon set, used by shadcn). -->
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.94 14.06 8 20l-1.94-5.94L0 12l6.06-1.94L8 4l1.94 6.06L16 12z" transform="translate(4 0) scale(.85)"/></symbol>
+  <symbol id="clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="userplus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></symbol>
+  <symbol id="arrowright" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="arrowup" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+  <symbol id="mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+  <symbol id="left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+</svg>
+
+<div class="section">
+  <h2>1 and 2. Home: Try one buttons and the Next drop</h2>
+  <p>The Try one cards keep one line each and become shadcn outline buttons with a small icon tile. The Next drop leaves the dark green banner and takes Home's frosted surface: cover, title, the countdown, a thin progress line and Open rollout. It only shows when a rollout has a date coming up.</p>
+  <div class="row">
+    <div>
+      <div class="label">Today</div>
+      <div class="phone"><div class="in">
+        <div class="top"><div class="tabs"><span class="on">Home</span><span>Ask Chappi</span></div><div class="me">OY</div></div>
+        <div class="hello"><p class="eyebrow">Wednesday evening</p><h2>Good evening, Oyin.<br><span>What is on your mind?</span></h2></div>
+        <div class="box"><p>What is slipping? Who is waiting on you?</p>
+          <div class="tools"><span class="plus">+</span><span class="chip">Honest</span><span class="grow"></span><span class="go"><svg width="16" height="16"><use href="#arrowup"/></svg></span></div></div>
+        <div class="try"><p class="lab">Try one</p>
+          <div class="cards">
+            <div class="ex"><i></i><b>Plan a rollout</b><small>Pick a record and the AI builds the plan.</small></div>
+            <div class="ex"><i></i><b>What is late?</b><small>See what is slipping across your artists.</small></div>
+            <div class="ex"><i></i><b>Add an artist</b><small>Paste a Spotify link to start their page.</small></div>
+          </div></div>
+        <div class="old-drop"><span class="cov"></span><span><small>Next drop</small><b>Honest</b><span>Babyboy Dorian</span></span><span class="num">12<small>days</small></span></div>
+      </div></div>
+    </div>
+    <div>
+      <div class="label">New</div>
+      <div class="phone"><div class="in">
+        <div class="top"><div class="tabs"><span class="on">Home</span><span>Ask Chappi</span></div><div class="me">OY</div></div>
+        <div class="hello"><p class="eyebrow">Wednesday evening</p><h2>Good evening, Oyin.<br><span>What is on your mind?</span></h2></div>
+        <div class="box"><p>What is slipping? Who is waiting on you?</p>
+          <div class="tools"><span class="plus">+</span><span class="chip">Honest</span><span class="grow"></span><span class="go"><svg width="16" height="16"><use href="#arrowup"/></svg></span></div></div>
+        <div class="try"><p class="lab">Try one</p>
+          <div class="btns">
+            <div class="sb"><span class="ico"><svg width="15" height="15"><use href="#sparkles"/></svg></span><b>Plan a rollout</b></div>
+            <div class="sb"><span class="ico"><svg width="15" height="15"><use href="#clock"/></svg></span><b>What is late?</b></div>
+            <div class="sb"><span class="ico"><svg width="15" height="15"><use href="#userplus"/></svg></span><b>Add an artist</b></div>
+          </div></div>
+        <div class="drop">
+          <p class="lab">Next drop</p>
+          <div class="main"><span class="cov"></span>
+            <span class="t"><b>Honest</b><small>Babyboy Dorian · Single</small></span>
+            <span class="num"><b>12</b><small>days · Mon 30 Nov</small></span></div>
+          <div class="bar"><i></i></div>
+          <div class="foot"><span>11 of 24 done</span><strong>Open rollout <svg width="14" height="14"><use href="#arrowright"/></svg></strong></div>
+        </div>
+        <div class="head"><b>Artists</b><span>2</span></div>
+        <div class="rows"><div class="ar"><span class="face">BD</span><span class="grow"><b>Babyboy Dorian</b><small>Honest · Mon 30 Nov</small></span></div></div>
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>3. The chat's bottom edge</h2>
+  <p>Today a dark band is painted between the last message and the box. New: no band. The messages fade out over their last line or so, straight into the wallpaper, and slide under the box as you scroll, so the box floats on the conversation. Under the box, one small line says the AI can get things wrong.</p>
+  <div class="row">
+    <div>
+      <div class="label">Today</div>
+      <div class="phone dark"><div class="in">
+        <div class="top"><div class="tabs"><span>Home</span><span class="on">Ask Chappi</span></div><div class="me">OY</div></div>
+        <div class="chathead"><span class="back"><svg width="16" height="16"><use href="#left"/></svg></span><span><b>Honest</b><small>Single · Babyboy Dorian</small></span></div>
+        <div class="msgs">
+          <div class="ai">Make sure to keep track of those streaming numbers and look at the trends.</div>
+          <div class="me2">what's my last task</div>
+          <div class="ai">Your last task, still to do, is Document lessons learned in the master release tracker. It is due 28 Nov.</div>
+          <div class="acts"><span>Copy</span><span>Listen</span><span>Good</span><span>Bad</span></div>
+        </div>
+        <div class="band"></div>
+        <div class="cbox"><span class="plus" style="border-color:rgba(242,240,234,.2);color:#b9b6ad">+</span><span class="grow">Message AI about Honest</span><svg width="18" height="18"><use href="#mic"/></svg><span class="go"><svg width="16" height="16"><use href="#arrowup"/></svg></span></div>
+      </div></div>
+    </div>
+    <div>
+      <div class="label">New</div>
+      <div class="phone dark"><div class="in">
+        <div class="top"><div class="tabs"><span>Home</span><span class="on">Ask Chappi</span></div><div class="me">OY</div></div>
+        <div class="chathead"><span class="back"><svg width="16" height="16"><use href="#left"/></svg></span><span><b>Honest</b><small>Single · Babyboy Dorian</small></span></div>
+        <div class="msgs fade" style="padding-bottom:6px">
+          <div class="ai">Make sure to keep track of those streaming numbers and look at the trends.</div>
+          <div class="me2">what's my last task</div>
+          <div class="ai">Your last task, still to do, is Document lessons learned in the master release tracker. It is due 28 Nov.</div>
+          <div class="acts"><span>Copy</span><span>Listen</span><span>Good</span><span>Bad</span></div>
+          <div class="ai" style="opacity:.9">Want me to add a reminder for Friday?</div>
+        </div>
+        <div class="cbox" style="margin-top:2px"><span class="plus" style="border-color:rgba(242,240,234,.2);color:#b9b6ad">+</span><span class="grow">Message AI about Honest</span><svg width="18" height="18"><use href="#mic"/></svg><span class="go"><svg width="16" height="16"><use href="#arrowup"/></svg></span></div>
+        <p class="disc">AI can get things wrong. Check anything important.</p>
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <h3>What changes</h3>
+  <ol>
+    <li>Try one: one line each, as shadcn outline buttons (the app's Button, variant outline) with a small lucide icon tile. What each one does stays the same.</li>
+    <li>Next drop on a phone: the frosted Home card above. The computer's Next drop is unchanged.</li>
+    <li>Chat: the painted band goes. The message list fades out with a mask, so the wallpaper (or the plain page with no wallpaper) shows through the fade. The jump to latest button stays.</li>
+    <li>Under the chat box, one small line: "AI can get things wrong. Check anything important." It shows wherever you chat with the AI (Ask Chappi, a rollout chat, the side panel on a computer), not on Home's box.</li>
+  </ol>
+</div>
+
+</div></body></html>

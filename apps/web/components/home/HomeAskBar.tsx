@@ -1,5 +1,6 @@
 'use client';
 
+import { AI_DISCLAIMER } from '@/lib/chappi/ai-disclaimer';
 import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
@@ -347,6 +348,10 @@ export function HomeAskBar({
             {attach.error}
           </p>
         ) : null}
+        {/* Under the box, over the wallpaper: a soft shadow keeps it readable on a photo (#1342). */}
+        <p className="mt-1.5 text-center text-[11px] leading-4 text-content-secondary [text-shadow:0_1px_2px_rgb(var(--color-bg-base)/0.6)]">
+          {AI_DISCLAIMER}
+        </p>
       </form>
     </div>,
     document.body

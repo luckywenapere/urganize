@@ -33,6 +33,7 @@ import { isChappiEnabled } from '@/lib/chappi/config';
 import {
   Cover,
   STATUS_WORD,
+  NextDropCard,
   Spotlight,
   shortDay,
   typeLabel,
@@ -388,7 +389,7 @@ function SwipeArtists({ loading, list, today }: { loading: boolean; list: Artist
           <OutNowCards className="mt-4" />
           {spotlight ? (
             <div className="mt-4">
-              <Spotlight row={spotlight} compact />
+              <NextDropCard row={spotlight} />
             </div>
           ) : null}
           {askFirst ? (

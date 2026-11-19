@@ -79,6 +79,7 @@ import { useShareStore } from '@/stores/useShareStore';
 import { deferFirstShareOffer } from '@/components/share/withFirstShareOffer';
 import { actionsForLeftChat, firstShareOffersIn } from '@/lib/chappi/left-chat-actions';
 import { mayAutoFocusComposer, readAutoFocusContext } from '@/lib/composer-focus';
+import { AI_DISCLAIMER } from '@/lib/chappi/ai-disclaimer';
 import { TASKS_CHANGED_EVENT, useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { matchTasksByTitle, parseTaskStatusCommand, type TaskStatusCommand } from '@/lib/chappi/task-status-command';
 import { getTaskStatusLabel } from '@/lib/tasks';
@@ -1719,6 +1720,7 @@ export function ChappiConversation({
           {attach.error}
         </p>
       ) : null}
+      <p className="mt-1.5 px-2 text-center text-[11px] leading-4 text-content-tertiary">{AI_DISCLAIMER}</p>
     </form>
   );
 
@@ -1868,7 +1870,11 @@ export function ChappiConversation({
       {/* overscroll-contain stops the transcript's scroll from chaining to
           the page on mobile — the input never rides away (Claude-app
           mechanics, founder call, 2026-07-23). */}
-      <div ref={scrollerRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      {/* chat-fade-bottom (#1342): the transcript fades out over its last
+          40px, a mask, so the wallpaper or the page shows through rather than
+          a painted band. The 48px bottom spacer keeps the newest message clear
+          of the fade once you are at the end. */}
+      <div ref={scrollerRef} className="chat-fade-bottom min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {/* The transcript starts at the TOP and grows down (founder call,
             2026-08-16), the shape every assistant people already use has.
             This REVERSES the messenger anchoring of 2026-07-23, which was
@@ -1918,25 +1924,13 @@ export function ChappiConversation({
         </div>
       </div>
 
-      {/* The composer sits on a frosted ground the transcript scrolls UNDER
-          (founder call, 2026-10-20): the wrapper pulls up over the last 16px
-          of the scroller (-mt-4; the bottom sentinel is 48px tall so a
-          message scrolled to the end still clears it), and its top padding
-          puts the pill back exactly where it was (28px = the 16px overlap plus
-          the old 12px gap). It was a 40px overlap until 2026-11-10, when the
-          founder found the frost too tall on a phone: it should be about the
-          height of the box, not twice it. The ground fades from clear to the page colour
-          over that padding and blurs what passes beneath, the way the phone's
-          bottom bar already does, so the box reads as part of the
-          conversation rather than a form stuck to it. The panel variant
-          fades to its card's surface instead of the page. backdrop-filter
-          makes this wrapper the containing block for fixed descendants; the
-          scope and attach menus are absolute, which it does not affect. */}
-      <div
-        className={`relative z-10 -mt-4 shrink-0 bg-gradient-to-t pt-7 backdrop-blur-xl ${
-          isPanel ? 'from-bg-surface via-bg-surface/90 to-transparent' : 'from-bg-base via-bg-base/90 to-transparent'
-        }`}
-      >
+      {/* The composer sits under the transcript, which fades out above it
+          (chat-fade-bottom on the scroller, #1342). The frosted, page-coloured
+          ground it had (2026-10-20) is gone: over the wallpaper it read as a
+          dark band, and on a phone, where the box lives outside the chat
+          (externalComposer), it was a band with nothing in it. With an outside
+          box this keeps only the jump-to-latest button. */}
+      <div className={externalComposer ? 'relative z-10 shrink-0' : 'relative z-10 shrink-0 pt-2'}>
         {awayFromLatest ? (
           // The way back down: one round button just above the frost, the
           // same material as the pill (the frost is too short to hold it
