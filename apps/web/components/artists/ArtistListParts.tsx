@@ -6,7 +6,7 @@
 // unchanged so both can draw the same cover and the same Next drop banner.
 
 import Link from 'next/link';
-import { Disc3, Plus } from '@/components/icons';
+import { ArrowRight, Disc3, Plus } from '@/components/icons';
 import { initialsFor } from '@/lib/swipe-nav';
 import type { ArtistListRow, ArtistStatus } from '@/lib/artists-list';
 import { releaseHref } from '@/lib/artist-page';
@@ -104,9 +104,10 @@ function SpotlightFacts({ row, withDone }: { row: ListRow; withDone: boolean }) 
 /**
  * The banner on top (#878): the dated rollout that drops soonest across the
  * roster. The eye lands on the cover, reads the title, then the countdown.
- * Dark green in both themes, like Spotify's artist banner.
+ * Dark green in both themes, like Spotify's artist banner. Computer only since
+ * #1342; the phone draws NextDropCard instead.
  */
-export function Spotlight({ row, compact = false }: { row: ListRow; compact?: boolean }) {
+export function Spotlight({ row }: { row: ListRow }) {
   const release = row.next;
   if (!release || row.daysToGo === null) return null;
   const days = row.daysToGo;
@@ -121,20 +122,16 @@ export function Spotlight({ row, compact = false }: { row: ListRow; compact?: bo
     <Link
       href={releaseHref(release.id)}
       onClick={() => captureAnalyticsEvent({ name: 'artists_list_action', properties: { artist_id: row.artist.id, action: 'spotlight' } })}
-      className={`motion-focus motion-press grid items-center rounded-2xl bg-[#1d2a21] text-[#f5f0e6] ${
-        compact ? 'grid-cols-[72px_minmax(0,1fr)_auto] gap-3 p-4' : 'grid-cols-[136px_minmax(0,1fr)_auto] gap-6 p-6'
-      }`}
+      className="motion-focus motion-press grid grid-cols-[136px_minmax(0,1fr)_auto] items-center gap-6 rounded-2xl bg-[#1d2a21] p-6 text-[#f5f0e6]"
     >
-      <Cover release={release} size={compact ? 72 : 136} onInk className="shadow-[0_8px_24px_rgba(0,0,0,0.25)]" />
+      <Cover release={release} size={136} onInk className="shadow-[0_8px_24px_rgba(0,0,0,0.25)]" />
       <span className="min-w-0">
         <span className="block text-[11px] font-semibold uppercase leading-4 tracking-[0.1em] text-[#f5f0e6]/70">
           Next drop
         </span>
-        <span className={`mt-1 block truncate font-display ${compact ? 'text-xl leading-[26px]' : 'text-[32px] leading-10'}`}>
-          {displayReleaseTitle(release.title)}
-        </span>
-        <span className={`mt-1 flex min-w-0 items-center gap-2 text-[#f5f0e6]/70 ${compact ? 'text-[13px]' : 'text-sm'}`}>
-          {compact ? null : row.artist.photoUrl ? (
+        <span className="mt-1 block truncate font-display text-[32px] leading-10">{displayReleaseTitle(release.title)}</span>
+        <span className="mt-1 flex min-w-0 items-center gap-2 text-sm text-[#f5f0e6]/70">
+          {row.artist.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={row.artist.photoUrl} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
           ) : (
@@ -146,41 +143,84 @@ export function Spotlight({ row, compact = false }: { row: ListRow; compact?: bo
             </span>
           )}
           <span className="truncate font-semibold text-[#f5f0e6]">{row.artist.name}</span>
-          {compact ? null : <span className="shrink-0">· {typeLabel(release)}</span>}
+          <span className="shrink-0">· {typeLabel(release)}</span>
         </span>
-        {compact ? null : (
-          <>
-            {bar ? <span className="mt-4 block max-w-[280px]">{bar}</span> : null}
-            <span className="mt-2 block text-[13px] leading-5 text-[#f5f0e6]/70">
-              <SpotlightFacts row={row} withDone />
-            </span>
-          </>
-        )}
+        {bar ? <span className="mt-4 block max-w-[280px]">{bar}</span> : null}
+        <span className="mt-2 block text-[13px] leading-5 text-[#f5f0e6]/70">
+          <SpotlightFacts row={row} withDone />
+        </span>
       </span>
       <span className="flex flex-col items-end text-right">
-        <span
-          className={`font-semibold tabular-nums tracking-[-0.03em] ${compact ? 'text-4xl leading-9' : 'text-[56px] leading-[56px]'}`}
-        >
-          {days}
+        <span className="text-[56px] font-semibold leading-[56px] tabular-nums tracking-[-0.03em]">{days}</span>
+        <span className="text-[13px] leading-5 text-[#f5f0e6]/70">
+          {days === 1 ? 'day' : 'days'} to go · {shortDay(release.releaseDate) ?? ''}
         </span>
-        <span className={`text-[#f5f0e6]/70 ${compact ? 'text-xs' : 'text-[13px] leading-5'}`}>
-          {days === 1 ? 'day' : 'days'}
-          {compact ? '' : ` to go · ${shortDay(release.releaseDate) ?? ''}`}
+        <span className="mt-4 inline-flex h-9 items-center rounded-full bg-[#f5f0e6] px-4 text-[13px] font-semibold text-[#1d2a21]">
+          Open rollout
         </span>
-        {compact ? null : (
-          <span className="mt-4 inline-flex h-9 items-center rounded-full bg-[#f5f0e6] px-4 text-[13px] font-semibold text-[#1d2a21]">
-            Open rollout
-          </span>
-        )}
       </span>
-      {compact && (bar || row.dueThisWeek > 0 || row.late > 0) ? (
-        <span className="col-span-3">
-          {bar}
-          <span className="mt-1.5 block text-xs text-[#f5f0e6]/70">
-            <SpotlightFacts row={row} withDone={false} />
+    </Link>
+  );
+}
+
+/**
+ * The Next drop on a phone's Home (#1342, docs/mocks/phone-next-drop-chat): the
+ * frosted Home surface the box and the Try one buttons use, in place of the
+ * dark green banner. Cover and title, the countdown big, a thin progress line,
+ * then Open rollout. Same link and the same analytics as the banner.
+ */
+export function NextDropCard({ row }: { row: ListRow }) {
+  const release = row.next;
+  if (!release || row.daysToGo === null) return null;
+  const days = row.daysToGo;
+  const day = shortDay(release.releaseDate);
+  return (
+    <Link
+      href={releaseHref(release.id)}
+      onClick={() => captureAnalyticsEvent({ name: 'artists_list_action', properties: { artist_id: row.artist.id, action: 'spotlight' } })}
+      className="motion-focus motion-press group block rounded-[18px] border border-stroke-control bg-bg-surface/85 p-3.5 shadow-[0_6px_18px_rgb(0_0_0/0.06)] backdrop-blur-sm transition-colors hover:bg-bg-surface"
+    >
+      <span className="block text-[13px] leading-5 text-content-secondary">Next drop</span>
+      <span className="mt-2.5 flex min-w-0 items-center gap-3">
+        <Cover release={release} size={56} className="!rounded-xl" />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-lg font-semibold leading-[22px] tracking-[-0.02em] text-content-primary">
+            {displayReleaseTitle(release.title)}
           </span>
+          <span className="block truncate text-[13px] leading-5 text-content-secondary">
+            {row.artist.name} · {typeLabel(release)}
+          </span>
+        </span>
+        <span className="shrink-0 text-right">
+          <span className="block text-[34px] font-semibold leading-[34px] tabular-nums tracking-[-0.03em] text-content-primary">
+            {days === 0 ? 'Today' : days}
+          </span>
+          <span className="block text-xs leading-4 text-content-secondary">
+            {days === 0 ? 'it drops' : days === 1 ? 'day' : 'days'}
+            {day ? ` · ${day}` : ''}
+          </span>
+        </span>
+      </span>
+      {row.total > 0 ? (
+        <span className="mt-3 block h-1.5 overflow-hidden rounded-full bg-bg-hover">
+          <span className="block h-full rounded-full bg-brand" style={{ width: `${percent(row)}%` }} />
         </span>
       ) : null}
+      <span className="mt-2 flex items-center justify-between gap-3 text-[13px] leading-5 text-content-secondary">
+        <span className="min-w-0 truncate">
+          {row.total > 0 ? `${row.done} of ${row.total} done` : null}
+          {row.late > 0 ? (
+            <span className="font-semibold text-status-error">
+              {row.total > 0 ? ' · ' : ''}
+              {row.late} late
+            </span>
+          ) : null}
+        </span>
+        <span className="inline-flex shrink-0 items-center gap-1 font-semibold text-content-primary">
+          Open rollout
+          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+        </span>
+      </span>
     </Link>
   );
 }

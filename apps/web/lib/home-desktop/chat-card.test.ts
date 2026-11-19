@@ -181,6 +181,12 @@ describe('phone Try one cards (#1339)', () => {
     expect(PHONE_TRY_CARDS.map((card) => card.title)).toEqual(['Plan a rollout', 'What is late?', 'Add an artist']);
   });
 
+  it('carries a title only, no second line (#1342)', () => {
+    for (const card of PHONE_TRY_CARDS) {
+      expect(Object.keys(card).sort()).toEqual(card.ask ? ['ask', 'kind', 'title'] : ['kind', 'title']);
+    }
+  });
+
   it('asks the AI a real question for What is late?', () => {
     const late = PHONE_TRY_CARDS.find((card) => card.kind === 'late');
     expect(late?.ask).toBeTruthy();

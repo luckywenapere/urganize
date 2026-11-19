@@ -3555,6 +3555,13 @@ html.urgans-leaving .home-scene-container > :not([data-urgans-source]) {
   }
 }
 
+/* A chat's messages fade out above its box (#1342). A mask, not a painted
+   gradient, so a wallpaper shows through the fade in both themes. */
+.chat-fade-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent);
+}
+
 /* Each page clears the box under it. */
 .swipe-page {
   padding-bottom: calc(var(--home-dock-height, 3.5rem) + 2.5rem + env(safe-area-inset-bottom, 0px));

@@ -149,20 +149,15 @@ export function buildChatSuggestions(rows: readonly SuggestionRow[]): ChatSugges
 export type TryCard = {
   kind: 'plan' | 'late' | 'artist';
   title: string;
-  line: string;
   /** What the card sends to the AI, when it asks rather than opens a step. */
   ask?: string;
 };
 
 export const PHONE_TRY_CARDS: readonly TryCard[] = [
-  { kind: 'plan', title: 'Plan a rollout', line: 'Pick a record and the AI builds the plan.' },
-  {
-    kind: 'late',
-    title: 'What is late?',
-    line: 'See what is slipping across your artists.',
-    ask: 'What is late across my artists?',
-  },
-  { kind: 'artist', title: 'Add an artist', line: 'Paste a Spotify link to start their page.' },
+  // Title only (#1342, founder: "remove the subtext"); the icon says the rest.
+  { kind: 'plan', title: 'Plan a rollout' },
+  { kind: 'late', title: 'What is late?', ask: 'What is late across my artists?' },
+  { kind: 'artist', title: 'Add an artist' },
 ];
 
 export const TRY_CARDS_LABEL = 'Try one';

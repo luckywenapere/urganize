@@ -71,6 +71,8 @@ export const changelog: Release[] = [
     date: "November 19, 2026",
     highlights: [
       "On a computer, the top bar now always stays at the top of the screen, and the \"Enter to send\" text is gone from the Home chat box.",
+      "In a chat, messages now fade out above the box instead of sitting on a dark band, and a small line under the box reminds you the AI can get things wrong.",
+      "On your phone, the three cards under Home's box are simpler, and the card for your next drop matches the rest of Home.",
     ],
   },
   {

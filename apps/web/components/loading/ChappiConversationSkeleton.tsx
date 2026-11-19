@@ -30,8 +30,10 @@ export function ChappiConversationSkeleton({ resumableMessages = 0 }: { resumabl
             )}
           </div>
         </div>
-        <div className="mt-3 shrink-0">
+        {/* pt-2 and the AI line under the box, as the live chat (#1342). */}
+        <div className="mt-2 shrink-0">
           <div className="mx-auto h-12 w-full max-w-[46rem] rounded-full border border-stroke-default bg-bg-surface" />
+          <span className="mx-auto mt-1.5 flex h-4 items-center justify-center"><SkeletonBlock className="h-2.5 w-56" /></span>
         </div>
       </div>
     );
@@ -47,6 +49,7 @@ export function ChappiConversationSkeleton({ resumableMessages = 0 }: { resumabl
       </div>
       <div className="mt-3 shrink-0 lg:mt-6">
         <div className="mx-auto h-12 w-full max-w-2xl rounded-full border border-stroke-default bg-bg-surface" />
+        <span className="mx-auto mt-1.5 flex h-4 items-center justify-center"><SkeletonBlock className="h-2.5 w-56" /></span>
         <div className="mt-4 hidden flex-wrap items-center justify-center gap-2 lg:flex">
           {Array.from({ length: 4 }).map((_, index) => (
             <SkeletonBlock key={`chappi-chip-${index}`} className="h-7 w-24" />
