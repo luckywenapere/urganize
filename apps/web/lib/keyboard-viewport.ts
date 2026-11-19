@@ -102,11 +102,44 @@ export function isEditableElement(
   return element.isContentEditable === true;
 }
 
+/**
+ * Whether an on-screen keyboard is possible at all right now. Two things rule it
+ * out, and both used to be read as a keyboard:
+ *
+ *  - No touch screen. A computer with a mouse or trackpad has no on-screen
+ *    keyboard, but its visible area can still differ from the layout viewport
+ *    (a zoomed page, a resized window). That was read as a keyboard, and the
+ *    app's fixed frame, top bar included, was pushed down the screen with a
+ *    blank band above it.
+ *  - A pinched-in page. Pinch-zoom shrinks and pans the visible area, which
+ *    looks exactly like a keyboard covering the bottom.
+ *
+ * Takes plain values so it is testable without a browser.
+ */
+export function keyboardCanExist(env: { coarsePointer: boolean; scale: number }): boolean {
+  return env.coarsePointer && Math.abs(env.scale - 1) <= 0.02;
+}
+
+function readKeyboardEnvironment(): { coarsePointer: boolean; scale: number } {
+  return {
+    coarsePointer: window.matchMedia?.('(pointer: coarse)').matches ?? false,
+    scale: window.visualViewport?.scale ?? 1,
+  };
+}
+
 function measure(): KeyboardViewportState {
   const viewport = window.visualViewport;
   const width = window.innerWidth;
   const height = readViewportHeight();
   const offsetTop = viewport ? Math.max(0, Math.round(viewport.offsetTop)) : 0;
+
+  if (!keyboardCanExist(readKeyboardEnvironment())) {
+    // Keep the baselines current so the moment a real keyboard is possible
+    // again (the page is un-pinched) it is compared against the right height.
+    baselineWidth = width;
+    baselineHeight = height;
+    return { open: false, viewportHeightPx: height, insetPx: 0, offsetTopPx: 0 };
+  }
 
   if (width !== baselineWidth) {
     // Orientation or window resize, not a keyboard — re-baseline instead of

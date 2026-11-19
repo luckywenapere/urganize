@@ -3520,6 +3520,17 @@ html.urgans-leaving .home-scene-container > :not([data-urgans-source]) {
   top: var(--app-visual-top, 0px);
   height: var(--app-viewport-height, 100dvh);
 }
+/* A computer has no on-screen keyboard, so the frame is always the whole window,
+   pinned to the top. The two variables above only exist to follow a phone's
+   keyboard; on a mouse or trackpad device a stray reading of them pushed the
+   top bar down the screen with a blank band above it (Nov 19, 2026 report,
+   the same bug as Nov 2). */
+@media (hover: hover) and (pointer: fine) {
+  .swipe-frame {
+    top: 0;
+    height: 100dvh;
+  }
+}
 
 /* The one box on Home and Artists sits where the old bottom bar was. */
 /* The Artists / Rollouts switch lives on the Rollouts page too; only the swipe shell shows it. */
