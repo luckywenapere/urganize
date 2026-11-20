@@ -3,6 +3,7 @@ import { getCreditSnapshot } from '@/lib/credits/credits-server';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
 import { STRIKE_LIMIT, STRIKE_WINDOW_DAYS, PITCH_REMINDER_LEAD_HOURS } from '@/lib/pitch-payments';
 import { notifyUser } from '@/lib/pitch-payments-server';
+import { notifyCuratorOfNewPitch } from '@/lib/pitch-submission-notice-server';
 import { INBOX_PAUSED } from '@/lib/pitch-payment-copy';
 import {
   CREDIT_PITCH_REPLY_DAYS,
@@ -151,7 +152,11 @@ export async function sendCreditPitches(
   }
 }
 
-/** Tell each curator a paid-tier pitch is waiting. Best effort, never throws. */
+/**
+ * Tell each curator a pitch from this send is waiting: the free notice for a
+ * Free-tier playlist, the earnings line for a paid one. Each email has a
+ * per-pitch key, so a retry never sends twice. Best effort, never throws.
+ */
 export async function notifyCuratorsOfCreditPitches(admin: SupabaseClient, pitchIds: string[]): Promise<void> {
   for (const pitchId of pitchIds) {
     try {
@@ -161,7 +166,15 @@ export async function notifyCuratorsOfCreditPitches(admin: SupabaseClient, pitch
         .eq('id', pitchId)
         .maybeSingle();
       const row = data as Record<string, unknown> | null;
-      if (!row || row.payment_kind !== 'credits') continue;
+      if (!row) continue;
+      // Every playlist starts on the Free tier, so most pitches this send
+      // writes are 'free', and those need the free notice. Skipping them is
+      // why playlist owners were never emailed about a pitch (2026-11-20).
+      if (row.payment_kind === 'free') {
+        await notifyCuratorOfNewPitch(admin, pitchId);
+        continue;
+      }
+      if (row.payment_kind !== 'credits') continue;
       await notifyUser(admin, String(row.curator_user_id || ''), {
         title: 'New pitch',
         body: newPaidPitchLine(
@@ -174,6 +187,7 @@ export async function notifyCuratorsOfCreditPitches(admin: SupabaseClient, pitch
         trigger: 'pitch_paid',
         ctaLabel: 'Open your inbox',
         footnote: 'You are getting this because you take pitches on Urganize.',
+        dedupeKey: `pitch-credits-${pitchId}`,
       });
     } catch {
       // Best effort: the inbox is the record.

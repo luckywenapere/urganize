@@ -67,6 +67,13 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.290.4",
+    date: "November 20, 2026",
+    highlights: [
+      "Playlist owners now get an email the moment someone pitches them a song, so no pitch sits unseen.",
+    ],
+  },
+  {
     version: "1.290.3",
     date: "November 19, 2026",
     highlights: [
