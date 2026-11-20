@@ -247,21 +247,6 @@ function ArtistsBlock({
           <ArtistRow key={row.artist.id} row={row} setArtistPhoto={setArtistPhoto} />
         ))}
       </ul>
-      <div className={`border-t ${HOME_ROW_RULE}`}>
-        <button
-          type="button"
-          onClick={() => openAddArtist()}
-          className="motion-focus -mx-3 flex w-[calc(100%+1.5rem)] items-center gap-3 rounded-2xl px-3 py-4 text-left text-sm font-medium text-content-secondary transition-colors hover:bg-bg-hover/60 hover:text-content-primary"
-        >
-          <span
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-[1.5px] border-dashed border-stroke-control text-content-tertiary"
-            aria-hidden="true"
-          >
-            <Plus className="h-4 w-4" />
-          </span>
-          Add an artist
-        </button>
-      </div>
     </section>
   );
 }
@@ -432,11 +417,6 @@ export function HomeDesktopSkeleton() {
             </li>
           ))}
         </ul>
-        {/* "Add an artist": py-4 around a 40px circle. */}
-        <div className={`flex items-center gap-3 border-t ${HOME_ROW_RULE} py-4`}>
-          <span className="h-10 w-10 shrink-0 rounded-full border-[1.5px] border-dashed border-stroke-control" />
-          {line('h-5', 'w-24', 'h-3.5')}
-        </div>
       </div>
     </div>
   );
