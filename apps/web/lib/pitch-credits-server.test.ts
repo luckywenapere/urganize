@@ -5,8 +5,17 @@ const notifyUser = vi.fn(async () => {});
 vi.mock('@/lib/pitch-payments-server', () => ({ notifyUser: (...args: unknown[]) => notifyUser(...(args as [])) }));
 vi.mock('@/lib/team-billing-server', () => ({ getTeamAccessForUser: vi.fn() }));
 vi.mock('@/lib/credits/credits-server', () => ({ getCreditSnapshot: vi.fn() }));
+const notifyCuratorOfNewPitch = vi.fn(async () => {});
+vi.mock('@/lib/pitch-submission-notice-server', () => ({
+  notifyCuratorOfNewPitch: (...args: unknown[]) => notifyCuratorOfNewPitch(...(args as [])),
+}));
 
-import { isMissingSchema, runCreditPitchSweep, sendCreditPitches } from './pitch-credits-server';
+import {
+  isMissingSchema,
+  notifyCuratorsOfCreditPitches,
+  runCreditPitchSweep,
+  sendCreditPitches,
+} from './pitch-credits-server';
 
 /**
  * A tiny stand-in for the Supabase client: every query chain resolves to what
@@ -189,5 +198,76 @@ describe('runCreditPitchSweep', () => {
     expect(result.reminders).toBe(1);
     const notice = (notifyUser.mock.calls[0] as unknown as [unknown, string, { body: string }])[2];
     expect(notice.body).toBe('1 day left to reply to Kola. Reply in time to earn ₦2,500.');
+  });
+});
+
+describe('notifyCuratorsOfCreditPitches', () => {
+  beforeEach(() => {
+    notifyUser.mockClear();
+    notifyCuratorOfNewPitch.mockClear();
+  });
+
+  // The bug of 2026-11-20: every playlist starts on the Free tier, so the
+  // pitches this send writes are mostly payment_kind 'free', and those were
+  // skipped, so the playlist owner was never emailed.
+  it('tells the curator about a Free-tier pitch, with the free pitch notice', async () => {
+    const { client } = fakeAdmin({
+      tables: {
+        playlist_pitches: [
+          {
+            data: {
+              id: 'p-free',
+              curator_user_id: 'cur-1',
+              song_title: 'Midnight Run',
+              artist_name: 'Kola Dare',
+              payment_kind: 'free',
+              credits_charged: 0,
+            },
+          },
+        ],
+      },
+    });
+    await notifyCuratorsOfCreditPitches(client, ['p-free']);
+    expect(notifyCuratorOfNewPitch).toHaveBeenCalledTimes(1);
+    expect(notifyCuratorOfNewPitch).toHaveBeenCalledWith(client, 'p-free');
+    expect(notifyUser).not.toHaveBeenCalled();
+  });
+
+  it('tells the curator about a credit pitch with what they earn, once per pitch', async () => {
+    const { client } = fakeAdmin({
+      tables: {
+        playlist_pitches: [
+          {
+            data: {
+              id: 'p-paid',
+              curator_user_id: 'cur-2',
+              song_title: 'Midnight Run',
+              artist_name: 'Kola Dare',
+              payment_kind: 'credits',
+              credits_charged: 3,
+            },
+          },
+        ],
+      },
+    });
+    await notifyCuratorsOfCreditPitches(client, ['p-paid']);
+    expect(notifyCuratorOfNewPitch).not.toHaveBeenCalled();
+    expect(notifyUser).toHaveBeenCalledTimes(1);
+    const [, userId, notice] = notifyUser.mock.calls[0] as unknown as [unknown, string, Record<string, unknown>];
+    expect(userId).toBe('cur-2');
+    expect(notice.trigger).toBe('pitch_paid');
+    expect(notice.dedupeKey).toBe('pitch-credits-p-paid');
+  });
+
+  it('tells every curator in a mixed send, and skips a pitch that is gone', async () => {
+    const row = (id: string, kind: string) => ({
+      data: { id, curator_user_id: `cur-${id}`, song_title: 's', artist_name: 'a', payment_kind: kind, credits_charged: kind === 'credits' ? 2 : 0 },
+    });
+    const { client } = fakeAdmin({
+      tables: { playlist_pitches: [row('a', 'free'), { data: null }, row('c', 'credits'), row('d', 'free')] },
+    });
+    await notifyCuratorsOfCreditPitches(client, ['a', 'b', 'c', 'd']);
+    expect(notifyCuratorOfNewPitch.mock.calls.map((call) => (call as unknown as [unknown, string])[1])).toEqual(['a', 'd']);
+    expect(notifyUser).toHaveBeenCalledTimes(1);
   });
 });
