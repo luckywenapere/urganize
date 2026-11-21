@@ -28,7 +28,7 @@ describe('/auth keeps next on this site', () => {
 
   it('the sign-in page checks next before navigating to it', () => {
     const source = readFileSync(join(__dirname, '..', 'app', 'auth', 'AuthPageClient.tsx'), 'utf8');
-    expect(source).toMatch(/isSafeNextPath\(requestedNext\)\s*\?\s*requestedNext\s*:\s*HOME_PATH/);
+    expect(source).toMatch(/isSafeNextPath\(requestedNext\)\s*\?\s*requestedNext\s*:\s*MUSIC_PATH/);
     expect(source).not.toMatch(/searchParams\?\.get\('next'\)\s*\|\|/);
   });
 });

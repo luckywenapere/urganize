@@ -270,6 +270,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname === '/unsubscribe' ||
     pathname?.startsWith('/credits/') ||
     pathname?.startsWith('/listen/') ||
+    // The music side (2026-11-21): the front door for anyone, signed in or not.
+    // It carries its own frame (tabs, player), so the workspace chrome around it
+    // would be a second app inside the first.
+    pathname === '/music' ||
+    pathname?.startsWith('/music/') ||
     pathname?.startsWith('/epk/') ||
     // A standing press kit, opened by an editor who has no account.
     pathname?.startsWith('/k/') ||

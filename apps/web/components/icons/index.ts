@@ -93,6 +93,8 @@ export {
   Share2, ShieldCheck, Slash, SlidersHorizontal, Smartphone,
   Smile, Square, ThumbsDown, ThumbsUp, TrendingUp,
   Undo2, UserPlus,
+  // Urganize music (2026-11-21): save a song.
+  Heart,
   // Read-aloud on UrgAns replies.
   Volume2,
   // Talk to UrgAns (2026-10-11): the Talk button, mute, hang up, captions.
@@ -109,4 +111,7 @@ export {
   Pause, Play,
   // The Appearance choice (#1320): Light, Dark, System (Auto uses Clock).
   Sun, Moon, MonitorSmartphone,
+  // Urganize music (2026-11-21): the player's skip buttons, and the artist's
+  // take-it-down and replace-the-file rows.
+  Eye, EyeOff, Replace, SkipBack, SkipForward,
 } from 'lucide-react';

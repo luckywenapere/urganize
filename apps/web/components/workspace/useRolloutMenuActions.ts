@@ -16,6 +16,7 @@ import {
   Megaphone,
   MessageCircle,
   Newspaper,
+  Music,
   NotebookPen,
   Radio,
   Share2,
@@ -65,6 +66,8 @@ const ICONS: Record<ReleaseMenuKey, ComponentType<LucideProps>> = {
   metadata: ClipboardList,
   // Their own mark is a globe ("upload once, distribute everywhere").
   distribute: Globe,
+  // Songs on Urganize music: a note.
+  music: Music,
   // Money, in a wallet. The shim carries Wallet2 already.
   spend: Wallet2,
   note: NotebookPen,

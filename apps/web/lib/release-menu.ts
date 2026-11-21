@@ -119,6 +119,10 @@ export const RELEASE_MENU_ORDER = [
   // After the cover art too (2026-10-16), since its handoff checklist hands it
   // to the distributor.
   'distribute',
+  // Urganize music (2026-11-21): put a song from this rollout where anyone can
+  // listen. After Distribute, because that is the paperwork for the streaming
+  // services and this is the quick one, and before the general file cabinet.
+  'music',
   // The general file cabinet: everything that is not the cover or the master.
   'files',
   // Pitch this! after Distribute: an editorial pitch needs the release
@@ -262,6 +266,7 @@ const GROUP_BY_KEY: Record<ReleaseMenuKey, RolloutMenuGroupKey> = {
   coverart: 'release',
   files: 'release',
   distribute: 'release',
+  music: 'release',
   pitch: 'promote',
   pitchkit: 'promote',
   promo: 'promote',
