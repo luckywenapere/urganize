@@ -49,7 +49,7 @@ const members: readonly Member[] = [
   },
   {
     name: "Chidera Nnamani",
-    role: "Product Ops Lead",
+    role: "Head of Growth & Partnerships",
     photo: "/images/team/chidera-nnamani.webp",
     bio: "Manages artists and has run operations at startups, so he sees both the manager\u2019s mess and the system that fixes it. Holds an MBA in Music Management from the Creative Business Academy for Africa, built on engineering and mathematics.",
     linkedin: "https://www.linkedin.com/in/chidera-nnamani/",
