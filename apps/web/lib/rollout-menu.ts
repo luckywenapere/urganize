@@ -189,6 +189,8 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
       ...scene('distribute', 'Distribute now'),
       isActive: activeScene === 'distribute' || activeScene === 'metadata' || activeScene === 'coverart',
     },
+    // Urganize music (2026-11-21): put a song from this rollout where anyone can listen.
+    scene('music', 'Urganize music'),
     flags.files ? scene('files', 'Add files') : null,
     // ONE row since 2026-10-16 (Pitch this! as one place): the pitch kit lives
     // inside it, so "Build your pitch kit" is gone from the menu. Old

@@ -22,6 +22,7 @@ import { ReleaseChatSection } from '@/components/releases/ReleaseChatSection';
 import { PitchKitSection } from '@/components/releases/PitchKitSection';
 import { DISTRIBUTE_HOLDS_EDITORS, DistributionSection } from '@/components/releases/DistributionSection';
 import { SpendSection } from '@/components/releases/SpendSection';
+import { MusicSection } from '@/components/releases/MusicSection';
 import { ReleaseBriefScene } from '@/components/releases/ReleaseBriefScene';
 import { BriefIdeaGate } from '@/components/releases/BriefIdeaGate';
 import { onlyPreProductionWork } from '@/lib/pre-production';
@@ -67,6 +68,7 @@ const SECTION_SCENES = [
   'distribute',
   'spend',
   'brief',
+  'music',
 ] as const;
 
 // No compile-time coverage check beside this list, deliberately. One was
@@ -99,6 +101,7 @@ const SCENE_LABELS: Record<SceneName, string> = {
   spend: 'Spend',
   promo: 'Promo',
   brief: 'Brief',
+  music: 'Urganize music',
 };
 
 type ReleaseScenePanelProps = {
@@ -259,6 +262,7 @@ export function ReleaseScenePanel({
         />
       ) : null}
       {scene === 'coverart' && !editorScene ? <CoverArtSection releaseId={release.id} onToast={onToast} /> : null}
+      {scene === 'music' ? <MusicSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'files' ? <AssetSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'pitch' ? (
         <PitchScene release={release} onToast={onToast} />

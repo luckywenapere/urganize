@@ -49,6 +49,26 @@
 // was turned off), so Home has no "artists" in its address.
 export const HOME_PATH = '/dashboard';
 
+/**
+ * The music side (2026-11-21, founder): the front door for anyone, signed in or
+ * not. The site root and a plain sign-in land here. HOME_PATH stays the
+ * dashboard, because onboarding, invites, the paywall and checkout all send a
+ * person back to the work they came to do, not to the song list.
+ */
+export const MUSIC_PATH = '/music';
+
+/**
+ * True for a `next` that is only a filler default rather than a place somebody
+ * asked to go: the dashboard (what /auth used to default to) or the music side
+ * (what it defaults to now). The Google callback uses it to tell "a plain
+ * sign-in" from "a sign-in with somewhere to be", so a never-onboarded Google
+ * account is still sent to the wizard instead of being waved to the song list.
+ */
+export function isDefaultLandingPath(path: string | null | undefined): boolean {
+  const clean = (path || '').split(/[?#]/)[0].replace(/\/+$/, '') || '/';
+  return clean === HOME_PATH || clean === MUSIC_PATH;
+}
+
 /** Where a curator-only account lands. That surface has no team chrome at all. */
 export const CURATOR_HOME_PATH = '/curator';
 

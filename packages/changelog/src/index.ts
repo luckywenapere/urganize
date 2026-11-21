@@ -67,6 +67,21 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.291.0",
+    date: "November 21, 2026",
+    title: "Urganize music",
+    tag: "App",
+    highlights: [
+      "Anyone can now open Urganize and listen to new music, with no account. Songs show up on the day they are released, newest first.",
+      "You can search for songs and artists, and the Top 10, Top 50 and Top 100 playlists are coming soon.",
+      "To put a song out, open a rollout and choose Urganize music. Upload an MP3 or WAV, tick that the rights are yours, and pick release day or right away.",
+      "You can see how many times each song was played, and take a song down whenever you want.",
+      "Tap the heart on a song to like it. Your liked songs are in the new You tab, kept on your device.",
+      "Urganize now opens on the music side. Your rollouts, pitches and settings are one tap away: Settings is the gear at the top of You.",
+    ],
+  },
+
+  {
     version: "1.290.4",
     date: "November 20, 2026",
     highlights: [

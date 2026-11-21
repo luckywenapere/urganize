@@ -6,7 +6,7 @@ import { LoadingScreen } from '@urganize/ui';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { accessIntentFromToken, hasPendingAccessIntent, redeemPendingAccess } from '@/lib/access-intent';
-import { CURATOR_HOME_PATH, HOME_PATH, resolveHomePath } from '@/lib/home-path';
+import { CURATOR_HOME_PATH, HOME_PATH, MUSIC_PATH, isDefaultLandingPath } from '@/lib/home-path';
 import {
   EMAIL_CONFIRMED_FLAG_KEY,
   EMAIL_CONFIRMED_PARAM,
@@ -375,7 +375,7 @@ export default function AuthCallbackPage() {
         // next that points somewhere ELSE as purposeful: the /onboarding OAuth
         // round trip, the curator join flow and the invite email link all
         // carry their own path and keep winning outright.
-        const hasPurposefulNext = hasExplicitNext && safeNext !== HOME_PATH;
+        const hasPurposefulNext = hasExplicitNext && !isDefaultLandingPath(safeNext);
         const profile = useAuthStore.getState().user;
         // Card-before-trial: a Google sign-in straight from /auth has an
         // account but has never been through onboarding — nothing routes it
@@ -398,7 +398,7 @@ export default function AuthCallbackPage() {
             ? ONBOARDING_SETUP_PATH
             : hasExplicitNext
               ? safeNext
-              : resolveHomePath(profile?.role);
+              : MUSIC_PATH;
 
         window.clearTimeout(timeout);
         await holdYoureIn();

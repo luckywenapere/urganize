@@ -28,6 +28,7 @@ describe('RELEASE_MENU_ORDER', () => {
       'coverart',
       'metadata',
       'distribute',
+      'music',
       'files',
       'pitch',
       'pitchkit',

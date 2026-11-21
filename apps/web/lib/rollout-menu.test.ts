@@ -87,6 +87,7 @@ const SCENE_ROWS: ReleaseMenuKey[] = [
   'pitchkit',
   'metadata',
   'distribute',
+  'music',
   'files',
   'capture',
 ];
@@ -131,13 +132,14 @@ describe('buildRolloutMenu', () => {
     expect(keysOf(build({ flags: { ...ALL_ON, pitching: false, pitchKit: false } }))).not.toContain('pitchkit');
   });
 
-  it('is only Distribute and the dialog rows when every feature is off (Distribute has no switch)', () => {
+  it('is only Distribute, Urganize music and the dialog rows when every feature is off (neither has a switch)', () => {
     const allOff = Object.fromEntries(
       Object.keys(ALL_ON).map((flag) => [flag, false])
     ) as RolloutMenuFlags;
     expect(keysOf(build({ flags: allOff, showSpend: false }))).toEqual([
       'add-idea',
       'distribute',
+      'music',
       'share',
       'release-date',
       'change-artist',
