@@ -310,6 +310,18 @@ export default function AuthPage() {
     }
   }, []);
 
+  // The splash (#1365) plays once per tab. The pre-paint script in
+  // app/layout.tsx records it on a full page load; this covers arriving here
+  // by an in-app link, where that script does not run. It only writes the
+  // mark, never the attribute, so a splash already playing finishes.
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem('urganize.auth-splash-seen', '1');
+    } catch {
+      // Restricted storage: the splash may play again next time, no harm.
+    }
+  }, []);
+
   const handleEmailContinue = async (e: React.FormEvent) => {
     e.preventDefault();
     // A disabled submit button does not stop Enter-in-a-field from firing the
@@ -488,6 +500,30 @@ export default function AuthPage() {
             pointer-events-none either way. Kept as a plain div with no client
             state: this page is `○ Static` and must stay that way. */}
         <div className="urg-ground-sunburst lg:hidden" aria-hidden="true" />
+        {/* The login splash (#1365): the U fades in, slides left as "rganize"
+            joins it, then the layer fades and the card below slides up. CSS
+            only (globals.css, .auth-splash), so it never waits on the bundle;
+            skipped on a second visit in the same tab and for reduced motion. */}
+        <div className="auth-splash" aria-hidden="true">
+          <div className="auth-splash-word">
+            <Image
+              src="/images/urganize-wordmark-u.png"
+              alt=""
+              width={161}
+              height={231}
+              priority
+              className="auth-splash-u app-wordmark"
+            />
+            <Image
+              src="/images/urganize-wordmark-rganize.png"
+              alt=""
+              width={833}
+              height={231}
+              priority
+              className="auth-splash-rest app-wordmark"
+            />
+          </div>
+        </div>
         {/* On a computer (#1229, mock docs/mocks/signin-onboarding-desktop,
             screen 1): two halves filling the window. The form on the left,
             one photo filling the right; the plans, questions and footer below
@@ -533,7 +569,7 @@ export default function AuthPage() {
               )}
 
               {/* A card on a phone; on a computer the form sits on the page. */}
-              <div className="mt-7 w-full max-w-[418px] rounded-2xl border border-stroke-default bg-bg-surface p-5 text-left shadow-[0_1px_2px_rgba(26,22,17,0.04),0_8px_24px_rgba(26,22,17,0.06)] lg:max-w-none lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
+              <div className="auth-card-enter mt-7 w-full max-w-[418px] rounded-2xl border border-stroke-default bg-bg-surface p-5 text-left shadow-[0_1px_2px_rgba(26,22,17,0.04),0_8px_24px_rgba(26,22,17,0.06)] lg:max-w-none lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
                 {inviteOnly ? (
                   <InviteOnlyNotice
                     onSignIn={() => {
