@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.292.1",
+    date: "November 22, 2026",
+    highlights: [
+      "Continue with Google on the sign-in page works again. The opening animation could stay on top of it after it faded.",
+      "Signing in from the circle menu on Urganize Music now takes you to your dashboard.",
+    ],
+  },
+
+  {
     version: "1.292.0",
     date: "November 22, 2026",
     title: "Urganize Music, redesigned",

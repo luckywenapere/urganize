@@ -129,7 +129,7 @@ export function MusicMenuSheet({ onClose, onUpload }: { onClose: () => void; onU
                 Create my account
               </Link>
               <Link
-                href="/auth?next=/music"
+                href="/auth?next=/dashboard"
                 className="motion-focus motion-press flex h-12 items-center justify-center rounded-[14px] border border-content-primary/[0.16] px-5 text-[15px] font-semibold text-content-primary transition-colors hover:bg-content-primary/[0.06]"
               >
                 I have an account. Sign in
