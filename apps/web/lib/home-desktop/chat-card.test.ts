@@ -177,8 +177,8 @@ describe('buildChatSuggestions', () => {
 
 describe('phone Try one cards (#1339)', () => {
   it('offers the three cards from the mock, in order', () => {
-    expect(PHONE_TRY_CARDS.map((card) => card.kind)).toEqual(['plan', 'late', 'artist']);
-    expect(PHONE_TRY_CARDS.map((card) => card.title)).toEqual(['Plan a rollout', 'What is late?', 'Add an artist']);
+    expect(PHONE_TRY_CARDS.map((card) => card.kind)).toEqual(['plan', 'upload', 'artist']);
+    expect(PHONE_TRY_CARDS.map((card) => card.title)).toEqual(['Plan a rollout', 'Upload a song', 'Add an artist']);
   });
 
   it('carries a title only, no second line (#1342)', () => {
@@ -187,10 +187,8 @@ describe('phone Try one cards (#1339)', () => {
     }
   });
 
-  it('asks the AI a real question for What is late?', () => {
-    const late = PHONE_TRY_CARDS.find((card) => card.kind === 'late');
-    expect(late?.ask).toBeTruthy();
-    expect(late?.ask?.endsWith('?')).toBe(true);
+  it('every card opens a step; none asks the AI (#1364)', () => {
+    for (const card of PHONE_TRY_CARDS) expect(card.ask).toBeUndefined();
   });
 
   it('shows the cards until a few messages have been sent from Home', () => {

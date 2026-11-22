@@ -14,7 +14,7 @@
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
-import { isAppShellPath } from '@/lib/appearance';
+import { isAppShellPath, wallpaperForEveryone } from '@/lib/appearance';
 import { watchAppearance } from '@/lib/appearance-client';
 
 let marks = 0;
@@ -27,7 +27,7 @@ export function AppearanceWatcher() {
   // not an app page, or someone known to be signed out. A frame that mounts
   // late (its code still loading) keeps the picture rather than blinking it.
   useEffect(() => {
-    if (marks === 0 && (!isAppShellPath(pathname) || signedOut)) {
+    if (marks === 0 && !wallpaperForEveryone(pathname) && (!isAppShellPath(pathname) || signedOut)) {
       document.documentElement.removeAttribute('data-app-shell');
     }
   }, [pathname, signedOut]);

@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, ArrowUp, Check, ChevronDown, Clock, Loader2, Mic, Sparkles, UserPlus } from '@/components/icons';
+import { ArrowRight, ArrowUp, Check, ChevronDown, Loader2, Mic, Sparkles, Upload, UserPlus } from '@/components/icons';
 import { ChappiAttachMenu } from '@/components/chappi/ChappiAttachMenu';
 import { ChappiAttachmentTray } from '@/components/chappi/ChappiAttachments';
 import { useAttachments } from '@/components/chappi/useAttachments';
@@ -244,6 +244,7 @@ export function HomeChatCard({
     captureAnalyticsEvent({ name: 'home_try_card', properties: { kind: card.kind } });
     if (card.kind === 'plan') openPlanChoice();
     else if (card.kind === 'artist') openAddArtist();
+    else if (card.kind === 'upload') router.push('/music?upload=1');
     else if (card.ask) void send(card.ask, null, 'suggestion');
   };
 
@@ -399,7 +400,7 @@ export function HomeChatCard({
   );
 }
 
-const TRY_CARD_ICON = { plan: Sparkles, late: Clock, artist: UserPlus } as const;
+const TRY_CARD_ICON = { plan: Sparkles, upload: Upload, artist: UserPlus } as const;
 
 /** The phone's three Try one cards, in one row of three (Linear's examples):
  *  shadcn outline Buttons (#1342), a small icon tile and the title, no second

@@ -490,7 +490,7 @@ export interface AnalyticsEventPropertiesMap {
    *  or a suggestion, and whether it went to a rollout's chat. No text. */
   home_chat_sent: { source: 'box' | 'suggestion'; about: 'rollout' | 'everything'; files: number };
   /** A Try one card under the phone Home's box (#1339). */
-  home_try_card: { kind: 'plan' | 'late' | 'artist' };
+  home_try_card: { kind: 'plan' | 'upload' | 'artist' };
   /** The Out now card on Home (#1086): the smart link copied or shared. */
   out_now_link_copied: { release_id: string };
   out_now_link_shared: { release_id: string };

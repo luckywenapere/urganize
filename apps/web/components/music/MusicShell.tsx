@@ -1,137 +1,167 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
-import { Inbox, LayoutDashboard, Music, Search, Settings, UserCircle } from '@/components/icons';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Logo } from '@urganize/ui';
+import { AppWallpaperMark } from '@/components/app/AppWallpaper';
+import { Search, UserRoundCog } from '@/components/icons/lucide';
+import { MUSIC_TABS, musicTabForPath, musicSwipeTarget } from '@/lib/music/nav';
+import { MusicMenuSheet } from './MusicMenuSheet';
 import { MusicProvider } from './MusicProvider';
+import { MusicUploadSheet } from './MusicUploadSheet';
 import { PlayerBar } from './PlayerBar';
 import { useMusicAccount } from './useMusicAccount';
 
-// Songs, then the listener's own tab, then Search. Settings is not a tab: it
-// sits behind the gear on You (and under the menu on a laptop), so the bar is
-// about listening and the personal corner.
-const TABS = [
-  { href: '/music', label: 'Songs', Icon: Music, exact: true },
-  { href: '/music/you', label: 'You', Icon: UserCircle, exact: false },
-  { href: '/music/search', label: 'Search', Icon: Search, exact: false },
-] as const;
+type Sheet = 'menu' | 'upload' | null;
 
-function isActive(pathname: string | null, href: string, exact: boolean): boolean {
-  if (!pathname) return false;
-  // Settings belongs to You, so You stays lit there.
-  if (href === '/music/you' && pathname.startsWith('/music/settings')) return true;
-  return exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+const SheetsContext = createContext<{ open: (sheet: Exclude<Sheet, null>) => void }>({ open: () => undefined });
+
+/** Opens the circle menu or the upload sheet from anywhere on the music side. */
+export function useMusicSheets() {
+  return useContext(SheetsContext);
 }
 
-/** The buttons that lead back to the rest of Urganize, for whoever has a team or
- *  playlists. Shared by the laptop's side menu and the phone's page header. */
-export function MusicShortcuts({ className = '' }: { className?: string }) {
-  const { hasTeam, hasPlaylists } = useMusicAccount();
-  if (!hasTeam && !hasPlaylists) return null;
-  const pill =
-    'motion-focus motion-press inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-brand px-3 text-xs font-semibold text-brand transition-colors hover:bg-brand/10';
-  return (
-    <div className={`flex flex-wrap items-center gap-2 ${className}`}>
-      {hasTeam ? (
-        <Link href="/dashboard" className={pill}>
-          <LayoutDashboard className="h-3.5 w-3.5" aria-hidden="true" /> Dashboard
-        </Link>
-      ) : null}
-      {hasPlaylists ? (
-        <Link href="/curator" className={pill}>
-          <Inbox className="h-3.5 w-3.5" aria-hidden="true" /> Pitches
-        </Link>
-      ) : null}
-    </div>
-  );
-}
+const CIRCLE =
+  'motion-focus motion-press flex h-9 w-9 items-center justify-center rounded-full border border-content-primary/[0.16] bg-bg-surface/70 text-content-primary backdrop-blur transition-colors hover:bg-content-primary/[0.06] md:h-10 md:w-10';
 
+/**
+ * The music side's frame (#1364, docs/mocks/music-v2), in the dashboard's
+ * shape so the two sides feel like one app: the Urganize mark and "Music" at
+ * the top left, two tabs (Home and Collection) with the green underline,
+ * search and the circle menu at the right. On a phone you swipe between the
+ * tabs; from md the mark sits left and the tabs in the middle. The dashboard's
+ * wallpaper shows here for everyone, signed in or not.
+ */
 function Frame({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
-  const { hasTeam, hasPlaylists } = useMusicAccount();
+  const pathname = usePathname() ?? '/music';
+  const router = useRouter();
+  const tab = musicTabForPath(pathname);
+  const [sheet, setSheet] = useState<Sheet>(null);
+  const touch = useRef<{ x: number; y: number } | null>(null);
+
+  const open = useCallback((next: Exclude<Sheet, null>) => setSheet(next), []);
+  const sheets = useMemo(() => ({ open }), [open]);
+
+  // Prefetch the other tab so a swipe lands at once.
+  useEffect(() => {
+    for (const item of MUSIC_TABS) router.prefetch(item.href);
+  }, [router]);
+
+  const onTouchStart = (event: React.TouchEvent) => {
+    const point = event.touches[0];
+    touch.current = point ? { x: point.clientX, y: point.clientY } : null;
+  };
+  const onTouchEnd = (event: React.TouchEvent) => {
+    const start = touch.current;
+    touch.current = null;
+    const point = event.changedTouches[0];
+    if (!start || !point) return;
+    // A swipe only counts when it is clearly sideways and long enough; a
+    // scroll, a tap or a drag on a slider never changes the tab.
+    if ((event.target as HTMLElement | null)?.closest('input,textarea,[data-no-swipe]')) return;
+    const target = musicSwipeTarget(tab, point.clientX - start.x, point.clientY - start.y);
+    if (target) router.push(target);
+  };
 
   return (
-    <div className="min-h-dvh text-content-primary lg:flex">
-      {/* Laptop: the three tabs down the left, the way back to the dashboard under them, Settings at the bottom. */}
-      <aside className="sticky top-0 hidden h-dvh w-[220px] flex-none flex-col border-r border-stroke-default bg-bg-surface px-3 py-5 lg:flex">
-        <p className="px-3 text-base font-semibold tracking-tight">Urganize</p>
-        <nav aria-label="Music" className="mt-5 flex flex-col gap-1">
-          {TABS.map(({ href, label, Icon, exact }) => {
-            const active = isActive(pathname, href, exact);
-            return (
+    <SheetsContext.Provider value={sheets}>
+      <AppWallpaperMark />
+      <div className="min-h-dvh text-content-primary">
+        <header className="sticky top-0 z-40 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md md:border-b md:border-content-primary/[0.06]">
+          <div className="relative flex h-[52px] items-center px-5 md:h-[72px] md:px-8">
+            <Link href="/music" aria-label="Urganize Music, Home" className="motion-focus flex items-center gap-2 rounded-md">
+              <Logo size="sm" priority />
+              <span className="text-[17px] font-semibold tracking-[-0.02em] text-content-secondary md:text-[19px]">Music</span>
+            </Link>
+            <nav
+              aria-label="Music"
+              className="hidden h-full items-center md:absolute md:inset-y-0 md:left-1/2 md:flex md:-translate-x-1/2"
+            >
+              <TabRow tab={tab} />
+            </nav>
+            <div className="ml-auto flex items-center gap-2">
               <Link
-                key={href}
-                href={href}
-                aria-current={active ? 'page' : undefined}
-                className={`motion-focus flex min-h-[40px] items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-colors ${
-                  active ? 'bg-brand/10 text-brand' : 'text-content-primary hover:bg-bg-hover'
-                }`}
+                href="/music/search"
+                aria-label="Search"
+                aria-current={pathname.startsWith('/music/search') ? 'page' : undefined}
+                className={`${CIRCLE} ${pathname.startsWith('/music/search') ? 'border-brand text-brand' : ''}`}
               >
-                <Icon className="h-4 w-4" aria-hidden="true" />
-                {label}
+                <Search className="h-[18px] w-[18px]" aria-hidden="true" />
               </Link>
-            );
-          })}
-        </nav>
-        {hasTeam || hasPlaylists ? (
-          <div className="mt-6 border-t border-stroke-default px-1 pt-4">
-            <MusicShortcuts className="flex-col items-stretch [&>a]:justify-center" />
+              <button type="button" onClick={() => setSheet('menu')} aria-label="Menu" aria-haspopup="dialog" className={CIRCLE}>
+                <UserRoundCog className="h-[18px] w-[18px]" aria-hidden="true" />
+              </button>
+            </div>
           </div>
-        ) : null}
-        <Link
-          href="/music/settings"
-          aria-current={pathname?.startsWith('/music/settings') ? 'page' : undefined}
-          className={`motion-focus mt-auto flex min-h-[40px] items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-colors ${
-            pathname?.startsWith('/music/settings')
-              ? 'bg-brand/10 text-brand'
-              : 'text-content-secondary hover:bg-bg-hover hover:text-content-primary'
-          }`}
-        >
-          <Settings className="h-4 w-4" aria-hidden="true" />
-          Settings
-        </Link>
-      </aside>
+          {tab ? (
+            <nav aria-label="Music" className="flex h-11 items-center px-5 md:hidden">
+              <TabRow tab={tab} />
+            </nav>
+          ) : null}
+        </header>
 
-      <div className="min-w-0 flex-1">
         <main
           id="main-content"
           tabIndex={-1}
-          className="mx-auto w-full max-w-3xl px-4 pb-[calc(9.5rem+env(safe-area-inset-bottom))] pt-5 focus:outline-none lg:px-8 lg:pb-32 lg:pt-8"
+          onTouchStart={tab ? onTouchStart : undefined}
+          onTouchEnd={tab ? onTouchEnd : undefined}
+          className="mx-auto w-full max-w-6xl px-5 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-3 focus:outline-none md:px-8 md:pb-28 md:pt-7 lg:px-14"
         >
           {children}
         </main>
+
+        <PlayerBar />
       </div>
 
-      <PlayerBar />
-
-      {/* Phone: the three tabs along the bottom. */}
-      <nav
-        aria-label="Music"
-        className="fixed inset-x-0 bottom-0 z-[70] border-t border-stroke-default bg-bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
-      >
-        <ul className="m-0 flex list-none p-0">
-          {TABS.map(({ href, label, Icon, exact }) => {
-            const active = isActive(pathname, href, exact);
-            return (
-              <li key={href} className="flex-1">
-                <Link
-                  href={href}
-                  aria-current={active ? 'page' : undefined}
-                  className={`motion-focus flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors ${
-                    active ? 'text-brand' : 'text-content-secondary'
-                  }`}
-                >
-                  <Icon className="h-5 w-5" aria-hidden="true" />
-                  {label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-    </div>
+      <Suspense fallback={null}>
+        <UploadFromLink onOpen={open} />
+      </Suspense>
+      {sheet === 'menu' ? <MusicMenuSheet onClose={() => setSheet(null)} onUpload={() => setSheet('upload')} /> : null}
+      {sheet === 'upload' ? <MusicUploadSheet onClose={() => setSheet(null)} /> : null}
+    </SheetsContext.Provider>
   );
+}
+
+/** Home and Collection, 17px semibold, the inactive one at 45%, a 2.5px green
+ *  underline under the one you are on. The dashboard's tab style. */
+function TabRow({ tab }: { tab: ReturnType<typeof musicTabForPath> }) {
+  return (
+    <ul className="m-0 flex h-full list-none items-center gap-6 p-0 md:gap-14">
+      {MUSIC_TABS.map((item) => {
+        const active = tab === item.key;
+        return (
+          <li key={item.key} className="h-full">
+            <Link
+              href={item.href}
+              aria-current={active ? 'page' : undefined}
+              className="motion-focus relative flex h-full items-center text-[17px] font-semibold md:text-[19px]"
+            >
+              <span className={`text-content-primary transition-opacity ${active ? '' : 'opacity-45'}`}>{item.label}</span>
+              {active ? (
+                <span aria-hidden="true" className="absolute inset-x-0 bottom-1 h-[2.5px] rounded-full bg-brand md:bottom-2.5" />
+              ) : null}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** /music?upload=1 (the Upload tile on dashboard Home) opens the upload sheet
+ *  for someone with a team, and the circle menu (with Sign in) otherwise. */
+function UploadFromLink({ onOpen }: { onOpen: (sheet: 'menu' | 'upload') => void }) {
+  const params = useSearchParams();
+  const router = useRouter();
+  const { isAuthenticated, isLoading, hasTeam } = useMusicAccount();
+  const wanted = params?.get('upload') === '1';
+  useEffect(() => {
+    if (!wanted || isLoading) return;
+    onOpen(isAuthenticated && hasTeam ? 'upload' : 'menu');
+    router.replace('/music', { scroll: false });
+  }, [wanted, isLoading, isAuthenticated, hasTeam, onOpen, router]);
+  return null;
 }
 
 export function MusicShell({ children }: { children: ReactNode }) {

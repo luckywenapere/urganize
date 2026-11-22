@@ -4,6 +4,7 @@ import {
   THEME_CHOICES,
   WALLPAPER_IMAGE,
   isAppShellPath,
+  wallpaperForEveryone,
   parseThemeChoice,
   resolveAppearance,
   wallpaperForHour,
@@ -73,6 +74,13 @@ describe('resolveAppearance', () => {
   it('System follows the device setting, whatever the hour', () => {
     expect(resolveAppearance({ choice: 'system', hour: 22, systemLight: true })).toEqual({ wallpaper: 'day', theme: 'light' });
     expect(resolveAppearance({ choice: 'system', hour: 9, systemLight: false })).toEqual({ wallpaper: 'night-sky', theme: 'dark' });
+  });
+});
+
+describe('wallpaperForEveryone', () => {
+  it('is true on Urganize Music only', () => {
+    for (const path of ['/music', '/music/collection', '/music/search']) expect(wallpaperForEveryone(path)).toBe(true);
+    for (const path of ['/', '/musical', '/dashboard', '/auth']) expect(wallpaperForEveryone(path)).toBe(false);
   });
 });
 
@@ -154,5 +162,12 @@ describe('APPEARANCE_BOOT_SCRIPT', () => {
     expect(run({ stored: null, hour: 9, systemLight: true, path: '/dashboard', signedIn: false }).attrs['data-app-shell']).toBeUndefined();
     // The theme still applies everywhere.
     expect(run({ stored: null, hour: 14, systemLight: true, path: '/auth', signedIn: false }).dataset.theme).toBe('dark');
+  });
+
+  it('marks Urganize Music for everyone, signed in or not (#1364)', () => {
+    for (const path of ['/music', '/music/collection', '/music/search']) {
+      expect(run({ stored: null, hour: 9, systemLight: true, path, signedIn: false }).attrs['data-app-shell']).toBe('1');
+    }
+    expect(run({ stored: null, hour: 9, systemLight: true, path: '/musical', signedIn: false }).attrs['data-app-shell']).toBeUndefined();
   });
 });

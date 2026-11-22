@@ -33,3 +33,17 @@ Anyone who opens Urganize, signed in or not, now lands on a music side with thre
 ## Not verified
 
 No real song has been uploaded, played, or taken down; the player, the stream redirect and the play count have only run as unit tests and a build. Looked at in a browser: Songs, Search, Settings and the sign-in sheet (empty state, phone and laptop). Do a real upload, publish, play and take-down pass on the live site.
+
+## Redesign: two tabs, records, the circle menu (same day, v1.292.0, #1364, no flag)
+
+Oyin approved the mocks in `docs/mocks/music-v2/mock.html` ("Yes, build it"). This supersedes the three-tab layout and the Settings gear above.
+
+- **Top bar like the dashboard's.** The Urganize wordmark plus "Music" at the top left, two tabs (**Home** and **Collection**) with the dashboard's 17px semibold labels and green underline, a search circle and the **circle menu** (lucide `user-round-cog`) at the right. Phone: swipe left and right between the tabs (`lib/music/nav.ts`, `musicSwipeTarget`; 60px and clearly sideways, never from a slider or field). From md: the mark left, tabs centred, 72px tall. No side menu, no bottom tab bar.
+- **Collection** (`/music/collection`) is the songs you hearted, newest first, with no heading or explainer. `/music/you` and `/music/settings` redirect.
+- **Search** is a pushed page with Back and the field ready; the coming-soon playlists are cassette tiles.
+- **The circle menu** (`MusicMenuSheet`) replaces the Dashboard and Pitches buttons and the Settings tab. Signed in: Artist dashboard, Upload a song, Playlist pitches, Appearance, Sign out. Signed out: Create my account, Sign in, Appearance, "Just listening? You don't need an account."
+- **Upload, three doors.** The circle menu's Upload a song (`MusicUploadSheet`: pick a rollout from `GET /api/releases`, then the same `MusicSection` a rollout has), the dashboard Home "Upload a song" Try one tile (it replaced "What is late?", which the box above already answers; it opens `/music?upload=1`), and the existing row inside a rollout. The mock's "On Music" pill on the rollout list was left out: it needs a music lookup per rollout.
+- **Back to music from the dashboard:** a headphones circle beside the avatar in `SwipeTopBar`, and an "Urganize Music" row in the avatar menu.
+- **Analog feel, only where it says something true.** Songs are vinyl records (`Vinyl.tsx`): grooves, the cover as the label, a spindle hole. A record turns only while its song plays, and never with reduced motion (`.music-spin` in globals.css). The full player is a turntable with a tonearm that lifts off when paused; the position is a tick-mark dial (the native range input lies on top of it).
+- **Wallpaper for everyone.** `/music` gets `data-app-shell` from the boot script for signed-out listeners too (`wallpaperForEveryone` in `lib/appearance.ts`), and `AppearanceWatcher` leaves it alone there. Music surfaces avoid opaque grounds so the picture shows.
+- **Icons:** the music side imports plain lucide from `components/icons/lucide.ts` (the approved shadcn set), not the house marks in `components/icons`.

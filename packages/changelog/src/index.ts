@@ -67,6 +67,22 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.292.0",
+    date: "November 22, 2026",
+    title: "Urganize Music, redesigned",
+    tag: "App",
+    highlights: [
+      "Urganize Music now has two tabs, Home and Collection. Swipe between them on your phone.",
+      "Collection is the songs you tapped the heart on.",
+      "Search is the magnifier at the top. Everything else, like the dashboard, uploads and Appearance, is in the circle beside it.",
+      "Songs show as records that turn while they play, and the player is a turntable.",
+      "Your wallpaper now shows on Urganize Music too.",
+      "To upload a song, tap the circle and choose Upload a song, or tap Upload a song on your dashboard Home.",
+      "On the dashboard, the headphones beside your photo take you back to Urganize Music.",
+    ],
+  },
+
+  {
     version: "1.291.1",
     date: "November 22, 2026",
     highlights: [
