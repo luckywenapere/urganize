@@ -3981,3 +3981,39 @@ html[data-app-shell][data-wallpaper] [data-home-chat-box] {
 html[data-app-shell][data-wallpaper][data-theme='dark'] [data-home-chat-box] {
   background-color: rgba(13, 18, 14, 0.5);
 }
+
+/* ── Urganize Music: the analog touches (#1364, docs/mocks/music-v2) ─────────
+   A record turns only while its song plays (.music-spin is added then), and
+   never for someone who asked the system for less motion. The vinyl and its
+   label are fixed colours in both themes, the way a real record is. */
+:root {
+  --music-vinyl: #1d1a16;
+  --music-label: #14643a;
+}
+[data-theme='dark'] {
+  --music-vinyl: #050806;
+  --music-label: #2f7a4c;
+}
+.music-record {
+  background: var(--music-vinyl);
+}
+.music-record-label {
+  background: var(--music-label);
+}
+@keyframes music-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .music-spin {
+    animation: music-spin 3.2s linear infinite;
+  }
+}
+/* The position dial: tick marks instead of a flat bar. */
+.music-ticks {
+  background-image: repeating-linear-gradient(90deg, rgb(var(--color-text-primary) / 0.22) 0 1px, transparent 1px 8px);
+}
+.music-ticks-lit {
+  background-image: repeating-linear-gradient(90deg, rgb(var(--color-brand)) 0 1.5px, transparent 1.5px 8px);
+}

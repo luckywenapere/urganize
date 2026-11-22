@@ -79,6 +79,19 @@ export function isAppShellPath(pathname: string): boolean {
   return APP_SHELL_PATH.test(pathname);
 }
 
+/** Urganize Music (#1364): the same picture shows for everyone there, signed
+ *  in or not, because listening needs no account. */
+const MUSIC_PATH = /^\/music(\/|$)/;
+
+export function isMusicPath(pathname: string): boolean {
+  return MUSIC_PATH.test(pathname);
+}
+
+/** Whether a page shows the wallpaper for a signed-out visitor too. */
+export function wallpaperForEveryone(pathname: string): boolean {
+  return isMusicPath(pathname);
+}
+
 /**
  * Runs in <head> before the body paints, so the first frame already has the
  * right theme and picture (no flash). It sets data-theme and the theme class
@@ -105,7 +118,9 @@ try {
   root.classList.remove('dark', 'light');
   root.classList.add(theme);
   root.setAttribute('data-wallpaper', wallpaper);
-  if (${APP_SHELL_PATH.toString()}.test(window.location.pathname)) {
+  if (${MUSIC_PATH.toString()}.test(window.location.pathname)) {
+    root.setAttribute('data-app-shell', '1');
+  } else if (${APP_SHELL_PATH.toString()}.test(window.location.pathname)) {
     var auth = localStorage.getItem('urganize-auth');
     var parsed = auth ? JSON.parse(auth) : null;
     if (parsed && parsed.state && parsed.state.isAuthenticated === true) root.setAttribute('data-app-shell', '1');

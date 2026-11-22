@@ -40,6 +40,7 @@ import { SHEET_ROW } from './SwipeSheet';
 import { openSettingsPage } from './settings-page';
 import { useRouter } from 'next/navigation';
 import { LogOut } from '@/components/icons';
+import { Headphones as MusicHeadphones } from '@/components/icons/lucide';
 import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { useArtistFilterOptions } from '@/components/shell/useArtistFilter';
 import { ProfileFace } from '@/components/shared/ProfileFace';
@@ -396,6 +397,8 @@ export function MenuBody({
         {String(user?.role || '').toLowerCase() === 'curator' ? null : (
           <MenuLink href="/dashboard/trash" icon={Trash2} label="Trash" onClose={onClose} />
         )}
+        {/* The way back to the listening side (#1364). */}
+        <MenuLink href="/music" icon={MusicHeadphones} label="Urganize Music" onClose={onClose} />
         {has('admin') ? <ActionRow icon={Gauge} label="Admin" onClick={inSettings('admin')} /> : null}
       </MenuGroup>
 

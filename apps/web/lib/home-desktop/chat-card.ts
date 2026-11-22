@@ -143,11 +143,12 @@ export function buildChatSuggestions(rows: readonly SuggestionRow[]): ChatSugges
 
 /**
  * The three "Try one" cards under the box on a phone's Home (#1339; founder
- * approved docs/mocks/home-chat-phone, after Linear's phone screen). Two open
- * a step (the plan choice, Add an artist); one asks the AI a question.
+ * approved docs/mocks/home-chat-phone, after Linear's phone screen). Each opens
+ * a step: the plan choice, the song upload on Urganize Music (#1364, in place
+ * of "What is late?", which the box above already answers), Add an artist.
  */
 export type TryCard = {
-  kind: 'plan' | 'late' | 'artist';
+  kind: 'plan' | 'upload' | 'artist';
   title: string;
   /** What the card sends to the AI, when it asks rather than opens a step. */
   ask?: string;
@@ -156,7 +157,7 @@ export type TryCard = {
 export const PHONE_TRY_CARDS: readonly TryCard[] = [
   // Title only (#1342, founder: "remove the subtext"); the icon says the rest.
   { kind: 'plan', title: 'Plan a rollout' },
-  { kind: 'late', title: 'What is late?', ask: 'What is late across my artists?' },
+  { kind: 'upload', title: 'Upload a song' },
   { kind: 'artist', title: 'Add an artist' },
 ];
 
