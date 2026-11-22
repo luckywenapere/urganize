@@ -1,8 +1,6 @@
-import type { Metadata } from 'next';
-import { YouScreen } from '@/components/music/YouScreen';
+import { permanentRedirect } from 'next/navigation';
 
-export const metadata: Metadata = { title: 'You' };
-
-export default function MusicYouPage() {
-  return <YouScreen />;
+// You became Collection (#1364): kept so old links still land somewhere.
+export default function Page() {
+  permanentRedirect('/music/collection');
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, X } from '@/components/icons';
+import { ArrowRight, X } from '@/components/icons/lucide';
 import type { MusicGuidance } from '@/lib/music/rules';
 
 const COPY: Record<Exclude<MusicGuidance, null>, { title: string; body: string }> = {

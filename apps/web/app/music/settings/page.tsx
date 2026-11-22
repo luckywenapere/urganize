@@ -1,8 +1,6 @@
-import type { Metadata } from 'next';
-import { SettingsScreen } from '@/components/music/SettingsScreen';
+import { permanentRedirect } from 'next/navigation';
 
-export const metadata: Metadata = { title: 'Music settings' };
-
-export default function MusicSettingsPage() {
-  return <SettingsScreen />;
+// Settings moved into the circle menu (#1364): kept so old links still land somewhere.
+export default function Page() {
+  permanentRedirect('/music');
 }

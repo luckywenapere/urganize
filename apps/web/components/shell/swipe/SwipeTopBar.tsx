@@ -7,6 +7,7 @@ import { Logo } from '@urganize/ui';
 import { SWIPE_TABS, lerpIndicator, swipeAreaForPath, swipeBackAction, swipeBackFor, swipeLitTab, swipeTabIndex, swipeUnderline, type SwipeTabKey } from '@/lib/swipe-nav';
 import { readPreviousLocation } from '@/lib/nav-history';
 import { ArrowLeft } from '@/components/icons';
+import { Headphones } from '@/components/icons/lucide';
 import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
 import { useNeedsYouStore } from '@/stores/useNeedsYouStore';
 import { getSwipeProgress, subscribeSwipeProgress } from './progress';
@@ -150,7 +151,16 @@ export function SwipeTopBar({ showHelp, pagerActive }: { showHelp: boolean; page
             />
           </div>
         </nav>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          {/* Back to Urganize Music (#1364): a quiet circle beside the photo. */}
+          <Link
+            href="/music"
+            aria-label="Urganize Music"
+            title="Urganize Music"
+            className="motion-focus flex h-9 w-9 items-center justify-center rounded-full border border-content-primary/[0.12] text-content-primary/75 transition-colors hover:bg-content-primary/[0.06] hover:text-content-primary"
+          >
+            <Headphones className="h-[18px] w-[18px]" aria-hidden="true" />
+          </Link>
           <AvatarMenu showHelp={showHelp} settingsActive={area === 'settings'} />
         </div>
       </div>

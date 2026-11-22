@@ -1,7 +1,9 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { Loader2, Search } from '@/components/icons';
+import { ArrowLeft, Loader2, Search } from '@/components/icons/lucide';
+import { readPreviousLocation } from '@/lib/nav-history';
 import type { ArtistHit } from '@/lib/music/rules';
 import type { PublicTrack } from '@/lib/music/server';
 import { SongListSkeleton, SongRow } from './parts';
@@ -11,7 +13,10 @@ const PLAYLISTS = ['Top 10', 'Top 50', 'Top 100'] as const;
 
 type Results = { tracks: PublicTrack[]; artists: ArtistHit[] };
 
+/** Search (#1364): a page pushed on top of the tabs, with Back to where you
+ *  were, the field ready to type, and the coming-soon playlists as cassettes. */
 export function SearchScreen() {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Results | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -49,9 +54,21 @@ export function SearchScreen() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold tracking-tight text-content-primary">Search</h1>
+      <button
+        type="button"
+        onClick={() => {
+          const previous = readPreviousLocation();
+          if (previous && previous.startsWith('/music') && !previous.startsWith('/music/search')) router.back();
+          else router.push('/music');
+        }}
+        className="motion-focus -ml-2 flex h-11 items-center gap-1.5 rounded-full px-2 text-[15px] font-semibold text-content-secondary hover:text-content-primary"
+      >
+        <ArrowLeft className="h-[18px] w-[18px]" aria-hidden="true" />
+        Back
+      </button>
+      <h1 className="sr-only">Search</h1>
 
-      <div className="relative mt-4">
+      <div className="relative mt-2.5 md:max-w-xl">
         <label htmlFor="music-search" className="sr-only">
           Search songs or artists
         </label>
@@ -66,24 +83,34 @@ export function SearchScreen() {
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Songs or artists"
           autoComplete="off"
+          autoFocus
           enterKeyHint="search"
-          className="motion-focus h-12 w-full rounded-xl border border-stroke-control bg-bg-surface pl-10 pr-4 text-base text-content-primary placeholder:text-content-tertiary hover:border-content-secondary"
+          className="motion-focus h-12 w-full rounded-[14px] border border-stroke-control bg-bg-surface pl-10 pr-4 text-base text-content-primary placeholder:text-content-tertiary hover:border-content-secondary"
         />
       </div>
 
       {!showingResults ? (
         <section aria-labelledby="music-playlists" className="mt-6">
-          <h2 id="music-playlists" className="text-sm font-semibold text-content-primary">
+          <h2 id="music-playlists" className="text-[15px] font-bold tracking-[-0.02em] text-content-primary">
             Playlists
           </h2>
-          <ul className="m-0 mt-2 list-none space-y-2 p-0">
+          <ul className="m-0 mt-2 grid list-none grid-cols-2 gap-2.5 p-0 md:max-w-xl md:grid-cols-3">
             {PLAYLISTS.map((name) => (
               <li
                 key={name}
-                className="flex min-h-[56px] items-center justify-between rounded-xl border border-stroke-default bg-bg-surface px-4 py-3 text-content-secondary opacity-70"
+                className="relative h-[92px] rounded-xl border border-content-primary/[0.16] bg-bg-surface/80 px-3 py-2.5 opacity-[0.62]"
               >
-                <span className="text-sm font-medium">{name}</span>
-                <span className="text-xs"><span className="sr-only">{name} is </span>Coming soon</span>
+                <span className="block text-[15px] font-semibold tracking-[-0.02em] text-content-primary">{name}</span>
+                <span className="block text-[11.5px] text-content-tertiary">
+                  <span className="sr-only">{name} is </span>Coming soon
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-x-3 bottom-2.5 flex h-[26px] items-center justify-between rounded-md border border-content-primary/[0.16] px-3"
+                >
+                  <span className="h-4 w-4 rounded-full border-[3px] border-content-primary/[0.16]" />
+                  <span className="h-4 w-4 rounded-full border-[3px] border-content-primary/[0.16]" />
+                </span>
               </li>
             ))}
           </ul>
@@ -107,11 +134,11 @@ export function SearchScreen() {
                   </h2>
                   <ul className="m-0 mt-1 list-none p-0">
                     {results.artists.map((artist) => (
-                      <li key={artist.name} className="border-b border-stroke-subtle last:border-b-0">
+                      <li key={artist.name} className="border-b border-content-primary/[0.08] last:border-b-0">
                         <button
                           type="button"
                           onClick={() => setQuery(artist.name)}
-                          className="motion-focus flex min-h-[48px] w-full items-center justify-between gap-3 rounded-lg px-1 text-left hover:bg-bg-hover"
+                          className="motion-focus flex min-h-[48px] w-full items-center justify-between gap-3 rounded-lg px-1 text-left hover:bg-content-primary/[0.06]"
                         >
                           <span className="truncate text-sm font-medium text-content-primary">{artist.name}</span>
                           <span className="flex-none text-xs text-content-secondary">
