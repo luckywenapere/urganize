@@ -1834,9 +1834,8 @@ export function ChappiConversation({
         {/* The question sits inside the SAME flex-1 region: the two-region
             split below is what three rejected attempts landed on. */}
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-y-auto lg:flex-none lg:overflow-visible">
-          {/* One block, so the question glides with the keyboard as one piece
-              instead of snapping half a screen (morph-urgans-hero, globals.css;
-              KeyboardViewportBridge runs the move in a view transition). */}
+          {/* One block, so the question moves with the keyboard as one piece
+              (morph-urgans-hero, globals.css). */}
           <div className="morph-urgans-hero flex flex-col items-center gap-4">
             {headingLevel === 'h2' ? (
               <h2 className="font-display text-xl font-semibold tracking-tight text-content-primary sm:text-2xl">

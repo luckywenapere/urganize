@@ -130,13 +130,15 @@ describe('the tab row lights the tapped tab at once', () => {
   });
 });
 
-describe('AI glides with the keyboard', () => {
-  it('runs the open/closed flip in a view transition where the names exist', () => {
+describe('the keyboard flip is never a view transition (#1374)', () => {
+  it('writes the keyboard state straight to the page, with no morph', () => {
+    // A view transition freezes the page as a picture while iOS slides the
+    // keyboard and pans, which stranded the box high above it.
     const bridge = strip(read('components/providers/KeyboardViewportBridge.tsx'));
-    expect(bridge).toMatch(/if \(toggled && document\.querySelector\('\.morph-urgans-hero'\)\) \{\s*morphUpdate\(apply\);/);
-    const chat = read('components/chappi/ChappiConversation.tsx');
-    expect(chat).toMatch(/morph-urgans-hero flex flex-col items-center gap-4/);
-    expect(chat).toMatch(/morph-urgans-composer mx-auto w-full max-w-2xl/);
+    expect(bridge).not.toMatch(/morphUpdate/);
+    const keyboard = strip(read('lib/keyboard-viewport.ts'));
+    expect(keyboard).not.toMatch(/morphUpdate/);
+    expect(keyboard).toMatch(/requestAnimationFrame/);
   });
 });
 

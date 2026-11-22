@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isEditableElement, keyboardCanExist } from './keyboard-viewport';
+import { isEditableElement, keyboardCanExist, pageIsPanned } from './keyboard-viewport';
 
 describe('keyboardCanExist', () => {
   it('is true on a touch screen at normal zoom', () => {
@@ -42,5 +42,27 @@ describe('isEditableElement', () => {
     expect(isEditableElement({ tagName: 'INPUT', type: 'checkbox' })).toBe(false);
     expect(isEditableElement({ tagName: 'INPUT', type: 'submit' })).toBe(false);
     expect(isEditableElement({ tagName: 'DIV', isContentEditable: false })).toBe(false);
+  });
+});
+
+describe('pageIsPanned', () => {
+  const rest = { locked: true, scrollX: 0, scrollY: 0, offsetTop: 0 };
+
+  it('is false at rest', () => {
+    expect(pageIsPanned(rest)).toBe(false);
+  });
+
+  it('is true when iOS scrolled the document or panned the visible region (#1374)', () => {
+    expect(pageIsPanned({ ...rest, scrollY: 110 })).toBe(true);
+    expect(pageIsPanned({ ...rest, offsetTop: 110 })).toBe(true);
+    expect(pageIsPanned({ ...rest, scrollX: 4 })).toBe(true);
+  });
+
+  it('ignores half a pixel of rounding in the pan', () => {
+    expect(pageIsPanned({ ...rest, offsetTop: 0.4 })).toBe(false);
+  });
+
+  it('never touches a page that scrolls on its own (a rollout, settings)', () => {
+    expect(pageIsPanned({ ...rest, locked: false, scrollY: 600, offsetTop: 110 })).toBe(false);
   });
 });

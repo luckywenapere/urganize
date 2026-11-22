@@ -1,7 +1,7 @@
 {
   "name": "urganize",
   "description": "Urganize is a planning and coordination app for recording artists, managers and labels.",
-  "version": "1.292.2",
+  "version": "1.292.3",
   "private": true,
   "packageManager": "pnpm@10.6.4",
   "workspaces": [
