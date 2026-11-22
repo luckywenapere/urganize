@@ -185,6 +185,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               (function () {
                 try {
                   if (!/^\\/auth\\/?$/.test(window.location.pathname)) return;
+                  // The login splash (#1365) plays once per tab. A second visit
+                  // in the same tab skips it, decided here so it never paints.
+                  try {
+                    if (sessionStorage.getItem('urganize.auth-splash-seen')) {
+                      document.documentElement.setAttribute('data-auth-splash', 'seen');
+                    } else {
+                      sessionStorage.setItem('urganize.auth-splash-seen', '1');
+                    }
+                  } catch (_) {}
                   var raw = localStorage.getItem('urganize-auth');
                   if (!raw) return;
                   var parsed = JSON.parse(raw);

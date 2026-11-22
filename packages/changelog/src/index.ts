@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.291.1",
+    date: "November 22, 2026",
+    highlights: [
+      "The login page now opens with our logo coming together, then the sign-in options slide up. It plays once each visit and never slows you down.",
+    ],
+  },
+
+  {
     version: "1.291.0",
     date: "November 21, 2026",
     title: "Urganize music",

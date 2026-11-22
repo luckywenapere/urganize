@@ -3134,6 +3134,132 @@ html[data-auth-session='1'] .auth-form-shell {
   display: none;
 }
 
+/* The login splash (#1365). The U (the headphone) fades in alone in the
+   middle, slides left while "rganize" fades in beside it, the layer fades
+   away, and the sign-in card slides up into place. About 2.2s in all.
+
+   CSS only, on purpose: the login form is server-rendered so a weak
+   connection still gets a usable page (2026-08-12), and a splash that waited
+   on JavaScript would put that back behind the bundle. The layer lives inside
+   .auth-form-shell, so a returning signed-in visitor (who never sees the form)
+   never sees it either.
+
+   Once per tab: the pre-paint script in app/layout.tsx sets
+   data-auth-splash="seen" when this tab has already played it, and both the
+   layer and the card's entrance switch off. Reduced motion switches both off
+   too, so the form is simply there.
+
+   Geometry comes from the wordmark PNG (1011 x 231): the U is columns 0-161,
+   "rganize" 178-1011. The word starts shifted right by 42.04% of its own width
+   ((1011/2 - 161/2) / 1011), which puts the U alone on the centre line. */
+.auth-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(var(--color-bg-base));
+  animation: auth-splash-out 380ms cubic-bezier(0.4, 0, 0.2, 1) 1650ms both;
+}
+
+.auth-splash-word {
+  position: relative;
+  width: min(62vw, 300px);
+  aspect-ratio: 1011 / 231;
+  animation: auth-splash-slide 700ms cubic-bezier(0.65, 0, 0.35, 1) 650ms both;
+}
+
+.auth-splash-u,
+.auth-splash-rest {
+  position: absolute;
+  top: 0;
+  height: 100%;
+}
+
+.auth-splash-u {
+  left: 0;
+  width: 15.925%;
+  animation: auth-splash-u-in 520ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.auth-splash-rest {
+  left: 17.606%;
+  width: 82.394%;
+  animation: auth-splash-rest-in 600ms cubic-bezier(0.2, 0, 0, 1) 880ms both;
+}
+
+.auth-card-enter {
+  animation: auth-card-up 520ms cubic-bezier(0.2, 0, 0, 1) 1800ms both;
+}
+
+@keyframes auth-splash-u-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes auth-splash-slide {
+  from {
+    transform: translateX(42.04%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes auth-splash-rest-in {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes auth-splash-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@keyframes auth-card-up {
+  from {
+    opacity: 0;
+    transform: translateY(48px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+html[data-auth-splash='seen'] .auth-splash {
+  display: none;
+}
+
+html[data-auth-splash='seen'] .auth-card-enter {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-splash {
+    display: none;
+  }
+
+  .auth-card-enter {
+    animation: none;
+  }
+}
+
 /* ------------------------------------------------------------------------- *
  * The boot frame (2026-10-18, "double load screen"). Every boot-stage loader
  * (LoadingScreen in packages/ui) draws this one frame, and inside the phone
