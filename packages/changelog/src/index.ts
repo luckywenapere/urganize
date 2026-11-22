@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.292.3",
+    date: "November 23, 2026",
+    tag: "AI",
+    highlights: [
+      "On an iPhone, the Ask Chappi box now sits right on top of the keyboard, with no empty gap.",
+      "The page stays still while you type and goes back to where it was when the keyboard closes.",
+    ],
+  },
+  {
     version: "1.292.2",
     date: "November 23, 2026",
     highlights: [

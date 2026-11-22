@@ -3695,6 +3695,16 @@ html.urgans-leaving .home-scene-container > :not([data-urgans-source]) {
     height: 100dvh;
   }
 }
+/* While the keyboard is up on the phone tabs the page behind the frame must not
+   rubber-band or drag (#1374). lib/keyboard-viewport.ts undoes iOS's pan and
+   stops a drag that would not scroll the chat; this stops the bounce that a
+   chat scrolled to its end hands on to the page. overscroll-behavior, never
+   overflow: `overflow` on html breaks position: sticky app-wide. */
+:root[data-swipe-nav='tab'][data-keyboard-open='true'],
+:root[data-swipe-nav='tab'][data-keyboard-open='true'] body,
+:root[data-swipe-nav='tab'][data-keyboard-open='true'] .swipe-frame * {
+  overscroll-behavior-y: none;
+}
 
 /* The one box on Home and Artists sits where the old bottom bar was. */
 /* The Artists / Rollouts switch lives on the Rollouts page too; only the swipe shell shows it. */

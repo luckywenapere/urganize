@@ -1,85 +1,37 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef } from 'react';
-import { morphUpdate } from '@/lib/morph';
 import { useKeyboardViewport } from '@/lib/keyboard-viewport';
 
 /**
- * Publishes the on-screen keyboard's state to CSS, so viewport-locked
- * surfaces can react to it without every one of them subscribing to
- * `visualViewport` itself. Mounted once by AppShell; renders nothing.
+ * Keeps the on-screen keyboard measurement running for the whole app, so
+ * viewport-locked surfaces can react to it from CSS without every one of them
+ * subscribing to `visualViewport` itself. Mounted once by AppShell; renders
+ * nothing.
  *
- * Two things land on `<html>` while the keyboard is up:
- *  - `data-keyboard-open="true"` — the selector hook. Used to reclaim space
- *    reserved for chrome that hides itself when the keyboard opens (the
- *    mobile tab bar), which would otherwise stay as dead space.
- *  - `--app-viewport-height` — the visible region's height in px. On iOS
+ * lib/keyboard-viewport.ts writes four things to `<html>` while the keyboard
+ * is up, in the same animation frame as the viewport event:
+ *  - `data-keyboard-open="true"`: the selector hook. Used to reclaim space
+ *    reserved for chrome that hides itself when the keyboard opens.
+ *  - `--app-viewport-height`: the visible region's height in px. On iOS
  *    `100dvh` does NOT shrink for the keyboard, so a `calc()` against it
  *    leaves the composer floating above the keyboard with a band of nothing
- *    between them (the bug this fixes). This value is measured, not derived.
- *  - `--app-keyboard-inset` — how far a `position: fixed; bottom: 0`
- *    surface has to be lifted to clear the keyboard, which is NOT the same
- *    question: `fixed` anchors to the layout viewport, and on iOS that
- *    viewport's bottom is behind the keyboard.
- *  - `--app-visual-top` — how far the visible region has been panned down
- *    the layout viewport. iOS pans when it cannot scroll the document far
- *    enough to reveal the focused field, and a `fixed` box that ignores it
- *    renders above the screen. Zero on Android and in the common iOS case.
+ *    between them. This value is measured, not derived.
+ *  - `--app-keyboard-inset`: how far a `position: fixed; bottom: 0` surface
+ *    has to be lifted to clear the keyboard. `fixed` anchors to the layout
+ *    viewport, and on iOS that viewport's bottom is behind the keyboard.
+ *  - `--app-visual-top`: how far the visible region has been panned down the
+ *    layout viewport. On the locked phone tabs the pan is undone at once
+ *    (#1374), so this stays 0 there; elsewhere a `fixed` box adds it.
  *
- * Both are REMOVED when the keyboard closes rather than reset to a resting
- * value, so every layout falls back to its ordinary `100dvh` rule and the
- * keyboard-closed rendering is byte-identical to before this existed.
+ * All of them are REMOVED when the keyboard closes, so every layout falls back
+ * to its ordinary `100dvh` rule and the keyboard-closed rendering is unchanged.
+ *
+ * The keyboard flip no longer runs inside a view transition (it did from Oct
+ * 18, 2026): a view transition freezes the page as a picture while iOS is
+ * still sliding the keyboard and panning, which is what showed as a cut-off,
+ * shifted page with the box stranded high (#1374).
  */
 export function KeyboardViewportBridge() {
-  const { open, viewportHeightPx, insetPx, offsetTopPx } = useKeyboardViewport();
-
-  const wasOpen = useRef(false);
-  // The newest reading: a view transition runs its update a frame later, by
-  // which time a newer resize may already have landed.
-  const latest = useRef({ open, viewportHeightPx, insetPx, offsetTopPx });
-  useLayoutEffect(() => {
-    latest.current = { open, viewportHeightPx, insetPx, offsetTopPx };
-  });
-  useEffect(() => {
-    const root = document.documentElement;
-    const apply = () => {
-      const { open, viewportHeightPx, insetPx, offsetTopPx } = latest.current;
-      if (open && viewportHeightPx > 0) {
-        root.dataset.keyboardOpen = 'true';
-        root.style.setProperty('--app-viewport-height', `${viewportHeightPx}px`);
-        root.style.setProperty('--app-keyboard-inset', `${insetPx}px`);
-        root.style.setProperty('--app-visual-top', `${offsetTopPx}px`);
-      } else {
-        delete root.dataset.keyboardOpen;
-        root.style.removeProperty('--app-viewport-height');
-        root.style.removeProperty('--app-keyboard-inset');
-        root.style.removeProperty('--app-visual-top');
-      }
-    };
-    const nowOpen = open && viewportHeightPx > 0;
-    const toggled = nowOpen !== wasOpen.current;
-    wasOpen.current = nowOpen;
-    // The keyboard coming up or going down on the empty UrgAns page: the
-    // question and the box glide to their new places with it (lib/morph.ts,
-    // Oct 18, 2026) instead of jumping half a screen in one frame while the
-    // keyboard is still sliding. Only the open/closed flip, never the size
-    // updates in between, and only where the morph names exist.
-    if (toggled && document.querySelector('.morph-urgans-hero')) {
-      morphUpdate(apply);
-      return;
-    }
-    apply();
-  }, [open, viewportHeightPx, insetPx, offsetTopPx]);
-
-  // Unmount (sign-out, a route that drops the shell) must not strand the
-  // attribute — a stale "keyboard is open" would shrink the next page.
-  useEffect(() => {
-    return () => {
-      const root = document.documentElement;
-      delete root.dataset.keyboardOpen;
-      root.style.removeProperty('--app-viewport-height');
-    };
-  }, []);
-
+  useKeyboardViewport();
   return null;
 }
