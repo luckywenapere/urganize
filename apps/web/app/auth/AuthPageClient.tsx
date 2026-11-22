@@ -53,9 +53,6 @@ const LAST_AUTH_EMAIL_KEY = 'urganize.last_auth_email';
 // Written by the pre-hydration probe in app/layout.tsx, read by the CSS gate in
 // app/globals.css, cleared here once Supabase confirms there is no session.
 const SESSION_HINT_ATTRIBUTE = 'data-auth-session';
-/** When the splash and the card's entrance are over (globals.css: the card
- *  ends at 1800ms + 520ms), with a little room. */
-const SPLASH_TOTAL_MS = 2400;
 const normalizeAuthEmail = (value: string) => value.trim().toLowerCase();
 
 // The card's controls: 44px on a phone, 38px from md, 8px corners, so every
@@ -162,16 +159,6 @@ export default function AuthPage() {
   // what lets the session check below hide the form without the user ever
   // seeing a painted frame of it. See the session gate near the bottom.
   const [hasMounted, setHasMounted] = useState(false);
-  // The splash (#1365) is a full-screen layer that only goes away when its CSS
-  // fade finishes. A fade that never finishes (paused, throttled, a phone
-  // browser quirk) left it on top, invisible, swallowing every tap on the
-  // sign-in card (#1369). So the page also takes it away itself, once the
-  // animation should be over, and drops the card's entrance with it.
-  const [splashDone, setSplashDone] = useState(false);
-  useEffect(() => {
-    const timer = window.setTimeout(() => setSplashDone(true), SPLASH_TOTAL_MS);
-    return () => window.clearTimeout(timer);
-  }, []);
 
   useIsomorphicLayoutEffect(() => {
     setHasMounted(true);
@@ -323,17 +310,6 @@ export default function AuthPage() {
     }
   }, []);
 
-  // The splash (#1365) plays once per tab. The pre-paint script in
-  // app/layout.tsx records it on a full page load; this covers arriving here
-  // by an in-app link, where that script does not run. It only writes the
-  // mark, never the attribute, so a splash already playing finishes.
-  useEffect(() => {
-    try {
-      window.sessionStorage.setItem('urganize.auth-splash-seen', '1');
-    } catch {
-      // Restricted storage: the splash may play again next time, no harm.
-    }
-  }, []);
 
   const handleEmailContinue = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -513,30 +489,6 @@ export default function AuthPage() {
             pointer-events-none either way. Kept as a plain div with no client
             state: this page is `○ Static` and must stay that way. */}
         <div className="urg-ground-sunburst lg:hidden" aria-hidden="true" />
-        {/* The login splash (#1365): the U fades in, slides left as "rganize"
-            joins it, then the layer fades and the card below slides up. CSS
-            only (globals.css, .auth-splash), so it never waits on the bundle;
-            skipped on a second visit in the same tab and for reduced motion. */}
-        {splashDone ? null : <div className="auth-splash" aria-hidden="true">
-          <div className="auth-splash-word">
-            <Image
-              src="/images/urganize-wordmark-u.png"
-              alt=""
-              width={161}
-              height={231}
-              priority
-              className="auth-splash-u app-wordmark"
-            />
-            <Image
-              src="/images/urganize-wordmark-rganize.png"
-              alt=""
-              width={833}
-              height={231}
-              priority
-              className="auth-splash-rest app-wordmark"
-            />
-          </div>
-        </div>}
         {/* On a computer (#1229, mock docs/mocks/signin-onboarding-desktop,
             screen 1): two halves filling the window. The form on the left,
             one photo filling the right; the plans, questions and footer below
@@ -582,7 +534,7 @@ export default function AuthPage() {
               )}
 
               {/* A card on a phone; on a computer the form sits on the page. */}
-              <div className={`${splashDone ? '' : 'auth-card-enter '}mt-7 w-full max-w-[418px] rounded-2xl border border-stroke-default bg-bg-surface p-5 text-left shadow-[0_1px_2px_rgba(26,22,17,0.04),0_8px_24px_rgba(26,22,17,0.06)] lg:max-w-none lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none`}>
+              <div className="auth-card-enter mt-7 w-full max-w-[418px] rounded-2xl border border-stroke-default bg-bg-surface p-5 text-left shadow-[0_1px_2px_rgba(26,22,17,0.04),0_8px_24px_rgba(26,22,17,0.06)] lg:max-w-none lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
                 {inviteOnly ? (
                   <InviteOnlyNotice
                     onSignIn={() => {

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { DM_Sans, DM_Mono } from 'next/font/google';
 import { AppShell } from '@/components/app/AppShell';
 import { CursorRefresher } from '@/components/app/CursorRefresher';
+import { EntrySplash } from '@/components/app/EntrySplash';
 import { LegacyHostHandoff } from '@/components/app/LegacyHostHandoff';
 import { APP_ORIGIN } from '@/lib/app-hosts';
 import { LEGACY_HOST_EARLY_SCRIPT } from '@/lib/legacy-host-handoff';
@@ -185,15 +186,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               (function () {
                 try {
                   if (!/^\\/auth\\/?$/.test(window.location.pathname)) return;
-                  // The login splash (#1365) plays once per tab. A second visit
-                  // in the same tab skips it, decided here so it never paints.
-                  try {
-                    if (sessionStorage.getItem('urganize.auth-splash-seen')) {
-                      document.documentElement.setAttribute('data-auth-splash', 'seen');
-                    } else {
-                      sessionStorage.setItem('urganize.auth-splash-seen', '1');
-                    }
-                  } catch (_) {}
                   var raw = localStorage.getItem('urganize-auth');
                   if (!raw) return;
                   var parsed = JSON.parse(raw);
@@ -272,8 +264,42 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             `,
           }}
         />
+        {/*
+          The entry splash (#1365, #1375; components/app/EntrySplash.tsx). It
+          is hidden unless this sets data-entry-splash="play", so a failure here
+          only means no splash. Plays on a full load of an app page, once per
+          tab session: in the phone app that is every cold open. Never on a
+          public link someone was sent (a press kit, credits, a DJ pack), on a
+          machine step (the sign-in callback, payment return), or for anyone who
+          turned motion off.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  var p = window.location.pathname;
+                  if (/^\\/(api|auth\\/callback|auth\\/handoff|oauth|share-target|payment|checkout|add-card|unsubscribe|capture|credits|epk|k|p|pack|pitch|r|claim|brief)(\\/|$)/.test(p)) return;
+                  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+                  if (sessionStorage.getItem('urganize.entry-splash-seen')) return;
+                  sessionStorage.setItem('urganize.entry-splash-seen', '1');
+                  var root = document.documentElement;
+                  root.setAttribute('data-entry-splash', 'play');
+                  // The safety net (#1369). The layer only goes away when its
+                  // CSS fade finishes, and a fade can stall (a throttled or
+                  // backgrounded tab, a phone browser quirk), which once left
+                  // it on top and swallowed taps on the sign-in card. So it is
+                  // switched off here too, once it should be over, whether or
+                  // not the fade ran. Plain script: no wait on the bundle.
+                  setTimeout(function () { root.removeAttribute('data-entry-splash'); }, 2400);
+                } catch (_) {}
+              })();
+            `,
+          }}
+        />
       </head>
       <body className="app-body bg-bg-base text-content-primary antialiased">
+        <EntrySplash />
         <LegacyHostHandoff />
         <CursorRefresher />
         <NavPendingBar />
