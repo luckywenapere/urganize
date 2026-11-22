@@ -3134,66 +3134,101 @@ html[data-auth-session='1'] .auth-form-shell {
   display: none;
 }
 
-/* The login splash (#1365). The U (the headphone) fades in alone in the
-   middle, slides left while "rganize" fades in beside it, the layer fades
-   away, and the sign-in card slides up into place. About 2.2s in all.
+/* The entry splash (#1365, #1375; components/app/EntrySplash.tsx). Every time
+   someone opens the app: the U (the headphone) alone in the middle, then it
+   slides left as "rganize" fades in beside it, then the layer fades away to
+   whatever loaded underneath. On the login page the sign-in card then slides
+   up. About 2.2s in all.
 
-   CSS only, on purpose: the login form is server-rendered so a weak
-   connection still gets a usable page (2026-08-12), and a splash that waited
-   on JavaScript would put that back behind the bundle. The layer lives inside
-   .auth-form-shell, so a returning signed-in visitor (who never sees the form)
-   never sees it either.
+   Hidden unless the pre-paint script in app/layout.tsx sets
+   data-entry-splash="play" on <html> (a full load of an app page, once per tab
+   session, never for reduced motion). CSS only, so it never waits on the
+   bundle and a weak connection still gets its page as soon as it has it.
 
-   Once per tab: the pre-paint script in app/layout.tsx sets
-   data-auth-splash="seen" when this tab has already played it, and both the
-   layer and the card's entrance switch off. Reduced motion switches both off
-   too, so the form is simply there.
+   Phone app hand-off: the native launch screen draws the U 77.7pt wide, dead
+   centre of the whole screen, on --boot-ground (the same numbers the boot
+   frame below uses, BOOT_MARK_WIDTH in packages/ui). The word therefore STARTS
+   at the width that makes its U exactly 77.7px (161 / 1011 of the word, so
+   487.9px) and shrinks to its resting size as it slides. Inside the app the U
+   is already on screen, so it does not fade in.
 
    Geometry comes from the wordmark PNG (1011 x 231): the U is columns 0-161,
-   "rganize" 178-1011. The word starts shifted right by 42.04% of its own width
-   ((1011/2 - 161/2) / 1011), which puts the U alone on the centre line. */
-.auth-splash {
+   rows 5-178, so its centre sits 10.39% of the word's height above the word's
+   centre (translateY +10.39% lines the U up with the screen centre), and
+   translateX 42.04% of the word's own width puts the U alone on the centre
+   line ((1011/2 - 161/2) / 1011). Both are percentages of the element itself,
+   so they stay right while the width animates. */
+.entry-splash {
+  display: none;
+}
+
+html[data-entry-splash='play'] .entry-splash {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 400;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  /* Never catches a tap (#1369): it only covers the page for a moment, and a
+     layer that held taps once left the sign-in card unusable when its fade
+     stalled. The timer in app/layout.tsx is the other half of that net. */
+  pointer-events: none;
   background: rgb(var(--color-bg-base));
-  animation: auth-splash-out 380ms cubic-bezier(0.4, 0, 0.2, 1) 1650ms both;
+  animation: entry-splash-out 380ms cubic-bezier(0.4, 0, 0.2, 1) 1650ms both;
 }
 
-.auth-splash-word {
+html[data-native-shell][data-entry-splash='play'] .entry-splash {
+  background: var(--boot-ground, rgb(var(--color-bg-base)));
+}
+
+/* Same marks as the launch screen: cream on its dark ground, ink on paper,
+   whatever theme the page itself stored (the boot frame's rule, mirrored). */
+html[data-native-shell] .entry-splash .app-wordmark {
+  filter: none;
+}
+
+html[data-native-shell][data-boot-light] .entry-splash .app-wordmark {
+  filter: invert(1);
+}
+
+.entry-splash-word {
   position: relative;
+  flex: none;
   width: min(62vw, 300px);
   aspect-ratio: 1011 / 231;
-  animation: auth-splash-slide 700ms cubic-bezier(0.65, 0, 0.35, 1) 650ms both;
+  transform: translate(0, calc(10.39% - var(--boot-shift, 0px)));
+  animation: entry-splash-slide 700ms cubic-bezier(0.65, 0, 0.35, 1) 650ms both;
 }
 
-.auth-splash-u,
-.auth-splash-rest {
+.entry-splash-u,
+.entry-splash-rest {
   position: absolute;
   top: 0;
   height: 100%;
 }
 
-.auth-splash-u {
+.entry-splash-u {
   left: 0;
   width: 15.925%;
-  animation: auth-splash-u-in 520ms cubic-bezier(0.2, 0, 0, 1) both;
+  animation: entry-splash-u-in 520ms cubic-bezier(0.2, 0, 0, 1) both;
 }
 
-.auth-splash-rest {
+html[data-native-shell] .entry-splash-u {
+  animation: none;
+}
+
+.entry-splash-rest {
   left: 17.606%;
   width: 82.394%;
-  animation: auth-splash-rest-in 600ms cubic-bezier(0.2, 0, 0, 1) 880ms both;
+  animation: entry-splash-rest-in 600ms cubic-bezier(0.2, 0, 0, 1) 880ms both;
 }
 
-.auth-card-enter {
-  animation: auth-card-up 520ms cubic-bezier(0.2, 0, 0, 1) 1800ms both;
+html[data-entry-splash='play'] .auth-card-enter {
+  animation: entry-card-up 520ms cubic-bezier(0.2, 0, 0, 1) 1800ms both;
 }
 
-@keyframes auth-splash-u-in {
+@keyframes entry-splash-u-in {
   from {
     opacity: 0;
     transform: scale(0.9);
@@ -3204,16 +3239,18 @@ html[data-auth-session='1'] .auth-form-shell {
   }
 }
 
-@keyframes auth-splash-slide {
+@keyframes entry-splash-slide {
   from {
-    transform: translateX(42.04%);
+    width: 487.9px;
+    transform: translate(42.04%, calc(10.39% - var(--boot-shift, 0px)));
   }
   to {
-    transform: translateX(0);
+    width: min(62vw, 300px);
+    transform: translate(0, calc(10.39% - var(--boot-shift, 0px)));
   }
 }
 
-@keyframes auth-splash-rest-in {
+@keyframes entry-splash-rest-in {
   from {
     opacity: 0;
     transform: translateX(-10px);
@@ -3224,7 +3261,7 @@ html[data-auth-session='1'] .auth-form-shell {
   }
 }
 
-@keyframes auth-splash-out {
+@keyframes entry-splash-out {
   to {
     opacity: 0;
     visibility: hidden;
@@ -3232,7 +3269,7 @@ html[data-auth-session='1'] .auth-form-shell {
   }
 }
 
-@keyframes auth-card-up {
+@keyframes entry-card-up {
   from {
     opacity: 0;
     transform: translateY(48px);
@@ -3243,20 +3280,12 @@ html[data-auth-session='1'] .auth-form-shell {
   }
 }
 
-html[data-auth-splash='seen'] .auth-splash {
-  display: none;
-}
-
-html[data-auth-splash='seen'] .auth-card-enter {
-  animation: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .auth-splash {
+  html[data-entry-splash='play'] .entry-splash {
     display: none;
   }
 
-  .auth-card-enter {
+  html[data-entry-splash='play'] .auth-card-enter {
     animation: none;
   }
 }

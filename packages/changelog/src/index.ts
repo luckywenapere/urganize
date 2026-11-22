@@ -67,6 +67,14 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.292.2",
+    date: "November 23, 2026",
+    highlights: [
+      "The logo animation now plays every time you open Urganize, on your phone too, not just on the login page. In the phone app it carries straight on from the opening screen.",
+    ],
+  },
+
+  {
     version: "1.292.1",
     date: "November 22, 2026",
     highlights: [
