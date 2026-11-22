@@ -287,7 +287,7 @@ export function HomeChatCard({
         <form
           onSubmit={onSubmit}
           data-home-chat-box
-          className={`${phone ? 'mt-4 px-4 pt-4' : 'mt-[22px] px-[18px] pt-[18px]'} rounded-[24px] bg-bg-surface pb-3.5 shadow-[0_0_0_1.5px_var(--home-line-strong)] transition-shadow focus-within:shadow-[0_0_0_2px_rgb(var(--color-brand))]`}
+          className={`${phone ? 'mt-4 px-4 pt-4' : 'mt-[22px] px-[18px] pt-[18px]'} relative z-30 rounded-[24px] bg-bg-surface pb-3.5 shadow-[0_0_0_1.5px_var(--home-line-strong)] transition-shadow focus-within:shadow-[0_0_0_2px_rgb(var(--color-brand))]`}
         >
           <ChappiAttachmentTray attachments={attach.attachments} pending={attach.pending} onRemove={attach.remove} />
           <label htmlFor="home-chat-box" className="sr-only">
@@ -318,7 +318,7 @@ export function HomeChatCard({
               onFiles={(files) => void attach.addFiles(files)}
               triggerClassName="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full border border-stroke-control text-content-secondary transition-colors hover:text-content-primary disabled:opacity-40"
             />
-            <AboutPicker options={options} value={aboutId} onChange={setPicked} disabled={sending} />
+            <AboutPicker options={options} value={aboutId} onChange={setPicked} disabled={sending} phone={phone} />
             {phone ? (
               <>
                 {voiceDriver}
@@ -419,7 +419,7 @@ function TryCards({ disabled, onPick }: { disabled: boolean; onPick: (card: TryC
                 variant="outline"
                 onClick={() => onPick(card)}
                 disabled={disabled}
-                className="motion-focus motion-press h-[76px] w-full flex-col items-start justify-between whitespace-normal rounded-xl border-stroke-control bg-bg-surface/85 px-2.5 py-2.5 text-left font-normal text-content-primary backdrop-blur-sm hover:bg-bg-surface hover:text-content-primary"
+                className="motion-focus motion-press h-[76px] w-full flex-col items-start justify-between whitespace-normal rounded-xl border-stroke-control bg-transparent px-2.5 py-2.5 text-left font-normal text-content-primary hover:bg-bg-hover/40 hover:text-content-primary"
               >
                 <span className="grid h-[26px] w-[26px] place-items-center rounded-lg bg-brand/10 text-brand" aria-hidden="true">
                   <Icon className="!size-[15px]" />
@@ -459,11 +459,14 @@ function AboutPicker({
   value,
   onChange,
   disabled,
+  phone = false,
 }: {
   options: AboutOption[];
   value: string | null;
   onChange: (id: string | null) => void;
   disabled: boolean;
+  /** On a phone the list spans the message box instead of hanging off the button, which sits too far right for a 20rem list. */
+  phone?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -510,7 +513,7 @@ function AboutPicker({
     'motion-focus flex w-full min-w-0 items-center gap-2.5 rounded-[14px] px-2.5 py-2 text-left text-sm text-content-primary transition-colors hover:bg-bg-hover';
 
   return (
-    <div ref={rootRef} className="relative min-w-0">
+    <div ref={rootRef} className={`min-w-0 ${phone ? '' : 'relative'}`}>
       <button
         ref={triggerRef}
         type="button"
@@ -536,7 +539,7 @@ function AboutPicker({
           id={panelId}
           role="group"
           aria-label="What your message is about"
-          className="absolute left-0 top-full z-50 mt-2 max-h-[22rem] w-80 overflow-y-auto rounded-[20px] border border-stroke-default bg-bg-surface p-1.5 shadow-[0_24px_48px_-12px_rgba(0,0,0,.45)]"
+          className={`absolute top-full z-50 mt-2 max-h-[22rem] overflow-y-auto rounded-[20px] border border-stroke-default bg-bg-surface p-1.5 shadow-[0_24px_48px_-12px_rgba(0,0,0,.45)] ${phone ? 'inset-x-0' : 'left-0 w-80'}`}
         >
           <button type="button" onClick={() => choose(null)} aria-current={value === null ? 'true' : undefined} className={`${row} ${value === null ? 'bg-bg-sidebar-active font-semibold' : ''}`}>
             <span aria-hidden="true" className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-bg-hover text-content-secondary">
