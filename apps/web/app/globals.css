@@ -3228,6 +3228,7 @@ html[data-auth-session='1'] .auth-form-shell {
   to {
     opacity: 0;
     visibility: hidden;
+    pointer-events: none;
   }
 }
 
