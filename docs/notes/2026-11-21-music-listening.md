@@ -47,3 +47,14 @@ Oyin approved the mocks in `docs/mocks/music-v2/mock.html` ("Yes, build it"). Th
 - **Analog feel, only where it says something true.** Songs are vinyl records (`Vinyl.tsx`): grooves, the cover as the label, a spindle hole. A record turns only while its song plays, and never with reduced motion (`.music-spin` in globals.css). The full player is a turntable with a tonearm that lifts off when paused; the position is a tick-mark dial (the native range input lies on top of it).
 - **Wallpaper for everyone.** `/music` gets `data-app-shell` from the boot script for signed-out listeners too (`wallpaperForEveryone` in `lib/appearance.ts`), and `AppearanceWatcher` leaves it alone there. Music surfaces avoid opaque grounds so the picture shows.
 - **Icons:** the music side imports plain lucide from `components/icons/lucide.ts` (the approved shadcn set), not the house marks in `components/icons`.
+
+## Music gets its own address (2026-11-23, v1.293.0, #1378, no flag)
+
+Oyin: put the music side on music.urganize.app; team.urganize.app opens the workspace again, with a New-tagged way to music on Home. He chose **sign-in on both addresses** over a listen-only music address.
+
+- **Root by address** (`lib/music-host.ts`, `app/page.tsx`, server-side from the Host header): music.urganize.app → `/music`, every other address → `/dashboard` (signed-out people bounce on to `/auth`). The PWA `start_url` is `/` so it follows the same rule.
+- **A plain sign-in lands on the side it happened on** (`defaultSignInPath`, used by `/auth` and the Google callback): music on the music address, the workspace on team.
+- **Sign-in is per address.** Supabase keeps the session in each address's own storage, so someone signed in on team is signed out on music until they sign in there too; liked songs are per address as well. Supabase's redirect allow list gained `https://music.urganize.app/**` (2026-11-23, Management API; appended, nothing removed).
+- **Links across:** `musicHref` / `teamHref` give absolute links only on the live addresses and stay relative on previews and local copies (`useHost` reads the address after load, so nothing mismatches on hydration). Music's circle menu sends Artist dashboard, Playlist pitches and Create my account to team; its Sign in stays on music. The dashboard's headphones circle, avatar row and the new Home card go to music. The dashboard Home "Upload a song" tile stays on team (`/music?upload=1`), where the person is already signed in.
+- **New tag** (`lib/music-intro.ts`, `MusicHomeCard`): a card under the Chappi box with a New tag and a dot on the headphones circle until the person opens music once from the workspace; kept per account on the device. Both Home skeletons reserve its 56px.
+- **Vercel:** music.urganize.app added to the `urganize` project (verified). **DNS:** urganize.app is on Namecheap, so `music` needs a CNAME to `890bb18ab284a954.vercel-dns-017.com` (the same target as team).

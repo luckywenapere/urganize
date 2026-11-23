@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { MUSIC_PATH } from '@/lib/home-path';
+
 import { SHORT_DESCRIPTION } from '@/lib/positioning';
 
 // Web app manifest — makes the app installable as a PWA (Add to Home
@@ -15,8 +15,8 @@ export default function manifest(): MetadataRoute.Manifest {
     // is under 160 characters for exactly this kind of field.
     description: SHORT_DESCRIPTION,
     // Cold-launch destination for an installed PWA — kept in sync with the
-    // in-app post-auth landing surface (URG-205) via the shared constant.
-    start_url: MUSIC_PATH,
+    // root, which picks music or the workspace by address (#1378).
+    start_url: '/',
     display: 'standalone',
     // The dark theme's ground (2026-10-18; it was the old ink #0d120e, a shade
     // greener than the page, so an installed app's launch read as a second

@@ -8,6 +8,10 @@ import { SWIPE_TABS, lerpIndicator, swipeAreaForPath, swipeBackAction, swipeBack
 import { readPreviousLocation } from '@/lib/nav-history';
 import { ArrowLeft } from '@/components/icons';
 import { Headphones } from '@/components/icons/lucide';
+import { musicHref } from '@/lib/music-host';
+import { useHost } from '@/lib/use-host';
+import { useAuthStore } from '@/lib/auth-store';
+import { markMusicIntroSeen, useMusicIntroSeen } from '@/lib/music-intro';
 import { useSwipeNavStore } from '@/stores/useSwipeNavStore';
 import { useNeedsYouStore } from '@/stores/useNeedsYouStore';
 import { getSwipeProgress, subscribeSwipeProgress } from './progress';
@@ -29,6 +33,9 @@ export function SwipeTopBar({ showHelp, pagerActive }: { showHelp: boolean; page
   const router = useRouter();
   const back = pagerActive ? null : swipeBackFor(pathname);
   const go = useSwipeNavStore((state) => state.go);
+  const host = useHost();
+  const userId = useAuthStore((state) => state.user?.id ?? null);
+  const musicSeen = useMusicIntroSeen(userId);
   const unread = useNeedsYouStore((state) => state.items.reduce((count, item) => (item.read ? count : count + 1), 0));
   const tabRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const rowRef = useRef<HTMLDivElement>(null);
@@ -154,12 +161,14 @@ export function SwipeTopBar({ showHelp, pagerActive }: { showHelp: boolean; page
         <div className="ml-auto flex items-center gap-2">
           {/* Back to Urganize Music (#1364): a quiet circle beside the photo. */}
           <Link
-            href="/music"
-            aria-label="Urganize Music"
+            href={musicHref(host)}
+            onClick={() => markMusicIntroSeen(userId)}
+            aria-label={musicSeen ? 'Urganize Music' : 'Urganize Music, new'}
             title="Urganize Music"
-            className="motion-focus flex h-9 w-9 items-center justify-center rounded-full border border-content-primary/[0.12] text-content-primary/75 transition-colors hover:bg-content-primary/[0.06] hover:text-content-primary"
+            className="motion-focus relative flex h-9 w-9 items-center justify-center rounded-full border border-content-primary/[0.12] text-content-primary/75 transition-colors hover:bg-content-primary/[0.06] hover:text-content-primary"
           >
             <Headphones className="h-[18px] w-[18px]" aria-hidden="true" />
+            {musicSeen ? null : <span aria-hidden="true" className="absolute right-0 top-0 h-2 w-2 rounded-full bg-brand" />}
           </Link>
           <AvatarMenu showHelp={showHelp} settingsActive={area === 'settings'} />
         </div>
