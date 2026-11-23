@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.293.2",
+    date: "November 24, 2026",
+    tag: "Account",
+    highlights: [
+      "If you open Urganize from Instagram, TikTok or another app, Google sign-in does not work there. You now see how to open the page in your browser, and you can sign up with your email.",
+    ],
+  },
+
+  {
     version: "1.293.1",
     date: "November 23, 2026",
     tag: "App",

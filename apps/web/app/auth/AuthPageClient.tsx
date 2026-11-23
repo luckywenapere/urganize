@@ -1,5 +1,6 @@
 'use client';
 
+import { GoogleGate } from '@/components/auth/GoogleGate';
 import { AppleSignInButton } from '@/components/auth/AppleSignInButton';
 import { describeCallbackError } from '@/lib/auth-callback-error';
 import { useEffect, useRef, useState } from 'react';
@@ -557,7 +558,7 @@ export default function AuthPage() {
                       className={`${googleButtonClass} mb-3`}
                       onError={() => setError('Sign in with Apple failed. Please try again.')}
                     />
-                    <button type="button" onClick={handleGoogleLogin} disabled={busy} className={googleButtonClass}>
+                    <GoogleGate><button type="button" onClick={handleGoogleLogin} disabled={busy} className={googleButtonClass}>
                       {isGoogleLoading ? (
                         <>
                           <span aria-hidden="true" className="h-4 w-4 rounded-md bg-content-primary/10 skeleton-shimmer" />
@@ -587,7 +588,7 @@ export default function AuthPage() {
                           <span>Continue with Google</span>
                         </>
                       )}
-                    </button>
+                    </button></GoogleGate>
 
                     <p className="mt-3 text-center text-xs leading-[14px] text-content-tertiary lg:hidden">OR</p>
                     <div aria-hidden="true" className="my-[18px] hidden items-center gap-3 text-xs text-content-tertiary lg:flex">

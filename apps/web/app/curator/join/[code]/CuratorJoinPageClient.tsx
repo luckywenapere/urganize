@@ -13,6 +13,7 @@
 // next=/curator/join/<code>, so the callback returns here and the resume effect
 // finishes the join. Same pattern as /invite/accept.
 
+import { GoogleGate } from '@/components/auth/GoogleGate';
 import { AppleSignInButton } from '@/components/auth/AppleSignInButton';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { clearPendingConfirmation, firstNameOf, writePendingConfirmation } from '@/lib/email-confirmation';
@@ -489,7 +490,7 @@ export function CuratorJoinPageClient({
                       disabled={busy}
                       onError={(message: string) => setError(message)}
                     />
-                    <button
+                    <GoogleGate><button
                       type="button"
                       onClick={() => void handleGoogleSignup()}
                       disabled={busy}
@@ -520,7 +521,7 @@ export function CuratorJoinPageClient({
                           Continue with Google
                         </>
                       )}
-                    </button>
+                    </button></GoogleGate>
 
                     <div className="relative">
                       <div className="absolute inset-0 flex items-center">

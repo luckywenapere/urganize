@@ -36,6 +36,7 @@
 // 2026-08-13), so the URL is read imperatively after mount, never through
 // useSearchParams.
 
+import { GoogleGate } from '@/components/auth/GoogleGate';
 import { AppleSignInButton } from '@/components/auth/AppleSignInButton';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -946,7 +947,7 @@ export default function OnboardingPage() {
             className={`${secondaryButtonClass} mt-[22px] lg:mt-7 lg:text-[14px]`}
             onError={(message) => setAccountError({ kind: 'message', text: message })}
           />
-          <button
+          <GoogleGate className="mt-[22px] lg:mt-7"><button
             type="button"
             onClick={() => void continueWithGoogle()}
             disabled={googleBusy || creating}
@@ -960,7 +961,7 @@ export default function OnboardingPage() {
                 Continue with Google
               </>
             )}
-          </button>
+          </button></GoogleGate>
 
           <div className="mb-0.5 mt-[18px] flex items-center gap-3 text-[13px] text-content-tertiary" aria-hidden="true">
             <span className="h-px flex-1 bg-stroke-control" />
