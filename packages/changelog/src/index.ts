@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.293.1",
+    date: "November 23, 2026",
+    tag: "App",
+    listed: false,
+    highlights: [
+      "Opening Urganize from a link now takes you to sign-in in one step, instead of a few.",
+      "Links on go.urganize.app and the old app addresses go straight to the right place.",
+    ],
+  },
+
+  {
     version: "1.293.0",
     date: "November 23, 2026",
     title: "Urganize Music has its own address",

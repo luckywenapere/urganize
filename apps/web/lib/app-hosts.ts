@@ -3,12 +3,15 @@
 //
 // team.urganize.app is where the app lives (founder call, 29 Oct 2026; it was
 // my.urganize.app for one day). go.urganize.app is the name we put on links
-// people hand to someone else (a team invite, a press kit, a profile); Vercel
-// answers it with a 308 to the same path on team.urganize.app.
-// app.urganize.app and my.urganize.app are old addresses: they still serve the
-// app so signed-in people can be moved across with their session
-// (lib/legacy-host-handoff.ts), because a Supabase session is kept in
-// localStorage, which is per origin.
+// people hand to someone else (a team invite, a press kit, a profile). Since
+// #1380 the app answers it itself (next.config.js): a source-link slug is one
+// 307 to its tagged page, any other path is one 308 to the same path on
+// team.urganize.app. Vercel's domain setting must not redirect it first.
+// app.urganize.app and my.urganize.app are old addresses: a browser that holds
+// the sign-in hint cookie is still served the app so its session can be moved
+// across (lib/legacy-host-handoff.ts), because a Supabase session is kept in
+// localStorage, which is per origin; everyone else is redirected to team.
+// music.urganize.app is the music side's own address (#1378, lib/music-host.ts).
 
 export const APP_ORIGIN = 'https://team.urganize.app';
 export const SHARE_ORIGIN = 'https://go.urganize.app';
