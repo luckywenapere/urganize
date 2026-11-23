@@ -35,8 +35,8 @@ export const OUTBOX_MAX_ATTEMPTS = 3;
 export const OUTBOX_RETRY_DELAY_MS = 60 * 60 * 1000;
 
 /** Held back from queued mail for everything that is not queued. */
-export const SEQUENCE_RESERVE = 10;
-export const BULK_RESERVE = 25;
+export const SEQUENCE_RESERVE = 30;
+export const BULK_RESERVE = 50;
 
 /** The Resend free plan. Override with EMAIL_DAILY_LIMIT after upgrading. */
 export const DEFAULT_DAILY_EMAIL_LIMIT = 100;
