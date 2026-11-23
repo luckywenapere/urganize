@@ -7,6 +7,7 @@
 // Nothing on this page lets anyone in. A verified Paystack payment does, in
 // the webhook. Card and bank transfer get equal weight.
 
+import { GoogleGate } from '@/components/auth/GoogleGate';
 import { AppleSignInButton } from '@/components/auth/AppleSignInButton';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
@@ -515,9 +516,9 @@ function SignupStep({
           className={`mt-6 ${outlineButton}`}
           onError={(message) => setError(message)}
         />
-        <button type="button" onClick={() => void handleGoogle()} className={`mt-6 ${outlineButton}`}>
+        <GoogleGate className="mt-6"><button type="button" onClick={() => void handleGoogle()} className={`mt-6 ${outlineButton}`}>
           Continue with Google
-        </button>
+        </button></GoogleGate>
 
         <div className="my-6 flex items-center gap-3 text-xs text-content-tertiary">
           <span className="h-px flex-1 bg-stroke-default" />

@@ -27,6 +27,7 @@
 // the redirect and read-and-cleared on return. Same pattern as the
 // /onboarding Google path.
 
+import { GoogleGate } from '@/components/auth/GoogleGate';
 import { AppleSignInButton } from '@/components/auth/AppleSignInButton';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
@@ -595,7 +596,7 @@ export default function InviteAcceptPageClient({
                       disabled={isGoogleRedirecting || isSubmitting}
                       onError={(message: string) => setError(message)}
                     />
-                    <button
+                    <GoogleGate><button
                       type="button"
                       onClick={() => void handleGoogleSignup()}
                       disabled={isGoogleRedirecting || isSubmitting}
@@ -630,7 +631,7 @@ export default function InviteAcceptPageClient({
                           Continue with Google
                         </>
                       )}
-                    </button>
+                    </button></GoogleGate>
 
                     <div className="relative">
                       <div className="absolute inset-0 flex items-center">
