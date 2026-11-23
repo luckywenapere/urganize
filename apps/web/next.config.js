@@ -49,6 +49,57 @@ const CUT_FEATURE_FLAGS = require('./lib/cut-features.json');
 // /ig ... Each slug is rewritten to /api/go/<slug>. See lib/source-links.ts.
 const SOURCE_LINK_SLUGS = Object.keys(require('./lib/source-links.json'));
 
+// One hop from every old or shared address (#1380). Hosts and cookie name are
+// repeated from lib/app-hosts.ts and lib/login-cookie.ts, which this CommonJS
+// file cannot import; lib/host-redirects.test.ts holds the copies together.
+//
+// go.urganize.app (Vercel serves it with no domain-level redirect): a short
+// link slug is answered by the rewrite below with ONE 307 to its tagged final
+// page; the bare root goes to sign-in or the workspace by the sign-in hint
+// cookie; every other path goes to the same path on team.urganize.app.
+//
+// app.urganize.app and my.urganize.app keep serving the app only for a browser
+// that holds the sign-in hint cookie, so lib/legacy-host-handoff.ts can carry
+// its localStorage session across. Everyone else, signed out, is sent to the
+// same path and query on team.urganize.app before any page loads. API paths are
+// never redirected: Paystack, Resend and MCP callers may still use these hosts.
+const TEAM_ORIGIN = 'https://team.urganize.app';
+const LOGIN_HINT_COOKIE = 'urganize_in';
+const LEGACY_APP_HOSTS = ['app.urganize.app', 'my.urganize.app'];
+const GO_HOST = 'go.urganize.app';
+const goSlugAlternation = SOURCE_LINK_SLUGS.join('|');
+
+const hostRedirects = [
+  {
+    source: '/',
+    has: [{ type: 'host', value: GO_HOST }, { type: 'cookie', key: LOGIN_HINT_COOKIE }],
+    destination: `${TEAM_ORIGIN}/dashboard`,
+    permanent: false,
+  },
+  {
+    source: '/',
+    has: [{ type: 'host', value: GO_HOST }],
+    destination: `${TEAM_ORIGIN}/auth`,
+    permanent: false,
+  },
+  {
+    // Everything except a source-link slug, which the rewrite below answers.
+    source: `/:path((?!(?:${goSlugAlternation})$).+)`,
+    has: [{ type: 'host', value: GO_HOST }],
+    destination: `${TEAM_ORIGIN}/:path`,
+    permanent: true,
+  },
+  ...LEGACY_APP_HOSTS.map((host) => ({
+    source: '/:path((?!api(?:/|$)|_next/).*)',
+    has: [{ type: 'host', value: host }],
+    missing: [{ type: 'cookie', key: LOGIN_HINT_COOKIE }],
+    destination: `${TEAM_ORIGIN}/:path`,
+    // Temporary on purpose: a cached 308 would stop a browser that later
+    // gains a session here from ever reaching the handoff.
+    permanent: false,
+  })),
+];
+
 // Sentry (URG-372). The app version becomes the Sentry release, and the
 // Vercel environment (production / preview) its environment. VERCEL_ENV is
 // server-only, so it is stamped for the browser here. package.json mirrors
@@ -116,6 +167,7 @@ const nextConfig = {
   // the feature was only hidden.
   async redirects() {
     return [
+      ...hostRedirects,
       // Short links for the three tabs (URG-380). Harmless with the swipe
       // navigation off: they land on the same pages.
       { source: '/home', destination: '/dashboard/home', permanent: false },

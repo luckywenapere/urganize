@@ -4,9 +4,9 @@ import SOURCE_LINK_DATA from './source-links.json';
  * Short links that say where a visitor came from (2026-11-10, #1185).
  * See docs/notes/2026-11-10-source-links.md.
  *
- * go.urganize.app/x, /ig, /fb ... go in bios and posts. Vercel answers
- * go.urganize.app with a 308 to the same path on team.urganize.app, where
- * next.config.js rewrites /<slug> to /api/go/<slug>. That route counts the
+ * go.urganize.app/x, /ig, /fb ... go in bios and posts. The go host is served
+ * by this app with no Vercel domain redirect (#1380), where next.config.js
+ * rewrites /<slug> to /api/go/<slug>: one hop, no stop on team. That route counts the
  * tap, remembers the link in a cookie for 30 days and sends the visitor to the
  * marketing site with utm tags. When a new account's team is made, the cookie
  * is reported once as `signup_from_source_link`.

@@ -28,6 +28,28 @@ export function rootPathForHost(host: string | null | undefined): '/music' | '/d
   return isMusicHost(host) ? '/music' : '/dashboard';
 }
 
+/**
+ * Where the site root sends a request, decided on the server (#1380). The
+ * Supabase session sits in localStorage, which the server cannot read, so the
+ * parent-domain `urganize_in` hint cookie (lib/login-cookie.ts) stands in: a
+ * person with it goes straight to the workspace, a person without it goes
+ * straight to sign-in, one redirect either way, instead of /dashboard painting
+ * a skeleton and then bouncing to /auth in the browser. A wrong hint costs
+ * nothing: /auth sends a signed-in person on, and the workspace sends a
+ * signed-out one back. Only live product hosts see the cookie, so previews and
+ * local copies keep going to the workspace.
+ */
+export function entryPathForRequest(
+  host: string | null | undefined,
+  hasSignedInHint: boolean
+): '/music' | '/dashboard' | '/auth' {
+  if (isMusicHost(host)) return '/music';
+  const clean = cleanHost(host);
+  const onLiveSite = clean === 'urganize.app' || clean.endsWith('.urganize.app');
+  if (!onLiveSite) return '/dashboard';
+  return hasSignedInHint ? '/dashboard' : '/auth';
+}
+
 /** Where a plain sign-in lands: back on music when it happened on the music
  *  address, the workspace otherwise. */
 export function defaultSignInPath(host: string | null | undefined): '/music' | '/dashboard' {

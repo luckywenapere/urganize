@@ -135,8 +135,8 @@ These are the principles that govern v1 build decisions. When in doubt, return t
 urganize/
 ├── apps/
 │   ├── homepage/      # Marketing + waitlist + admin growth (urganize.app)
-│   ├── web/           # Authenticated product app (app.urganize.app)
-│   └── mobile/        # Expo native shell (iOS + Android): a webview on app.urganize.app
+│   ├── web/           # Authenticated product app (team.urganize.app)
+│   └── mobile/        # Expo native shell (iOS + Android): a webview on team.urganize.app
 ├── packages/
 │   ├── ui/            # Shared React primitives (Button, Card, Input, etc.)
 │   ├── config/        # Shared tsconfig, ESLint, Tailwind preset
@@ -383,24 +383,24 @@ The hand-crafted templates are the heart of v1. Template infrastructure (types, 
 
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Vercel — monorepo, TWO projects from this one repo:
-  - `Web` → https://app.urganize.app (builds `apps/web`)
+  - `Web` → https://team.urganize.app (since 29 Oct 2026; app.urganize.app and my.urganize.app are old addresses that redirect here, music.urganize.app serves the music side) (builds `apps/web`)
   - `the-urganization` → https://www.urganize.app (builds `apps/homepage`; **`www.urganize.app` 308s to the bare `urganize.app` apex** — this line said the reverse until 2026-08-13, when a post-deploy health check measured the real chain: `www` → 308 → apex → 200. The "reconcile that doc" note under the URG-118 section is now discharged.)
   - **`the-urganization` HAS an Ignored Build Step and `urganize` does NOT (measured 2026-09-11 from the commit statuses on #579 and #582).** So a push rebuilds the product app always, and the marketing app only when the change reaches it. This bullet said both use `npx turbo-ignore @urganize/<app>`, then said the field was empty on both (founder, 2026-09-08); the first was never true and the second was true until something was installed on the marketing project two days later. The evidence, what it cannot tell you about WHICH command is installed, and the value still to install on `urganize` are all under Hosting above and in *"A docs-only merge no longer costs four deployments"*.
 - **The marketing site deploys itself again since 2026-10-31 (founder call, #947), but only for marketing changes.** `the-urganization` has Root Directory `apps/homepage` (since 2026-10-19), so it reads `apps/homepage/vercel.json`, not the root file: `"main": true` there, and its `ignoreCommand` is `scripts/vercel-ignore-homepage.sh`, which builds only when the commit has `[deploy]` AND something under `apps/homepage/`, `packages/{pricing,ui,config}` or `pnpm-lock.yaml` changed since its last deploy. Version-only `package.json` bumps and `packages/changelog` do not count, so a product release does not rebuild urganize.app (its `/changelog` page catches up at the next marketing deploy). From 2026-10-19 to 2026-10-31 the site did not deploy from `main` at all.
 - **DEPLOYS ARE OPT-IN SINCE 2026-10-27 (founder call, to save Vercel deploys and Active CPU): a push to `main` only builds when its commit message contains `[deploy]`.** Root `vercel.json` has `"ignoreCommand": "git log -1 --pretty=%B | grep -qF '[deploy]' && exit 1 || exit 0"` (exit 0 = skip, exit 1 = build). Both Vercel projects read the root file, so this gate applies to the product app AND the marketing site, and it overrides the dashboard Ignored Build Step. Batch work in plain commits, then put `[deploy]` in the message of the commit that should go live; that build ships everything since the last deploy.
-- Production URL: https://app.urganize.app (product) / https://www.urganize.app (marketing)
+- Production URL: https://team.urganize.app (product) / https://www.urganize.app (marketing)
 - Deploy workflow: auto-deploy on push to `main` (production); PR branches do not build (no `[deploy]` in their commits); the reviewed squash merge with `[deploy]` in its subject is what goes live
-- Deploy status command: the Vercel REST API with `$VERCEL_TOKEN` (set in cloud sessions). Team `team_Q8ifaV1Kre3IPoxveXwUTLcW`; the product app (app.urganize.app) is project `urganize` (`prj_4CymLx7edCv8X8NIoy4oapTgfFp5`), the marketing site is `the-urganization`. `GET /v6/deployments?projectId=...&teamId=...&target=production&limit=3` shows the latest builds and their state.
+- Deploy status command: the Vercel REST API with `$VERCEL_TOKEN` (set in cloud sessions). Team `team_Q8ifaV1Kre3IPoxveXwUTLcW`; the product app (team.urganize.app) is project `urganize` (`prj_4CymLx7edCv8X8NIoy4oapTgfFp5`), the marketing site is `the-urganization`. `GET /v6/deployments?projectId=...&teamId=...&target=production&limit=3` shows the latest builds and their state.
 - **Check Vercel yourself, never ask the founder (founder, 2026-11-03).** Whether a flag or env var is on in production, whether a deploy has finished: read it from the API with `$VERCEL_TOKEN` (`GET /v10/projects/{id}/env?teamId=...` lists keys; `GET /v1/projects/{id}/env/{envId}?teamId=...` reads one value) and report what you found. Never write "if it's switched on" or ask him to look. Reading is fine; changing a production env var or triggering a deploy still needs his yes, as before. Never print secret values in the reply; a `NEXT_PUBLIC_*` flag value is fine to state.
 - Merge method: rebase, one commit per PR (since 2026-10-29: squash would author bot-opened PRs as the bot)
 - Project type: web app (SaaS product + marketing site, Next.js App Router)
-- Post-deploy health check: `https://app.urganize.app/auth` must return 200 (public page that exercises the web app end to end); `https://www.urganize.app/` must return 200
+- Post-deploy health check: `https://team.urganize.app/auth` must return 200 (public page that exercises the web app end to end); `https://www.urganize.app/` must return 200
 
 ### Custom deploy hooks
 - Pre-merge: `pnpm test && pnpm lint && pnpm build`
 - Deploy trigger: automatic on push to main
 - Deploy status: poll production URLs until the new deployment serves (script asset hashes change)
-- Health check: `curl -sf https://app.urganize.app/auth` and `curl -sf https://www.urganize.app/`
+- Health check: `curl -sf https://team.urganize.app/auth` and `curl -sf https://www.urganize.app/`
 
 ### Versioning (reversed 2026-07-13 — the repo now tracks a version)
 
@@ -643,3 +643,18 @@ card page, the webhooks, cancel, the card page link and the reminder have never
 run for real. Card changes in Bachs's customer page are off by default and must
 be switched on in the Bachs dashboard. An account still waiting to be let in
 (closed sign-up) is not let in by adding a card.
+
+---
+
+## The new-user entry path: one hop, one canonical host (2026-11-23, #1380)
+
+Complaints that people arriving from go.urganize.app and urganize.app could not
+get into the app. Measured chain before: `go/<slug>` 308 to team, 308 to
+urganize.app (marketing, 260 KB); `go/` 308 to team, 307 to /dashboard, then a
+client bounce to /auth. Note: `docs/notes/2026-11-23-redirect-chain.md`.
+
+- **The canonical app address is team.urganize.app** (founder call, 29 Oct, #855). app.urganize.app and my.urganize.app are old addresses; music.urganize.app is the music side's own address (#1378). Marketing's `APP_ORIGIN` already says team.
+- **go.urganize.app is served by this app, never redirected by Vercel.** `hostRedirects` in `next.config.js`: a source-link slug is one 307 (rewrite to /api/go/<slug>); the bare root goes to /dashboard or /auth by the sign-in hint; any other path is one 308 to the same path on team.
+- **The site root** (`app/page.tsx`) reads the `urganize_in` hint cookie (parent domain, set by `lib/login-cookie.ts`): hint, /dashboard; no hint, /auth; music host, /music. `entryPathForRequest` in `lib/music-host.ts`. /dashboard itself stays a static client page: a server cannot see a localStorage session, so redirecting it would need middleware.
+- **Old hosts keep serving the app only to a browser that holds the hint cookie** (so `lib/legacy-host-handoff.ts` can carry its session). Everyone else is redirected (307, so a cached redirect never blocks a later handoff) to the same path on team before any page loads. `/api` and `/_next` are never redirected: webhook callers may still use those hosts.
+- **Do not set a Vercel domain redirect on app or my** while the handoff exists: it signs signed-in people out (proven 28 Oct). Retire them (308 in Vercel, delete the handoff) once traffic is near zero.

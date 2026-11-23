@@ -13,7 +13,8 @@ import {
 } from '@/lib/source-links';
 
 // GET /api/go/<slug> (2026-11-10, #1185). Reached as go.urganize.app/<slug>
-// through the rewrites in next.config.js. Counts the tap, remembers the link
+// through the rewrites in next.config.js, with no redirect in front of it
+// (#1380), so the tap costs one hop to the final page. Counts the tap, remembers the link
 // for 30 days and sends the visitor to the marketing site with utm tags.
 // See lib/source-links.ts.
 //

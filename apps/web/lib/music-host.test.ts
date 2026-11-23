@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultSignInPath, isMusicHost, musicHref, rootPathForHost, teamHref } from './music-host';
+import { defaultSignInPath, entryPathForRequest, isMusicHost, musicHref, rootPathForHost, teamHref } from './music-host';
 
 describe('rootPathForHost', () => {
   it('opens music on the music address and the workspace elsewhere (#1378)', () => {
@@ -12,6 +12,26 @@ describe('rootPathForHost', () => {
   it('does not mistake a look-alike for the music address', () => {
     expect(isMusicHost('music.urganize.app.evil.com')).toBe(false);
     expect(isMusicHost('notmusic.urganize.app')).toBe(false);
+  });
+});
+
+describe('entryPathForRequest', () => {
+  it('sends a signed-out visit to a live team address straight to sign-in (#1380)', () => {
+    expect(entryPathForRequest('team.urganize.app', false)).toBe('/auth');
+    expect(entryPathForRequest('app.urganize.app', false)).toBe('/auth');
+  });
+  it('sends a signed-in visit to the workspace', () => {
+    expect(entryPathForRequest('team.urganize.app', true)).toBe('/dashboard');
+  });
+  it('always opens music on the music address, signed in or not', () => {
+    expect(entryPathForRequest('music.urganize.app', false)).toBe('/music');
+    expect(entryPathForRequest('music.urganize.app', true)).toBe('/music');
+  });
+  it('keeps previews and local copies on the workspace, where the hint cookie never exists', () => {
+    expect(entryPathForRequest('localhost:3100', false)).toBe('/dashboard');
+    expect(entryPathForRequest('urganize-git-x.vercel.app', false)).toBe('/dashboard');
+    expect(entryPathForRequest('evilurganize.app', false)).toBe('/dashboard');
+    expect(entryPathForRequest(null, false)).toBe('/dashboard');
   });
 });
 
