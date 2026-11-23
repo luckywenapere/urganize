@@ -41,6 +41,8 @@ import { openSettingsPage } from './settings-page';
 import { useRouter } from 'next/navigation';
 import { LogOut } from '@/components/icons';
 import { Headphones as MusicHeadphones } from '@/components/icons/lucide';
+import { musicHref } from '@/lib/music-host';
+import { useHost } from '@/lib/use-host';
 import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { useArtistFilterOptions } from '@/components/shell/useArtistFilter';
 import { ProfileFace } from '@/components/shared/ProfileFace';
@@ -205,6 +207,7 @@ export function MenuBody({
   onOpenSegment?: (segment: SettingsSegment, section: string | null) => void;
 }) {
   const page = Boolean(onOpenSegment);
+  const host = useHost();
   const user = useAuthStore((state) => state.user);
   const isAdmin = useWorkspaceIdentityStore((state) => state.isAdmin);
   const openCommand = useShellStore((state) => state.openCommand);
@@ -398,7 +401,7 @@ export function MenuBody({
           <MenuLink href="/dashboard/trash" icon={Trash2} label="Trash" onClose={onClose} />
         )}
         {/* The way back to the listening side (#1364). */}
-        <MenuLink href="/music" icon={MusicHeadphones} label="Urganize Music" onClose={onClose} />
+        <MenuLink href={musicHref(host)} icon={MusicHeadphones} label="Urganize Music" onClose={onClose} />
         {has('admin') ? <ActionRow icon={Gauge} label="Admin" onClick={inSettings('admin')} /> : null}
       </MenuGroup>
 

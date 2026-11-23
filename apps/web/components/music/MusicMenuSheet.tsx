@@ -8,6 +8,8 @@ import { ChevronRight, LayoutDashboard, LogOut, Radio, SunMoon, Upload, X } from
 import { DialogPanel } from '@/components/shared/DialogPanel';
 import { useAuthStore } from '@/lib/auth-store';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
+import { teamHref } from '@/lib/music-host';
+import { useHost } from '@/lib/use-host';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { useMusicAccount } from './useMusicAccount';
 
@@ -47,6 +49,8 @@ export function MusicMenuSheet({ onClose, onUpload }: { onClose: () => void; onU
   const team = useWorkspaceIdentityStore((state) => state.name);
   const loadTeam = useWorkspaceIdentityStore((state) => state.load);
   const [signingOut, setSigningOut] = useState(false);
+  // On music.urganize.app the work side lives on team.urganize.app (#1378).
+  const host = useHost();
 
   useEffect(() => lockBodyScroll(), []);
   useEffect(() => {
@@ -103,7 +107,7 @@ export function MusicMenuSheet({ onClose, onUpload }: { onClose: () => void; onU
             hasTeam || hasPlaylists ? (
               <Group>
                 {hasTeam ? (
-                  <Link href="/dashboard" onClick={onClose} className={ROW}>
+                  <Link href={teamHref(host, '/dashboard')} onClick={onClose} className={ROW}>
                     <Row accent icon={<LayoutDashboard className="h-5 w-5" />} title="Artist dashboard" hint="Your rollouts and team" />
                   </Link>
                 ) : null}
@@ -113,7 +117,7 @@ export function MusicMenuSheet({ onClose, onUpload }: { onClose: () => void; onU
                   </button>
                 ) : null}
                 {hasPlaylists ? (
-                  <Link href="/curator" onClick={onClose} className={ROW}>
+                  <Link href={teamHref(host, '/curator')} onClick={onClose} className={ROW}>
                     <Row icon={<Radio className="h-5 w-5" />} title="Playlist pitches" />
                   </Link>
                 ) : null}
@@ -122,14 +126,14 @@ export function MusicMenuSheet({ onClose, onUpload }: { onClose: () => void; onU
           ) : (
             <div className="mt-4 space-y-2.5">
               <Link
-                href="/onboarding"
+                href={teamHref(host, '/onboarding')}
                 data-autofocus
                 className="motion-focus motion-press flex h-12 items-center justify-center rounded-[14px] bg-content-primary px-5 text-[15px] font-semibold text-bg-base transition-opacity hover:opacity-90"
               >
                 Create my account
               </Link>
               <Link
-                href="/auth?next=/dashboard"
+                href="/auth"
                 className="motion-focus motion-press flex h-12 items-center justify-center rounded-[14px] border border-content-primary/[0.16] px-5 text-[15px] font-semibold text-content-primary transition-colors hover:bg-content-primary/[0.06]"
               >
                 I have an account. Sign in

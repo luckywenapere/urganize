@@ -67,6 +67,19 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.293.0",
+    date: "November 23, 2026",
+    title: "Urganize Music has its own address",
+    tag: "App",
+    highlights: [
+      "Urganize Music now lives at music.urganize.app. You can listen there with no account, or sign in.",
+      "team.urganize.app opens your workspace again.",
+      "Home has a new Urganize Music card. It shows a New tag until you open it.",
+      "Signing in on one address does not sign you in on the other, so you may need to sign in once on each.",
+    ],
+  },
+
+  {
     version: "1.292.3",
     date: "November 23, 2026",
     tag: "AI",

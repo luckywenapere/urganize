@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { SESSION_EXPIRED_NOTICE_KEY, useAuthStore } from '@/lib/auth-store';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { captureReferralFromSearch } from '@/lib/referral-intent';
-import { MUSIC_PATH } from '@/lib/home-path';
+import { defaultSignInPath } from '@/lib/music-host';
 import { openExternalUrl } from '@/lib/external-link';
 // Deep imports (URG-314): the @urganize/ui barrel pulled every ui component
 // (the audio player, the assistant's pieces, the genre picker) into the
@@ -128,7 +128,12 @@ export default function AuthPage() {
   // router.push leave the app after sign-in (URG-386's safe next, applied here
   // too, not only on /auth/callback).
   const requestedNext = searchParams?.get('next');
-  const nextPath = isSafeNextPath(requestedNext) ? requestedNext : MUSIC_PATH;
+  // A plain sign-in lands on the side it happened on (#1378): the workspace on
+  // team.urganize.app, music on music.urganize.app. Read in the browser; the
+  // server's first render has no next yet either, so nothing is drawn from it.
+  const nextPath = isSafeNextPath(requestedNext)
+    ? requestedNext
+    : defaultSignInPath(typeof window === 'undefined' ? null : window.location.host);
   const inviteEmail = normalizeAuthEmail(searchParams?.get('email') || '');
   // Old bookmarks / sent emails may still carry ?mode=signup. Send those
   // to /onboarding (the organic signup home) so the user has a path

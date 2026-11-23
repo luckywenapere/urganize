@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { ArrowRight, X } from '@/components/icons/lucide';
 import type { MusicGuidance } from '@/lib/music/rules';
+import { teamHref } from '@/lib/music-host';
+import { useHost } from '@/lib/use-host';
 
 const COPY: Record<Exclude<MusicGuidance, null>, { title: string; body: string }> = {
   team: {
@@ -33,6 +35,7 @@ export function GuidanceCard({
   onDismiss: () => void;
 }) {
   const copy = COPY[kind];
+  const host = useHost();
   return (
     <section
       aria-label={copy.title}
@@ -53,7 +56,7 @@ export function GuidanceCard({
       <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1">
         {kind !== 'curator' ? (
           <Link
-            href="/dashboard"
+            href={teamHref(host, '/dashboard')}
             onClick={onDismiss}
             className="motion-focus inline-flex min-h-[36px] items-center gap-1 text-xs font-semibold text-brand"
           >
@@ -62,7 +65,7 @@ export function GuidanceCard({
         ) : null}
         {kind !== 'team' ? (
           <Link
-            href="/curator"
+            href={teamHref(host, '/curator')}
             onClick={onDismiss}
             className="motion-focus inline-flex min-h-[36px] items-center gap-1 text-xs font-semibold text-brand"
           >

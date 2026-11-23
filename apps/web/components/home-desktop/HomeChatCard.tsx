@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { MusicHomeCard } from './MusicHomeCard';
 import { ArrowRight, ArrowUp, Check, ChevronDown, Loader2, Mic, Sparkles, Upload, UserPlus } from '@/components/icons';
 import { ChappiAttachMenu } from '@/components/chappi/ChappiAttachMenu';
 import { ChappiAttachmentTray } from '@/components/chappi/ChappiAttachments';
@@ -393,6 +394,9 @@ export function HomeChatCard({
             ))}
           </ul>
         ) : null}
+
+        {/* The way to Urganize Music (#1378): a New card the first time. */}
+        <MusicHomeCard />
       </div>
 
       {phone ? null : <NextDropPanel row={spotlight} />}
@@ -670,6 +674,7 @@ export function HomeChatCardSkeleton() {
           </span>
           <span className={`h-[38px] w-52 ${bar}`} />
         </span>
+        <span className="mt-4 block h-[56px] animate-pulse rounded-2xl bg-bg-hover" />
       </div>
       <div className={`flex min-w-0 flex-col border-l ${HOME_RULE} pl-8 xl:pl-10`}>
         <span className="flex h-5 items-center">
@@ -717,6 +722,7 @@ export function HomeChatCardPhoneSkeleton() {
           <span key={key} className="block h-[76px] animate-pulse rounded-xl bg-bg-hover" />
         ))}
       </span>
+      <span className="mt-4 block h-[56px] animate-pulse rounded-2xl bg-bg-hover" />
     </div>
   );
 }

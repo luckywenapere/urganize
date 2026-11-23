@@ -6,7 +6,8 @@ import { LoadingScreen } from '@urganize/ui';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { accessIntentFromToken, hasPendingAccessIntent, redeemPendingAccess } from '@/lib/access-intent';
-import { CURATOR_HOME_PATH, HOME_PATH, MUSIC_PATH, isDefaultLandingPath } from '@/lib/home-path';
+import { CURATOR_HOME_PATH, HOME_PATH, isDefaultLandingPath } from '@/lib/home-path';
+import { defaultSignInPath } from '@/lib/music-host';
 import {
   EMAIL_CONFIRMED_FLAG_KEY,
   EMAIL_CONFIRMED_PARAM,
@@ -398,7 +399,7 @@ export default function AuthCallbackPage() {
             ? ONBOARDING_SETUP_PATH
             : hasExplicitNext
               ? safeNext
-              : MUSIC_PATH;
+              : defaultSignInPath(window.location.host);
 
         window.clearTimeout(timeout);
         await holdYoureIn();
