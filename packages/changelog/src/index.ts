@@ -67,6 +67,18 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.293.3",
+    date: "November 25, 2026",
+    tag: "App",
+    listed: false,
+    highlights: [
+      "If your phone or browser is too old to open Urganize, you now see a clear message instead of a blank page.",
+      "If a page takes too long to open, you get a Retry button.",
+      "Opening the app after an update no longer leaves you on a broken page.",
+    ],
+  },
+
+  {
     version: "1.293.2",
     date: "November 24, 2026",
     tag: "Account",

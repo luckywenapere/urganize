@@ -4,10 +4,12 @@ import { DM_Sans, DM_Mono } from 'next/font/google';
 import { AppShell } from '@/components/app/AppShell';
 import { CursorRefresher } from '@/components/app/CursorRefresher';
 import { EntrySplash } from '@/components/app/EntrySplash';
+import { HydrationBeacon } from '@/components/app/HydrationBeacon';
 import { LegacyHostHandoff } from '@/components/app/LegacyHostHandoff';
 import { APP_ORIGIN } from '@/lib/app-hosts';
 import { LEGACY_HOST_EARLY_SCRIPT } from '@/lib/legacy-host-handoff';
 import { APPEARANCE_BOOT_SCRIPT } from '@/lib/appearance';
+import { COLD_LOAD_BOOT_SCRIPT } from '@/lib/cold-load';
 import { NavPendingBar } from '@/components/app/NavPendingBar';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import { BRAND_LINE, META_DESCRIPTION, SHARE_DESCRIPTION, SHARE_HEADLINE, SHARE_TITLE } from '@/lib/positioning';
@@ -155,6 +157,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* First, so a sign-in link that lands on the old host moves to the
             new one before supabase-js can read it (lib/legacy-host-handoff.ts). */}
         <script dangerouslySetInnerHTML={{ __html: LEGACY_HOST_EARLY_SCRIPT }} />
+        {/* Second: the first load must never be a blank or endless screen (#1380,
+            lib/cold-load.ts). An engine too old for Next gets a notice, a page
+            that names chunks a newer deploy removed reloads once (bounded), a
+            front door that has not hydrated in 10 seconds gets a Retry bar,
+            and a visitor with no sign of a session leaves /dashboard before the
+            workspace bundle downloads. HydrationBeacon is its other half. */}
+        <script dangerouslySetInnerHTML={{ __html: COLD_LOAD_BOOT_SCRIPT }} />
         {/* The theme and the wallpaper before the first paint (#1320): one
             choice (Light, Dark, Auto, System) gives both, by the rule in
             lib/appearance.ts, which the test runs this script against. */}
@@ -299,6 +308,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="app-body bg-bg-base text-content-primary antialiased">
+        <HydrationBeacon />
         <EntrySplash />
         <LegacyHostHandoff />
         <CursorRefresher />
