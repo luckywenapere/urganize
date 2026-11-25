@@ -1,6 +1,7 @@
 'use client';
 
 import type { BrandColors } from '@/lib/social-share-colors';
+import type { ArtistVerificationStatus } from '@/lib/artist-verification';
 import { registerSignOutReset } from '@/lib/sign-out-resets';
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
@@ -35,6 +36,9 @@ export type RosterArtist = {
   photoUrl?: string | null;
   /** The artist's brand colors, when the API sends them (#1209). */
   brandColors?: BrandColors;
+  /** Where the artist stands on verification (#1390). Absent on payloads and
+   *  saved rosters that predate it, which reads as "not verified". */
+  verification?: { status: ArtistVerificationStatus; note: string | null };
 };
 
 type ArtistRosterStore = {

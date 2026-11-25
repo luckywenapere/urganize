@@ -31,6 +31,7 @@ import type { RenewalReminderEmailProps } from './RenewalReminderEmail';
 import type { CardTrialReminderEmailProps } from './CardTrialReminderEmail';
 import type { HelpRequestEmailProps } from './HelpRequestEmail';
 import type { CuratorApplicationApprovedEmailProps } from './CuratorApplicationApprovedEmail';
+import type { ArtistVerificationEmailProps } from './ArtistVerificationEmail';
 
 export type EmailTemplateProps = {
   welcome: WelcomeEmailProps;
@@ -64,6 +65,7 @@ export type EmailTemplateProps = {
   card_trial_reminder: CardTrialReminderEmailProps;
   help_request: HelpRequestEmailProps;
   curator_application_approved: CuratorApplicationApprovedEmailProps;
+  artist_verification: ArtistVerificationEmailProps;
 };
 
 export type EmailTemplateId = keyof EmailTemplateProps;

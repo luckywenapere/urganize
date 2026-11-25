@@ -9,6 +9,7 @@ import { recordLimitHit } from '@/lib/seats-server';
 import { NO_BRAND_COLORS, isBrandColorsEnabled, type BrandColors } from '@/lib/social-share-colors';
 import { loadArtistBrandColors } from '@/lib/social-share-colors-server';
 import { loadArtistPhotoUrls } from '@/lib/profile-photo-server';
+import { loadVerificationStates, type VerificationState } from '@/lib/artist-verification-server';
 
 // The team's artist roster.
 //
@@ -36,7 +37,8 @@ const isFlagOn = () => process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 function toPayload(
   artist: { id: string; name: string; slug: string },
   brandColors?: BrandColors,
-  photoUrl: string | null = null
+  photoUrl: string | null = null,
+  verification: VerificationState = { status: 'unverified', note: null }
 ) {
   return {
     id: artist.id,
@@ -44,6 +46,8 @@ function toPayload(
     slug: artist.slug,
     // A short-lived signed URL, minted per response (lib/profile-photo.ts).
     photoUrl,
+    // Where the artist stands on verification (issue #1390). Only ever shown.
+    verification,
     ...(brandColors ? { brandColors } : {}),
   };
 }
@@ -90,13 +94,21 @@ export async function GET(request: NextRequest) {
       artists.map((artist) => artist.id)
     );
 
+    // Own query too: a failed read leaves every artist "not verified" rather
+    // than failing the roster.
+    const verification = await loadVerificationStates(
+      adminClient,
+      artists.map((artist) => artist.id)
+    );
+
     return NextResponse.json({
       workspaceId: access.primaryWorkspaceId,
       artists: artists.map((artist) =>
         toPayload(
           artist,
           brandColors ? (brandColors.get(artist.id) ?? NO_BRAND_COLORS) : undefined,
-          photoUrls.get(artist.id) ?? null
+          photoUrls.get(artist.id) ?? null,
+          verification.get(artist.id)
         )
       ),
       artistLimit: allowance.limit,

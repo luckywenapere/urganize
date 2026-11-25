@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.294.0",
+    date: "November 25, 2026",
+    tag: "Team",
+    highlights: [
+      "Every artist now asks you to verify them. Send a screenshot of Spotify for Artists or Apple Music for Artists.",
+      "Verified artists get a green tick next to their name. Nothing stops working while you wait.",
+    ],
+  },
+
+  {
     version: "1.293.5",
     date: "November 25, 2026",
     tag: "Account",

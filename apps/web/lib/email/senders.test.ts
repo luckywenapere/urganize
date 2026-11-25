@@ -39,6 +39,7 @@ const EXPECTED: Record<EmailTemplateId, { from: string; replyTo: string | null }
   claim_code: VERIFY,
   pay_link: BILLING,
   team_admin_notice: BILLING,
+  artist_verification: NOTIFY,
   referral_reward: BILLING,
   waitlist_joined: NOTIFY,
   welcome: FOUNDER,

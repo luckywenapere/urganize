@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuthenticatedAdmin, loadWorkspaceAccessContext } from '@/lib/tasks-server';
 import { makeCatalogueLink } from '@/lib/artist-import/links-server';
+import { isArtistTakenDown } from '@/lib/artist-verification-server';
 
 // Makes one Altlink link for one imported release. The person has already
 // confirmed in the notice; the daily cap and the one-link-per-release rule are
@@ -8,8 +9,13 @@ import { makeCatalogueLink } from '@/lib/artist-import/links-server';
 export async function POST(request: NextRequest, context: { params: Promise<{ artistId: string; releaseId: string }> }) {
   const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
-  const { releaseId } = await context.params;
+  const { artistId, releaseId } = await context.params;
   if (!/^[0-9a-f-]{36}$/i.test(releaseId)) return NextResponse.json({ error: 'Release not found.' }, { status: 404 });
+
+  // A taken-down artist makes no new links (#1390). Only an admin sets this.
+  if (await isArtistTakenDown(auth.adminClient, artistId)) {
+    return NextResponse.json({ error: 'This artist has been taken down.', reason: 'taken_down' }, { status: 403 });
+  }
 
   const access = await loadWorkspaceAccessContext(auth.adminClient, auth.user);
   try {

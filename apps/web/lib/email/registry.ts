@@ -192,6 +192,16 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     fromAddress: 'notifications@urganize.app',
     replyTo: 'support@urganize.app',
   },
+  artist_verification: {
+    id: 'artist_verification',
+    category: 'transactional',
+    name: 'Artist verification',
+    description: 'Tells the team where an artist stands: screenshot received, verified, needs a new screenshot, badge removed, taken down or brought back.',
+    placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: 'support@urganize.app',
+  },
   team_admin_notice: {
     id: 'team_admin_notice',
     category: 'transactional',

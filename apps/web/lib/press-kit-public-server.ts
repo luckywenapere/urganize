@@ -22,6 +22,7 @@ import {
   generateSignedUrl,
 } from '@/lib/asset-helpers';
 import { isKitLive, publicSections, type PublicKitSection } from '@/lib/press-kit-public';
+import { isHiddenStatus, parseVerificationStatus } from '@/lib/artist-verification';
 import type { PressKitSectionContent, PressKitVisibility } from '@/types/press-kits';
 
 export const isPressKitsFeatureEnabled = (): boolean =>
@@ -54,6 +55,9 @@ export type PublicPressKit = {
   photos: PublicKitPhoto[];
   /** The artist's profile photo (roster face), signed. Null when none. */
   artistPhotoUrl?: string | null;
+  /** An admin approved the artist (#1390). The badge shows only when true; an
+   *  unverified artist shows nothing, so nobody is shamed in public. */
+  verified: boolean;
 };
 
 function createServiceClient(): SupabaseClient | null {
@@ -125,6 +129,23 @@ export async function loadPublicPressKit(slug: string): Promise<PublicPressKit |
     const artistName = String(asRow(artistResult.data).name || '').trim();
     if (!artistName) return null;
 
+    // Verification (#1390), in its own tolerant read so a missing column never
+    // takes the kit down. A taken-down artist is hidden here, by an admin's
+    // hand only; unverified and checking artists show as usual, with no badge.
+    let verified = false;
+    try {
+      const verification = await client
+        .from('artists')
+        .select('verification_status')
+        .eq('id', String(kit.artist_id || ''))
+        .maybeSingle();
+      const status = parseVerificationStatus(asRow(verification.data).verification_status);
+      if (isHiddenStatus(status)) return null;
+      verified = status === 'verified';
+    } catch {
+      // Unreadable: show the kit, without a badge.
+    }
+
     const sectionRows = sectionResult.error
       ? []
       : (sectionResult.data || []).map((row) => {
@@ -178,6 +199,7 @@ export async function loadPublicPressKit(slug: string): Promise<PublicPressKit |
       slug: String(kit.slug || normalized),
       artistName,
       artistPhotoUrl,
+      verified,
       visibility: (kit.visibility as PressKitVisibility) || 'public',
       embargoDate: kit.embargo_date ? String(kit.embargo_date) : null,
       availableForInterview: kit.available_for_interview === true,

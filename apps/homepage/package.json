@@ -1,6 +1,6 @@
 {
   "name": "@urganize/homepage",
-  "version": "1.293.5",
+  "version": "1.294.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

@@ -89,6 +89,13 @@ const LOADERS: LoaderMap = {
       subject: (p) => m.workRequestAnswerSubject(p.answererName, p.roleLabel, p.interested),
     };
   },
+  artist_verification: async () => {
+    const m = await import('./ArtistVerificationEmail');
+    return {
+      element: (p) => createElement(m.ArtistVerificationEmail, p),
+      subject: (p) => m.artistVerificationSubject(p.kind, p.artistName),
+    };
+  },
   team_admin_notice: async () => {
     const m = await import('./TeamAdminNoticeEmail');
     return {
