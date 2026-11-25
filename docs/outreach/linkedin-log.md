@@ -255,3 +255,11 @@ Connection requests from 5 Nov: 3 of 18 accepted so far, 2 of them replied (Afol
 **First DMs (2):** Adeniyi Akinbowale (Kneelyo Media) and Neoentle Mokori (Culture Hub ZA, accepted 11 Nov and missed until today).
 
 **Investors, relationship only, no ask (6), each with a liked post:** DM to Adedeji Olowe (Lendsqr, Paystack board chair; already connected) on his WhatsApp + AI post. Connection requests, all confirmed in Sent invitations: Mark Essien (Hotels.ng, TripDesk), Gatumi Aliyu (Vendease, 54gene), Kevwe Jefia, Munachimso Ngozi-Olehi (InnovFrica, Abuja) and Amarachi Nwachukwu (VC, MARL Accelerator).
+
+## 19 Nov 2026
+
+**Inbox replies sent (6), each checked in the thread:** Mila Verney (sound designer, said she'd be interested): what Urganize is, plans for one artist up to a full label, sign-up link. Munachimso Ngozi-Olehi (founder mentor, Abuja): apologised for missing his question, said what Urganize is, asked which founders he mentors. Ramzy Ben Salem (ex YouTube Music MENA): what Urganize is, sign-up link, asked which markets he watches. Emmanuel David (independent producer, release coming soon): what Urganize is, sign-up link, asked the drop date. Momanyi Ian (Nairobi music exec, manager and A&R): asked who he manages or signs. Adefemi Ogundipe (Flip Empires): asked who he manages there.
+
+**Waiting for Oyin to let them in:** Mila Verney, Ramzy Ben Salem, Emmanuel David.
+
+**Skipped (8):** IfeOluwa Akinwumi (manages Micheal Anderson a.k.a Vhersatyle; artist not confirmed by search, draft not approved). Gregg Miller (said they do it all in house). Kwao Richard (closed with "OK, I will"; Nov 8 DM said "try Urganize free", correction drafted, not sent). Emmanuel Agyei Baffoe (closed with "Sure thing"; Nov 18 DM called him "Pablo", name to correct). Hannah Perron (closed with "Likewise"). Vaishali Rathode (agency pitch). Diana Josh (charges USD 199 to feature, asked for email; not answered). LinkedIn Talent Solutions (automated offer).
