@@ -164,6 +164,14 @@ export const COLD_LOAD_BOOT_SCRIPT = `
         if (k && /^sb-.*-auth-token/.test(k)) { signedIn = true; break; }
       }
       if (!signedIn) {
+        // The shared sign-in cookie, set on the other address (music or team).
+        var cookies = (d.cookie || '').split(';');
+        for (var c = 0; c < cookies.length; c++) {
+          var cname = cookies[c].split('=')[0].replace(/ /g, '');
+          if (/^sb-.*-auth-token[.]0$/.test(cname)) { signedIn = true; break; }
+        }
+      }
+      if (!signedIn) {
         var raw = store.getItem('urganize-auth');
         if (raw) {
           var parsed = JSON.parse(raw);

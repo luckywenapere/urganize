@@ -70,9 +70,13 @@ function Frame({ children }: { children: ReactNode }) {
       <div className="min-h-dvh text-content-primary">
         <header className="sticky top-0 z-40 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md md:border-b md:border-content-primary/[0.06]">
           <div className="relative flex h-[52px] items-center px-5 md:h-[72px] md:px-8">
-            <Link href="/music" aria-label="Urganize Music, Home" className="motion-focus flex items-center gap-2 rounded-md">
+            <Link href="/music" aria-label="Urganize Music Beta, Home" className="motion-focus flex items-center gap-2 rounded-md">
               <Logo size="sm" priority />
               <span className="text-[17px] font-semibold tracking-[-0.02em] text-content-secondary md:text-[19px]">Music</span>
+              {/* Same Beta pill as the workspace's top bar (#1386). */}
+              <span className="select-none rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+                Beta
+              </span>
             </Link>
             <nav
               aria-label="Music"
