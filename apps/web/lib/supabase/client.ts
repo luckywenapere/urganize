@@ -20,6 +20,7 @@
 import { AuthClient } from '@supabase/auth-js';
 import { PostgrestClient } from '@supabase/postgrest-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createSharedSessionStorage } from './shared-session';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -57,7 +58,12 @@ export function authClientOptions(url: string, anonKey: string) {
 type BrowserAuthClient = InstanceType<typeof AuthClient>;
 
 const authOptions = authClientOptions(supabaseUrl, supabaseAnonKey);
-const auth: BrowserAuthClient = new AuthClient(authOptions);
+// The session is also kept in a cookie on .urganize.app, so music and team share
+// one sign-in (#1386). localStorage stays the primary copy; see shared-session.ts.
+const auth: BrowserAuthClient = new AuthClient({
+  ...authOptions,
+  storage: createSharedSessionStorage(authOptions.storageKey),
+});
 
 /**
  * fetch that sends the signed-in user's access token (anon key when signed

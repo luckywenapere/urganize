@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.293.4",
+    date: "November 25, 2026",
+    tag: "Account",
+    highlights: [
+      "Sign in once and you are signed in on both Urganize Music and your workspace.",
+      "Urganize Music now shows a Beta tag, like the rest of Urganize.",
+    ],
+  },
+
+  {
     version: "1.293.3",
     date: "November 25, 2026",
     tag: "App",

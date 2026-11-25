@@ -58,6 +58,7 @@ type Env = {
   noFetch?: boolean;
   noPromise?: boolean;
   native?: boolean;
+  cookie?: string;
 };
 
 function run(env: Env = {}) {
@@ -67,6 +68,7 @@ function run(env: Env = {}) {
     documentElement: root,
     body: new FakeEl('body'),
     hidden: !!env.hidden,
+    cookie: env.cookie ?? '',
     createElement: (tag: string) => new FakeEl(tag),
     createTextNode: (text: string) => ({ nodeValue: text }),
     getElementById: (id: string) => root.children.find((c) => c.id === id) ?? null,
@@ -184,6 +186,14 @@ describe('signed-out visitor on a workspace route', () => {
 
   it('stays when a Supabase session is stored', () => {
     expect(run({ local: { 'sb-abcd-auth-token': '{}' } }).calls.replace).toEqual([]);
+  });
+
+  it('stays when the other address left the shared sign-in cookie', () => {
+    expect(run({ cookie: 'a=1; sb-abcd-auth-token.0=xyz; b=2' }).calls.replace).toEqual([]);
+  });
+
+  it('ignores unrelated cookies', () => {
+    expect(run({ cookie: 'sb-abcd-auth-token-x=1; theme=dark' }).calls.replace).toEqual(['/auth']);
   });
 
   it('stays when the auth store says signed in', () => {
