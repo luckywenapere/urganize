@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.293.5",
+    date: "November 25, 2026",
+    tag: "Account",
+    highlights: [
+      "On a slow connection, tapping Continue on the sign-in page no longer refreshes it and wipes your email. It now says it is getting ready and waits.",
+    ],
+  },
+
+  {
     version: "1.293.4",
     date: "November 25, 2026",
     tag: "Account",

@@ -62,6 +62,7 @@ type Env = {
 };
 
 function run(env: Env = {}) {
+  const docListeners: Record<string, { fn: Listener; capture: boolean }[]> = {};
   const root = new FakeEl('html');
   if (env.hydrated) root.attrs[HYDRATED_ATTRIBUTE] = '1';
   const doc = Object.assign(new FakeEl('doc'), {
@@ -72,7 +73,9 @@ function run(env: Env = {}) {
     createElement: (tag: string) => new FakeEl(tag),
     createTextNode: (text: string) => ({ nodeValue: text }),
     getElementById: (id: string) => root.children.find((c) => c.id === id) ?? null,
-    addEventListener: () => {},
+    addEventListener: (type: string, fn: Listener, capture: boolean) => {
+      (docListeners[type] ??= []).push({ fn, capture });
+    },
   });
   const calls = { replace: [] as string[], reload: 0 };
   const timers: { fn: () => void; ms: number }[] = [];
@@ -133,6 +136,7 @@ function run(env: Env = {}) {
     calls,
     timers,
     listeners,
+    docListeners,
     session: sessionData,
     bar: () => doc.getElementById(COLD_LOAD_BAR_ID),
     fireErrors: (event: unknown) => (listeners.error ?? []).forEach((l) => l.fn(event)),
@@ -343,5 +347,48 @@ describe('a first load that names missing chunks', () => {
       session[CHUNK_RELOAD_STORAGE_KEY] = JSON.stringify({ ...rec, at: rec.at - 2 * CHUNK_RELOAD_COOLDOWN_MS });
     }
     expect(reloads).toBe(CHUNK_RELOAD_MAX_ATTEMPTS);
+  });
+});
+
+describe('a form submitted before React is running (#1388)', () => {
+  const submit = (r: ReturnType<typeof run>, form: Record<string, unknown>) => {
+    const event = {
+      target: form,
+      prevented: false,
+      stopped: false,
+      preventDefault() {
+        this.prevented = true;
+      },
+      stopPropagation() {
+        this.stopped = true;
+      },
+    };
+    (r.docListeners.submit ?? []).forEach((l) => l.fn(event));
+    return event;
+  };
+  const reactForm = { tagName: 'FORM', getAttribute: () => null };
+
+  it('marks the page as having JavaScript and listens in the capture phase', () => {
+    const r = run({ path: '/auth' });
+    expect(r.root.attrs['data-js']).toBe('1');
+    expect(r.docListeners.submit?.[0].capture).toBe(true);
+  });
+
+  it('cancels the browser submit until the page has hydrated', () => {
+    const event = submit(run({ path: '/auth' }), reactForm);
+    expect(event.prevented).toBe(true);
+    expect(event.stopped).toBe(true);
+  });
+
+  it('lets the submit through once hydrated', () => {
+    const r = run({ path: '/auth' });
+    r.root.attrs[HYDRATED_ATTRIBUTE] = '1';
+    const event = submit(r, reactForm);
+    expect(event.prevented).toBe(false);
+  });
+
+  it('leaves a form that has its own action alone', () => {
+    const event = submit(run({ path: '/unsubscribe' }), { tagName: 'FORM', getAttribute: () => '/api/x' });
+    expect(event.prevented).toBe(false);
   });
 });

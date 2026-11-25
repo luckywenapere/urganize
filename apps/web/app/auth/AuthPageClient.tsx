@@ -539,8 +539,15 @@ export default function AuthPage() {
                 </p>
               )}
 
+              {/* Shown only until the page's JavaScript is running; see the
+                  .getting-ready rules in globals.css. Outside the dimmed card so
+                  it stays readable. */}
+              <p role="status" className="getting-ready mt-6 w-full max-w-[418px] text-sm text-content-secondary lg:max-w-none">
+                Getting ready. This takes a few seconds on a slow connection.
+              </p>
+
               {/* A card on a phone; on a computer the form sits on the page. */}
-              <div className="auth-card-enter mt-7 w-full max-w-[418px] rounded-2xl border border-stroke-default bg-bg-surface p-5 text-left shadow-[0_1px_2px_rgba(26,22,17,0.04),0_8px_24px_rgba(26,22,17,0.06)] lg:max-w-none lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
+              <div className="auth-card-enter mt-7 w-full max-w-[418px] rounded-2xl border border-stroke-default bg-bg-surface p-5 text-left shadow-[0_1px_2px_rgba(26,22,17,0.04),0_8px_24px_rgba(26,22,17,0.06)] lg:max-w-none lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none" data-wait-hydrate>
                 {inviteOnly ? (
                   <InviteOnlyNotice
                     onSignIn={() => {
