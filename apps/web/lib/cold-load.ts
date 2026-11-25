@@ -79,6 +79,27 @@ export const COLD_LOAD_BOOT_SCRIPT = `
 
   function hydrated() { return root.hasAttribute(HYDRATED); }
 
+  // 0. A form tapped before React is running. The front doors are server
+  // rendered, so the form is on screen seconds before its handlers exist; on a
+  // slow phone link people type and tap in that gap, the browser submits the
+  // form itself, the page reloads as /auth? and the email is gone (#1388).
+  // Until hydration, swallow the submit of any form with no action of its own
+  // (every React-handled form), and mark <html> so CSS can show a waiting state
+  // (data-js is also what keeps that state away from visitors with no JS).
+  try {
+    root.setAttribute('data-js', '1');
+    d.addEventListener('submit', function (e) {
+      try {
+        if (hydrated()) return;
+        var f = e.target;
+        if (f && f.tagName === 'FORM' && !f.getAttribute('action')) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      } catch (x) {}
+    }, true);
+  } catch (e) {}
+
   function make(tag, css, text) {
     var n = d.createElement(tag);
     if (css) n.style.cssText = css;

@@ -3134,6 +3134,24 @@ html[data-auth-session='1'] .auth-form-shell {
   display: none;
 }
 
+/* Before React is running (#1388). The sign-in form is server rendered, so it is
+   on screen before its handlers exist. Until the hydration beacon sets
+   data-hydrated, the card is dimmed and cannot be tapped, and a line says why.
+   data-js (set by the boot script in lib/cold-load.ts) keeps this away from a
+   visitor with JavaScript off, who gets the <noscript> note instead. */
+.getting-ready {
+  display: none;
+}
+
+html[data-js]:not([data-hydrated]) .getting-ready {
+  display: block;
+}
+
+html[data-js]:not([data-hydrated]) [data-wait-hydrate] {
+  pointer-events: none;
+  opacity: 0.55;
+}
+
 /* The entry splash (#1365, #1375; components/app/EntrySplash.tsx). Every time
    someone opens the app: the U (the headphone) alone in the middle, then it
    slides left as "rganize" fades in beside it, then the layer fades away to
