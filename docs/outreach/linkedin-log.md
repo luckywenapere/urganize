@@ -255,3 +255,15 @@ Connection requests from 5 Nov: 3 of 18 accepted so far, 2 of them replied (Afol
 **First DMs (2):** Adeniyi Akinbowale (Kneelyo Media) and Neoentle Mokori (Culture Hub ZA, accepted 11 Nov and missed until today).
 
 **Investors, relationship only, no ask (6), each with a liked post:** DM to Adedeji Olowe (Lendsqr, Paystack board chair; already connected) on his WhatsApp + AI post. Connection requests, all confirmed in Sent invitations: Mark Essien (Hotels.ng, TripDesk), Gatumi Aliyu (Vendease, 54gene), Kevwe Jefia, Munachimso Ngozi-Olehi (InnovFrica, Abuja) and Amarachi Nwachukwu (VC, MARL Accelerator).
+
+## 19 Nov 2026
+
+**First DMs sent (3), each approved by Oyin and confirmed in thread:** Mark Bawden (artist manager, Dust on the Antics tour; liked his tour post), Karim Ennaas (CEO and founder, Empire City Music Group, Morocco; liked his post on record labels evolving), Wendy Verwey Bekker (African music industry, master and publishing rights; her recent activity was reposts only, so no like).
+
+**Held (1):** Frank McCulloch (ex-A&R Island Records, MD of Elite Events NZ, manages Bad Kangaroo). His Big Al post was liked. The compose box opened showing text that was not typed in this run, so nothing was sent. Oyin to check the thread before any message goes to him.
+
+**Liked, not messaged (1):** Zach Skedzuhn (Blush Hill Management). He already has a thread with Oyin from 8:56 AM, so no DM was sent.
+
+**Skipped, already messaged by Oyin (5):** Kay Agyemang, Jabulani Matarise, Angel Jackson, Nomthandazo Zulu, and Zach Skedzuhn (above).
+
+**Skipped, not ICP (1):** Patrick-Ola Oyeyiola (Music Business Executive at EMPIRE; EMPIRE is a distributor, which the skill excludes).
