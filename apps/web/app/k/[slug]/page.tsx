@@ -588,6 +588,19 @@ export default async function PublicPressKitPage({ params, searchParams }: PageP
             style={{ color: CREAM, overflowWrap: 'anywhere', textWrap: 'balance' }}
           >
             {kit.artistName}
+            {kit.verified ? (
+              <span
+                role="img"
+                aria-label="Verified artist"
+                title="Verified artist"
+                className="ml-3 inline-grid h-7 w-7 place-items-center rounded-full align-middle"
+                style={{ background: '#7fd09c', color: '#0d120e' }}
+              >
+                <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M5 10.5l3.2 3.2L15 6.8" />
+                </svg>
+              </span>
+            ) : null}
           </h1>
           {tagline ? (
             <p className="mt-3 text-[15px]" style={{ color: MUTED }}>

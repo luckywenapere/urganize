@@ -21,6 +21,8 @@ import { FitOneLine } from '@/components/shared/FitOneLine';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { CoverThumbEditor } from '@/components/artists/CoverThumbEditor';
 import { ArtistCatalogueCard } from '@/components/artists/ArtistCatalogueCard';
+import { VerificationBanner } from '@/components/artists/VerificationBanner';
+import { VerifiedMark } from '@/components/artists/VerifiedMark';
 import { ArtistTasksCard } from '@/components/artists/ArtistTasksCard';
 import type { CatalogueProfile } from '@/lib/artist-import/client';
 import { RecordRows, isUntitledRecord, useArtistRecords } from '@/components/artists/ArtistRecordsCard';
@@ -462,6 +464,8 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
                 <div className="h-9 w-28 animate-pulse rounded-full bg-bg-surface" />
                 <div className="h-9 w-28 animate-pulse rounded-full bg-bg-surface" />
               </div>
+              {/* The verification banner (#1390): not-verified is the common state. */}
+              <div className="mt-6 h-[76px] animate-pulse rounded-2xl bg-bg-surface" />
               <div className="mt-6 grid grid-cols-[minmax(0,1fr)_360px] items-start gap-6">
                 <div className="space-y-4">
                   <div className="h-[88px] animate-pulse rounded-2xl bg-bg-surface" />
@@ -570,6 +574,10 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
   };
 
   const canImport = streamingProfile === null && catalogueCount === 0;
+  // Verification (#1390) only shows. A taken-down artist (set by an admin, by
+  // hand) shows just the banner; everything else keeps working.
+  const verification = artist.verification ?? { status: 'unverified' as const, note: null };
+  const takenDown = verification.status === 'taken_down';
 
   return (
     <div className="mx-auto w-full max-w-3xl lg:max-w-[1120px]" {...(brandTheme ? { [ARTIST_BRAND_ATTR]: '' } : {})}>
@@ -600,6 +608,7 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
         <div className="flex min-h-[76px] min-w-0 flex-1 flex-col justify-between gap-2">
           <FitOneLine className="font-display text-[30px] leading-[1.15] text-content-primary sm:text-[36px]">
             {artist.name}
+            {verification.status === 'verified' ? <VerifiedMark size="lg" className="ml-2 align-middle" /> : null}
           </FitOneLine>
           {/* New record first: between releases the next record is the work (founder, 2026-10-29). */}
           <div className="flex flex-wrap gap-1.5 sm:gap-2">
@@ -612,12 +621,19 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
           </div>
         </div>
       </header>
+      <VerificationBanner
+        artistId={artist.id}
+        artistName={artist.name}
+        status={verification.status}
+        note={verification.note}
+      />
       {recordError ? (
         <p role="alert" className="mt-3 text-sm text-status-error">
           {recordError}
         </p>
       ) : null}
 
+      {takenDown ? null : (
       <div className="mt-6 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6">
         <div className="min-w-0">
           {/* A known rollout wins Up next, so only wait for records without one. */}
@@ -776,6 +792,7 @@ export default function ArtistPageClient({ artistId: homeArtistId, home = false 
           ) : null}
         </aside>
       </div>
+      )}
     </div>
   );
 }

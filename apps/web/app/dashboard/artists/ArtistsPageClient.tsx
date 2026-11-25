@@ -22,6 +22,7 @@ import { PlanLoopDemo } from '@/components/artists/PlanLoopDemo';
 import { FirstArtistDesk, readFirstArtistLater } from '@/components/artists/FirstArtistDesk';
 import { OutNowCards } from '@/components/home/OutNowCards';
 import { StreamingLinkPrompt } from '@/components/artists/StreamingLinkPrompt';
+import { VerifiedMark } from '@/components/artists/VerifiedMark';
 import { useShellStore } from '@/stores/useShellStore';
 import { useRoleViewViewer } from '@/components/shell/useShellAreas';
 import { artistHomeId } from '@/lib/artist-home';
@@ -284,7 +285,10 @@ function ArtistRow({
         className={`motion-focus flex min-h-[72px] items-center gap-4 py-3 pl-[4.75rem] pr-5 transition-colors hover:bg-bg-hover/60 md:grid ${ROW_GRID}`}
       >
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-display text-[17px] leading-6 text-content-primary">{artist.name}</span>
+          <span className="flex items-center gap-1.5">
+            <span className="block truncate font-display text-[17px] leading-6 text-content-primary">{artist.name}</span>
+            {artist.verification?.status === 'verified' ? <VerifiedMark size="sm" /> : null}
+          </span>
           {/* Narrow screens: the one line carries the next rollout instead. */}
           <span className="block truncate text-xs leading-4 text-content-secondary md:hidden">
             {next ? `${displayReleaseTitle(next.title)}${day ? ` · ${day}` : ''}` : 'Nothing planned'}
@@ -416,7 +420,10 @@ function SwipeArtists({ loading, list, today }: { loading: boolean; list: Artist
                       </span>
                     )}
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[16.5px] text-content-primary">{artist.name}</span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="block truncate text-[16.5px] text-content-primary">{artist.name}</span>
+                        {artist.verification?.status === 'verified' ? <VerifiedMark size="sm" /> : null}
+                      </span>
                       <span className={`mt-0.5 block truncate text-sm ${next ? 'text-content-primary/75' : 'text-content-primary/40'}`}>
                         {next ? `${displayReleaseTitle(next.title)}${day ? ` · ${day}` : ''}` : 'Nothing planned'}
                       </span>

@@ -86,6 +86,7 @@ export const ADMIN_SECTION_ICONS: Record<string, typeof LayoutDashboard> = {
   urgans: Sparkles,
   directory: UserPlus,
   claims: UserPlus,
+  'artist-verification': UserPlus,
   seeding: Send,
   featured: Spotlight,
   'promo-channels': Megaphone,

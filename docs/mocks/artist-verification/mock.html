@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Artist verification</title>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* App tokens: apps/web LIGHT theme. */
+  :root {
+    --bg:#f5f0e6; --card:#faf5ec; --tile:#e3ddd0; --line:rgba(26,22,17,.09);
+    --text:#1a1611; --sec:#4b4740; --ter:#6a665f; --brand:#14643a; --brand-soft:rgba(20,100,58,.10);
+    --on:#f5f0e6; --board:#e4e0d7;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--board); }
+  body { font:16px/26px 'Instrument Sans', system-ui, sans-serif; color:var(--text); padding:64px 24px 120px; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3,p { margin:0; }
+  .serif { font-family:'Young Serif', serif; font-weight:400; }
+  .wrap { max-width:860px; margin:0 auto; }
+  h1 { font-family:'Young Serif', serif; font-weight:400; font-size:32px; line-height:40px; }
+  .lead { color:var(--sec); margin-top:12px; max-width:620px; }
+  .step { margin-top:96px; }
+  .step .n { font-size:13px; color:var(--ter); letter-spacing:.06em; text-transform:uppercase; }
+  .step h2 { font-family:'Young Serif', serif; font-weight:400; font-size:24px; line-height:32px; margin-top:4px; }
+  .step .say { color:var(--sec); margin-top:6px; max-width:560px; }
+  .frame { background:var(--bg); border-radius:20px; margin-top:28px; padding:40px; box-shadow:0 10px 30px rgba(26,22,17,.07); }
+  .phone { width:360px; padding:28px; }
+  .muted { color:var(--ter); }
+
+  .seal { display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; background:var(--brand); color:var(--on); vertical-align:middle; }
+  .seal svg { width:14px; height:14px; }
+  .quiet { font-size:14px; color:var(--ter); }
+
+  .head { display:flex; gap:20px; align-items:center; }
+  .photo { width:80px; height:80px; border-radius:14px; background:var(--tile); display:grid; place-items:center; font-size:28px; font-weight:600; flex:none; }
+  .name { font-family:'Young Serif', serif; font-size:38px; line-height:44px; }
+
+  /* The banner: one line, one button. */
+  .banner { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-top:28px; padding:16px 20px; border-radius:14px; background:var(--card); }
+  .banner p { color:var(--sec); font-size:15px; line-height:22px; }
+  .btn { display:inline-block; padding:10px 20px; border-radius:99px; background:var(--brand); color:var(--on); font-weight:600; font-size:15px; white-space:nowrap; }
+  .btn.plain { background:transparent; color:var(--sec); border:1px solid rgba(26,22,17,.2); font-weight:500; }
+  .btn.red { background:#961a1a; }
+
+  .rows { margin-top:36px; }
+  .r { display:flex; align-items:center; gap:16px; padding:18px 0; border-top:1px solid var(--line); }
+  .cv { width:48px; height:48px; border-radius:8px; background:var(--tile); flex:none; }
+  .r .g { flex:1; }
+  .r small { display:block; color:var(--ter); font-size:14px; line-height:20px; }
+
+  .sheet { background:var(--card); border-radius:20px; padding:32px; max-width:460px; }
+  .sheet h3 { font-family:'Young Serif', serif; font-weight:400; font-size:24px; line-height:32px; }
+  .sheet ol { margin:20px 0 0; padding-left:20px; color:var(--sec); }
+  .sheet li { margin:8px 0; }
+  .drop { margin-top:24px; border:1.5px dashed rgba(26,22,17,.25); border-radius:14px; padding:28px; text-align:center; color:var(--ter); }
+
+  .list { margin-top:24px; }
+  .list .r { padding:20px 0; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:start; }
+  .shot { height:200px; border-radius:14px; background:var(--tile); display:grid; place-items:center; color:var(--ter); }
+  .sp { margin-top:20px; }
+  @media (max-width:720px) { .two { grid-template-columns:1fr; } .frame { padding:24px; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><symbol id="t" viewBox="0 0 20 20"><path d="M5 10.5l3.2 3.2L15 6.8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol></svg>
+<div class="wrap">
+
+<h1>Artist verification</h1>
+<p class="lead">Five screens. The banner only asks. It never blocks anything and it never takes anything down. Only you can, from the admin. Issue #1390. Not built yet.</p>
+
+<div class="step">
+  <div class="n">1 of 5</div>
+  <h2>The artist page, not verified</h2>
+  <p class="say">One quiet line under the name, and one button. Songs, covers and smart links all keep working.</p>
+  <div class="frame">
+    <div class="head"><span class="photo">D</span>
+      <div><div class="name">Dorian</div><div class="quiet">Not verified</div></div></div>
+    <div class="banner"><p>Confirm Dorian is the artist or that you manage him.</p><span class="btn">Verify</span></div>
+    <div class="rows">
+      <div class="r"><span class="cv"></span><div class="g"><b style="font-weight:600">Lagos Nights</b><small>UPC 8421 0034</small></div><span class="btn plain">Grab a smart link</span></div>
+      <div class="r"><span class="cv"></span><div class="g"><b style="font-weight:600">Ojuelegba</b><small>UPC 8421 0027</small></div><span class="btn plain">Grab a smart link</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="n">2 of 5</div>
+  <h2>On a phone</h2>
+  <p class="say">Same thing, smaller.</p>
+  <div class="frame phone">
+    <div class="head"><span class="photo" style="width:64px;height:64px;font-size:22px">D</span>
+      <div><div class="name" style="font-size:30px;line-height:36px">Dorian</div><div class="quiet">Not verified</div></div></div>
+    <div class="banner" style="flex-direction:column;align-items:stretch;gap:14px"><p>Confirm Dorian is the artist or that you manage him.</p><span class="btn" style="text-align:center">Verify</span></div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="n">3 of 5</div>
+  <h2>After tapping Verify</h2>
+  <p class="say">The steps only show here, not on the page. The artist or the manager can send the screenshot.</p>
+  <div class="frame">
+    <div class="sheet">
+      <h3>Verify Dorian</h3>
+      <ol>
+        <li>Open Spotify for Artists or Apple Music for Artists.</li>
+        <li>Take a screenshot that shows Dorian's name at the top.</li>
+        <li>Send it here. We reply by email.</li>
+      </ol>
+      <div class="drop">Add the screenshot</div>
+      <div style="margin-top:24px"><span class="btn">Send</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="n">4 of 5</div>
+  <h2>Once you approve</h2>
+  <p class="say">The tick shows next to the name on the artist page, the artists list and the press kit. Nothing else changes.</p>
+  <div class="frame">
+    <div class="head"><span class="photo">N</span>
+      <div><div class="name">Nelsun <span class="seal"><svg><use href="#t"/></svg></span></div><div class="quiet">Verified artist</div></div></div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="n">5 of 5</div>
+  <h2>Your admin page</h2>
+  <p class="say">Waiting list on the left. Pick one and the screenshot opens beside the Spotify artist the team linked, so you compare the name in one look. Take down is the only button that hides anything, and it asks first.</p>
+  <div class="frame">
+    <div class="two">
+      <div class="list">
+        <div class="muted" style="font-size:14px">Waiting · 3</div>
+        <div class="r"><div class="g"><b style="font-weight:600">Dorian</b><small>Midnight Music · sent by the artist</small></div><span class="quiet">Today</span></div>
+        <div class="r"><div class="g"><b style="font-weight:600">Tems Jr</b><small>Anika Records · sent by the manager</small></div><span class="quiet">Yesterday</span></div>
+        <div class="r"><div class="g"><b style="font-weight:600">Bolu</b><small>Solo team · sent by the artist</small></div><span class="quiet">2 days</span></div>
+      </div>
+      <div>
+        <div class="shot">Screenshot</div>
+        <p class="sp muted" style="font-size:14px">Name matches the linked Spotify artist.</p>
+        <div class="sp"><span class="btn">Approve</span> &nbsp; <span class="btn plain">Ask again</span></div>
+        <p class="sp muted" style="font-size:14px">Also here: Remove badge, and Take down. Every step emails the team and sends a message in the app.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="lead" style="margin-top:96px">Emails and the wording of each message come after your yes.</p>
+
+</div>
+</body>
+</html>

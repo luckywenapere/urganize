@@ -28,6 +28,7 @@ export const EMAIL_TEMPLATE_LABELS: Record<EmailTemplateId, string> = {
   chat_mention: 'Tagged in a chat',
   chime_in: 'Asked to chime in',
   team_admin_notice: 'Trial or comp notice',
+  artist_verification: 'Artist verification',
   release_payback_question: 'Did the release pay back',
   release_out_now: 'Release out now',
   claim_invite: 'Claim your profile',

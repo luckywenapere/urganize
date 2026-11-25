@@ -165,6 +165,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     description: 'Unclaimed profiles from credits, and removal requests.',
   },
   {
+    key: 'artist-verification',
+    label: 'Artist verification',
+    href: '/admin/artist-verification',
+    group: 'operations',
+    description: 'Screenshots from artists and managers. Approve, ask again or take down.',
+  },
+  {
     key: 'seeding',
     label: 'Seeding',
     href: '/admin/seeding',

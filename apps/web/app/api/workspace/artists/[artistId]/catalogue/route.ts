@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuthenticatedAdmin, loadWorkspaceAccessContext } from '@/lib/tasks-server';
 import { afterResponse } from '@/lib/after-response';
 import { ARTISTS_TABLE } from '@/lib/artists-server';
+import { isArtistTakenDown } from '@/lib/artist-verification-server';
 import { CATALOGUE_TABLE, type StreamingProfile } from '@/lib/artist-import/server';
 import { CATALOGUE_LINKS_TABLE, enrichCatalogueCodes, readLinkCap } from '@/lib/artist-import/links-server';
 
@@ -16,6 +17,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ art
 
   const access = await loadWorkspaceAccessContext(auth.adminClient, auth.user);
   if (access.workspaceIds.length === 0) {
+    return NextResponse.json({ releases: [], cap: null, codesPending: 0, profile: null });
+  }
+
+  // A taken-down artist's songs are hidden (#1390). Only an admin sets this.
+  if (await isArtistTakenDown(auth.adminClient, artistId)) {
     return NextResponse.json({ releases: [], cap: null, codesPending: 0, profile: null });
   }
 
