@@ -63,12 +63,24 @@ overwrite the grant, and a refund would have to rebuild what was there before.
 `DAYZERO_CLIENT_ID`, `DAYZERO_CLIENT_SECRET`, `DAYZERO_API_KEY`,
 `DAYZERO_ORIGIN` (defaults to https://dayzero.ltd). Never in the repo.
 
-## Not verified
+## Verified in production (2026-11-26)
 
-- Nothing has run against Day Zero: dayzero.ltd is not reachable from the build
-  container, so the headers, the token call and the license call follow the
-  founder's written spec. The wizard's green checks and "Run test activation"
-  are the proof.
-- Checked locally: a plain GET is 200 with the message in the HTML; a correctly
-  signed test event is 200 `{success:true}`; a wrong signature is 401; every
-  page state, light and dark, desktop and phone (claim API faked in the browser).
+After v1.295.0 deployed, the Day Zero integration wizard
+(dayzero.ltd/dashboard/integration) showed every step green:
+
+- Both URLs saved and checked: `https://team.urganize.app/dayzero/callback`
+  (plain GET, 200) and `https://team.urganize.app/api/dayzero/webhook`.
+- The wizard's signed test `activate`, `deactivate` and `purchase` events each
+  got 200 (13:57:42 WAT). The 404s before that (11:02) were from before the
+  deploy.
+- "Run test activation" passed (13:58:01 WAT). Day Zero sent a real `purchase`
+  then `activate` for a test license (key starting `83667984`), both 200, and
+  the redirect landed on "Pro is yours, for life" (founder saw it). That test
+  license stays attached to the founder's account, giving it Pro for life.
+- Go live is on: backers can activate.
+
+Still not exercised for real: a refund (`deactivate` on a real license), the
+signed-out path (cookie, then sign in or a new account), "another account",
+and the card-plan email. Locally, a correctly signed test event was 200, a wrong
+signature 401, and every page state was checked in light and dark, desktop and
+phone.
