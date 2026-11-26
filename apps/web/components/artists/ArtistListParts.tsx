@@ -12,9 +12,16 @@ import type { ArtistListRow, ArtistStatus } from '@/lib/artists-list';
 import { releaseHref } from '@/lib/artist-page';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import type { ExecutionRelease } from '@/lib/execution-types';
+import type { ArtistVerificationStatus } from '@/lib/artist-verification';
 import { displayReleaseTitle } from '@/types/releases';
 
-export type RosterArtist = { id: string; name: string; photoUrl?: string | null };
+export type RosterArtist = {
+  id: string;
+  name: string;
+  photoUrl?: string | null;
+  /** Where the artist stands on verification (#1390). Only ever shown. */
+  verification?: { status: ArtistVerificationStatus; note: string | null };
+};
 export type ListRow = ArtistListRow<RosterArtist, ExecutionRelease>;
 export type ArtistsListData = { rows: ListRow[]; spotlight: ListRow | null };
 export const STATUS_WORD: Record<ArtistStatus, string> = {
