@@ -56,6 +56,8 @@ export {
   Activity,
   AlignLeft, Archive, ArrowDown, ArrowRight,
   ArrowUp,
+  // Day Zero activation page (#1393).
+  BadgeCheck, CalendarRange, Link2Off, UserX,
   // The release brief (URG-281): its menu row, and the share button.
   ArrowUpRight, BookOpen,
   BadgeDollarSign,

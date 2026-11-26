@@ -67,6 +67,17 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.295.0",
+    date: "November 26, 2026",
+    title: "Day Zero lifetime deal",
+    tag: "Account",
+    listed: false,
+    highlights: [
+      "Bought Urganize on Day Zero? Click Activate there and Pro is added to your account for life.",
+    ],
+  },
+
+  {
     version: "1.294.1",
     date: "November 26, 2026",
     tag: "Team",

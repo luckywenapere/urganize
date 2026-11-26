@@ -29,6 +29,8 @@ const SAFE_PATHS = new Set([
   '/checkout',
   // Closed sign-up's invite link page (/start/<code>), 2026-10-15.
   '/start',
+  // Day Zero activation (#1393): a walled or new account claims Pro here.
+  '/dayzero',
 ]);
 
 const isSafePath = (pathname: string): boolean => {

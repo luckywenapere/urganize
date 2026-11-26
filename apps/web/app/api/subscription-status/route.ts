@@ -164,7 +164,8 @@ async function computeAddCardRequired(
   snapshot: SubscriptionSnapshot
 ): Promise<boolean> {
   const offered = shouldOfferBachs(isBachsConfigured(), request.headers.get('x-vercel-ip-country'));
-  if (!offered || snapshot.paidAt) return false;
+  // A Day Zero lifetime license (#1393) is a plan: no card is owed.
+  if (!offered || snapshot.paidAt || snapshot.lifetime) return false;
   const admin = createAdminClient(supabaseUrl);
   if (!admin) return false;
   try {
@@ -277,6 +278,7 @@ export async function GET(request: NextRequest) {
     trialStartedAt: snapshot.trialStartedAt,
     paidAt: snapshot.paidAt,
     pendingPlan: snapshot.pendingPlan,
+    lifetime: snapshot.lifetime === true,
     cardTrialRequired: cardTrialFacts.required,
     addCardRequired: await computeAddCardRequired(request, auth.user.id, auth.supabaseUrl, snapshot),
     onboardingCompleted: cardTrialFacts.onboardingCompleted,

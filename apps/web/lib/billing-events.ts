@@ -198,6 +198,12 @@ export const BILLING_EVENT_TYPES = [
    *  ran dry and a plan fell back to the quick plan. Founder emailed at most
    *  once a day across all teams (lib/ai/wallet-alert-server.ts). */
   'ai_wallet_empty',
+  /** Day Zero lifetime deals (#1393). Activated: a license was attached to an
+   *  owner. Refunded: Day Zero sent a deactivate. Cancel needed: the owner
+   *  still has a live card plan, so the founder is emailed to cancel it. */
+  'dayzero_activated',
+  'dayzero_refunded',
+  'dayzero_card_plan_cancel_needed',
 ] as const;
 
 export type BillingEventType = (typeof BILLING_EVENT_TYPES)[number];

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { applyLifetimeLicense } from './dayzero-shared';
 
 export type SubscriptionStatus = 'free_trial' | 'active' | 'expired' | 'cancelled';
 
@@ -40,6 +41,10 @@ export type SubscriptionSnapshot = {
    *  whether a team has access today. It rides along so Settings can name the
    *  move without a second query on this route's hot path. */
   pendingPlan: string | null;
+  /** True when a Day Zero lifetime license is what gives this account its plan
+   *  (#1393). Then `plan` is 'manager' (Pro) and `expiresAt` is null. Absent or
+   *  false for everyone else. */
+  lifetime?: boolean;
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -298,6 +303,7 @@ async function fetchSnapshotFromApi(userId: string): Promise<SubscriptionSnapsho
       trialStartedAt: typeof payload.trialStartedAt === 'string' ? payload.trialStartedAt : null,
       paidAt: typeof payload.paidAt === 'string' ? payload.paidAt : null,
       pendingPlan: typeof payload.pendingPlan === 'string' ? payload.pendingPlan : null,
+      lifetime: payload.lifetime === true,
     };
   } catch {
     return null;
@@ -375,7 +381,7 @@ export async function getSubscriptionSnapshot(userId: string): Promise<Subscript
       return getFallbackSnapshot();
     }
 
-    const [subscriptionResult, profileResult] = await Promise.all([
+    const [subscriptionResult, profileResult, licenseResult] = await Promise.all([
       supabase
         .from('subscriptions')
         .select('status,expires_at,plan,updated_at,pending_plan')
@@ -388,15 +394,27 @@ export async function getSubscriptionSnapshot(userId: string): Promise<Subscript
         .select('is_subscribed,trial_started_at,trial_ends_at,trial_used,paid_at')
         .eq('id', userId)
         .maybeSingle(),
+      // Day Zero lifetime license (#1393). An error (the table not there yet, or
+      // the anon key in a browser) reads as "no license", so this can only add
+      // access, never take it away.
+      supabase
+        .from('dayzero_licenses')
+        .select('license_key')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .limit(1),
     ]);
 
     if (subscriptionResult.error && profileResult.error) {
       return getFallbackSnapshot();
     }
 
-    const snapshot = resolveSnapshot(
-      (subscriptionResult.data || null) as SubscriptionRow | null,
-      (profileResult.data || null) as ProfileAccessRow | null
+    const snapshot = applyLifetimeLicense(
+      resolveSnapshot(
+        (subscriptionResult.data || null) as SubscriptionRow | null,
+        (profileResult.data || null) as ProfileAccessRow | null
+      ),
+      !licenseResult.error && (licenseResult.data?.length ?? 0) > 0
     );
 
     if (typeof window === 'undefined') {
