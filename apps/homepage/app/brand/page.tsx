@@ -197,7 +197,7 @@ export default function BrandPage() {
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">The name</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
                   Urganize is spelled with a G, like organize. It is not urbanize. The company
-                  behind it is The Urganization Ltd, registered in Nigeria and started in December
+                  behind it is Urganize Technologies Limited, a company being registered in Nigeria and started in December
                   2025. The product lives at urganize.app.
                 </p>
               </div>
@@ -214,7 +214,7 @@ export default function BrandPage() {
               </div>
 
               <p className={`text-sm ${bodyText}`}>
-                The Urganization Ltd. Started December 2025.{" "}
+                Urganize Technologies Limited. Started December 2025.{" "}
                 <Link
                   href="/team"
                   className="text-[var(--marketing-text)] underline underline-offset-2"

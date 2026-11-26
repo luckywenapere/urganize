@@ -52,7 +52,7 @@ export default function TermsPage() {
                     the same text, the compiler dropped the leading space after
                     the expression and rendered "made.It is". */}
                 {CORE_LINE}{" "}
-                It is operated by The Urganization Ltd, a company registered in
+                It is operated by Urganize Technologies Limited, a company being registered in
                 Nigeria (&ldquo;we&rdquo;, &ldquo;our&rdquo;, &ldquo;us&rdquo;).
                 The service runs at urganize.app and app.urganize.app.
               </p>

@@ -124,6 +124,9 @@ describe('in shadow', () => {
   beforeEach(() => vi.stubEnv('AI_ROUTER', 'shadow'));
 
   it('keeps using the old model but records what the router would have used', async () => {
+    // The default pro rung and the planner's old model are both gpt-5.4 now, so pin
+    // the rung to Terra for the router to have something different to record.
+    vi.stubEnv('AI_LADDER_PRO', 'openai/gpt-5.6-terra');
     const fetchMock = vi.fn().mockResolvedValue(ok({ ok: true }));
     vi.stubGlobal('fetch', fetchMock);
     const traces: RoutingTrace[] = [];
@@ -175,7 +178,7 @@ describe('with the router on', () => {
     expect(modelsCalled(fetchMock)).toEqual([
       'openai/gpt-4o-mini',
       'openai/gpt-5.4-mini',
-      'openai/gpt-5.6-terra',
+      'openai/gpt-5.4',
     ]);
   });
 
@@ -238,7 +241,7 @@ describe('with the router on', () => {
     });
 
     expect(value).toEqual({ ok: true });
-    expect(modelsCalled(fetchMock)).toEqual(['openai/gpt-5.6-terra', 'openai/gpt-5.4']);
+    expect(modelsCalled(fetchMock)).toEqual(['openai/gpt-5.4', 'openai/gpt-5.6-terra']);
     for (const call of [0, 1]) {
       expect(bodyOf(fetchMock, call).response_format).toMatchObject({ type: 'json_schema' });
       expect(bodyOf(fetchMock, call).reasoning_effort).toBe('low');
@@ -259,7 +262,7 @@ describe('with the router on', () => {
     expect(value).toEqual({ ok: true });
     // Press-kit drafting starts on standard and, with no team information to
     // say otherwise, may climb as far as pro.
-    expect(modelsCalled(fetchMock)).toEqual(['openai/gpt-5.4-mini', 'openai/gpt-5.6-terra']);
+    expect(modelsCalled(fetchMock)).toEqual(['openai/gpt-5.4-mini', 'openai/gpt-5.4']);
   });
 
   it('treats an unparseable answer as bad output whatever wording the caller gave its error', async () => {
@@ -278,7 +281,7 @@ describe('with the router on', () => {
     });
 
     expect(value).toEqual({ ok: true });
-    expect(modelsCalled(fetchMock)).toEqual(['openai/gpt-5.4-mini', 'openai/gpt-5.6-terra']);
+    expect(modelsCalled(fetchMock)).toEqual(['openai/gpt-5.4-mini', 'openai/gpt-5.4']);
   });
 
   it('stops escalating at the ceiling and lets the failure through', async () => {

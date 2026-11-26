@@ -16,7 +16,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { LandingAnalytics } from "./components/landing/LandingAnalytics";
 
 const SITE_URL = "https://urganize.app";
-const LEGAL_NAME = "The Urganization Ltd";
+const LEGAL_NAME = "Urganize Technologies Limited";
 // AI Music Manager positioning (2026-09-09). The category leads, because it
 // is now the thing we want to be found for rather than a description of the
 // software. Two terms left with it: "music release management" is a retired

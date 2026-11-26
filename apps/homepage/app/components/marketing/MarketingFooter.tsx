@@ -131,7 +131,7 @@ export function MarketingFooter() {
         </div>
 
         <p className="mt-6 text-center font-mono text-[0.68rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
-          &copy; {currentYear} The Urganization Ltd
+          &copy; {currentYear} Urganize Technologies Limited
         </p>
       </div>
     </footer>

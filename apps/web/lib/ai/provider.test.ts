@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { generateStructuredAiOutput, generatePlainTextAiOutput } from './provider';
+import { effortForTools, generateStructuredAiOutput, generatePlainTextAiOutput } from './provider';
 
 // Regression coverage for the bug reported 2026-09-08: the release planner's
 // timeout budget (PLANNER_TIMEOUT_MS x PLANNER_MAX_RETRIES, see
@@ -485,5 +485,23 @@ describe('buildOpenAiRequestBody', () => {
     expect(Object.keys(yes)).toEqual(['model', 'messages', 'stream', 'response_format', 'reasoning_effort']);
     const no = buildOpenAiRequestBody({ model: 'openai/gpt-4o-mini', messages, format: 'json', reasoningEffort: 'low' });
     expect('reasoning_effort' in no).toBe(false);
+  });
+});
+
+describe('effortForTools', () => {
+  it("turns any effort into 'none' on the 5.6 family, with or without the vendor prefix", () => {
+    for (const model of ['openai/gpt-5.6-luna', 'openai/gpt-5.6-terra', 'openai/gpt-5.6-sol', 'gpt-5.6-sol', 'OpenAI/GPT-5.6-Sol']) {
+      for (const effort of ['minimal', 'low', 'medium', 'high'] as const) {
+        expect(effortForTools(model, effort), `${model} ${effort}`).toBe('none');
+      }
+    }
+  });
+
+  it('leaves every other model, and no effort at all, as it was asked', () => {
+    for (const model of ['openai/gpt-5.4', 'openai/gpt-5.4-mini', 'openai/gpt-5.5', 'openai/gpt-4o-mini', 'openai/o3', '', null, undefined]) {
+      expect(effortForTools(model, 'low'), String(model)).toBe('low');
+    }
+    expect(effortForTools('openai/gpt-5.6-sol', null)).toBeNull();
+    expect(effortForTools('openai/gpt-5.6-sol', 'none')).toBe('none');
   });
 });

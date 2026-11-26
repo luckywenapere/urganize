@@ -12,12 +12,18 @@ import { REASONING_EFFORTS, supportsReasoningEffort, type ReasoningEffort } from
  *
  *   quick     gpt-4o-mini   today's model, 1x         fallback gpt-5.6-luna
  *   standard  gpt-5.4-mini  ~5x input / ~7.5x output  fallback gpt-5.6-luna
- *   pro       gpt-5.6-terra ~13x / ~20x               fallback gpt-5.4
- *   max       gpt-5.6-sol   ~33x / ~50x               fallback gpt-5.5
+ *   pro       gpt-5.4       ~17x / ~25x               fallback gpt-5.6-terra
+ *   max       gpt-5.5       ~33x / ~50x               fallback gpt-5.6-sol
  *
- * `gpt-5.6-sol` is what the provider's `gpt-5.6` alias resolves to. Terra and
- * Sol are capped by the provider at 10 requests a minute and 500 a day, which
- * is why each has a sibling with three times the limits (gpt-5.4 and gpt-5.5).
+ * Revised 2026-10-01 after the live evaluation (model-eval.integration.test.ts),
+ * which swapped the first two of those: Terra and Sol were the primaries, and
+ * the 5.4 and 5.5 siblings are now. On the real chat prompt gpt-5.4 picked the
+ * right first tool at least as often as Terra (6 of 8 against 4 of 8, a small
+ * sample) and was cheaper per call (4.2 against 4.5 RODI billed). Terra and Sol
+ * are capped by the provider at 10 requests a minute and 500 a day, where 5.4
+ * and 5.5 allow 30 and 2,000, and Sol is priced like 5.5 (the provider's
+ * `gpt-5.6` alias resolves to Sol). The 5.6 models also reject function tools
+ * with any reasoning effort but 'none' (see effortForTools in provider.ts).
  *
  * Every id here can be replaced without a deploy of code: AI_LADDER_<RUNG> takes
  * a comma list, primary first. Swapping the quick rung to gpt-5.6-luna, for
@@ -75,14 +81,14 @@ export const DEFAULT_LADDER: Ladder = {
   },
   pro: {
     tier: 'pro',
-    models: ['openai/gpt-5.6-terra', 'openai/gpt-5.4'],
+    models: ['openai/gpt-5.4', 'openai/gpt-5.6-terra'],
     reasoningEffort: 'low',
     maxOutputTokens: 4096,
     typicalLatencyMs: 12_000,
   },
   max: {
     tier: 'max',
-    models: ['openai/gpt-5.6-sol', 'openai/gpt-5.5'],
+    models: ['openai/gpt-5.5', 'openai/gpt-5.6-sol'],
     reasoningEffort: 'low',
     maxOutputTokens: 8192,
     typicalLatencyMs: 25_000,
