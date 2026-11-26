@@ -47,21 +47,24 @@
  */
 
 /**
- * POSITIONING SINCE 2026-11-15 (founder, issue #1299; he said it first on
- * 2026-11-10): "Urganize is a planning and coordination app for recording
- * artists, managers and labels." It is NOT a release planner. A release is one
- * kind of work, next to shows, pitching, press, distribution and the team
- * itself. The headline and the line under it are his too, first approved for
- * the pre-seed deck: "A music career shouldn't run on a group chat." and "Tell
- * it your goals. It makes the plan. Every task has one owner and one date. It
- * reminds each person, so nobody has to chase."
+ * POSITIONING SINCE 2026-11-26 (founder, issue #1405): "Urganize is the
+ * operating system for independent music careers." Joshua Perez (Greylight)
+ * recommended it after reviewing the pre-seed deck, and Oyin agreed the same
+ * day to bring the operating-system line back everywhere. It helps independent
+ * artists and managers run their careers as businesses: planning,
+ * coordinating and growing a career, not just keeping a task list. The
+ * headline stays: "A music career shouldn't run on a group chat."
  *
- * Retired the same day (2026-11-09 to 2026-11-15, #1153 and #1224): "Plan new
- * music. Track every task.", "an app that helps artists, managers and record
- * labels plan new music and keep track of every task", the headline "Plan your
- * next release, task by task." and "Urganize builds a release plan for...".
- * They described one kind of work as if it were the whole product. Their
- * history is in git.
+ * "Operating system for music" was retired on 2026-09-24 with the old
+ * category. This line is the founder reversing that call, not a slip: the
+ * guard now pins it instead of banning it.
+ *
+ * Retired the same day (2026-11-15 to 2026-11-26, #1299): "a planning and
+ * coordination app for recording artists, managers and labels", the eyebrow
+ * "Planning and coordination for recording artists, managers and labels", the
+ * short line "One plan. Every task has an owner." and the brand line
+ * "Urganize: Planning and coordination for music teams". Their history is in
+ * git.
  *
  * Still not said: "keeps learning". Task answers feed the review after the
  * work is done; nothing yet feeds them back into the next plan.
@@ -69,29 +72,30 @@
 
 /**
  * The core line without its subject, for a sentence that already names
- * Urganize ("Urganize, a planning and coordination app for...").
+ * Urganize ("Urganize, the operating system for...").
  */
-export const CORE_CLAUSE = 'a planning and coordination app for recording artists, managers and labels';
+export const CORE_CLAUSE = 'the operating system for independent music careers';
 
 /** The core line, the founder's words. Introduces the product anywhere a whole sentence fits. */
 export const CORE_LINE = `Urganize is ${CORE_CLAUSE}.`;
 
 /**
  * The short line. Page titles, meta titles, tight bios, the footer, the share
- * card. Founder approved 2026-11-15.
+ * card. Since 2026-11-26.
  */
-export const SHORT_LINE = 'One plan. Every task has an owner.';
+export const SHORT_LINE = 'Run your music career like a business.';
 
 /**
  * The homepage headline, in two parts so the page can colour the second
- * without typing the words again. Founder's line, approved 2026-11-15.
+ * without typing the words again. Founder's line, approved 2026-11-15, kept
+ * on 2026-11-26.
  */
 export const HERO_HEADLINE_LEAD = "A music career shouldn't run";
 export const HERO_HEADLINE_ACCENT = 'on a group chat.';
 export const HERO_HEADLINE = `${HERO_HEADLINE_LEAD} ${HERO_HEADLINE_ACCENT}`;
 
-/** The line above the headline: what it is and who it is for. */
-export const HERO_EYEBROW = 'Planning and coordination for recording artists, managers and labels';
+/** The line above the headline: what it is. */
+export const HERO_EYEBROW = 'The operating system for independent music careers';
 
 /** The line under the headline. The founder's words. */
 export const HERO_SUBHEAD =
@@ -107,20 +111,21 @@ export const PROMISE_LINE = 'Releases, shows, pitching, press and distribution, 
 export const LEARNING_LINE = 'After every task, Urganize asks how it went, so you can see what worked.';
 
 /**
- * Who it is for, in the fixed order recording artists, managers, labels.
+ * Who it is for, in a fixed order: independent artists first, then managers.
  *
  * ARTISTS ALWAYS LEAD, and the order is never reordered for emphasis. It is
  * data rather than a baked string so the guard can pin the order rather than
- * pin one sentence that happens to contain it. "Recording artists" and
- * "labels" since 2026-11-15, the founder's words.
+ * pin one sentence that happens to contain it. "Independent artists and
+ * managers" since 2026-11-26, the founder's words. The Label plan is still
+ * sold; labels are simply not named in the positioning line.
  */
-export const AUDIENCE = ['recording artists', 'managers', 'labels'] as const;
+export const AUDIENCE = ['independent artists', 'managers'] as const;
 
-/** "recording artists, managers and labels", built from the list above. No Oxford comma. */
+/** "independent artists and managers", built from the list above. No Oxford comma. */
 export const AUDIENCE_LINE = `${AUDIENCE.slice(0, -1).join(', ')} and ${AUDIENCE[AUDIENCE.length - 1]}`;
 
 /** The brand line. The homepage title and the app's default title. */
-export const BRAND_LINE = 'Urganize: Planning and coordination for music teams';
+export const BRAND_LINE = 'Urganize: The operating system for independent music careers';
 
 /**
  * Under 80 characters. Bios, the footer tagline, anywhere a single line is all
@@ -136,16 +141,18 @@ export const SHORT_DESCRIPTION = CORE_LINE;
 
 /**
  * The search description: the homepage meta description and JSON-LD. Under
- * 160 characters so Google shows it whole. Founder approved 2026-11-15.
+ * 160 characters so Google shows it whole.
  */
-export const META_DESCRIPTION = `${CORE_LINE} Tell it your goals. It makes the plan and reminds each person.`;
+export const META_DESCRIPTION = `${CORE_LINE} Plan, coordinate and grow your career as a business, with your team.`;
 
 /**
  * The long description: the positioning in full. Used wherever there is room:
  * the brand page, the AI, the store listing.
  */
 export const CANONICAL_DESCRIPTION =
-  `${CORE_LINE} Tell it your goals and it makes the plan: releases, shows, pitching, press and distribution. ` +
+  `${CORE_LINE} It helps ${AUDIENCE_LINE} run their careers as businesses: ` +
+  'planning, coordinating and growing the career, not just keeping a task list. ' +
+  'Tell it your goals and it makes the plan: releases, shows, pitching, press and distribution. ' +
   'Every task has one owner and one date. It reminds each person, so nobody has to chase.';
 
 /**

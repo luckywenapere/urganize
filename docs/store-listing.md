@@ -31,26 +31,26 @@ Urganize
 
 8 characters.
 
-The name is the brand alone. "Urganize: Planning and coordination for music teams" is
-51 characters against a hard 30-character cap that both stores enforce, so the
+The name is the brand alone. "Urganize: The operating system for independent music careers" is
+61 characters against a hard 30-character cap that both stores enforce, so the
 line goes in the subtitle on the App Store and the short description here. Play shows the app name under the icon,
 where a long name is truncated anyway.
 
 ### Short description (80 characters max)
 
 ```
-Planning and coordination for recording artists, managers and labels.
+The operating system for independent music careers.
 ```
 
-69 characters. The core line (`CORE_LINE`) is 87 characters and does not fit
-Play's 80, so this says the same thing in fewer words, same audience order. The
+52 characters. The core line (`CORE_LINE`) is 64 characters and would fit
+Play's 80, but the name already says "Urganize", so this drops "Urganize is". The
 full core line opens the full description below and is the promotional text on
 the App Store.
 
 ### Full description (4000 characters max)
 
 ```
-Urganize is a planning and coordination app for recording artists, managers and labels. Tell it your goals and it makes the plan: releases, shows, pitching, press and distribution. Every task has one owner and one date. It reminds each person, so nobody has to chase.
+Urganize is the operating system for independent music careers. It helps independent artists and managers run their careers as businesses: planning, coordinating and growing the career, not just keeping a task list. Tell it your goals and it makes the plan: releases, shows, pitching, press and distribution. Every task has one owner and one date. It reminds each person, so nobody has to chase.
 
 PLAN FROM YOUR GOALS
 Tell Urganize what you want: a release, a show, a pitching run. It asks a few questions, then lays out a plan that fits, week by week, with every task dated. The plans come from playbooks written by working managers, and you can edit or delete anything that does not apply to you.
@@ -140,20 +140,20 @@ Same as Play, for the same reason. See the note under the Play app name above.
 ### Subtitle (30 characters max)
 
 ```
-One plan for your music team.
+Run your music career
 ```
 
-29 characters. The short line (`SHORT_LINE`, "One plan. Every task has an
-owner.") is 34 characters, four over Apple's 30, so the subtitle says the
+21 characters. The short line (`SHORT_LINE`, "Run your music career like a
+business.") is 38 characters, eight over Apple's 30, so the subtitle says the
 same idea in fewer words.
 
 ### Promotional text (170 characters max)
 
 ```
-Urganize is a planning and coordination app for recording artists, managers and labels.
+Urganize is the operating system for independent music careers.
 ```
 
-87 characters. This is `SHORT_DESCRIPTION` from `positioning.ts`, which is the
+64 characters. This is `SHORT_DESCRIPTION` from `positioning.ts`, which is the
 core line, unchanged.
 
 ### Description

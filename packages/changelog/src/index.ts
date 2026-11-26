@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.295.1",
+    date: "November 26, 2026",
+    tag: "App",
+    highlights: [
+      "Urganize now calls itself what it is: the operating system for independent music careers. It helps you run your music career like a business.",
+    ],
+  },
+
+  {
     version: "1.295.0",
     date: "November 26, 2026",
     title: "Day Zero lifetime deal",

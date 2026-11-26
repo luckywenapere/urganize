@@ -6,7 +6,7 @@ A high-level snapshot of what this codebase is and where it stands. The deep, al
 
 ## The product
 
-Urganize is **a planning and coordination app for recording artists, managers and labels**. The music industry runs on chaos: group chats, spreadsheets, one overworked person holding every release together. Urganize v1 gives an independent music manager (1-3 artists, next release inside 90 days) one place for the plan, the tasks, the files and the status, all attached to the release.
+Urganize is **the operating system for independent music careers**: it helps independent artists and managers run their careers as businesses. The music industry runs on chaos: group chats, spreadsheets, one overworked person holding every release together. Urganize v1 gives an independent music manager (1-3 artists, next release inside 90 days) one place for the plan, the tasks, the files and the status, all attached to the release.
 
 **The plan is the spine.** A release (a rollout in the app) is the most common kind of work on it, next to shows, pitching, press and distribution. Hand-crafted release templates carry the domain knowledge; AI is a removable polish layer on top — the product works, degraded but functional, if AI is unavailable.
 

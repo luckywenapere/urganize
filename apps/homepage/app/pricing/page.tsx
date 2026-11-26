@@ -22,7 +22,7 @@ export const metadata: Metadata = buildPageMetadata({
   // positioning: artists, managers, record labels, in that order). It was
   // "Pricing for artist managers and their teams" from 2026-10-18.
   // The root template adds " | Urganize".
-  title: "Pricing for recording artists, managers and labels",
+  title: "Pricing for independent artists, managers and labels",
   description:
     // Pricing v4 (2026-11-08): plans in two groups. Free was removed 2026-11-09.
     "Plans for a recording artist on their own or a team with a roster. One plan for the work and an owner for every task. See what each plan includes.",

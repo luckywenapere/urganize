@@ -148,9 +148,10 @@ export default function BrandPage() {
               <div>
                 <h3 className="text-sm text-[var(--marketing-text)]">Mission</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  A music career runs on chats, spreadsheets and memory. Urganize gives
-                  recording artists, managers and labels one plan that fits their goals,
-                  with one owner and one date for every task.
+                  A music career runs on chats, spreadsheets and memory. Urganize helps
+                  independent artists and managers run their careers as businesses:
+                  one plan that fits their goals, with one owner and one date for
+                  every task.
                 </p>
               </div>
 
@@ -169,7 +170,7 @@ export default function BrandPage() {
               <div>
                 <h3 className="text-sm text-[var(--marketing-text)]">Who it’s for</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  Artists, managers and record labels. Use it on your own or with a team.
+                  Independent artists and managers. Use it on your own or with a team.
                   Record labels with a bigger roster get the Label plan, with the founders
                   working alongside them.
                 </p>

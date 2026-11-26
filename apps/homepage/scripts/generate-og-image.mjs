@@ -32,6 +32,9 @@
 // from more than a release (a show, a pitch, press), and a pill that names
 // the idea (one plan, one owner per task) where the drop-day timeline was.
 //
+// 2026-11-26 (#1405): the pill names the new line, "the operating system for
+// your music career", and one ribbon step is about the career, not a release.
+//
 // WHY A JPEG. The grain makes a PNG about 750 KB, over what WhatsApp will show
 // as a large preview. A quality-86 JPEG is about 70 KB and looks the same.
 //
@@ -74,7 +77,7 @@ const LINE_TWO = 'on a group chat.';
 // Real kinds of work a team plans here, a release next to a show, a pitch and
 // press, so the ribbons do not say the product is only for releases. Two ribbons, each one long line that runs off both edges.
 const RIBBON_ONE =
-  'brief the designer on cover art · book the venue for the show · write the song metadata · ' +
+  'brief the designer on cover art · book the venue for the show · set this year’s career goals · ' +
   'pitch to playlist curators · send the press kit · upload track and metadata ·';
 const RIBBON_TWO =
   'choose the distributor · confirm the release date · lock the set list · ' +
@@ -119,7 +122,7 @@ h1 span{display:block;color:#7FD99A}
 <div class="center">
   <img class="logo" src="${url(join(HOMEPAGE, 'public', 'images', 'urganize-logo.png'))}">
   <h1>${LINE_ONE}<span>${LINE_TWO}</span></h1>
-  <div class="pill"><div class="who"><i style="background:#14643a">DO</i><i style="background:#7a1f3a">ZB</i><i style="background:#1f3a7a">TA</i></div><span class="label">ONE PLAN · ONE OWNER PER TASK</span></div>
+  <div class="pill"><div class="who"><i style="background:#14643a">DO</i><i style="background:#7a1f3a">ZB</i><i style="background:#1f3a7a">TA</i></div><span class="label">THE OPERATING SYSTEM FOR YOUR MUSIC CAREER</span></div>
 </div>
 </div></body></html>`;
 

@@ -122,8 +122,9 @@ export default function SignupPage() {
               Who Urganize is for
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">
-              Recording artists, managers and labels. Use it on your own or
-              with a team to plan the work and give every task one owner. See{" "}
+              Independent artists and managers who run their music careers as
+              businesses. Use it on your own or with a team to plan the work
+              and give every task one owner. See{" "}
               <Link
                 href="/features"
                 className="underline underline-offset-4 hover:text-[var(--marketing-text)]"

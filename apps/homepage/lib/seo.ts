@@ -65,7 +65,7 @@ export const LANDING_SHARE_DESCRIPTION = SHARE_DESCRIPTION;
 // Bump this string every time public/opengraph-image.jpg changes so the
 // URL is new to every platform and the very next fetch pulls fresh bytes,
 // instead of depending on a manual re-scrape request or an unknown TTL.
-const SHARE_IMAGE_VERSION = "2026-11-15-dm-sans";
+const SHARE_IMAGE_VERSION = "2026-11-26-operating-system";
 
 const SHARE_IMAGE = {
   url: `${SITE_URL}/opengraph-image.jpg?v=${SHARE_IMAGE_VERSION}`,
@@ -95,7 +95,7 @@ const SHARE_IMAGE = {
   // 2026-11-09: the alt describes the picture (headline plus the drop-day
   // track) and no longer appends SHARE_DESCRIPTION, which the card never showed.
   // 2026-11-15 (#1299): the new headline, and the art shows more than a release.
-  alt: `Urganize. ${SHARE_HEADLINE} Plan steps for releases, shows, pitching and press curve around a pill that reads one plan, one owner per task.`,
+  alt: `Urganize. ${SHARE_HEADLINE} Plan steps for releases, shows, pitching and press curve around a pill that reads the operating system for your music career.`,
 };
 
 // Each main page's own share card (#964, mock approved by the founder

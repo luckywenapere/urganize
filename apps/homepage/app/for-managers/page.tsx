@@ -18,7 +18,7 @@ import type { ProductShot } from "@/content/product-shots";
 import { PRIMARY_CTA } from "@/lib/app-urls";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Planning and coordination software for artist managers",
+  title: "The operating system for artist managers and their artists",
   description:
     "For artist managers. Urganize asks about each artist's goals, makes a plan that fits and keeps track of every task.",
   path: "/for-managers",

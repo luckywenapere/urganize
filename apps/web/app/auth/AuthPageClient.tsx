@@ -10,6 +10,7 @@ import { SESSION_EXPIRED_NOTICE_KEY, useAuthStore } from '@/lib/auth-store';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { captureReferralFromSearch } from '@/lib/referral-intent';
 import { defaultSignInPath } from '@/lib/music-host';
+import { SHORT_LINE } from '@/lib/positioning';
 import { openExternalUrl } from '@/lib/external-link';
 // Deep imports (URG-314): the @urganize/ui barrel pulled every ui component
 // (the audio player, the assistant's pieces, the genre picker) into the
@@ -510,7 +511,7 @@ export default function AuthPage() {
             <div className="flex flex-col items-center px-4 pt-12 text-center lg:mx-auto lg:my-auto lg:w-full lg:max-w-[400px] lg:items-stretch lg:px-0 lg:py-12 lg:text-left">
               {/* DM Sans Bold: the font-display rule in globals.css sets the weight. */}
               <h1 className="text-balance font-display text-[34px] font-normal leading-10 tracking-[-0.012em] text-content-primary lg:text-[40px] lg:leading-[46px]">
-                One plan. Every task has an owner.
+                {SHORT_LINE}
               </h1>
               <p className="mt-3 text-base leading-[23px] text-content-secondary lg:mt-2 lg:text-[15px] lg:leading-[22px]">
                 Tell it your goals. It makes the plan and reminds each person.
