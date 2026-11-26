@@ -128,7 +128,7 @@ export function MarketingFooter() {
           style={{ borderTop: "0.5px solid var(--marketing-border)" }}
         >
           <p className="font-mono text-[0.68rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
-            &copy; {currentYear} Urganization
+            &copy; {currentYear} Urganize Technologies Limited
           </p>
         </div>
       </div>
