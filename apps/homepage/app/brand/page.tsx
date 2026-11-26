@@ -197,7 +197,7 @@ export default function BrandPage() {
                 <h3 className="text-sm text-[var(--marketing-text)]">The name</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
                   Urganize is spelled with a G, like organize. It is not urbanize. The company
-                  behind it is Urganize Technologies Limited, started in December 2025. The product lives at urganize.app.
+                  behind it is Urganize Technologies Limited, registered in Nigeria and started in December 2025. The product lives at urganize.app.
                 </p>
               </div>
 
