@@ -52,6 +52,7 @@ export const EMAIL_TRIGGER_LABELS: Record<string, string> = {
   backfill_comped: 'Past comp, sent later',
   backfill_trial_extended: 'Past extension, sent later',
   ai_wallet_empty: 'AI wallet empty',
+  dayzero_card_plan_cancel_needed: 'Day Zero: cancel card plan',
   manually_marked_paid: 'Marked paid',
   paywall_hit: 'Hit the paywall',
   paywall_return_visit: 'Came back to the paywall',

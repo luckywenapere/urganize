@@ -20,6 +20,7 @@ import { ChunkRecoveryBridge } from '@/components/providers/ChunkRecoveryBridge'
 import { CardTrialGate } from '@/components/providers/CardTrialGate';
 import { AddCardGate } from '@/components/providers/AddCardGate';
 import { HardPaywallGate } from '@/components/providers/HardPaywallGate';
+import { DayzeroClaimer } from '@/components/providers/DayzeroClaimer';
 import { NativePushBridge } from '@/components/providers/NativePushBridge';
 import { NativeShareBridge } from '@/components/providers/NativeShareBridge';
 import { NativeAppearanceBridge } from '@/components/providers/NativeAppearanceBridge';
@@ -248,6 +249,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname === '/start-trial' ||
     // Card trial for customers abroad (#1266): the add-a-card page.
     pathname === '/add-card' ||
+    // Day Zero activation (#1393): a new or walled account claims Pro here.
+    pathname?.startsWith('/dayzero') ||
     // Self-serve checkout and its welcome page (2026-10-22): a held account
     // pays here, so no app chrome and no gates.
     pathname?.startsWith('/checkout') ||
@@ -268,6 +271,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname === '/auth' ||
     // The unsubscribe link in an email, opened by someone who may not be signed in.
     pathname === '/unsubscribe' ||
+    // Day Zero activation (#1393), opened by a buyer who may have no account yet.
+    pathname?.startsWith('/dayzero') ||
     pathname?.startsWith('/credits/') ||
     pathname?.startsWith('/listen/') ||
     // The music side (2026-11-21): the front door for anyone, signed in or not.
@@ -530,6 +535,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         team. Renders nothing; a no-op while NEXT_PUBLIC_FEATURE_HARD_PAYWALL
         is off. */}
     <HardPaywallGate />
+    {/* Day Zero lifetime deals (#1393): attaches a license that was waiting for
+        the buyer to sign in or make an account. Renders nothing. */}
+    <DayzeroClaimer />
     {/* The invite gate (founder request, 2026-10-11): once a new manager
         scrolls their first plan, the app freezes until one teammate is
         invited. Only on app chrome, never on auth, onboarding or public pages.
