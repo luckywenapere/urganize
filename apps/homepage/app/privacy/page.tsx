@@ -88,7 +88,7 @@ export default function PrivacyPolicy() {
               <p>
                 Urganize (&ldquo;we&rdquo;, &ldquo;our&rdquo;,
                 &ldquo;us&rdquo;) is {CORE_CLAUSE}. It is operated by
-                Urganize Technologies Limited, based in Nigeria.
+                Urganize Technologies Limited, a company registered in Nigeria.
               </p>
               <p>
                 For privacy questions, email{" "}
