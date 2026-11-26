@@ -24,6 +24,7 @@ import { homeFontVariables } from "./components/landing/home-fonts";
 import { MarketingFooter } from "./components/marketing/MarketingFooter";
 import { MarketingHeader } from "./components/marketing/MarketingHeader";
 import { MobileStickyCta } from "./components/landing/MobileStickyCta";
+import { DayZeroDrop } from "./components/landing/DayZeroDrop";
 
 // This title/description render verbatim (the home page sits at the same
 // route segment as the root layout, so layout.tsx's "%s | Urganize"
@@ -93,6 +94,8 @@ export default function Home() {
               again. The briefs are in the Urganize Home Page Optimization
               project (landing-overhaul/01-06). */}
           <HeroSection />
+          {/* Day Zero drop, one week only (#1401). Remove after the drop. */}
+          <DayZeroDrop />
           {/* Affiliations strip directly under the hero (2026-10-07, founder call). */}
           <AffiliationsSection />
           <PainSection />
