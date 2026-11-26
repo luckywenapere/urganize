@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.294.1",
+    date: "November 26, 2026",
+    tag: "Team",
+    listed: false,
+    highlights: [
+      "Fixed a build error that stopped the artist verification update from going live.",
+    ],
+  },
+
+  {
     version: "1.294.0",
     date: "November 25, 2026",
     tag: "Team",
