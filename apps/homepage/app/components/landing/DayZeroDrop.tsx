@@ -14,7 +14,12 @@ export function DayZeroDrop() {
         src="https://dayzero.ltd/embed/urganize"
         title="Urganize on Day Zero"
         loading="lazy"
-        className="block h-[22rem] w-full max-w-[22rem] rounded-xl border-0"
+        // Day Zero's page is light and paints no background. Our dark theme
+        // sets color-scheme: dark, and when the two differ the browser paints
+        // an opaque WHITE backdrop behind the frame. Matching their scheme
+        // keeps the backdrop transparent, so only their card shows.
+        style={{ colorScheme: 'light' }}
+        className="block h-[18rem] w-full max-w-[22rem] border-0 bg-transparent"
       />
     </section>
   );
