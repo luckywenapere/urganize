@@ -20,7 +20,7 @@ import { PageDawn } from "../components/marketing/PageDawn";
 export const metadata: Metadata = buildPageMetadata({
   title: "Community",
   description:
-    `${CORE_LINE} Join our community, a group chat for recording artists, managers and labels.`,
+    `${CORE_LINE} Join our community, a group chat for independent artists and managers.`,
   path: "/community",
   // Kept out of search so the homepage's sitelinks stay commercial
   // (Features / Pricing / For executives / For managers). The page stays public

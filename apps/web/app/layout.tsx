@@ -52,7 +52,7 @@ const appDescription = META_DESCRIPTION;
 // apps cache the bytes per URL, and the unversioned PNG kept WhatsApp showing
 // a months-old card. Bump with SHARE_IMAGE_VERSION in apps/homepage/lib/seo.ts
 // whenever scripts/generate-og-image.mjs is re-run.
-const SHARE_IMAGE_VERSION = '2026-11-15-dm-sans';
+const SHARE_IMAGE_VERSION = '2026-11-26-operating-system';
 const shareImage = {
   url: `/opengraph-image.jpg?v=${SHARE_IMAGE_VERSION}`,
   width: 1200,

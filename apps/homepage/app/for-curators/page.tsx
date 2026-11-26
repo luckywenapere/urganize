@@ -17,7 +17,7 @@ import type { ProductShot } from "@/content/product-shots";
 export const metadata: Metadata = buildPageMetadata({
   title: "A free song pitch inbox for playlist curators",
   description:
-    "One inbox for the songs artists pitch you, inside the planning and coordination app they already use. Answer each in one tap. Free for playlist curators.",
+    "One inbox for the songs artists pitch you, inside the app they use to run their music careers. Answer each in one tap. Free for playlist curators.",
   path: "/for-curators",
   shareCard: "for-curators",
 });

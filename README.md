@@ -1,6 +1,6 @@
 # Urganize
 
-Urganize is a planning and coordination app for recording artists, managers and labels. Tell it your goals and it makes the plan: releases, shows, pitching, press and distribution. Every task has one owner and one date. It reminds each person, so nobody has to chase.
+Urganize is the operating system for independent music careers. It helps independent artists and managers run their careers as businesses: planning, coordinating and growing the career, not just keeping a task list. Tell it your goals and it makes the plan: releases, shows, pitching, press and distribution. Every task has one owner and one date. It reminds each person, so nobody has to chase.
 
 The target user is an independent music manager handling 1–3 artists, with work to plan in the next 90 days. A release (a rollout in the app) is the most common kind of work, next to shows, pitching, press and distribution.
 

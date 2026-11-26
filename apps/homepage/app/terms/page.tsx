@@ -63,8 +63,8 @@ export default function TermsPage() {
 
             <Section number="02" title="The service">
               <p>
-                Urganize is a planning and coordination app for recording
-                artists, managers and labels: a plan built from your
+                Urganize is the operating system for independent music
+                careers: a plan built from your
                 goals or one you make yourself, tasks with owners and dates,
                 cover art and release details, press kits, event milestones,
                 pitching to curators and opportunities, distribution through

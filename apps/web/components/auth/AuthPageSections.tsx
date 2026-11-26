@@ -200,7 +200,7 @@ const questions = (currency: PricingCurrencyCode) => [
   },
   {
     q: 'Who is it for?',
-    a: 'Artists and managers starting out, managers taking their artists to the next level, and record labels organising and scaling. Use it solo or with a team.',
+    a: 'Independent artists and managers who want to run their music careers as businesses, whether you are starting out or growing. Labels use it too. Use it solo or with a team.',
   },
   {
     q: 'How much does it cost?',

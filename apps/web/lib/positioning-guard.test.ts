@@ -28,8 +28,9 @@ import {
 /**
  * The positioning, enforced rather than reviewed.
  *
- * Since 2026-10-17: Urganize is where music teams plan every release and
- * deliver it on time ("Every release, on plan."). It said "do everything
+ * Since 2026-11-26 (#1405): Urganize is the operating system for independent
+ * music careers. Before that (2026-10-17) it was where music teams plan every
+ * release and deliver it on time ("Every release, on plan."). It said "do everything
  * after the music is made" from 2026-09-24, and that brief retired the category the product had been
  * introduced by since 2026-09-09 ("AI Music Business Manager"), and every
  * earlier brief retired phrases of its own. They all ask for zero hits in
@@ -183,7 +184,9 @@ const RETIRED = [
   // habits changed when our wording did.
   /\bAI Music Manager\b/,
   /Music Business AI/i,
-  /operating system for music/i,
+  // "operating system for music" was retired here on 2026-09-24. The founder
+  // reversed that on 2026-11-26 (#1405): the core line is now "the operating
+  // system for independent music careers", pinned in the test below.
   /plan, organize and execute/i,
   // The category itself. Retired everywhere on 2026-09-24 except UrgAns's
   // system prompt, which kept saying it while the founder decided how the
@@ -222,6 +225,11 @@ const RETIRED = [
   /keeps learning/i,
   /learns from (?:you|how)/i,
   /next plan fits better/i,
+  // 2026-11-26 (#1405): the 2026-11-15 lines, replaced by "the operating
+  // system for independent music careers". The headline stays, and "One plan.
+  // Every task has an owner." stays allowed: it is the features page's own line.
+  /planning and coordination app/i,
+  /planning and coordination for (?:recording artists|music teams)/i,
 ] as const;
 
 /**
@@ -300,25 +308,29 @@ describe('positioning', () => {
     // the release is out", true today (see LEARNING_LINE in positioning.ts).
     // 2026-11-15 (#1299, founder approved the mock): planning and
     // coordination, not a release planner.
-    expect(CORE_LINE).toBe('Urganize is a planning and coordination app for recording artists, managers and labels.');
-    expect(SHORT_LINE).toBe('One plan. Every task has an owner.');
+    // 2026-11-26 (#1405, founder): the operating system for independent music
+    // careers. The headline and the subhead stay.
+    expect(CORE_LINE).toBe('Urganize is the operating system for independent music careers.');
+    expect(SHORT_LINE).toBe('Run your music career like a business.');
     expect(HERO_HEADLINE).toBe("A music career shouldn't run on a group chat.");
-    expect(HERO_EYEBROW).toBe('Planning and coordination for recording artists, managers and labels');
+    expect(HERO_EYEBROW).toBe('The operating system for independent music careers');
     expect(HERO_SUBHEAD).toBe(
       'Tell it your goals. It makes the plan. Every task has one owner and one date. It reminds each person, so nobody has to chase.',
     );
     expect(PROMISE_LINE).toBe('Releases, shows, pitching, press and distribution, on one plan.');
     expect(META_DESCRIPTION).toBe(
-      'Urganize is a planning and coordination app for recording artists, managers and labels. ' +
-        'Tell it your goals. It makes the plan and reminds each person.',
+      'Urganize is the operating system for independent music careers. ' +
+        'Plan, coordinate and grow your career as a business, with your team.',
     );
     expect(CANONICAL_DESCRIPTION).toBe(
-      'Urganize is a planning and coordination app for recording artists, managers and labels. ' +
+      'Urganize is the operating system for independent music careers. ' +
+        'It helps independent artists and managers run their careers as businesses: ' +
+        'planning, coordinating and growing the career, not just keeping a task list. ' +
         'Tell it your goals and it makes the plan: releases, shows, pitching, press and distribution. ' +
         'Every task has one owner and one date. It reminds each person, so nobody has to chase.',
     );
     expect(CORE_LINE).toBe(`Urganize is ${CORE_CLAUSE}.`);
-    expect(BRAND_LINE).toBe('Urganize: Planning and coordination for music teams');
+    expect(BRAND_LINE).toBe('Urganize: The operating system for independent music careers');
     expect(URGANS_LINE).toBe('personal AI for music professionals');
   });
 
@@ -327,8 +339,9 @@ describe('positioning', () => {
     // a sentence containing it, so a reorder fails here rather than in review.
     // Labels were dropped on 2026-09-11 and came back on 2026-09-24 with the
     // founder's long description; artists led both times.
-    expect([...AUDIENCE]).toEqual(['recording artists', 'managers', 'labels']);
-    expect(AUDIENCE_LINE).toBe('recording artists, managers and labels');
+    // 2026-11-26 (#1405): independent artists and managers, the founder's words.
+    expect([...AUDIENCE]).toEqual(['independent artists', 'managers']);
+    expect(AUDIENCE_LINE).toBe('independent artists and managers');
     // The long description stopped composing this list on 2026-10-18: it is
     // built for artist managers, and says so in its own words.
   });
@@ -340,9 +353,9 @@ describe('positioning', () => {
     expect(ONE_LINER.length).toBeLessThan(80);
     expect(SHORT_DESCRIPTION.length).toBeLessThan(160);
     // Every short-form line says the one idea, so no surface can quote a
-    // line that forgot it. (The core line keeps its own wording.)
+    // line that forgot it: it is about a music career (since 2026-11-26).
     for (const line of [SHORT_LINE, CANONICAL_DESCRIPTION, META_DESCRIPTION, BRAND_LINE, CORE_LINE]) {
-      expect(line.toLowerCase()).toContain('plan');
+      expect(line.toLowerCase()).toContain('music career');
     }
     // Google shows about 155 to 160 characters of a description.
     expect(META_DESCRIPTION.length).toBeLessThan(160);
@@ -353,7 +366,7 @@ describe('positioning', () => {
     // The share card, og:title and og:description. Their own strings for a day
     // (#939); since #944 they are the short line, brand line and core line.
     expect(SHARE_HEADLINE).toBe(HERO_HEADLINE);
-    expect(SHARE_TITLE).toBe('Urganize: Planning and coordination for music teams');
+    expect(SHARE_TITLE).toBe('Urganize: The operating system for independent music careers');
     expect(SHARE_DESCRIPTION).toBe(CORE_LINE);
     // Short enough that WhatsApp and X show the description whole.
     expect(SHARE_DESCRIPTION.length).toBeLessThan(120);
@@ -477,7 +490,7 @@ describe('positioning', () => {
       if (!declared) continue;
       const expression = declared[1];
       const declaresPositioning =
-        /planning and coordination|one plan|your goals|every task/i.test(expression) ||
+        /operating system|music career|one plan|your goals|every task/i.test(expression) ||
         // Composed from the shared constants rather than written out.
         /\b(?:CORE_LINE|CORE_CLAUSE|SHORT_LINE|PROMISE_LINE|SHORT_DESCRIPTION|CANONICAL_DESCRIPTION|META_DESCRIPTION|ONE_LINER|LANDING_DESCRIPTION)\b/.test(
           expression,

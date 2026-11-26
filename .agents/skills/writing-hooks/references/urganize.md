@@ -8,9 +8,9 @@ First: artist managers running more than one artist, small management teams and 
 
 ## What the product is (say it this way)
 
-"Urganize is an app that helps artists, managers and record labels plan new music and keep track of every task. It asks about your goals, then makes a plan that fits. You can also make your own. Use it solo or with a team. After every task, Urganize asks how it went, so you can see what worked when the release is out." (founder positioning, 9 Nov 2026; his "so it keeps learning from you" is not true yet, never use it). Short line: "Plan new music. Track every task."
+"Urganize is the operating system for independent music careers. It helps independent artists and managers run their careers as businesses: planning, coordinating and growing the career, not just keeping a task list." (founder positioning, 26 Nov 2026, issue #1405.) Headline: "A music career shouldn't run on a group chat." Short line: "Run your music career like a business." Never say "keeps learning from you": it is not true yet.
 
-Retired lines, never use: "From idea to execution", "keeps learning from you", "where music teams manage everything from idea to execution", "plan every release and deliver it on time", "the team app for music release", "AI workspace for music executives", "AI Music Business Manager", "Everything after the music", "Every release, on plan".
+Retired lines, never use: "a planning and coordination app", "Plan new music. Track every task.", "From idea to execution", "keeps learning from you", "where music teams manage everything from idea to execution", "plan every release and deliver it on time", "the team app for music release", "AI workspace for music executives", "AI Music Business Manager", "Everything after the music", "Every release, on plan".
 
 ## Copy rules
 
