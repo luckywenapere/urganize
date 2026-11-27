@@ -36,11 +36,17 @@ export const PAYWALL_TIERS: readonly PricingTierId[] = ['solo', 'solo_plus', 'ma
 /**
  * The plan that starts selected (founder call, 2026-10-14):
  * independent artist → Solo; manager, label / A&R (Label is contact-us since
- * 2026-10-26), artist's team,
- * other (and anything unanswered) → Manager. The other plans are one tap away.
+ * 2026-10-26), artist's team, other → Manager. The other plans are one tap away.
+ *
+ * No answer → Solo since 2026-11-27 (founder call, #1412; it was Manager).
+ * Sign-up no longer asks who the team is for, so most new people have no
+ * answer, and of the 16 who had answered since 29 Oct, 8 were artists. A price
+ * that is too high can lose the person; the plan wall moves a team up when it
+ * no longer fits (pickWallPlan). This also covers older accounts that were
+ * never asked.
  */
 export function paywallTierForPersona(persona: OnboardingPersona | null | undefined): PricingTierId {
-  if (persona === 'independent_artist') return 'solo';
+  if (!persona || persona === 'independent_artist') return 'solo';
   return 'manager';
 }
 

@@ -8,12 +8,17 @@
 //                             asked before the account, so nothing has to
 //                             survive the Google round trip.
 //   S2  Your team             An invite to this email comes first (one-tap
-//                             Join cards). Otherwise "Set up your team": the
-//                             name, prefilled "{First name}'s Team", and who
-//                             the team is for.
-//   S3  Ask to be invited     "I'm joining someone's team": the WhatsApp ask,
-//                             their email, a pasted link, and a check every
-//                             20 seconds that turns into a Join card.
+//                             Join cards). Otherwise the team is made for them,
+//                             named "{First name}'s Team", and S4 opens. There
+//                             is no team step since #1412 (27 Nov 2026): 3 of
+//                             16 new accounts stopped on "Set up your team".
+//                             That screen now shows only when the invite check
+//                             or the team cannot be made, so nobody is stuck.
+//                             Who the team is for is asked on Home instead
+//                             (components/home/PersonaAskCard.tsx).
+//   S3  Ask to be invited     "ask someone to invite you" on S4: the WhatsApp
+//                             ask, their email, a pasted link, and a check
+//                             every 20 seconds that turns into a Join card.
 //   S4  New project           Stage first, then artist, kind, a name and that
 //                             stage's fields. Early stages save as a record in
 //                             the making, Ready and Already out as a rollout.
@@ -74,10 +79,14 @@ import { lagosToday } from '@/lib/next-records';
 import {
   buildMusicSubmission,
   decideAfterJoin,
+  decideAskBack,
   decideOnboardingScreen,
+  decideOwnTeam,
   defaultTeamName,
   invitePollDelay,
   INVITE_POLL_LONG_WAIT_MS,
+  shouldFollowLateTeamAnswer,
+  teamStateForNewTeam,
   whoForFromPersona,
   type MusicForm,
   type OnboardingTeamState,
@@ -119,8 +128,14 @@ const REFERRAL_FIELD_ENABLED = isReferralsEnabled();
 const LAST_CHOICE_KEY = 'urganize.onboarding.team-choice';
 /** Set before the Google round trip, only to report how the account was made. */
 const GOOGLE_STARTED_KEY = 'urganize.onboarding.google';
-/** On bad data the team screen does not wait for the invite check forever. */
-const TEAM_CHECK_TIMEOUT_MS = 6000;
+/**
+ * On bad data the page does not wait for the invite check forever: after this
+ * long the team form shows as a stand-in. It was 6 seconds while that form was
+ * the next step anyway. Since #1412 it is not, so a check that is only slow
+ * waits on the loading screen instead of flashing a form the person does not
+ * need (a check that fails outright still falls back at once).
+ */
+const TEAM_CHECK_TIMEOUT_MS = 15000;
 const ONBOARDING_DONE_STEP = 3;
 
 const isEmailValid = (value: string): boolean => /\S+@\S+\.\S+/.test(value.trim());
@@ -161,6 +176,10 @@ function track(event: Parameters<typeof captureAnalyticsEvent>[0]): void {
 
 const isNetworkError = (error: unknown): boolean =>
   error instanceof TypeError || (typeof navigator !== 'undefined' && navigator.onLine === false);
+
+/** The partner code and where they came from, once the team exists. Never throws. */
+const reportNewTeam = (token: string): Promise<unknown> =>
+  Promise.all([reportReferralCode(token), reportSignupSource(token), reportSourceLinkSignup(token)]).catch(() => undefined);
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -300,6 +319,66 @@ export default function OnboardingPage() {
     return true;
   }, [router]);
 
+  // The team, made for them (#1412, 27 Nov 2026). There is no "Set up your
+  // team" step: the server names the team "{First name}'s Team" and the
+  // project screen opens. Safe to run again: an account that reloads before
+  // adding anything comes back through here, and the server leaves a team its
+  // owner has named alone. If it cannot be made, the team screen shows with
+  // the reason, so they can make it by hand.
+  const teamMadeRef = useRef(false);
+  // They have typed in, or picked on, the team form (the stand-in shown when
+  // the invite check is slow): a late answer no longer moves them off it.
+  const setupTouchedRef = useRef(false);
+  const makeTeam = useCallback(
+    async (before: OnboardingTeamState | null) => {
+      setTeamError('');
+      setScreen('team_loading');
+      try {
+        const token = await getToken();
+        const response = await fetch('/api/onboarding/team', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ action: 'create', auto: true }),
+        });
+        const payload = (await response.json().catch(() => ({}))) as {
+          workspaceId?: string;
+          name?: string;
+          state?: OnboardingTeamState;
+          error?: string;
+          redirect?: string;
+        };
+        if (response.status === 402 && payload.redirect) {
+          router.replace('/locked?reason=not_approved');
+          return;
+        }
+        if (!response.ok || !payload.workspaceId) throw new Error(payload.error || 'Could not make your team.');
+        const workspaceId = payload.workspaceId;
+        // Once per team, not once per reload.
+        if (!before?.ownTeam) {
+          track({ name: 'onboarding_team_created', properties: { who_for: 'not_asked', name_edited: false } });
+        }
+        writeLastChoice('setup');
+        teamMadeRef.current = true;
+        // Not waited for: the project screen opens first.
+        void reportNewTeam(token);
+        const state =
+          payload.state ??
+          (await fetchTeamState().catch(() => null)) ??
+          teamStateForNewTeam(workspaceId, payload.name || '');
+        setTeamState(state);
+        setSelectedTeamId(workspaceId);
+        setJoinedRole(null);
+        if (await sendToPlansIfUnpaid()) return;
+        setScreen('music');
+      } catch (error) {
+        setTeamError(isNetworkError(error) ? 'No connection. Try again.' : errorMessage(error, 'Could not make your team.'));
+        track({ name: 'onboarding_team_viewed', properties: { invites: 0, state: 'make_failed' } });
+        setScreen('setup');
+      }
+    },
+    [fetchTeamState, getToken, router, sendToPlansIfUnpaid]
+  );
+
   const showScreenFor = useCallback(
     (state: OnboardingTeamState) => {
       setTeamState(state);
@@ -319,18 +398,20 @@ export default function OnboardingPage() {
         });
         return;
       }
+      if (next === 'make_team') {
+        void makeTeam(state);
+        return;
+      }
       if (next === 'invites') {
         track({
           name: 'onboarding_team_viewed',
           properties: { invites: state.invites.length, state: 'invited' },
         });
-      } else if (next === 'setup') {
-        track({ name: 'onboarding_team_viewed', properties: { invites: 0, state: 'none' } });
       }
       if (next === 'ask') setAskStartedAt(Date.now());
       setScreen(next);
     },
-    [goHome, router, sendToPlansIfUnpaid]
+    [goHome, makeTeam, router, sendToPlansIfUnpaid]
   );
 
   /** Signed in: the closed sign-up check, then where they stand. */
@@ -380,9 +461,12 @@ export default function OnboardingPage() {
       const state = await fetchTeamState();
       window.clearTimeout(timer);
       if (!timedOut) showScreenFor(state);
-      else {
+      else if (shouldFollowLateTeamAnswer(state, { formTouched: setupTouchedRef.current })) {
+        // The team form was only a stand-in while the check was slow (#1412).
+        setCheckFailed(false);
+        showScreenFor(state);
+      } else {
         setTeamState(state);
-        if (state.invites.length) showScreenFor(state);
       }
     } catch {
       window.clearTimeout(timer);
@@ -456,8 +540,9 @@ export default function OnboardingPage() {
       void fetchTeamState()
         .then((state) => {
           setCheckFailed(false);
-          if (screenRef.current === 'setup' && state.invites.length) showScreenFor(state);
-          else setTeamState(state);
+          if (screenRef.current === 'setup' && shouldFollowLateTeamAnswer(state, { formTouched: setupTouchedRef.current })) {
+            showScreenFor(state);
+          } else setTeamState(state);
         })
         .catch(() => undefined);
     }, invitePollDelay(0));
@@ -505,22 +590,19 @@ export default function OnboardingPage() {
     };
   }, [screen, askStartedAt, fetchTeamState]);
 
-  // Device Back: New project goes back to the team screen; the team screens
-  // never go back into account creation (lib/onboarding-history's approach:
-  // hold the page by pushing the entry back).
+  // Device Back: these screens never go back into account creation
+  // (lib/onboarding-history's approach: hold the page by pushing the entry
+  // back). New project used to go back to the team screen; since #1412 there
+  // is no team step behind it, so it holds too.
   useEffect(() => {
     if (!['setup', 'invites', 'ask', 'music'].includes(screen)) return;
     window.history.pushState({ urganizeOnboarding: screen }, '');
     const onPop = () => {
-      if (screenRef.current === 'music' && !joinedRole) {
-        setScreen('setup');
-        return;
-      }
       window.history.pushState({ urganizeOnboarding: screenRef.current }, '');
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
-  }, [screen, joinedRole]);
+  }, [screen]);
 
   // ── S1 actions ────────────────────────────────────────────────────────────
   const rememberReferral = () => {
@@ -622,11 +704,8 @@ export default function OnboardingPage() {
   const account = { name: displayName || accountEmail, email: accountEmail, onLogout: () => void logOut() };
   const whoFor: TeamWhoFor | null = whoForFromPersona(user?.onboarding_persona ?? null);
 
-  const afterTeamExists = async (token: string) => {
-    // The partner code and where they came from, now the team exists.
-    await Promise.all([reportReferralCode(token), reportSignupSource(token), reportSourceLinkSignup(token)]).catch(() => undefined);
-  };
-
+  // By hand, on the team screen. Only reached when the invite check or the
+  // automatic team (makeTeam) failed.
   const createTeam = async (input: { name: string; whoFor: TeamWhoFor; nameEdited: boolean }) => {
     setTeamBusy(true);
     setTeamError('');
@@ -645,7 +724,8 @@ export default function OnboardingPage() {
       if (!response.ok || !payload.workspaceId) throw new Error(payload.error || 'Could not make your team.');
       track({ name: 'onboarding_team_created', properties: { who_for: input.whoFor, name_edited: input.nameEdited } });
       writeLastChoice('setup');
-      await afterTeamExists(token);
+      teamMadeRef.current = true;
+      await reportNewTeam(token);
       await checkAuth({ force: true }).catch(() => undefined);
       const state = await fetchTeamState().catch(() => null);
       if (state) setTeamState(state);
@@ -663,7 +743,7 @@ export default function OnboardingPage() {
     track({ name: 'onboarding_team_joined', properties: { via, role: result.role } });
     writeLastChoice(null);
     const token = await getToken().catch(() => '');
-    if (token) await afterTeamExists(token);
+    if (token) await reportNewTeam(token);
     if (decideAfterJoin(result.role) === 'music') {
       const state = await fetchTeamState().catch(() => null);
       if (state) setTeamState(state);
@@ -717,7 +797,13 @@ export default function OnboardingPage() {
     setLinkBusy(false);
   };
 
+  // Where the ask screen was opened from, so Back returns there. The rules for
+  // its two exits are decideAskBack and decideOwnTeam in lib/onboarding-flow.ts.
+  const askFromRef = useRef<'music' | 'setup' | null>(null);
+
   const openAsk = () => {
+    const from = screenRef.current;
+    askFromRef.current = from === 'music' || from === 'setup' ? from : null;
     writeLastChoice('ask');
     setAskStatus('');
     setLinkError('');
@@ -726,10 +812,26 @@ export default function OnboardingPage() {
     setScreen('ask');
   };
 
-  const openSetup = () => {
+  /** "Create a team" on the invite screen, "Create my own team instead" on the ask screen. */
+  const openOwnTeam = () => {
     writeLastChoice('setup');
     setArrived(false);
-    setScreen('setup');
+    const next = decideOwnTeam({ teamMade: teamMadeRef.current, hasTeamState: Boolean(teamState) });
+    if (next === 'music') setScreen('music');
+    else void makeTeam(teamState);
+  };
+
+  /** Back on the ask screen: to the screen it was opened from. */
+  const leaveAsk = () => {
+    writeLastChoice('setup');
+    setArrived(false);
+    const next = decideAskBack({
+      openedFrom: askFromRef.current,
+      teamMade: teamMadeRef.current,
+      hasTeamState: Boolean(teamState),
+    });
+    if (next === 'make_team') void makeTeam(teamState);
+    else setScreen(next);
   };
 
   // ── S4 actions ────────────────────────────────────────────────────────────
@@ -1109,7 +1211,7 @@ export default function OnboardingPage() {
           arrived={arrived}
           arrivedBy={arrivedBy}
           onJoin={(invite) => void joinInvite(invite)}
-          onCreateTeam={openSetup}
+          onCreateTeam={openOwnTeam}
         />
       </OnboardingFrame>
     );
@@ -1121,7 +1223,8 @@ export default function OnboardingPage() {
         <AskInviteScreen
           account={account}
           longWait={longWait}
-          onBack={openSetup}
+          onBack={leaveAsk}
+          onCreateOwnTeam={openOwnTeam}
           onUseDifferentEmail={() => void logOut()}
           onAsked={(channel) => {
             track({ name: 'onboarding_join_asked', properties: { channel } });
@@ -1150,7 +1253,6 @@ export default function OnboardingPage() {
           submit={submit}
           onSubmit={(form) => void addMusic(form)}
           onSkip={() => void skipMusic()}
-          onBackToTeam={joined ? null : () => setScreen('setup')}
           onAskInvite={openAsk}
           onOpenRollout={(releaseId) => void goHome(onboardingLandingPath(releaseId, HOME_PATH))}
           getToken={getToken}
@@ -1160,7 +1262,8 @@ export default function OnboardingPage() {
     );
   }
 
-  // Set up your team (also the fallback while the invite check is slow).
+  // Set up your team. Not a step since #1412: it shows only when the invite
+  // check is slow or fails, or the automatic team could not be made.
   const teamMade = Boolean(teamState?.teamDecided || (teamState?.ownTeam && screen === 'setup' && selectedTeamId));
   return (
     <OnboardingFrame name={frameName}>
@@ -1175,6 +1278,9 @@ export default function OnboardingPage() {
         busy={teamBusy}
         error={teamError}
         onSubmit={(input) => void createTeam(input)}
+        onTouched={() => {
+          setupTouchedRef.current = true;
+        }}
         onAsk={openAsk}
       />
     </OnboardingFrame>

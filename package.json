@@ -1,7 +1,7 @@
 {
   "name": "urganize",
   "description": "Urganize is the operating system for independent music careers.",
-  "version": "1.296.0",
+  "version": "1.297.0",
   "private": true,
   "packageManager": "pnpm@10.6.4",
   "workspaces": [

@@ -84,7 +84,14 @@ describe('the plan on the sheet', () => {
     expect(trialSheetTier('artist')).toBe('solo');
     expect(trialSheetTier('manager')).toBe('manager');
     expect(trialSheetTier('label')).toBe('manager');
-    expect(trialSheetTier(null)).toBe('manager');
+  });
+
+  // Oyin, 27 Nov 2026 (#1412): sign-up no longer asks who the team is for, so
+  // most new people have no answer. They are shown Solo, never the dearer plan.
+  it('is Solo when nobody said who the team is for', () => {
+    expect(trialSheetTier(null)).toBe('solo');
+    expect(trialSheetTier(undefined)).toBe('solo');
+    expect(trialSheetPlan(undefined).name).toBe('Solo');
   });
 
   it('says the limits from the plan itself', () => {

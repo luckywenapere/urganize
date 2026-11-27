@@ -14,6 +14,7 @@ import {
   generateAccessCode,
   getAppAccess,
   hashAccessCode,
+  isEmailLetIn,
   redeemAccessCode,
 } from './access-gate-server';
 
@@ -126,6 +127,41 @@ describe('getAppAccess', () => {
 
   it('lets in the paywall allowlist before any read', async () => {
     expect((await getAppAccess('u8', 'luckydio10@gmail.com', null)).allowed).toBe(true);
+  });
+});
+
+// POST /api/access/check: the question the sign-up form asks before it makes
+// the account. Sign-up is closed in this file (see the mock above).
+describe('isEmailLetIn', () => {
+  const answers = (script: Script = {}) =>
+    fakeClient({
+      profiles: () => ({ data: null, error: null }),
+      access_invites: () => ({ data: null, error: null }),
+      workspace_members: () => ({ data: null, error: null }),
+      ...script,
+    }).client;
+
+  it('turns away an email with no invite while sign-up is closed', async () => {
+    expect(await isEmailLetIn(answers(), 'new@b.co')).toBe(false);
+  });
+
+  it('lets in an approved account, a founder invite and a team invite', async () => {
+    expect(await isEmailLetIn(answers({ profiles: () => ({ data: { access_approved_at: '2026-10-01' }, error: null }) }), 'a@b.co')).toBe(true);
+    expect(
+      await isEmailLetIn(answers({ access_invites: () => ({ data: { id: 'i1', used_at: null, revoked_at: null }, error: null }) }), 'f@b.co')
+    ).toBe(true);
+    expect(await isEmailLetIn(answers({ workspace_members: () => ({ data: { id: 'm1' }, error: null }) }), 't@b.co')).toBe(true);
+  });
+
+  // #1415: with sign-up open the form still asked the closed-sign-up question,
+  // so email and password sign-up read "invite-only" while Google walked in.
+  it('lets any email in once sign-up is open', async () => {
+    // The same empty database that answers no while sign-up is closed.
+    expect(await isEmailLetIn(answers(), 'new@b.co', true)).toBe(true);
+  });
+
+  it('still refuses something that is not an email', async () => {
+    expect(await isEmailLetIn(answers(), 'not an email', true)).toBe(false);
   });
 });
 
