@@ -9,7 +9,6 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   MAX_TEAM_NAME_LENGTH,
   NEW_PROJECT_HEADING,
-  TEAM_WHO_FOR_OPTIONS,
   askInviteMessage,
   describeTeamBlocker,
   inviteRoleLabel,
@@ -24,6 +23,7 @@ import {
   Lede,
   Spinner,
   Split,
+  WhoForRows,
   errorTextClass,
   hintClass,
   icons,
@@ -270,39 +270,13 @@ export function SetupTeamScreen({
         />
         <span className={hintClass}>Your team sees this name, and so does anyone you invite.</span>
       </label>
-      <div role="radiogroup" aria-label="Who is this team for?" className="mt-4">
-        <span className={labelClass}>Who is this team for?</span>
-        <div className="grid gap-2">
-          {TEAM_WHO_FOR_OPTIONS.map((option) => {
-            const selected = whoFor === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                onClick={() => {
-                  setWhoFor(option.value);
-                  onTouched?.();
-                }}
-                className={`motion-press flex min-h-[52px] w-full items-center gap-3 rounded-xl border bg-bg-base px-3.5 py-2.5 text-left transition-colors duration-fast hover:bg-bg-hover ${
-                  selected ? 'border-brand shadow-[inset_0_0_0_0.5px_rgb(var(--color-brand))]' : 'border-stroke-control'
-                }`}
-              >
-                <span
-                  aria-hidden="true"
-                  className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border-[1.5px] ${
-                    selected ? 'border-brand bg-brand' : 'border-stroke-control'
-                  }`}
-                >
-                  {selected ? <span className="h-2 w-2 rounded-full bg-content-inverse" /> : null}
-                </span>
-                <span className="text-[15px] font-medium text-content-primary">{option.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <WhoForRows
+        value={whoFor}
+        onChange={(next) => {
+          setWhoFor(next);
+          onTouched?.();
+        }}
+      />
       <div className="mt-5">
         <button type="submit" disabled={Boolean(blocker) || busy} aria-describedby="team-blocker" className={primaryButtonClass}>
           {busy ? (teamMade ? 'Saving…' : 'Making your team…') : teamMade ? 'Save and continue' : 'Create team'}

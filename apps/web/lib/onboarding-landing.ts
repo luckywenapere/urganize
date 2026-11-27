@@ -25,7 +25,7 @@ import {
   getIntroPrice,
   type PricingTierId,
 } from '@urganize/pricing';
-import type { TeamWhoFor } from './onboarding-flow';
+import type { TeamWhoFor } from './team-who-for';
 
 export const ONBOARDING_LANDING_KEY = 'urganize.onboarding.landing';
 
@@ -144,6 +144,32 @@ export function planLimitLines(tier: PricingTierId): string[] {
  */
 export function trialSheetTier(whoFor: TeamWhoFor | null | undefined): PricingTierId {
   return whoFor === 'manager' || whoFor === 'label' ? 'manager' : 'solo';
+}
+
+/**
+ * Whether the sheet asks "Who is this team for?" (#1424, 27 Nov 2026; Oyin
+ * picked the three rows of docs/mocks/trial-sheet-who-for-1424). Sign-up no
+ * longer asks, so most new people reach the sheet with no answer and are shown
+ * Solo. Of the 16 who had answered since 29 Oct, 8 were managers or labels, and
+ * team size cannot tell them apart in the first days. One tap here shows the
+ * right plan and saves the answer.
+ *
+ * Asked only when there is no answer: not when the landing carries one (the
+ * stand-in team form asked), not when the profile has one, and not in the
+ * iPhone app, where the sheet shows no plan for the answer to change. Once
+ * they tap, the rows stay (`picked`) so the answer can be changed, although
+ * the profile has an answer from that moment.
+ */
+export function shouldAskWhoFor(input: {
+  ios: boolean;
+  landingWhoFor: TeamWhoFor | null | undefined;
+  hasPersona: boolean;
+  picked: TeamWhoFor | null;
+}): boolean {
+  if (input.ios) return false;
+  if (input.picked) return true;
+  if (input.landingWhoFor) return false;
+  return !input.hasPersona;
 }
 
 export type TrialSheetPlan = {

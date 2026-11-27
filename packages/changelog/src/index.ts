@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.298.0",
+    date: "November 27, 2026",
+    title: "The right plan for your team",
+    tag: "Account",
+    highlights: [
+      "When your trial starts, tell us who your team is for with one tap. The plan you see then fits you.",
+    ],
+  },
+
+  {
     version: "1.297.0",
     date: "November 27, 2026",
     title: "Sign-up is shorter",

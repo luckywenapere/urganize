@@ -7,6 +7,7 @@ import {
   decideTrialSheet,
   parseOnboardingLanding,
   planLimitLines,
+  shouldAskWhoFor,
   trialSheetPlan,
   trialSheetTier,
   type OnboardingLanding,
@@ -92,6 +93,36 @@ describe('the plan on the sheet', () => {
     expect(trialSheetTier(null)).toBe('solo');
     expect(trialSheetTier(undefined)).toBe('solo');
     expect(trialSheetPlan(undefined).name).toBe('Solo');
+  });
+
+  // #1424: sign-up no longer asks who the team is for. Of the 16 who had
+  // answered since 29 Oct, 8 were artists and 8 managers or labels, and team
+  // size cannot tell them apart in the first days. So the sheet asks, one tap.
+  it('asks who the team is for when nobody has said', () => {
+    expect(shouldAskWhoFor({ ios: false, landingWhoFor: undefined, hasPersona: false, picked: null })).toBe(true);
+    expect(shouldAskWhoFor({ ios: false, landingWhoFor: null, hasPersona: false, picked: null })).toBe(true);
+  });
+
+  it('does not ask someone who has already said', () => {
+    // The stand-in team form asked.
+    expect(shouldAskWhoFor({ ios: false, landingWhoFor: 'manager', hasPersona: true, picked: null })).toBe(false);
+    // An answer on the profile from before (the card on Home, an older sign-up).
+    expect(shouldAskWhoFor({ ios: false, landingWhoFor: undefined, hasPersona: true, picked: null })).toBe(false);
+  });
+
+  it('does not ask in the iPhone app, where the sheet shows no plan to change', () => {
+    expect(shouldAskWhoFor({ ios: true, landingWhoFor: undefined, hasPersona: false, picked: null })).toBe(false);
+  });
+
+  it('keeps the rows up after a tap, so the answer can be changed', () => {
+    // The tap saves the answer, so the profile has one a moment later.
+    expect(shouldAskWhoFor({ ios: false, landingWhoFor: undefined, hasPersona: true, picked: 'label' })).toBe(true);
+  });
+
+  it('the plan follows the tap', () => {
+    expect(trialSheetPlan('artist').name).toBe('Solo');
+    expect(trialSheetPlan('manager').name).toBe('Pro');
+    expect(trialSheetPlan('label').name).toBe('Pro');
   });
 
   it('says the limits from the plan itself', () => {
