@@ -61,6 +61,17 @@ export function resolveTeamName(input: string, name: string | null | undefined):
   return input.trim() || defaultTeamName(name);
 }
 
+/**
+ * Is this the name the system gives a team nobody has named, "{email handle}'s
+ * Team" (createWorkspaceName in lib/tasks-server.ts, used when any request makes
+ * the team before onboarding does)? The team made for a new account (#1412)
+ * replaces only this name, never one somebody chose.
+ */
+export function isSystemTeamName(teamName: string, email: string | null | undefined): boolean {
+  const handle = String(email || '').trim().split('@')[0] || 'Team';
+  return teamName.trim().toLowerCase() === `${handle}'s team`.toLowerCase();
+}
+
 export function describeTeamBlocker(input: { name: string; whoFor: TeamWhoFor | null }): string {
   if (input.name.trim().length > MAX_TEAM_NAME_LENGTH) return 'Keep it under 80 characters.';
   if (!input.whoFor) return 'Pick who the team is for.';
@@ -121,13 +132,22 @@ export type OnboardingTeamState = {
   primaryWorkspaceId: string | null;
 };
 
-export type OnboardingScreen = 'done' | 'held' | 'invites' | 'setup' | 'ask' | 'music';
+/**
+ * `make_team` is not a screen: the page makes the team ("{First name}'s Team")
+ * and opens the project screen (#1412).
+ */
+export type OnboardingScreen = 'done' | 'held' | 'invites' | 'make_team' | 'ask' | 'music';
 
 /**
  * Which screen a signed-in person sees. An invite waiting for their email
  * comes first, because joining the team that already exists beats starting
  * a new one (the bug this flow fixes: invited people ending up in an empty
  * team of their own).
+ *
+ * With no invite, the team is made for them (#1412, 27 Nov 2026, Oyin approved
+ * docs/mocks/first-rollout-1412). "Set up your team" used to be the answer
+ * here, and 3 of 16 new accounts stopped on it. It is never the answer now:
+ * the page keeps that screen only for when this check cannot be made.
  */
 export function decideOnboardingScreen(
   state: OnboardingTeamState,
@@ -139,7 +159,65 @@ export function decideOnboardingScreen(
   if (state.ownsWork) return 'done';
   if (state.invites.length > 0) return 'invites';
   if (memory.lastChoice === 'ask') return 'ask';
-  return 'setup';
+  return 'make_team';
+}
+
+/**
+ * The team form is a stand-in since #1412: it shows only while the invite check
+ * is slow (over 6 seconds) or has failed. When the answer does arrive it is
+ * followed (an invite, the project screen, the app), so a slow phone does not
+ * end up on the screen that was taken out of sign-up. The one exception: a
+ * person who has started on the form is left to finish it, unless an invite is
+ * waiting, which always wins.
+ */
+export function shouldFollowLateTeamAnswer(state: OnboardingTeamState, form: { formTouched: boolean }): boolean {
+  return state.invites.length > 0 || !form.formTouched;
+}
+
+/**
+ * "Create a team" on the invite screen and "Create my own team instead" on the
+ * ask screen: straight to the project screen when the team was made in this
+ * visit and its team list is at hand, else make it first (safe to repeat).
+ */
+export function decideOwnTeam(input: { teamMade: boolean; hasTeamState: boolean }): 'music' | 'make_team' {
+  return input.teamMade && input.hasTeamState ? 'music' : 'make_team';
+}
+
+/**
+ * Back on the ask screen goes to the screen the ask was opened from. Opened by
+ * a reload (they chose to ask last visit) there is nothing behind it, so Back
+ * is the same as "Create my own team instead".
+ */
+export function decideAskBack(input: {
+  openedFrom: 'music' | 'setup' | null;
+  teamMade: boolean;
+  hasTeamState: boolean;
+}): 'music' | 'setup' | 'make_team' {
+  if (input.openedFrom === 'music' && input.hasTeamState) return 'music';
+  if (input.openedFrom === 'setup') return 'setup';
+  return decideOwnTeam(input);
+}
+
+/**
+ * What the project screen needs to know about a team made a moment ago, for
+ * when neither the make-team answer nor a re-read brought the real state
+ * (bad data on a phone). A new team has no artists and no rollouts, so this is
+ * true for the first visit; a later read replaces it.
+ */
+export function teamStateForNewTeam(workspaceId: string, name: string): OnboardingTeamState {
+  const teamName = name.trim() || 'My Team';
+  return {
+    approved: true,
+    completed: false,
+    ownsWork: false,
+    teamDecided: false,
+    ownTeam: { workspaceId, name: teamName },
+    invites: [],
+    teams: [
+      { workspaceId, name: teamName, role: 'owner', isOwn: true, canAdd: true, artists: [], rolloutCount: 0, rollouts: [] },
+    ],
+    primaryWorkspaceId: workspaceId,
+  };
 }
 
 /** Managers (and owners) add music in the team they joined; everyone else lands on Home. */
@@ -199,7 +277,14 @@ export function parseInviteLink(raw: string): { token: string } | null {
 
 // ── New project ─────────────────────────────────────────────────────────────
 
-export type MusicStage = 'idea' | 'recording' | 'mixing' | 'ready' | 'out';
+/**
+ * The project screen's heading (#1412; it was "Nothing here yet." while a team
+ * step came before it). Shared with the loading screen in front of it, so the
+ * heading does not change when the form arrives.
+ */
+export const NEW_PROJECT_HEADING = 'What are you working on?';
+
+export type MusicStage ='idea' | 'recording' | 'mixing' | 'ready' | 'out';
 export type MusicKind = 'single' | 'ep' | 'album' | 'unsure';
 export type MusicOutWhen = OutWhen | 'day';
 
@@ -255,6 +340,7 @@ export type MusicForm = {
   outDay: string;
 };
 
+/** The blank form. The screen opens on defaultMusicForm, which also picks a day. */
 export const DEFAULT_MUSIC_FORM: MusicForm = {
   stage: null,
   artist: '',
@@ -267,6 +353,29 @@ export const DEFAULT_MUSIC_FORM: MusicForm = {
 };
 
 const isYmd = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+/**
+ * How far out the release day is that the form opens with: 8 weeks, which is
+ * where the single plan starts (the earliest step in release-templates/single
+ * is 56 days before release day; onboarding-flow.test.ts holds the two together).
+ */
+export const DEFAULT_RELEASE_LEAD_DAYS = 56;
+
+
+/**
+ * The form a new project opens with (#1412, 27 Nov 2026): "Pick a day" is on
+ * and the day is filled in, 8 weeks from today. Before this the form opened on
+ * "No date yet", the question sat under the pinned Add it button on a phone,
+ * and 0 of 16 new accounts picked a day, so nobody got a plan straight away.
+ * The day only counts for Ready to release; "No date yet" is still one tap.
+ */
+export function defaultMusicForm(todayYmd: string): MusicForm {
+  // The right shape is not enough ("2026-13-45"): the day has to exist.
+  const today = isYmd(todayYmd) ? Date.parse(`${todayYmd}T00:00:00Z`) : NaN;
+  if (!Number.isFinite(today)) return DEFAULT_MUSIC_FORM;
+  const date = new Date(today + DEFAULT_RELEASE_LEAD_DAYS * 86_400_000).toISOString().slice(0, 10);
+  return { ...DEFAULT_MUSIC_FORM, noDate: false, date };
+}
 
 /** What Add it is waiting for, in the spec's order. Empty when it can go. */
 export function describeMusicBlocker(form: MusicForm, todayYmd: string): string {

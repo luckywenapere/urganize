@@ -1,18 +1,22 @@
 'use client';
 
-// New project (#854, spec S4): "Nothing here yet." with three cards. The New
-// project card is open when the team has nothing: stage first, then artist,
-// kind, an optional name and only what that stage needs, with a live preview.
+// New project (#854, spec S4): "What are you working on?" with three cards.
+// The New project card is open when the team has nothing: stage first, then
+// artist, kind, an optional name and only what that stage needs, with a live
+// preview. Since #1412 (27 Nov 2026) this is the first screen after the
+// account (the heading said "Nothing here yet." while a team step came before
+// it), and the form opens with a release day already picked.
 // Plus Bring in released music (the artist import, as a sheet) and Invite
 // your team. Under the heading, a still of what adding a project gets you
 // (#1008). The page owns saving; this owns the form, the sheets and copy.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  DEFAULT_MUSIC_FORM,
   MUSIC_KIND_LABELS,
   MUSIC_OUT_WHEN_OPTIONS,
   MUSIC_STAGES,
+  NEW_PROJECT_HEADING,
+  defaultMusicForm,
   describeMusicBlocker,
   isEarlyStage,
   kindsForStage,
@@ -29,7 +33,6 @@ import { OnboardingArtistImportStep } from './OnboardingArtistImportStep';
 import {
   AccountChip,
   ActionCard,
-  BackLink,
   Heading,
   Lede,
   Sheet,
@@ -48,13 +51,15 @@ import {
 
 const FORM_KEY_PREFIX = 'urganize.onboarding.music.';
 
-function loadForm(userId: string): MusicForm {
+/** Their saved answers, over the form a new project opens with (a release day already picked). */
+function loadForm(userId: string, today: string): MusicForm {
+  const start = defaultMusicForm(today);
   try {
     const raw = window.sessionStorage.getItem(FORM_KEY_PREFIX + userId);
-    if (!raw) return DEFAULT_MUSIC_FORM;
-    return { ...DEFAULT_MUSIC_FORM, ...(JSON.parse(raw) as Partial<MusicForm>) };
+    if (!raw) return start;
+    return { ...start, ...(JSON.parse(raw) as Partial<MusicForm>) };
   } catch {
-    return DEFAULT_MUSIC_FORM;
+    return start;
   }
 }
 
@@ -84,6 +89,119 @@ const formatDay = (ymd: string): string => {
   });
 };
 
+/** The three cards' words, in one place so the loading skeleton below holds the same room for them. */
+const CARD_COPY = {
+  project: { title: 'New project', line: 'Any stage, even just an idea.' },
+  bringIn: { title: 'Bring in released music', line: "Type an artist's name. We pull in their releases." },
+  invite: { title: 'Invite your team', line: "They see what's theirs to do." },
+} as const;
+
+const PULSE = 'animate-pulse rounded-full bg-bg-hover';
+
+/**
+ * Words as blocks. The real words are there, unseen, so the block is exactly
+ * as tall as the text will be at any width, wrapped or not. One bar sits on
+ * the first line, and a second shows only when the words take two lines (it
+ * is clipped away otherwise). `lineHeight` is the text's line height in px.
+ */
+function GhostText({
+  text,
+  className,
+  lineHeight,
+  barHeight,
+  width,
+}: {
+  text: string;
+  className: string;
+  lineHeight: number;
+  barHeight: number;
+  width: string;
+}) {
+  const top = (lineHeight - barHeight) / 2;
+  return (
+    <span className={`relative block overflow-hidden ${className}`}>
+      <span className="invisible">{text}</span>
+      <span className={`absolute left-0 max-w-full ${width} ${PULSE}`} style={{ top, height: barHeight }} />
+      <span className={`absolute left-0 w-1/3 ${PULSE}`} style={{ top: top + lineHeight, height: barHeight }} />
+    </span>
+  );
+}
+
+/** A row-shaped card as blocks: the 40px tile and its two lines. */
+function CardRowSkeleton({ copy }: { copy: { title: string; line: string } }) {
+  return (
+    <div className="flex min-h-16 items-center gap-3 px-3.5 py-3">
+      <span className="h-10 w-10 shrink-0 animate-pulse rounded-lg bg-bg-hover" />
+      <span className="min-w-0 flex-1">
+        <GhostText text={copy.title} className="text-[15px] font-semibold" lineHeight={22.5} barHeight={14} width="w-28" />
+        <GhostText text={copy.line} className="text-[13px]" lineHeight={19.5} barHeight={10} width="w-44" />
+      </span>
+      {/* The chevron's room, so the words wrap where the real card's do. */}
+      <span className="w-4 shrink-0" />
+    </div>
+  );
+}
+
+/**
+ * The cards of this screen while the page finds out who just signed in (#1412:
+ * this screen now comes straight after the account, so its loading state is
+ * the one a new person sees). The same blocks in the same order as the screen
+ * with no stage picked: the New project card (its header, "Where is it now?",
+ * one row per stage, Add it and its line), the two cards under it, and Skip.
+ * When the screen changes, change this with it.
+ */
+export function NewProjectCardsSkeleton({ label }: { label: string }) {
+  return (
+    <div aria-busy="true" aria-live="polite">
+      <span className="sr-only">{label}</span>
+      <div aria-hidden="true">
+        <div className={`${surfaceClass} overflow-clip`}>
+          {/* The open card's header has no chevron. */}
+          <div className="flex min-h-16 items-center gap-3 px-3.5 py-3">
+            <span className="h-10 w-10 shrink-0 animate-pulse rounded-lg bg-bg-hover" />
+            <span className="min-w-0 flex-1">
+              <GhostText text={CARD_COPY.project.title} className="text-[15px] font-semibold" lineHeight={22.5} barHeight={14} width="w-28" />
+              <GhostText text={CARD_COPY.project.line} className="text-[13px]" lineHeight={19.5} barHeight={10} width="w-44" />
+            </span>
+          </div>
+          <div className="px-4 pb-4">
+            <div className="mt-3.5">
+              <GhostText text="Where is it now?" className={labelClass} lineHeight={20.25} barHeight={12} width="w-28" />
+              <div className="relative grid gap-1.5">
+                <span className="absolute bottom-6 left-[23px] top-6 w-[1.5px] bg-stroke-control" />
+                {MUSIC_STAGES.map((item) => (
+                  <div key={item.value} className="relative flex min-h-12 items-center gap-3 py-2 pl-3.5 pr-3">
+                    <span className="relative z-[1] h-5 w-5 shrink-0 rounded-full border-[1.5px] border-stroke-control bg-bg-surface" />
+                    <span className="min-w-0 flex-1">
+                      <GhostText text={item.label} className="text-[15px] font-medium" lineHeight={22.5} barHeight={14} width="w-32" />
+                      <GhostText text={item.line} className="text-[12.5px]" lineHeight={18.75} barHeight={10} width="w-44" />
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="-mx-4 -mb-4 mt-4 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3 md:m-0 md:mt-4 md:p-0">
+              <div className="h-12 animate-pulse rounded-full bg-bg-hover" />
+              <div className="mt-2 flex h-5 items-center justify-center">
+                <span className={`h-3 w-36 ${PULSE}`} />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={`${surfaceClass} mt-2.5 overflow-clip`}>
+          <CardRowSkeleton copy={CARD_COPY.bringIn} />
+        </div>
+        <div className={`${surfaceClass} mt-2.5 overflow-clip`}>
+          <CardRowSkeleton copy={CARD_COPY.invite} />
+        </div>
+        <div className="mt-5 flex h-5 items-center justify-center">
+          <span className={`h-3 w-24 ${PULSE}`} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export type NewProjectSubmitState =
   | { kind: 'idle' }
   | { kind: 'busy'; label: string }
@@ -101,7 +219,6 @@ export function NewProjectScreen({
   submit,
   onSubmit,
   onSkip,
-  onBackToTeam,
   onAskInvite,
   onOpenRollout,
   getToken,
@@ -118,29 +235,28 @@ export function NewProjectScreen({
   submit: NewProjectSubmitState;
   onSubmit: (form: MusicForm) => void;
   onSkip: () => void;
-  onBackToTeam: (() => void) | null;
   onAskInvite: () => void;
   onOpenRollout: (releaseId: string) => void;
   getToken: () => Promise<string>;
   /** Something changed in the team (artists brought in). */
   onTeamChanged: () => void;
 }) {
-  const [form, setForm] = useState<MusicForm>(DEFAULT_MUSIC_FORM);
+  const today = useMemo(() => lagosToday(), []);
+  const [form, setForm] = useState<MusicForm>(() => defaultMusicForm(today));
   const [formOpen, setFormOpen] = useState(true);
   const [sheet, setSheet] = useState<'import' | 'invite' | null>(null);
   const [teamMenuOpen, setTeamMenuOpen] = useState(false);
   const [imported, setImported] = useState('');
   const [invited, setInvited] = useState('');
   const hydrated = useRef(false);
-  const today = useMemo(() => lagosToday(), []);
 
-  const team = teams.find((item) => item.workspaceId === selectedTeamId) ?? teams[0] ?? null;
+  const team =teams.find((item) => item.workspaceId === selectedTeamId) ?? teams[0] ?? null;
   const writableTeams = teams.filter((item) => item.canAdd);
 
   useEffect(() => {
-    setForm(loadForm(userId));
+    setForm(loadForm(userId, today));
     hydrated.current = true;
-  }, [userId]);
+  }, [userId, today]);
 
   useEffect(() => {
     if (hydrated.current) saveForm(userId, form);
@@ -247,10 +363,9 @@ export function NewProjectScreen({
     </>
   ) : (
     <>
-      {onBackToTeam ? <BackLink onClick={onBackToTeam}>Team</BackLink> : null}
-      <Heading>Nothing here yet.</Heading>
+      <Heading>{NEW_PROJECT_HEADING}</Heading>
       <Lede>
-        Add what you&apos;re working on in {teamPicker}, or{' '}
+        Add it to {teamPicker}, or{' '}
         <button type="button" onClick={onAskInvite} className={textLinkClass}>
           ask someone to invite you
         </button>
@@ -514,8 +629,8 @@ export function NewProjectScreen({
             <div className="flex min-h-16 items-center gap-3 px-3.5 py-3">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand text-content-inverse">{icons.plus}</span>
               <span>
-                <span className="block text-[15px] font-semibold">New project</span>
-                <span className="block text-[13px] text-content-secondary">Any stage, even just an idea.</span>
+                <span className="block text-[15px] font-semibold">{CARD_COPY.project.title}</span>
+                <span className="block text-[13px] text-content-secondary">{CARD_COPY.project.line}</span>
               </span>
             </div>
             {musicForm}
@@ -528,8 +643,8 @@ export function NewProjectScreen({
           >
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand text-content-inverse">{icons.plus}</span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-semibold">New project</span>
-              <span className="block text-[13px] text-content-secondary">Any stage, even just an idea.</span>
+              <span className="block text-[15px] font-semibold">{CARD_COPY.project.title}</span>
+              <span className="block text-[13px] text-content-secondary">{CARD_COPY.project.line}</span>
             </span>
             {icons.chevron}
           </button>
@@ -540,8 +655,8 @@ export function NewProjectScreen({
         <div className="mt-2.5">
           <ActionCard
             tile={icons.disc}
-            title="Bring in released music"
-            line={imported ? <span className="text-brand">{imported}</span> : "Type an artist's name. We pull in their releases."}
+            title={CARD_COPY.bringIn.title}
+            line={imported ? <span className="text-brand">{imported}</span> : CARD_COPY.bringIn.line}
             onClick={() => {
               captureAnalyticsEvent({ name: 'onboarding_import_opened', properties: {} });
               setSheet('import');
@@ -553,8 +668,8 @@ export function NewProjectScreen({
         <div className="mt-2.5">
           <ActionCard
             tile={icons.people}
-            title="Invite your team"
-            line={invited ? <span className="text-brand">Invite sent to {invited}</span> : "They see what's theirs to do."}
+            title={CARD_COPY.invite.title}
+            line={invited ? <span className="text-brand">Invite sent to {invited}</span> : CARD_COPY.invite.line}
             onClick={() => {
               captureAnalyticsEvent({ name: 'onboarding_invite_opened', properties: {} });
               setSheet('invite');

@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   MAX_TEAM_NAME_LENGTH,
+  NEW_PROJECT_HEADING,
   TEAM_WHO_FOR_OPTIONS,
   askInviteMessage,
   describeTeamBlocker,
@@ -36,6 +37,8 @@ import {
   textLinkClass,
 } from './OnboardingFrame';
 import { AccountPhotoRow } from './AccountPhotoRow';
+import { FirstProjectStillSkeleton } from './FirstProjectStill';
+import { NewProjectCardsSkeleton } from './NewProjectScreen';
 
 type Account = { name: string; email: string; onLogout: () => void };
 
@@ -51,23 +54,48 @@ function BottomChip({ account }: { account: Account }) {
 
 // `leaving`: the hand-off into the app, which can take a few seconds on a slow
 // phone; it must not say it is checking for invites (#854).
+//
+// Otherwise this is the wait between the account and the project screen
+// (#1412: there is no team step between them now), so it is that screen's
+// skeleton: the same heading, the still and the cards as blocks, the account
+// row where that screen puts it. An invite, when there is one, replaces it.
 export function TeamLoadingScreen({ account, leaving = false }: { account: Account; leaving?: boolean }) {
+  if (leaving) {
+    return (
+      <Split
+        left={
+          <>
+            <Heading>Opening Urganize</Heading>
+            <Lede>Taking you in. One moment.</Lede>
+            <Chips account={account} />
+          </>
+        }
+        right={
+          <div className={`${surfaceClass} p-4`} aria-busy="true" aria-live="polite">
+            <span className="sr-only">Opening Urganize</span>
+            <div className="h-3.5 w-[55%] animate-pulse rounded-full bg-bg-hover" />
+            <div className="mt-3 h-3.5 w-[85%] animate-pulse rounded-full bg-bg-hover" />
+            <div className="mt-[18px] h-11 animate-pulse rounded-full bg-bg-hover" />
+          </div>
+        }
+      />
+    );
+  }
   return (
     <Split
       left={
         <>
-          <Heading>{leaving ? 'Opening Urganize' : 'Your team'}</Heading>
-          <Lede>{leaving ? 'Taking you in. One moment.' : `Checking for invites to ${account.email}.`}</Lede>
-          <Chips account={account} />
+          <Heading>{NEW_PROJECT_HEADING}</Heading>
+          <Lede>Checking for invites to {account.email}.</Lede>
+          <AccountChip place="top" name={account.name} email={account.email} onLogout={account.onLogout} logoutLabel="Log out" />
+          <FirstProjectStillSkeleton />
         </>
       }
       right={
-        <div className={`${surfaceClass} p-4`} aria-busy="true" aria-live="polite">
-          <span className="sr-only">{leaving ? 'Opening Urganize' : 'Checking for invites'}</span>
-          <div className="h-3.5 w-[55%] animate-pulse rounded-full bg-bg-hover" />
-          <div className="mt-3 h-3.5 w-[85%] animate-pulse rounded-full bg-bg-hover" />
-          <div className="mt-[18px] h-11 animate-pulse rounded-full bg-bg-hover" />
-        </div>
+        <>
+          <NewProjectCardsSkeleton label="Checking for invites" />
+          <AccountChip place="bottom" name={account.name} email={account.email} onLogout={account.onLogout} logoutLabel="Log out" />
+        </>
       }
     />
   );
@@ -185,12 +213,15 @@ export function SetupTeamScreen({
   busy,
   error,
   onSubmit,
+  onTouched,
   onAsk,
 }: {
   account: Account;
   defaultName: string;
   initialName: string;
   initialWhoFor: TeamWhoFor | null;
+  /** They typed a name or picked who it is for: the page stops moving them off this form. */
+  onTouched?: () => void;
   /** They came back from New project: "Your team", "Save and continue", no joining card. */
   teamMade: boolean;
   checkFailed: boolean;
@@ -228,7 +259,10 @@ export function SetupTeamScreen({
           ref={nameRef}
           type="text"
           value={name}
-          onChange={(event) => setName(event.target.value)}
+          onChange={(event) => {
+            setName(event.target.value);
+            onTouched?.();
+          }}
           placeholder="e.g. Northline Music"
           maxLength={MAX_TEAM_NAME_LENGTH + 40}
           autoComplete="organization"
@@ -247,7 +281,10 @@ export function SetupTeamScreen({
                 type="button"
                 role="radio"
                 aria-checked={selected}
-                onClick={() => setWhoFor(option.value)}
+                onClick={() => {
+                  setWhoFor(option.value);
+                  onTouched?.();
+                }}
                 className={`motion-press flex min-h-[52px] w-full items-center gap-3 rounded-xl border bg-bg-base px-3.5 py-2.5 text-left transition-colors duration-fast hover:bg-bg-hover ${
                   selected ? 'border-brand shadow-[inset_0_0_0_0.5px_rgb(var(--color-brand))]' : 'border-stroke-control'
                 }`}
@@ -327,6 +364,7 @@ export function AskInviteScreen({
   account,
   longWait,
   onBack,
+  onCreateOwnTeam,
   onUseDifferentEmail,
   onAsked,
   onJoinLink,
@@ -337,7 +375,10 @@ export function AskInviteScreen({
   account: Account;
   /** Still waiting after 30 minutes on screen. */
   longWait: boolean;
+  /** Back to the screen the ask was opened from. */
   onBack: () => void;
+  /** "Create my own team instead": the team is made and the project screen opens. */
+  onCreateOwnTeam: () => void;
   onUseDifferentEmail: () => void;
   onAsked: (channel: 'whatsapp' | 'copy') => void;
   onJoinLink: (link: string) => void;
@@ -476,7 +517,7 @@ export function AskInviteScreen({
               Use a different email
             </button>
             {' · '}
-            <button type="button" onClick={onBack} className={textLinkClass}>
+            <button type="button" onClick={onCreateOwnTeam} className={textLinkClass}>
               Create my own team instead
             </button>
           </p>

@@ -134,9 +134,16 @@ export function planLimitLines(tier: PricingTierId): string[] {
   return lines;
 }
 
-/** Just me → Solo; artists I manage or a label → Manager (Label is call-led and never shown here). */
+/**
+ * Just me → Solo; artists I manage or a label → Manager (Label is call-led and
+ * never shown here). Nobody said → Solo since 2026-11-27 (founder call, #1412;
+ * it was Manager): sign-up no longer asks, and the dearer plan is not the one
+ * to show someone we know nothing about. The same rule as
+ * paywallTierForPersona. /add-card reads this too, so a card trial with no
+ * answer starts on Solo.
+ */
 export function trialSheetTier(whoFor: TeamWhoFor | null | undefined): PricingTierId {
-  return whoFor === 'artist' ? 'solo' : 'manager';
+  return whoFor === 'manager' || whoFor === 'label' ? 'manager' : 'solo';
 }
 
 export type TrialSheetPlan = {

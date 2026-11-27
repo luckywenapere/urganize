@@ -21,8 +21,29 @@ describe('pickWallPlan: first plan or trial ended', () => {
     expect(pickWallPlan({ offered: ALL, isUpgrade: false, persona: 'music_manager', usage: usage(2, 4) })?.tier).toBe('manager');
   });
 
-  it('starts anyone who did not answer on Pro', () => {
-    expect(pickWallPlan({ offered: ALL, isUpgrade: false })?.tier).toBe('manager');
+  // Oyin, 27 Nov 2026 (#1412): sign-up no longer asks who the team is for, and
+  // of the 16 who had answered, 8 were artists. Nobody who did not answer is
+  // shown the dearer plan first; the team's own size moves it up.
+  it('starts anyone who did not answer on Solo', () => {
+    expect(pickWallPlan({ offered: ALL, isUpgrade: false })?.tier).toBe('solo');
+    expect(pickWallPlan({ offered: ALL, isUpgrade: false, persona: null, usage: usage(1, 1) })).toEqual({
+      tier: 'solo',
+      kind: 'solo',
+    });
+  });
+
+  it('moves someone who did not answer up when their team needs it', () => {
+    // A second artist: past both one-artist plans, to Pro.
+    expect(pickWallPlan({ offered: ALL, isUpgrade: false, usage: usage(2, 1) })).toEqual({ tier: 'manager', kind: 'team' });
+    // A fourth person: Solo holds three.
+    expect(pickWallPlan({ offered: ALL, isUpgrade: false, usage: usage(1, 4) })?.tier).toBe('manager');
+    // A second rollout in progress: Solo Plus.
+    expect(pickWallPlan({ offered: ALL, isUpgrade: false, usage: usage(1, 1, 2) })?.tier).toBe('solo_plus');
+  });
+
+  it('an answer still decides: a manager or a label starts on Pro', () => {
+    expect(pickWallPlan({ offered: ALL, isUpgrade: false, persona: 'label_ar', usage: usage(1, 1) })?.tier).toBe('manager');
+    expect(pickWallPlan({ offered: ALL, isUpgrade: false, persona: 'other', usage: usage(1, 1) })?.tier).toBe('manager');
   });
 
   it('starts from the plan picked on the sign-up paywall', () => {
@@ -48,6 +69,10 @@ describe('pickWallPlan: first plan or trial ended', () => {
 
   it('never moves down from the starting plan, even when a cheaper one fits', () => {
     expect(pickWallPlan({ offered: ALL, isUpgrade: false, persona: 'music_manager', usage: usage(1, 1) })?.tier).toBe('manager');
+  });
+
+  it('moves past every one-artist plan for a big team that did not answer', () => {
+    expect(pickWallPlan({ offered: ALL, isUpgrade: false, usage: usage(4, 7) })?.tier).toBe('pro');
   });
 
   it('shows every plan (null) when no self-serve plan holds the team', () => {

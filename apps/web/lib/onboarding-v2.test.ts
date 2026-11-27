@@ -210,7 +210,9 @@ describe('paywall (URG-251 Part 3)', () => {
     expect(paywallTierForPersona('other')).toBe('manager');
     // Label is contact-us since 2026-10-26, so a label lands on Manager.
     expect(paywallTierForPersona('label_ar')).toBe('manager');
-    expect(paywallTierForPersona(null)).toBe('manager');
+    // No answer starts on Solo since 27 Nov 2026 (#1412). It was Manager.
+    expect(paywallTierForPersona(null)).toBe('solo');
+    expect(paywallTierForPersona(undefined)).toBe('solo');
   });
 
   it('leads with their "where does it fall apart" answer, then the rest, at most five', () => {

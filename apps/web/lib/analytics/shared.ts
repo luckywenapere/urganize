@@ -100,7 +100,13 @@ export interface AnalyticsEventPropertiesMap {
   onboarding_started: { entry: 'auth' | 'homepage' | 'invite' | 'google' };
   /** Onboarding v3 (#854): account, team, New project. Each carries seconds_since_start when known. */
   onboarding_account_created: { method: 'google' | 'email'; had_referral: boolean; seconds_since_start?: number };
-  onboarding_team_viewed: { invites: number; state: 'invited' | 'none' | 'check_failed'; seconds_since_start?: number };
+  // Since #1412 the team screen is not a step: 'check_failed' and 'make_failed'
+  // are the only ways to see it ('none' was the old default path).
+  onboarding_team_viewed: {
+    invites: number;
+    state: 'invited' | 'none' | 'check_failed' | 'make_failed';
+    seconds_since_start?: number;
+  };
   onboarding_team_created: { who_for: string; name_edited: boolean; seconds_since_start?: number };
   onboarding_team_joined: { via: 'pending' | 'link' | 'waited' | 'accept_page'; role: string; seconds_since_start?: number };
   onboarding_join_asked: { channel: 'whatsapp' | 'copy'; seconds_since_start?: number };

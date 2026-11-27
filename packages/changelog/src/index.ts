@@ -67,6 +67,18 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.297.0",
+    date: "November 27, 2026",
+    title: "Sign-up is shorter",
+    tag: "Account",
+    highlights: [
+      "Sign-up is shorter. After you make your account, you go straight to adding your music. Your team is made for you.",
+      "A release day is already picked when your music is ready to release. Change it, or tap No date yet.",
+      "Fixed: signing up with an email and a password said Urganize was invite-only. It works now.",
+    ],
+  },
+
+  {
     version: "1.296.0",
     date: "November 27, 2026",
     tag: "App",

@@ -13,7 +13,8 @@
  *     (upgradeTargetFor), so the wall never names a different plan than the
  *     refusal that sent them here.
  *  2. Otherwise: start from the plan they picked on the sign-up paywall, or from
- *     who they said they are (artist starts at Solo, everyone else at Pro).
+ *     who they said they are (an artist, or no answer, starts at Solo; a
+ *     manager, a label or "other" at Pro). No answer was Pro until 2026-11-27.
  *  3. Then move up until the plan holds what they already have (artists, people,
  *     rollouts in progress). Nobody is offered a plan that would lock part of
  *     their team out.

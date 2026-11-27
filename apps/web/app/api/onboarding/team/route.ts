@@ -8,10 +8,12 @@ import {
   createOnboardingTeam,
   joinInvitedTeam,
   joinWithInviteToken,
+  loadOnboardingTeamState,
   type ServerResult,
 } from '@/lib/onboarding-team-server';
 
 // POST /api/onboarding/team (#854). One of:
+//   { action: 'create', auto: true }     the team made for a new account (#1412)
 //   { action: 'create', name, whoFor }   name your own team (or rename it)
 //   { action: 'join', workspaceId }      join the team an invite is waiting in
 //   { action: 'join_link', link }        join with a pasted invite link
@@ -39,18 +41,25 @@ export async function POST(request: NextRequest) {
   const body = ((await request.json().catch(() => ({}))) ?? {}) as Record<string, unknown>;
   try {
     if (body.action === 'create') {
-      if (!isTeamWhoFor(body.whoFor)) {
+      // `auto` (#1412): the team made for a new account straight after
+      // sign-up. No name, and nobody is asked who the team is for.
+      const auto = body.auto === true;
+      if (!auto && !isTeamWhoFor(body.whoFor)) {
         return NextResponse.json({ error: 'Pick who the team is for.' }, { status: 400 });
       }
       const metadata = (auth.user.user_metadata ?? {}) as Record<string, unknown>;
       const displayName = String(metadata.name || metadata.full_name || '');
-      return respond(
-        await createOnboardingTeam(admin, auth.user, {
-          name: typeof body.name === 'string' ? body.name : '',
-          whoFor: body.whoFor,
-          displayName,
-        })
-      );
+      const result = await createOnboardingTeam(admin, auth.user, {
+        name: !auto && typeof body.name === 'string' ? body.name : '',
+        whoFor: !auto && isTeamWhoFor(body.whoFor) ? body.whoFor : null,
+        displayName,
+      });
+      if (!auto || !result.ok) return respond(result);
+      // The project screen opens next and needs the team list. Sending it here
+      // saves a phone on bad data one more request. Best effort: the page asks
+      // for it itself when it is missing.
+      const state = await loadOnboardingTeamState(admin, auth.user, true).catch(() => null);
+      return NextResponse.json({ ...result.value, ...(state ? { state } : {}) });
     }
     if (body.action === 'join') {
       const workspaceId = typeof body.workspaceId === 'string' ? body.workspaceId : '';

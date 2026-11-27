@@ -306,10 +306,21 @@ export const escapeLike = (value: string): string => value.replace(/[\\%_]/g, (m
  * allowlisted email, an existing approved account, an open founder invite, or a
  * pending team invite. Fails OPEN on a read error: this is a courtesy screen,
  * the real gate is server-side after sign-up.
+ *
+ * While sign-up is open, every email is let in, as decideAppAccess lets every
+ * new account in (#1415: this check did not know sign-up had opened, so email
+ * and password sign-up read "invite-only" from 8 to 27 Nov 2026 while Google,
+ * which never asks here, worked). access-gate-agreement.test.ts holds the two
+ * to the same answer.
  */
-export async function isEmailLetIn(admin: SupabaseClient, rawEmail: unknown): Promise<boolean> {
+export async function isEmailLetIn(
+  admin: SupabaseClient,
+  rawEmail: unknown,
+  signupOpen: boolean = SIGNUP_OPEN
+): Promise<boolean> {
   const email = normalizeAccessEmail(rawEmail);
   if (!email) return false;
+  if (signupOpen) return true;
   if (isAllowlistedEmail(email)) return true;
   const pattern = escapeLike(email);
   try {

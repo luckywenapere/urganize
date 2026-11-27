@@ -20,6 +20,7 @@ import { escapeLike } from './access-gate-server';
 import { addSong, createRecord } from './next-records-server';
 import {
   MAX_TEAM_NAME_LENGTH,
+  isSystemTeamName,
   isTeamRole,
   personaForWhoFor,
   resolveTeamName,
@@ -229,23 +230,45 @@ async function loadTeamSummaries(
 
 // ── Name your team ───────────────────────────────────────────────────────────
 
+/**
+ * `whoFor: null` is the team made for a new account straight after sign-up
+ * (#1412, 27 Nov 2026): no team screen, the name is "{First name}'s Team", and
+ * nothing is written to the profile, so the persona stays empty and Home asks
+ * "Who are you?" once (lib/persona-ask.ts). It is safe to run again: an account
+ * that reloads before adding anything comes back through it, and a name
+ * somebody chose is never replaced.
+ */
 export async function createOnboardingTeam(
   admin: SupabaseClient,
   user: User,
-  input: { name: string; whoFor: TeamWhoFor; displayName: string }
+  input: { name: string; whoFor: TeamWhoFor | null; displayName: string }
 ): Promise<ServerResult<{ workspaceId: string; name: string }>> {
-  const name = resolveTeamName(input.name, input.displayName);
+  const name = resolveTeamName(input.whoFor ? input.name : '', input.displayName);
   if (name.length > MAX_TEAM_NAME_LENGTH) return fail(400, 'Keep it under 80 characters.');
 
   // One team per owner (unique on owner_id): this finds it or makes it, and
   // the trial clock starts here, as it always has.
   const workspace = await ensureOwnedWorkspace(admin, user);
+
+  if (!input.whoFor) {
+    // The automatic name only goes on a team nobody has named: a new one, or
+    // one another request made a moment ago with the system name. Any other
+    // name is one somebody chose (on the old team screen, in Team settings, or
+    // from an older account's organization), and it stays. Already carrying
+    // the automatic name (a reload) means there is nothing to write.
+    const current = text(workspace.name);
+    if (current && !isSystemTeamName(current, user.email)) {
+      return { ok: true, value: { workspaceId: workspace.id, name: current } };
+    }
+  }
+
   const renamed = await admin
     .from(WORKSPACES)
     .update({ name, updated_at: new Date().toISOString() })
     .eq('id', workspace.id)
     .eq('owner_id', user.id);
   if (renamed.error) return fail(500, 'Could not name your team.');
+  if (!input.whoFor) return { ok: true, value: { workspaceId: workspace.id, name } };
 
   const persona = personaForWhoFor(input.whoFor);
   const profile = await admin.from('profiles').select('role').eq('id', user.id).maybeSingle();
