@@ -82,7 +82,7 @@ export function clearOptInChoices(): void {
   }
 }
 
-/** The opt-in step was shown on this device: the in-app soft ask stays away. */
+/** The opt-in step was shown on this device: the in-app soft ask waits a week. */
 export function markPushAskedInOnboarding(now: number = Date.now()): void {
   if (typeof window === 'undefined') return;
   try {
@@ -92,10 +92,25 @@ export function markPushAskedInOnboarding(now: number = Date.now()): void {
   }
 }
 
-export function wasPushAskedInOnboarding(): boolean {
+/**
+ * Was the opt-in step shown on this device within `withinMs`? With no window
+ * given, any time counts. The soft ask passes one week, so onboarding counts
+ * as an answer for the same week a "Not now" does, then the weekly reminder
+ * starts. A value that is not a timestamp counts as asked (never a reason to
+ * show more).
+ */
+export function wasPushAskedInOnboarding(
+  withinMs?: number,
+  now: number = Date.now()
+): boolean {
   if (typeof window === 'undefined') return false;
   try {
-    return Boolean(window.localStorage.getItem(PUSH_ASKED_KEY));
+    const raw = window.localStorage.getItem(PUSH_ASKED_KEY);
+    if (!raw) return false;
+    if (withinMs === undefined) return true;
+    const at = Number(raw);
+    if (!Number.isFinite(at)) return true;
+    return now - at < withinMs;
   } catch {
     return false;
   }

@@ -23,17 +23,20 @@ describe('decidePushPrompt', () => {
   });
 
   // The whole reason this function exists: a browser hands out one prompt per
-  // origin, and a denied origin never gets another. Every one of these must
-  // stay 'skip' or we ship a button that silently does nothing.
-  it('never asks once the permission is denied', () => {
+  // origin, and a denied origin never gets another. None of these may ever
+  // be 'ask' (a button that silently does nothing). Instead, once a week, a
+  // card that only says where to switch it back on (founder call, 2026-11-27).
+  it('never asks once the permission is denied, and reminds weekly instead', () => {
     for (const status of ['blocked', 'disabled', 'enabled'] as PushStatus[]) {
-      expect(decide(status, 'denied')).toBe('skip');
+      expect(decide(status, 'denied')).toBe('remind-blocked');
+      expect(decide(status, 'denied', true)).toBe('skip');
     }
   });
 
   it('never asks when the status itself reports blocked', () => {
     for (const permission of ['default', 'granted', 'denied'] as PushPermissionState[]) {
-      expect(decide('blocked', permission)).toBe('skip');
+      expect(decide('blocked', permission)).toBe('remind-blocked');
+      expect(decide('blocked', permission, true)).toBe('skip');
     }
   });
 
@@ -64,7 +67,7 @@ describe('decidePushPrompt', () => {
     for (const status of statuses) {
       for (const permission of permissions) {
         for (const snoozed of [false, true]) {
-          expect(['ask', 'auto-enable', 'skip']).toContain(
+          expect(['ask', 'auto-enable', 'remind-blocked', 'skip']).toContain(
             decidePushPrompt({ status, permission, snoozed })
           );
         }
@@ -88,14 +91,10 @@ describe('pushPromptSnoozeKey', () => {
 });
 
 describe('PUSH_PROMPT_SNOOZE_MS', () => {
-  // Guards the deliberate deviation from the "a dismissal is forever" house
-  // rule: the ask comes back, but not soon enough to be nagging. If someone
-  // needs it permanent they raise this constant, and this test is the place
-  // that records the intent either way.
-  it('holds for weeks, not hours', () => {
-    const day = 24 * 60 * 60 * 1000;
-    expect(PUSH_PROMPT_SNOOZE_MS).toBeGreaterThanOrEqual(14 * day);
-    expect(PUSH_PROMPT_SNOOZE_MS).toBeLessThanOrEqual(180 * day);
+  // Founder call, 2026-11-27: people with notifications off are reminded every
+  // week. The snooze IS that cadence, so it is pinned exactly.
+  it('holds for exactly one week', () => {
+    expect(PUSH_PROMPT_SNOOZE_MS).toBe(7 * 24 * 60 * 60 * 1000);
   });
 });
 

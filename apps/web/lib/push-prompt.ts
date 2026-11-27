@@ -19,13 +19,15 @@
 
 import type { PushPermissionState, PushStatus } from './push';
 
-/** How long "Not now" holds. Read through readPersistedState's maxAgeMs, so
- * the record simply expires and the ask returns once — this is a deliberate
+/** How long "Not now" holds: one week (founder call, 2026-11-27, was 30 days).
+ * People who have not turned notifications on are reminded weekly. Read
+ * through readPersistedState's maxAgeMs, so the record simply expires and the
+ * ask returns — this is a deliberate
  * deviation from the AndroidAppBanner / InviteTeamBanner house rule that a
  * dismissal is forever. Rationale: those two point at things the user can
  * reach any time; this one is the difference between a deadline reminder
- * arriving and not existing. Set to a huge number to make it permanent. */
-export const PUSH_PROMPT_SNOOZE_MS = 30 * 24 * 60 * 60 * 1000;
+ * arriving and not existing. */
+export const PUSH_PROMPT_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
 export const PUSH_PROMPT_SNOOZE_VERSION = 1;
 
 /** Keyed per USER, not per device. The subscription row is per (user, device)
@@ -38,6 +40,7 @@ export function pushPromptSnoozeKey(userId: string): string {
 export type PushPromptDecision =
   | 'ask' // show the soft ask; its button is the gesture that opens the OS prompt
   | 'auto-enable' // permission is already granted — subscribe silently, show nothing
+  | 'remind-blocked' // the browser or phone blocks notifications: say how to undo it, no prompt
   | 'skip'; // nothing to do, and in some cases nothing we are ALLOWED to do
 
 /**
@@ -46,29 +49,32 @@ export type PushPromptDecision =
  *
  *  - unsupported: no PushManager, or no VAPID key configured. There is no
  *    permission to grant.
- *  - blocked / denied: the browser will not prompt again. A card whose button
- *    silently does nothing is worse than no card; Settings already explains
- *    how to undo it at the browser level.
+ *  - blocked / denied: the browser will not prompt again, so a card with a
+ *    "Turn on" button would silently do nothing. Instead, once a week, a card
+ *    that only tells the person where to switch it back on themselves.
  *  - enabled: already subscribed on this device.
  *  - granted but not subscribed: the user said yes at some point and we lost
  *    the subscription (cleared site data, a rotated key, a failed sync).
  *    Re-subscribing needs no prompt and therefore needs no card — the same
  *    passive re-register NativePushBridge already does for native.
  *  - default: the one state where a prompt is possible. Ask unless the user
- *    has recently said "Not now", or already answered onboarding's opt-in
- *    step on this device.
+ *    has said "Not now" in the last week, or answered onboarding's opt-in
+ *    step on this device in the last week.
  */
 export function decidePushPrompt(input: {
   status: PushStatus;
   permission: PushPermissionState;
   snoozed: boolean;
   /** Onboarding's "Stay on top of your next move" step was shown on this
-   * device (URG-251 Part 2). The person already answered there, so the soft
-   * ask stays away for good; a granted device is still repaired silently. */
+   * device in the last week (URG-251 Part 2). The person already answered
+   * there, so the soft ask waits out the same week a "Not now" does; a
+   * granted device is still repaired silently. */
   askedInOnboarding?: boolean;
 }): PushPromptDecision {
   if (input.status === 'unsupported') return 'skip';
-  if (input.status === 'blocked' || input.permission === 'denied') return 'skip';
+  if (input.status === 'blocked' || input.permission === 'denied') {
+    return input.snoozed ? 'skip' : 'remind-blocked';
+  }
   if (input.status === 'enabled') return 'skip';
   if (input.permission === 'granted') return 'auto-enable';
   if (input.askedInOnboarding) return 'skip';

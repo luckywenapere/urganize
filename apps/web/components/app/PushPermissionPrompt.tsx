@@ -88,6 +88,9 @@ export function PushPermissionPrompt() {
   const userId = useAuthStore((state) => state.user?.id ?? '');
   const { pushToast } = useToast();
   const [isVisible, setIsVisible] = useState(false);
+  // 'blocked': the browser or phone blocks notifications, so the card can only
+  // say where to switch them back on. It never shows a "Turn on" button there.
+  const [mode, setMode] = useState<'ask' | 'blocked'>('ask');
   const [isWorking, setIsWorking] = useState(false);
   const [error, setError] = useState('');
 
@@ -140,10 +143,11 @@ export function PushPermissionPrompt() {
         status,
         permission,
         snoozed,
-        askedInOnboarding: wasPushAskedInOnboarding(),
+        askedInOnboarding: wasPushAskedInOnboarding(PUSH_PROMPT_SNOOZE_MS),
       });
 
-      if (decision === 'ask') {
+      if (decision === 'ask' || decision === 'remind-blocked') {
+        setMode(decision === 'ask' ? 'ask' : 'blocked');
         showAfter(ASK_DELAY_MS);
         return;
       }
@@ -231,11 +235,14 @@ export function PushPermissionPrompt() {
           </span>
           <div className="min-w-0 flex-1">
             <p id="push-prompt-title" className="text-sm font-semibold text-content-primary">
-              Never miss a deadline
+              {mode === 'blocked' ? 'Your notifications are off' : 'Never miss a deadline'}
             </p>
             <p className="mt-1 text-sm leading-6 text-content-secondary">
-              Turn on notifications and Urganize will tell you when an activity is due or a
-              teammate hands you work.
+              {mode === 'blocked'
+                ? native
+                  ? 'Urganize cannot reach you on this phone. Turn on notifications for Urganize in your phone settings so you know when work is due.'
+                  : 'Your browser is blocking notifications from Urganize. Allow them in your browser’s site settings so you know when work is due.'
+                : 'Turn on notifications and Urganize will tell you when an activity is due or a teammate hands you work.'}
             </p>
           </div>
           <button
@@ -250,6 +257,13 @@ export function PushPermissionPrompt() {
 
         {error ? <p role="alert" className="mt-3 text-sm text-status-error">{error}</p> : null}
 
+        {mode === 'blocked' ? (
+          <div className="mt-4">
+            <button type="button" onClick={dismiss} className={`${dismissButtonClass} w-full`}>
+              Got it
+            </button>
+          </div>
+        ) : (
         <div className="mt-4 flex items-center gap-2">
           <button
             type="button"
@@ -268,6 +282,7 @@ export function PushPermissionPrompt() {
             Not now
           </button>
         </div>
+        )}
       </div>
     </div>
   );
