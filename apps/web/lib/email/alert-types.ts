@@ -37,7 +37,7 @@ export type FounderAlertKind =
    *  ACTION: top up RodiumAi. At most one a day across all teams. */
   | 'ai_wallet_empty'
   /** Day Zero (#1393): someone with a live card plan activated a lifetime
-   *  license, so they now have Pro for life AND a card that still renews. An
+   *  license, so they now have Solo Plus for life AND a card that still renews. An
    *  ACTION: cancel their Paystack plan by hand (founder call, 2026-11-26). */
   | 'dayzero_card_plan_cancel_needed';
 
@@ -103,7 +103,7 @@ export const FOUNDER_ALERT_HEADLINE: Record<FounderAlertKind, string> = {
   ai_wallet_empty:
     'The AI wallet is empty, so AI could not write a plan and gave a quick plan instead. Top up RodiumAi to bring tailored plans back.',
   dayzero_card_plan_cancel_needed:
-    'This owner activated a Day Zero lifetime license and now has Pro for life, but their card plan still renews. Cancel their Paystack plan by hand so they are not charged again.',
+    'This owner activated a Day Zero lifetime license and now has Solo Plus for life, but their card plan still renews. Cancel their Paystack plan by hand so they are not charged again.',
 };
 
 const formatCount = (value: number | null): string => (value === null ? 'unknown' : String(value));

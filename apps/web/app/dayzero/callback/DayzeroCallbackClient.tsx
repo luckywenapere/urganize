@@ -32,7 +32,7 @@ import { HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { invalidateTeamAccessClientCache } from '@/lib/team-billing-client';
-import { DAYZERO_PENDING_COOKIE, type DayzeroClaimState } from '@/lib/dayzero-shared';
+import { DAYZERO_PENDING_COOKIE, DAYZERO_PLAN, type DayzeroClaimState } from '@/lib/dayzero-shared';
 import { clearDayzeroActivatedFlag } from '@/components/providers/DayzeroClaimer';
 
 const DAYZERO_URL = 'https://dayzero.ltd';
@@ -41,12 +41,18 @@ const SIGN_IN_PATH = `/auth?next=${encodeURIComponent('/dayzero/callback')}`;
 
 type View = 'checking' | 'start' | 'needs_account' | 'attached' | 'other_account' | 'expired' | 'error';
 
-const pro = PRICING_TIERS.manager;
-const PRO_INCLUDES: Array<[LucideIcon, string]> = [
-  [Mic, `${pro.limits.artists} artists`],
-  [Users, `${pro.limits.seats} people on your team`],
-  [CalendarRange, `${pro.limits.activeReleases} rollouts at a time`],
-  [Sparkles, `${pro.urgansMonthlyCredits} AI credits every month`],
+// Solo Plus, as the Day Zero deal page says (#1419): 1 artist, you and 2
+// people helping you, 3 rollouts at a time, 400 AI credits a month.
+const plan = PRICING_TIERS[DAYZERO_PLAN];
+const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+// Solo Plus has fixed limits; the fallbacks only satisfy the type (null means unlimited).
+const PLAN_ARTISTS = plan.limits.artists ?? 1;
+const PLAN_HELPERS = (plan.limits.seats ?? 3) - 1;
+const PLAN_INCLUDES: Array<[LucideIcon, string]> = [
+  [Mic, plural(PLAN_ARTISTS, 'artist', 'artists')],
+  [Users, `You and ${plural(PLAN_HELPERS, 'person', 'people')} helping you`],
+  [CalendarRange, `${plan.limits.activeReleases} rollouts at a time`],
+  [Sparkles, `${plan.urgansMonthlyCredits} AI credits every month`],
 ];
 
 const hasPendingCookie = () =>
@@ -155,11 +161,11 @@ function renderView(view: View, switchAccount: () => void): ReactNode {
           <div className="flex items-start justify-between">
             <Tile icon={BadgeCheck} />
             <span className="inline-flex items-center rounded-md bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">
-              Pro for life
+              Solo Plus for life
             </span>
           </div>
           <Heading>Your Day Zero license is ready</Heading>
-          <Body>Create your Urganize account, or sign in to the one you have. Pro goes on it straight away.</Body>
+          <Body>Create your Urganize account, or sign in to the one you have. Solo Plus goes on it straight away.</Body>
           <Actions>
             <Link href="/onboarding" className={cn(buttonVariants({ size: 'lg' }), 'w-full')}>
               Create your account
@@ -176,10 +182,10 @@ function renderView(view: View, switchAccount: () => void): ReactNode {
       return (
         <>
           <Tile icon={PartyPopper} />
-          <Heading>Pro is yours, for life</Heading>
+          <Heading>Solo Plus is yours, for life</Heading>
           <Body>No card and no renewals. Here is what your team gets:</Body>
           <ul className="mt-5 flex flex-col gap-3">
-            {PRO_INCLUDES.map(([Icon, label]) => (
+            {PLAN_INCLUDES.map(([Icon, label]) => (
               <li key={label} className="flex items-center gap-3 text-[15px]">
                 <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
                   <Icon className="size-4" aria-hidden />
@@ -246,7 +252,7 @@ function renderView(view: View, switchAccount: () => void): ReactNode {
         <>
           <Tile icon={KeyRound} tone="muted" />
           <Heading>Activate from your Day Zero account</Heading>
-          <Body>Open your Day Zero account, find Urganize and click Activate. You come back here and Pro is added to your account.</Body>
+          <Body>Open your Day Zero account, find Urganize and click Activate. You come back here and Solo Plus is added to your account.</Body>
           <Actions>
             <a href={DAYZERO_URL} className={cn(buttonVariants({ size: 'lg' }), 'w-full')}>
               Open Day Zero

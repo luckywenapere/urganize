@@ -4,7 +4,7 @@
 // with DAYZERO_API_KEY (401 otherwise). Then:
 //   purchase   → the license is stored as inactive
 //   activate   → active (the buyer is about to reach /dayzero/callback)
-//   deactivate → deactivated, a refund: Pro comes off its account
+//   deactivate → deactivated, a refund: Solo Plus comes off its account
 //   upgrade / downgrade / migrate → the plan moves from prev_license_key
 // "test": true events never touch the database. Every handled event answers
 // 200 {success: true, event}; Day Zero retries anything else, so a database

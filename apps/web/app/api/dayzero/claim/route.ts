@@ -2,7 +2,7 @@
 //
 // Body {code?}. With a code (the page just came back from Day Zero): swap it
 // for a token, read the license, continue only if Day Zero says it is active.
-//   - signed in (Bearer token) → attach it and Pro is on
+//   - signed in (Bearer token) → attach it and Solo Plus is on
 //   - signed out → keep it in a signed, httpOnly cookie for an hour; the page
 //     sends them to sign in or make an account, then calls again with no code
 // Without a code: attach the license waiting in the cookie, if any.

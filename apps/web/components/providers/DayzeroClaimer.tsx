@@ -6,7 +6,7 @@
 // httpOnly cookie, then signs in (/auth) or makes an account (/onboarding, or
 // Google). Whichever way they come back, this sees the readable
 // `urg_dz_pending` marker once they are signed in and asks the server to attach
-// the license. Then it shows the "Pro is yours" screen, except mid-onboarding,
+// the license. Then it shows the "Solo Plus is yours" screen, except mid-onboarding,
 // where it waits until onboarding is over. Renders nothing; does nothing when
 // no license is waiting (one cookie read per route change).
 

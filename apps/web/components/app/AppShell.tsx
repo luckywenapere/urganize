@@ -249,7 +249,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname === '/start-trial' ||
     // Card trial for customers abroad (#1266): the add-a-card page.
     pathname === '/add-card' ||
-    // Day Zero activation (#1393): a new or walled account claims Pro here.
+    // Day Zero activation (#1393): a new or walled account claims Solo Plus here.
     pathname?.startsWith('/dayzero') ||
     // Self-serve checkout and its welcome page (2026-10-22): a held account
     // pays here, so no app chrome and no gates.

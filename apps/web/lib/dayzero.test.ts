@@ -5,10 +5,14 @@ import {
   encodeClaimCookie,
   hasLiveCardPlan,
   nextLicenseStatus,
+  planCoversLifetime,
   parseDayzeroWebhook,
   signDayzeroPayload,
   verifyDayzeroSignature,
 } from './dayzero';
+import { PRICING_TIERS } from '@urganize/pricing';
+import { resolveTeamTier } from './entitlements';
+import { monthlyAllowanceCredits } from './credits/allowance';
 
 const KEY = '3f2b8c1e-7a4d-4e9b-9c2a-1b2c3d4e5f60';
 const API_KEY = 'test-api-key';
@@ -100,7 +104,7 @@ describe('nextLicenseStatus', () => {
     expect(nextLicenseStatus(row('deactivated'), 'deactivate')).toBeNull();
   });
 
-  it('a refund is final: no activate brings Pro back, however new it looks', () => {
+  it('a refund is final: no activate brings Solo Plus back, however new it looks', () => {
     // A retried activate carries a fresh event_timestamp, so time cannot decide.
     expect(nextLicenseStatus(row('deactivated'), 'activate')).toBeNull();
   });
@@ -122,7 +126,7 @@ describe('applyLifetimeLicense', () => {
     expect(applyLifetimeLicense(before, false)).toEqual({ ...before, lifetime: false });
   });
 
-  it('turns no plan, a trial or a lapse into paid Pro with no end date', () => {
+  it('turns no plan, a trial or a lapse into paid Solo Plus with no end date', () => {
     for (const before of [
       snapshot(),
       snapshot({ status: 'free_trial', hasAccess: true, accountStatus: 'trial', trialEndsAt: '2026-12-01T00:00:00Z' }),
@@ -131,7 +135,7 @@ describe('applyLifetimeLicense', () => {
       expect(applyLifetimeLicense(before, true)).toMatchObject({
         status: 'active',
         hasAccess: true,
-        plan: 'manager',
+        plan: 'solo_plus',
         accountStatus: 'paid',
         expiresAt: null,
         trialEndsAt: null,
@@ -140,19 +144,32 @@ describe('applyLifetimeLicense', () => {
     }
   });
 
-  it('lifts a paid Solo or Solo Plus up to Pro', () => {
-    for (const plan of ['solo', 'solo_plus']) {
-      const out = applyLifetimeLicense(snapshot({ status: 'active', hasAccess: true, accountStatus: 'paid', plan }), true);
-      expect(out.plan).toBe('manager');
-      expect(out.lifetime).toBe(true);
-    }
+  it('lifts a paid Solo up to Solo Plus', () => {
+    const out = applyLifetimeLicense(snapshot({ status: 'active', hasAccess: true, accountStatus: 'paid', plan: 'solo' }), true);
+    expect(out.plan).toBe('solo_plus');
+    expect(out.lifetime).toBe(true);
   });
 
-  it('leaves a paid plan at or above Pro alone', () => {
-    for (const plan of ['manager', 'pro', 'label', 'enterprise', 'annual', 'founding']) {
+  it('leaves a paid plan at or above Solo Plus alone', () => {
+    for (const plan of ['solo_plus', 'manager', 'pro', 'label', 'enterprise', 'annual', 'founding']) {
       const before = snapshot({ status: 'active', hasAccess: true, accountStatus: 'paid', plan, expiresAt: '2027-01-01T00:00:00Z' });
       expect(applyLifetimeLicense(before, true)).toEqual({ ...before, lifetime: false });
     }
+  });
+
+  it('a lifetime team gets Solo Plus limits and 400 AI credits a month', () => {
+    const out = applyLifetimeLicense(snapshot(), true);
+    const tier = resolveTeamTier({ state: 'paid', ownerPlan: out.plan });
+    expect(tier).toBe('solo_plus');
+    expect(monthlyAllowanceCredits({ state: 'paid', tier })).toBe(400);
+    expect(PRICING_TIERS[tier].limits).toMatchObject({ artists: 1, seats: 3, activeReleases: 3 });
+  });
+});
+
+describe('planCoversLifetime', () => {
+  it('is true for Solo Plus and up, false for Solo or no plan', () => {
+    for (const plan of ['solo_plus', 'manager', 'pro', 'label', 'founding']) expect(planCoversLifetime(plan), plan).toBe(true);
+    for (const plan of ['solo', null, undefined, 'trial']) expect(planCoversLifetime(plan), String(plan)).toBe(false);
   });
 });
 
