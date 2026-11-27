@@ -10,7 +10,7 @@
 // (12 for fields and rows, 16 for surfaces, full for buttons and chips).
 
 import { useEffect, useRef, type ReactNode } from 'react';
-import { Logo, LogoIcon } from '@urganize/ui/Logo';
+import { Logo } from '@urganize/ui/Logo';
 import Image from 'next/image';
 import { MyFace } from '@/components/shared/AccountPhoto';
 import { SetupSteps } from '@/components/onboarding/SetupSteps';
@@ -71,11 +71,10 @@ export function TopBar({ name }: { name?: string | null }) {
   return (
     // Same box as the app's TopNav (max 1440, px-8 and 72px tall from lg), and
     // the same wordmark there, so landing in the app does not move the logo.
+    // A phone gets the same wordmark one size up (#1430): it used to show the
+    // square icon beside the word typed in plain text, which is not the logo.
     <header className="mx-auto flex h-14 w-full max-w-[1440px] shrink-0 items-center justify-between px-4 sm:px-5 lg:h-[72px] lg:px-8">
-      <div className="flex items-center gap-2 text-[15px] font-semibold lg:hidden">
-        <LogoIcon size={26} priority />
-        <span>Urganize</span>
-      </div>
+      <Logo size="md" priority className="opacity-95 lg:hidden" />
       <Logo size="sm" priority className="hidden opacity-95 lg:flex" />
       {name ? <MyFace size={32} fallback={<Avatar name={name} />} /> : null}
     </header>
