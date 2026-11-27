@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.298.2",
+    date: "November 28, 2026",
+    tag: "Account",
+    listed: false,
+    highlights: [
+      "If you make an account and stop before adding your music, you now get one short note the next morning with the way back.",
+    ],
+  },
+
+  {
     version: "1.298.1",
     date: "November 28, 2026",
     title: "The real logo at sign-up",

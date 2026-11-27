@@ -22,6 +22,9 @@
 //    gets the next step, not a pile of them; and a step that is days late is
 //    dropped rather than sent out of context ("tomorrow I'll ask you...").
 
+// Pure too: the words and rules of the next-morning sign-up note (#1429).
+import { isSignupNudgeTooLate } from './signup-nudge';
+
 /** The shape of lib/email's EmailSendResult that this file reads. Local rather
  *  than imported so this module stays free of anything server-side. */
 export type SendResultLike = {
@@ -169,7 +172,7 @@ export function planOutboxRun<Row extends DueOutboxRow>(input: {
   const sequenceCandidates: Row[] = [];
   for (const row of sequenceRows) {
     if (row.template === SEQUENCE_TEMPLATE && !input.sequenceEnabled) paused += 1;
-    else if (isStaleSequenceRow(row, input.now)) cancelStale.push(row);
+    else if (isStaleSequenceRow(row, input.now) || isSignupNudgeTooLate(row, input.now)) cancelStale.push(row);
     else sequenceCandidates.push(row);
   }
 
@@ -199,6 +202,8 @@ export function planOutboxRun<Row extends DueOutboxRow>(input: {
  *  that fails this is marked failed rather than sent with broken props. */
 export type OutboxTemplate =
   | { templateId: 'onboarding_step'; props: { step: 'day1' | 'day2' | 'day3' | 'day5' | 'day7'; recipientName: string } }
+  /** The next-morning note to someone who stopped before adding music (#1429). */
+  | { templateId: 'signup_nudge'; props: { recipientName: string } }
   | {
       templateId: 'announcement';
       props: { subject: string; body: string; recipientName: string; includeGreeting: boolean; signOff: boolean };
@@ -217,6 +222,10 @@ export function readOutboxTemplate(row: { template: string; props: unknown }): O
       templateId: 'onboarding_step',
       props: { step: props.step as 'day1' | 'day2' | 'day3' | 'day5' | 'day7', recipientName },
     };
+  }
+
+  if (row.template === 'signup_nudge') {
+    return { templateId: 'signup_nudge', props: { recipientName } };
   }
 
   if (row.template === 'announcement') {

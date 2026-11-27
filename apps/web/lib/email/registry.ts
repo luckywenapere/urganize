@@ -334,6 +334,17 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     fromAddress: 'billing@urganize.app',
     replyTo: 'support@urganize.app',
   },
+  signup_nudge: {
+    id: 'signup_nudge',
+    category: 'onboarding',
+    name: 'Stopped before adding music',
+    description:
+      'One note the next morning to someone who made an account and did not finish sign-up, once. From the morning cron. Copy in lib/email/signup-nudge.ts.',
+    placeholderCopy: false,
+    fromName: 'Oyin at Urganize',
+    fromAddress: 'wenapere@urganize.app',
+    replyTo: 'wenapere@urganize.app',
+  },
   card_trial_reminder: {
     id: 'card_trial_reminder',
     category: 'transactional',

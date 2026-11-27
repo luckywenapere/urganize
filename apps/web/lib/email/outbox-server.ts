@@ -299,7 +299,9 @@ async function sendOne(admin: SupabaseClient, row: OutboxRow): Promise<{ row: Ou
   const send =
     template.templateId === 'onboarding_step'
       ? await sendEmail(admin, { ...common, templateId: 'onboarding_step', props: template.props })
-      : await sendEmail(admin, { ...common, templateId: 'announcement', props: template.props });
+      : template.templateId === 'signup_nudge'
+        ? await sendEmail(admin, { ...common, templateId: 'signup_nudge', props: template.props })
+        : await sendEmail(admin, { ...common, templateId: 'announcement', props: template.props });
   return { row, send };
 }
 

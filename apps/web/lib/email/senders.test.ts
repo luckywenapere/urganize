@@ -44,6 +44,7 @@ const EXPECTED: Record<EmailTemplateId, { from: string; replyTo: string | null }
   waitlist_joined: NOTIFY,
   welcome: FOUNDER,
   onboarding_step: FOUNDER,
+  signup_nudge: FOUNDER,
   self_serve_nudge: FOUNDER,
   renewal_reminder: BILLING,
   card_trial_reminder: FOUNDER,
