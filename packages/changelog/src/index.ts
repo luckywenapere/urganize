@@ -67,6 +67,15 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.296.0",
+    date: "November 27, 2026",
+    tag: "App",
+    highlights: [
+      "If notifications are off on your device, Urganize now reminds you once a week to turn them on, so you know when work is due.",
+    ],
+  },
+
+  {
     version: "1.295.2",
     date: "November 27, 2026",
     tag: "Account",
