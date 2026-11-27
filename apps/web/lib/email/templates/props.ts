@@ -29,6 +29,7 @@ import type { DirectoryInviteEmailProps } from './DirectoryInviteEmail';
 import type { SelfServeNudgeEmailProps } from './SelfServeNudgeEmail';
 import type { RenewalReminderEmailProps } from './RenewalReminderEmail';
 import type { CardTrialReminderEmailProps } from './CardTrialReminderEmail';
+import type { SignupNudgeEmailProps } from './SignupNudgeEmail';
 import type { HelpRequestEmailProps } from './HelpRequestEmail';
 import type { CuratorApplicationApprovedEmailProps } from './CuratorApplicationApprovedEmail';
 import type { ArtistVerificationEmailProps } from './ArtistVerificationEmail';
@@ -63,6 +64,7 @@ export type EmailTemplateProps = {
   self_serve_nudge: SelfServeNudgeEmailProps;
   renewal_reminder: RenewalReminderEmailProps;
   card_trial_reminder: CardTrialReminderEmailProps;
+  signup_nudge: SignupNudgeEmailProps;
   help_request: HelpRequestEmailProps;
   curator_application_approved: CuratorApplicationApprovedEmailProps;
   artist_verification: ArtistVerificationEmailProps;

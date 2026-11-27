@@ -24,6 +24,7 @@ export const EMAIL_TEMPLATE_LABELS: Record<EmailTemplateId, string> = {
   front_desk_digest: 'Front desk digest',
   founder_ops_alert: 'Ops alert to us',
   onboarding_step: 'Onboarding email',
+  signup_nudge: 'Stopped before adding music',
   announcement: 'Email from the admin',
   chat_mention: 'Tagged in a chat',
   chime_in: 'Asked to chime in',

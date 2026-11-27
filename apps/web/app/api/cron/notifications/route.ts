@@ -9,6 +9,7 @@ import { runPauseSweep } from '@/lib/cancel-flow-server';
 import { runFrontDeskDigest } from '@/lib/front-desk/digest-server';
 import { runRenewalReminderSweep, runSelfServeNudgeSweep } from '@/lib/self-serve-lifecycle-server';
 import { runCardTrialReminderSweep } from '@/lib/bachs-trial-server';
+import { runSignupNudgeSweep } from '@/lib/email/signup-nudge-server';
 
 // The push flush and the outbox drain below share this minute (lib/push-limits.ts).
 export const maxDuration = 60;
@@ -68,6 +69,12 @@ export async function GET(request: NextRequest) {
   // Card trials (#1266): the day before the first charge, once each.
   const cardTrialReminders = await runCardTrialReminderSweep(adminClient);
 
+  // Stopped before adding music (#1429): one note to each person who made an
+  // account yesterday and has not finished sign-up. It only QUEUES; the drain
+  // below sends, so it shares the day's limit and the unsubscribe rules. Once
+  // per person, never throws.
+  const signupNudges = await runSignupNudgeSweep(adminClient);
+
   // The email outbox (2026-09-30): the onboarding sequence's days 2 to 7, and
   // any broadcast the day's email limit held back. A passenger on this cron for
   // the reason the due-date cron gives for its own: the Hobby plan allows two
@@ -80,5 +87,5 @@ export async function GET(request: NextRequest) {
     maxSends: 80,
   });
 
-  return NextResponse.json({ ok: true, ...result, email, grants, pauses, frontDesk, selfServeNudges, renewalReminders, cardTrialReminders });
+  return NextResponse.json({ ok: true, ...result, email, grants, pauses, frontDesk, selfServeNudges, renewalReminders, cardTrialReminders, signupNudges });
 }
