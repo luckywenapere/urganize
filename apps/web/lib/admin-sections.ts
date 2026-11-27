@@ -81,6 +81,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     description: 'Credits to claimed pages to sign-ups, last 30 days.',
   },
   {
+    key: 'source-links',
+    label: 'Short links',
+    href: '/admin/source-links',
+    group: 'numbers',
+    description: 'Taps and sign-ups per link: TikTok, Instagram, X.',
+  },
+  {
     key: 'teams',
     label: 'Teams',
     href: '/admin/teams',
@@ -169,7 +176,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     label: 'Artist verification',
     href: '/admin/artist-verification',
     group: 'operations',
-    description: 'Screenshots from artists and managers. Approve, ask again or take down.',
+    description: 'Screenshots from artists and managers. Approve or take down.',
   },
   {
     key: 'seeding',
@@ -355,6 +362,7 @@ export const ADMIN_DESKTOP_MENU: AdminMenuGroup[] = [
     label: 'Growth',
     items: [
       { key: 'waitlist', label: 'Waitlist', href: '/admin/waitlist' },
+      { key: 'source-links', label: 'Short links', href: '/admin/source-links' },
       { key: 'referrals', label: 'Referrals', href: '/admin/referrals' },
       { key: 'promo-channels', label: 'Promo channels', href: '/admin/promo-channels' },
       { key: 'featured', label: 'Featured', href: '/admin/featured' },
@@ -370,6 +378,7 @@ export const ADMIN_DESKTOP_MENU: AdminMenuGroup[] = [
       { key: 'notifications', label: 'Notifications', href: '/admin/notifications' },
       { key: 'curator-invites', label: 'Curator invites', href: '/admin/curator-invites' },
       { key: 'claims', label: 'Claims', href: '/admin/claims' },
+      { key: 'artist-verification', label: 'Artist verification', href: '/admin/artist-verification' },
       { key: 'seeding', label: 'Seeding', href: '/admin/seeding' },
       { key: 'chappi', label: 'Chappi', href: '/admin/chappi' },
       { key: 'more', label: 'Runway and all pages', href: '/admin/more' },

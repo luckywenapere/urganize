@@ -11,6 +11,7 @@ import {
   sourceLinkDestination,
   sourceLinkProperties,
 } from '@/lib/source-links';
+import { recordSourceLinkEvent } from '@/lib/source-links-server';
 
 // GET /api/go/<slug> (2026-11-10, #1185). Reached as go.urganize.app/<slug>
 // through the rewrites in next.config.js, with no redirect in front of it
@@ -48,5 +49,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     null,
     createPostHogEvent('source_link_clicked', sourceLinkProperties(link))
   );
+  // The same tap as one row of our own, for /admin/source-links (#1409).
+  recordSourceLinkEvent('source link tap row', { kind: 'tap', slug: link.slug });
   return response;
 }

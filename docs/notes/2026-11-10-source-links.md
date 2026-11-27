@@ -36,9 +36,18 @@ To add a link, add one line to `lib/source-links.json`. `lib/source-links.test.t
 
 ## Where to read the numbers
 
+- **The admin page: `/admin/source-links` ("Short links"), since 27 Nov 2026 (#1409).** One row per link: taps and sign-ups this week, last week and in all, sign-ups for every 100 taps, and how many of the sign-ups made a rollout or pay today. Below it, the newest sign-ups by name. Weeks run Monday to Sunday, Lagos time; our own accounts are left out of sign-ups.
 - Taps: PostHog event `source_link_clicked`, broken down by `slug`.
 - Sign-ups: PostHog event `signup_from_source_link`, broken down by `slug`.
 - Site visits: the utm tags show in Google Analytics and Vercel Analytics on urganize.app.
+
+## What is saved (27 Nov 2026, #1409)
+
+Each counted tap and each sign-up is also one row in `public.source_link_events` (migration `20261127120000_source_link_events.sql`), written after the reply by `lib/source-links-server.ts`. A tap row is the link and the time, nothing about the person. A sign-up row adds the new account, once per account. The admin page counts taps in the database (`source_link_tap_counts`), because the API returns 1,000 rows at most. The rules for the page are in `lib/admin-source-links.ts`.
+
+The page counts from the day the table started filling. Taps from 10 Nov to that day are in PostHog only, unless they are copied in.
+
+The name the page shows for a link is `label` in `lib/source-links.json`. It never leaves the app.
 
 ## Traps and limits
 
@@ -46,7 +55,8 @@ To add a link, add one line to `lib/source-links.json`. `lib/source-links.test.t
 - A sign-up is tied to a link only in the same browser, within 30 days. An in-app browser (Instagram, X) that hands off to Chrome or Safari for sign-up loses it.
 - Only the "make a team" path reports. Someone who joins a team by invite is not counted, on purpose.
 - /sws does not carry the Sound Wave Spotlight referral code. Commission is the referral system's job (`?ref=CODE`, flag off); this only counts visits and sign-ups.
-- Nothing is stored in our database, so there is no admin screen. PostHog holds it.
+- Until 27 Nov 2026 nothing was stored in our database and PostHog held it all. See "What is saved" above.
+- A tap has no person, so our own taps while testing a link are in the tap numbers.
 
 ## Verified
 
