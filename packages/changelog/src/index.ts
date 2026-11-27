@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.298.1",
+    date: "November 28, 2026",
+    title: "The real logo at sign-up",
+    tag: "Account",
+    highlights: [
+      "Sign-up on your phone now shows the Urganize logo, the one with the headphones.",
+    ],
+  },
+
+  {
     version: "1.298.0",
     date: "November 27, 2026",
     title: "The right plan for your team",

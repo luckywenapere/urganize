@@ -12,7 +12,7 @@
 // curator, /auth, /auth/callback) own the flow around them.
 
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { LogoIcon } from '@urganize/ui/Logo';
+import { Logo } from '@urganize/ui/Logo';
 import {
   GMAIL_CONFIRMATION_SEARCH_URL,
   formatCooldown,
@@ -35,9 +35,8 @@ export function ConfirmShell({ children, dimGlow = false }: { children: ReactNod
   return (
     <main className="ec-shell relative min-h-screen overflow-hidden text-content-primary">
       <div className={`ec-glow ${dimGlow ? 'ec-glow-dim' : ''}`} aria-hidden="true" />
-      <div className="absolute left-1/2 top-[calc(18px+env(safe-area-inset-top,0px))] z-[3] -translate-x-1/2 md:left-10 md:top-8 md:flex md:translate-x-0 md:items-center md:gap-2.5">
-        <LogoIcon size={26} priority className="opacity-90 md:h-7 md:w-7" />
-        <span className="hidden text-[15px] font-semibold tracking-[-0.01em] md:inline">Urganize</span>
+      <div className="absolute left-1/2 top-[calc(18px+env(safe-area-inset-top,0px))] z-[3] -translate-x-1/2 md:left-10 md:top-8 md:translate-x-0">
+        <Logo size="md" priority className="opacity-95" />
       </div>
       <div className="relative z-[2] mx-auto w-full max-w-[420px] px-4 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] pt-[calc(80px+env(safe-area-inset-top,0px))] md:flex md:min-h-screen md:max-w-none md:flex-col md:items-center md:justify-center md:p-10">
         {children}
