@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.295.2",
+    date: "November 27, 2026",
+    tag: "Account",
+    listed: false,
+    highlights: [
+      "A Day Zero lifetime license now gives you Solo Plus for life, as the Day Zero deal says.",
+    ],
+  },
+
+  {
     version: "1.295.1",
     date: "November 26, 2026",
     tag: "App",

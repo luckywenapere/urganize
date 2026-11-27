@@ -8,6 +8,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   hasLiveCardPlan,
   isLicenseKey,
+  planCoversLifetime,
   nextLicenseStatus,
   type DayzeroLicenseStatus,
   type DayzeroWebhookPayload,
@@ -218,7 +219,7 @@ export async function applyDayzeroWebhook(admin: SupabaseClient, event: DayzeroW
   }
 
   // upgrade / downgrade / migrate: the plan moves from the old license to the
-  // new one. Every tier gives Pro today, so this only keeps the owner on it.
+  // new one. Every tier gives Solo Plus today, so this only keeps the owner on it.
   const prev = event.prevLicenseKey ? await readRow(admin, event.prevLicenseKey) : null;
   const moved = await moveLicense(admin, {
     licenseKey,
@@ -355,7 +356,11 @@ async function afterFirstAttach(admin: SupabaseClient, userId: string, licenseKe
       workspaceId,
       ownerUserId: userId,
       actorUserId: userId,
-      note: `Card plan: ${row?.plan ?? 'unknown'}, renews ${row?.expires_at ?? 'unknown'}. Day Zero license ${licenseKey}.`,
+      // A card plan at or above Solo Plus (Pro, Pro Plus, Label) is worth more
+      // than the license: cancelling it would drop them to Solo Plus (#1419).
+      note: `Card plan: ${row?.plan ?? 'unknown'}, renews ${row?.expires_at ?? 'unknown'}. Day Zero license ${licenseKey}.${
+        planCoversLifetime(row?.plan) ? ' This card plan is already at or above Solo Plus: cancelling it drops them to Solo Plus, so ask them first.' : ''
+      }`,
     });
   } catch {
     // notifyFounder never throws; this guards the subscription read.

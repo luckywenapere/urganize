@@ -42,7 +42,7 @@ export type SubscriptionSnapshot = {
    *  move without a second query on this route's hot path. */
   pendingPlan: string | null;
   /** True when a Day Zero lifetime license is what gives this account its plan
-   *  (#1393). Then `plan` is 'manager' (Pro) and `expiresAt` is null. Absent or
+   *  (#1393). Then `plan` is 'solo_plus' (Solo Plus) and `expiresAt` is null. Absent or
    *  false for everyone else. */
   lifetime?: boolean;
 };

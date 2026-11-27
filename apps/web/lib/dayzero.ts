@@ -5,7 +5,7 @@
 // Day Zero (dayzero.ltd) works like AppSumo Licensing v2: a signed webhook
 // tells us a license was bought, activated or refunded, and an OAuth redirect
 // brings the buyer to /dayzero/callback to claim it. One active license gives
-// the account it is attached to the Pro plan (code id `manager`) for life.
+// the account it is attached to the Solo Plus plan (code id `solo_plus`) for life.
 // The plan is not written to `subscriptions`: getSubscriptionSnapshot folds an
 // active license in (applyLifetimeLicense below), so a Paystack renewal can
 // never overwrite it and a refund only has to flip the license row.
@@ -14,7 +14,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { DAYZERO_CLAIM_COOKIE, DAYZERO_CLAIM_TTL_SECONDS, DAYZERO_PENDING_COOKIE } from './dayzero-shared';
 
 export { DAYZERO_CLAIM_COOKIE, DAYZERO_CLAIM_TTL_SECONDS, DAYZERO_PENDING_COOKIE };
-export { DAYZERO_PLAN, applyLifetimeLicense, hasLiveCardPlan } from './dayzero-shared';
+export { DAYZERO_PLAN, applyLifetimeLicense, hasLiveCardPlan, planCoversLifetime } from './dayzero-shared';
 export type { DayzeroClaimState } from './dayzero-shared';
 
 
@@ -117,7 +117,7 @@ export type LicenseRow = {
  * The status an event moves a license to, or null for "change nothing".
  *
  * A refund is final. Once a license is deactivated, no activate (a late one, a
- * retried one, or the OAuth step) brings Pro back; only an upgrade, downgrade
+ * retried one, or the OAuth step) brings Solo Plus back; only an upgrade, downgrade
  * or migrate to a NEW license key can. This does not lean on timestamps on
  * purpose: Day Zero may give a retried webhook a fresh event_timestamp, so an
  * old activate retried after a refund would look newer than the refund.

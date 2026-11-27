@@ -2,8 +2,9 @@
 // activation page and the AppShell claimer can import it. Rules live in
 // lib/dayzero.ts.
 
-/** The plan a license grants. `manager` is shown as "Pro" (pricing v4). */
-export const DAYZERO_PLAN = 'manager' as const;
+/** The plan a license grants: Solo Plus, as the locked Day Zero deal page
+ * says (founder call, 2026-11-27, #1419). It was Pro (`manager`) from #1393. */
+export const DAYZERO_PLAN = 'solo_plus' as const;
 
 /** httpOnly: the signed license. */
 export const DAYZERO_CLAIM_COOKIE = 'urg_dz_license';
@@ -13,10 +14,11 @@ export const DAYZERO_CLAIM_TTL_SECONDS = 60 * 60;
 
 // ── The plan an account gets ────────────────────────────────────────────────
 
-/** Paid plans a lifetime Pro license should NOT override: they already give
- * as much or more. Solo and Solo Plus are smaller than Pro, so Pro wins there.
- * Legacy single-price plans map to Label (lib/entitlements.ts), so they stay. */
-const PLANS_AT_OR_ABOVE_PRO = new Set([
+/** Paid plans a lifetime Solo Plus license should NOT override: they already
+ * give as much or more. Solo is smaller, so Solo Plus wins there. Legacy
+ * single-price plans map to Label (lib/entitlements.ts), so they stay. */
+const PLANS_AT_OR_ABOVE_SOLO_PLUS = new Set([
+  'solo_plus',
   'manager',
   'pro',
   'label',
@@ -29,6 +31,12 @@ const PLANS_AT_OR_ABOVE_PRO = new Set([
   'founding',
 ]);
 
+/** Is this paid plan already at or above what a license gives? Then the
+ * license changes nothing, and cancelling the card plan would be a downgrade. */
+export function planCoversLifetime(plan: string | null | undefined): boolean {
+  return PLANS_AT_OR_ABOVE_SOLO_PLUS.has(plan ?? '');
+}
+
 type SnapshotLike = {
   status: string;
   hasAccess: boolean;
@@ -40,8 +48,8 @@ type SnapshotLike = {
 
 /**
  * Fold an active license into a subscription snapshot. A paid snapshot on a
- * plan at or above Pro is left alone; everything else (no plan, a trial, a
- * lapse, Solo, Solo Plus) becomes paid on Pro with no end date.
+ * plan at or above Solo Plus is left alone; everything else (no plan, a trial,
+ * a lapse, Solo) becomes paid on Solo Plus with no end date.
  */
 export function applyLifetimeLicense<T extends SnapshotLike>(
   snapshot: T,
@@ -49,7 +57,7 @@ export function applyLifetimeLicense<T extends SnapshotLike>(
 ): T & { lifetime: boolean } {
   if (!hasActiveLicense) return { ...snapshot, lifetime: false };
   const paidAlready =
-    snapshot.hasAccess && snapshot.accountStatus === 'paid' && PLANS_AT_OR_ABOVE_PRO.has(snapshot.plan ?? '');
+    snapshot.hasAccess && snapshot.accountStatus === 'paid' && planCoversLifetime(snapshot.plan);
   if (paidAlready) return { ...snapshot, lifetime: false };
   return {
     ...snapshot,
@@ -81,7 +89,7 @@ export function hasLiveCardPlan(
 
 /** The answer POST /api/dayzero/claim gives the page. */
 export type DayzeroClaimState =
-  /** Attached (or already attached to this account). Pro is on. */
+  /** Attached (or already attached to this account). Solo Plus is on. */
   | 'attached'
   /** Checked and active, but nobody is signed in. Waiting in the cookie. */
   | 'needs_account'
