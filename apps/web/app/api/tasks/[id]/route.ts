@@ -31,6 +31,7 @@ import {
   shutdownServerAnalytics,
 } from '@/lib/posthog';
 import { completedAtPatch } from '@/lib/task-completed-at';
+import { completionNeedsBlockerCheck, decideTaskStatusChange } from '@/lib/task-status-gate';
 
 // Allowed PATCH body fields → tasks-table column names. The route is the API
 // boundary that translates camelCase client payloads into snake_case columns
@@ -207,6 +208,25 @@ export async function PATCH(
 
     const previousAssigneeUserId = access.task.assigned_to_user_id;
     const previousStatus = access.task.status;
+
+    // The status gate (#1408): the status menu, the API, MCP and UrgAns all
+    // finish a task through here, so the checkbox's blocker rule lives here too.
+    // The graph is only read for a move into done; every other edit pays nothing.
+    if ('status' in mapped.updates) {
+      // A task outside any rollout has no dependency graph to hold it up.
+      const blocker =
+        access.task.release_id && completionNeedsBlockerCheck(previousStatus, mapped.updates.status)
+          ? await taskService.getCompletionBlocker(access.task.release_id, id, auth.user.id)
+          : null;
+      const decision = decideTaskStatusChange({
+        from: previousStatus,
+        to: mapped.updates.status,
+        blocker,
+      });
+      if (!decision.ok) {
+        return NextResponse.json({ error: decision.message, reason: decision.reason }, { status: decision.status });
+      }
+    }
 
     // When it was ticked (URG-369): stamp completed_at on the way into done and
     // clear it on undo, so "Activities ticked" can stop guessing from updated_at.

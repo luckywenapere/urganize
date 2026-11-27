@@ -55,6 +55,7 @@ one.
 | Machine | What could happen | Fix |
 |---|---|---|
 | Admin email composer (`ComposeEmailPageClient`, #1274) | A background sign-in refresh recounted the starting audience over the one chosen, so "Send to 124 people" sat over a one-person send (and a count of one could sit over a send to everyone) | `lib/email/compose-audience.ts`: the count carries the audience it was made for and shows only while that is the audience chosen now; the first-load recount runs once per person, from the current choice; a count landing under an open confirm cancels it |
+| Task status (`PATCH /api/tasks/[id]`, #1408) | A locked or blocked task could go straight to done through the status menu, the API, MCP update_task or UrgAns, skipping the blocker check the checkbox runs; an unknown status surfaced as a database 500 | `lib/task-status-gate.ts`: a move into done is refused (409) while `getTaskCompletionBlocker` says something holds it up; an unknown status is a 400; leaving done and every other edit are never gated. The graph is read only for a move into done. Still open: the server does not unlock dependents on a PATCH to done (the client and `complete_task` do) |
 
 ## Still open, ranked
 
@@ -69,21 +70,15 @@ because each needs a decision or a live test this sandbox cannot run.
    `invoice.payment_failed` sets `past_due` on a cancelled row. Next step: a
    `decideSubscriptionWrite(current, event)` in `lib/subscription-status.ts`
    and conditional writes in the webhook, tested against Paystack test mode.
-2. **`tasks.status` has no server-side gate.** `PATCH /api/tasks/[id]` accepts
-   any status, so locked -> done skips the blocker check and never unlocks
-   dependents (the client store does both; MCP, guests and the API do not).
-   `reopenTask` does not check the task was done. Next step: route status
-   changes through `getTaskCompletionBlocker` and `completeTaskWithCascade` on
-   the server. Needs care: the client's own cascade also PATCHes.
-3. **UrgAns action reclaim re-runs `apply()`** after 120 seconds with no
+2. **UrgAns action reclaim re-runs `apply()`** after 120 seconds with no
    result. Every action's apply must be safe to run twice, or reclaim must
    check first.
-4. **`issue_reports` admin retry** has no claim, so a double click files two
+3. **`issue_reports` admin retry** has no claim, so a double click files two
    Linear issues.
-5. **`email_outbox` post-send writes** are not conditional on `sending`, so a
+4. **`email_outbox` post-send writes** are not conditional on `sending`, so a
    stale-claim sweep and a slow sender can disagree.
-6. **`releases.status` PATCH** accepts any jump between statuses.
-7. **Screens with many flags:** the onboarding team step (a poll can switch the
+5. **`releases.status` PATCH** accepts any jump between statuses.
+6. **Screens with many flags:** the onboarding team step (a poll can switch the
    screen mid-join), invite accept (a failed confirmation shows no error),
    Settings artist roster (concurrent add/remove loses one), team logins
    (overlapping revokes undo each other), billing cancel (a failed reload

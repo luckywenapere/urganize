@@ -312,6 +312,29 @@ export class TaskService {
    * `workspaceIds` is the caller's access set (from loadWorkspaceAccessContext);
    * it authorizes the mutation to the user's own workspaces.
    */
+  /** Every task of a release, hydrated, so a rule can see the whole dependency graph. */
+  private async loadReleaseTasks(releaseId: string, userId: string): Promise<ExecutionTask[]> {
+    const { data: rows, error } = await this.adminClient
+      .from(TASKS_TABLE)
+      .select(TASKS_SELECT_COLUMNS)
+      .eq('release_id', releaseId);
+    if (error) throw error;
+    return (await loadTasks(this.adminClient, (rows || []) as TaskRow[], userId)) as ExecutionTask[];
+  }
+
+  /**
+   * What would stop this task being marked done, or null. The same rule the
+   * checkbox and completeTaskWithCascade use (getTaskCompletionBlocker), so the
+   * status menu and the API cannot finish a task those two would refuse.
+   * Null also when the task cannot be found: the caller already proved access,
+   * and an unreadable graph must not block someone from finishing their work.
+   */
+  async getCompletionBlocker(releaseId: string, taskId: string, userId: string): Promise<string | null> {
+    const tasks = await this.loadReleaseTasks(releaseId, userId);
+    const target = tasks.find((t) => t.id === taskId);
+    return target ? getTaskCompletionBlocker(target, tasks) : null;
+  }
+
   async completeTaskWithCascade(
     taskId: string,
     userId: string,
@@ -331,17 +354,7 @@ export class TaskService {
 
     // 2. Load the release's tasks so the blocker check + cascade see the whole
     //    dependency graph, exactly like the client store does.
-    const { data: rows, error: rowsError } = await this.adminClient
-      .from(TASKS_TABLE)
-      .select(TASKS_SELECT_COLUMNS)
-      .eq('release_id', targetRow.release_id);
-    if (rowsError) throw rowsError;
-
-    const tasks = (await loadTasks(
-      this.adminClient,
-      (rows || []) as TaskRow[],
-      userId
-    )) as ExecutionTask[];
+    const tasks = await this.loadReleaseTasks(String(targetRow.release_id), userId);
     const target = tasks.find((t) => t.id === taskId);
     if (!target) return { ok: false, reason: 'not_found', message: 'Task not found.' };
 
