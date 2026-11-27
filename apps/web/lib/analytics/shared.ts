@@ -123,6 +123,9 @@ export interface AnalyticsEventPropertiesMap {
   onboarding_import_opened: { seconds_since_start?: number };
   onboarding_invite_opened: { seconds_since_start?: number };
   onboarding_trial_sheet_viewed: { tier_shown: string; ios: boolean };
+  // #1424: the one tap on the sheet, "Who is this team for?". `saved` is false
+  // when the answer could not be written (they still see the plan for it).
+  onboarding_trial_sheet_answered: { who_for: 'artist' | 'manager' | 'label'; tier_shown: string; saved: boolean };
   onboarding_trial_sheet_closed: { tier_shown: string; ios: boolean; opened_plans: boolean };
   onboarding_role_selected: { role: 'artist' | 'manager' | 'label' | 'other' };
   onboarding_release_created: {

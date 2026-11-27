@@ -14,6 +14,7 @@ import { Logo, LogoIcon } from '@urganize/ui/Logo';
 import Image from 'next/image';
 import { MyFace } from '@/components/shared/AccountPhoto';
 import { SetupSteps } from '@/components/onboarding/SetupSteps';
+import { TEAM_WHO_FOR_OPTIONS, TEAM_WHO_FOR_QUESTION, type TeamWhoFor } from '@/lib/team-who-for';
 
 export const primaryButtonClass =
   'motion-press inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-full bg-brand px-5 text-[15px] font-semibold text-content-inverse transition-colors duration-fast ease-standard hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-bg-hover disabled:text-content-tertiary';
@@ -275,6 +276,57 @@ export const icons = {
     </svg>
   ),
 };
+
+/**
+ * "Who is this team for?" as three rows, one tap to answer. The team form used
+ * to hold these inline; since #1424 the trial sheet asks the same question, so
+ * both draw this one.
+ */
+export function WhoForRows({
+  value,
+  onChange,
+  disabled = false,
+  className = 'mt-4',
+}: {
+  value: TeamWhoFor | null;
+  onChange: (value: TeamWhoFor) => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <div role="radiogroup" aria-label={TEAM_WHO_FOR_QUESTION} className={className}>
+      <span className={labelClass}>{TEAM_WHO_FOR_QUESTION}</span>
+      <div className="grid gap-2">
+        {TEAM_WHO_FOR_OPTIONS.map((option) => {
+          const selected = value === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              disabled={disabled}
+              onClick={() => onChange(option.value)}
+              className={`motion-press flex min-h-[52px] w-full items-center gap-3 rounded-xl border bg-bg-base px-3.5 py-2.5 text-left transition-colors duration-fast hover:bg-bg-hover ${
+                selected ? 'border-brand shadow-[inset_0_0_0_0.5px_rgb(var(--color-brand))]' : 'border-stroke-control'
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border-[1.5px] ${
+                  selected ? 'border-brand bg-brand' : 'border-stroke-control'
+                }`}
+              >
+                {selected ? <span className="h-2 w-2 rounded-full bg-content-inverse" /> : null}
+              </span>
+              <span className="text-[15px] font-medium text-content-primary">{option.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 /** A row-shaped card that opens something: 40px tile, title, one line, chevron. */
 export function ActionCard({

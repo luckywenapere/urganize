@@ -9,28 +9,40 @@
 // The host is mounted once in AppShell on app pages. It opens the sheet once,
 // at the moment lib/onboarding-landing.ts picks, and never over the planner's
 // questions.
+//
+// Since #1424 (27 Nov 2026) the sheet asks "Who is this team for?" when nobody
+// has said (sign-up stopped asking in #1412): three rows, one tap. The plan on
+// the sheet follows the tap at once, and the answer is saved as the persona,
+// the way the "Who are you?" card on Home saves it (the account's role is not
+// touched). No tap leaves the plan as it was, and Keep going always works.
 
 import { usePurchasePromptsAllowed } from '@/lib/use-purchase-prompts';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
+import { supabase } from '@/lib/supabase/client';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { isIOSApp } from '@/lib/platform';
 import { isHomeLocation } from '@/lib/home-path';
 import { TEAM_TRIAL_DAYS } from '@/lib/team-billing';
+import { personaForWhoFor, type TeamWhoFor } from '@/lib/team-who-for';
 import {
   PLAN_LANDED_EVENT,
   clearOnboardingLanding,
   decideTrialSheet,
   readOnboardingLanding,
+  shouldAskWhoFor,
   trialSheetPlan,
+  trialSheetTier,
   type OnboardingLanding,
 } from '@/lib/onboarding-landing';
-import { Sheet, primaryButtonClass, textLinkClass } from './OnboardingFrame';
+import { Sheet, WhoForRows, primaryButtonClass, textLinkClass } from './OnboardingFrame';
 
 const RECORD_PATH = /^\/dashboard\/artists\/[^/]+\/records\/[^/]+$/;
 const TICK_MS = 1000;
+/** The longest "See all plans" waits for an answer tapped a moment ago to save. */
+const SAVE_WAIT_MS = 1500;
 
 function readReleaseParam(): string | null {
   try {
@@ -42,6 +54,8 @@ function readReleaseParam(): string | null {
 
 export function OnboardingTrialSheetHost() {
   const userId = useAuthStore((state) => state.user?.id ?? null);
+  const hasPersona = useAuthStore((state) => Boolean(state.user?.onboarding_persona));
+  const checkAuth = useAuthStore((state) => state.checkAuth);
   const pathname = usePathname();
   const router = useRouter();
   const purchasePromptsAllowed = usePurchasePromptsAllowed();
@@ -53,11 +67,18 @@ export function OnboardingTrialSheetHost() {
   const plannerWasOpenedRef = useRef(false);
   const planLandedRef = useRef(false);
   const shownRef = useRef(false);
+  // "Who is this team for?", answered on this sheet. Saves run one after the
+  // other, so a second tap is never overtaken by the first one's request.
+  const [picked, setPicked] = useState<TeamWhoFor | null>(null);
+  const saveChainRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
-    setLanding(readOnboardingLanding(userId));
+    // While the sheet is open it keeps the landing it opened with: the saved
+    // one is cleared the moment the sheet is seen, and a re-read then would
+    // drop who the team is for and change the plan under the reader.
+    setLanding((current) => (open && current ? current : readOnboardingLanding(userId)));
     setIos(isIOSApp());
-  }, [userId, pathname]);
+  }, [userId, pathname, open]);
 
   // The plan built on its own (auto-plan): WorkspaceView says so.
   useEffect(() => {
@@ -112,10 +133,47 @@ export function OnboardingTrialSheetHost() {
     return () => window.clearInterval(timer);
   }, [landing, open, pathname]);
 
-  const plan = useMemo(() => trialSheetPlan(landing?.whoFor), [landing?.whoFor]);
+  const whoFor = picked ?? landing?.whoFor;
+  const plan = useMemo(() => trialSheetPlan(whoFor), [whoFor]);
+  const asksWhoFor = shouldAskWhoFor({ ios, landingWhoFor: landing?.whoFor, hasPersona, picked });
 
+  const pickWhoFor = (next: TeamWhoFor) => {
+    if (next === picked) return;
+    // The plan on the sheet follows the tap at once; the save follows it.
+    setPicked(next);
+    saveChainRef.current = saveChainRef.current.then(async () => {
+      let saved = false;
+      try {
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (token) {
+          const response = await fetch('/api/user/onboarding', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ onboardingPersona: personaForWhoFor(next) }),
+          });
+          saved = response.ok;
+        }
+      } catch {
+        // A lost answer is not worth an error on this sheet. They still see
+        // the plan for it, and the "Who are you?" card on Home asks later.
+      }
+      captureAnalyticsEvent({
+        name: 'onboarding_trial_sheet_answered',
+        properties: { who_for: next, tier_shown: trialSheetTier(next), saved },
+      });
+      // So the card on Home knows the answer in this visit. Not waited for:
+      // "See all plans" waits on this chain, and only the save matters to it.
+      if (saved) void checkAuth({ force: true }).catch(() => undefined);
+    });
+  };
+
+  const viewedRef = useRef(false);
   useEffect(() => {
-    if (!open) return;
+    // Once per sheet: a tap on "Who is this team for?" changes plan.tier, and
+    // that must not count as the sheet being seen a second time.
+    if (!open || viewedRef.current) return;
+    viewedRef.current = true;
     // Seen once: it never opens again, whatever happens next.
     clearOnboardingLanding();
     captureAnalyticsEvent({ name: 'onboarding_trial_sheet_viewed', properties: { tier_shown: ios ? 'none' : plan.tier, ios } });
@@ -139,6 +197,7 @@ export function OnboardingTrialSheetHost() {
         <p className="mt-3.5 text-[15px] text-content-secondary">You can pick a plan later in Settings.</p>
       ) : (
         <>
+          {asksWhoFor ? <WhoForRows value={picked} onChange={pickWhoFor} /> : null}
           <div className="mt-4 rounded-2xl border border-brand bg-bg-base p-3.5">
             <div className="flex items-baseline justify-between gap-2.5">
               <span className="text-base font-semibold">
@@ -162,7 +221,12 @@ export function OnboardingTrialSheetHost() {
                 type="button"
                 onClick={() => {
                   close(true);
-                  router.push('/locked?intent=activate');
+                  // The plan wall reads the answer from the server, so a tap
+                  // made a moment ago gets a moment to save before the wall
+                  // opens. Never longer than SAVE_WAIT_MS: on bad data the
+                  // button must not feel dead. The chain never rejects.
+                  const waited = new Promise<void>((resolve) => window.setTimeout(resolve, SAVE_WAIT_MS));
+                  void Promise.race([saveChainRef.current, waited]).then(() => router.push('/locked?intent=activate'));
                 }}
                 className={textLinkClass}
               >

@@ -13,35 +13,21 @@
  * app/api/onboarding/* plus POST /api/releases (which now takes the team).
  */
 
-import type { OnboardingPersona } from './onboarding';
 import { outReleaseDate, type OutWhen } from './planner-v2/answers';
+import type { TeamWhoFor } from './team-who-for';
 
 // ── Team ────────────────────────────────────────────────────────────────────
 
-export type TeamWhoFor = 'artist' | 'manager' | 'label';
-
-export const TEAM_WHO_FOR_OPTIONS: ReadonlyArray<{ value: TeamWhoFor; label: string }> = [
-  { value: 'artist', label: "Just me, I'm the artist" },
-  { value: 'manager', label: 'Artists I manage' },
-  { value: 'label', label: 'A label' },
-];
-
-export const isTeamWhoFor = (value: unknown): value is TeamWhoFor =>
-  value === 'artist' || value === 'manager' || value === 'label';
-
-/** Stored as the onboarding persona, so profiles.role and the plan on the trial sheet follow. */
-export function personaForWhoFor(whoFor: TeamWhoFor): OnboardingPersona {
-  if (whoFor === 'artist') return 'independent_artist';
-  if (whoFor === 'label') return 'label_ar';
-  return 'music_manager';
-}
-
-export function whoForFromPersona(persona: string | null | undefined): TeamWhoFor | null {
-  if (persona === 'independent_artist') return 'artist';
-  if (persona === 'label_ar') return 'label';
-  if (persona === 'music_manager' || persona === 'artist_team') return 'manager';
-  return null;
-}
+// "Who is this team for?" lives in lib/team-who-for.ts since #1424, so the
+// trial sheet (in the app shell) can ask it without loading this whole file.
+export {
+  TEAM_WHO_FOR_OPTIONS,
+  TEAM_WHO_FOR_QUESTION,
+  isTeamWhoFor,
+  personaForWhoFor,
+  whoForFromPersona,
+  type TeamWhoFor,
+} from './team-who-for';
 
 /** The existing server limit on a team name. */
 export const MAX_TEAM_NAME_LENGTH = 80;
