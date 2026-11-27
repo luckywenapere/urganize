@@ -9,6 +9,7 @@ import {
   sourceLinkCookieDomain,
   sourceLinkProperties,
 } from '@/lib/source-links';
+import { recordSourceLinkEvent } from '@/lib/source-links-server';
 
 // POST /api/source-link/signup (2026-11-10, #1185). Onboarding calls it once,
 // when a new account's team exists. If the browser carries the cookie a short
@@ -35,6 +36,9 @@ export async function POST(request: NextRequest) {
       auth.user.id,
       createPostHogEvent('signup_from_source_link', sourceLinkProperties(link))
     );
+    // The same sign-up as one row of our own, for /admin/source-links (#1409).
+    // One row per account: a second report is a no-op in the database.
+    recordSourceLinkEvent('source link signup row', { kind: 'signup', slug: link.slug, userId: auth.user.id });
   }
   const response = NextResponse.json({ recorded: fresh });
   response.cookies.set(SOURCE_LINK_COOKIE, '', {
