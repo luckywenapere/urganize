@@ -199,10 +199,10 @@ describe('parseClaimBody: publishing is theirs alone', () => {
 describe('the message', () => {
   const messages = buildSeedMessages({ name: 'Ada Obi', url: 'https://app.urganize.app/welcome/tok' });
 
-  it('carries the link and is signed Wena', () => {
+  it('carries the link and is signed Oyin', () => {
     expect(messages.whatsapp).toContain('https://app.urganize.app/welcome/tok');
     expect(messages.emailBody).toContain('https://app.urganize.app/welcome/tok');
-    expect(messages.emailBody.trim().endsWith('Wena')).toBe(true);
+    expect(messages.emailBody.trim().endsWith('Oyin')).toBe(true);
     expect(messages.whatsapp).toContain('Hi Ada,');
   });
 

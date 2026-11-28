@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.298.3",
+    date: "November 28, 2026",
+    tag: "Account",
+    listed: false,
+    highlights: [
+      "The welcome email and the notes after it are now signed Oyin.",
+    ],
+  },
+
+  {
     version: "1.298.2",
     date: "November 28, 2026",
     tag: "Account",

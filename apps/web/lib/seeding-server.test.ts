@@ -417,7 +417,7 @@ describe('claimProfile', () => {
     const later = new Date(NOW.getTime() + 40 * 24 * 60 * 60 * 1000);
     const expired = await claimProfile(client, { token, userId: 'user-1', body: body(), now: later });
     expect(expired).toMatchObject({ ok: false, status: 410 });
-    expect((expired as { error: string }).error).toMatch(/Wena/);
+    expect((expired as { error: string }).error).toMatch(/Oyin/);
 
     await mintClaimLink(client, { personId, actorUserId: ADMIN, now: NOW });
     const replaced = await claimProfile(client, { token, userId: 'user-1', body: body(), now: NOW });

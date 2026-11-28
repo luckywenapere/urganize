@@ -23,7 +23,7 @@ export type FounderNoteBodyProps = {
   body: string;
   includeGreeting?: boolean;
   signOff?: boolean;
-  /** The name the note is signed with. Welcome and onboarding are Wena; the
+  /** The name the note is signed with. Welcome and onboarding are Oyin; the
    *  admin composer passes its own. */
   signature?: string;
   /** An optional picture placed after one paragraph (onboarding only). */
@@ -65,7 +65,7 @@ export function FounderNoteBody({
   body,
   includeGreeting = true,
   signOff = true,
-  signature = "Wena",
+  signature = "Oyin",
   still,
 }: FounderNoteBodyProps) {
   const firstName = firstNameFrom(recipientName);
