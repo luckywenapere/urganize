@@ -9,7 +9,7 @@ description: Run Oyin's LinkedIn outbound for Urganize. Go through his newest co
 
 # LinkedIn outreach
 
-Outbound only: the first touch, not the sale. Every DM, reply and connection note is shown to Oyin and sent only after his yes. Likes need no approval.
+Outbound only: the first touch, not the sale. Every DM, reply and connection request is shown to Oyin and sent only after his yes. Likes need no approval.
 
 **The goal is a person who actually uses Urganize, not just an account (since 27 Nov 2026, #1413).** A bare sign-up link does not work: of 36 people who got it from 3 to 26 Nov, 4 made an account and none of them used it; most said "will check it out" and went quiet. So when someone is interested, offer to set Urganize up with them for their artist on a short call (the approved line is in "When someone is interested"), then ask for their WhatsApp.
 
@@ -48,12 +48,12 @@ Skip: distributor or DSP staff (Spotify, Believe, TuneCore, The Orchard), founde
 3. If they have a post of their own, like it with a real click. If they only have reposts or nothing, skip the like and still DM.
 4. Open their thread first if one exists. If Oyin already knows them, the draft must pick up from that conversation, not introduce him again.
 5. Draft the DM (rules below). Note one thing from their post or profile to open with.
-6. Show Oyin ONE batch for the day, in chat (inbox replies, first DMs and connection notes together, each with name, link and exact text). Separate batches pile up unapproved.
+6. Show Oyin ONE batch for the day, in chat (inbox replies, first DMs and connection requests together, each with name, link and exact text). Separate batches pile up unapproved.
 7. Right before sending each one, re-read the thread: drafts written earlier go stale.
 8. Send each and check it shows in the thread. For invites, check them in Sent invitations (the profile page can keep showing "Connect" after sending).
 9. Log the run in `C:\Users\penta\Documents\Urganize Business\Marketing\outbound\results\log.md` and update `shared-knowledge\learnings.md` (merge, don't pile up duplicates).
 
-If his connections run out of ICP people, search LinkedIn for titles (artist manager, A&R, label, independent artist, with Nigerian or African locations) and send connection requests with a custom note (he has Premium). Same note rules as DMs, same approval step.
+If his connections run out of ICP people, search LinkedIn for titles (artist manager, A&R, label, independent artist, with Nigerian or African locations) and send connection requests with NO note (since 28 Nov 2026, #1435: in Oyin's LinkedIn export, invites sent 1 to 20 Nov were accepted 57% without a note vs 38% with one, because the notes read as templated). The personal opener goes in the first DM after they accept. Same approval step.
 
 ## DM rules (from his own inbox, 80 threads, 3 Nov 2026)
 
@@ -74,7 +74,7 @@ So the first message:
 
 ## Opening lines
 
-Before showing any DM, connection note or post draft, run its first line through the `writing-hooks` skill's 5 checks in short mode (one line, no 10 options for a DM). His voice rules below still win on wording.
+Before showing any DM or post draft, run its first line through the `writing-hooks` skill's 5 checks in short mode (one line, no 10 options for a DM). His voice rules below still win on wording.
 
 ## His voice
 
@@ -124,7 +124,7 @@ Look up any artist a prospect names before replying. A big artist means Oyin onb
 
 - Open an existing thread: click the "Search messages" box, type the name, press Enter, then open the first result. Putting `?searchTerm=` in the URL does not run the search.
 - Message a person: on their profile or activity page, click Message. Check the chat header shows their name before typing.
-- Invites: click Connect (or More, then Connect), then "Add a note", type the note, click Send. Check it in Sent invitations.
+- Invites: click Connect (or More, then Connect), then "Send without a note". Check it in Sent invitations.
 - Wait for each page and thread to load before clicking: the thread pane can still show the previous person for a second or two.
 - Don't run long in-page scripts or load hundreds of conversations at once: the LinkedIn tab freezes. Read threads a few at a time.
 - The safety check sometimes blocks a send once ("Real-World Transactions"). After Oyin's yes, retry once. If it blocks again, stop and tell him.
