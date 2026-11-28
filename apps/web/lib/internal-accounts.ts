@@ -33,6 +33,8 @@ export const BUILT_IN_INTERNAL_EMAILS: readonly string[] = [
   'luckydio10@gmail.com',
   'luckywenapere@gmail.com',
   'theurganization@gmail.com',
+  // A team account (founder, 2026-11-28).
+  'apexcyber00@gmail.com',
   // QA accounts Hark signs in with.
   'luckydio10.paywalltest@gmail.com',
 ];

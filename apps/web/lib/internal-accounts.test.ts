@@ -30,6 +30,7 @@ describe('internal accounts', () => {
       'clebmichael@gmail.com',
       'clebmichael+x@icloud.com',
       'anyone@urganize.app',
+      'Apexcyber00@Gmail.com',
     ]) {
       expect(isInternalAccountEmail(email), email).toBe(true);
     }
