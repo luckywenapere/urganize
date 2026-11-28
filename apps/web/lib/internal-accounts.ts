@@ -19,11 +19,8 @@
 const INTERNAL_DOMAIN = '@urganize.app';
 const INTERNAL_NAME_PART = 'luckydio';
 
-/**
- * Throwaway inbox services (founder, 2026-11-28): nobody real signs up with
- * one, so an address on one of these domains, or a subdomain of one, is a
- * test and stays out of every stat.
- */
+/** Throwaway inbox services: every address on them is somebody testing (2026-11-28).
+ *  Left out of numbers by isExcludedFromMetrics, never treated as the team. */
 export const THROWAWAY_EMAIL_DOMAINS: readonly string[] = [
   'mailinator.com',
   'yopmail.com',
@@ -45,6 +42,7 @@ export const THROWAWAY_EMAIL_DOMAINS: readonly string[] = [
   '10minutemail.com',
 ];
 
+/** The whole domain or a subdomain of one, never a look-alike. */
 function isThrowawayDomain(domain: string): boolean {
   return THROWAWAY_EMAIL_DOMAINS.some((d) => domain === d || domain.endsWith('.' + d));
 }
@@ -63,16 +61,26 @@ export const BUILT_IN_INTERNAL_EMAILS: readonly string[] = [
   'luckydio10@gmail.com',
   'luckywenapere@gmail.com',
   'theurganization@gmail.com',
-  // Team and tester accounts (founder, 2026-11-28).
-  'apexcyber00@gmail.com',
+  // Chidera, on the team (founder, 2026-11-28).
   'itsderah@gmail.com',
-  'realameerdev@gmail.com',
-  'getsentra.co@gmail.com',
   // QA accounts Hark signs in with.
   'luckydio10.paywalltest@gmail.com',
 ];
 
 const BUILT_IN = new Set(BUILT_IN_INTERNAL_EMAILS);
+
+/**
+ * Tester accounts (founder, 2026-11-28: "those are testers too"). Left out of
+ * every number, like the team, but NOT the team: isInternalAccountEmail also
+ * opens team-only routes (/api/trm/health), and a tester must not get those.
+ */
+export const TEST_ACCOUNT_EMAILS: readonly string[] = [
+  'apexcyber00@gmail.com',
+  'realameerdev@gmail.com',
+  'getsentra.co@gmail.com',
+];
+
+const TEST_ACCOUNTS = new Set(TEST_ACCOUNT_EMAILS);
 
 export function normalizeEmail(email: string | null | undefined): string {
   return String(email || '').trim().toLowerCase();
@@ -91,7 +99,6 @@ export function isInternalAccountEmail(
     const name = normalized.slice(0, at);
     if (name.includes(INTERNAL_NAME_PART)) return true;
     if (INTERNAL_NAME_PREFIXES.some((prefix) => name.startsWith(prefix))) return true;
-    if (isThrowawayDomain(normalized.slice(at + 1))) return true;
   }
   const listed = (value: string) =>
     BUILT_IN.has(value) || (Array.isArray(extra) ? extra.includes(value) : (extra as ReadonlySet<string>).has(value));
@@ -99,6 +106,25 @@ export function isInternalAccountEmail(
   const plus = normalized.indexOf('+');
   if (plus > 0 && plus < at) return listed(normalized.slice(0, plus) + normalized.slice(at));
   return false;
+}
+
+/**
+ * Left out of analytics and admin numbers: the team, plus tester accounts and
+ * throwaway inboxes. Use this for COUNTING only. To decide whether someone may
+ * see a team-only screen, use isInternalAccountEmail, which testers never pass.
+ */
+export function isExcludedFromMetrics(
+  email: string | null | undefined,
+  extra: ReadonlySet<string> | readonly string[] = []
+): boolean {
+  if (isInternalAccountEmail(email, extra)) return true;
+  const normalized = normalizeEmail(email);
+  if (!normalized) return false;
+  const at = normalized.indexOf('@');
+  if (at > 0 && isThrowawayDomain(normalized.slice(at + 1))) return true;
+  if (TEST_ACCOUNTS.has(normalized)) return true;
+  const plus = normalized.indexOf('+');
+  return plus > 0 && plus < at && TEST_ACCOUNTS.has(normalized.slice(0, plus) + normalized.slice(at));
 }
 
 /**
@@ -110,6 +136,6 @@ export class InternalEmailSet extends Set<string> {
   override has(email: string): boolean {
     const normalized = normalizeEmail(email);
     if (super.has(normalized)) return true;
-    return isInternalAccountEmail(normalized, [...this.values()]);
+    return isExcludedFromMetrics(normalized, [...this.values()]);
   }
 }

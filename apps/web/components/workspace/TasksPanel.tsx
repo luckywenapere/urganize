@@ -208,6 +208,8 @@ type TasksPanelProps = {
    * so it is offered only where that problem shows: the distribution issue
    * list. The dialog and its data are unchanged.
    */
+  /** Mark as a test (#1442), owner-only, hidden once it is one. */
+  markTestAction?: TaskPanelAction | null;
   archiveAction?: TaskPanelAction | null;
   shareAction?: TaskPanelAction | null;
   /** Change release date (#1128), owner-only, once the rollout has a date. */
@@ -303,6 +305,7 @@ export function TasksPanel({
   tasks,
   scopedRelease,
   id,
+  markTestAction,
   archiveAction,
   shareAction,
   releaseDateAction,
@@ -573,6 +576,7 @@ export function TasksPanel({
     variant: 'phone',
     share: shareAction,
     releaseDate: releaseDateAction,
+    markTest: markTestAction,
     archive: archiveAction,
     deleteRollout: deleteAction,
   });

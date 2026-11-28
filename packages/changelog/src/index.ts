@@ -67,6 +67,16 @@ export type SiteStill = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.299.0",
+    date: "November 28, 2026",
+    tag: "Rollouts",
+    highlights: [
+      "Just trying things out? Mark a rollout as a test from the rollout menu.",
+      "A rollout you made a week ago and never touched, with no name or no date, is now marked as a test for you. If it is real, tap \"It's real, undo\" and it stays real.",
+    ],
+  },
+
+  {
     version: "1.298.3",
     date: "November 28, 2026",
     tag: "Account",

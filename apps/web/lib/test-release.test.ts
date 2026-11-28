@@ -6,7 +6,11 @@ import {
   buildTestReleaseDraft,
   isTestReleaseEnabled,
   readTestRelease,
+  readTestReleaseAuto,
+  readTestReleaseDismissed,
   writeTestRelease,
+  writeTestReleaseByPerson,
+  writeTestReleaseBySweep,
 } from './test-release';
 
 afterEach(() => {
@@ -128,5 +132,28 @@ describe('copy rules', () => {
 
   it('the description names the exit', () => {
     expect(TEST_RELEASE_DESCRIPTION.toLowerCase()).toContain('delete');
+  });
+});
+
+describe('marking by a person and by the sweep (#1442)', () => {
+  it('a person marking a test sets the marker and clears any old answer', () => {
+    const next = writeTestReleaseByPerson({ test_release_dismissed: true, planner_pending: true }, true);
+    expect(readTestRelease(next)).toBe(true);
+    expect(readTestReleaseDismissed(next)).toBe(false);
+    expect(next.planner_pending).toBe(true);
+  });
+
+  it('a person saying it is real clears the marker and stops the sweep coming back', () => {
+    const next = writeTestReleaseByPerson(writeTestReleaseBySweep({}), false);
+    expect(readTestRelease(next)).toBe(false);
+    expect(readTestReleaseAuto(next)).toBe(false);
+    expect(readTestReleaseDismissed(next)).toBe(true);
+  });
+
+  it('the sweep sets the marker and says it did', () => {
+    const next = writeTestReleaseBySweep({ share_offered: true });
+    expect(readTestRelease(next)).toBe(true);
+    expect(readTestReleaseAuto(next)).toBe(true);
+    expect(next.share_offered).toBe(true);
   });
 });

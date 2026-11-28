@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { InternalEmailSet, isInternalAccountEmail } from './internal-accounts';
+import { InternalEmailSet, isExcludedFromMetrics, isInternalAccountEmail } from './internal-accounts';
 
 describe('internal accounts', () => {
   it('leaves out our test inboxes and domain', () => {
@@ -30,15 +30,7 @@ describe('internal accounts', () => {
       'clebmichael@gmail.com',
       'clebmichael+x@icloud.com',
       'anyone@urganize.app',
-      'Apexcyber00@Gmail.com',
       'itsderah@gmail.com',
-      'realameerdev+2@gmail.com',
-      'getsentra.co@gmail.com',
-      'anything@mailinator.com',
-      'x@YOPMAIL.com',
-      'a@sharklasers.com',
-      'b@temp-mail.org',
-      'c@sub.guerrillamail.com',
     ]) {
       expect(isInternalAccountEmail(email), email).toBe(true);
     }
@@ -46,9 +38,32 @@ describe('internal accounts', () => {
     expect(isInternalAccountEmail('fan.tedumking@gmail.com')).toBe(false);
     expect(isInternalAccountEmail('manager@tedumking.com')).toBe(false);
     expect(isInternalAccountEmail('gideon@ugorjigideon.com')).toBe(false);
+  });
+  it('leaves testers and throwaway inboxes out of numbers without making them team', () => {
+    for (const email of [
+      'apexcyber00@gmail.com',
+      'Apexcyber00@Gmail.com',
+      'realameerdev@gmail.com',
+      'getsentra.co@gmail.com',
+      'getsentra.co+2@gmail.com',
+      'prtpkxkt@guerrillamailblock.com',
+      'someone@Mailinator.com',
+      'realameerdev+2@gmail.com',
+      'x@YOPMAIL.com',
+      'a@sharklasers.com',
+      'b@temp-mail.org',
+      'c@sub.guerrillamail.com',
+    ]) {
+      expect(isExcludedFromMetrics(email), email).toBe(true);
+      // Team-only screens (/api/trm/health) ask isInternalAccountEmail.
+      expect(isInternalAccountEmail(email), email).toBe(false);
+      expect(new InternalEmailSet().has(email), email).toBe(true);
+    }
+    expect(isExcludedFromMetrics('mailinator.fan@gmail.com')).toBe(false);
+    expect(isExcludedFromMetrics('fan@gmail.com')).toBe(false);
     // A throwaway domain matches the whole domain, never a look-alike.
-    expect(isInternalAccountEmail('fan@notmailinator.com')).toBe(false);
-    expect(isInternalAccountEmail('mailinator.com@gmail.com')).toBe(false);
+    expect(isExcludedFromMetrics('fan@notmailinator.com')).toBe(false);
+    expect(isExcludedFromMetrics('mailinator.com@gmail.com')).toBe(false);
   });
   it('a set answers for aliases of its extra addresses', () => {
     const set = new InternalEmailSet(['ops@example.com']);

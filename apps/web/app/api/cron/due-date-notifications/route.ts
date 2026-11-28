@@ -19,6 +19,7 @@ import { runOnTheRiseSweep } from '@/lib/featured-shelves-server';
 import { purgeExpiredReleases } from '@/lib/rollout-trash-server';
 import { runWhatsappChaseSweep } from '@/lib/whatsapp/server';
 import { runOutNowSweep } from '@/lib/release-out-now/server';
+import { runTestReleaseSweep } from '@/lib/test-release-sweep-server';
 
 // Scheduled sweep — see apps/web/vercel.json for the cron schedule. Vercel
 // Cron automatically sends `Authorization: Bearer ${CRON_SECRET}` when that
@@ -170,6 +171,11 @@ export async function GET(request: NextRequest) {
   // exists is emailed that the song is out, once. Own time budget, never throws.
   const outNowSweep = await runOutNowSweep(adminClient);
 
+  // Test rollouts tag themselves (#1442): a week old, untouched, and no real
+  // name or no date. Never untags, never touches one somebody said is real.
+  // Never throws.
+  const testReleaseSweep = await runTestReleaseSweep(adminClient);
+
   // Add-on renewals and credits past the allowance (#1112): charged to each
   // team's saved card once a day. Another passenger on this cron. Never throws.
   const billingRun = await runDailyBilling(adminClient);
@@ -178,6 +184,7 @@ export async function GET(request: NextRequest) {
     ok: true,
     billingRun,
     outNowSweep,
+    testReleaseSweep,
     whatsappSweep,
     trashPurge,
     trialSweep,

@@ -39,6 +39,7 @@ describe('RELEASE_MENU_ORDER', () => {
       'capture',
       'release-date',
       'change-artist',
+      'mark-test',
       'archive',
       'delete',
     ]);

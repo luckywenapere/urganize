@@ -84,6 +84,9 @@ export type RolloutMenuInput = {
    *  date: a rollout with none keeps its "Set your release date" row. */
   releaseDate?: RolloutMenuDialogAction | null;
   changeArtist?: RolloutMenuDialogAction | null;
+  /** Mark as a test (#1442). Owner-only, and not offered once it is one: the
+   *  test banner carries the undo. */
+  markTest?: RolloutMenuDialogAction | null;
   archive?: RolloutMenuDialogAction | null;
   /** Delete rollout (moves it to Trash). Owner-only; the caller passes it only
    *  for the owner, so a teammate never sees a row the server would refuse. */
@@ -138,7 +141,7 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
   });
 
   const dialog = (
-    key: 'share' | 'add-idea' | 'release-date' | 'change-artist' | 'archive' | 'delete',
+    key: 'share' | 'add-idea' | 'release-date' | 'change-artist' | 'mark-test' | 'archive' | 'delete',
     action: RolloutMenuDialogAction
   ): RolloutMenuEntry => ({
     key,
@@ -208,6 +211,7 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     // What UrgAns did moved to the UrgAns page (2026-10-29, #849).
     input.releaseDate ? dialog('release-date', input.releaseDate) : null,
     input.changeArtist ? dialog('change-artist', input.changeArtist) : null,
+    input.markTest ? dialog('mark-test', input.markTest) : null,
     input.archive ? dialog('archive', input.archive) : null,
     input.deleteRollout ? dialog('delete', input.deleteRollout) : null,
   ];

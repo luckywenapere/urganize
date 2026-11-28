@@ -55,6 +55,8 @@ export {
   // The usage dashboard (2026-10-07): people using Urganize over time.
   Activity,
   AlignLeft, Archive, ArrowDown, ArrowRight,
+  // Mark as a test, in the rollout menu (#1442).
+  FlaskConical,
   ArrowUp,
   // Day Zero activation page (#1393).
   BadgeCheck, CalendarRange, Link2Off, UserX,

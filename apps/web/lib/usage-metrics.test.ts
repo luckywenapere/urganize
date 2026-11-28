@@ -42,6 +42,8 @@ function release(id: string, over: Partial<MetricsRelease> = {}): MetricsRelease
     templatePending: false,
     plannedByUrgans: false,
     draftAiApplied: null,
+    title: 'Midnight',
+    touchedCount: 0,
     taskCount: 0,
     doneCount: 0,
     autoTaskCount: 0,

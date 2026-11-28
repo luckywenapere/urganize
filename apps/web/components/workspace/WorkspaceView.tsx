@@ -14,6 +14,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { isCatalogRequested, markCatalogRequested } from '@/lib/catalog-intent';
 import { watchNavigationStall } from '@/lib/nav-stall-watch';
 import { isTestReleaseEnabled, readTestRelease } from '@/lib/test-release';
+import { supabase } from '@/lib/supabase/client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useChappiStore } from '@/stores/useChappiStore';
@@ -985,6 +986,51 @@ export function WorkspaceView() {
         }
       : null;
 
+  // Mark as a test, and its undo (#1442, founder approved mock, Nov 28, 2026).
+  // Owner-only like archive and delete. No confirm step: marking a test
+  // deletes nothing, and the banner's "It's real, undo" puts it back in one
+  // tap. Saying it is real also stops the daily sweep tagging it again.
+  const [isSettingTestMark, setIsSettingTestMark] = useState(false);
+  const setTestMark = async (releaseId: string, isTest: boolean) => {
+    if (isSettingTestMark) return;
+    setIsSettingTestMark(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const response = await fetch(`/api/releases/${encodeURIComponent(releaseId)}/test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({ isTest }),
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        setToast({ message: payload?.error || 'Could not update this rollout.', tone: 'error' });
+        return;
+      }
+      await loadCommandCenter({ force: true });
+      setToast({
+        message: isTest ? 'Marked as a test.' : 'Marked as real.',
+        tone: 'success',
+      });
+    } catch {
+      setToast({ message: 'Could not update this rollout.', tone: 'error' });
+    } finally {
+      setIsSettingTestMark(false);
+    }
+  };
+  const markTestAction =
+    TEST_RELEASE_ENABLED && scopedReleaseId && scopedReleaseSlim && scopedReleaseIsOwn && !scopedReleaseSlim.isTest
+      ? {
+          label: 'Mark as a test',
+          disabled: isSettingTestMark,
+          onClick: () => void setTestMark(scopedReleaseSlim.id, true),
+        }
+      : null;
+
   // Change release date (#1128, founder approved mock, Nov 8, 2026). Before
   // this the sheet opened only from the Spotify pitch banner and a Distribute
   // row. Owner-only, like the schedule route; and only once a date is set,
@@ -1031,6 +1077,8 @@ export function WorkspaceView() {
   const testReleaseBanner =
     scopedReleaseSlim && scopedReleaseSlim.isTest && scopedReleaseIsOwn ? (
       <TestReleaseBanner
+        onMarkReal={() => void setTestMark(scopedReleaseSlim.id, false)}
+        markingReal={isSettingTestMark}
         onDelete={() =>
           setReleaseToDelete({
             id: scopedReleaseSlim.id,
@@ -1223,8 +1271,10 @@ export function WorkspaceView() {
 
   // The one banner the activity list carries, with the pinned activity above
   // it for a new user. Null when there is neither, so the panel renders no gap.
-  const otherActivitiesBanner =
-    editorialPitchBanner ?? testReleaseBanner ?? planBanner ?? setReleaseDateBanner;
+  // The test banner sits ABOVE these rather than taking their place (#1442):
+  // a rollout the daily sweep tagged can be a slow real start, and its owner
+  // must still see the date and plan steps under the "It's real, undo".
+  const otherActivitiesBanner = editorialPitchBanner ?? planBanner ?? setReleaseDateBanner;
   // The post-release review (URG-253) leads the list once it opens: 28 days
   // after release day, or every activity done. Checked here from the store
   // first, so a rollout still in flight never fetches it.
@@ -1268,7 +1318,9 @@ export function WorkspaceView() {
       !(phoneSearchOpen && !isDesktopViewport),
     scopedReleaseSlim?.id ?? null
   );
-  const bannerParts = [releaseReviewCard, pinnedConfirmDateCard, otherActivitiesBanner].filter(Boolean);
+  const bannerParts = [testReleaseBanner, releaseReviewCard, pinnedConfirmDateCard, otherActivitiesBanner].filter(
+    Boolean
+  );
   const activitiesBannerNode =
     bannerParts.length > 1 ? (
       <div className="space-y-3">
@@ -1870,6 +1922,7 @@ export function WorkspaceView() {
                   id={TASKS_PANEL_ID}
                   tasks={scopedTasks}
                   scopedRelease={scopedReleaseSlim}
+                  markTestAction={markTestAction}
                   archiveAction={archiveAction}
                   shareAction={shareAction}
                   releaseDateAction={releaseDateAction}
@@ -1911,6 +1964,7 @@ export function WorkspaceView() {
                 card={selectedCard}
                 share={shareAction}
                 releaseDate={releaseDateAction}
+                markTest={markTestAction}
                 archive={archiveAction}
                 deleteRollout={deleteAction}
                 onClose={goBack}

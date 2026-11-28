@@ -16,6 +16,7 @@
 // Days and weeks are Lagos calendar days (UTC+1, no daylight saving). "Last 7
 // days" and "last 30 days" are rolling windows that end now.
 
+import { classifyReleaseReality, type ReleaseReality } from './release-reality';
 import type { LatestEvent } from './admin-read-server';
 import { isOnline, presenceDay, type PresenceSurface, PRESENCE_SURFACES } from './presence';
 
@@ -67,6 +68,10 @@ export type MetricsRelease = {
   /** null when no plan draft row exists; otherwise whether the model's changes
    *  were applied (doc.ai.applied). */
   draftAiApplied: boolean | null;
+  /** The rollout's name, for telling a real rollout from a test. */
+  title: string | null;
+  /** Activities somebody has worked on (lib/release-reality.ts isTouchedTask). */
+  touchedCount: number;
   taskCount: number;
   doneCount: number;
   autoTaskCount: number;
@@ -163,6 +168,9 @@ export type UsageMetrics = {
     outLast30d: number;
     weekly: SeriesPoint[];
     plans: PlanSplit;
+    /** Real or test, read from what people did (lib/release-reality.ts).
+     *  Covers every rollout, flagged tests included, so the three add up. */
+    reality: Record<ReleaseReality, number>;
   };
   accounts: {
     total: number;
@@ -428,6 +436,8 @@ export function buildUsageMetrics(input: UsageMetricsInput): UsageMetrics {
   const weekIndex = new Map(weeks.map((week, index) => [week, index]));
   const rolloutWeekly = weeks.map(() => 0);
   const plans: PlanSplit = { urgans: 0, playbook: 0, own: 0, none: 0 };
+  const reality: Record<ReleaseReality, number> = { real: 0, test: 0, too_early: 0 };
+  for (const release of releases) reality[classifyReleaseReality(release, now)] += 1;
   let rollouts7 = 0;
   let rollouts30 = 0;
   let goingOut = 0;
@@ -632,6 +642,7 @@ export function buildUsageMetrics(input: UsageMetricsInput): UsageMetrics {
       outLast30d: outRecently,
       weekly: series(weeks, rolloutWeekly, (week) => `Week of ${shortDayLabel(week)}`),
       plans,
+      reality,
     },
     accounts: {
       total: people.length,

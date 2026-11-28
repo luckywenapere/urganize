@@ -30,6 +30,7 @@ const MODALS = {
   addIdea: { label: 'Add idea' },
   releaseDate: { label: 'Change release date' },
   changeArtist: { label: 'Change artist' },
+  markTest: { label: 'Mark as a test' },
   archive: { label: 'Archive' },
   deleteRollout: { label: 'Delete rollout' },
 };
@@ -143,6 +144,7 @@ describe('buildRolloutMenu', () => {
       'share',
       'release-date',
       'change-artist',
+      'mark-test',
       'archive',
       'delete',
     ]);
@@ -168,6 +170,7 @@ describe('buildRolloutMenu', () => {
       ['addIdea', 'add-idea'],
       ['releaseDate', 'release-date'],
       ['changeArtist', 'change-artist'],
+      ['markTest', 'mark-test'],
       ['archive', 'archive'],
       ['deleteRollout', 'delete'],
     ];
@@ -274,7 +277,7 @@ describe('what each row does', () => {
   });
 
   it('opens a dialog from the last three, identified by their key', () => {
-    for (const key of ['share', 'add-idea', 'release-date', 'change-artist', 'archive', 'delete'] as const) {
+    for (const key of ['share', 'add-idea', 'release-date', 'change-artist', 'mark-test', 'archive', 'delete'] as const) {
       const entry = build().find((row) => row.key === key);
       expect(entry?.target, key).toEqual({ kind: 'modal' });
     }

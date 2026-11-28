@@ -9,7 +9,7 @@ describe('the rollout menu groups (2026-10-14 declutter)', () => {
     expect(groups[0].entries.map((e) => e.key)).toEqual(['timeline', 'activities', 'brief', 'add-idea', 'chat', 'calendar', 'spend', 'note']);
     expect(groups[1].entries.map((e) => e.key)).toEqual(['coverart', 'metadata', 'distribute', 'music', 'files']);
     expect(groups[2].entries.map((e) => e.key)).toEqual(['pitch', 'pitchkit', 'promo', 'share', 'capture']);
-    expect(groups[3].entries.map((e) => e.key)).toEqual(['release-date', 'change-artist', 'archive', 'delete']);
+    expect(groups[3].entries.map((e) => e.key)).toEqual(['release-date', 'change-artist', 'mark-test', 'archive', 'delete']);
   });
 
   it('drops empty groups', () => {

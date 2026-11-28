@@ -4,6 +4,7 @@ import { BarList } from '@/components/shared/BarList';
 import { InfoTip } from '@/components/shared/HelpTip';
 import type { AdminReadSource } from '@/lib/admin-read-server';
 import { PRESENCE_SURFACES, SURFACE_LABEL } from '@/lib/presence';
+import type { ReleaseReality } from '@/lib/release-reality';
 import type { PlanSplit, QuietPerson, UsageMetrics } from '@/lib/usage-metrics';
 import { formatDate, formatGrowth, formatShare, formatUsd, people, timeAgo } from '@/lib/usage-metrics-format';
 
@@ -16,6 +17,13 @@ import { formatDate, formatGrowth, formatShare, formatUsd, people, timeAgo } fro
 // live fact ("plus 3 test rollouts").
 
 const number = new Intl.NumberFormat('en');
+
+// Real or test, read from what people did with the rollout (lib/release-reality.ts).
+const REALITY_LABELS: Record<ReleaseReality, string> = {
+  real: 'Real: named, dated and worked on',
+  too_early: 'Too early to tell',
+  test: 'Looks like a test',
+};
 
 const PLAN_LABELS: Record<keyof PlanSplit, string> = {
   urgans: 'Planned by AI',
@@ -210,7 +218,7 @@ export function MetricsView({
       <Section
         id="metrics-rollouts"
         title="Rollouts"
-        info="Every rollout ever made, test rollouts left out. Going out means a release date in the next 30 days; out means a date in the last 30. How plans were made: Planned by AI is a plan AI tailored; Playbook plan is the playbook with no AI changes; Their own plan has only activities people added by hand; No plan yet has no activities, or is still waiting for a plan or a date."
+        info="Every rollout ever made, test rollouts left out. Going out means a release date in the next 30 days; out means a date in the last 30. Real or test is read from what people did: real means it has a name, a release date and at least one activity somebody worked on; it looks like a test when it was marked as one, or when it is a week old, nobody has worked on it, and it has no name or no date. How plans were made: Planned by AI is a plan AI tailored; Playbook plan is the playbook with no AI changes; Their own plan has only activities people added by hand; No plan yet has no activities, or is still waiting for a plan or a date."
       >
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <Stat
@@ -231,6 +239,23 @@ export function MetricsView({
               formatValue={(value) => `${number.format(value)} ${value === 1 ? 'rollout' : 'rollouts'} made`}
             />
           </div>
+          <div className="flex flex-col gap-3">
+          <div className="rounded-xl border border-stroke-default bg-bg-surface p-4">
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">
+              Real or test
+            </p>
+            <div className="mt-3">
+              <BarList
+                formatShare={formatShare}
+                label="Rollouts that are real, too early to tell, or look like tests"
+                rows={(Object.keys(REALITY_LABELS) as ReleaseReality[]).map((key) => ({
+                  key,
+                  label: REALITY_LABELS[key],
+                  value: rollouts.reality[key],
+                }))}
+              />
+            </div>
+          </div>
           <div className="rounded-xl border border-stroke-default bg-bg-surface p-4">
             <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">
               How plans were made
@@ -246,6 +271,7 @@ export function MetricsView({
                 }))}
               />
             </div>
+          </div>
           </div>
         </div>
       </Section>

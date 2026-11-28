@@ -180,6 +180,11 @@ export const RELEASE_MENU_ORDER = [
   'release-date',
   // A correction, not a place to work.
   'change-artist',
+  // Mark as a test (#1442, 2026-11-28). A correction about what the rollout
+  // IS, so it sits with the others, just above the two terminal rows. Owner
+  // only, and hidden once the rollout is already a test (its banner carries
+  // the undo).
+  'mark-test',
   // Terminal.
   'archive',
   // Delete (moves the rollout to Trash, 30 days to restore). Last of all, under
@@ -274,6 +279,7 @@ const GROUP_BY_KEY: Record<ReleaseMenuKey, RolloutMenuGroupKey> = {
   capture: 'promote',
   'release-date': 'manage',
   'change-artist': 'manage',
+  'mark-test': 'manage',
   archive: 'manage',
   delete: 'manage',
 };
