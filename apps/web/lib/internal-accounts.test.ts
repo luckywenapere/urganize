@@ -31,6 +31,14 @@ describe('internal accounts', () => {
       'clebmichael+x@icloud.com',
       'anyone@urganize.app',
       'Apexcyber00@Gmail.com',
+      'itsderah@gmail.com',
+      'realameerdev+2@gmail.com',
+      'getsentra.co@gmail.com',
+      'anything@mailinator.com',
+      'x@YOPMAIL.com',
+      'a@sharklasers.com',
+      'b@temp-mail.org',
+      'c@sub.guerrillamail.com',
     ]) {
       expect(isInternalAccountEmail(email), email).toBe(true);
     }
@@ -38,6 +46,9 @@ describe('internal accounts', () => {
     expect(isInternalAccountEmail('fan.tedumking@gmail.com')).toBe(false);
     expect(isInternalAccountEmail('manager@tedumking.com')).toBe(false);
     expect(isInternalAccountEmail('gideon@ugorjigideon.com')).toBe(false);
+    // A throwaway domain matches the whole domain, never a look-alike.
+    expect(isInternalAccountEmail('fan@notmailinator.com')).toBe(false);
+    expect(isInternalAccountEmail('mailinator.com@gmail.com')).toBe(false);
   });
   it('a set answers for aliases of its extra addresses', () => {
     const set = new InternalEmailSet(['ops@example.com']);

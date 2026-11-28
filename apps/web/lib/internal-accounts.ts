@@ -19,6 +19,36 @@
 const INTERNAL_DOMAIN = '@urganize.app';
 const INTERNAL_NAME_PART = 'luckydio';
 
+/**
+ * Throwaway inbox services (founder, 2026-11-28): nobody real signs up with
+ * one, so an address on one of these domains, or a subdomain of one, is a
+ * test and stays out of every stat.
+ */
+export const THROWAWAY_EMAIL_DOMAINS: readonly string[] = [
+  'mailinator.com',
+  'yopmail.com',
+  'guerrillamail.com',
+  'guerrillamail.net',
+  'guerrillamail.org',
+  'guerrillamail.biz',
+  'guerrillamail.de',
+  'guerrillamailblock.com',
+  'grr.la',
+  'sharklasers.com',
+  'pokemail.net',
+  'spam4.me',
+  'tempmail.com',
+  'temp-mail.org',
+  'tempmail.net',
+  'tempmail.dev',
+  'tempmailo.com',
+  '10minutemail.com',
+];
+
+function isThrowawayDomain(domain: string): boolean {
+  return THROWAWAY_EMAIL_DOMAINS.some((d) => domain === d || domain.endsWith('.' + d));
+}
+
 /** Name parts (before the @) that mark one of us when an address starts with them. */
 export const INTERNAL_NAME_PREFIXES: readonly string[] = [
   'luckydio',
@@ -33,8 +63,11 @@ export const BUILT_IN_INTERNAL_EMAILS: readonly string[] = [
   'luckydio10@gmail.com',
   'luckywenapere@gmail.com',
   'theurganization@gmail.com',
-  // A team account (founder, 2026-11-28).
+  // Team and tester accounts (founder, 2026-11-28).
   'apexcyber00@gmail.com',
+  'itsderah@gmail.com',
+  'realameerdev@gmail.com',
+  'getsentra.co@gmail.com',
   // QA accounts Hark signs in with.
   'luckydio10.paywalltest@gmail.com',
 ];
@@ -58,6 +91,7 @@ export function isInternalAccountEmail(
     const name = normalized.slice(0, at);
     if (name.includes(INTERNAL_NAME_PART)) return true;
     if (INTERNAL_NAME_PREFIXES.some((prefix) => name.startsWith(prefix))) return true;
+    if (isThrowawayDomain(normalized.slice(at + 1))) return true;
   }
   const listed = (value: string) =>
     BUILT_IN.has(value) || (Array.isArray(extra) ? extra.includes(value) : (extra as ReadonlySet<string>).has(value));
