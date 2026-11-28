@@ -21,6 +21,7 @@ import {
   Radio,
   Share2,
   Sparkles,
+  FlaskConical,
   Trash2,
   Users,
   Wallet2,
@@ -78,6 +79,7 @@ const ICONS: Record<ReleaseMenuKey, ComponentType<LucideProps>> = {
   capture: Link2,
   'release-date': CalendarDays,
   'change-artist': Users,
+  'mark-test': FlaskConical,
   archive: Archive,
   delete: Trash2,
 };
@@ -122,6 +124,8 @@ type UseRolloutMenuActionsInput = {
   addIdea?: RolloutMenuDialogInput | null;
   releaseDate?: RolloutMenuDialogInput | null;
   changeArtist?: RolloutMenuDialogInput | null;
+  /** Mark as a test (#1442). Owner-only, and absent once it is one. */
+  markTest?: RolloutMenuDialogInput | null;
   archive?: RolloutMenuDialogInput | null;
   deleteRollout?: RolloutMenuDialogInput | null;
 };
@@ -148,6 +152,7 @@ export function useRolloutMenuActions({
   addIdea,
   releaseDate,
   changeArtist,
+  markTest,
   archive,
   deleteRollout,
 }: UseRolloutMenuActionsInput): RolloutMenuAction[] {
@@ -193,6 +198,7 @@ export function useRolloutMenuActions({
     addIdea,
     releaseDate,
     changeArtist,
+    markTest,
     archive,
     deleteRollout,
   });
@@ -205,7 +211,7 @@ export function useRolloutMenuActions({
     .map((entry) => (entry.key === 'activities' ? { ...entry, isActive: isPlanView(activeScene) } : entry));
 
   const dialogFor =(key: ReleaseMenuKey): RolloutMenuDialogInput | null | undefined =>
-    key === 'share' ? share : key === 'add-idea' ? addIdea : key === 'release-date' ? releaseDate : key === 'change-artist' ? changeArtist : key === 'archive' ? archive : key === 'delete' ? deleteRollout : null;
+    key === 'share' ? share : key === 'add-idea' ? addIdea : key === 'release-date' ? releaseDate : key === 'change-artist' ? changeArtist : key === 'mark-test' ? markTest : key === 'archive' ? archive : key === 'delete' ? deleteRollout : null;
 
   return entries.map((entry): RolloutMenuAction => {
     const base = { key: entry.key, label: entry.label, icon: ICONS[entry.key] };

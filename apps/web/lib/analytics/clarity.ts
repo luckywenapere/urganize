@@ -9,7 +9,7 @@
 //   of us it is remembered as internal, Clarity stops, and it never loads there
 //   again, signed in or out. A real account on that browser clears the mark.
 
-import { isInternalAccountEmail } from '@/lib/internal-accounts';
+import { isExcludedFromMetrics } from '@/lib/internal-accounts';
 
 const CLARITY_PROJECT_ID = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID || 'yzov1zloyv';
 const INTERNAL_BROWSER_KEY = 'urganize.analytics.internal-browser';
@@ -85,7 +85,7 @@ export function loadClarity() {
 export function identifyClarityUser(user: { id?: string | null; email?: string | null; role?: string | null } | null | undefined) {
   if (typeof window === 'undefined' || !user?.id) return;
 
-  if (isInternalAccountEmail(user.email)) {
+  if (isExcludedFromMetrics(user.email)) {
     setInternalBrowser(true);
     const w = window as ClarityWindow;
     if (w.clarity) w.clarity('stop');

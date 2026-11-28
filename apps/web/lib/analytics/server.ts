@@ -2,7 +2,7 @@ import { PostHog } from 'posthog-node';
 import { getPostHogProjectKey, type AnalyticsEvent } from './shared';
 import { resolvePostHogIngestHost } from './posthog-proxy';
 import { createClient } from '@supabase/supabase-js';
-import { isInternalAccountEmail } from '@/lib/internal-accounts';
+import { isExcludedFromMetrics } from '@/lib/internal-accounts';
 
 // Our own and test accounts stay out of PostHog on the server too (2026-10-16,
 // founder). The event's distinct id is a user id, so its email is looked up
@@ -21,7 +21,7 @@ async function isInternalUserId(userId: string): Promise<boolean> {
   try {
     const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
     const { data } = await db.from('profiles').select('email').eq('id', userId).maybeSingle();
-    const internal = isInternalAccountEmail((data as { email?: string | null } | null)?.email ?? null);
+    const internal = isExcludedFromMetrics((data as { email?: string | null } | null)?.email ?? null);
     if (internalById.size > 5_000) internalById.clear();
     internalById.set(userId, { internal, until: Date.now() + INTERNAL_TTL_MS });
     return internal;

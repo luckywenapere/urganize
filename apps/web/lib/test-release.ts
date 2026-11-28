@@ -13,9 +13,9 @@
  * reasoning verbatim — `releases.metadata` is JSONB, already selected by the
  * command-center query AND forwarded raw onto the client `Release.metadata`,
  * so marking a release costs no migration and reading the mark costs zero new
- * API surface. The marker is written exactly once (the isTest branch of
- * POST /api/releases) and never queried across rows; nothing server-side
- * reads it back after creation.
+ * API surface. It is written by the isTest branch of POST /api/releases and,
+ * since #1442 (2026-11-28), by the owner through POST
+ * /api/releases/[releaseId]/test and by the daily sweep; see the block below.
  *
  * INVARIANT AT THE WRITE SITE: the create route writes `metadata` through
  * three mutually-exclusive object spreads (template_pending / planner_pending
@@ -67,6 +67,71 @@ export function writeTestRelease(
     delete base[TEST_RELEASE_KEY];
   }
 
+  return base;
+}
+
+// --- Marking an ordinary rollout as a test (#1442, 2026-11-28) -------------
+//
+// Founder: "we need a way to know the difference between release that are
+// actually real and the one that were just tests" and "we need to
+// automatically tag the test rollouts". So the same `test_release` marker can
+// now also be set on an ordinary rollout, by its owner from the rollout menu,
+// or by the daily sweep (lib/test-release-sweep-server.ts) for a rollout that
+// lib/release-reality.ts reads as a test.
+//
+// Two more keys keep that honest:
+// - test_release_auto: the sweep set the marker, not a person. Only shown to
+//   us; it tells an automatic tag from a deliberate one.
+// - test_release_dismissed: somebody said "it's real". The sweep never tags a
+//   dismissed rollout again, or one wrong guess would come back every morning.
+
+const TEST_RELEASE_AUTO_KEY = 'test_release_auto';
+const TEST_RELEASE_DISMISSED_KEY = 'test_release_dismissed';
+
+/** The sweep set the marker, not a person. */
+export function readTestReleaseAuto(metadata: ReleaseMetadata): boolean {
+  if (!metadata || typeof metadata !== 'object') return false;
+  return (metadata as Record<string, unknown>)[TEST_RELEASE_AUTO_KEY] === true;
+}
+
+/** Somebody said this rollout is real: the sweep must leave it alone. */
+export function readTestReleaseDismissed(metadata: ReleaseMetadata): boolean {
+  if (!metadata || typeof metadata !== 'object') return false;
+  return (metadata as Record<string, unknown>)[TEST_RELEASE_DISMISSED_KEY] === true;
+}
+
+/**
+ * A person marking a rollout as a test, or saying it is real. Saying it is
+ * real also records the answer, so the daily sweep never tags it again.
+ * Marking it a test clears that answer and any automatic mark: a person said
+ * so, which outranks the sweep's guess.
+ */
+export function writeTestReleaseByPerson(
+  metadata: ReleaseMetadata,
+  isTest: boolean
+): Record<string, unknown> {
+  const base = writeTestRelease(metadata, isTest);
+  delete base[TEST_RELEASE_AUTO_KEY];
+  if (isTest) {
+    delete base[TEST_RELEASE_DISMISSED_KEY];
+  } else {
+    base[TEST_RELEASE_DISMISSED_KEY] = true;
+  }
+  return base;
+}
+
+/** The sweep lifting its own tag once the rollout reads as real. Leaves no
+ *  "said it is real" answer behind: nobody said anything, the work did. */
+export function clearTestReleaseBySweep(metadata: ReleaseMetadata): Record<string, unknown> {
+  const base = writeTestRelease(metadata, false);
+  delete base[TEST_RELEASE_AUTO_KEY];
+  return base;
+}
+
+/** The daily sweep's tag: the marker plus a note that nobody chose it. */
+export function writeTestReleaseBySweep(metadata: ReleaseMetadata): Record<string, unknown> {
+  const base = writeTestRelease(metadata, true);
+  base[TEST_RELEASE_AUTO_KEY] = true;
   return base;
 }
 

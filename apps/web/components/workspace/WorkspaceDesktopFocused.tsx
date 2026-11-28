@@ -46,6 +46,7 @@ type WorkspaceDesktopFocusedProps = {
   share?: RolloutMenuDialogInput | null;
   /** Change release date (#1128), owner-only, behind the same overflow. */
   releaseDate?: RolloutMenuDialogInput | null;
+  markTest?: RolloutMenuDialogInput | null;
   archive?: RolloutMenuDialogInput | null;
   /** Delete rollout (to Trash), owner-only. */
   deleteRollout?: RolloutMenuDialogInput | null;
@@ -127,6 +128,7 @@ export function WorkspaceDesktopFocused({
   onAddIdea,
   share,
   releaseDate,
+  markTest,
   archive,
   deleteRollout,
   banner,
@@ -323,6 +325,7 @@ export function WorkspaceDesktopFocused({
           share={share}
           addIdea={onAddIdea && hasPlan ? { label: 'Add idea', onClick: onAddIdea } : null}
           releaseDate={releaseDate}
+          markTest={markTest}
           archive={archive}
           deleteRollout={deleteRollout}
         />

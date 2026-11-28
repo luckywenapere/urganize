@@ -24,6 +24,7 @@ type RolloutTabsProps = {
   addIdea?: RolloutMenuDialogInput | null;
   /** Change release date (#1128). Owner-only; WorkspaceView owns the sheet. */
   releaseDate?: RolloutMenuDialogInput | null;
+  markTest?: RolloutMenuDialogInput | null;
   archive?: RolloutMenuDialogInput | null;
   /** Delete rollout (to Trash). Owner-only; WorkspaceView owns the dialog. */
   deleteRollout?: RolloutMenuDialogInput | null;
@@ -68,6 +69,7 @@ export function RolloutTabs({
   share,
   addIdea,
   releaseDate,
+  markTest,
   archive,
   deleteRollout,
 }: RolloutTabsProps) {
@@ -77,6 +79,7 @@ export function RolloutTabs({
     share,
     addIdea,
     releaseDate,
+    markTest,
     archive,
     deleteRollout,
   });

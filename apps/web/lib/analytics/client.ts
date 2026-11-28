@@ -7,7 +7,7 @@ import {
   type StoredAnalyticsEvent,
   getPostHogProjectKey,
 } from './shared';
-import { isInternalAccountEmail } from '@/lib/internal-accounts';
+import { isExcludedFromMetrics } from '@/lib/internal-accounts';
 import { identifyClarityUser } from './clarity';
 
 const ANALYTICS_STORAGE_KEY = 'urganize.analytics.events';
@@ -296,7 +296,7 @@ export function identifyAnalyticsUser(user: AnalyticsIdentity | null | undefined
   identifyClarityUser({ id: user.id, email: user.email, role: user.onboarding_role || user.role });
 
   // Our own and test accounts never reach PostHog (2026-10-16).
-  if (isInternalAccountEmail(user.email)) {
+  if (isExcludedFromMetrics(user.email)) {
     void loadBrowserPostHog().then((client) => client?.opt_out_capturing());
     return;
   }

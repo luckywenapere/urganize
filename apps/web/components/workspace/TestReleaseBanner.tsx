@@ -22,7 +22,17 @@ import { HelpTip } from '@/components/shared/HelpTip';
  * Copy rules: short words, "you", no em dash, and never the word "workspace"
  * (banned on mascot-adjacent surfaces, and this sits one slot from them).
  */
-export function TestReleaseBanner({ onDelete }: { onDelete: () => void }) {
+export function TestReleaseBanner({
+  onDelete,
+  onMarkReal,
+  markingReal = false,
+}: {
+  onDelete: () => void;
+  /** "It's real, undo" (#1442): a rollout marked as a test by its owner, or by
+   *  the daily sweep, can be put back in one tap. */
+  onMarkReal?: () => void;
+  markingReal?: boolean;
+}) {
   return (
     <div className="mb-4 rounded-xl border border-brand/30 bg-brand/5 p-4">
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">
@@ -38,14 +48,27 @@ export function TestReleaseBanner({ onDelete }: { onDelete: () => void }) {
         Nothing here is real. Tick activities off, open the tools, move things around.{' '}
         <HelpTip helpKey="workspace.testRelease" className="align-text-bottom" />
       </p>
+      <div className="mt-3 flex flex-wrap gap-2">
       <button
         type="button"
         onClick={onDelete}
-        className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-stroke-default bg-bg-surface px-2.5 py-1.5 text-xs font-semibold text-content-secondary transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-stroke-default bg-bg-surface px-2.5 py-1.5 text-xs font-semibold text-content-secondary transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
       >
         <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
         Delete test rollout
       </button>
+      {onMarkReal ? (
+        <button
+          type="button"
+          onClick={onMarkReal}
+          disabled={markingReal}
+          aria-busy={markingReal}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-stroke-default bg-bg-surface px-2.5 py-1.5 text-xs font-semibold text-content-secondary transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand disabled:opacity-60"
+        >
+          {markingReal ? 'Saving...' : "It's real, undo"}
+        </button>
+      ) : null}
+      </div>
     </div>
   );
 }

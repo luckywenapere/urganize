@@ -113,7 +113,7 @@ export async function loadScoreboardInput(
         (from, to) =>
           client
             .from('releases')
-            .select('id, owner_user_id, artist_id, created_at, updated_at, release_date, status, metadata')
+            .select('id, owner_user_id, artist_id, title, created_at, updated_at, release_date, status, metadata')
             .is('deleted_at', null)
             .order('created_at', { ascending: true })
             .range(from, to),
