@@ -297,17 +297,17 @@ export type SeedMessages = {
 /**
  * Copy-paste messages in the founder-note register: one person writing to one
  * person. Plain words, no pressure, and the first thing said is that nothing
- * is public until they choose. Signed Wena, the name he goes by.
+ * is public until they choose. Signed Oyin, the name he goes by.
  */
 export function buildSeedMessages(input: { name: string; url: string }): SeedMessages {
   const first = firstNameOf(input.name);
   const hello = first ? `Hi ${first}` : 'Hi';
   return {
-    whatsapp: `${hello}, it's Wena from Urganize. I made a small profile for you, so people who hire managers can find you. Only you can see it until you publish it. Have a look, change anything, and publish it only if you want to: ${input.url}`,
+    whatsapp: `${hello}, it's Oyin from Urganize. I made a small profile for you, so people who hire managers can find you. Only you can see it until you publish it. Have a look, change anything, and publish it only if you want to: ${input.url}`,
     emailSubject: 'A profile for you on Urganize',
     emailBody: `${hello},
 
-It's Wena from Urganize. I made a small profile for you, so the artists and teams who hire managers can find you.
+It's Oyin from Urganize. I made a small profile for you, so the artists and teams who hire managers can find you.
 
 Only you can see it right now. Nothing goes public until you publish it. You can change anything first.
 
@@ -315,7 +315,7 @@ Open it here: ${input.url}
 
 If it's not for you, just tell me and I'll delete it.
 
-Wena`,
+Oyin`,
   };
 }
 

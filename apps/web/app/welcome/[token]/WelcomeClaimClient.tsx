@@ -99,7 +99,7 @@ export default function WelcomeClaimClient({ token, initial }: { token: string; 
         ? 'This profile is already set up. Sign in to open it.'
         : initial.state === 'missing'
           ? 'This link is not available.'
-          : `This link has expired. Ask ${initial.invitedBy || 'Wena'} for a new one.`;
+          : `This link has expired. Ask ${initial.invitedBy || 'Oyin'} for a new one.`;
     return (
       <Shell>
         <h1 className="mt-4 font-display text-3xl font-semibold">{message}</h1>

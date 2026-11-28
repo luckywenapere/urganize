@@ -321,7 +321,7 @@ describe('the invitee lands, joins and publishes', () => {
     expect(db.tables.person_profiles[0].visibility).toBe('private');
   });
 
-  it('a founder seeding link still says Wena', async () => {
+  it('a founder seeding link still says Oyin', async () => {
     db.tables.person_profiles.push({ id: 'p-seed', status: 'unclaimed', user_id: null, visibility: 'private', display_name: 'Ada', roles: ['manager'] });
     const { mintClaimLink } = await import('./seeding-server');
     const link = await mintClaimLink(admin(), { personId: 'p-seed', actorUserId: 'founder' });

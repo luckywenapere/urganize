@@ -111,12 +111,12 @@ describe('OnboardingStepEmail', () => {
   });
 });
 
-// The founder signs as "Wena" (founder call, 2026-10-09), never with a first name
-// (the old "Lucky" or the current "Oyin"). Held for every email that carries the
+// The founder signs as "Oyin" (founder call, 2026-11-08; it was "Wena" from
+// 2026-10-09, changed in #1438), never "Lucky" or "Wena". Held for every email that carries the
 // founder's voice: the welcome, all five sequence steps and the admin composer's
 // sign-off.
-describe('the founder signs as Wena', () => {
-  it('uses Wena in the welcome note, its subject and every sequence step', async () => {
+describe('the founder signs as Oyin', () => {
+  it('uses Oyin in the welcome note, its subject and every sequence step', async () => {
     const welcome = await renderEmail(WelcomeEmail({ recipientName: 'Ada' }));
     const parts = [WELCOME_SUBJECT, welcome.html, welcome.text];
     for (const step of ONBOARDING_STEP_KEYS) {
@@ -125,11 +125,11 @@ describe('the founder signs as Wena', () => {
     }
     for (const part of parts) {
       expect(part).not.toContain('Lucky');
-      expect(part).not.toContain('Oyin');
+      expect(part).not.toContain('Wena');
     }
-    expect(WELCOME_SUBJECT).toContain('Wena');
-    expect(welcome.text).toContain('Wena here.');
-    expect(welcome.text).toMatch(/Wena\s+Founder, Urganize/);
+    expect(WELCOME_SUBJECT).toContain('Oyin');
+    expect(welcome.text).toContain('Oyin here.');
+    expect(welcome.text).toMatch(/Oyin\s+Founder, Urganize/);
   });
 
   it('signs a composer announcement as Oyin', async () => {

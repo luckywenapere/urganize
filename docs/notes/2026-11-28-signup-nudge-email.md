@@ -25,7 +25,7 @@ Measured on production, read-only, 26 and 27 Nov: of 16 real accounts made from 
 - **The words say "yesterday".** That is why the window is exactly yesterday, and why `isSignupNudgeTooLate` makes `planOutboxRun` cancel a row that the daily email limit held back to a later morning. It is never sent late.
 - **It does not depend on `EMAIL_ONBOARDING_SEQUENCE`.** That switch pauses only `onboarding_step` rows.
 - A missed cron morning means that day's people are not emailed. On purpose: late would be untrue.
-- The other founder notes still sign off as "Wena" (`FounderNote.tsx` default, and the day 1 subject). Not changed here: Oyin has not said to.
+- Every founder note signs as Oyin since v1.298.3 (#1438): the welcome, the onboarding steps, the `FounderNote.tsx` default, the profile invite messages and the expired-link line. They said "Wena" before.
 
 ## Checked
 

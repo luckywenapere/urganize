@@ -280,7 +280,7 @@ export type ClaimView =
       state: 'ok';
       personId: string;
       /** The manager behind a Directory invite (2026-10-11). Null for the
-       *  founder's own seeding links, which the page signs as Wena. */
+       *  founder's own seeding links, which the page signs as Oyin. */
       invitedBy?: string | null;
       profile: {
         displayName: string;
@@ -394,7 +394,7 @@ export async function claimProfile(
   const state = claimInviteState(invite, now);
   if (state !== 'ok') {
     const directoryInvite = await loadDirectoryInviteForPerson(admin, invite.personId);
-    const askWho = directoryInvite ? directoryInvite.inviterName ?? 'your manager' : 'Wena';
+    const askWho = directoryInvite ? directoryInvite.inviterName ?? 'your manager' : 'Oyin';
     return {
       ok: false,
       error:
